@@ -1,0 +1,16 @@
+{
+  "name": "flipibook-backend",
+  "version": "1.0.0",
+  "description": "Flipbook Backend Microservices & API Gateway",
+  "scripts": {
+    "dev": "concurrently -n \"GATEWAY,AUTH\" -c \"cyan,magenta\" \"npm run dev:gateway\" \"npm run dev:auth\"",
+    "start": "concurrently -n \"GATEWAY,AUTH\" -c \"cyan,magenta\" \"npm run start:gateway\" \"npm run start:auth\"",
+    "start:auth": "node services/auth-service/src/server.js",
+    "start:gateway": "node api-gateway/src/server.js",
+    "dev:auth": "node --watch services/auth-service/src/server.js",
+    "dev:gateway": "node --watch api-gateway/src/server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

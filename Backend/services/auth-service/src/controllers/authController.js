@@ -1,0 +1,484 @@
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
+const LoginLog = require('../models/LoginLog');
+const { generateToken, verifyToken } = require('../utils/jwtHelper');
+const { sendOtpEmail } = require('../utils/emailService');
+
+/**
+ * Extract client IP address accurately from request
+ */
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || req.ip || '127.0.0.1';
+};
+
+/**
+ * Helper to securely attach HttpOnly cookie for JWT
+ * and a non-sensitive cookie indicator for client UI routing
+ */
+const setAuthCookies = (res, token) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // 1. HttpOnly token cookie (inaccessible via JavaScript)
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/'
+  });
+
+  // 2. Non-sensitive client indicator (zero credentials, zero user IDs)
+  res.cookie('flipibook_logged_in', 'true', {
+    httpOnly: false,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/'
+  });
+};
+
+const clearAuthCookies = (res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOpts = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/'
+  };
+  res.clearCookie('token', cookieOpts);
+  res.clearCookie('flipibook_logged_in', { ...cookieOpts, httpOnly: false });
+};
+
+/**
+ * 1. User Signup
+ */
+const signup = async (req, res) => {
+  try {
+    const { name, emailId, password } = req.body;
+
+    if (!emailId || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ emailId: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user (pre-save hook generates FLIPI0001 userID)
+    const user = new User({
+      name: name ? name.trim() : '',
+      emailId: cleanEmail,
+      password: hashedPassword
+    });
+
+    await user.save();
+
+    // Capture IP & Create Login Log
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    const loginLog = await LoginLog.create({
+      userId: user.userID,
+      userObjectId: user._id,
+      emailId: user.emailId,
+      ipAddress,
+      userAgent,
+      loginTime: new Date(),
+      status: 'ACTIVE',
+      loginMethod: 'EMAIL_PASSWORD'
+    });
+
+    const token = generateToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      user: {
+        name: user.name,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error('[Signup Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error during signup' });
+  }
+};
+
+/**
+ * 2. User Login
+ */
+const login = async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+
+    if (!emailId || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+
+    // Find user
+    const user = await User.findOne({ emailId: cleanEmail });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Track Login in LoginLog Table
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    const loginLog = await LoginLog.create({
+      userId: user.userID,
+      userObjectId: user._id,
+      emailId: user.emailId,
+      ipAddress,
+      userAgent,
+      loginTime: new Date(),
+      status: 'ACTIVE',
+      loginMethod: 'EMAIL_PASSWORD'
+    });
+
+    const token = generateToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      user: {
+        name: user.name,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error('[Login Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error during login' });
+  }
+};
+
+/**
+ * 3. Google OAuth Login / Signup
+ */
+const googleLogin = async (req, res) => {
+  try {
+    const { email, name, picture } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account email is required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      // Auto-register google user with a secure random password hash
+      const randomPassword = Math.random().toString(36).slice(-12) + '!FliPi';
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = new User({
+        name: name || '',
+        emailId: cleanEmail,
+        password: hashedPassword,
+        picture: picture || ''
+      });
+
+      await user.save();
+    } else if (picture && (!user.picture || user.picture !== picture)) {
+      user.picture = picture;
+      if (name && !user.name) user.name = name;
+      await user.save();
+    }
+
+    // Log the Google Sign-in event
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    const loginLog = await LoginLog.create({
+      userId: user.userID,
+      userObjectId: user._id,
+      emailId: user.emailId,
+      ipAddress,
+      userAgent,
+      loginTime: new Date(),
+      status: 'ACTIVE',
+      loginMethod: 'GOOGLE'
+    });
+
+    const token = generateToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Google login successful',
+      user: {
+        name: user.name,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error('[Google Login Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error during Google auth' });
+  }
+};
+
+/**
+ * 4. Forgot Password - Generate & Send OTP
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { emailId } = req.body;
+
+    if (!emailId) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.otp = {
+      code: otp,
+      expiresAt
+    };
+
+    await user.save();
+
+    // Send email using Nodemailer
+    await sendOtpEmail(cleanEmail, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP has been sent to your email successfully'
+    });
+  } catch (error) {
+    console.error('[Forgot Password Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to send OTP' });
+  }
+};
+
+/**
+ * 5. Reset Password with OTP verification
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { emailId, otp, newPassword } = req.body;
+
+    if (!emailId || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.otp || !user.otp.code) {
+      return res.status(400).json({ success: false, message: 'No OTP requested or OTP has already been used' });
+    }
+
+    // Check expiration
+    if (new Date() > new Date(user.otp.expiresAt)) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Verify OTP code
+    if (user.otp.code !== otp.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP code' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    // Clear OTP
+    user.otp = {
+      code: null,
+      expiresAt: null
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully! Please sign in with your new password.'
+    });
+  } catch (error) {
+    console.error('[Reset Password Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to reset password' });
+  }
+};
+
+/**
+ * 6. Sign Out / Logout - Track Logout Timestamp & Status
+ */
+const logout = async (req, res) => {
+  try {
+    const token = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+    let filter = {};
+
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded?.sessionId) {
+        filter._id = decoded.sessionId;
+      } else if (decoded?.userId) {
+        filter.userId = decoded.userId;
+        filter.status = 'ACTIVE';
+      }
+    }
+
+    if (Object.keys(filter).length > 0) {
+      await LoginLog.updateMany(
+        filter,
+        {
+          $set: {
+            logoutTime: new Date(),
+            status: 'LOGGED_OUT'
+          }
+        }
+      );
+    }
+
+    clearAuthCookies(res);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('[Logout Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Error during logout' });
+  }
+};
+
+/**
+ * 7. Get Login Logs History
+ */
+const getLoginLogs = async (req, res) => {
+  try {
+    const { userId, limit = 50 } = req.query;
+    const query = userId ? { userId } : {};
+
+    const logs = await LoginLog.find(query)
+      .sort({ loginTime: -1 })
+      .limit(Number(limit))
+      .select('-__v');
+
+    return res.status(200).json({
+      success: true,
+      count: logs.length,
+      data: logs
+    });
+  } catch (error) {
+    console.error('[Get Login Logs Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch login logs' });
+  }
+};
+
+/**
+ * 8. Verify Session (Current Authenticated User Context)
+ */
+const verifySession = async (req, res) => {
+  try {
+    const token = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        isAuthenticated: false,
+        message: 'No active session token'
+      });
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
+      clearAuthCookies(res);
+      return res.status(401).json({
+        success: false,
+        isAuthenticated: false,
+        message: 'Session has expired or is invalid'
+      });
+    }
+
+    const user = await User.findById(decoded.id).select('name picture emailId');
+    if (!user) {
+      clearAuthCookies(res);
+      return res.status(401).json({
+        success: false,
+        isAuthenticated: false,
+        message: 'User no longer exists'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      isAuthenticated: true,
+      user: {
+        name: user.name,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error('[Verify Session Error]:', error);
+    return res.status(500).json({
+      success: false,
+      isAuthenticated: false,
+      message: 'Server error verifying session'
+    });
+  }
+};
+
+module.exports = {
+  signup,
+  login,
+  googleLogin,
+  forgotPassword,
+  resetPassword,
+  logout,
+  getLoginLogs,
+  verifySession
+};

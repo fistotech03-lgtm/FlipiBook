@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment configurations & credentials
+.env
+.env.*
+!.env.example
+*.env
+
+# RSA Certificates & Private Keys
+*.pem
+*.key
+*.cert
+certs/private.pem
+*/certs/private.pem
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE & Editor files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+*.swo
+
+# Coverage and build artifacts
+coverage/
+dist/
+build/
+tmp/
+temp/

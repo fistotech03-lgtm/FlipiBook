@@ -3,6 +3,8 @@ services:
     build: ./Frontend
     ports:
       - "3001:5173"
+    environment:
+      - BACKEND_URL=http://backend:8000
     depends_on:
       - backend
 
@@ -14,7 +16,7 @@ services:
       - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
       - EMAIL_USER=fistotech04@gmail.com
       - EMAIL_APP_PASSWORD=ghrn izix para kuyg
-      - CLIENT_URL=http://localhost:3001
+      - CLIENT_URL=https://flipibook.com
       - GATEWAY_PORT=8000
       - AUTH_PORT=5001
       - AUTH_SERVICE_PORT=5001

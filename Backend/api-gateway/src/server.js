@@ -1,11 +1,13 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 const express = require('express');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.GATEWAY_PORT || process.env.PORT || 8000;
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
 
 // Global Middleware

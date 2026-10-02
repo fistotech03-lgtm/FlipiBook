@@ -5,11 +5,9 @@ services:
     ports:
       - "3000:5173"
     depends_on:
-      - Backend
+      - backend
 
   backend:
     build: ./Backend
     ports:
       - "5001:5000"
-
-      

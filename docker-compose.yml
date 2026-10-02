@@ -10,6 +10,15 @@ services:
     build: ./Backend
     ports:
       - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
+      - EMAIL_USER=fistotech04@gmail.com
+      - EMAIL_APP_PASSWORD=ghrn izix para kuyg
+      - CLIENT_URL=http://localhost:3001
+      - GATEWAY_PORT=8000
+      - AUTH_PORT=5001
+      - AUTH_SERVICE_PORT=5001
+      - AUTH_SERVICE_URL=http://localhost:5001
     env_file:
       - path: ./Backend/.env
         required: false

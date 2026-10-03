@@ -13,7 +13,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
+      - MONGO_URI=mongodb://flipibook:Flipibook123@@flipibook-database-y1m1gq:27017/?authSource=admin
       - EMAIL_USER=fistotech04@gmail.com
       - EMAIL_APP_PASSWORD=ghrn izix para kuyg
       - CLIENT_URL=https://flipibook.com

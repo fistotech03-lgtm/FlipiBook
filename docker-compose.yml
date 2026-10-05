@@ -11,7 +11,7 @@ services:
   backend:
     build: ./Backend
     ports:
-      - "8000:8000"
+      - "8000"
     environment:
       - MONGO_URI=mongodb://flipibook:Flipibook123@flipibook-database-y1m1gq:27017/?authSource=admin
       - EMAIL_USER=fistotech04@gmail.com

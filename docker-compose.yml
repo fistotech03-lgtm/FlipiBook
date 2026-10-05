@@ -10,8 +10,11 @@ services:
 
   backend:
     build: ./Backend
-    ports:
+    expose:
       - "8000"
+    networks:
+      - default
+      - dokploy-network
     environment:
       - MONGO_URI=mongodb://flipibook:Flipibook123@flipibook-database-y1m1gq:27017/?authSource=admin
       - EMAIL_USER=fistotech04@gmail.com
@@ -24,3 +27,11 @@ services:
     env_file:
       - path: ./Backend/.env
         required: false
+
+networks:
+  default:
+    name: flipibook-flipibook-ts4dqs_default
+
+  dokploy-network:
+    name: dokploy-network
+    external: true

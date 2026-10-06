@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Signin, Signup, ForgotPassword } from '../components/Login';
 import { verifyToken } from '../utils/authUtils';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ;
 
 export default function Login() {
   const [searchParams, setSearchParams] = useSearchParams();

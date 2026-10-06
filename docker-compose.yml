@@ -2,7 +2,7 @@ services:
   frontend:
     build: ./Frontend
     ports:
-      - "3001:5173"
+      - "3002:5173"
     environment:
       - BACKEND_URL=http://backend:8000
     depends_on:
@@ -10,23 +10,13 @@ services:
 
   backend:
     build: ./Backend
-    expose:
-      - "8000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.flipibook-api.rule=Host(`api.flipibook.com`)"
-      - "traefik.http.routers.flipibook-api.entrypoints=websecure"
-      - "traefik.http.routers.flipibook-api.tls=true"
-      - "traefik.http.routers.flipibook-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.flipibook-api.loadbalancer.server.port=8000"
-    networks:
-      - default
-      - dokploy-network
+    ports:
+      - "8000:8000"
     environment:
-      - MONGO_URI=mongodb://flipibook:Flipibook123@flipibook-database-y1m1gq:27017/?authSource=admin
+      - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
       - EMAIL_USER=fistotech04@gmail.com
       - EMAIL_APP_PASSWORD=ghrn izix para kuyg
-      - CLIENT_URL=https://flipibook.com
+      - CLIENT_URL=https://testing.flipibook.com
       - GATEWAY_PORT=8000
       - AUTH_PORT=5001
       - AUTH_SERVICE_PORT=5001

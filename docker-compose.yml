@@ -10,8 +10,18 @@ services:
 
   backend:
     build: ./Backend
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flipibook-api.rule=Host(`api.flipibook.com`)"
+      - "traefik.http.routers.flipibook-api.entrypoints=websecure"
+      - "traefik.http.routers.flipibook-api.tls=true"
+      - "traefik.http.routers.flipibook-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.flipibook-api.loadbalancer.server.port=8000"
+    networks:
+      - default
+      - dokploy-network
     environment:
       - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
       - EMAIL_USER=fistotech04@gmail.com
@@ -24,3 +34,11 @@ services:
     env_file:
       - path: ./Backend/.env
         required: false
+
+networks:
+  default:
+    name: flipibook-flipibook-ts4dqs_default
+
+  dokploy-network:
+    name: dokploy-network
+    external: true

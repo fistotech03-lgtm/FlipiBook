@@ -4,6 +4,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 const express = require('express');
 const cors = require('cors');
+const os = require('os');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
@@ -32,6 +33,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'UP',
     service: 'api-gateway',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Instance Check
+app.get('/health/instance', (req, res) => {
+  res.status(200).json({
+    status: 'UP',
+    service: 'api-gateway',
+    instance: os.hostname(),
     timestamp: new Date().toISOString()
   });
 });

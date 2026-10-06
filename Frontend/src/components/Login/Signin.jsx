@@ -126,7 +126,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
       {/* 1. Header Section */}
       <div className="text-center">
         <h1 className="text-[2vw] font-semibold font-poppins tracking-tight text-gray-900 uppercase leading-tight">
-          WELCOME BACK!jkj
+          WELCOME BACK!jkjdd
         </h1>
         <p className="text-[0.82vw] text-gray-500 font-inter mt-[0.35vw]">
           Sign in to continue to Flipbook

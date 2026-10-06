@@ -1,8 +1,9 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const LoginLog = require('../models/LoginLog');
+const SignupOtp = require('../models/SignupOtp');
 const { generateToken, verifyToken } = require('../utils/jwtHelper');
-const { sendOtpEmail } = require('../utils/emailService');
+const { sendOtpEmail, sendSignupOtpEmail } = require('../utils/emailService');
 
 /**
  * Extract client IP address accurately from request
@@ -124,6 +125,195 @@ const signup = async (req, res) => {
 };
 
 /**
+ * 1b. Send OTP for Account Creation
+ */
+const sendSignupOtp = async (req, res) => {
+  try {
+    const { name, emailId, password } = req.body;
+
+    if (!emailId || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ emailId: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Upsert into SignupOtp
+    await SignupOtp.findOneAndUpdate(
+      { emailId: cleanEmail },
+      {
+        name: name ? name.trim() : '',
+        emailId: cleanEmail,
+        password: hashedPassword,
+        otp,
+        expiresAt
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Send signup verification email
+    await sendSignupOtpEmail(cleanEmail, otp, name ? name.trim() : '');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Verification code sent to your email'
+    });
+  } catch (error) {
+    console.error('[Send Signup OTP Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to send verification code' });
+  }
+};
+
+/**
+ * 1c. Verify Signup OTP & Create Account
+ */
+const verifySignupOtp = async (req, res) => {
+  try {
+    const { emailId, otp } = req.body;
+
+    if (!emailId || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    // Check if user already registered
+    const existingUser = await User.findOne({ emailId: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
+    }
+
+    const pendingSignup = await SignupOtp.findOne({ emailId: cleanEmail });
+    if (!pendingSignup) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending registration found or code expired. Please sign up again.'
+      });
+    }
+
+    if (pendingSignup.expiresAt < new Date()) {
+      await SignupOtp.deleteOne({ _id: pendingSignup._id });
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired. Please request a new one.'
+      });
+    }
+
+    if (pendingSignup.otp !== cleanOtp) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+
+    // Create user
+    const user = new User({
+      name: pendingSignup.name || '',
+      emailId: cleanEmail,
+      password: pendingSignup.password
+    });
+
+    await user.save();
+
+    // Clean up pending OTP record
+    await SignupOtp.deleteOne({ _id: pendingSignup._id });
+
+    // Capture IP & Create Login Log
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    const loginLog = await LoginLog.create({
+      userId: user.userID,
+      userObjectId: user._id,
+      emailId: user.emailId,
+      ipAddress,
+      userAgent,
+      loginTime: new Date(),
+      status: 'ACTIVE',
+      loginMethod: 'EMAIL_PASSWORD'
+    });
+
+    const token = generateToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account verified and created successfully',
+      user: {
+        name: user.name,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error('[Verify Signup OTP Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error during verification' });
+  }
+};
+
+/**
+ * 1d. Resend Signup OTP
+ */
+const resendSignupOtp = async (req, res) => {
+  try {
+    const { emailId } = req.body;
+
+    if (!emailId) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+
+    const pendingSignup = await SignupOtp.findOne({ emailId: cleanEmail });
+    if (!pendingSignup) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration session expired. Please enter your details again.'
+      });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    pendingSignup.otp = otp;
+    pendingSignup.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await pendingSignup.save();
+
+    await sendSignupOtpEmail(cleanEmail, otp, pendingSignup.name || '');
+
+    return res.status(200).json({
+      success: true,
+      message: 'New verification code sent to your email'
+    });
+  } catch (error) {
+    console.error('[Resend Signup OTP Error]:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to resend code' });
+  }
+};
+
+/**
  * 2. User Login
  */
 const login = async (req, res) => {
@@ -139,13 +329,17 @@ const login = async (req, res) => {
     // Find user
     const user = await User.findOne({ emailId: cleanEmail });
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+      return res.status(404).json({
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'This account does not exist. Please sign up.'
+      });
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+      return res.status(400).json({ success: false, message: 'Invalid password. Please try again.' });
     }
 
     // Track Login in LoginLog Table
@@ -191,7 +385,7 @@ const login = async (req, res) => {
  */
 const googleLogin = async (req, res) => {
   try {
-    const { email, name, picture } = req.body;
+    const { email, name, picture, mode } = req.body;
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Google account email is required' });
@@ -199,6 +393,24 @@ const googleLogin = async (req, res) => {
 
     const cleanEmail = email.trim().toLowerCase();
     let user = await User.findOne({ emailId: cleanEmail });
+
+    // From the Sign Up tab: never log into an existing account
+    if (mode === 'signup' && user) {
+      return res.status(409).json({
+        success: false,
+        code: 'ACCOUNT_EXISTS',
+        message: 'An account with this email already exists. Please sign in.'
+      });
+    }
+
+    // From the Sign In tab: if account does not exist, do not auto-create, prompt user to sign up
+    if (mode === 'signin' && !user) {
+      return res.status(404).json({
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'This account does not exist. Please sign up.'
+      });
+    }
 
     if (!user) {
       // Auto-register google user with a secure random password hash
@@ -474,6 +686,9 @@ const verifySession = async (req, res) => {
 
 module.exports = {
   signup,
+  sendSignupOtp,
+  verifySignupOtp,
+  resendSignupOtp,
   login,
   googleLogin,
   forgotPassword,

@@ -12,12 +12,6 @@
  */
 export const verifyToken = () => {
   try {
-    // Clean up any stale localStorage tokens from previous implementations
-    if (localStorage.getItem('user') || localStorage.getItem('token')) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-    }
-
     // Check for the flipibook_logged_in cookie indicator set by backend
     const hasCookie = document.cookie
       .split(';')

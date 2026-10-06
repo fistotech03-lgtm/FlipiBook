@@ -114,8 +114,8 @@ export default function Login() {
         {/* Top-Left Logo */}
         <div className="absolute top-[2vw] left-[2vw] z-10">
           <img
-            src="/Login/logo.webp"
-            alt="Flipbook Logo"
+            src="/Login/logo.svg"
+            alt="FlipiBook Logo"
             className="h-[2.5vw] w-auto object-contain drop-shadow-md"
           />
         </div>

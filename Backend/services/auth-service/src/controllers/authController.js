@@ -31,8 +31,11 @@ const getClientIp = (req) => {
  * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
-  if (!req) return false;
-  return req.secure || req.headers['x-forwarded-proto'] === 'https' || req.protocol === 'https';
+  if (!req) return process.env.NODE_ENV === 'production';
+  const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : '') || req.protocol;
+  const referer = req.headers['referer'] || '';
+  const origin = req.headers['origin'] || '';
+  return proto === 'https' || referer.startsWith('https://') || origin.startsWith('https://') || process.env.NODE_ENV === 'production';
 };
 
 /**
@@ -737,14 +740,24 @@ const verifySession = async (req, res) => {
       }
     }
 
-    // 3. If neither token is valid, clear cookies and return unauthenticated
+    // 3. If no tokens were provided in the request, return unauthenticated without altering cookies
+    if (!accessToken && !refreshToken) {
+      return res.status(200).json({
+        success: true,
+        isAuthenticated: false,
+        user: null,
+        message: 'No active session'
+      });
+    }
+
+    // 4. If tokens were provided but could not be validated or refreshed, clear and return unauthenticated
     if (!targetUserId) {
       clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
         isAuthenticated: false,
         user: null,
-        message: 'No active session or session expired'
+        message: 'Session has expired'
       });
     }
 

@@ -54,6 +54,7 @@ app.use(
   createProxyMiddleware({
     target: `${AUTH_SERVICE_URL}/api/auth`,
     changeOrigin: true,
+    xfwd: true,
     cookieDomainRewrite: '',
     cookiePathRewrite: '/',
     on: {

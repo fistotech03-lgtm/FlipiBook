@@ -2,10 +2,12 @@ import React, { lazy, Suspense } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/CustomToast';
+import { ModernToastProvider } from './components/ModernToast';
 import Login from './pages/login';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/mainLayout';
 
+// Main Pages
 const Home = lazy(() => import('./pages/Home'));
 const MyFlipbooks = lazy(() => import('./pages/MyFlipbooks'));
 const Templates = lazy(() => import('./pages/Templates'));
@@ -15,10 +17,34 @@ const AboutUs = lazy(() => import('./pages/AboutUs'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
 const Help = lazy(() => import('./pages/Help'));
 
+// Settings Components
+const SettingsLayout = lazy(() => import('./components/Settings/SettingsLayout'));
+const Profile = lazy(() => import('./components/Settings/Profile'));
+const Account = lazy(() => import('./components/Settings/Account'));
+const Notifications = lazy(() => import('./components/Settings/Notifications'));
+const MyShelf = lazy(() => import('./components/Settings/MyShelf'));
+
+function SettingsIndexRedirect() {
+  let email = '';
+  try {
+    const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
+    if (stored) {
+      const u = JSON.parse(stored);
+      email = u.emailId || u.email || '';
+    }
+  } catch (e) {}
+
+  if (email) {
+    return <Navigate to={`profile/${encodeURIComponent(email)}`} replace />;
+  }
+  return <Navigate to="profile" replace />;
+}
+
 export default function App() {
   return (
     <ToastProvider>
-      <Router>
+      <ModernToastProvider>
+        <Router>
         <Routes>
           {/* Public auth routes */}
           <Route path="/" element={<Login />} />
@@ -27,7 +53,7 @@ export default function App() {
           <Route path="/signup" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />
 
-          {/* Main Layout routes */}
+          {/* Protected Main Layout routes */}
           <Route
             element={
               <ProtectedRoute>
@@ -115,12 +141,66 @@ export default function App() {
                 </Suspense>
               }
             />
+
+            {/* Settings Nested Routes */}
+            <Route
+              path="/settings"
+              element={
+                <Suspense fallback={null}>
+                  <SettingsLayout />
+                </Suspense>
+              }
+            >
+              <Route index element={<SettingsIndexRedirect />} />
+              <Route
+                path="profile"
+                element={
+                  <Suspense fallback={null}>
+                    <Profile />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile/:useremail"
+                element={
+                  <Suspense fallback={null}>
+                    <Profile />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="account"
+                element={
+                  <Suspense fallback={null}>
+                    <Account />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="notifications"
+                element={
+                  <Suspense fallback={null}>
+                    <Notifications />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="my-shelf"
+                element={
+                  <Suspense fallback={null}>
+                    <MyShelf />
+                  </Suspense>
+                }
+              />
+
+            </Route>
           </Route>
 
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      </ModernToastProvider>
     </ToastProvider>
   );
 }

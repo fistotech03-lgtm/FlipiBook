@@ -177,7 +177,9 @@ const login = async (req, res) => {
       message: 'Login successful',
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId,
+        email: user.emailId
       }
     });
   } catch (error) {
@@ -249,7 +251,9 @@ const googleLogin = async (req, res) => {
       message: 'Google login successful',
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId,
+        email: user.emailId
       }
     });
   } catch (error) {
@@ -459,7 +463,9 @@ const verifySession = async (req, res) => {
       isAuthenticated: true,
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId,
+        email: user.emailId
       }
     });
   } catch (error) {

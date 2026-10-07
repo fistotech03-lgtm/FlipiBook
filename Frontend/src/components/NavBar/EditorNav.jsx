@@ -5,12 +5,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 const logo = '/Login/logo.svg';
 import { User, Share2, Save, Download, Loader2, Eye, ChevronDown, Monitor, Tablet, Smartphone, Settings } from 'lucide-react';
 import { Icon } from '@iconify/react';
-// import ProfileModal from './ProfileModal';
+import ProfileModal from '../Settings/ProfileModal';
 // import ShareModal from './ShareModal';
 // import EditorSettingsModal from './EditorSettingsModal';
 
 
-const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
+const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
   const [secondsSinceSave, setSecondsSinceSave] = useState(0);
   const [userProfile, setUserProfile] = useState(() => {
     try {
@@ -454,7 +454,7 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
               style={{ backgroundColor: userProfile.picture ? 'transparent' : userProfile.avatarBgColor }}
             >
               {userProfile.picture ? (
-                <img src={userProfile.picture} alt="Profile" className="w-full h-full object-cover" />
+                <img src={userProfile.picture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <span className="text-white font-semibold text-[1.1vw]">
                   {userProfile.name.charAt(0).toUpperCase()}
@@ -472,12 +472,12 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
       </nav>
 
       {/* Render Profile Modal */}
-      {/* <ProfileModal 
+      <ProfileModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)} 
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={onToggleAutoSave}
-      /> */}
+      />
       {/* Render Editor Settings Modal */}
       {/* <EditorSettingsModal 
         isOpen={isEditorSettingsOpen}
@@ -498,4 +498,4 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
   );
 };
 
-export default Navbar;
+export default EditorNavbar;

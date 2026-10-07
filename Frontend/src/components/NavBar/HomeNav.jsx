@@ -3,8 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 // import FlipibookLogo from '../assets/logo/Flipibook_logo.svg';
 const FlipibookLogo = '/Login/logo.svg';
 import { Bell } from 'lucide-react';
-// import ProfileModal from './ProfileModal';
-// import { resolveUploadsPath } from '../utils/supabaseUtils';
+import ProfileModal from '../Settings/ProfileModal';
 const resolveUploadsPath = (path) => path || '';
 
 const defaultColors = [
@@ -24,7 +23,7 @@ const getAvatarColor = (identifier, customColor) => {
   return defaultColors[Math.abs(hash) % defaultColors.length];
 };
 
-export default function DashboardNavbar() {
+export default function HomeNav() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -37,6 +36,34 @@ export default function DashboardNavbar() {
   });
 
   useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    const loadUser = async () => {
+      let currentUser = null;
+      try {
+        const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
+        if (stored) currentUser = JSON.parse(stored);
+      } catch (e) {}
+
+      // If user has missing picture or name, query verify session
+      if (!currentUser?.picture || !currentUser?.name) {
+        try {
+          const res = await fetch(`${backendUrl}/api/auth/verify`, { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.user) {
+              currentUser = { ...(currentUser || {}), ...data.user };
+              localStorage.setItem('user', JSON.stringify(currentUser));
+              localStorage.setItem('user_profile', JSON.stringify(currentUser));
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (currentUser) setUser(currentUser);
+    };
+
+    loadUser();
+
     const handleStorageChange = (e) => {
       if (e?.detail) {
         setUser(e.detail);
@@ -48,7 +75,6 @@ export default function DashboardNavbar() {
       } catch (err) {}
     };
 
-    handleStorageChange();
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('profileUpdate', handleStorageChange);
     return () => {
@@ -62,10 +88,10 @@ export default function DashboardNavbar() {
     { name: 'My Flipbooks', path: '/my-flipbooks' },
     { name: 'Templates', path: '/templates' },
     { name: 'Explore', path: '/explore' },
-    { name: 'Features', path: '#' },
+    { name: 'Features', path: '/features' },
     { name: 'About Us', path: '/about' },
     { name: 'Contact Us', path: '/contact' },
-    { name: 'Help', path: '#' },
+    { name: 'Help', path: '/help' },
     // { name: 'Settings', path: '/settings' },
   ];
 
@@ -76,7 +102,7 @@ export default function DashboardNavbar() {
         {/* Logo */}
         <div className="flex-shrink-0">
           <Link to="/home">
-            <img src={FlipibookLogo} alt="Flipibook" className="h-[2.5vw] w-auto object-contain transition-transform duration-300" />
+            <img src={FlipibookLogo} alt="Flipibook" className="h-[4.5vh] w-auto object-contain transition-transform duration-300" />
           </Link>
         </div>
 
@@ -88,7 +114,7 @@ export default function DashboardNavbar() {
                              (link.name === 'Home' && currentPath === '/') ||
                              (link.path === '/contact' && currentPath === '/contact-us');
             
-            const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-medium text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
+            const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
             const activeLinkStyle = "text-[#ec5137] font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
 
             return (
@@ -107,16 +133,19 @@ export default function DashboardNavbar() {
       {/* Right Actions */}
       <div className="flex items-center gap-[1vw]">
          {/* Notification */}
-         <button className="w-[2.5vw] h-[2.5vw] cursor-pointer flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all duration-200 group">
+         <button className="w-[2.3vw] h-[2.3vw] cursor-pointer flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all duration-200 group">
             <Bell size="1.2vw" className="text-gray-600 group-hover:text-gray-900 transition-colors" />
          </button>
 
-         {/* Profile */}
+         {/* Profile Button with Google Avatar & Name */}
          <button 
            onClick={() => setIsProfileModalOpen(true)}
-           className="w-[2.5vw] h-[2.5vw] cursor-pointer flex items-center justify-center rounded-full border border-gray-200 transition-all duration-200 overflow-hidden group p-[0.1vw] shadow-sm"
-           style={{ backgroundColor: (user?.picture && user?.picture !== 'color_only') ? '#ffffff' : ((user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') ? user?.avatarBgColor : getAvatarColor(user?.name || user?.emailId || user?.email || 'User')) }}
+           className="flex items-center gap-[0.5vw] py-[0.15vw] px-[0.35vw] rounded-full hover:bg-gray-100/80 border border-transparent hover:border-gray-200 transition-all duration-200 cursor-pointer group"
          >
+           <div 
+             className="w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-full border border-gray-200 overflow-hidden p-[0.1vw] shadow-xs flex-shrink-0"
+             style={{ backgroundColor: (user?.picture && user?.picture !== 'color_only') ? '#ffffff' : ((user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') ? user?.avatarBgColor : getAvatarColor(user?.name || user?.emailId || user?.email || 'User')) }}
+           >
              {user?.picture && user?.picture !== 'color_only' ? (
                 <img 
                   src={user.picture.startsWith('blob:') || user.picture.startsWith('data:') ? user.picture : resolveUploadsPath(user.picture)} 
@@ -135,10 +164,16 @@ export default function DashboardNavbar() {
                  {user?.name ? user.name.charAt(0).toUpperCase() : (user?.emailId || user?.email ? (user.emailId || user.email).charAt(0).toUpperCase() : 'U')}
                </div>
              )}
+           </div>
+           {user?.name && (
+             <span className="hidden sm:inline-block text-[0.85vw] font-semibold text-gray-800 max-w-[8vw] truncate text-left group-hover:text-black">
+               {user.name}
+             </span>
+           )}
          </button>
       </div>
     </nav>
-    {/* <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} /> */}
+    <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </>
   );
 }

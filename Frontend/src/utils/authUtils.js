@@ -12,12 +12,6 @@
  */
 export const verifyToken = () => {
   try {
-    // Clean up any stale localStorage tokens from previous implementations
-    if (localStorage.getItem('user') || localStorage.getItem('token')) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-    }
-
     // Check for the flipibook_logged_in cookie indicator set by backend
     const hasCookie = document.cookie
       .split(';')
@@ -35,10 +29,14 @@ export const verifyToken = () => {
 export const clearSession = () => {
   try {
     // Clear the client-readable cookie indicator
-    document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    // Clear any residual storage
+    document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+    // Clear all residual user data and tokens
     localStorage.removeItem('user');
+    localStorage.removeItem('user_profile');
     localStorage.removeItem('token');
+    localStorage.removeItem('last_active_folder');
+    localStorage.removeItem('hide_upgrade_card');
+    sessionStorage.clear();
   } catch (err) {
     console.warn('Error clearing session:', err);
   }

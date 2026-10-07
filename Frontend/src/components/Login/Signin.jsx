@@ -53,6 +53,16 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
           );
 
           if (res.data?.success) {
+            const googleUser = {
+              name: res.data?.user?.name || userInfo.data.name || 'User',
+              email: userInfo.data.email,
+              emailId: userInfo.data.email,
+              picture: res.data?.user?.picture || userInfo.data.picture || null,
+              avatarBgColor: '#E8D4C8'
+            };
+            localStorage.setItem('user', JSON.stringify(googleUser));
+            localStorage.setItem('user_profile', JSON.stringify(googleUser));
+            window.dispatchEvent(new CustomEvent('profileUpdate', { detail: googleUser }));
             toast.success('Login successful with Google!');
             navigate('/home');
           }
@@ -108,6 +118,16 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
       );
 
       if (res.data?.success) {
+        const loggedUser = {
+          name: res.data?.user?.name || email.split('@')[0],
+          email: res.data?.user?.emailId || email,
+          emailId: res.data?.user?.emailId || email,
+          picture: res.data?.user?.picture || null,
+          avatarBgColor: '#E8D4C8'
+        };
+        localStorage.setItem('user', JSON.stringify(loggedUser));
+        localStorage.setItem('user_profile', JSON.stringify(loggedUser));
+        window.dispatchEvent(new CustomEvent('profileUpdate', { detail: loggedUser }));
         toast.success('Login successful!');
         navigate('/home');
       } else {

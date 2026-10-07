@@ -55,6 +55,7 @@ app.use(
     target: `${AUTH_SERVICE_URL}/api/auth`,
     changeOrigin: true,
     cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
     on: {
       error: (err, req, res) => {
         console.error('[API Gateway] Proxy error to auth-service:', err.message);

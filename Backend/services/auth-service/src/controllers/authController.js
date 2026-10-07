@@ -27,11 +27,12 @@ const getClientIp = (req) => {
 
 /**
  * Helper to determine if current connection is HTTPS / Secure
+ * If the connection is plain HTTP (e.g. preview sslip.io or localhost), cookies must NOT have secure=true
+ * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
-  if (process.env.NODE_ENV === 'production') return true;
   if (!req) return false;
-  return req.secure || req.headers['x-forwarded-proto'] === 'https';
+  return req.secure || req.headers['x-forwarded-proto'] === 'https' || req.protocol === 'https';
 };
 
 /**

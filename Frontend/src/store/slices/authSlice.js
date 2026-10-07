@@ -22,10 +22,16 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
       }
       return { isAuthenticated: true, user: res.data.user || null };
     }
-    clearSession();
+    
+    // Explicit unauthenticated response from server
+    if (res.data && res.data.isAuthenticated === false) {
+      clearSession();
+    }
     return { isAuthenticated: false, user: null };
   } catch (err) {
-    clearSession();
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      clearSession();
+    }
     return rejectWithValue(err.response?.data?.message || 'Verification failed');
   }
 });

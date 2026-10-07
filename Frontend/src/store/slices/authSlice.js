@@ -1,19 +1,31 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { verifyToken, clearSession } from '../../utils/authUtils';
+import { verifyToken, clearSession, getSessionToken, setSessionToken } from '../../utils/authUtils';
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    const backupToken = getSessionToken();
+    const headers = {};
+    if (backupToken) {
+      headers.Authorization = `Bearer ${backupToken}`;
+    }
+
     const res = await axios.get(`${backendUrl}/api/auth/verify`, {
+      headers,
       withCredentials: true,
     });
 
     if (res.data?.success && res.data?.isAuthenticated) {
+      if (res.data.token) {
+        setSessionToken(res.data.token);
+      }
       return { isAuthenticated: true, user: res.data.user || null };
     }
+    clearSession();
     return { isAuthenticated: false, user: null };
   } catch (err) {
+    clearSession();
     return rejectWithValue(err.response?.data?.message || 'Verification failed');
   }
 });

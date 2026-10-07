@@ -24,6 +24,30 @@ export const verifyToken = () => {
 };
 
 /**
+ * Store backup token in client storage to survive third-party cookie restrictions
+ */
+export const setSessionToken = (token) => {
+  try {
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    }
+  } catch (err) {
+    console.warn('Storage error:', err);
+  }
+};
+
+/**
+ * Retrieve backup token
+ */
+export const getSessionToken = () => {
+  try {
+    return localStorage.getItem('auth_token') || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Clear client-side session state.
  */
 export const clearSession = () => {
@@ -33,6 +57,7 @@ export const clearSession = () => {
     // Clear any residual storage
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
   } catch (err) {
     console.warn('Error clearing session:', err);
   }

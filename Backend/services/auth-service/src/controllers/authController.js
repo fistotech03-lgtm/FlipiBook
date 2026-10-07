@@ -691,12 +691,23 @@ const getLoginLogs = async (req, res) => {
 };
 
 /**
+ * Helper to reliably extract cookies from req.cookies or raw req.headers.cookie
+ */
+const getCookie = (req, name) => {
+  if (req.cookies?.[name]) return req.cookies[name];
+  const raw = req.headers.cookie;
+  if (!raw) return null;
+  const match = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+/**
  * 8. Verify Session (Current Authenticated User Context)
  */
 const verifySession = async (req, res) => {
   try {
-    const accessToken = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
-    const refreshToken = req.cookies?.refreshToken;
+    const accessToken = getCookie(req, 'token') || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+    const refreshToken = getCookie(req, 'refreshToken');
 
     let targetUserId = null;
 

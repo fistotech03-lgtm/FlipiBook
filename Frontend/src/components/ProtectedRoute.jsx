@@ -4,21 +4,20 @@ import { useAuth } from '../context/AuthContext';
 import { verifyToken } from '../utils/authUtils';
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isAuthenticated, isLoading, openAuthModal } = useAuth();
   const location = useLocation();
 
-  // Synchronous cookie check or in-memory auth check
   const isAuthorized = isAuthenticated || verifyToken();
 
   useEffect(() => {
-    if (!isAuthorized) {
+    if (!isLoading && !isAuthorized) {
       openAuthModal('signin', location.pathname);
     }
-  }, [isAuthorized, location.pathname, openAuthModal]);
+  }, [isLoading, isAuthorized, location.pathname, openAuthModal]);
 
-  return isAuthorized ? (
-    children
-  ) : (
-    <Navigate to="/" replace />
-  );
+  if (isLoading) {
+    return null;
+  }
+
+  return isAuthorized ? children : <Navigate to="/" replace />;
 }

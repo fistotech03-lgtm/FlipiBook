@@ -7,9 +7,10 @@ import { useGoogleLogin } from '@react-oauth/google';
 
 import { useToast } from '../CustomToast';
 import { useAuth } from '../../context/AuthContext';
+import { getErrorMessage } from '../../utils/authUtils';
 
 export default function Signup({ onSwitchToSignin }) {
-  const { checkAuth, closeAuthModal, authRedirectPath } = useAuth();
+  const { setUser, closeAuthModal, authRedirectPath } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +74,7 @@ export default function Signup({ onSwitchToSignin }) {
           );
 
           if (res.data?.success) {
-            await checkAuth();
+            setUser(res.data.user || { name: userInfo.data.name, picture: userInfo.data.picture });
             toast.success('Registration successful with Google!');
             closeAuthModal?.();
             if (authRedirectPath) {
@@ -82,11 +83,7 @@ export default function Signup({ onSwitchToSignin }) {
           }
         } catch (err) {
           console.error('Google Auth Error:', err);
-          const errorMsg =
-            err.response?.data?.message ||
-            (typeof err.response?.data === 'string' && err.response?.status ? `Server Error (${err.response.status})` : null) ||
-            err.message ||
-            'Google Registration failed';
+          const errorMsg = getErrorMessage(err, 'Google Registration failed. Please try again.');
           toast.error(errorMsg);
 
           // If account already exists, auto-switch to Sign in tab
@@ -166,8 +163,9 @@ export default function Signup({ onSwitchToSignin }) {
         toast.error(res.data?.message || 'Failed to send verification code');
       }
     } catch (err) {
-      console.error('Signup OTP error:', err.response?.data?.message || err.message);
-      toast.error(err.response?.data?.message || 'Failed to send verification code');
+      console.error('Signup OTP error:', err);
+      const errorMsg = getErrorMessage(err, 'Failed to send verification code');
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -197,8 +195,8 @@ export default function Signup({ onSwitchToSignin }) {
       );
 
       if (res.data?.success) {
+        setUser(res.data.user || { emailId: cleanEmail });
         toast.success('Account created & verified successfully!');
-        await checkAuth();
         closeAuthModal?.();
         if (authRedirectPath) {
           navigate(authRedirectPath);
@@ -207,8 +205,9 @@ export default function Signup({ onSwitchToSignin }) {
         toast.error(res.data?.message || 'Verification failed');
       }
     } catch (err) {
-      console.error('Verify Signup error:', err.response?.data?.message || err.message);
-      toast.error(err.response?.data?.message || 'Verification failed');
+      console.error('Verify Signup error:', err);
+      const errorMsg = getErrorMessage(err, 'Verification failed. Please check the code.');
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -239,7 +238,9 @@ export default function Signup({ onSwitchToSignin }) {
         toast.error(res.data?.message || 'Failed to resend code');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to resend code');
+      console.error('Resend OTP error:', err);
+      const errorMsg = getErrorMessage(err, 'Failed to resend code');
+      toast.error(errorMsg);
     } finally {
       setIsResending(false);
     }

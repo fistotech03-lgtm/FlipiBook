@@ -1,9 +1,18 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const LoginLog = require('../models/LoginLog');
 const SignupOtp = require('../models/SignupOtp');
-const { generateToken, verifyToken } = require('../utils/jwtHelper');
+const { generateToken, generateRefreshToken, verifyToken } = require('../utils/jwtHelper');
 const { sendOtpEmail, sendSignupOtpEmail } = require('../utils/emailService');
+
+/**
+ * Hash 6-digit OTP using SHA-256 before database storage
+ */
+const hashOtp = (otp) => {
+  if (!otp) return '';
+  return crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+};
 
 /**
  * Extract client IP address accurately from request
@@ -17,27 +26,39 @@ const getClientIp = (req) => {
 };
 
 /**
- * Helper to securely attach HttpOnly cookie for JWT
+ * Helper to securely attach HttpOnly cookies for Access Token and Refresh Token (7 days)
  * and a non-sensitive cookie indicator for client UI routing
  */
-const setAuthCookies = (res, token) => {
+const setAuthCookies = (res, accessToken, refreshToken = null) => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
-  // 1. HttpOnly token cookie (inaccessible via JavaScript)
-  res.cookie('token', token, {
+  // 1. HttpOnly Access Token cookie
+  res.cookie('token', accessToken, {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: SEVEN_DAYS,
     path: '/'
   });
 
-  // 2. Non-sensitive client indicator (zero credentials, zero user IDs)
+  // 2. HttpOnly Refresh Token cookie (7 days)
+  if (refreshToken) {
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: SEVEN_DAYS,
+      path: '/'
+    });
+  }
+
+  // 3. Non-sensitive client indicator (zero credentials, zero user IDs)
   res.cookie('flipibook_logged_in', 'true', {
     httpOnly: false,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: SEVEN_DAYS,
     path: '/'
   });
 };
@@ -51,8 +72,10 @@ const clearAuthCookies = (res) => {
     path: '/'
   };
   res.clearCookie('token', cookieOpts);
+  res.clearCookie('refreshToken', cookieOpts);
   res.clearCookie('flipibook_logged_in', { ...cookieOpts, httpOnly: false });
 };
+
 
 /**
  * 1. User Signup
@@ -108,7 +131,14 @@ const signup = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token);
+    const refreshToken = generateRefreshToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token, refreshToken);
 
     return res.status(201).json({
       success: true,
@@ -159,20 +189,20 @@ const sendSignupOtp = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Upsert into SignupOtp
+    // Upsert into SignupOtp with SHA-256 hashed OTP
     await SignupOtp.findOneAndUpdate(
       { emailId: cleanEmail },
       {
         name: name ? name.trim() : '',
         emailId: cleanEmail,
         password: hashedPassword,
-        otp,
+        otp: hashOtp(otp),
         expiresAt
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Send signup verification email
+    // Send signup verification email (plaintext to recipient)
     await sendSignupOtpEmail(cleanEmail, otp, name ? name.trim() : '');
 
     return res.status(200).json({
@@ -221,7 +251,8 @@ const verifySignupOtp = async (req, res) => {
       });
     }
 
-    if (pendingSignup.otp !== cleanOtp) {
+    // Verify SHA-256 hashed OTP
+    if (pendingSignup.otp !== hashOtp(cleanOtp)) {
       return res.status(400).json({ success: false, message: 'Invalid verification code' });
     }
 
@@ -259,7 +290,14 @@ const verifySignupOtp = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token);
+    const refreshToken = generateRefreshToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token, refreshToken);
 
     return res.status(201).json({
       success: true,
@@ -297,7 +335,7 @@ const resendSignupOtp = async (req, res) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    pendingSignup.otp = otp;
+    pendingSignup.otp = hashOtp(otp);
     pendingSignup.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await pendingSignup.save();
 
@@ -364,7 +402,14 @@ const login = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token);
+    const refreshToken = generateRefreshToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token, refreshToken);
 
     return res.status(200).json({
       success: true,
@@ -454,7 +499,14 @@ const googleLogin = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token);
+    const refreshToken = generateRefreshToken({
+      userId: user.userID,
+      emailId: user.emailId,
+      id: user._id,
+      sessionId: loginLog._id
+    });
+
+    setAuthCookies(res, token, refreshToken);
 
     return res.status(200).json({
       success: true,
@@ -493,13 +545,13 @@ const forgotPassword = async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     user.otp = {
-      code: otp,
+      code: hashOtp(otp),
       expiresAt
     };
 
     await user.save();
 
-    // Send email using Nodemailer
+    // Send email using Nodemailer (plaintext to recipient)
     await sendOtpEmail(cleanEmail, otp);
 
     return res.status(200).json({
@@ -539,8 +591,8 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
     }
 
-    // Verify OTP code
-    if (user.otp.code !== otp.trim()) {
+    // Verify SHA-256 hashed OTP code
+    if (user.otp.code !== hashOtp(otp)) {
       return res.status(400).json({ success: false, message: 'Invalid OTP code' });
     }
 
@@ -637,29 +689,66 @@ const getLoginLogs = async (req, res) => {
  */
 const verifySession = async (req, res) => {
   try {
-    const token = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
-    if (!token) {
-      return res.status(200).json({
-        success: true,
-        isAuthenticated: false,
-        user: null,
-        message: 'No active session token'
-      });
+    const accessToken = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+    const refreshToken = req.cookies?.refreshToken;
+
+    let targetUserId = null;
+
+    // 1. Try verifying the Access Token (1 hour)
+    if (accessToken) {
+      const decodedAccess = verifyToken(accessToken);
+      if (decodedAccess && decodedAccess.id) {
+        targetUserId = decodedAccess.id;
+      }
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.id) {
+    // 2. If Access Token expired/missing, fallback to Refresh Token (7 days)
+    if (!targetUserId && refreshToken) {
+      const decodedRefresh = verifyToken(refreshToken);
+      if (decodedRefresh && decodedRefresh.id) {
+        // Verify session is active in LoginLog
+        if (decodedRefresh.sessionId) {
+          const session = await LoginLog.findById(decodedRefresh.sessionId);
+          if (session && session.status === 'LOGGED_OUT') {
+            clearAuthCookies(res);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: 'Session has been logged out'
+            });
+          }
+        }
+
+        // Issue a fresh new Access Token (1 hour)
+        const newAccessToken = generateToken({
+          userId: decodedRefresh.userId,
+          emailId: decodedRefresh.emailId,
+          id: decodedRefresh.id,
+          sessionId: decodedRefresh.sessionId
+        });
+
+        // Set the refreshed Access Token cookie while maintaining the 7-day Refresh Token
+        setAuthCookies(res, newAccessToken, refreshToken);
+        targetUserId = decodedRefresh.id;
+      }
+    }
+
+    // 3. If neither token is valid, clear cookies and return unauthenticated
+    if (!targetUserId) {
       clearAuthCookies(res);
       return res.status(200).json({
         success: true,
         isAuthenticated: false,
         user: null,
-        message: 'Session has expired or is invalid'
+        message: 'No active session or session expired'
       });
     }
 
-    const user = await User.findById(decoded.id).select('name picture emailId');
+    // 4. Retrieve user details
+    const user = await User.findById(targetUserId).select('name picture emailId');
     if (!user) {
+      console.warn('[Verify Session] User not found for id:', targetUserId);
       clearAuthCookies(res);
       return res.status(200).json({
         success: true,
@@ -674,7 +763,8 @@ const verifySession = async (req, res) => {
       isAuthenticated: true,
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId
       }
     });
   } catch (error) {

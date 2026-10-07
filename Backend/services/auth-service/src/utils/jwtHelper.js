@@ -70,10 +70,11 @@ if (!privateKey || !publicKey) {
   }
 }
 
-const JWT_EXPIRES_IN = '7d';
+const ACCESS_TOKEN_EXPIRES_IN = '1h';
+const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 /**
- * Sign payload using RS256 algorithm with RSA Private Key
+ * Sign Access Token using RS256 algorithm with RSA Private Key (1 hour)
  */
 const generateToken = (payload) => {
   if (!privateKey) {
@@ -81,7 +82,20 @@ const generateToken = (payload) => {
   }
   return jwt.sign(payload, privateKey, {
     algorithm: 'RS256',
-    expiresIn: JWT_EXPIRES_IN
+    expiresIn: ACCESS_TOKEN_EXPIRES_IN
+  });
+};
+
+/**
+ * Sign Refresh Token using RS256 algorithm with RSA Private Key (7 days)
+ */
+const generateRefreshToken = (payload) => {
+  if (!privateKey) {
+    throw new Error('[JWT] Cannot sign refresh token: RSA private key is missing');
+  }
+  return jwt.sign({ ...payload, type: 'refresh' }, privateKey, {
+    algorithm: 'RS256',
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN
   });
 };
 
@@ -89,19 +103,26 @@ const generateToken = (payload) => {
  * Verify token using RS256 algorithm with RSA Public Key
  */
 const verifyToken = (token) => {
-  if (!token || !publicKey) return null;
+  if (!token) return null;
+  if (!publicKey) {
+    console.error('[JWT Verify Error] Cannot verify token: RSA public key is missing');
+    return null;
+  }
   try {
     return jwt.verify(token, publicKey, {
       algorithms: ['RS256']
     });
-  } catch {
+  } catch (err) {
+    console.warn('[JWT Verify Warning]:', err.message);
     return null;
   }
 };
 
 module.exports = {
   generateToken,
+  generateRefreshToken,
   verifyToken,
   publicKey,
   privateKey
 };
+

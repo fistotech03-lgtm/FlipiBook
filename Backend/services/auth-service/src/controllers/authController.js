@@ -740,14 +740,24 @@ const verifySession = async (req, res) => {
       }
     }
 
-    // 3. If neither token is valid, clear cookies and return unauthenticated
+    // 3. If no tokens were provided in the request, return unauthenticated without altering cookies
+    if (!accessToken && !refreshToken) {
+      return res.status(200).json({
+        success: true,
+        isAuthenticated: false,
+        user: null,
+        message: 'No active session'
+      });
+    }
+
+    // 4. If tokens were provided but could not be validated or refreshed, clear and return unauthenticated
     if (!targetUserId) {
       clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
         isAuthenticated: false,
         user: null,
-        message: 'No active session or session expired'
+        message: 'Session has expired'
       });
     }
 

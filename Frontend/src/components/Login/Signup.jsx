@@ -7,7 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 
 import { useToast } from '../CustomToast';
 import { useAuth } from '../../context/AuthContext';
-import { getErrorMessage } from '../../utils/authUtils';
+import { getErrorMessage, setSessionToken } from '../../utils/authUtils';
 
 export default function Signup({ onSwitchToSignin }) {
   const { setUser, closeAuthModal, authRedirectPath } = useAuth();
@@ -74,6 +74,9 @@ export default function Signup({ onSwitchToSignin }) {
           );
 
           if (res.data?.success) {
+            if (res.data.token) {
+              setSessionToken(res.data.token);
+            }
             setUser(res.data.user || { name: userInfo.data.name, picture: userInfo.data.picture });
             toast.success('Registration successful with Google!');
             closeAuthModal?.();
@@ -195,6 +198,9 @@ export default function Signup({ onSwitchToSignin }) {
       );
 
       if (res.data?.success) {
+        if (res.data.token) {
+          setSessionToken(res.data.token);
+        }
         setUser(res.data.user || { emailId: cleanEmail });
         toast.success('Account created & verified successfully!');
         closeAuthModal?.();

@@ -149,6 +149,7 @@ const signup = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Account created successfully',
+      token,
       user: {
         name: user.name,
         picture: user.picture
@@ -308,6 +309,7 @@ const verifySignupOtp = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Account verified and created successfully',
+      token,
       user: {
         name: user.name,
         picture: user.picture
@@ -420,6 +422,7 @@ const login = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Login successful',
+      token,
       user: {
         name: user.name,
         picture: user.picture
@@ -517,6 +520,7 @@ const googleLogin = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Google login successful',
+      token,
       user: {
         name: user.name,
         picture: user.picture
@@ -788,6 +792,7 @@ const verifySession = async (req, res) => {
     return res.status(200).json({
       success: true,
       isAuthenticated: true,
+      token: accessToken,
       user: {
         name: user.name,
         picture: user.picture,

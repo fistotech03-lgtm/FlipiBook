@@ -71,7 +71,10 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
         } catch (err) {
           console.error("Google Auth Error:", err);
           const errorMsg =
-            err.response?.data?.message || "Google Authentication failed";
+            err.response?.data?.message ||
+            (typeof err.response?.data === 'string' && err.response?.status ? `Server Error (${err.response.status})` : null) ||
+            err.message ||
+            "Google Authentication failed";
           toast.error(errorMsg);
 
           // If account doesn't exist, auto-switch to Sign up tab

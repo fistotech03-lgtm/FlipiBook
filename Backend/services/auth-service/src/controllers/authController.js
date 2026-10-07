@@ -639,9 +639,10 @@ const verifySession = async (req, res) => {
   try {
     const token = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
     if (!token) {
-      return res.status(401).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         isAuthenticated: false,
+        user: null,
         message: 'No active session token'
       });
     }
@@ -649,9 +650,10 @@ const verifySession = async (req, res) => {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.id) {
       clearAuthCookies(res);
-      return res.status(401).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         isAuthenticated: false,
+        user: null,
         message: 'Session has expired or is invalid'
       });
     }
@@ -659,9 +661,10 @@ const verifySession = async (req, res) => {
     const user = await User.findById(decoded.id).select('name picture emailId');
     if (!user) {
       clearAuthCookies(res);
-      return res.status(401).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         isAuthenticated: false,
+        user: null,
         message: 'User no longer exists'
       });
     }

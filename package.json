@@ -1,0 +1,19 @@
+{
+  "name": "flipibook",
+  "version": "1.0.0",
+  "description": "FlipiBook - Monorepo root to run Frontend and Backend",
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"green,blue\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm --prefix Backend run dev",
+    "dev:frontend": "npm --prefix Frontend run dev",
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"green,blue\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "npm --prefix Backend run start",
+    "start:frontend": "npm --prefix Frontend run preview",
+    "build": "npm --prefix Frontend run build",
+    "build:frontend": "npm --prefix Frontend run build",
+    "install:all": "npm install && npm --prefix Backend install && npm --prefix Frontend install"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

@@ -83,7 +83,10 @@ export default function Signup({ onSwitchToSignin }) {
         } catch (err) {
           console.error('Google Auth Error:', err);
           const errorMsg =
-            err.response?.data?.message || 'Google Registration failed';
+            err.response?.data?.message ||
+            (typeof err.response?.data === 'string' && err.response?.status ? `Server Error (${err.response.status})` : null) ||
+            err.message ||
+            'Google Registration failed';
           toast.error(errorMsg);
 
           // If account already exists, auto-switch to Sign in tab

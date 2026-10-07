@@ -26,49 +26,51 @@ const getClientIp = (req) => {
 };
 
 /**
+ * Helper to determine if current connection is HTTPS / Secure
+ */
+const isSecureConnection = (req) => {
+  if (process.env.NODE_ENV === 'production') return true;
+  if (!req) return false;
+  return req.secure || req.headers['x-forwarded-proto'] === 'https';
+};
+
+/**
  * Helper to securely attach HttpOnly cookies for Access Token and Refresh Token (7 days)
  * and a non-sensitive cookie indicator for client UI routing
  */
-const setAuthCookies = (res, accessToken, refreshToken = null) => {
-  const isProduction = process.env.NODE_ENV === 'production';
+const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
+  const isSecure = isSecureConnection(req);
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
-  // 1. HttpOnly Access Token cookie
-  res.cookie('token', accessToken, {
+  const cookieOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
     maxAge: SEVEN_DAYS,
     path: '/'
-  });
+  };
+
+  // 1. HttpOnly Access Token cookie
+  res.cookie('token', accessToken, cookieOptions);
 
   // 2. HttpOnly Refresh Token cookie (7 days)
   if (refreshToken) {
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      maxAge: SEVEN_DAYS,
-      path: '/'
-    });
+    res.cookie('refreshToken', refreshToken, cookieOptions);
   }
 
   // 3. Non-sensitive client indicator (zero credentials, zero user IDs)
   res.cookie('flipibook_logged_in', 'true', {
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: SEVEN_DAYS,
-    path: '/'
+    ...cookieOptions,
+    httpOnly: false
   });
 };
 
-const clearAuthCookies = (res) => {
-  const isProduction = process.env.NODE_ENV === 'production';
+const clearAuthCookies = (res, req = null) => {
+  const isSecure = isSecureConnection(req);
   const cookieOpts = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
     path: '/'
   };
   res.clearCookie('token', cookieOpts);
@@ -138,7 +140,7 @@ const signup = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token, refreshToken);
+    setAuthCookies(res, token, refreshToken, req);
 
     return res.status(201).json({
       success: true,
@@ -297,7 +299,7 @@ const verifySignupOtp = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token, refreshToken);
+    setAuthCookies(res, token, refreshToken, req);
 
     return res.status(201).json({
       success: true,
@@ -409,7 +411,7 @@ const login = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token, refreshToken);
+    setAuthCookies(res, token, refreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -506,7 +508,7 @@ const googleLogin = async (req, res) => {
       sessionId: loginLog._id
     });
 
-    setAuthCookies(res, token, refreshToken);
+    setAuthCookies(res, token, refreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -648,7 +650,7 @@ const logout = async (req, res) => {
       );
     }
 
-    clearAuthCookies(res);
+    clearAuthCookies(res, req);
 
     return res.status(200).json({
       success: true,
@@ -710,7 +712,7 @@ const verifySession = async (req, res) => {
         if (decodedRefresh.sessionId) {
           const session = await LoginLog.findById(decodedRefresh.sessionId);
           if (session && session.status === 'LOGGED_OUT') {
-            clearAuthCookies(res);
+            clearAuthCookies(res, req);
             return res.status(200).json({
               success: true,
               isAuthenticated: false,
@@ -729,14 +731,14 @@ const verifySession = async (req, res) => {
         });
 
         // Set the refreshed Access Token cookie while maintaining the 7-day Refresh Token
-        setAuthCookies(res, newAccessToken, refreshToken);
+        setAuthCookies(res, newAccessToken, refreshToken, req);
         targetUserId = decodedRefresh.id;
       }
     }
 
     // 3. If neither token is valid, clear cookies and return unauthenticated
     if (!targetUserId) {
-      clearAuthCookies(res);
+      clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
         isAuthenticated: false,
@@ -749,7 +751,7 @@ const verifySession = async (req, res) => {
     const user = await User.findById(targetUserId).select('name picture emailId');
     if (!user) {
       console.warn('[Verify Session] User not found for id:', targetUserId);
-      clearAuthCookies(res);
+      clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
         isAuthenticated: false,

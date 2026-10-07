@@ -7,9 +7,10 @@ import { useGoogleLogin } from "@react-oauth/google";
 
 import { useToast } from "../CustomToast";
 import { useAuth } from "../../context/AuthContext";
+import { getErrorMessage } from "../../utils/authUtils";
 
 export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
-  const { checkAuth, closeAuthModal, authRedirectPath } = useAuth();
+  const { setUser, closeAuthModal, authRedirectPath } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,7 +62,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
           );
 
           if (res.data?.success) {
-            await checkAuth();
+            setUser(res.data.user || { name: userInfo.data.name, picture: userInfo.data.picture });
             toast.success("Login successful with Google!");
             closeAuthModal?.();
             if (authRedirectPath) {
@@ -70,11 +71,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
           }
         } catch (err) {
           console.error("Google Auth Error:", err);
-          const errorMsg =
-            err.response?.data?.message ||
-            (typeof err.response?.data === 'string' && err.response?.status ? `Server Error (${err.response.status})` : null) ||
-            err.message ||
-            "Google Authentication failed";
+          const errorMsg = getErrorMessage(err, "Google Authentication failed. Please try again.");
           toast.error(errorMsg);
 
           // If account doesn't exist, auto-switch to Sign up tab
@@ -132,7 +129,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
       );
 
       if (res.data?.success) {
-        await checkAuth();
+        setUser(res.data.user || { emailId: email });
         toast.success("Login successful!");
         closeAuthModal?.();
         if (authRedirectPath) {
@@ -142,9 +139,8 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
         throw new Error(res.data?.message || "Login failed");
       }
     } catch (err) {
-      console.error("Login error:", err.response?.data?.message || err.message);
-      const errorMsg =
-        err.response?.data?.message || "Invalid email or password";
+      console.error("Login error:", err);
+      const errorMsg = getErrorMessage(err, "Invalid email or password");
       toast.error(errorMsg);
 
       // If account doesn't exist, auto-switch to Sign up tab

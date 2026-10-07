@@ -41,24 +41,19 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const Counter = require('./Counter');
+
 userSchema.pre('save', async function () {
   if (this.userID) return;
 
   try {
-    const lastUser = await this.constructor
-      .findOne({ userID: { $regex: /^FLIPI/ } })
-      .sort({ createdAt: -1 });
+    const counter = await Counter.findByIdAndUpdate(
+      { _id: 'userId' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
 
-    let nextNumber = 1;
-
-    if (lastUser && lastUser.userID) {
-      const match = lastUser.userID.match(/\d+$/);
-      if (match && match[0]) {
-        nextNumber = parseInt(match[0], 10) + 1;
-      }
-    }
-
-    this.userID = `FLIPI${String(nextNumber).padStart(4, '0')}`;
+    this.userID = `FLIPI${String(counter.seq).padStart(4, '0')}`;
   } catch (err) {
     throw err;
   }

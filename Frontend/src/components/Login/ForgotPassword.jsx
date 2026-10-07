@@ -3,6 +3,7 @@ import { Eye, EyeOff, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
 import { useToast } from '../CustomToast';
+import { getErrorMessage } from '../../utils/authUtils';
 
 export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) {
   const [email, setEmail] = useState(initialEmail);
@@ -55,17 +56,19 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
     setIsLoading(true);
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      await axios.post(`${backendUrl}/api/auth/forgot-password`, { emailId: cleanEmail });
-      toast.success('OTP sent to your email!');
-      setIsOtpSent(true);
-      setTimer(60);
-      setTimeout(() => otpInputRefs.current[0]?.focus(), 150);
-    } catch {
-      // Mock / fallback so UI works seamlessly
-      toast.success('OTP sent to your email!');
-      setIsOtpSent(true);
-      setTimer(60);
-      setTimeout(() => otpInputRefs.current[0]?.focus(), 150);
+      const res = await axios.post(`${backendUrl}/api/auth/forgot-password`, { emailId: cleanEmail });
+      if (res.data?.success) {
+        toast.success('OTP sent to your email!');
+        setIsOtpSent(true);
+        setTimer(60);
+        setTimeout(() => otpInputRefs.current[0]?.focus(), 150);
+      } else {
+        toast.error(res.data?.message || 'Failed to send OTP');
+      }
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      const errorMsg = getErrorMessage(err, 'Failed to send OTP');
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -109,16 +112,21 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
     setIsResending(true);
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      await axios.post(`${backendUrl}/api/auth/forgot-password`, {
+      const res = await axios.post(`${backendUrl}/api/auth/forgot-password`, {
         emailId: email.trim().toLowerCase()
       });
-      toast.success('New OTP sent to your email');
-      setTimer(60);
-      setOtp(['', '', '', '', '', '']);
-      otpInputRefs.current[0]?.focus();
-    } catch {
-      toast.success('New OTP sent!');
-      setTimer(60);
+      if (res.data?.success) {
+        toast.success('New OTP sent to your email');
+        setTimer(60);
+        setOtp(['', '', '', '', '', '']);
+        otpInputRefs.current[0]?.focus();
+      } else {
+        toast.error(res.data?.message || 'Failed to resend OTP');
+      }
+    } catch (err) {
+      console.error('Resend OTP error:', err);
+      const errorMsg = getErrorMessage(err, 'Failed to resend OTP');
+      toast.error(errorMsg);
     } finally {
       setIsResending(false);
     }
@@ -143,15 +151,16 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
         newPassword
       });
 
-      if (res.data?.success || res.status === 200) {
+      if (res.data?.success) {
         toast.success('Password updated successfully! Please sign in.');
         onSwitchToSignin();
       } else {
         toast.error(res.data?.message || 'Failed to update password');
       }
-    } catch {
-      toast.success('Password updated successfully! Please sign in.');
-      onSwitchToSignin();
+    } catch (err) {
+      console.error('Reset password error:', err);
+      const errorMsg = getErrorMessage(err, 'Failed to update password');
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }

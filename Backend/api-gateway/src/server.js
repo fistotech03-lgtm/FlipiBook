@@ -8,6 +8,7 @@ const os = require('os');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.GATEWAY_PORT || process.env.PORT || 8000;
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
 

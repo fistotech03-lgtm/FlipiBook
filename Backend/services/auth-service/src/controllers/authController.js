@@ -32,9 +32,9 @@ const getClientIp = (req) => {
  */
 const isSecureConnection = (req) => {
   if (!req) return process.env.NODE_ENV === 'production';
-  const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : '') || req.protocol;
-  const referer = req.headers['referer'] || '';
-  const origin = req.headers['origin'] || '';
+  const proto = req.headers?.['x-forwarded-proto'] || (req.secure ? 'https' : '') || req.protocol;
+  const referer = req.headers?.['referer'] || '';
+  const origin = req.headers?.['origin'] || '';
   return proto === 'https' || referer.startsWith('https://') || origin.startsWith('https://') || process.env.NODE_ENV === 'production';
 };
 
@@ -714,12 +714,14 @@ const verifySession = async (req, res) => {
     const refreshToken = getCookie(req, 'refreshToken');
 
     let targetUserId = null;
+    let activeToken = accessToken;
 
     // 1. Try verifying the Access Token (1 hour)
     if (accessToken) {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
         targetUserId = decodedAccess.id;
+        activeToken = accessToken;
       }
     }
 
@@ -752,6 +754,7 @@ const verifySession = async (req, res) => {
         // Set the refreshed Access Token cookie while maintaining the 7-day Refresh Token
         setAuthCookies(res, newAccessToken, refreshToken, req);
         targetUserId = decodedRefresh.id;
+        activeToken = newAccessToken;
       }
     }
 
@@ -776,7 +779,7 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 4. Retrieve user details
+    // 5. Retrieve user details
     const user = await User.findById(targetUserId).select('name picture emailId');
     if (!user) {
       console.warn('[Verify Session] User not found for id:', targetUserId);
@@ -792,7 +795,7 @@ const verifySession = async (req, res) => {
     return res.status(200).json({
       success: true,
       isAuthenticated: true,
-      token: accessToken,
+      token: activeToken,
       user: {
         name: user.name,
         picture: user.picture,

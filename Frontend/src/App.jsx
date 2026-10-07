@@ -1,10 +1,23 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { ToastProvider } from './components/CustomToast';
-import Login from './pages/login';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthModal } from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/mainLayout';
+
+function AuthRouteRedirect({ mode = 'signin' }) {
+  const { openAuthModal } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || null;
+
+  useEffect(() => {
+    openAuthModal(mode, redirect);
+  }, [mode, redirect, openAuthModal]);
+
+  return <Navigate to="/" replace />;
+}
 
 const Home = lazy(() => import('./pages/Home'));
 const MyFlipbooks = lazy(() => import('./pages/MyFlipbooks'));
@@ -18,23 +31,26 @@ const Help = lazy(() => import('./pages/Help'));
 export default function App() {
   return (
     <ToastProvider>
-      <Router>
-        <Routes>
-          {/* Public auth routes */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signin" element={<Login />} />
-          <Route path="/signup" element={<Login />} />
-          <Route path="/forgot-password" element={<Login />} />
+      <AuthProvider>
+        <Router>
+          <AuthModal />
+          <Routes>
+            {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
+            <Route path="/login" element={<AuthRouteRedirect mode="signin" />} />
+            <Route path="/signin" element={<AuthRouteRedirect mode="signin" />} />
+            <Route path="/signup" element={<AuthRouteRedirect mode="signup" />} />
+            <Route path="/forgot-password" element={<AuthRouteRedirect mode="forgot-password" />} />
 
-          {/* Main Layout routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
+          {/* Main Layout routes — accessible without login initially */}
+          <Route element={<MainLayout />}>
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={null}>
+                  <Home />
+                </Suspense>
+              }
+            />
             <Route
               path="/home"
               element={
@@ -46,9 +62,11 @@ export default function App() {
             <Route
               path="/my-flipbooks"
               element={
-                <Suspense fallback={null}>
-                  <MyFlipbooks />
-                </Suspense>
+                <ProtectedRoute>
+                  <Suspense fallback={null}>
+                    <MyFlipbooks />
+                  </Suspense>
+                </ProtectedRoute>
               }
             />
             <Route
@@ -121,6 +139,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      </AuthProvider>
     </ToastProvider>
   );
 }

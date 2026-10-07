@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const {
   signup,
+  sendSignupOtp,
+  verifySignupOtp,
+  resendSignupOtp,
   login,
   googleLogin,
   forgotPassword,
@@ -13,6 +16,9 @@ const {
 
 // Public Auth Endpoints
 router.post('/signup', signup);
+router.post('/signup-otp', sendSignupOtp);
+router.post('/verify-signup-otp', verifySignupOtp);
+router.post('/resend-signup-otp', resendSignupOtp);
 router.post('/login', login);
 router.post('/google-login', googleLogin);
 router.post('/forgot-password', forgotPassword);

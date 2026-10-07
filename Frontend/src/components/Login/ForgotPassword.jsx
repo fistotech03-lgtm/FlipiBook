@@ -158,13 +158,13 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-center gap-[2.5vw]">
+    <div className="w-full h-full flex flex-col justify-center gap-[1.3vw] py-[1vw]">
       {/* 1. Header Section */}
       <div className="text-center">
         <h1 className="text-[1.8vw] font-semibold font-poppins tracking-tight text-gray-900 uppercase leading-tight">
           Reset Password
         </h1>
-        <p className="text-[0.82vw] text-gray-400 font-inter mt-[0.5vw]">
+        <p className="text-[0.82vw] text-gray-500 font-inter mt-[0.35vw] px-[0.4vw]">
           {isOtpSent
             ? 'Enter the 6-digit code sent to your email to update'
             : 'Enter your Gmail & new password to receive verification OTP'}
@@ -174,14 +174,14 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
       {/* 2. Unified Form */}
       <form
         onSubmit={isOtpSent ? handleUpdatePassword : handleGetOtp}
-        className="flex flex-col gap-[1.2vw]"
+        className="flex flex-col gap-[0.9vw]"
         noValidate
       >
-        <div className="space-y-[0.85vw]">
+        <div className="space-y-[0.75vw]">
           {/* Gmail / Email Address */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-[0.9vw] flex items-center pointer-events-none text-gray-400">
-              <Icon icon="codicon:mail" className="w-[1.2vw] h-[1.2vw]" />
+            <div className="absolute inset-y-0 left-0 pl-[0.8vw] flex items-center pointer-events-none text-gray-400">
+              <Icon icon="codicon:mail" className="w-[1.1vw] h-[1.1vw]" />
             </div>
             <input
               type="email"
@@ -191,14 +191,14 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your Gmail / Email ID"
               required
-              className="w-full pl-[2.8vw] pr-[1vw] py-[0.7vw] bg-white border border-gray-200 rounded-[0.75vw] text-[0.85vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-200 transition-all disabled:opacity-75 disabled:bg-gray-50 shadow-xs"
+              className="w-full pl-[2.4vw] pr-[0.8vw] py-[0.65vw] bg-white border border-gray-200 rounded-[0.65vw] text-[0.8vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-100 transition-all disabled:opacity-60 shadow-xs"
             />
           </div>
 
           {/* New Password */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-[0.9vw] flex items-center pointer-events-none text-gray-400">
-              <Icon icon="ep:lock" className="w-[1.2vw] h-[1.2vw]" />
+            <div className="absolute inset-y-0 left-0 pl-[0.8vw] flex items-center pointer-events-none text-gray-400">
+              <Icon icon="ep:lock" className="w-[1.1vw] h-[1.1vw]" />
             </div>
             <input
               type={showNewPass ? 'text' : 'password'}
@@ -208,12 +208,12 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New Password (min 6 characters)"
               required
-              className="w-full pl-[2.8vw] pr-[2.8vw] py-[0.7vw] bg-white border border-gray-200 rounded-[0.75vw] text-[0.85vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-200 transition-all disabled:opacity-75 disabled:bg-gray-50 shadow-xs"
+              className="w-full pl-[2.4vw] pr-[2.4vw] py-[0.65vw] bg-white border border-gray-200 rounded-[0.65vw] text-[0.8vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-100 transition-all disabled:opacity-60 shadow-xs"
             />
             <button
               type="button"
               onClick={() => setShowNewPass(!showNewPass)}
-              className="absolute inset-y-0 right-0 pr-[0.9vw] flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-[0.8vw] flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
             >
               {showNewPass ? <EyeOff className="w-[1.1vw] h-[1.1vw]" /> : <Eye className="w-[1.1vw] h-[1.1vw]" />}
             </button>
@@ -221,8 +221,8 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
 
           {/* Confirm New Password */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-[0.9vw] flex items-center pointer-events-none text-gray-400">
-              <Icon icon="ep:lock" className="w-[1.2vw] h-[1.2vw]" />
+            <div className="absolute inset-y-0 left-0 pl-[0.8vw] flex items-center pointer-events-none text-gray-400">
+              <Icon icon="ep:lock" className="w-[1.1vw] h-[1.1vw]" />
             </div>
             <input
               type={showConfirmPass ? 'text' : 'password'}
@@ -232,12 +232,12 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm New Password"
               required
-              className="w-full pl-[2.8vw] pr-[2.8vw] py-[0.7vw] bg-white border border-gray-200 rounded-[0.75vw] text-[0.85vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-200 transition-all disabled:opacity-75 disabled:bg-gray-50 shadow-xs"
+              className="w-full pl-[2.4vw] pr-[2.4vw] py-[0.65vw] bg-white border border-gray-200 rounded-[0.65vw] text-[0.8vw] font-inter text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-100 transition-all disabled:opacity-60 shadow-xs"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPass(!showConfirmPass)}
-              className="absolute inset-y-0 right-0 pr-[0.9vw] flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-[0.8vw] flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
             >
               {showConfirmPass ? <EyeOff className="w-[1.1vw] h-[1.1vw]" /> : <Eye className="w-[1.1vw] h-[1.1vw]" />}
             </button>
@@ -245,20 +245,20 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
 
           {/* 3. OTP Section */}
           {isOtpSent && (
-            <div className="space-y-[0.5vw] pt-[1.5vw] animate-in fade-in duration-200">
+            <div className="space-y-[0.4vw] pt-[0.4vw] animate-in fade-in duration-200">
               <div className="flex items-center justify-between px-[0.2vw]">
-                <label className="text-[0.8vw] font-semibold font-inter text-gray-700">
+                <label className="text-[0.75vw] font-semibold font-inter text-gray-700">
                   Enter 6-Digit OTP:
                 </label>
                 <div className="text-[0.75vw] font-inter text-gray-500">
                   {timer > 0 ? (
-                    <span className="font-semibold text-[#f05537]">Resend in {timer}s</span>
+                    <span className="font-semibold text-[#EC5137]">Resend in {timer}s</span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendOtp}
                       disabled={isResending}
-                      className="font-semibold text-[#f05537] hover:text-[#d94428] underline cursor-pointer"
+                      className="font-semibold text-[#EC5137] hover:text-[#d94428] underline cursor-pointer"
                     >
                       {isResending ? 'Sending...' : 'Resend OTP'}
                     </button>
@@ -267,7 +267,7 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
               </div>
 
               {/* 6 OTP Inputs */}
-              <div className="flex justify-between gap-[0.4vw]" onPaste={handlePaste}>
+              <div className="flex justify-between gap-[0.35vw]" onPaste={handlePaste}>
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -278,7 +278,7 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="w-[3.4vw] h-[3.2vw] text-center text-[1.1vw] font-medium text-gray-900 bg-white border border-gray-200 rounded-[0.75vw] focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-200 transition-all font-inter shadow-xs"
+                    className="w-[2.6vw] h-[2.6vw] text-center text-[1vw] font-medium text-gray-900 bg-white border border-gray-200 rounded-[0.6vw] focus:outline-none focus:border-[#EC5137] focus:ring-2 focus:ring-orange-100 transition-all font-inter shadow-xs"
                     autoComplete="one-time-code"
                   />
                 ))}
@@ -288,22 +288,22 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
         </div>
 
         {/* Action Button: "Get OTP" or "Update Password" */}
-        <div className="my-[0.3vw]">
+        <div className="mt-[0.2vw]">
           {!isOtpSent ? (
             <button
               type="submit"
               disabled={isLoading || !email || !newPassword || !confirmPassword}
-              className="w-full py-[0.85vw] px-[1vw] bg-gradient-to-r from-[#FF725B] to-[#EC5137] hover:from-[#ff644c] hover:to-[#e14328] active:opacity-95 text-white font-poppins font-semibold text-[0.9vw] rounded-[0.75vw] shadow-[0_0.3vw_0.8vw_rgba(236,81,55,0.28)] transition-all flex items-center justify-center gap-[0.4vw] disabled:opacity-85 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full py-[0.65vw] px-[0.8vw] bg-gradient-to-r from-[#FF725B] to-[#EC5137] hover:from-[#ff644c] hover:to-[#e14328] active:opacity-95 text-white font-poppins font-semibold text-[0.85vw] rounded-[0.65vw] shadow-[0_0.2vw_0.8vw_rgba(236,81,55,0.35)] transition-all flex items-center justify-center gap-[0.4vw] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin" />
+                  <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin" />
                   <span>Sending OTP...</span>
                 </>
               ) : (
                 <>
                   <span>Get OTP</span>
-                  <ArrowRight className="w-[1vw] h-[1vw]" />
+                  <ArrowRight className="w-[0.9vw] h-[0.9vw]" />
                 </>
               )}
             </button>
@@ -311,17 +311,17 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
             <button
               type="submit"
               disabled={isLoading || otp.join('').length !== 6}
-              className="w-full py-[0.85vw] px-[1vw] bg-gradient-to-r from-[#FF725B] to-[#EC5137] hover:from-[#ff644c] hover:to-[#e14328] active:opacity-95 text-white font-poppins font-semibold text-[0.9vw] rounded-[0.75vw] shadow-[0_0.3vw_0.8vw_rgba(236,81,55,0.28)] transition-all flex items-center justify-center gap-[0.4vw] disabled:opacity-85 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full py-[0.65vw] px-[0.8vw] bg-gradient-to-r from-[#FF725B] to-[#EC5137] hover:from-[#ff644c] hover:to-[#e14328] active:opacity-95 text-white font-poppins font-semibold text-[0.85vw] rounded-[0.65vw] shadow-[0_0.2vw_0.8vw_rgba(236,81,55,0.35)] transition-all flex items-center justify-center gap-[0.4vw] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin" />
+                  <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin" />
                   <span>Updating Password...</span>
                 </>
               ) : (
                 <>
                   <span>Update Password</span>
-                  <ArrowRight className="w-[1vw] h-[1vw]" />
+                  <ArrowRight className="w-[0.9vw] h-[0.9vw]" />
                 </>
               )}
             </button>
@@ -330,12 +330,12 @@ export default function ForgotPassword({ initialEmail = '', onSwitchToSignin }) 
       </form>
 
       {/* Footer Switcher */}
-      <div className="text-center text-[0.82vw] font-inter text-gray-500 pt-[0.4vw]">
+      <div className="text-center text-[0.8vw] font-inter text-gray-500">
         Remember your password ?{' '}
         <button
           type="button"
           onClick={onSwitchToSignin}
-          className="font-semibold text-[#f05537] hover:underline cursor-pointer"
+          className="font-semibold text-[#EC5137] hover:underline cursor-pointer"
         >
           Sign in
         </button>

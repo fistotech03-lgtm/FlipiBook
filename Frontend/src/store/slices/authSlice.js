@@ -3,10 +3,6 @@ import axios from 'axios';
 import { verifyToken, clearSession } from '../../utils/authUtils';
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
-  if (!verifyToken()) {
-    return { isAuthenticated: false, user: null };
-  }
-
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     const res = await axios.get(`${backendUrl}/api/auth/verify`, {
@@ -35,9 +31,9 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
 });
 
 const initialState = {
-  isAuthenticated: verifyToken(),
+  isAuthenticated: false,
   user: null,
-  isLoading: false,
+  isLoading: true,
   isAuthModalOpen: false,
   authModalMode: 'signin',
   authRedirectPath: null,

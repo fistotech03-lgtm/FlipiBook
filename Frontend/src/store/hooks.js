@@ -7,6 +7,7 @@ import {
   setIsAuthenticated,
   checkAuth,
   logoutUser,
+  logout,
 } from './slices/authSlice';
 
 export const useAppDispatch = () => useDispatch();
@@ -19,7 +20,15 @@ export const useAuth = () => {
   return {
     ...auth,
     checkAuth: () => dispatch(checkAuth()).unwrap(),
-    logout: () => dispatch(logoutUser()).unwrap(),
+    logout: async () => {
+      try {
+        await dispatch(logoutUser());
+      } catch (e) {
+        console.warn('Logout warning:', e);
+      } finally {
+        dispatch(logout());
+      }
+    },
     openAuthModal: (mode = 'signin', redirectPath = null) =>
       dispatch(openAuthModal({ mode, redirectPath })),
     closeAuthModal: () => dispatch(closeAuthModal()),

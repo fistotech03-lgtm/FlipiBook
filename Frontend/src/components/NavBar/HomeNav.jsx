@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 // import FlipibookLogo from '../assets/logo/Flipibook_logo.svg';
 const FlipibookLogo = '/Login/logo.svg';
+import ProfileModal from '../Settings/ProfileModal';
 import { Bell, User, CircleUser } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 // import ProfileModal from './ProfileModal';
@@ -28,12 +29,18 @@ const getAvatarColor = (identifier, customColor) => {
 // List of routes that require user to be logged in
 const protectedNavItems = ['/my-flipbooks'];
 
-export default function DashboardNavbar() {
+export default function HoveNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { user, isAuthenticated: isLoggedIn, openAuthModal } = useAuth();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setIsProfileModalOpen(false);
+    }
+  }, [isLoggedIn]);
 
   const handleLinkClick = (e, link) => {
     if (protectedNavItems.includes(link.path) && !isLoggedIn) {
@@ -46,34 +53,36 @@ export default function DashboardNavbar() {
     { name: 'Home', path: '/home' },
     { name: 'My Flipbooks', path: '/my-flipbooks' },
     { name: 'Templates', path: '/templates' },
+    { name: 'Converter', path: '/converter' },
     { name: 'Explore', path: '/explore' },
-    { name: 'Features', path: '#' },
+    { name: 'Features', path: '/features' },
+    { name: 'Pricing', path: '/pricing' },
     { name: 'About Us', path: '/about' },
     { name: 'Contact Us', path: '/contact' },
-    { name: 'Help', path: '#' },
+    { name: 'Help', path: '/help' },
     // { name: 'Settings', path: '/settings' },
   ];
 
   return (
     <>
     <nav className="w-full bg-white px-[1.5vw] flex items-center justify-between z-50 border-b border-gray-200 shadow-sm" style={{ height: '7vh' }}>
-      <div className="flex items-center gap-[4vw]">
+      <div className="flex items-center gap-[2.5vw] xl:gap-[3.5vw]">
         {/* Logo */}
         <div className="flex-shrink-0">
           <Link to="/home">
-            <img src={FlipibookLogo} alt="Flipibook" className="h-[2.5vw] w-auto object-contain transition-transform duration-300" />
+            <img src={FlipibookLogo} alt="Flipibook" className="h-[4.5vh] w-auto object-contain transition-transform duration-300" />
           </Link>
         </div>
 
         {/* Navigation Links */}
-        <div className="hidden lg:flex items-center gap-[2.5vw]">
+        <div className="hidden lg:flex items-center gap-[1.5vw] xl:gap-[2.2vw]">
           {navLinks.map((link) => {
             const currentPath = location.pathname;
             const isActive = currentPath === link.path || 
                              (link.name === 'Home' && currentPath === '/') ||
                              (link.path === '/contact' && currentPath === '/contact-us');
             
-            const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-medium text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
+            const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
             const activeLinkStyle = "text-[#ec5137] font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
 
             return (
@@ -142,7 +151,7 @@ export default function DashboardNavbar() {
         )}
       </div>
     </nav>
-    {/* <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} /> */}
+    <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </>
   );
 }

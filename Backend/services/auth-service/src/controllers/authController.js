@@ -425,7 +425,9 @@ const login = async (req, res) => {
       token,
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId,
+        email: user.emailId
       }
     });
   } catch (error) {
@@ -523,7 +525,9 @@ const googleLogin = async (req, res) => {
       token,
       user: {
         name: user.name,
-        picture: user.picture
+        picture: user.picture,
+        emailId: user.emailId,
+        email: user.emailId
       }
     });
   } catch (error) {

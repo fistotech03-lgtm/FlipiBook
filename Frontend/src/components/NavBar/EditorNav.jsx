@@ -5,14 +5,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 const logo = '/Login/logo.svg';
 import { User, Share2, Save, Download, Loader2, Eye, ChevronDown, Monitor, Tablet, Smartphone, Settings } from 'lucide-react';
 import { Icon } from '@iconify/react';
-// import ProfileModal from './ProfileModal';
-// import ShareModal from './ShareModal';
-// import EditorSettingsModal from './EditorSettingsModal';
+import ProfileModal from '../Settings/ProfileModal';
+import ShareModal from '../ShareModal';
+import EditorSettingsModal from '../PageEditor/modals/EditorSettingsModal';
 
 
 import { useAuth } from '../../context/AuthContext';
 
-const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
+const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
   const [secondsSinceSave, setSecondsSinceSave] = useState(0);
   const { user } = useAuth();
   const userProfile = {
@@ -64,11 +64,6 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
   };
 
 
-
-  // Common styles
-   const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-medium text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
-   const activeLinkStyle = "text-[#ec5137] font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
-
   // Timer: Run only when unsaved changes exist
   useEffect(() => {
     let interval;
@@ -110,7 +105,7 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
         <div className="flex items-center gap-[1.5vw]">
           <Link to="/" className="flex-shrink-0" onClick={handleLinkClick}>
             <img 
-              className="h-[2.5vw] w-auto object-contain" 
+              className="h-[4.5vh] w-auto object-contain" 
               src={logo} 
               alt="Flipibook" 
             />
@@ -447,7 +442,7 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
               style={{ backgroundColor: userProfile.picture ? 'transparent' : userProfile.avatarBgColor }}
             >
               {userProfile.picture ? (
-                <img src={userProfile.picture} alt="Profile" className="w-full h-full object-cover" />
+                <img src={userProfile.picture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <span className="text-white font-semibold text-[1.1vw]">
                   {userProfile.name.charAt(0).toUpperCase()}
@@ -465,30 +460,30 @@ const Navbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDel
       </nav>
 
       {/* Render Profile Modal */}
-      {/* <ProfileModal 
+      <ProfileModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)} 
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={onToggleAutoSave}
-      /> */}
+      />
       {/* Render Editor Settings Modal */}
-      {/* <EditorSettingsModal 
+      <EditorSettingsModal 
         isOpen={isEditorSettingsOpen}
         onClose={() => setIsEditorSettingsOpen(false)}
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={onToggleAutoSave}
-      /> */}
+      />
       {/* Render Share Modal */}
-      {/* <ShareModal 
+      <ShareModal 
         isOpen={isShareOpen} 
         onClose={() => setIsShareOpen(false)} 
         flipbookUrl={currentBook?.shareUrl}
         flipbookThumbnail={currentBook?.thumbnail}
         currentBook={currentBook}
         isMobileLayout={activeDevice === 'Mobile'}
-      /> */}
+      />
     </>
   );
 };
 
-export default Navbar;
+export default EditorNavbar;

@@ -80,6 +80,12 @@ const authSlice = createSlice({
     setAuthModalMode: (state, action) => {
       state.authModalMode = action.payload;
     },
+    logout: (state) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.isAuthModalOpen = false;
+      state.authRedirectPath = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -98,7 +104,15 @@ const authSlice = createSlice({
         state.isLoading = false;
       })
       // logoutUser
+      .addCase(logoutUser.pending, (state) => {
+        state.isAuthenticated = false;
+        state.user = null;
+      })
       .addCase(logoutUser.fulfilled, (state) => {
+        state.isAuthenticated = false;
+        state.user = null;
+      })
+      .addCase(logoutUser.rejected, (state) => {
         state.isAuthenticated = false;
         state.user = null;
       });
@@ -111,6 +125,7 @@ export const {
   openAuthModal,
   closeAuthModal,
   setAuthModalMode,
+  logout,
 } = authSlice.actions;
 
 export default authSlice.reducer;

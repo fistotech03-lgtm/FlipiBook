@@ -53,9 +53,10 @@ export const getSessionToken = () => {
 export const clearSession = () => {
   try {
     // Clear the client-readable cookie indicator
-    document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    // Clear any residual storage
+    document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+    // Clear all residual user data and tokens
     localStorage.removeItem('user');
+    localStorage.removeItem('user_profile');
     localStorage.removeItem('token');
     localStorage.removeItem('auth_token');
   } catch (err) {

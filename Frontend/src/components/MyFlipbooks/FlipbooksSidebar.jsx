@@ -1,6 +1,5 @@
 import React from 'react';
-import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, Edit2, Copy } from 'lucide-react';
-import { Icon } from '@iconify/react';
+import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy } from 'lucide-react';
 
 export default function FlipbooksSidebar({
     activeFolder,
@@ -40,7 +39,8 @@ export default function FlipbooksSidebar({
     startEditing,
     handleDuplicateFolder,
     handleDeleteFolderClick,
-    FOLDER_COLORS
+    FOLDER_COLORS,
+    setIsCreateModalOpen,
 }) {
     // Quick Access counts
     const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
@@ -50,8 +50,8 @@ export default function FlipbooksSidebar({
 
     // Storage formatting
     const fallbackBooksSize = Array.isArray(books) ? books.reduce((acc, b) => acc + (b.sizeBytes || b.fileSize || 0), 0) : 0;
-    const effectiveUsed = (typeof storage.used === 'number' && !isNaN(storage.used)) ? storage.used : fallbackBooksSize;
-    const effectiveTotal = storage.total > 0 ? storage.total : (300 * 1024 * 1024);
+    const effectiveUsed = (typeof storage?.used === 'number' && !isNaN(storage.used)) ? storage.used : fallbackBooksSize;
+    const effectiveTotal = storage?.total > 0 ? storage.total : (300 * 1024 * 1024);
 
     const formatMB = (bytes) => {
         if (!bytes || bytes <= 0) return '0 MB';
@@ -68,45 +68,49 @@ export default function FlipbooksSidebar({
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
 
     return (
-        <aside className="w-[18vw] bg-white h-[93vh] fixed left-0 top-[7vh] border-r border-gray-100 flex flex-col p-[1.5vw] z-20 select-none">
-            {/* Folders Section */}
+        <aside className="w-[18vw] bg-[#151c28] h-[93vh] fixed left-0 top-[7vh] border-r border-[#1f293d] flex flex-col p-[1.2vw] z-20 select-none text-white">
+            {/* Top Navigation: Go to Home */}
+            <div
+                onClick={() => navigate('/home')}
+                className="flex items-center gap-[0.75vw] px-[0.6vw] py-[0.5vw] text-white/90 hover:text-white cursor-pointer transition-colors group select-none flex-none"
+            >
+                <ArrowLeft size="1vw" className="transition-transform group-hover:-translate-x-0.5" />
+                <span className="text-[0.82vw] font-medium">Go to Home</span>
+            </div>
+
+            {/* Divider below Go to Home */}
+            <div className="my-[0.7vw] border-b border-[#243042] flex-none"></div>
+
+            {/* Main Section */}
             <div className="flex-1 flex flex-col min-h-0">
-                {/* Quick Access List */}
-                <div className="space-y-[0.2vw] flex-none">
-                    {/* All Flipbook */}
+                {/* Upper Actions Section */}
+                <div className="space-y-[0.25vw] flex-none">
+                    {/* Create Flipibooks */}
                     <div
-                        onClick={() => { setActiveFolder('All Flipbook'); setSelectedBooks([]); }}
-                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
-                                ? 'bg-[#fef2f0] text-[#ec5137] font-semibold'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-normal'
-                        }`}
+                        onClick={() => {
+                            if (setIsCreateModalOpen) {
+                                setIsCreateModalOpen(true);
+                            } else {
+                                navigate('/converter');
+                            }
+                        }}
+                        className="w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none bg-[#2c3749] text-white hover:bg-[#344257] font-medium shadow-xs"
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <BookOpen size="1.15vw" className={`shrink-0 ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-[#ec5137]' : 'text-gray-700'}`} />
-                            <span>All Flipbook</span>
+                            <BookOpen size="1.15vw" className="shrink-0 text-white" />
+                            <span>Create Flipibooks</span>
                         </div>
-                        <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-[#ec5137] font-semibold' : 'text-gray-500'}`}>
-                            {allCount}
-                        </span>
                     </div>
 
-                    {/* Recent */}
+                    {/* Add 3D Models */}
                     <div
-                        onClick={() => { setActiveFolder('Recent'); setSelectedBooks([]); }}
-                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            (activeFolder === 'Recent' || activeFolder === 'Recent Book')
-                                ? 'bg-[#fef2f0] text-[#ec5137] font-semibold'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-normal'
-                        }`}
+                        onClick={() => navigate('/editor/threed_editor')}
+                        className="w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal"
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Icon icon="codicon:history" className={`w-[1.15vw] h-[1.15vw] shrink-0 ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-[#ec5137]' : 'text-gray-700'}`} />
-                            <span>Recent</span>
+                            <Box size="1.15vw" className="shrink-0 text-gray-300" />
+                            <span>Add 3D Models</span>
                         </div>
-                        <span className={`text-[0.8vw] ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-[#ec5137] font-semibold' : 'text-gray-500'}`}>
-                            {recentCount}
-                        </span>
                     </div>
 
                     {/* Favorites */}
@@ -114,15 +118,15 @@ export default function FlipbooksSidebar({
                         onClick={() => { setActiveFolder('Favorites'); setSelectedBooks([]); }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
                             activeFolder === 'Favorites'
-                                ? 'bg-[#fef2f0] text-[#ec5137] font-semibold'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-normal'
+                                ? 'bg-[#2c3749] text-white font-medium'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Heart size="1.15vw" className={`shrink-0 ${activeFolder === 'Favorites' ? 'text-[#ec5137]' : 'text-gray-700'}`} />
+                            <Heart size="1.15vw" className={`shrink-0 ${activeFolder === 'Favorites' ? 'text-white' : 'text-gray-300'}`} />
                             <span>Favorites</span>
                         </div>
-                        <span className={`text-[0.8vw] ${activeFolder === 'Favorites' ? 'text-[#ec5137] font-semibold' : 'text-gray-500'}`}>
+                        <span className={`text-[0.8vw] ${activeFolder === 'Favorites' ? 'text-white font-medium' : 'text-gray-400'}`}>
                             {favoritesCount}
                         </span>
                     </div>
@@ -132,37 +136,74 @@ export default function FlipbooksSidebar({
                         onClick={() => { setActiveFolder('Trash'); setSelectedBooks([]); }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
                             activeFolder === 'Trash'
-                                ? 'bg-[#fef2f0] text-[#ec5137] font-semibold'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-normal'
+                                ? 'bg-[#2c3749] text-[#ef4444] font-medium'
+                                : 'text-[#ef4444] hover:bg-[#1e2738] hover:text-[#f87171] font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Trash2 size="1.15vw" className={`shrink-0 ${activeFolder === 'Trash' ? 'text-[#ec5137]' : 'text-gray-700'}`} />
-                            <span>Trash</span>
+                            <Trash2 size="1.15vw" className="shrink-0 text-[#ef4444]" />
+                            <span className="text-[#ef4444]">Trash</span>
                         </div>
-                        <span className={`text-[0.8vw] ${activeFolder === 'Trash' ? 'text-[#ec5137] font-semibold' : 'text-gray-500'}`}>
+                        <span className="text-[0.8vw] text-[#ef4444] font-medium">
                             {trashCount}
                         </span>
                     </div>
                 </div>
 
                 {/* Divider */}
-                <div className="my-[1.1vw] border-b border-gray-100 flex-none"></div>
+                <div className="my-[1vw] border-b border-[#243042] flex-none"></div>
 
                 {/* Your Folders Header */}
-                <div className="flex items-center justify-between mb-[0.85vw] flex-none">
-                    <span className="text-[0.95vw] font-bold text-gray-800">Your Folders</span>
+                <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
+                    <span className="text-[0.95vw] font-bold text-white">Your Folders</span>
                     <button
                         onClick={handleAddFolderClick}
-                        className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.25vw] rounded-[0.4vw] bg-gray-100 hover:bg-gray-200 text-gray-700 text-[0.75vw] font-medium transition-colors cursor-pointer"
+                        className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
                     >
                         <Plus size="0.85vw" /> Add
                     </button>
                 </div>
 
-                {/* Scrollable Folder List */}
+                {/* Scrollable Folder List (Includes All Flipbooks, Recent, and Custom Folders) */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-[0.25vw] pb-[1vw]" ref={folderListRef}>
-                    <div className="space-y-[0.2vw]">
+                    <div className="space-y-[0.25vw]">
+                        {/* All Flipbooks */}
+                        <div
+                            onClick={() => { setActiveFolder('All Flipbook'); setSelectedBooks([]); }}
+                            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                    ? 'bg-[#2c3749] text-white font-medium'
+                                    : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                            }`}
+                        >
+                            <div className="flex items-center gap-[0.75vw]">
+                                <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
+                                <span>All Flipbooks</span>
+                            </div>
+                            <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                {allCount}
+                            </span>
+                        </div>
+
+                        {/* Recent */}
+                        <div
+                            onClick={() => { setActiveFolder('Recent'); setSelectedBooks([]); }}
+                            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                (activeFolder === 'Recent' || activeFolder === 'Recent Book')
+                                    ? 'bg-[#2c3749] text-white font-medium'
+                                    : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                            }`}
+                        >
+                            <div className="flex items-center gap-[0.75vw]">
+                                <RotateCcw size="1.1vw" className={`shrink-0 ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white' : 'text-gray-300'}`} />
+                                <span>Recent</span>
+                            </div>
+                            <span className={`text-[0.8vw] ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                {recentCount}
+                            </span>
+                        </div>
+
+                        {/* Custom Folders */}
                         {folders.map((folder, index) => {
                             const isEditing = editingId === folder.id;
                             const isActive = activeFolder === folder.name;
@@ -172,7 +213,7 @@ export default function FlipbooksSidebar({
                             const folderColor = FOLDER_COLORS[index % FOLDER_COLORS.length];
 
                             return isEditing ? (
-                                <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-white shadow-sm">
+                                <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
                                     <input
                                         autoFocus
                                         type="text"
@@ -180,7 +221,7 @@ export default function FlipbooksSidebar({
                                         onChange={(e) => setTempName(e.target.value)}
                                         onBlur={saveEdit}
                                         onKeyDown={handleKeyDown}
-                                        className="w-full text-[0.875vw] font-medium text-gray-900 focus:outline-none"
+                                        className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
                                     />
                                 </div>
                             ) : (
@@ -195,10 +236,10 @@ export default function FlipbooksSidebar({
                                     onClick={() => { setActiveFolder(folder.name); setSelectedBooks([]); }}
                                     className={`relative group w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none
                                         ${isDragging ? 'opacity-40 scale-[0.98] border border-dashed border-[#ec5137]' : ''}
-                                        ${isDragOver ? 'border-t-2 border-t-[#ec5137] bg-red-50/40' : ''}
+                                        ${isDragOver ? 'border-t-2 border-t-[#ec5137] bg-white/5' : ''}
                                         ${isActive
-                                            ? 'bg-[#fef2f0] text-[#ec5137] font-semibold'
-                                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-normal'
+                                            ? 'bg-[#2c3749] text-white font-medium'
+                                            : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                                         }
                                     `}
                                 >
@@ -212,7 +253,7 @@ export default function FlipbooksSidebar({
                                     <span className="truncate flex-1 font-medium">{folder.name}</span>
 
                                     <div className="relative flex items-center justify-end h-[1.5vw] min-w-[1.5vw]">
-                                        <span className={`text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-[#ec5137] font-semibold' : 'text-gray-400 font-normal'} ${activeMenuId === folder.id ? 'pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
+                                        <span className={`text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-white font-medium' : 'text-gray-400 font-normal'} ${activeMenuId === folder.id ? 'pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
                                             {folderCount}
                                         </span>
 
@@ -234,9 +275,9 @@ export default function FlipbooksSidebar({
                                                     setActiveMenuId(folder.id);
                                                 }
                                             }}
-                                            className={`absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer ${
-                                                isActive ? 'hover:bg-red-100/70 text-[#ec5137]' : 'hover:bg-gray-200 text-gray-500'
-                                            } ${activeMenuId === folder.id ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}
+                                            className={`absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer hover:bg-[#344257] text-gray-400 hover:text-white ${
+                                                activeMenuId === folder.id ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'
+                                            }`}
                                         >
                                             <MoreVertical size="0.9vw" />
                                         </button>
@@ -247,7 +288,7 @@ export default function FlipbooksSidebar({
 
                         {/* New Folder Input */}
                         {isCreatingFolder && (
-                            <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-white shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
                                 <input
                                     autoFocus
                                     type="text"
@@ -265,14 +306,14 @@ export default function FlipbooksSidebar({
                                             setNewFolderInputName('');
                                         }
                                     }}
-                                    className="w-full text-[0.875vw] font-medium text-gray-900 focus:outline-none placeholder-gray-400"
+                                    className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none placeholder-gray-500"
                                 />
                             </div>
                         )}
 
                         {/* Creating Folder Loading Row */}
                         {creatingFolderName && (
-                            <div className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-white text-[#ec5137] text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
+                            <div className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] text-[#ec5137] text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
                                 <div className="flex items-center gap-[0.75vw] min-w-0 flex-1">
                                     <Folder size="1.15vw" className="text-[#ec5137] fill-current shrink-0" />
                                     <span className="truncate">{creatingFolderName}</span>
@@ -285,8 +326,8 @@ export default function FlipbooksSidebar({
             </div>
 
             {/* Storage & Upgrade Profile Card */}
-            <div className="mt-auto relative z-30 pt-[0.6vw]">
-                <div className="w-full bg-white rounded-[1vw] p-[0.8vw] border border-gray-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col select-none relative">
+            <div className="mt-auto relative z-30 pt-[0.6vw] flex-none">
+                <div className="w-full bg-white rounded-[0.5vw] p-[0.8vw] border border-gray-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col select-none relative">
                     {/* Top Header: Database/Storage Icon + Title + Close Button */}
                     <div className="flex items-center justify-between mb-[0.55vw]">
                         <div className="flex items-center gap-[0.5vw]">
@@ -428,7 +469,7 @@ export default function FlipbooksSidebar({
                 <>
                     <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}></div>
                     <div
-                        className="fixed z-[101] w-[12vw] min-w-[165px] bg-white rounded-[0.75vw] shadow-xl border border-gray-500 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                        className="fixed z-[101] w-[12vw] min-w-[165px] bg-white rounded-[0.75vw] shadow-xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
                         style={{
                             top: folderMenuPos.top,
                             left: folderMenuPos.left,

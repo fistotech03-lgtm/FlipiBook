@@ -1752,6 +1752,7 @@ export default function MyFlipbooks() {
                     handleDuplicateFolder={handleDuplicateFolder}
                     handleDeleteFolderClick={handleDeleteFolderClick}
                     FOLDER_COLORS={FOLDER_COLORS}
+                    setIsCreateModalOpen={setIsCreateModalOpen}
                 />
 
             {/* Main Content */}

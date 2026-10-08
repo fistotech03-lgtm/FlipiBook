@@ -10,23 +10,16 @@ import ShareModal from '../ShareModal';
 import EditorSettingsModal from '../PageEditor/modals/EditorSettingsModal';
 
 
+import { useAuth } from '../../context/AuthContext';
+
 const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
   const [secondsSinceSave, setSecondsSinceSave] = useState(0);
-  const [userProfile, setUserProfile] = useState(() => {
-    try {
-      const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
-      if (stored) {
-        const p = JSON.parse(stored);
-        const email = p.emailId || p.email || '';
-        return {
-          name: p.name || (email ? email.split('@')[0] : 'User'),
-          picture: p.picture || null,
-          avatarBgColor: p.avatarBgColor || '#f97316'
-        };
-      }
-    } catch (e) {}
-    return { name: 'User', picture: null, avatarBgColor: '#f97316' };
-  });
+  const { user } = useAuth();
+  const userProfile = {
+    name: user?.name || 'User',
+    picture: user?.picture || null,
+    avatarBgColor: '#f97316'
+  };
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);

@@ -9,6 +9,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.AUTH_PORT || process.env.PORT || 5001;
 
 // Connect to MongoDB Database

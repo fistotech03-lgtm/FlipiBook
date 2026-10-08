@@ -65,4 +65,62 @@ const sendOtpEmail = async (toEmail, otp) => {
   return await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendOtpEmail };
+/**
+ * Sends a 6-digit OTP email to user for account creation verification
+ * @param {string} toEmail 
+ * @param {string} otp 
+ * @param {string} userName
+ */
+const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
+  const transporter = createTransporter();
+
+  const greeting = userName ? `Hello ${userName},` : 'Hello,';
+
+  const mailOptions = {
+    from: `"Flipbook Security" <${process.env.EMAIL_USER || 'fistotech04@gmail.com'}>`,
+    to: toEmail,
+    subject: `🎉 Your Flipbook Account Verification Code: ${otp}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f7; color: #333333; margin: 0; padding: 0; }
+          .container { max-width: 520px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
+          .header { background: linear-gradient(135deg, #FF725B 0%, #EC5137 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+          .content { padding: 32px 28px; line-height: 1.6; }
+          .otp-card { background-color: #FFF5F2; border: 2px dashed #EC5137; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0; }
+          .otp-code { font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #EC5137; font-family: monospace; }
+          .footer { background-color: #fafafa; padding: 18px 24px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to Flipbook</h1>
+          </div>
+          <div class="content">
+            <p style="font-size: 16px; margin-top: 0;">${greeting}</p>
+            <p style="font-size: 14px; color: #555555;">Thank you for registering with Flipbook. To complete your account creation, please verify your email address (<strong>${toEmail}</strong>) using the verification code below:</p>
+            <div class="otp-card">
+              <span style="font-size: 13px; text-transform: uppercase; color: #777777; font-weight: 600; display: block; margin-bottom: 6px;">Registration Verification Code</span>
+              <div class="otp-code">${otp}</div>
+              <span style="font-size: 12px; color: #888888; display: block; margin-top: 6px;">Valid for 10 minutes</span>
+            </div>
+            <p style="font-size: 13px; color: #777777;">If you did not initiate this registration, please safely ignore this email.</p>
+          </div>
+          <div class="footer">
+            &copy; ${new Date().getFullYear()} Flipbook. All rights reserved.
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  return await transporter.sendMail(mailOptions);
+};
+
+module.exports = { sendOtpEmail, sendSignupOtpEmail };

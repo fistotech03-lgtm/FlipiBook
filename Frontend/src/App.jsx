@@ -1,13 +1,25 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { ToastProvider } from './components/CustomToast';
 import { ModernToastProvider } from './components/ModernToast';
-import Login from './pages/login';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthModal } from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './Layouts/MainLayout';
 
-// Main Pages
+function AuthRouteRedirect({ mode = 'signin' }) {
+  const { openAuthModal } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || null;
+
+  useEffect(() => {
+    openAuthModal(mode, redirect);
+  }, [mode, redirect, openAuthModal]);
+
+  return <Navigate to="/" replace />;
+}
+
 const Home = lazy(() => import('./pages/Home'));
 const MyFlipbooks = lazy(() => import('./pages/MyFlipbooks'));
 const Templates = lazy(() => import('./pages/Templates'));
@@ -16,6 +28,8 @@ const Features = lazy(() => import('./pages/Features'));
 const AboutUs = lazy(() => import('./pages/AboutUs'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
 const Help = lazy(() => import('./pages/Help'));
+const Converter = lazy(() => import('./pages/Converter'));
+const Pricing = lazy(() => import('./pages/Pricing'));
 
 // Editor Components
 const EditorLayout = lazy(() => import('./Layouts/EditorLayout'));
@@ -48,15 +62,178 @@ function SettingsIndexRedirect() {
 export default function App() {
   return (
     <ToastProvider>
-      <ModernToastProvider>
+      <AuthProvider>
+            <ModernToastProvider>
         <Router>
-        <Routes>
-          {/* Public auth routes */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signin" element={<Login />} />
-          <Route path="/signup" element={<Login />} />
-          <Route path="/forgot-password" element={<Login />} />
+          <AuthModal />
+          <Routes>
+            {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
+            <Route path="/login" element={<AuthRouteRedirect mode="signin" />} />
+            <Route path="/signin" element={<AuthRouteRedirect mode="signin" />} />
+            <Route path="/signup" element={<AuthRouteRedirect mode="signup" />} />
+            <Route path="/forgot-password" element={<AuthRouteRedirect mode="forgot-password" />} />
+
+          {/* Main Layout routes — accessible without login initially */}
+          <Route element={<MainLayout />}>
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={null}>
+                  <Home />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/home"
+              element={
+                <Suspense fallback={null}>
+                  <Home />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/my-flipbooks"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={null}>
+                    <MyFlipbooks />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/templates"
+              element={
+                <Suspense fallback={null}>
+                  <Templates />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/explore"
+              element={
+                <Suspense fallback={null}>
+                  <Explore />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/features"
+              element={
+                <Suspense fallback={null}>
+                  <Features />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <Suspense fallback={null}>
+                  <AboutUs />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/about-us"
+              element={
+                <Suspense fallback={null}>
+                  <AboutUs />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <Suspense fallback={null}>
+                  <ContactUs />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/contact-us"
+              element={
+                <Suspense fallback={null}>
+                  <ContactUs />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/help"
+              element={
+                <Suspense fallback={null}>
+                  <Help />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/converter"
+              element={
+                <Suspense fallback={null}>
+                  <Converter />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/pricing"
+              element={
+                <Suspense fallback={null}>
+                  <Pricing />
+                </Suspense>
+              }
+            />
+
+            {/* Settings Nested Routes */}
+            <Route
+              path="/settings"
+              element={
+                <Suspense fallback={null}>
+                  <SettingsLayout />
+                </Suspense>
+              }
+            >
+              <Route index element={<SettingsIndexRedirect />} />
+              <Route
+                path="profile"
+                element={
+                  <Suspense fallback={null}>
+                    <Profile />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile/:useremail"
+                element={
+                  <Suspense fallback={null}>
+                    <Profile />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="account"
+                element={
+                  <Suspense fallback={null}>
+                    <Account />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="notifications"
+                element={
+                  <Suspense fallback={null}>
+                    <Notifications />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="my-shelf"
+                element={
+                  <Suspense fallback={null}>
+                    <MyShelf />
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Route>
 
           {/* Protected Editor Routes */}
           <Route
@@ -127,154 +304,12 @@ export default function App() {
             />
           </Route>
 
-          {/* Protected Main Layout routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route
-              path="/home"
-              element={
-                <Suspense fallback={null}>
-                  <Home />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/my-flipbooks"
-              element={
-                <Suspense fallback={null}>
-                  <MyFlipbooks />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/templates"
-              element={
-                <Suspense fallback={null}>
-                  <Templates />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/explore"
-              element={
-                <Suspense fallback={null}>
-                  <Explore />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/features"
-              element={
-                <Suspense fallback={null}>
-                  <Features />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/about"
-              element={
-                <Suspense fallback={null}>
-                  <AboutUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/about-us"
-              element={
-                <Suspense fallback={null}>
-                  <AboutUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/contact"
-              element={
-                <Suspense fallback={null}>
-                  <ContactUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/contact-us"
-              element={
-                <Suspense fallback={null}>
-                  <ContactUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/help"
-              element={
-                <Suspense fallback={null}>
-                  <Help />
-                </Suspense>
-              }
-            />
-
-            {/* Settings Nested Routes */}
-            <Route
-              path="/settings"
-              element={
-                <Suspense fallback={null}>
-                  <SettingsLayout />
-                </Suspense>
-              }
-            >
-              <Route index element={<SettingsIndexRedirect />} />
-              <Route
-                path="profile"
-                element={
-                  <Suspense fallback={null}>
-                    <Profile />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="profile/:useremail"
-                element={
-                  <Suspense fallback={null}>
-                    <Profile />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="account"
-                element={
-                  <Suspense fallback={null}>
-                    <Account />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="notifications"
-                element={
-                  <Suspense fallback={null}>
-                    <Notifications />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="my-shelf"
-                element={
-                  <Suspense fallback={null}>
-                    <MyShelf />
-                  </Suspense>
-                }
-              />
-
-            </Route>
-          </Route>
-
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
       </ModernToastProvider>
+      </AuthProvider>
     </ToastProvider>
   );
 }

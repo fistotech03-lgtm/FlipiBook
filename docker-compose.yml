@@ -4,7 +4,8 @@ services:
     ports:
       - "3002:5173"
     environment:
-      - BACKEND_URL=http://backend:8000
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://testing.flipibook.com}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     depends_on:
       - backend
 
@@ -13,22 +14,23 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MONGO_URI=mongodb+srv://fistotech03:Murugan1234@projectmanagement.gntieqg.mongodb.net/idcProduct?retryWrites=true&w=majority&appName=idcProduct
-      - EMAIL_USER=fistotech04@gmail.com
-      - EMAIL_APP_PASSWORD=ghrn izix para kuyg
-      - CLIENT_URL=https://testing.flipibook.com
-      - GATEWAY_PORT=8000
-      - AUTH_PORT=5001
-      - AUTH_SERVICE_PORT=5001
-      - AUTH_SERVICE_URL=http://localhost:5001
+      - MONGO_URI=${MONGO_URI}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
+      - CLIENT_URL=${CLIENT_URL:-https://testing.flipibook.com}
+      - GATEWAY_PORT=${GATEWAY_PORT:-8000}
+      - AUTH_PORT=${AUTH_PORT:-5001}
+      - AUTH_SERVICE_PORT=${AUTH_SERVICE_PORT:-5001}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
+      - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
+      - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
     env_file:
       - path: ./Backend/.env
         required: false
+      - path: ./.env
+        required: false
 
 networks:
-  default:
-    name: flipibook-flipibook-ts4dqs_default
-
   dokploy-network:
     name: dokploy-network
     external: true

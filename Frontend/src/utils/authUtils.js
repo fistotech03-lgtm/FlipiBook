@@ -23,6 +23,13 @@ export const verifyToken = () => {
 };
 
 /**
+ * Safe no-op functions for components migrating away from localStorage tokens.
+ * All tokens are stored exclusively in HttpOnly cookies.
+ */
+export const setSessionToken = () => {};
+export const getSessionToken = () => null;
+
+/**
  * Clear client-side session state and non-sensitive cache.
  */
 export const clearSession = () => {
@@ -85,3 +92,6 @@ export const getAuthErrorMessage = (err, fallbackMessage = 'An unexpected error 
 
   return fallbackMessage;
 };
+
+// Backwards-compatibility alias
+export const getErrorMessage = getAuthErrorMessage;

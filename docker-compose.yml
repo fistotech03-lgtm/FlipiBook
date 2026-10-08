@@ -8,6 +8,9 @@ services:
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     depends_on:
       - backend
+    networks:
+      - testing-internal
+      - dokploy-network
 
   backend:
     build: ./Backend
@@ -29,9 +32,13 @@ services:
         required: false
       - path: ./.env
         required: false
+    networks:
+      - testing-internal
+      - dokploy-network
 
 networks:
-
+  testing-internal:
+    driver: bridge
   dokploy-network:
     name: dokploy-network
     external: true

@@ -1,10 +1,4 @@
-const fs = require('fs');
-const path = require('path');
 const jwt = require('jsonwebtoken');
-
-const CERTS_DIR = path.resolve(__dirname, '../../certs');
-const PRIVATE_KEY_PATH = path.join(CERTS_DIR, 'private.pem');
-const PUBLIC_KEY_PATH = path.join(CERTS_DIR, 'public.pem');
 
 /**
  * Format RSA Key string from env (supports raw PEM, \n escaped, or base64)
@@ -15,7 +9,6 @@ const parseKey = (keyString) => {
   if (trimmed.startsWith('-----BEGIN')) {
     return trimmed.replace(/\\n/g, '\n');
   }
-  // Try base64 decoding
   try {
     const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
     if (decoded.includes('-----BEGIN')) {
@@ -27,29 +20,11 @@ const parseKey = (keyString) => {
   return trimmed.replace(/\\n/g, '\n');
 };
 
-// 1. Check environment variables
-let privateKey = parseKey(process.env.RSA_PRIVATE_KEY);
-let publicKey = parseKey(process.env.RSA_PUBLIC_KEY);
+// 1. Explicit RSA Keys from Environment (if provided)
+const privateKey = parseKey(process.env.RSA_PRIVATE_KEY);
+const publicKey = parseKey(process.env.RSA_PUBLIC_KEY);
 
-// 2. Fallback to certs directory files if not provided via env
-if (!privateKey && fs.existsSync(PRIVATE_KEY_PATH)) {
-  try {
-    privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
-  } catch (err) {
-    console.error('[JWT Error] Failed to read private.pem:', err.message);
-  }
-}
-
-if (!publicKey && fs.existsSync(PUBLIC_KEY_PATH)) {
-  try {
-    publicKey = fs.readFileSync(PUBLIC_KEY_PATH, 'utf8');
-  } catch (err) {
-    console.error('[JWT Error] Failed to read public.pem:', err.message);
-  }
-}
-
-// 3. Cluster-wide Shared Secret for multi-replica consistency
-// When RSA keys are not explicitly supplied, all replicas seamlessly share this cluster secret
+// 2. Shared Secret for guaranteed consistency across all containers, replicas, and restarts
 const SHARED_SECRET = process.env.JWT_SECRET || process.env.MONGO_URI || 'flipibook_secure_cluster_secret_key_2026';
 const useRSA = !!(privateKey && publicKey);
 
@@ -94,16 +69,16 @@ const generateRefreshToken = (payload) => {
 const verifyToken = (token) => {
   if (!token) return null;
 
-  // Try RSA (RS256) first if public key is available
+  // Try RSA (RS256) first if public key is configured
   if (publicKey) {
     try {
       return jwt.verify(token, publicKey, { algorithms: ['RS256'] });
     } catch {
-      // Fallback to shared secret below if token was signed with HS256
+      // Fall through to shared secret verification
     }
   }
 
-  // Try Shared Secret (HS256)
+  // Verify with SHARED_SECRET (HS256)
   try {
     return jwt.verify(token, SHARED_SECRET, { algorithms: ['HS256'] });
   } catch (err) {

@@ -103,9 +103,9 @@ export default function DashboardNavbar() {
             <button 
               onClick={() => setIsProfileModalOpen(true)}
               className="w-[2.5vw] h-[2.5vw] cursor-pointer flex items-center justify-center rounded-full border border-gray-200 transition-all duration-200 overflow-hidden group p-[0.1vw] shadow-sm"
-              style={{ backgroundColor: (user?.picture && user?.picture !== 'color_only') ? '#ffffff' : ((user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') ? user?.avatarBgColor : getAvatarColor(user?.name || user?.emailId || user?.email || 'User')) }}
+              style={{ backgroundColor: (typeof user?.picture === 'string' && user.picture && user.picture !== 'color_only') ? '#ffffff' : ((user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') ? user?.avatarBgColor : getAvatarColor(user?.name || user?.emailId || user?.email || 'User')) }}
             >
-                {user?.picture && user?.picture !== 'color_only' ? (
+                {typeof user?.picture === 'string' && user.picture && user.picture !== 'color_only' ? (
                    <img 
                      src={user.picture.startsWith('blob:') || user.picture.startsWith('data:') ? user.picture : resolveUploadsPath(user.picture)} 
                      alt={user.name || 'User'} 
@@ -120,7 +120,11 @@ export default function DashboardNavbar() {
                     className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-[0.9vw]"
                     style={{ backgroundColor: (user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') ? user.avatarBgColor : getAvatarColor(user?.name || user?.emailId || user?.email || 'User') }}
                   >
-                    {user?.name ? user.name.charAt(0).toUpperCase() : (user?.emailId || user?.email ? (user.emailId || user.email).charAt(0).toUpperCase() : 'U')}
+                    {typeof user?.name === 'string' && user.name.length > 0 
+                      ? user.name.charAt(0).toUpperCase() 
+                      : (typeof user?.emailId === 'string' && user.emailId.length > 0 
+                          ? user.emailId.charAt(0).toUpperCase() 
+                          : (typeof user?.email === 'string' && user.email.length > 0 ? user.email.charAt(0).toUpperCase() : 'U'))}
                   </div>
                 )}
             </button>

@@ -31,8 +31,6 @@ services:
         required: false
 
 networks:
-  default:
-    name: flipibook-flipibook-ts4dqs_default
 
   dokploy-network:
     name: dokploy-network

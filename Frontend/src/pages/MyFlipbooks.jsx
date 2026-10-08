@@ -6,7 +6,7 @@ import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2,
 import { Icon } from '@iconify/react';
 
 import AlertModal from '../components/AlertModal';
-import CreateLayout from '../Layouts/createLayout';
+import CreateBookLayout from '../Layouts/CreateBookLayout';
 import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import ShareModal from '../components/ShareModal';
@@ -1701,7 +1701,7 @@ export default function MyFlipbooks() {
     const isAllSelected = filteredBooks.length > 0 && selectedBooks.length === filteredBooks.length;
 
     return (
-        <CreateLayout
+        <CreateBookLayout
             isOpen={isCreateModalOpen}
             onClose={() => { setIsCreateModalOpen(false); setInitialDroppedFiles(null); }}
             onUpload={handleUploadPDF}
@@ -2014,6 +2014,6 @@ export default function MyFlipbooks() {
                 isFromMyFlipbooks={true}
             />
         </div>
-        </CreateLayout>
+        </CreateBookLayout>
     );
 }

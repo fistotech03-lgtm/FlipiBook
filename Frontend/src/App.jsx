@@ -5,7 +5,7 @@ import { ToastProvider } from './components/CustomToast';
 import { ModernToastProvider } from './components/ModernToast';
 import Login from './pages/login';
 import ProtectedRoute from './components/ProtectedRoute';
-import MainLayout from './layouts/mainLayout';
+import MainLayout from './Layouts/MainLayout';
 
 // Main Pages
 const Home = lazy(() => import('./pages/Home'));
@@ -16,6 +16,11 @@ const Features = lazy(() => import('./pages/Features'));
 const AboutUs = lazy(() => import('./pages/AboutUs'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
 const Help = lazy(() => import('./pages/Help'));
+
+// Editor Components
+const EditorLayout = lazy(() => import('./Layouts/EditorLayout'));
+const PageEditor = lazy(() => import('./components/PageEditor/PageEditor'));
+const CustomizedEditor = lazy(() => import('./components/CustomizedEditor/CustomizedEditor'));
 
 // Settings Components
 const SettingsLayout = lazy(() => import('./components/Settings/SettingsLayout'));
@@ -52,6 +57,75 @@ export default function App() {
           <Route path="/signin" element={<Login />} />
           <Route path="/signup" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />
+
+          {/* Protected Editor Routes */}
+          <Route
+            path="/editor"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={null}>
+                  <EditorLayout />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          >
+            <Route
+              index
+              element={
+                <Suspense fallback={null}>
+                  <PageEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":folder/:v_id"
+              element={
+                <Suspense fallback={null}>
+                  <PageEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":v_id"
+              element={
+                <Suspense fallback={null}>
+                  <PageEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="customized_editor"
+              element={
+                <Suspense fallback={null}>
+                  <CustomizedEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="customized_editor/:v_id"
+              element={
+                <Suspense fallback={null}>
+                  <CustomizedEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="customized_editor/:folder/:v_id"
+              element={
+                <Suspense fallback={null}>
+                  <CustomizedEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="customized_editor/:folder/:v_id/:page"
+              element={
+                <Suspense fallback={null}>
+                  <CustomizedEditor />
+                </Suspense>
+              }
+            />
+          </Route>
 
           {/* Protected Main Layout routes */}
           <Route

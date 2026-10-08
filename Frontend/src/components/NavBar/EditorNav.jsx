@@ -6,8 +6,8 @@ const logo = '/Login/logo.svg';
 import { User, Share2, Save, Download, Loader2, Eye, ChevronDown, Monitor, Tablet, Smartphone, Settings } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import ProfileModal from '../Settings/ProfileModal';
-// import ShareModal from './ShareModal';
-// import EditorSettingsModal from './EditorSettingsModal';
+import ShareModal from '../ShareModal';
+import EditorSettingsModal from '../PageEditor/modals/EditorSettingsModal';
 
 
 const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook, onDeleteFlipbook, hasUnsavedChanges, saveSuccessInfo, isAutoSaveEnabled, onToggleAutoSave, isSaving, activeDevice = 'Desktop', setActiveDevice, currentBook }) => {
@@ -71,11 +71,6 @@ const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook,
   };
 
 
-
-  // Common styles
-   const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-medium text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
-   const activeLinkStyle = "text-[#ec5137] font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
-
   // Timer: Run only when unsaved changes exist
   useEffect(() => {
     let interval;
@@ -117,7 +112,7 @@ const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook,
         <div className="flex items-center gap-[1.5vw]">
           <Link to="/" className="flex-shrink-0" onClick={handleLinkClick}>
             <img 
-              className="h-[2.5vw] w-auto object-contain" 
+              className="h-[4.5vh] w-auto object-contain" 
               src={logo} 
               alt="Flipibook" 
             />
@@ -479,21 +474,21 @@ const EditorNavbar = ({ onExport, onSave, onPreview, onPublish, onClearFlipbook,
         onToggleAutoSave={onToggleAutoSave}
       />
       {/* Render Editor Settings Modal */}
-      {/* <EditorSettingsModal 
+      <EditorSettingsModal 
         isOpen={isEditorSettingsOpen}
         onClose={() => setIsEditorSettingsOpen(false)}
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={onToggleAutoSave}
-      /> */}
+      />
       {/* Render Share Modal */}
-      {/* <ShareModal 
+      <ShareModal 
         isOpen={isShareOpen} 
         onClose={() => setIsShareOpen(false)} 
         flipbookUrl={currentBook?.shareUrl}
         flipbookThumbnail={currentBook?.thumbnail}
         currentBook={currentBook}
         isMobileLayout={activeDevice === 'Mobile'}
-      /> */}
+      />
     </>
   );
 };

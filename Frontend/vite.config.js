@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    optimizeDeps: {
+      include: ['gifuct-js', 'ogl', 'fabric'],
+    },
     server: {
       host: '0.0.0.0',
       allowedHosts: true,

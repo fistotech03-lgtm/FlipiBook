@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
 import { useToast } from '../../CustomToast';
+import { useAuth } from '../../../context/AuthContext';
 
 const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
+  const { user } = useAuth();
   const toast = useToast();
 
   const [step, setStep] = useState('login'); // 'login' | 'otp' | 'newPassword'
@@ -38,20 +40,7 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
   }, [step, resendTimer]);
 
   const getUserEmail = () => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (!storedUser) return '';
-      if (typeof storedUser === 'string') {
-        if (storedUser.startsWith('{') || storedUser.startsWith('[')) {
-          const userObj = JSON.parse(storedUser);
-          return userObj?.emailId || userObj?.email || userObj?.userEmail || '';
-        }
-        return storedUser;
-      }
-      return '';
-    } catch (e) {
-      return '';
-    }
+    return user?.emailId || user?.email || user?.userEmail || '';
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -212,8 +201,8 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
     setNewFormError('');
     setIsSavingNewPassword(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
+
+
       const emailId = user?.emailId || user?.email;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const currentVid = v_id || shareId;

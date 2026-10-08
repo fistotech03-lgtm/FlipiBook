@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../../../context/AuthContext';
 import {
   ChevronDown,
   LayoutGrid,
@@ -179,6 +180,7 @@ const MAX_GALLERY_IMAGES = 4;
 
 const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpen, onToggle, opacity, onUpdateOpacity, setPreviewSrc, setIsUpdatingDOM, currentPageVId, flipbookVId, folderName, flipbookName, onDisableSlideshow }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const accordionRef = useRef(null);
 
   useEffect(() => {
@@ -1328,12 +1330,10 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
 
 
   const uploadFile = useCallback(async (file, replacingVideoId = null) => {
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) return null;
+    if (!user) return null;
 
-    const user = JSON.parse(storedUser);
     const formData = new FormData();
-    formData.append('emailId', user.emailId);
+    formData.append('emailId', user.emailId || user.email);
     
     const effectiveVId = flipbookVId || location.state?.v_id || location.state?.flipbook_v_id;
     if (effectiveVId) formData.append('v_id', effectiveVId);
@@ -1504,14 +1504,12 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     // Backend delete
     if (img.file_v_id) {
       try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
+        if (user) {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
           const effectiveFolder = folderName || location.state?.folderName || 'My_Flipbooks';
           const effectiveBook = flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
           await axios.post(`${backendUrl}/api/flipbook/delete-asset`, {
-            emailId: user.emailId,
+            emailId: user.emailId || user.email,
             file_v_id: img.file_v_id,
             assetType: 'Image',
             folderName: effectiveFolder,

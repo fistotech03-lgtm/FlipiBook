@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function EditorSettingsModal({
   isOpen,
@@ -12,6 +13,7 @@ export default function EditorSettingsModal({
   isRulerEnabled: initialRuler = true,
   onToggleRuler
 }) {
+  const { user } = useAuth();
   const [isTrimView, setIsTrimView] = useState(() => {
     const saved = localStorage.getItem('isTrimViewEnabled');
     return saved !== null ? JSON.parse(saved) : initialTrimView;
@@ -27,12 +29,10 @@ export default function EditorSettingsModal({
 
   const syncEditorSettings = async (partialSettings) => {
     try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      if (user) {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         await axios.post(`${backendUrl}/api/usersetting/update-editor-settings`, {
-          emailId: user.emailId,
+          emailId: user.emailId || user.email,
           editorSettings: partialSettings
         });
       }

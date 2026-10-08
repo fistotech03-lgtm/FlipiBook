@@ -13,6 +13,7 @@ import {
   getDocumentDetails
 } from '../../../utils/pdfUtils';
 import { parseLayersFromSVG } from './svgFilterUtils';
+import { useAuth } from '../../../context/AuthContext';
 
 export const useDocumentImport = ({
   pages,
@@ -29,7 +30,8 @@ export const useDocumentImport = ({
   v_id,
   activePageIndex
 }) => {
-    const handleAddFileClick = (index) => {
+  const { user } = useAuth();
+  const handleAddFileClick = (index) => {
     pdfInsertIndexRef.current = index;
     if (pdfInputRef.current) {
       pdfInputRef.current.value = '';
@@ -66,9 +68,9 @@ export const useDocumentImport = ({
     e.target.value = '';
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-    const emailId = user?.emailId;
+
+
+    const emailId = user?.emailId || user?.email;
 
     if (!emailId || !v_id) return;
 
@@ -247,9 +249,9 @@ export const useDocumentImport = ({
     e.target.value = '';
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-    const emailId = user?.emailId;
+
+
+    const emailId = user?.emailId || user?.email;
 
     if (!emailId || !v_id) {
       console.error("Missing emailId or v_id for asset upload");

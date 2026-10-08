@@ -2,6 +2,7 @@ import React from 'react';
 import { UploadCloud, ArrowRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import dashboardBannerImg from '../../assets/Dashboard/Main.png';
+import { useAuth } from '../../context/AuthContext';
 
 export default function FlipbooksBanner({
     user,
@@ -12,15 +13,22 @@ export default function FlipbooksBanner({
     setSelectedTemplateIdForModal,
     navigate
 }) {
-    const rawName = user?.name || user?.fullName || user?.firstName || (user?.emailId ? user.emailId.split('@')[0] : 'Naveen');
-    const displayName = rawName ? (rawName.charAt(0).toUpperCase() + rawName.slice(1)) : 'Naveen';
+    const { user: authUser } = useAuth();
+    const effectiveUser = user || authUser;
+    const rawName = effectiveUser?.name || effectiveUser?.fullName || effectiveUser?.firstName || (effectiveUser?.emailId ? effectiveUser.emailId.split('@')[0] : (effectiveUser?.email ? effectiveUser.email.split('@')[0] : ''));
+    const displayName = rawName ? (rawName.charAt(0).toUpperCase() + rawName.slice(1)) : '';
 
     return (
         <div className="w-full bg-white rounded-[1vw] py-[0.95vw] px-[1.4vw] border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex justify-between items-center relative overflow-hidden mb-[0.9vw] flex-shrink-0">
             {/* Left Side: Greeting & Quick Action Cards */}
             <div className="flex flex-col z-10">
-                <h1 className="text-[1.45vw] font-bold text-[#1f2937] leading-tight">
-                    Welcome back, <span className="text-[#ea543a]">{displayName}</span>
+                <h1 className="text-[1.45vw] font-bold text-[#1f2937] leading-tight flex items-center gap-[0.4vw]">
+                    Welcome back,{' '}
+                    {displayName ? (
+                        <span className="text-[#ea543a]">{displayName}</span>
+                    ) : (
+                        <span className="inline-block w-[6.5vw] h-[1.4vw] bg-gray-200 animate-pulse rounded-[0.35vw] align-middle" />
+                    )}
                 </h1>
                 <p className="text-[0.78vw] text-gray-400 font-normal mt-[0.15vw] mb-[0.8vw]">
                     Ready to create something amazing today?

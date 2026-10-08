@@ -36,6 +36,12 @@ export default function HoveNav() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { user, isAuthenticated: isLoggedIn, openAuthModal } = useAuth();
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setIsProfileModalOpen(false);
+    }
+  }, [isLoggedIn]);
+
   const handleLinkClick = (e, link) => {
     if (protectedNavItems.includes(link.path) && !isLoggedIn) {
       e.preventDefault();

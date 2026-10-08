@@ -42,6 +42,7 @@ import CornerRadius from './CornerRadius';
 import Adjustment from './Adjustment';
 import Effect from './Effect';
 import ReplaceMediaModal from './ReplaceMediaModal';
+import { useAuth } from '../../../context/AuthContext';
 
 const ImageEditor = ({
   selectedElement,
@@ -66,6 +67,7 @@ const ImageEditor = ({
   onDeleteLayer
 }) => {
   const fileInputRef = useRef(null);
+  const { user } = useAuth();
 
 
   const stateRef = useRef({
@@ -368,11 +370,9 @@ const ImageEditor = ({
         if (onUpdate) onUpdate({ shouldRefresh: true });
 
         // Upload to Backend
-        const storedUser = localStorage.getItem('user');
-        if (storedUser && (flipbookVId || (folderName && flipbookName))) {
-          const user = JSON.parse(storedUser);
+        if (user && (flipbookVId || (folderName && flipbookName))) {
           const formData = new FormData();
-          formData.append('emailId', user.emailId);
+          formData.append('emailId', user.emailId || user.email);
           if (flipbookVId) formData.append('v_id', flipbookVId);
           if (folderName) formData.append('folderName', folderName);
           if (flipbookName) formData.append('flipbookName', flipbookName);

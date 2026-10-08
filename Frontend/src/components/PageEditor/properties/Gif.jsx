@@ -4,6 +4,7 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import useDeviceDetection from '../hooks/useDeviceDetection';
 import { resolveUploadsPath } from "../../../utils/assetUtils";
+import { useAuth } from "../../../context/AuthContext";
 import {
   Image as ImageIcon,
   Upload,
@@ -77,6 +78,7 @@ const GifEditor = ({
 }) => {
   const { v_id: paramVId } = useParams();
   const activeVId = flipbookVId || paramVId;
+  const { user } = useAuth();
 
   // Use prop if available, fallback to selectedElement.id
   const selectedLayerId = propSelectedLayerId || selectedElement?.id;
@@ -1920,11 +1922,9 @@ const GifEditor = ({
       liveElement.dataset.mediaType = "gif";
       onUpdateRef.current?.({ shouldRefresh: true });
 
-      const storedUser = localStorage.getItem('user');
-      if (storedUser && (activeVId || (folderName && flipbookName))) {
-        const user = JSON.parse(storedUser);
+      if (user && (activeVId || (folderName && flipbookName))) {
         const formData = new FormData();
-        formData.append('emailId', user.emailId);
+        formData.append('emailId', user.emailId || user.email);
         if (activeVId) formData.append('v_id', activeVId);
         formData.append('type', 'gif');
         formData.append('assetType', 'gif');

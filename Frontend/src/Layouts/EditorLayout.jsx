@@ -6,10 +6,12 @@ import PublishModal from '../components/PublishModal';
 import AlertModal from '../components/AlertModal';
 import axios from 'axios';
 import { getFromDB, saveToDB } from '../utils/dbUtils';
+import { useAuth } from '../context/AuthContext';
 
 const STATE_KEY = 'threed_editor_state';
 
 const EditorLayout = () => {
+  const { user } = useAuth();
   // Auto Save Preferences
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(() => {
     const stored = localStorage.getItem('isAutoSaveEnabled');
@@ -20,13 +22,11 @@ const EditorLayout = () => {
   // Sync state with backend on mount
   useEffect(() => {
     const fetchSettings = async () => {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
+      if (user) {
         try {
-          const user = JSON.parse(storedUser);
           const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const res = await axios.get(`${backendUrl}/api/usersetting/get-settings`, {
-            params: { emailId: user.emailId }
+            params: { emailId: user.emailId || user.email }
           });
           
           if (res.data) {
@@ -60,13 +60,11 @@ const EditorLayout = () => {
     localStorage.setItem('isAutoSaveEnabled', JSON.stringify(value));
     
     try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      if (user) {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         
         await axios.post(`${backendUrl}/api/usersetting/update-editor-settings`, {
-          emailId: user.emailId,
+          emailId: user.emailId || user.email,
           editorSettings: { isAutoSaveEnabled: value }
         });
       }
@@ -159,11 +157,9 @@ const EditorLayout = () => {
   const confirmUnpublish = async () => {
     setIsUnpublishing(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const v_id = currentBook?.v_id || currentBook?.realName;
-      const userEmail = user?.emailId || currentBook?.userEmail;
+      const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 
       if (userEmail && v_id) {
         await axios.post(`${backendUrl}/api/flipbook/unpublish`, {
@@ -222,10 +218,8 @@ const EditorLayout = () => {
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const emailId = user?.emailId || currentBook?.userEmail;
+      const emailId = user?.emailId || user?.email || currentBook?.userEmail;
 
       const pathParts = window.location.pathname.split('/');
       const folderName = currentBook?.folder || currentBook?.folderName || (pathParts.length >= 4 ? decodeURIComponent(pathParts[3]) : 'My_Flipbooks');

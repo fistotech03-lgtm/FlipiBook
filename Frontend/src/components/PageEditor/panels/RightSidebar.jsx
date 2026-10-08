@@ -24,6 +24,7 @@ import PopupTemplateSelection from '../modals/PopupTemplateSelection';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useToast } from '../../CustomToast';
+import { useAuth } from '../../../context/AuthContext';
 
 const RightSidebar = ({
   isDoublePage,
@@ -77,6 +78,7 @@ const RightSidebar = ({
   flipbookName: flipbookNameProp,
   folder: folderProp
 }) => {
+  const { user } = useAuth();
   const { folder: paramFolder, v_id: paramVId } = useParams();
   const location = useLocation();
 
@@ -377,9 +379,6 @@ const RightSidebar = ({
       return;
     }
 
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-
     if ((isVideo || isGif) && !user) {
       alert(`You must be logged in to upload ${isVideo ? 'videos' : 'GIFs'}.`);
       e.target.value = '';
@@ -672,7 +671,7 @@ const RightSidebar = ({
 
   return (
     <div
-      className="bg-white border-l border-[#EEEEEE] flex flex-col overflow-hidden select-none flex-shrink-0 h-[92vh]"
+      className="bg-white border-l border-[#EEEEEE] flex flex-col overflow-hidden select-none flex-shrink-0 h-full"
       style={{ width: '24vw' }}
       onMouseDown={() => {
         if (activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {

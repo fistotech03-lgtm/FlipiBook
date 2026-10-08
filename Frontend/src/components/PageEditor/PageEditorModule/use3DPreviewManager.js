@@ -7,11 +7,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
+import { useAuth } from '../../../context/AuthContext';
 
 export const use3DPreviewManager = ({
   setPages,
   activePageIndex
 }) => {
+  const { user } = useAuth();
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [current3DItem, setCurrent3DItem] = useState(null);
   const [shadowStrength, setShadowStrength] = useState(1);
@@ -62,10 +64,10 @@ export const use3DPreviewManager = ({
         try {
           const parsed = JSON.parse(dataVal);
           if (parsed.v_id) {
-            const storedUser = localStorage.getItem('user');
-            const user = storedUser ? JSON.parse(storedUser) : null;
+
+
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            axios.get(`${backendUrl}/api/assets/3d-models/${user?.emailId || 'guest'}`)
+            axios.get(`${backendUrl}/api/assets/3d-models/${user?.emailId || user?.email || 'guest'}`)
               .then(res => {
                 if (res.data?.success && Array.isArray(res.data.data)) {
                   const targetModel = res.data.data.find(m => m.v_id === parsed.v_id);
@@ -112,12 +114,12 @@ export const use3DPreviewManager = ({
                   parsed.name = bottomText;
                   el.setAttribute('data-interaction-value', JSON.stringify(parsed));
 
-                  const storedUser = localStorage.getItem('user');
-                  const user = storedUser ? JSON.parse(storedUser) : null;
-                  if (user?.emailId) {
+
+                  const userEmail = user?.emailId || user?.email;
+                  if (userEmail) {
                     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
                     axios.post(`${backendUrl}/api/assets/3d-models/save-config`, {
-                      emailId: user.emailId,
+                      emailId: userEmail,
                       v_id: parsed.v_id,
                       name: bottomText
                     }).catch(() => { });

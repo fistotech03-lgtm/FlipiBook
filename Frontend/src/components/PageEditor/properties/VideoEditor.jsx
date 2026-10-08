@@ -4,6 +4,7 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
 import { Icon } from "@iconify/react";
+import { useAuth } from "../../../context/AuthContext";
 
 import {
   Video as VideoIcon,
@@ -127,6 +128,7 @@ const VideoEditor = ({
 }) => {
   const { v_id: paramVId } = useParams();
   const activeVId = flipbookVId || paramVId;
+  const { user } = useAuth();
 
   const fileInputRef = useRef(null);
   const [openGallery, setOpenGallery] = useState(false);
@@ -1840,11 +1842,9 @@ const VideoEditor = ({
       setPreviewSrc(videoURL);
       onUpdateRef.current?.({ newElement: wasIframe ? target : undefined });
 
-      const storedUser = localStorage.getItem('user');
-      if (storedUser && (activeVId || (folderName && flipbookName))) {
-        const user = JSON.parse(storedUser);
+      if (user && (activeVId || (folderName && flipbookName))) {
         const formData = new FormData();
-        formData.append('emailId', user.emailId);
+        formData.append('emailId', user.emailId || user.email);
         if (activeVId) formData.append('v_id', activeVId);
         if (folderName) formData.append('folderName', folderName);
         if (flipbookName) formData.append('flipbookName', flipbookName);

@@ -20,6 +20,7 @@ import ColorPicker from '../properties/ColorPicker';
 import HotspotCustomizationPopup from '../modals/HotspotCustomizationPopup';
 import { generateHotspotSVG, generateButtonSVG } from '../utils/hotspotSvgUtils';
 import MediaGalleryPopup from '../properties/MediaGalleryPopup';
+import { useAuth } from '../../../context/AuthContext';
 
 const GlbModelScene = ({ url }) => {
   const { scene, animations } = useGLTF(url);
@@ -879,6 +880,7 @@ const InteractionPanel = ({
   folderName: folderNameProp,
   flipbookName: flipbookNameProp
 }) => {
+  const { user } = useAuth();
   const { folder: paramFolder, v_id: paramVId } = useParams() || {};
   const location = useLocation() || {};
 
@@ -1436,12 +1438,10 @@ const InteractionPanel = ({
     const recordedData = overrideData || recordedDataMap[item.id];
     if (!recordedData || !recordedData.blob) return;
 
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) {
+    if (!user) {
       alert("You must be logged in to save recorded audio.");
       return;
     }
-    const user = JSON.parse(storedUser);
 
     setUploadingItems(prev => ({ ...prev, [item.id]: true }));
 
@@ -1452,7 +1452,7 @@ const InteractionPanel = ({
       const recFile = new File([recordedData.blob], `voice_recording_${Date.now()}${ext}`, { type: mime });
 
       const formData = new FormData();
-      formData.append('emailId', user.emailId);
+      formData.append('emailId', user.emailId || user.email);
       if (effectiveVId) formData.append('v_id', effectiveVId);
       if (effectiveFolder) formData.append('folderName', effectiveFolder);
       if (effectiveBook) formData.append('flipbookName', effectiveBook);
@@ -2994,8 +2994,7 @@ const InteractionPanel = ({
                                       accept="*"
                                       onFileSelect={(file) => {
                                         if (file && updateElementAttribute) {
-                                          const storedUser = localStorage.getItem('user');
-                                          if (!storedUser) { alert("You must be logged in to upload a file."); return; }
+                                          if (!user) { alert("You must be logged in to upload a file."); return; }
 
                                           const reader = new FileReader();
                                           reader.onload = () => {
@@ -3355,16 +3354,14 @@ const InteractionPanel = ({
                                       accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
                                       onFileSelect={async (file) => {
                                         if (file && updateElementAttribute) {
-                                          const storedUser = localStorage.getItem('user');
-                                          if (!storedUser) { alert("You must be logged in to upload a file."); return; }
-                                          const user = JSON.parse(storedUser);
+                                          if (!user) { alert("You must be logged in to upload a file."); return; }
 
                                           setUploadingItems(prev => ({ ...prev, [item.id]: true }));
 
                                           try {
                                             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
                                             const formData = new FormData();
-                                            formData.append('emailId', user.emailId);
+                                            formData.append('emailId', user.emailId || user.email);
                                             if (effectiveVId) formData.append('v_id', effectiveVId);
                                             if (effectiveFolder) formData.append('folderName', effectiveFolder);
                                             if (effectiveBook) formData.append('flipbookName', effectiveBook);

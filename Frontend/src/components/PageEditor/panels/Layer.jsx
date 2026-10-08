@@ -16,6 +16,7 @@ import AlertModal from '../../AlertModal';
 import { Icon as FileReplaceIcon, Icon } from '@iconify/react';
 import pageCacheManager from '../utils/PageCacheManager';
 import { parseLayersFromSVG } from '../utils/editorUtils';
+import { useAuth } from '../../../context/AuthContext';
 
 // Memoized isolated vector SVG preview container with CSS containment
 const MemoizedPagePreview = React.memo(({ pageId, pageHtml, isHidden }) => {
@@ -518,6 +519,8 @@ const Layer = ({
     }
   }, [isPdfProject, activeTab]);
 
+  const { user } = useAuth();
+
   // Menu State
   const [activeMenuPageId, setActiveMenuPageId] = useState(null);
   const menuRef = useRef(null);
@@ -603,12 +606,11 @@ const Layer = ({
   // Fetch all books for uniqueness validation
   useEffect(() => {
     const fetchBooks = async () => {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-      if (user?.emailId) {
+      const emailId = user?.emailId || user?.email;
+      if (emailId) {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         try {
-          const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId: user.emailId } });
+          const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId } });
           if (res.data && res.data.books) {
             setAllBooks(res.data.books);
           }
@@ -750,7 +752,7 @@ const Layer = ({
     <motion.div
       initial={false}
       animate={{ width: isVisible ? '16vw' : '0vw' }}
-      className="relative h-[92vh] bg-white border-r border-[#EEEEEE] overflow-visible flex-shrink-0"
+      className="relative h-full bg-white border-r border-[#EEEEEE] overflow-visible flex-shrink-0"
     >
       {/* Floating Button Drag Area (Hidden when sidebar is open) */}
       {!isVisible && (

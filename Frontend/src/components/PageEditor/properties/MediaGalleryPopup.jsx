@@ -5,9 +5,11 @@ import axios from 'axios';
 import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
 import { useToast } from '../../CustomToast';
+import { useAuth } from '../../../context/AuthContext';
 
 const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGalleryType, imageOnly = false }) => {
   const toast = useToast();
+  const { user } = useAuth();
   const [galleryType, setGalleryType] = useState(() => {
     return initialGalleryType || (imageOnly ? 'Image Gallery' : 'All');
   });
@@ -42,15 +44,13 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
     if (!isOpen) return;
 
     const fetchGalleryAssets = async () => {
-      const storedUser = localStorage.getItem('user');
-      if (!storedUser) return;
-      const user = JSON.parse(storedUser);
+      if (!user) return;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       setIsLoading(true);
       try {
         const res = await axios.get(`${backendUrl}/api/flipbook/get-gallery-assets`, {
-          params: { emailId: user.emailId }
+          params: { emailId: user.emailId || user.email }
         });
 
         if (res.data.assets) {
@@ -149,8 +149,6 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
   const handleFileChange = async (e) => {
     if (e.target.files?.length) {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       const validFiles = [];
@@ -267,12 +265,10 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
         file: newFile
       };
 
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      if (user) {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const formData = new FormData();
-        formData.append('emailId', user.emailId);
+        formData.append('emailId', user.emailId || user.email);
         formData.append('isGallery', 'true');
         formData.append('type', isVideo ? 'video' : isAnimated ? 'gif' : 'image');
         formData.append('file', newFile);
@@ -335,14 +331,12 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
       return;
     }
     
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
+    if (user) {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       
       try {
         const res = await axios.post(`${backendUrl}/api/flipbook/rename-gallery-asset`, {
-          emailId: user.emailId,
+          emailId: user.emailId || user.email,
           file_v_id: item.file_v_id,
           fileName: item.id || item.name,
           newName: renameInput.trim()
@@ -597,13 +591,11 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                           className="text-[0.7vw] font-medium text-red-600 hover:bg-red-50 text-left px-[0.5vw] py-[0.3vw]"
                           onClick={async (e) => {
                             e.stopPropagation();
-                            const storedUser = localStorage.getItem('user');
-                            if (storedUser) {
-                              const user = JSON.parse(storedUser);
+                            if (user) {
                               const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
                               try {
                                 await axios.post(`${backendUrl}/api/flipbook/delete-gallery-asset`, {
-                                  emailId: user.emailId,
+                                  emailId: user.emailId || user.email,
                                   url: item.rawUrl || item.url,
                                   fileName: item.id || item.name,
                                   file_v_id: item.file_v_id

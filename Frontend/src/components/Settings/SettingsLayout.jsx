@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { clearSession } from '../../utils/authUtils';
+import { useAuth } from '../../context/AuthContext';
 
 const defaultColors = [
   '#4c5add', '#2563eb', '#059669', '#d97706', '#dc2626', 
@@ -73,17 +74,14 @@ const getInitialProfile = () => {
 const SettingsLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [user, setUser] = useState(getInitialProfile);
 
   const handleLogout = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
     try {
-      await fetch(`${backendUrl}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      await logout();
     } catch (e) {
-      // Ignore network errors on logout
+      console.warn('Logout error:', e);
     }
 
     // Clear client session and user data
@@ -91,6 +89,7 @@ const SettingsLayout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('user_profile');
     localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('last_active_folder');
     localStorage.removeItem('hide_upgrade_card');
     localStorage.removeItem('isAutoSaveEnabled');
@@ -101,7 +100,7 @@ const SettingsLayout = () => {
     }
 
     setUser(defaultProfile);
-    window.location.href = 'http://localhost:5173/';
+    navigate('/home');
   };
 
   useEffect(() => {

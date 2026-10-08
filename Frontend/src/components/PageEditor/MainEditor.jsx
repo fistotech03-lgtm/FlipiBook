@@ -1107,7 +1107,7 @@ const getDraggableElement = (target, canvasRoot) => {
 
   return (
     <div
-      className={`flex-1 flex flex-col overflow-hidden h-[92vh] ${isPopupEditor ? 'bg-[#E5E7EB]' : 'bg-white'}`}
+      className={`flex-1 flex flex-col overflow-hidden h-full ${isPopupEditor ? 'bg-[#E5E7EB]' : 'bg-white'}`}
       onClick={closeAllDropdowns}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -1311,6 +1311,8 @@ const getDraggableElement = (target, canvasRoot) => {
           <GuidesOverlay
             zoom={zoom}
             pan={currentPanRef.current}
+            baseLogicalWidth={baseWidth}
+            baseLogicalHeight={baseHeight}
             baseCanvasWidth={window.innerHeight * 0.78 * (baseWidth / baseHeight)}
             baseCanvasHeight={window.innerHeight * 0.78}
           />

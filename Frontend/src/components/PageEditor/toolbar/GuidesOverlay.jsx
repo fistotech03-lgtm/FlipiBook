@@ -1,24 +1,31 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 
-// GuidesOverlay listens to ruler events and renders draggable guidelines
-const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
+// GuidesOverlay listens to ruler events, renders draggable guidelines,
+// provides magnetic snapping against canvas edges, centers, elements, and minute ruler ticks,
+// and shows the live movement coordinate in a dark box.
+const GuidesOverlay = ({
+  zoom,
+  pan,
+  baseCanvasWidth,
+  baseCanvasHeight,
+  baseLogicalWidth = 210,
+  baseLogicalHeight = 297
+}) => {
   const containerRef = useRef(null);
-  
-  // Store guides as logical coordinates in the flipbook space (0 to baseWidth)
+
+  // Store guides as logical coordinates in the flipbook space (0 to unscaled canvas dimension)
   const [guides, setGuides] = useState({ h: [], v: [] });
-  
-  // Track current pan and dimensions efficiently without React state if possible,
-  // but for rendering the div lines we need them in React state or use Refs and direct DOM manipulation.
-  // Direct DOM manipulation is much faster for 60fps panning.
+
   const guidesStateRef = useRef(guides);
   guidesStateRef.current = guides;
-  
+
   const containerDimensionsRef = useRef({ width: 0, height: 0 });
   const panRef = useRef(pan);
   const zoomRef = useRef(zoom);
   const animationFrameRef = useRef(null);
-  
+
   useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
   // Keep dimensions up to date
   useEffect(() => {
@@ -36,13 +43,13 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     return () => observer.disconnect();
   }, []);
 
-  // Update DOM lines directly for 60fps panning
+  // Update DOM lines directly for 60fps panning & zooming (pixel-perfect integer screen alignment)
   const updateLinesDOM = (renderZoom, renderPan) => {
     if (!containerRef.current) return;
-    
+
     const zoomContainer = document.getElementById('main-zoom-container');
     if (!zoomContainer) return;
-    
+
     const pageContainers = Array.from(zoomContainer.querySelectorAll('.page-svg-container'));
     if (pageContainers.length === 0) return;
 
@@ -52,36 +59,39 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     let maxBottom = -Infinity;
 
     pageContainers.forEach(el => {
-       const rect = el.getBoundingClientRect();
-       if (rect.left < minLeft) minLeft = rect.left;
-       if (rect.top < minTop) minTop = rect.top;
-       if (rect.right > maxRight) maxRight = rect.right;
-       if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+      const rect = el.getBoundingClientRect();
+      if (rect.left < minLeft) minLeft = rect.left;
+      if (rect.top < minTop) minTop = rect.top;
+      if (rect.right > maxRight) maxRight = rect.right;
+      if (rect.bottom > maxBottom) maxBottom = rect.bottom;
     });
 
     const rulerRect = containerRef.current.getBoundingClientRect();
-    
     const startX = minLeft - rulerRect.left;
     const startY = minTop - rulerRect.top;
-
     const scale = renderZoom / 100;
 
-    // Update horizontal lines (which move vertically, so their Y changes)
+    // Update horizontal lines (transform in Y)
     const hLines = containerRef.current.querySelectorAll('.guide-line-h');
     hLines.forEach(line => {
       const logicalY = parseFloat(line.dataset.logical);
       const screenY = startY + (logicalY * scale);
-      line.style.transform = `translateY(${screenY}px)`;
+      line.style.transform = `translateY(${Math.floor(screenY)}px)`;
     });
 
-    // Update vertical lines (which move horizontally, so their X changes)
+    // Update vertical lines (transform in X)
     const vLines = containerRef.current.querySelectorAll('.guide-line-v');
     vLines.forEach(line => {
       const logicalX = parseFloat(line.dataset.logical);
       const screenX = startX + (logicalX * scale);
-      line.style.transform = `translateX(${screenX}px)`;
+      line.style.transform = `translateX(${Math.floor(screenX)}px)`;
     });
   };
+
+  // Immediate synchronous positioning on guide changes before browser paint
+  useLayoutEffect(() => {
+    updateLinesDOM(zoomRef.current, panRef.current);
+  }, [guides]);
 
   // Listen to panning to update lines instantly
   useEffect(() => {
@@ -97,7 +107,7 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     };
   }, [baseCanvasWidth, baseCanvasHeight]);
 
-  // Force update when zoom or layout changes
+  // Smooth animated update when zoom or layout changes
   useEffect(() => {
     const startZoom = zoomRef.current;
     const targetZoom = zoom;
@@ -145,12 +155,17 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     }
   }, [zoom, pan, baseCanvasWidth, baseCanvasHeight, guides]);
 
-  // Global drag handler
+  // Global drag handler with magnetic snapping and dark coordinate box
   useEffect(() => {
     let isDragging = false;
     let dragType = null; // 'h' or 'v'
     let dragIndex = -1; // -1 means new guide
     let dragElement = null; // Temporary visual line while dragging
+    let dragOffset = { x: 0, y: 0 };
+    let snapTargets = []; // Precomputed magnetic snap targets for 60fps drag
+    let badgeEl = null; // Dark coordinate box
+    let hiddenTarget = null;
+    let lastLogicalVal = null;
 
     const getScreenCoord = (e) => {
       const rect = containerRef.current.getBoundingClientRect();
@@ -162,85 +177,341 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
 
     const getLogicalCoord = (screenPos) => {
       const zoomContainer = document.getElementById('main-zoom-container');
-      if (!zoomContainer) return { x: 0, y: 0 };
-      
+      if (!zoomContainer) return { x: 0, y: 0, startX: 0, startY: 0, scale: 1, logicalPageW: 500, logicalPageH: 700 };
+
       const pageContainers = Array.from(zoomContainer.querySelectorAll('.page-svg-container'));
-      if (pageContainers.length === 0) return { x: 0, y: 0 };
+      if (pageContainers.length === 0) return { x: 0, y: 0, startX: 0, startY: 0, scale: 1, logicalPageW: 500, logicalPageH: 700 };
 
       let minLeft = Infinity;
       let minTop = Infinity;
+      let maxRight = -Infinity;
+      let maxBottom = -Infinity;
 
       pageContainers.forEach(el => {
-         const rect = el.getBoundingClientRect();
-         if (rect.left < minLeft) minLeft = rect.left;
-         if (rect.top < minTop) minTop = rect.top;
+        const rect = el.getBoundingClientRect();
+        if (rect.left < minLeft) minLeft = rect.left;
+        if (rect.top < minTop) minTop = rect.top;
+        if (rect.right > maxRight) maxRight = rect.right;
+        if (rect.bottom > maxBottom) maxBottom = rect.bottom;
       });
 
       const rulerRect = containerRef.current.getBoundingClientRect();
       const startX = minLeft - rulerRect.left;
       const startY = minTop - rulerRect.top;
+      const scale = (zoomRef.current || 100) / 100;
 
-      const scale = zoomRef.current / 100;
+      const logicalPageW = (maxRight - minLeft) / scale;
+      const logicalPageH = (maxBottom - minTop) / scale;
+
       return {
         x: (screenPos.x - startX) / scale,
-        y: (screenPos.y - startY) / scale
+        y: (screenPos.y - startY) / scale,
+        startX,
+        startY,
+        scale,
+        logicalPageW,
+        logicalPageH
       };
     };
 
-    let dragOffset = { x: 0, y: 0 };
+    // Precompute primary magnetic snap targets on drag start
+    const collectSnapTargets = (type, currentDragIdx) => {
+      const zoomContainer = document.getElementById('main-zoom-container');
+      if (!zoomContainer || !containerRef.current) return [];
 
+      const pageContainers = Array.from(zoomContainer.querySelectorAll('.page-svg-container'));
+      if (pageContainers.length === 0) return [];
+
+      let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
+      pageContainers.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.left < minLeft) minLeft = rect.left;
+        if (rect.top < minTop) minTop = rect.top;
+        if (rect.right > maxRight) maxRight = rect.right;
+        if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+      });
+
+      const rulerRect = containerRef.current.getBoundingClientRect();
+      const startX = minLeft - rulerRect.left;
+      const startY = minTop - rulerRect.top;
+      const scale = (zoomRef.current || 100) / 100;
+
+      const logicalPageW = (maxRight - minLeft) / scale;
+      const logicalPageH = (maxBottom - minTop) / scale;
+
+      const targets = [];
+
+      if (type === 'v') {
+        // Page bounds & center (0, center, page end)
+        targets.push(0);
+        targets.push(logicalPageW / 2);
+        targets.push(logicalPageW);
+
+        // Other vertical guides
+        const curV = guidesStateRef.current?.v || [];
+        curV.forEach((gVal, idx) => {
+          if (idx !== currentDragIdx) targets.push(gVal);
+        });
+
+        // Elements on canvas
+        pageContainers.forEach(container => {
+          const svg = container.querySelector('svg');
+          if (!svg) return;
+          const elements = svg.querySelectorAll('[id]:not(defs *):not(clipPath *):not(style):not(script)');
+          elements.forEach(el => {
+            const name = el.getAttribute('data-name') || '';
+            const dt = el.getAttribute('data-type') || '';
+            if (name === 'Overlay' || name === 'Document Shield' || dt === 'background' || dt === 'shield') return;
+            if (el.getAttribute('data-hidden') === 'true' || el.style.visibility === 'hidden' || el.style.display === 'none') return;
+            if (el.closest('[data-name="Overlay"]') || el.closest('[data-type="background"]')) return;
+            if (el === svg) return;
+
+            try {
+              const rect = el.getBoundingClientRect();
+              if (rect.width <= 0 || rect.height <= 0) return;
+              const lLeft = (rect.left - rulerRect.left - startX) / scale;
+              const lRight = (rect.right - rulerRect.left - startX) / scale;
+              const lCenter = (lLeft + lRight) / 2;
+
+              targets.push(lLeft);
+              targets.push(lCenter);
+              targets.push(lRight);
+            } catch (_) {}
+          });
+        });
+      } else {
+        // Page bounds & center (0, center, page end)
+        targets.push(0);
+        targets.push(logicalPageH / 2);
+        targets.push(logicalPageH);
+
+        // Other horizontal guides
+        const curH = guidesStateRef.current?.h || [];
+        curH.forEach((gVal, idx) => {
+          if (idx !== currentDragIdx) targets.push(gVal);
+        });
+
+        // Elements on canvas
+        pageContainers.forEach(container => {
+          const svg = container.querySelector('svg');
+          if (!svg) return;
+          const elements = svg.querySelectorAll('[id]:not(defs *):not(clipPath *):not(style):not(script)');
+          elements.forEach(el => {
+            const name = el.getAttribute('data-name') || '';
+            const dt = el.getAttribute('data-type') || '';
+            if (name === 'Overlay' || name === 'Document Shield' || dt === 'background' || dt === 'shield') return;
+            if (el.getAttribute('data-hidden') === 'true' || el.style.visibility === 'hidden' || el.style.display === 'none') return;
+            if (el.closest('[data-name="Overlay"]') || el.closest('[data-type="background"]')) return;
+            if (el === svg) return;
+
+            try {
+              const rect = el.getBoundingClientRect();
+              if (rect.width <= 0 || rect.height <= 0) return;
+              const lTop = (rect.top - rulerRect.top - startY) / scale;
+              const lBottom = (rect.bottom - rulerRect.top - startY) / scale;
+              const lCenter = (lTop + lBottom) / 2;
+
+              targets.push(lTop);
+              targets.push(lCenter);
+              targets.push(lBottom);
+            } catch (_) {}
+          });
+        });
+      }
+
+      return targets;
+    };
+
+    // Create dark coordinate badge (matching 1st image reference)
+    const createBadge = () => {
+      if (badgeEl) return;
+      badgeEl = document.createElement('div');
+      badgeEl.style.cssText = `
+        position: fixed;
+        z-index: 99999;
+        pointer-events: none;
+        background-color: #1e2432;
+        color: #ffffff;
+        padding: 4px 10px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        user-select: none;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      `;
+      document.body.appendChild(badgeEl);
+    };
+
+    const updateBadge = (clientX, clientY, mmValue, type) => {
+      if (!badgeEl) return;
+      badgeEl.style.display = 'flex';
+
+      const axisLabel = type === 'h' ? 'Y' : 'X';
+      badgeEl.textContent = `${axisLabel}: ${mmValue.toFixed(1)} mm`;
+
+      // Position badge: centered under horizontal line, or beside vertical line
+      const badgeWidth = badgeEl.offsetWidth || 70;
+      const badgeHeight = badgeEl.offsetHeight || 24;
+
+      if (type === 'h') {
+        badgeEl.style.left = `${clientX - badgeWidth / 2}px`;
+        badgeEl.style.top = `${clientY + 14}px`;
+      } else {
+        badgeEl.style.left = `${clientX + 14}px`;
+        badgeEl.style.top = `${clientY - badgeHeight / 2}px`;
+      }
+    };
+
+    const removeBadge = () => {
+      if (badgeEl && badgeEl.parentNode) {
+        badgeEl.parentNode.removeChild(badgeEl);
+      }
+      badgeEl = null;
+    };
+
+    // Handle drag initiation from ruler (new guide)
     const handleRulerDragStart = (e) => {
       const { type, clientX, clientY } = e.detail;
       isDragging = true;
       dragType = type;
       dragIndex = -1; // New guide
-      dragOffset = { x: 0, y: 0 }; // No offset for new guides
+      dragOffset = { x: 0, y: 0 };
+      lastLogicalVal = null;
 
-      // Create a temporary line DOM element for dragging
+      snapTargets = collectSnapTargets(type, -1);
+      createBadge();
+
       dragElement = document.createElement('div');
-      dragElement.className = `absolute ${type === 'h' ? 'w-full h-[1px] border-t border-red-500 cursor-row-resize' : 'h-full w-[1px] border-l border-red-500 cursor-col-resize'} z-50`;
-      
-      // Match the hit area offsets of the real rendered elements so the visual line perfectly matches mathematical coordinate
+      dragElement.className = `absolute pointer-events-none z-50 ${type === 'h' ? 'left-0 w-full h-[9px]' : 'top-0 h-full w-[9px]'}`;
       if (type === 'h') {
-        dragElement.style.paddingBottom = '4px';
-        dragElement.style.marginTop = '-2px';
+        dragElement.style.top = '-4px';
+        dragElement.style.left = '0';
+        dragElement.innerHTML = '<div class="absolute top-[4px] left-0 w-full h-[1px] bg-red-500"></div>';
       } else {
-        dragElement.style.paddingRight = '4px';
-        dragElement.style.marginLeft = '-2px';
+        dragElement.style.left = '-4px';
+        dragElement.style.top = '0';
+        dragElement.innerHTML = '<div class="absolute left-[4px] top-0 w-[1px] h-full bg-red-500"></div>';
       }
-
-      dragElement.style.top = '0';
-      dragElement.style.left = '0';
       containerRef.current.appendChild(dragElement);
-      
+
       const pos = getScreenCoord({ clientX, clientY });
-      if (type === 'h') dragElement.style.transform = `translateY(${pos.y}px)`;
-      else dragElement.style.transform = `translateX(${pos.x}px)`;
+      if (type === 'h') dragElement.style.transform = `translateY(${Math.floor(pos.y)}px)`;
+      else dragElement.style.transform = `translateX(${Math.floor(pos.x)}px)`;
     };
 
     const handleMouseMove = (e) => {
-      if (!isDragging) return;
+      if (!isDragging || !dragElement) return;
+
       const pos = getScreenCoord(e);
-      if (dragElement) {
-        if (dragType === 'h') dragElement.style.transform = `translateY(${pos.y - dragOffset.y}px)`;
-        else dragElement.style.transform = `translateX(${pos.x - dragOffset.x}px)`;
+      const rawScreenPos = { x: pos.x - dragOffset.x, y: pos.y - dragOffset.y };
+      const logicalInfo = getLogicalCoord(rawScreenPos);
+
+      const rawVal = dragType === 'h' ? logicalInfo.y : logicalInfo.x;
+
+      // 1. PRIMARY SNAP TARGETS (Canvas edges, center, elements, other guides)
+      const primaryScreenThreshold = 7;
+      const primaryLogicalThreshold = primaryScreenThreshold / logicalInfo.scale;
+
+      let effectiveLogical = rawVal;
+      let snappedToPrimary = false;
+      let minDiff = Infinity;
+
+      for (const targetVal of snapTargets) {
+        const diff = Math.abs(rawVal - targetVal);
+        if (diff <= primaryLogicalThreshold && diff < minDiff) {
+          minDiff = diff;
+          effectiveLogical = targetVal;
+          snappedToPrimary = true;
+        }
       }
+
+      // 2. MINUTE POINTS MAGNETIC SNAP (Ruler subdivisions / millimeter ticks)
+      const totalLogical = dragType === 'h' ? logicalInfo.logicalPageH : logicalInfo.logicalPageW;
+      const totalBase = dragType === 'h' ? (baseLogicalHeight || 297) : (baseLogicalWidth || 210);
+
+      if (!snappedToPrimary && totalLogical > 0 && totalBase > 0) {
+        const rawMm = (rawVal / totalLogical) * totalBase;
+        const visualScale = (totalLogical * logicalInfo.scale) / totalBase;
+
+        // Determine step matching CanvasRuler subdivisions
+        let stepMm = 500;
+        if (visualScale > 20) stepMm = 5;
+        else if (visualScale > 10) stepMm = 10;
+        else if (visualScale > 4) stepMm = 20;
+        else if (visualScale > 1.5) stepMm = 50;
+        else if (visualScale > 0.5) stepMm = 100;
+        else if (visualScale > 0.2) stepMm = 250;
+
+        const subStepMm = stepMm / 10;
+        // Minute points snap step: 0.5mm if high zoom, else 1mm (or finer subStep)
+        const minuteStepMm = subStepMm <= 0.5 ? 0.5 : 1;
+
+        const nearestMm = Math.round(rawMm / minuteStepMm) * minuteStepMm;
+        const nearestLogical = (nearestMm / totalBase) * totalLogical;
+
+        const screenDist = Math.abs(rawVal - nearestLogical) * logicalInfo.scale;
+        const mmScreenDist = (minuteStepMm / totalBase) * totalLogical * logicalInfo.scale;
+        const minuteThreshold = Math.min(3.5, mmScreenDist * 0.45);
+
+        if (screenDist <= minuteThreshold) {
+          effectiveLogical = nearestLogical;
+        }
+      }
+
+      lastLogicalVal = effectiveLogical;
+
+      // Pixel-perfect integer screen coordinate matching CanvasRuler Math.floor()
+      const effectiveScreen = dragType === 'h'
+        ? Math.floor(logicalInfo.startY + (effectiveLogical * logicalInfo.scale))
+        : Math.floor(logicalInfo.startX + (effectiveLogical * logicalInfo.scale));
+
+      if (dragType === 'h') {
+        dragElement.style.transform = `translateY(${effectiveScreen}px)`;
+      } else {
+        dragElement.style.transform = `translateX(${effectiveScreen}px)`;
+      }
+
+      // Compute display mm value
+      const mmVal = totalLogical > 0 ? (effectiveLogical / totalLogical) * totalBase : effectiveLogical;
+      updateBadge(e.clientX, e.clientY, mmVal, dragType);
     };
 
     const handleMouseUp = (e) => {
       if (!isDragging) return;
+
       const pos = getScreenCoord(e);
-      const finalPos = { x: pos.x - dragOffset.x, y: pos.y - dragOffset.y };
-      const logicalPos = getLogicalCoord(finalPos);
+      const rulerRect = containerRef.current.getBoundingClientRect();
+
+      // Check if user dragged guide back onto ruler to delete it
+      const draggedToRuler = (dragType === 'v' && e.clientX <= rulerRect.left + 22) ||
+                            (dragType === 'h' && e.clientY <= rulerRect.top + 22);
+
+      const finalLogical = lastLogicalVal !== null
+        ? lastLogicalVal
+        : (dragType === 'h' ? getLogicalCoord({ x: pos.x - dragOffset.x, y: pos.y - dragOffset.y }).y
+                            : getLogicalCoord({ x: pos.x - dragOffset.x, y: pos.y - dragOffset.y }).x);
 
       setGuides(prev => {
         const newGuides = { ...prev };
         if (dragIndex === -1) {
-          // Add new guide
-          newGuides[dragType] = [...newGuides[dragType], dragType === 'h' ? logicalPos.y : logicalPos.x];
+          // Add new guide if inside canvas
+          if (!draggedToRuler) {
+            newGuides[dragType] = [...newGuides[dragType], finalLogical];
+          }
         } else {
-          // Update existing guide
-          newGuides[dragType][dragIndex] = dragType === 'h' ? logicalPos.y : logicalPos.x;
+          // Update or delete existing guide
+          if (draggedToRuler) {
+            newGuides[dragType] = newGuides[dragType].filter((_, idx) => idx !== dragIndex);
+          } else {
+            newGuides[dragType] = [...newGuides[dragType]];
+            newGuides[dragType][dragIndex] = finalLogical;
+          }
         }
         return newGuides;
       });
@@ -250,7 +521,9 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
       }
       dragElement = null;
       isDragging = false;
-      
+      lastLogicalVal = null;
+      removeBadge();
+
       if (hiddenTarget) {
         hiddenTarget.style.opacity = '1';
         hiddenTarget = null;
@@ -260,14 +533,15 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     let lastClickTime = 0;
     let lastClickIndex = -1;
     let lastClickType = null;
-    let hiddenTarget = null;
 
-    // To handle dragging existing guides
+    // Handle dragging and double-click delete on existing guides
     const handleGuideMouseDown = (e) => {
-      const target = e.target;
+      const target = e.target.closest('.guide-line-h, .guide-line-v');
+      if (!target) return;
+
       let clickedType = null;
       let clickedIndex = -1;
-      
+
       if (target.classList.contains('guide-line-h')) {
         clickedType = 'h';
         clickedIndex = parseInt(target.dataset.index);
@@ -277,50 +551,60 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
       } else {
         return;
       }
-      
+
       e.preventDefault();
       e.stopPropagation();
 
       const now = Date.now();
       if (now - lastClickTime < 300 && lastClickIndex === clickedIndex && lastClickType === clickedType) {
-        // Double click detected! Delete the guide.
+        // Double-click detected! Delete the guideline.
         setGuides(prev => {
           const newGuides = { ...prev };
-          newGuides[clickedType] = [...newGuides[clickedType]];
-          newGuides[clickedType].splice(clickedIndex, 1);
+          newGuides[clickedType] = newGuides[clickedType].filter((_, idx) => idx !== clickedIndex);
           return newGuides;
         });
-        lastClickTime = 0; // reset
+        lastClickTime = 0;
         return;
       }
 
       lastClickTime = now;
       lastClickIndex = clickedIndex;
       lastClickType = clickedType;
-      
+
       isDragging = true;
       dragType = clickedType;
       dragIndex = clickedIndex;
+      lastLogicalVal = null;
 
-      // Create a temporary element and hide the original to prevent react re-renders during drag
+      snapTargets = collectSnapTargets(clickedType, clickedIndex);
+      createBadge();
+
       dragElement = document.createElement('div');
-      dragElement.className = target.className;
-      dragElement.style.cssText = target.style.cssText; // Copy all styles including margins for perfect hit matching
-      dragElement.style.top = '0';
-      dragElement.style.left = '0';
-      
+      dragElement.className = `absolute pointer-events-none z-50 ${clickedType === 'h' ? 'left-0 w-full h-[9px]' : 'top-0 h-full w-[9px]'}`;
+      if (clickedType === 'h') {
+        dragElement.style.top = '-4px';
+        dragElement.style.left = '0';
+        dragElement.innerHTML = '<div class="absolute top-[4px] left-0 w-full h-[1px] bg-red-500"></div>';
+      } else {
+        dragElement.style.left = '-4px';
+        dragElement.style.top = '0';
+        dragElement.innerHTML = '<div class="absolute left-[4px] top-0 w-[1px] h-full bg-red-500"></div>';
+      }
+
       const currentTransform = target.style.transform;
       const val = parseFloat(currentTransform.replace(/[^\d.-]/g, '')) || 0;
-      
+
       const pos = getScreenCoord(e);
       if (clickedType === 'h') {
         dragOffset = { x: 0, y: pos.y - val };
+        dragElement.style.transform = `translateY(${val}px)`;
       } else {
         dragOffset = { x: pos.x - val, y: 0 };
+        dragElement.style.transform = `translateX(${val}px)`;
       }
 
       containerRef.current.appendChild(dragElement);
-      
+
       hiddenTarget = target;
       hiddenTarget.style.opacity = '0';
     };
@@ -328,8 +612,7 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
     window.addEventListener('ruler-drag-start', handleRulerDragStart);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    
-    // We attach mousedown to the container to catch existing guides
+
     const container = containerRef.current;
     if (container) container.addEventListener('mousedown', handleGuideMouseDown);
 
@@ -338,28 +621,35 @@ const GuidesOverlay = ({ zoom, pan, baseCanvasWidth, baseCanvasHeight }) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       if (container) container.removeEventListener('mousedown', handleGuideMouseDown);
+      removeBadge();
     };
-  }, [baseCanvasWidth, baseCanvasHeight]);
+  }, [baseCanvasWidth, baseCanvasHeight, baseLogicalWidth, baseLogicalHeight]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
       {guides.h.map((val, idx) => (
         <div
           key={`h-${idx}`}
-          className="guide-line-h absolute top-0 left-0 w-full h-[1px] border-t border-red-500 cursor-row-resize pointer-events-auto"
-          style={{ paddingBottom: '4px', marginTop: '-2px' }} // Increase hit area
+          className="guide-line-h group absolute left-0 w-full h-[9px] cursor-row-resize pointer-events-auto select-none"
+          style={{ top: '-4px' }}
           data-index={idx}
           data-logical={val}
-        />
+          title="Horizontal Guide: Drag to move, double-click to remove"
+        >
+          <div className="absolute top-[4px] left-0 w-full h-[1px] bg-red-500 group-hover:bg-red-600 transition-colors pointer-events-none" />
+        </div>
       ))}
       {guides.v.map((val, idx) => (
         <div
           key={`v-${idx}`}
-          className="guide-line-v absolute top-0 left-0 h-full w-[1px] border-l border-red-500 cursor-col-resize pointer-events-auto"
-          style={{ paddingRight: '4px', marginLeft: '-2px' }} // Increase hit area
+          className="guide-line-v group absolute top-0 h-full w-[9px] cursor-col-resize pointer-events-auto select-none"
+          style={{ left: '-4px' }}
           data-index={idx}
           data-logical={val}
-        />
+          title="Vertical Guide: Drag to move, double-click to remove"
+        >
+          <div className="absolute left-[4px] top-0 w-[1px] h-full bg-red-500 group-hover:bg-red-600 transition-colors pointer-events-none" />
+        </div>
       ))}
     </div>
   );

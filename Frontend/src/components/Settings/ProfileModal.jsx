@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Save, BookOpen, Library, Settings, ChevronRight, ArrowRight } from 'lucide-react';
+import { X, Save, BookOpen, Library, Settings, ChevronRight, ArrowRight, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { clearSession } from '../../utils/authUtils';
 const resolveUploadsPath = (path) => path || '';
 
 const defaultColors = [
@@ -45,6 +47,30 @@ export default function ProfileModal({ isOpen, onClose, isAutoSaveEnabled, onTog
   });
 
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.warn("Logout error:", e);
+    }
+    clearSession();
+    localStorage.removeItem('user');
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('last_active_folder');
+    localStorage.removeItem('hide_upgrade_card');
+    localStorage.removeItem('isAutoSaveEnabled');
+    sessionStorage.clear();
+
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
+    onClose();
+    navigate('/home');
+  };
 
   useEffect(() => {
     if (isAutoSaveEnabled !== undefined) {
@@ -326,6 +352,14 @@ export default function ProfileModal({ isOpen, onClose, isAutoSaveEnabled, onTog
           className="w-full bg-[#18181b] hover:bg-black text-white py-[0.65vw] px-[1vw] rounded-[0.75vw] text-[0.8vw] font-bold flex items-center justify-center gap-[0.4vw] shadow-md transition-all cursor-pointer"
         >
           Upgrade Profile <ArrowRight size="0.9vw" />
+        </button>
+
+        {/* Log Out Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-[0.5vw] bg-transparent border border-red-200 hover:bg-red-50 text-red-600 py-[0.55vw] px-[1vw] rounded-[0.75vw] text-[0.78vw] font-semibold flex items-center justify-center gap-[0.4vw] transition-all cursor-pointer"
+        >
+          <LogOut size="0.85vw" /> Log Out
         </button>
       </div>
     </>

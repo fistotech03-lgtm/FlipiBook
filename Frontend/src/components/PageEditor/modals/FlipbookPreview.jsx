@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getFromDB } from '../../../utils/dbUtils';
 import useDeviceDetection from '../hooks/useDeviceDetection';
+import { useAuth } from '../../../context/AuthContext';
 
 
 const AttachedCurve = ({ position }) => {
@@ -88,6 +89,7 @@ const parseInitialSettings = (inputSettings, v_id, isPublishedPreview) => {
 };
 
 const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobileProp, isDoublePage, settings, targetPage, v_id: propVId, isPublishedPreview, isLoadingParent = false, currentBook }) => {
+  const { user } = useAuth();
   const params = useParams();
   const v_id = propVId || params.v_id || params.shareId || settings?.shareId || settings?.v_id;
   const [localSettings, setLocalSettings] = useState(() => parseInitialSettings(settings, v_id, isPublishedPreview));
@@ -224,13 +226,12 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
 
         // If we didn't get them from local DB, fallback to backend if v_id exists
         if ((!finalSettings.appearance || !finalSettings.logo || !finalSettings.preloader) && v_id) {
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
+
+          if (user) {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
-              params: { emailId: user.emailId, v_id, metadataOnly: true }
+              params: { emailId: user.emailId || user.email, v_id, metadataOnly: true }
             });
 
             if (res.data) {

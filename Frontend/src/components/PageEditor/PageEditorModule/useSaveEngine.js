@@ -8,6 +8,7 @@ import { useRef } from 'react';
 import axios from 'axios';
 import { getSupabaseBaseUrl, resolveUploadsPath } from '../../../utils/assetUtils';
 import { validateInteractions } from './interactionValidation';
+import { useAuth } from '../../../context/AuthContext';
 
 export const useSaveEngine = ({
   pages,
@@ -26,6 +27,7 @@ export const useSaveEngine = ({
   setActiveTopTool,
   setSelectedLayerId
 }) => {
+  const { user } = useAuth();
   const autoSaveTimerRef = useRef(null);
   const justSavedRef = useRef(false);
   const lastSavedHtmlsRef = useRef({});
@@ -70,9 +72,10 @@ export const useSaveEngine = ({
 
     try {
       setIsSaving(true);
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-      const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
+
+
+      const userEmail = user?.emailId || user?.email;
+      const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       // Extract and upload 3D models into the flipbook's assets/3D_Model/ folder before saving
@@ -572,7 +575,7 @@ export const useSaveEngine = ({
 
         const activeDims = getFlipbookDimensions();
         const payload = {
-          emailId: user?.emailId,
+          emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
@@ -645,7 +648,7 @@ export const useSaveEngine = ({
 
         const activeDims = getFlipbookDimensions();
         const payload = {
-          emailId: user?.emailId,
+          emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),

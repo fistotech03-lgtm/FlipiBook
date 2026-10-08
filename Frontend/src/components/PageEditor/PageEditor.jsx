@@ -17,6 +17,7 @@ import PasswordProtectModal from './modals/PasswordProtectModal';
 import pageCacheManager from './utils/PageCacheManager';
 import { useToast } from '../CustomToast';
 import { getSupabaseBaseUrl, resolveUploadsPath } from '../../utils/assetUtils';
+import { useAuth } from '../../context/AuthContext';
 
 import {
   parseLayersFromSVG,
@@ -34,6 +35,7 @@ import {
 export { parseLayersFromSVG };
 
 const PageEditor = () => {
+  const { user } = useAuth();
   const { folder, v_id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -704,17 +706,16 @@ const PageEditor = () => {
       try {
         if (v_id) {
         try {
-          const storedUser = localStorage.getItem('user');
-          const user = storedUser ? JSON.parse(storedUser) : null;
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
           const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
-            params: { emailId: user?.emailId, v_id, folderName: folder || location.state?.folderName, bookName: decodeURIComponent(v_id) }
+            params: { emailId: user?.emailId || user?.email, v_id, folderName: folder || location.state?.folderName, bookName: decodeURIComponent(v_id) }
           });
 
           if (res.data && res.data.pages) {
             const parser = new DOMParser();
-            const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
+            const userEmail = user?.emailId || user?.email;
+            const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
             const folderNameArr = Array.isArray(res.data.meta.folderName) ? res.data.meta.folderName : [res.data.meta.folderName || 'Recent Book'];
             const actualFolderName = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
             const bookName = res.data.meta.flipbookName || 'Untitled Flipbook';
@@ -878,7 +879,7 @@ const PageEditor = () => {
               const newShareId = Math.random().toString(36).substring(2, 14);
               shareData = { shareId: newShareId, access: 'public' };
               axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-                emailId: user?.emailId,
+                emailId: user?.emailId || user?.email,
                 v_id: v_id,
                 share: shareData
               }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
@@ -1044,7 +1045,7 @@ const PageEditor = () => {
 
   // ── JSX Render ─────────────────────────────────────────────────────────────
   return (
-    <div onContextMenu={(e) => e.preventDefault()} className="flex h-[92vh] w-full bg-white overflow-hidden relative">
+    <div onContextMenu={(e) => e.preventDefault()} className="flex h-[93vh] w-full bg-white overflow-hidden relative">
       {!isLoading && isPasswordProtected && !isUnlocked && (
         <PasswordProtectModal
           v_id={v_id}

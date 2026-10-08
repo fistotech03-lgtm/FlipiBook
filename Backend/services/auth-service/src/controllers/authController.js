@@ -49,7 +49,7 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
   const cookieOptions = {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: SEVEN_DAYS,
     path: '/'
   };
@@ -74,7 +74,7 @@ const clearAuthCookies = (res, req = null) => {
   const cookieOpts = {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'none' : 'lax',
+    sameSite: 'lax',
     path: '/'
   };
   res.clearCookie('token', cookieOpts);

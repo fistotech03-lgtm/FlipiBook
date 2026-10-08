@@ -22,6 +22,8 @@ services:
     expose:
       - "8000"
       - "5001"
+    deploy:
+      replicas: 3
     environment:
       - MONGO_URI=${MONGO_URI}
       - EMAIL_USER=${EMAIL_USER}

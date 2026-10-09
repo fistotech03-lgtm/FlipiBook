@@ -355,6 +355,7 @@ const MainEditor = ({
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = targetSvg.outerHTML;
     tempDiv.querySelectorAll('.slideshow-transition-clone').forEach(el => el.remove());
+    tempDiv.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
     cleanTrimViewFromHtml(tempDiv);
     let finalHtml = tempDiv.innerHTML;
     finalHtml = finalHtml
@@ -369,7 +370,7 @@ const MainEditor = ({
 
   // ── Modular Hook Calls: Slideshow & Custom Video Controls ──
   useSlideshowManager();
-  useVideoControls({ setSelectedLayerId, activePageIndex, updateElementAttribute });
+  useVideoControls({ setSelectedLayerId, selectedLayerId, activePageIndex, updateElementAttribute });
 
 
   // ── Modular Hook Call: Canvas DOM Overlays & Visual Observers ──
@@ -859,6 +860,12 @@ const getDraggableElement = (target, canvasRoot) => {
         hotspotGroup.id = `hotspot-${Date.now()}`;
       }
       return hotspotGroup;
+    }
+
+    // Video groups are single compound elements; always drag the whole video group
+    const videoGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-video-group="true"]') : null;
+    if (videoGroup) {
+      return videoGroup;
     }
 
     let deepestElementWithId = null;

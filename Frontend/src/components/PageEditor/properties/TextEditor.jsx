@@ -1,20 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import ColorPicker, { parseGradient } from './ColorPicker';
-import { generateGradientString } from "../../CustomizedEditor/AppearanceShared";
 import Color from './Color';
 import Effect from './Effect';
 import { applyStyleToActiveTextSelection } from '../utils/editorUtils';
 
 import { Icon } from '@iconify/react';
 import {
-  ChevronDown, PencilLine, AlignLeft, Bold, Minus, List,
-  ChevronUp, Settings2, ArrowsUpFromLine,
-  AlignCenter, AlignRight, AlignJustify, Italic, Underline,
-  Strikethrough, Type, ListOrdered, RotateCcw, X, Pipette,
-  ChevronLeft, ChevronRight, Star, Zap, Eye,
-  ArrowLeftRight, ArrowUpDown, SlidersHorizontal, Maximize,
-  CaseUpper, CaseLower, Palette, Edit3
+  ChevronDown, AlignLeft, Bold, Minus, List,
+  AlignCenter, AlignRight, AlignJustify,
+  ListOrdered,
+  ArrowLeftRight, ArrowUpDown, Maximize
 } from 'lucide-react';
 
 const fontFamilies = [
@@ -33,62 +27,7 @@ const fontWeights = [
   { name: 'Medium', value: '500' },
   { name: 'Semi Bold', value: '600' },
   { name: 'Bold', value: '800' }
-
 ];
-
-// Color conversion helpers
-const hexToRgb = (hex) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : { r: 0, g: 0, b: 0 };
-};
-
-const rgbToHex = (r, g, b) => {
-  return "#" + ((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1).toUpperCase();
-};
-
-const rgbToHsv = (r, g, b) => {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, v = max;
-  const d = max - min;
-  s = max === 0 ? 0 : d / max;
-  if (max === min) {
-    h = 0;
-  } else {
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-      default: break;
-    }
-    h /= 6;
-  }
-  return { h: h * 360, s, v };
-};
-
-const hsvToRgb = (h, s, v) => {
-  h /= 360;
-  let r, g, b;
-  const i = Math.floor(h * 6);
-  const f = h * 6 - i;
-  const p = v * (1 - s);
-  const q = v * (1 - f * s);
-  const t = v * (1 - (1 - f) * s);
-  switch (i % 6) {
-    case 0: r = v, g = t, b = p; break;
-    case 1: r = q, g = v, b = p; break;
-    case 2: r = p, g = v, b = t; break;
-    case 3: r = p, g = q, b = v; break;
-    case 4: r = t, g = p, b = v; break;
-    case 5: r = v, g = p, b = q; break;
-    default: break;
-  }
-  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
-};
 
 
 
@@ -189,7 +128,7 @@ const syncGradient = (doc, element, baseAttr) => {
   if (!stopsJson) return;
 
   let stops = [];
-  try { stops = JSON.parse(stopsJson); } catch (e) { return; }
+  try { stops = JSON.parse(stopsJson); } catch { return; }
 
   const svgRoot = doc.querySelector('svg') || (doc.tagName?.toLowerCase() === 'svg' ? doc : null);
   if (!svgRoot) return;
@@ -734,8 +673,6 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
     strokeDashGap: parseInt((selectedElementProps?.strokeDasharray || '10,10').split(',')[1] || (selectedElementProps?.strokeDasharray || '10,10').split(',')[0]) || 10,
   });
 
-  const [filters, setFilters] = useState({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
-
   const [radius, setRadius] = useState({
     tl: parseFloat(selectedElementProps?.['data-tl'] || 0),
     tr: parseFloat(selectedElementProps?.['data-tr'] || 0),
@@ -769,7 +706,7 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
   const [isDashPosOpen, setIsDashPosOpen] = useState(false);
   const [activePopup, setActivePopup] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
-  const [colorsOnPage, setColorsOnPage] = useState([]);
+  const [colorsOnPage] = useState([]);
 
   // Debounce ref to prevent excessive calls to updateElementAttributeLocal
   const updateTimeoutRef = useRef(null);
@@ -980,43 +917,14 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
 
 const TextEditor = ({
   selectedElement,
-  selectedElementType,
   onUpdate,
-  onPopupPreviewUpdate,
   closePanelsSignal,
   pages,
   setPages,
-  activePopupElement,
-  onPopupUpdate,
-  TextEditorComponent,
-  ImageEditorComponent,
-  VideoEditorComponent,
-  GifEditorComponent,
-  IconEditorComponent,
-  showInteraction = true,
   activePageIndex
 }) => {
-  // Accordian State: 'main' or 'interaction' or null
-  const [activeSection, setActiveSection] = useState('main');
-  const isTextOpen = activeSection === 'main';
-  const isInteractionOpen = activeSection === 'interaction';
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isTextareaEditable, setIsTextareaEditable] = useState(false);
   const [isScrollable, setIsScrollable] = useState(false);
   const [sizingMode, setSizingMode] = useState('auto-height'); // 'auto-width' | 'auto-height' | 'fixed'
-
-
-
-
-
-
-  // Guard ref to track current syncing status
-  const lastSelectedElementRef = useRef(null);
-  const isSyncingRef = useRef(false);
-
-  // Typing debounce refs — prevents canvas re-render on every keystroke
-  const isTypingRef = useRef(false);
-  const typingTimerRef = useRef(null);
 
   // Refs
   const [activePanel, setActivePanel] = useState(null);
@@ -1037,38 +945,16 @@ const TextEditor = ({
   const [textDecoration, setTextDecoration] = useState('none');
   const [textTransform, setTextTransform] = useState('none');
   const [listStyleType, setListStyleType] = useState('none');
-  const textareaRef = useRef(null);
-  const [selectionRange, setSelectionRange] = useState({ start: 0, end: 0 });
 
   const strokePositionRef = useRef(null);
   const dropdownRef = useRef(null);
   const weightRef = useRef(null);
-  const dashedRef = useRef(null);
   const borderStyleRef = useRef(null);
   const fontSizeRef = useRef(null);
   const alignmentRef = useRef(null);
   const styleRef = useRef(null);
   const caseRef = useRef(null);
   const listRef = useRef(null);
-
-  // --- HELPER FUNCTIONS ---
-
-  const escapeSvg = (str) => {
-    return str.replace(/[&<>"']/g, (m) => {
-      switch (m) {
-        case '&': return '&amp;';
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '"': return '&quot;';
-        case "'": return '&apos;';
-        default: return m;
-      }
-    });
-  };
-
-  const applyDesign = useCallback((shouldNotify = true) => {
-    // Logic removed - UI only
-  }, []);
 
   const selectedLayerId = useMemo(() => {
     if (!selectedElement) return null;
@@ -1652,7 +1538,6 @@ const TextEditor = ({
           }
 
           newW = Math.min(newW * scaleX, maxW) / scaleX;
-          newH = newH; // The innerDiv height is auto, so initial height doesn't matter much
 
           const newFo = doc.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
           newFo.id = element.id;
@@ -2055,7 +1940,7 @@ const TextEditor = ({
   };
 
   const updateStyle = useCallback((property, value) => {
-    if (property === 'fontFamily') setFontFamily(value.replace(/['\"]/g, '').split(',')[0]);
+    if (property === 'fontFamily') setFontFamily(value.replace(/['"]/g, '').split(',')[0]);
     if (property === 'fontSize') setFontSize(parseInt(value));
     if (property === 'fontWeight') setFontWeight(value.toString());
     if (property === 'fontStyle') setFontStyle(value);
@@ -2307,7 +2192,7 @@ const TextEditor = ({
         updateElementAttributeLocal(activePageIndex, selectedLayerId, property, adjustedValue);
       }
     }
-  }, [selectedLayerId, activePageIndex, updateElementAttributeLocal, selectionRange, textContent, onUpdate]);
+  }, [selectedLayerId, activePageIndex, updateElementAttributeLocal, textContent, onUpdate]);
 
   const handleScrub = useCallback((property, startValue, step = 1) => (e) => {
     e.preventDefault();
@@ -2409,11 +2294,6 @@ const TextEditor = ({
     updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-sizing-mode', mode);
   }, [selectedLayerId, activePageIndex, updateElementAttributeLocal]);
 
-  const getCurrentStyle = (prop) => {
-    if (!selectedElement) return '';
-    return window.getComputedStyle(selectedElement)[prop] || '';
-  };
-
   const getDeepStyle = useCallback((el, prop) => {
     if (!el) return '';
     const targetEl = el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild : el;
@@ -2487,14 +2367,6 @@ const TextEditor = ({
   };
 
   // --- EFFECTS ---
-
-  useEffect(() => {
-    if (selectedElement !== lastSelectedElementRef.current) {
-      isSyncingRef.current = true;
-      setIsSyncing(true);
-      lastSelectedElementRef.current = selectedElement;
-    }
-  }, [selectedElement]);
 
   const getDeepContent = useCallback((el) => {
     if (!el) return '';
@@ -2650,7 +2522,7 @@ const TextEditor = ({
     const el = document.getElementById(selectedLayerId);
     let observer = null;
     if (el) {
-      observer = new MutationObserver((mutations) => {
+      observer = new MutationObserver(() => {
         if (el.getAttribute('data-editing') === 'true') return;
         // Optimization: only sync if relevant nodes changed
         syncFromCanvas();
@@ -2674,46 +2546,10 @@ const TextEditor = ({
     };
   }, [selectedLayerId, selectedElement, getDeepContent, getDeepStyle]);
 
-  const handleTextSelection = useCallback(() => {
-    if (!textareaRef.current || !selectedElement) return;
-    const { selectionStart, selectionEnd } = textareaRef.current;
-    setSelectionRange({ start: selectionStart, end: selectionEnd });
-
-    // Detection logic: Find the node at selectionStart and fetch its style
-    let currentPos = 0;
-    const findStyleAtPos = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const nextPos = currentPos + node.length;
-        if (selectionStart >= currentPos && selectionStart < nextPos) {
-          const style = window.getComputedStyle(node.parentElement);
-          if (style.fontFamily) setFontFamily(style.fontFamily.replace(/['\"]/g, '').split(',')[0]);
-          if (style.fontSize) setFontSize(parseInt(style.fontSize));
-          return true;
-        }
-        currentPos = nextPos;
-      } else {
-        for (const child of node.childNodes) {
-          if (findStyleAtPos(child)) return true;
-        }
-      }
-      return false;
-    };
-
-    findStyleAtPos(selectedElement);
-  }, [selectedElement]);
-
-
-
   // Reset panels when selectedElement or closePanelsSignal changes
   useEffect(() => {
     setShowStrokePositionDropdown(false);
   }, [selectedElement, closePanelsSignal]);
-
-
-  // Design update logic removed
-  useEffect(() => {
-    // UI only - no canvas updates
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

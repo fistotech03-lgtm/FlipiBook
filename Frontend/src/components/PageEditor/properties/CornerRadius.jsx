@@ -7,8 +7,7 @@ const CornerRadius = ({
   openSubSection, setOpenSubSection,
   radius, setRadius,
   isRadiusLinked, setIsRadiusLinked,
-  tagName = 'rect',
-  ...props
+  tagName = 'rect'
 }) => {
   const containerRef = useRef(null);
 
@@ -93,7 +92,7 @@ const CornerRadius = ({
                   { key: 'data-tr', roundedClass: 'rounded-tr-[1vw] rounded-tl-0 rounded-bl-0 rounded-br-0' },
                   { key: 'data-bl', roundedClass: 'rounded-bl-[1vw] rounded-tl-0 rounded-tr-0 rounded-br-0' },
                   { key: 'data-br', roundedClass: 'rounded-br-[1vw] rounded-tl-0 rounded-tr-0 rounded-bl-0' }
-                ].map((corner, idx) => {
+                ].map((corner) => {
                   const val = parseInt(pseudoProps[corner.key] !== undefined ? pseudoProps[corner.key] : (pseudoProps.rx || 0));
                   const updateVal = (newVal) => {
                     const clamped = Math.max(0, newVal);

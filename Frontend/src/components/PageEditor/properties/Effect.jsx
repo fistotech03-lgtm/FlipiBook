@@ -10,12 +10,12 @@ const Effect = ({
   activeEffects, setActiveEffects,
   effectSettings, setEffectSettings,
   activeColorPicker, setActiveColorPicker,
-  showDetailedPicker, setShowDetailedPicker,
+  setShowDetailedPicker,
+  setPickerPosition,
   ...props
 }) => {
   const [activeEffectPopupId, setActiveEffectPopupId] = useState(null);
   const [effectPopupPos, setEffectPopupPos] = useState({ top: 0, right: '16.5vw' });
-  const [pickerPosition, setPickerPosition] = useState({ top: 0, right: 0 });
 
   const pseudoProps = {
     'data-effect-drop-shadow': activeEffects?.includes('Drop Shadow') ? 'true' : 'false',
@@ -258,7 +258,6 @@ const Effect = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const target = e.currentTarget;
                         if (!isActive) {
                           setShouldOpenPopupId(effect.id);
                           updateAttr(`data-effect-${effect.id}`, 'true');
@@ -320,7 +319,7 @@ const Effect = ({
                     }}
                     onClick={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
-                      setPickerPosition({ top: rect.top, right: window.innerWidth - rect.left + 15 });
+                      if (setPickerPosition) setPickerPosition({ top: rect.top, right: window.innerWidth - rect.left + 15 });
                       if (setActiveColorPicker) setActiveColorPicker(`data-effect-${activeEffectPopupId}-color`);
                       if (setShowDetailedPicker) setShowDetailedPicker(true);
                     }}

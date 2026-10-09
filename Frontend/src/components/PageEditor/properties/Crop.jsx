@@ -81,7 +81,7 @@ export const CropController = ({
     const getCropData = () => {
       try {
         return JSON.parse(cropEl.getAttribute('data-crop-data') || '{}');
-      } catch (e) {
+      } catch {
         return { left: 0, top: 0, width: 100, height: 100, offX: 0, offY: 0, scale: 1 };
       }
     };
@@ -129,7 +129,6 @@ export const CropController = ({
       const maskId = `crop-edit-mask-${activePageIndex}`;
 
       const cd = getCropData();
-      const foEl = null;
       const fallbackW = imgEl?.getAttribute('width') || '100';
       const fallbackH = imgEl?.getAttribute('height') || '100';
       const fallbackX = imgEl?.getAttribute('x') || '0';
@@ -242,7 +241,6 @@ export const CropController = ({
     let startOffX = 0, startOffY = 0;
 
     const updateTransform = (cd) => {
-      const foEl = null;
       const fallbackW = imgEl?.getAttribute('width') || '100';
       const fallbackH = imgEl?.getAttribute('height') || '100';
       const fallbackX = imgEl?.getAttribute('x') || '0';
@@ -311,7 +309,6 @@ export const CropController = ({
       const dxScreen = (e.clientX - startX) / zoomScale;
       const dyScreen = (e.clientY - startY) / zoomScale;
 
-      const foEl = null;
       const fallbackW = imgEl?.getAttribute('width') || '100';
       const fallbackH = imgEl?.getAttribute('height') || '100';
 

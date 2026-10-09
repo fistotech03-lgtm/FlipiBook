@@ -6,22 +6,11 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../../../context/AuthContext';
 import {
   ChevronDown,
-  LayoutGrid,
-  Maximize,
-  MoveHorizontal,
-  Settings,
-  Type,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Maximize2,
   ChevronLeft,
   ChevronRight,
   MoreVertical,
-  Replace,
-  Upload,
-  X
-  } from 'lucide-react';
+  Upload
+} from 'lucide-react';
 import ReplaceMediaModal from './ReplaceMediaModal';
 import { Icon } from '@iconify/react';
 import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
@@ -37,49 +26,6 @@ import DotStylesPopup, { DotRenderer } from '../../CustomizedEditor/popups/DotSt
 import axios from 'axios';
 import ColorPicker from './ColorPicker';
 
-const DraggableSpan = ({ label, value, onChange, min = 0, max = 100, className }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const startXRef = useRef(0);
-  const startValRef = useRef(0);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleMove = (e) => {
-      const dx = e.clientX - startXRef.current;
-      const newVal = Math.max(min, Math.min(max, startValRef.current + Math.round(dx)));
-      onChange(newVal);
-    };
-    const handleUp = () => { setIsDragging(false); document.body.style.cursor = ''; };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    document.body.style.cursor = 'ew-resize';
-    return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); document.body.style.cursor = ''; };
-  }, [isDragging, onChange, min, max]);
-
-  const onMouseDown = (e) => {
-    e.preventDefault(); setIsDragging(true);
-    startXRef.current = e.clientX; startValRef.current = Number(value);
-  };
-
-  return (
-    <span className={`${className} cursor-ew-resize select-none`} onMouseDown={onMouseDown}>{label}</span>
-  );
-};
-
-const Toggle = ({ active, onClick }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${active ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${active ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
-
 const Switch = ({ enabled, onChange }) => (
   <button
     onClick={(e) => {
@@ -92,26 +38,6 @@ const Switch = ({ enabled, onChange }) => (
       className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
     />
   </button>
-);
-
-const RadioGroup = ({ options, value, onChange }) => (
-  <div className="space-y-[0.75vw]">
-    {options.map((opt) => (
-      <label key={opt.id} className="text-[0.75vw] font-semibold text-gray-700">
-        <div className="relative flex items-center justify-center">
-          <input
-            type="radio"
-            name="radio-group"
-            checked={value === opt.id}
-            onChange={() => onChange(opt.id)}
-            className="peer appearance-none w-[1vw] h-[1vw] border-2 border-gray-300 rounded-full checked:border-[#4A3AFF] transition-all bg-white"
-          />
-          <div className="absolute w-[0.3vw] h-[0.3vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
-        </div>
-        <span className={`text-[0.85vw] font-medium ${value === opt.id ? 'text-gray-900' : 'text-gray-500'}`}>{opt.label}</span>
-      </label>
-    ))}
-  </div>
 );
 
 const SectionHeader = ({ title }) => (
@@ -237,14 +163,12 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     }
   }, [selectedElement?.id, slideshowImages, flipbookVId]);
   const isHoveringRef = useRef(false);
-  const sidebarRef = useRef(null);
 
   const transitionEffectRef = useRef(slideshowSettings.transitionEffect || 'Linear');
   useEffect(() => {
     transitionEffectRef.current = slideshowSettings.transitionEffect || 'Linear';
   }, [slideshowSettings.transitionEffect]);
 
-  const [showEffectDropdown, setShowEffectDropdown] = useState(false);
   const [showFitDropdown, setShowFitDropdown] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
   const [showGallery, setShowGallery] = useState(false);
@@ -258,7 +182,6 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
 
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [replaceTargetIndex, setReplaceTargetIndex] = useState(null);
-  const [newReplaceImg, setNewReplaceImg] = useState(null);
   const replaceInputRef = useRef(null);
 
   const [isDisabling, setIsDisabling] = useState(false);
@@ -269,7 +192,6 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
   const isUpdatingDOMTimeoutRef = useRef(null);
   const isHydrating = useRef(true);
   const isSyncingRef = useRef(false);
-  const lastSyncedDataRef = useRef("");
 
   const onUpdateTimerRef = useRef(null);
   const syncTimeoutRef = useRef(null);
@@ -291,7 +213,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
         }));
       }
       return obj;
-    } catch (e) { return data; }
+    } catch { return data; }
   };
 
   const getSvgImageEl = (el) => {
@@ -375,7 +297,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
                   if (Array.isArray(localImages) && localImages.length > 0) {
                     newImages = localImages.slice(0, MAX_GALLERY_IMAGES);
                   }
-                } catch (e) { }
+                } catch { }
               }
             }
 
@@ -456,14 +378,6 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
         const newDataStr = JSON.stringify(dataToSave);
         const oldDataStr = targetElement.getAttribute('data-slideshow');
 
-        // Use a unique signature for the "core" visual state (excluding current index and runtime interactive settings)
-        const visualStateSignature = JSON.stringify({
-          id: selectedElement.id,
-          images: slideshowImages.map(img => ({ url: img.url, isOriginalCrop: img.isOriginalCrop, cropData: img.cropData })),
-          imageFitType: slideshowSettings.imageFitType,
-          opacity: opacity
-        });
-
         if (newDataStr !== oldDataStr) {
           targetElement.setAttribute('data-slideshow', newDataStr);
           targetElement.setAttribute('data-is-slideshow', 'true');
@@ -495,7 +409,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
             const url = imgObj.url;
             if (targetImg.getAttribute('href') !== url || targetImg.src !== url) {
               targetImg.setAttribute('href', url);
-              try { targetImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', url); } catch (e) { }
+              try { targetImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', url); } catch { }
               if (targetImg.tagName?.toLowerCase() === 'img') targetImg.src = url;
               if (setPreviewSrcRef.current) setPreviewSrcRef.current(url);
             }
@@ -690,7 +604,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
 
     const setElSrc = (url, imgObj) => {
       imgEl.setAttribute('href', url);
-      try { imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', url); } catch (e) { }
+      try { imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', url); } catch { }
       if (imgEl.tagName?.toLowerCase() === 'img') imgEl.src = url;
       if (setPreviewSrcRef.current) setPreviewSrcRef.current(url);
 
@@ -798,40 +712,40 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
       } else {
         w = animEl.getBBox().width;
       }
-    } catch (e) {
+    } catch {
       w = animEl.clientWidth || 100;
     }
 
-    let cloneAnim, realAnim;
+    let realAnim;
 
     if (effect === 'fade') {
-      cloneAnim = clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
+      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
       realAnim = animEl.animate([{ opacity: 0 }, { opacity: baseOpacity }], { duration, easing: 'ease-in-out', fill: 'forwards' });
     } else if (effect === 'push') {
       const dx = dir === 'next' ? -w : w;
-      cloneAnim = clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
+      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
       realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
     } else if (effect === 'linear') {
-      cloneAnim = clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
+      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
       realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
     } else if (effect === 'slide') {
       const dx = dir === 'next' ? -w : w;
-      cloneAnim = clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
+      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
       realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
     } else if (effect === 'flip') {
       animEl.style.transformBox = 'fill-box';
       animEl.style.transformOrigin = 'center';
-      cloneAnim = clone.animate([{ opacity: 0 }, { opacity: 0 }], { duration, fill: 'forwards' });
+      clone.animate([{ opacity: 0 }, { opacity: 0 }], { duration, fill: 'forwards' });
       realAnim = animEl.animate([
         { rotate: 'y 90deg', opacity: 0 },
         { rotate: 'y 0deg', opacity: baseOpacity }
       ], { duration, easing: 'ease-out', fill: 'forwards' });
     } else if (effect === 'reveal') {
       const startClip = dir === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-      cloneAnim = clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
+      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
       realAnim = animEl.animate([{ clipPath: startClip }, { clipPath: 'inset(0 0 0 0)' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
     } else {
-      cloneAnim = clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
+      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
       realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
     }
 
@@ -905,7 +819,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
 
       roots.forEach(r => {
         setTimeout(() => {
-          try { r.unmount(); } catch (e) { }
+          try { r.unmount(); } catch { }
         }, 0);
       });
       roots.length = 0;
@@ -967,7 +881,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
             };
           }
         }
-      } catch(e) {}
+      } catch {}
 
       // Compute actual CSS scale of the container
       const scaleX = containerRect.width / (pageContainer.offsetWidth || 1);
@@ -1048,8 +962,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     trackPosition();
 
     const { navIconColor = '#000000', navStyle: styleId = 1, showDots = true,
-      showArrows = true, showNav = true, dotColor = '#000000',
-      autoSlide = true, autoPlay = true, speed = 3, infiniteLoop = true } = slideshowSettings;
+      showArrows = true, showNav = true, dotColor = '#000000', infiniteLoop = true } = slideshowSettings;
     const showNavArrows = showArrows !== false && showNav !== false;
 
     // Helper: switch to a slide index
@@ -1498,7 +1411,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
         } else {
           localStorage.removeItem(key);
         }
-      } catch (e) {}
+      } catch {}
     }
 
     // Backend delete
@@ -1561,7 +1474,6 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
   const updateSetting = (key, value) => {
     setSlideshowSettings(prev => ({ ...prev, [key]: value }));
   };
-  const effects = ['Linear', 'Fade', 'Flip', 'Reveal'];
 
   const colorsOnPage = React.useMemo(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -1910,7 +1822,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
                         <div
                           className="w-[2.2vw] h-[2.2vw] rounded-[0.5vw] cursor-pointer shadow-sm border border-gray-100"
                           style={{ background: slideshowSettings.navIconColor || '#000000' }}
-                          onClick={(e) => {
+                          onClick={() => {
                             setShowNavColorPicker(true);
                           }}
                         />
@@ -1960,7 +1872,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
                       <div
                         className="w-[2.2vw] h-[2.2vw] rounded-[0.5vw] cursor-pointer shadow-sm border border-gray-100"
                         style={{ background: slideshowSettings.dotColor || '#000000' }}
-                        onClick={(e) => {
+                        onClick={() => {
                           setShowDotColorPicker(true);
                         }}
                       />

@@ -168,11 +168,20 @@ export const usePageManager = ({
   };
 
   const updatePageHtml = (pageIndex, html) => {
+    let sanitizedHtml = html;
+    if (typeof sanitizedHtml === 'string' && sanitizedHtml.includes('custom-video-overlay')) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
+      doc.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
+      const svg = doc.querySelector('svg');
+      if (svg) sanitizedHtml = svg.outerHTML;
+    }
+
     setPages(prev => {
       saveToHistory(prev, selectedLayerId, pageIndex);
 
       const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'image/svg+xml');
+      const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
       const svgEl = doc.querySelector('svg');
       const newLayers = svgEl ? parseLayersFromSVG(svgEl) : [];
 
@@ -181,12 +190,12 @@ export const usePageManager = ({
       if (!page) return prev;
 
       // Update layer cache and debounced thumbnail in PageCacheManager
-      pageCacheManager.setCachedLayers(page.id, html, newLayers);
-      pageCacheManager.updateThumbnailDebounced(page.id, html, 300);
+      pageCacheManager.setCachedLayers(page.id, sanitizedHtml, newLayers);
+      pageCacheManager.updateThumbnailDebounced(page.id, sanitizedHtml, 300);
 
       updated[pageIndex] = {
         ...page,
-        html,
+        html: sanitizedHtml,
         layers: newLayers
       };
       return updated;

@@ -6,7 +6,8 @@ import {
   matrixToTransform,
   getCanvasBounds,
   getSvgPoint,
-  toDOMMatrix
+  toDOMMatrix,
+  clearOverlayType
 } from '../utils/geometryUtils';
 import { isElementCompletelyOutside } from '../utils/trimViewUtils';
 import {
@@ -368,6 +369,10 @@ export const useInteractEngine = ({
                 selectedLayerIdRef.current = elementToDrag.id;
                 multiSelectedIdsRef.current = new Set([elementToDrag.id]);
 
+                // Clear previous stale selection overlays immediately before drawing new one
+                clearOverlayType('selected');
+                clearOverlayType('child-selected');
+
                 // Visualize selection immediately
                 const highlightType = currentFrameIdRef.current && elementToDrag.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
                 drawOverlayHighlight(elementToDrag, highlightType);
@@ -485,6 +490,20 @@ export const useInteractEngine = ({
                 dragState.element.setAttribute('data-dragging', 'true');
               }
 
+              // Purge lingering ghost selection boxes for other elements across all overlay layers
+              if (!dragState.multiDragItems && dragState.element?.id) {
+                document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
+                  ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
+                    if (node.id !== `overlay-poly-selected-${dragState.element.id}` &&
+                        node.id !== `overlay-poly-child-selected-${dragState.element.id}` &&
+                        node.id !== `overlay-path-selected-${dragState.element.id}` &&
+                        node.id !== `overlay-path-child-selected-${dragState.element.id}`) {
+                      node.remove();
+                    }
+                  });
+                });
+              }
+
               // Initialize smart guide snapping candidates and initial bounds
               initSmartGuides(dragState);
             }
@@ -584,6 +603,27 @@ export const useInteractEngine = ({
               const translation = new DOMMatrix().translate(snap.snappedDx, snap.snappedDy);
               const nextMatrix = translation.multiply(dragState.initialMatrix);
               target.setAttribute('transform', matrixToTransform(nextMatrix));
+
+              // Prevent Chromium foreignObject compositor ghosting trails by ensuring an active SVG shape
+              if (target.querySelector && (target.querySelector('foreignObject') || target.tagName?.toLowerCase() === 'foreignobject')) {
+                const parent = target.tagName?.toLowerCase() === 'foreignobject' ? target.parentElement : target;
+                const foEl = target.tagName?.toLowerCase() === 'foreignobject' ? target : target.querySelector('foreignObject');
+                if (parent && foEl) {
+                  let dmgRect = parent.querySelector('.video-damage-rect');
+                  if (!dmgRect) {
+                    dmgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    dmgRect.setAttribute('class', 'video-damage-rect');
+                    dmgRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
+                    dmgRect.setAttribute('stroke', 'none');
+                    dmgRect.setAttribute('pointer-events', 'none');
+                    parent.insertBefore(dmgRect, foEl);
+                  }
+                  dmgRect.setAttribute('x', foEl.getAttribute('x') || '0');
+                  dmgRect.setAttribute('y', foEl.getAttribute('y') || '0');
+                  dmgRect.setAttribute('width', foEl.getAttribute('width') || '100%');
+                  dmgRect.setAttribute('height', foEl.getAttribute('height') || '100%');
+                }
+              }
 
               // dynamically update the outline while dragging
               const highlightType = currentFrameIdRef.current && target.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';

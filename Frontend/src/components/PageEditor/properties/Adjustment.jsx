@@ -97,8 +97,7 @@ export const AdjustmentSlider = ({ label, value, onChange, onReset, min = -100, 
 const Adjustment = ({
   openSubSection, setOpenSubSection,
   filters, setFilters,
-  tagName = 'rect',
-  ...props
+  tagName = 'rect'
 }) => {
   const containerRef = useRef(null);
 

@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '@iconify/react';
-import { createPortal } from 'react-dom';
 import { handleScrubHelper } from './Color';
 import Color from './Color';
 import CornerRadius from './CornerRadius';
-import Adjustment from './Adjustment';
 import Effect from './Effect';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false }) => {
   const [localVal, setLocalVal] = useState(value);
@@ -93,7 +90,7 @@ const ShapeProperties = ({
   activePageIndex,
   selectedLayerId,
   updateElementAttribute,
-  activeMainTool
+  activeMainTool: _activeMainTool
 }) => {
   const [openSubSection, setOpenSubSection] = useState('color');
 
@@ -120,11 +117,11 @@ const ShapeProperties = ({
     colors.add('#FFFFFF');
     colors.add('#000000');
     return Array.from(colors).slice(0, 12);
-  }, [selectedElementProps, activePageIndex]);
-
-  const shapeType = selectedElementProps['data-shape-type'] || selectedElementProps.tagName?.toLowerCase();
+  }, []);
 
   if (!selectedElementProps) return null;
+
+  const shapeType = selectedElementProps['data-shape-type'] || selectedElementProps.tagName?.toLowerCase();
 
   const updateAttr = (attribute, value) => {
     updateElementAttribute(activePageIndex, selectedLayerId, attribute, value);
@@ -299,79 +296,6 @@ const ShapeProperties = ({
 
     if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
-
-  const [isNodeEditActive, setIsNodeEditActive] = useState(false);
-
-  useEffect(() => {
-    const handleNodeEditChange = (e) => {
-      setIsNodeEditActive(Boolean(e.detail?.active));
-    };
-    window.addEventListener('node-edit-mode-changed', handleNodeEditChange);
-    return () => window.removeEventListener('node-edit-mode-changed', handleNodeEditChange);
-  }, []);
-
-  const isVectorPath = (
-    shapeType === 'path' ||
-    shapeType === 'vector-path' ||
-    shapeType === 'shape' ||
-    selectedElementProps['data-type'] === 'vector-path' ||
-    selectedElementProps['data-type'] === 'shape' ||
-    selectedElementProps.tagName?.toLowerCase() === 'path' ||
-    Boolean(selectedElementProps.d) ||
-    isNodeEditActive ||
-    Boolean(selectedLayerId)
-  );
-
-  const [activeNodeType, setActiveNodeType] = useState(null);
-  const [selectedNodeCount, setSelectedNodeCount] = useState(1);
-  const [canJoinNodes, setCanJoinNodes] = useState(false);
-  const [isLineSelected, setIsLineSelected] = useState(false);
-
-  useEffect(() => {
-    const handleNodeSelected = (e) => {
-      if (e.detail?.nodeType) {
-        setActiveNodeType(e.detail.nodeType);
-      }
-      const count = e.detail?.selectedCount !== undefined ? e.detail.selectedCount : e.detail?.count;
-      if (count !== undefined) {
-        setSelectedNodeCount(count);
-      }
-      if (e.detail?.canJoin !== undefined) {
-        setCanJoinNodes(Boolean(e.detail.canJoin) && count === 2);
-      } else {
-        setCanJoinNodes(count === 2);
-      }
-      if (e.detail?.isLineSelected !== undefined) {
-        setIsLineSelected(Boolean(e.detail.isLineSelected));
-      } else {
-        setIsLineSelected(false);
-      }
-    };
-    const handleNodeEditChange = (e) => {
-      setIsNodeEditActive(Boolean(e.detail?.active));
-      if (e.detail?.active) {
-        setSelectedNodeCount(1);
-        setCanJoinNodes(false);
-        setIsLineSelected(false);
-        setActiveNodeType(null); // Reset stale type; enterNodeEditMode will dispatch node-selected with the real type
-      }
-    };
-    window.addEventListener('node-selected', handleNodeSelected);
-    window.addEventListener('node-edit-mode-changed', handleNodeEditChange);
-    return () => {
-      window.removeEventListener('node-selected', handleNodeSelected);
-      window.removeEventListener('node-edit-mode-changed', handleNodeEditChange);
-    };
-  }, []);
-
-  const triggerPathAction = (action) => {
-    if (['sharp', 'smooth', 'balanced', 'custom'].includes(action)) {
-      setActiveNodeType(action);
-    }
-    window.dispatchEvent(new CustomEvent('vector-path-action', { detail: { action } }));
-  };
-
-  const isPenChosen = activeMainTool === 'pen';
 
   return (
     <div className="flex flex-col gap-[0.4vw] font-sans">

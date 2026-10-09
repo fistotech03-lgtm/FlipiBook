@@ -188,7 +188,25 @@ export const createInteractionBadgeOverlay = ({
         }
       }
 
-      const midN = { x: (mapped[0].x + mapped[1].x) / 2, y: (mapped[0].y + mapped[1].y) / 2 };
+      let midN;
+      if (mapped && mapped.length >= 4) {
+        const minX = Math.min(mapped[0].x, mapped[1].x, mapped[2].x, mapped[3].x);
+        const maxX = Math.max(mapped[0].x, mapped[1].x, mapped[2].x, mapped[3].x);
+        const minY = Math.min(mapped[0].y, mapped[1].y, mapped[2].y, mapped[3].y);
+        midN = {
+          x: (minX + maxX) / 2,
+          y: minY
+        };
+      } else if (mapped && mapped.length >= 2) {
+        midN = { x: (mapped[0].x + mapped[1].x) / 2, y: (mapped[0].y + mapped[1].y) / 2 };
+      } else {
+        return;
+      }
+
+      const isDraggingNow = el.getAttribute('data-dragging') === 'true' || document.body.classList.contains('dragging-active');
+      badge.style.pointerEvents = isDraggingNow ? 'none' : 'auto';
+      badge.style.display = 'flex';
+
       const vwOffset = (window.innerWidth * 0.006) / zoomScale;
       badge.style.left = `${midN.x}px`;
 

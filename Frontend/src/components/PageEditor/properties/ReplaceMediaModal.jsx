@@ -514,7 +514,11 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         if (renamingItemId === item.id) return;
-                        replaceModalFile?.id === item.id ? setReplaceModalFile(null) : setReplaceModalFile({ ...item, isGalleryItem: true }); 
+                        if (replaceModalFile?.id === item.id) {
+                          setReplaceModalFile(null);
+                        } else {
+                          setReplaceModalFile({ ...item, isGalleryItem: true });
+                        }
                         setActiveGalleryDropdown(null); 
                       }}
                       onDoubleClick={(e) => {
@@ -659,8 +663,9 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                             className="w-full h-full object-contain absolute inset-0 z-10 bg-gray-100" 
                             onError={(e) => { 
                               if (e.target.src.includes('maxresdefault.jpg')) {
-                                e.target.src = e.target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
-                                if (replaceModalFile) replaceModalFile.url = e.target.src;
+                                const fallbackSrc = e.target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                                e.target.src = fallbackSrc;
+                                setReplaceModalFile(prev => prev ? { ...prev, url: fallbackSrc } : null);
                               } else {
                                 e.target.style.display = 'none'; 
                                 if (e.target.nextSibling) {
@@ -692,7 +697,6 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                       if (val.trim()) {
                         let finalUrl = val.trim();
                         const ytMatch = finalUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-                        const isImage = /\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i.test(finalUrl);
                         const isVideo = ytMatch || /\.(mp4|webm|ogg|mkv)(\?.*)?$/i.test(finalUrl);
 
                         if (mediaType === 'video') {

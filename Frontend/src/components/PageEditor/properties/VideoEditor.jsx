@@ -9,31 +9,27 @@ import { useAuth } from "../../../context/AuthContext";
 import {
   Video as VideoIcon,
   Upload,
-  RefreshCw,
-  Trash2,
-  Sliders,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Replace,
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Edit3,
-  Video,
-  X,
+  ChevronDown
 } from "lucide-react";
 import ReplaceMediaModal from "./ReplaceMediaModal";
 import Color from './Color';
-
 import Adjustment from './Adjustment';
 import Effect from './Effect';
-import ColorPicker, { parseGradient } from "./ColorPicker";
-import { generateGradientString } from "../../CustomizedEditor/AppearanceShared";
-import { syncGradient, getEmbedVideoUrl, detectMediaType } from '../utils/editorUtils';
-import { createPortal } from "react-dom";
+import { parseGradient } from "./ColorPicker";
+import { syncGradient, getEmbedVideoUrl } from '../utils/editorUtils';
+
+const resizeAndCenter = (el, targetW, targetH) => {
+  const oldW = parseFloat(el.getAttribute("width") || "0");
+  const oldH = parseFloat(el.getAttribute("height") || "0");
+  if (oldW > 0 && oldH > 0) {
+    const oldX = parseFloat(el.getAttribute("x") || "0");
+    const oldY = parseFloat(el.getAttribute("y") || "0");
+    el.setAttribute("x", oldX + oldW / 2 - targetW / 2);
+    el.setAttribute("y", oldY + oldH / 2 - targetH / 2);
+  }
+  el.setAttribute("width", targetW);
+  el.setAttribute("height", targetH);
+};
 
 // Switch toggle component (matches SlideshowProperties style)
 const Switch = ({ enabled, onChange, disabled }) => (
@@ -111,19 +107,10 @@ const VideoEditor = ({
   activePageIndex,
   onUpdate,
   onDeleteLayer,
-  onPopupPreviewUpdate,
   currentPageVId,
   flipbookVId,
   folderName,
   flipbookName,
-  activePopupElement,
-  onPopupUpdate,
-  TextEditorComponent,
-  ImageEditorComponent,
-  VideoEditorComponent,
-  GifEditorComponent,
-  IconEditorComponent,
-  showInteraction = true,
   pages
 }) => {
   const { v_id: paramVId } = useParams();
@@ -131,8 +118,6 @@ const VideoEditor = ({
   const { user } = useAuth();
 
   const fileInputRef = useRef(null);
-  const [openGallery, setOpenGallery] = useState(false);
-  const [tab, setTab] = useState("gallery");
   const coverInputRef = useRef(null);
 
   const [previewSrc, setPreviewSrc] = useState(null);
@@ -166,8 +151,6 @@ const VideoEditor = ({
 
   const [opacity, setOpacity] = useState(100);
   const [coverOption, setCoverOption] = useState("auto"); // "upload" or "auto"
-  const [activeSection, setActiveSection] = useState('main');
-  const [showGallery, setShowGallery] = useState(false);
 
   const [backgroundColor, setBackgroundColor] = useState({
     fill: '#000000', fillOpacity: 100, stroke: 'transparent', strokeOpacity: 100, strokeType: 'Solid', strokeWeight: 0
@@ -176,7 +159,6 @@ const VideoEditor = ({
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
   const [radius, setRadius] = useState({ tl: 0, tr: 0, br: 0, bl: 0 });
-  const [isRadiusLinked, setIsRadiusLinked] = useState(true);
   const [activeEffects, setActiveEffects] = useState([]);
   const [activePopup, setActivePopup] = useState(null);
   const [effectSettings, setEffectSettings] = useState({
@@ -193,15 +175,8 @@ const VideoEditor = ({
   const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
   const [isDashPosOpen, setIsDashPosOpen] = useState(false);
 
-  const [inputUrl, setInputUrl] = useState("");
-  const [isAddingUrl, setIsAddingUrl] = useState(false);
-  const [urlAddProgress, setUrlAddProgress] = useState(0);
-  const [isUrlAdded, setIsUrlAdded] = useState(false);
-
   const isUpdatingDOM = useRef(false);
-  const isUpdatingDOMTimeoutRef = useRef(null);
   const isHydrating = useRef(true);
-  const onUpdateTimerRef = useRef(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   const [videoResolution, setVideoResolution] = useState('');
@@ -302,16 +277,6 @@ const VideoEditor = ({
     [],
   );
 
-  const galleryPreviews = useMemo(
-    () => [
-      "https://www.abcconsultants.in/wp-content/uploads/2023/07/Industrial.jpg",
-      "https://www.shutterstock.com/image-photo/engineers-discussing-project-outdoors-industrial-260nw-2624485537.jpg",
-      "https://thumbs.dreamstime.com/b/professional-people-workers-working-modern-technology-robotic-industry-automation-manufacturing-engineer-robot-arm-assembly-413769130.jpg",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjnXGV5m5a_3qpSA5aZOiTI2cxP12fiECP7A&s",
-    ],
-    [],
-  );
-
   const lastElementRef = useRef(null);
 
   const syncStateFromDOM = useCallback((force = false) => {
@@ -404,7 +369,7 @@ const VideoEditor = ({
       try {
         const parsed = JSON.parse(brData);
         setRadius(prev => JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed);
-      } catch (e) { }
+      } catch { }
     } else {
       const br = visualTarget.style.borderRadius || "";
       if (br) {
@@ -432,20 +397,13 @@ const VideoEditor = ({
             return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
           });
         }
-      } catch (e) { }
+      } catch { }
     }
 
     // 6. Media Specific
     if (target.tagName === "VIDEO") {
       const src = target.currentSrc || target.src || target.querySelector("source")?.src || null;
       setPreviewSrc(src);
-
-      const origUrl = target.getAttribute('data-original-url') || liveElement.getAttribute('data-original-url') || "";
-      const isFocused = document.activeElement && document.activeElement.id === 'video-url-input';
-      if (!isFocused) {
-        setInputUrl(origUrl);
-        setIsUrlAdded(!!origUrl);
-      }
 
       const poster = target.getAttribute('poster') || target.poster || null;
       setPosterSrc(poster || null);
@@ -510,14 +468,7 @@ const VideoEditor = ({
           }
           setLoop(urlObj.searchParams.get("loop") === "1");
           setMuted(urlObj.searchParams.get("mute") === "1");
-        } catch (e) {}
-      }
-
-      const origUrl = target.getAttribute('data-original-url') || liveElement.getAttribute('data-original-url') || "";
-      const isFocused = document.activeElement && document.activeElement.id === 'video-url-input';
-      if (!isFocused) {
-        setInputUrl(origUrl);
-        setIsUrlAdded(!!origUrl);
+        } catch {}
       }
 
       setPosterSrc(null);
@@ -859,7 +810,7 @@ const VideoEditor = ({
             strokeOverlay.style.transformOrigin = visualTarget.style.transformOrigin;
 
             let bBox = { x: 0, y: 0, width: 100, height: 100 };
-            try { bBox = visualTarget.getBBox(); } catch (e) { }
+            try { bBox = visualTarget.getBBox(); } catch { }
 
             let bxStr = visualTarget.getAttribute('x') || '0';
             let byStr = visualTarget.getAttribute('y') || '0';
@@ -875,7 +826,7 @@ const VideoEditor = ({
             try {
               const ctm = visualTarget.getScreenCTM();
               if (ctm) { scaleX = Math.abs(ctm.a) || 1; scaleY = Math.abs(ctm.d) || 1; }
-            } catch (e) { }
+            } catch { }
 
             const offsetX = (weight / 2) / scaleX;
             const offsetY = (weight / 2) / scaleY;
@@ -910,7 +861,7 @@ const VideoEditor = ({
         }
 
         let bBox = { x: 0, y: 0, width: 100, height: 100 };
-        try { bBox = visualTarget.getBBox(); } catch (e) { }
+        try { bBox = visualTarget.getBBox(); } catch { }
 
         let bxStr = visualTarget.getAttribute('x') || '0';
         let byStr = visualTarget.getAttribute('y') || '0';
@@ -930,7 +881,7 @@ const VideoEditor = ({
             scaleX = Math.abs(ctm.a) || 1;
             scaleY = Math.abs(ctm.d) || 1;
           }
-        } catch (e) { }
+        } catch { }
 
         const offsetX = (weight / 2) / scaleX;
         const offsetY = (weight / 2) / scaleY;
@@ -1050,7 +1001,7 @@ const VideoEditor = ({
         if (anyR || forceClip) {
           let targetElForShadow = container || liveElement;
           let bb = { x: 0, y: 0, width: 100, height: 100 };
-          try { bb = targetElForShadow.getBBox(); } catch (e) { }
+          try { bb = targetElForShadow.getBBox(); } catch { }
           let cxStr = targetElForShadow.getAttribute('x');
           let cyStr = targetElForShadow.getAttribute('y');
           let cwStr = targetElForShadow.getAttribute('width');
@@ -1342,7 +1293,7 @@ const VideoEditor = ({
 
           const targetEl = visualTarget;
           let box = { x: 0, y: 0, width: 100, height: 100 };
-          try { box = targetEl.getBBox(); } catch (e) {
+          try { box = targetEl.getBBox(); } catch {
             box.x = parseFloat(targetEl.getAttribute('x') || 0);
             box.y = parseFloat(targetEl.getAttribute('y') || 0);
             box.width = parseFloat(targetEl.getAttribute('width') || 100);
@@ -1559,7 +1510,7 @@ const VideoEditor = ({
             target.src = urlObj.toString();
             target.setAttribute('src', urlObj.toString());
           }
-        } catch (e) {
+        } catch {
           // Ignore invalid URLs
         }
       }
@@ -1789,19 +1740,6 @@ const VideoEditor = ({
       target.style.objectFit = "contain";
 
       if (liveElement) {
-        const resizeAndCenter = (el, targetW, targetH) => {
-          const oldW = parseFloat(el.getAttribute("width") || "0");
-          const oldH = parseFloat(el.getAttribute("height") || "0");
-          if (oldW > 0 && oldH > 0) {
-            const oldX = parseFloat(el.getAttribute("x") || "0");
-            const oldY = parseFloat(el.getAttribute("y") || "0");
-            el.setAttribute("x", oldX + oldW / 2 - targetW / 2);
-            el.setAttribute("y", oldY + oldH / 2 - targetH / 2);
-          }
-          el.setAttribute("width", targetW);
-          el.setAttribute("height", targetH);
-        };
-
         const fo = liveElement.tagName.toLowerCase() === "foreignobject" ? liveElement : (liveElement.querySelector("foreignObject") || liveElement.querySelector("foreignobject"));
         if (fo) {
           resizeAndCenter(fo, newW, newH);
@@ -1977,11 +1915,6 @@ const VideoEditor = ({
     const newW = Math.round(svgW * 0.5);
     const newH = Math.round(newW * (9 / 16)); // Standard 16:9 for URLs
 
-    const ytIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-    const ytId = ytIdMatch ? ytIdMatch[1] : null;
-
-
-
     // If the target is already the correct type, just update its src
     if ((isIframeTarget && target.tagName === "IFRAME") || (!isIframeTarget && target.tagName === "VIDEO")) {
       target.src = finalUrl;
@@ -2012,19 +1945,6 @@ const VideoEditor = ({
       }
 
       if (liveElement) {
-        const resizeAndCenter = (el, targetW, targetH) => {
-          const oldW = parseFloat(el.getAttribute("width") || "0");
-          const oldH = parseFloat(el.getAttribute("height") || "0");
-          if (oldW > 0 && oldH > 0) {
-            const oldX = parseFloat(el.getAttribute("x") || "0");
-            const oldY = parseFloat(el.getAttribute("y") || "0");
-            el.setAttribute("x", oldX + oldW / 2 - targetW / 2);
-            el.setAttribute("y", oldY + oldH / 2 - targetH / 2);
-          }
-          el.setAttribute("width", targetW);
-          el.setAttribute("height", targetH);
-        };
-
         const fo = liveElement.tagName.toLowerCase() === "foreignobject" ? liveElement : (liveElement.querySelector("foreignObject") || liveElement.querySelector("foreignobject"));
         if (fo) {
           resizeAndCenter(fo, newW, newH);
@@ -2109,19 +2029,6 @@ const VideoEditor = ({
     }
 
     if (liveElement) {
-      const resizeAndCenter = (el, targetW, targetH) => {
-        const oldW = parseFloat(el.getAttribute("width") || "0");
-        const oldH = parseFloat(el.getAttribute("height") || "0");
-        if (oldW > 0 && oldH > 0) {
-          const oldX = parseFloat(el.getAttribute("x") || "0");
-          const oldY = parseFloat(el.getAttribute("y") || "0");
-          el.setAttribute("x", oldX + oldW / 2 - targetW / 2);
-          el.setAttribute("y", oldY + oldH / 2 - targetH / 2);
-        }
-        el.setAttribute("width", targetW);
-        el.setAttribute("height", targetH);
-      };
-
       const fo = liveElement.tagName.toLowerCase() === "foreignobject"
         ? liveElement
         : (liveElement.closest("foreignObject") || liveElement.querySelector("foreignObject") || liveElement.querySelector("foreignobject"));
@@ -2161,37 +2068,6 @@ const VideoEditor = ({
 
     setPreviewSrc(finalUrl);
     onUpdateRef.current?.();
-  };
-
-  const handleAddUrl = () => {
-    if (!inputUrl) return;
-
-    const type = detectMediaType(inputUrl);
-    if (type !== 'video') {
-      alert("Please provide a valid video URL.");
-      return;
-    }
-
-    setIsAddingUrl(true);
-    setUrlAddProgress(0);
-    setIsUrlAdded(false);
-
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 20) + 10;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        setUrlAddProgress(100);
-        replaceTemplateWithUrl(inputUrl);
-        setTimeout(() => {
-          setIsAddingUrl(false);
-          setIsUrlAdded(true);
-        }, 500);
-      } else {
-        setUrlAddProgress(progress);
-      }
-    }, 200);
   };
 
   if (!selectedElement) {

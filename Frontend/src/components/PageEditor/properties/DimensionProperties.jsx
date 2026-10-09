@@ -32,7 +32,7 @@ export const DimensionInput = ({ targetId, targetAttr, value, readOnly, onChange
             try {
               const domM = new DOMMatrix(transform);
               m = [domM.a, domM.b, domM.c, domM.d, domM.e, domM.f];
-            } catch (_) {
+            } catch {
               if (transform.includes('matrix')) {
                 const match = transform.match(/matrix\(([^)]+)\)/);
                 if (match) {

@@ -20,7 +20,9 @@ import {
     FlipbooksEmptyState,
     FlipbookActionMenu,
     MoveToFolderModal,
-    ConflictModal
+    ConflictModal,
+    ThreeDDashboard,
+    CustomScrollbar
 } from '../components/MyFlipbooks';
 
 const resolveUploadsPath = (path) => path || '';
@@ -148,6 +150,8 @@ export default function MyFlipbooks() {
         if (saved === 'Recent Book') return 'Recent';
         return saved || 'All Flipbook';
     });
+    const [dashboardMode, setDashboardMode] = useState('books'); // 'books' | '3d'
+    const [active3dFolder, setActive3dFolder] = useState('All Models');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [sortOption, setSortOption] = useState('Recently Created');
@@ -1753,14 +1757,25 @@ export default function MyFlipbooks() {
                     handleDeleteFolderClick={handleDeleteFolderClick}
                     FOLDER_COLORS={FOLDER_COLORS}
                     setIsCreateModalOpen={setIsCreateModalOpen}
+                    dashboardMode={dashboardMode}
+                    setDashboardMode={setDashboardMode}
+                    active3dFolder={active3dFolder}
+                    setActive3dFolder={setActive3dFolder}
                 />
 
             {/* Main Content */}
             <main
                 className="flex-1 ml-[18vw] px-[1vw] pt-[1vw] pb-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[92vh] max-h-[92vh] overflow-hidden"
             >
-                {/* Welcome Banner */}
-                <FlipbooksBanner
+                {dashboardMode === '3d' ? (
+                    <ThreeDDashboard
+                        navigate={navigate}
+                        activeFolder={active3dFolder}
+                    />
+                ) : (
+                    <>
+                        {/* Welcome Banner */}
+                        <FlipbooksBanner
                     user={user}
                     setCreateModalInitialView={setCreateModalInitialView}
                     setIsCreateModalOpen={setIsCreateModalOpen}
@@ -1808,8 +1823,11 @@ export default function MyFlipbooks() {
                         <p className="text-gray-500 mt-[1vw] font-medium text-[0.875vw]">Loading Flipbooks...</p>
                     </div>
                 ) : filteredBooks.length > 0 ? (
-                    <div
-                        className="flex-1 overflow-y-auto custom-scrollbar pr-[0.3vw] pb-[2vw] z-10 space-y-[0.85vw] min-h-0"
+                    <CustomScrollbar
+                        color="#d1d5db"
+                        hoverColor="#9ca3af"
+                        width="0.35vw"
+                        className="flex-1 pr-[0.3vw] pb-[2vw] z-10 space-y-[0.85vw] min-h-0"
                         onScroll={() => setActiveBookMenu(null)}
                     >
                         {filteredBooks.map((book) => {
@@ -1855,12 +1873,14 @@ export default function MyFlipbooks() {
                                 />
                             );
                         })}
-                    </div>
+                    </CustomScrollbar>
                 ) : (
                     <FlipbooksEmptyState
                         activeFolder={activeFolder}
                         setIsCreateModalOpen={setIsCreateModalOpen}
                     />
+                )}
+                    </>
                 )}
             </main>
 

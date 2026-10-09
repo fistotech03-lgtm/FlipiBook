@@ -17,6 +17,7 @@ import { Icon as FileReplaceIcon, Icon } from '@iconify/react';
 import pageCacheManager from '../utils/PageCacheManager';
 import { parseLayersFromSVG } from '../utils/editorUtils';
 import { useAuth } from '../../../context/AuthContext';
+import CustomScrollbar from '../../CustomScrollbar';
 
 // Memoized isolated vector SVG preview container with CSS containment
 const MemoizedPagePreview = React.memo(({ pageId, pageHtml, isHidden }) => {
@@ -1189,8 +1190,11 @@ const Layer = ({
             <div className="h-[1px] bg-[#EEEEEE] mx-[-0.8vw] mb-[2vh]"></div>
 
             {/* Scrollable Area for Pages and Layers */}
-            <div
-              className="flex-1 overflow-y-auto pr-[0.2vw] space-y-[1.2vh] no-scrollbar pb-[2vh]"
+            <CustomScrollbar
+              color="#d1d5db"
+              hoverColor="#9ca3af"
+              width="0.32vw"
+              className="flex-1 pr-[0.2vw] space-y-[1.2vh] pb-[2vh]"
               onClick={() => setActiveMenuPageId(null)}
             >
               {(!isPdfProject && activeTab === 'layers') ?
@@ -1307,7 +1311,12 @@ const Layer = ({
                               transition={{ duration: 0.2, ease: 'easeInOut' }}
                               className="overflow-hidden bg-white rounded-b-[0.6vw] border-t border-[#EEF2FF]"
                             >
-                              <div className="py-[1vh] px-[0.6vw] flex flex-col gap-[0.2vh] max-h-[45vh] overflow-y-auto custom-scrollbar">
+                              <CustomScrollbar
+                                color="#c7d2fe"
+                                hoverColor="#818cf8"
+                                width="0.25vw"
+                                className="py-[1vh] px-[0.6vw] flex flex-col gap-[0.2vh] max-h-[45vh]"
+                              >
                                 {page.isHidden ? (
                                   <div className="text-[0.75vw] text-gray-500 font-medium italic px-[0.8vw] py-[1vh] text-center bg-gray-50 rounded-[0.4vw]">
                                     Page is hidden
@@ -1359,7 +1368,7 @@ const Layer = ({
                                     );
                                   });
                                 })()}
-                              </div>
+                              </CustomScrollbar>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -1577,7 +1586,7 @@ const Layer = ({
                 </AnimatePresence>,
                 document.body
               )}
-            </div>
+            </CustomScrollbar>
 
             {/* Footer Buttons */}
             <div className="pt-[1vh] bg-white flex flex-col gap-[1vh] flex-shrink-0">

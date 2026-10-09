@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy } from 'lucide-react';
+import CustomScrollbar from '../CustomScrollbar';
 
 export default function FlipbooksSidebar({
     activeFolder,
@@ -41,7 +42,99 @@ export default function FlipbooksSidebar({
     handleDeleteFolderClick,
     FOLDER_COLORS,
     setIsCreateModalOpen,
+    dashboardMode = 'books',
+    setDashboardMode,
+    active3dFolder = 'All Models',
+    setActive3dFolder,
 }) {
+    // 3D Folders state matching the reference mockup
+    const [threeDFolders, setThreeDFolders] = React.useState([
+        { id: '3d-1', name: 'Motors', count: 1, color: '#f59e0b' },
+        { id: '3d-2', name: 'Pumps', count: 2, color: '#f43f5e' },
+        { id: '3d-3', name: 'Models for Book', count: 1, color: '#10b981' },
+        { id: '3d-4', name: 'Texture added Models', count: 4, color: '#38bdf8' },
+    ]);
+    const [isCreating3dFolder, setIsCreating3dFolder] = React.useState(false);
+    const [new3dFolderInputName, setNew3dFolderInputName] = React.useState('');
+    const [editing3dFolderId, setEditing3dFolderId] = React.useState(null);
+    const [temp3dFolderName, setTemp3dFolderName] = React.useState('');
+
+    const startEditing3dFolder = (folder) => {
+        setEditing3dFolderId(folder.id);
+        setTemp3dFolderName(folder.name);
+    };
+
+    const save3dEdit = () => {
+        if (!editing3dFolderId || !temp3dFolderName.trim()) {
+            setEditing3dFolderId(null);
+            return;
+        }
+        const trimmed = temp3dFolderName.trim();
+        const currentFolder = threeDFolders.find(f => f.id === editing3dFolderId);
+        if (currentFolder && active3dFolder === currentFolder.name) {
+            setActive3dFolder?.(trimmed);
+        }
+        setThreeDFolders(prev => prev.map(f => f.id === editing3dFolderId ? { ...f, name: trimmed } : f));
+        setEditing3dFolderId(null);
+        setTemp3dFolderName('');
+    };
+
+    const handle3dKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            save3dEdit();
+        } else if (e.key === 'Escape') {
+            setEditing3dFolderId(null);
+            setTemp3dFolderName('');
+        }
+    };
+
+    const handleDuplicate3dFolder = (folder) => {
+        const baseName = folder.name.replace(/ \(Copy( \d+)?\)$/, '');
+        let newName = `${baseName} (Copy)`;
+        let counter = 1;
+        while (threeDFolders.some(f => f.name.toLowerCase() === newName.toLowerCase())) {
+            counter++;
+            newName = `${baseName} (Copy ${counter})`;
+        }
+        const newFolder = {
+            id: `3d-${Date.now()}`,
+            name: newName,
+            count: folder.count || 0,
+            color: folder.color || '#f59e0b'
+        };
+        setThreeDFolders(prev => [...prev, newFolder]);
+        setActive3dFolder?.(newName);
+    };
+
+    const handleDelete3dFolder = (folder) => {
+        setThreeDFolders(prev => prev.filter(f => f.id !== folder.id));
+        if (active3dFolder === folder.name) {
+            setActive3dFolder?.('All Models');
+        }
+    };
+
+    const saveNew3dFolder = () => {
+        if (!new3dFolderInputName.trim()) {
+            setIsCreating3dFolder(false);
+            setNew3dFolderInputName('');
+            return;
+        }
+        const trimmed = new3dFolderInputName.trim();
+        setThreeDFolders(prev => [
+            ...prev,
+            {
+                id: `3d-${Date.now()}`,
+                name: trimmed,
+                count: 0,
+                color: FOLDER_COLORS[prev.length % FOLDER_COLORS.length]
+            }
+        ]);
+        setActive3dFolder?.(trimmed);
+        setIsCreating3dFolder(false);
+        setNew3dFolderInputName('');
+    };
+
     // Quick Access counts
     const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
     const recentCount = books.filter(b => !b.trash && (b.folder === 'Recent Book' || b.folder === 'Recent')).length;
@@ -85,57 +178,75 @@ export default function FlipbooksSidebar({
             <div className="flex-1 flex flex-col min-h-0">
                 {/* Upper Actions Section */}
                 <div className="space-y-[0.25vw] flex-none">
-                    {/* Create Flipibooks */}
+                    {/* Create Flipibooks (Book Dashboard Switcher) */}
                     <div
                         onClick={() => {
-                            if (setIsCreateModalOpen) {
-                                setIsCreateModalOpen(true);
-                            } else {
-                                navigate('/converter');
+                            if (setDashboardMode) {
+                                setDashboardMode('books');
                             }
                         }}
-                        className="w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none bg-[#2c3749] text-white hover:bg-[#344257] font-medium shadow-xs"
+                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                            dashboardMode === 'books'
+                                ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                        }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <BookOpen size="1.15vw" className="shrink-0 text-white" />
+                            <BookOpen size="1.15vw" className={`shrink-0 ${dashboardMode === 'books' ? 'text-white' : 'text-gray-300'}`} />
                             <span>Create Flipibooks</span>
                         </div>
                     </div>
 
-                    {/* Add 3D Models */}
+                    {/* Add 3D Models (3D Dashboard Switcher) */}
                     <div
-                        onClick={() => navigate('/editor/threed_editor')}
-                        className="w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal"
+                        onClick={() => {
+                            if (setDashboardMode) {
+                                setDashboardMode('3d');
+                            }
+                        }}
+                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                            dashboardMode === '3d'
+                                ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                        }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Box size="1.15vw" className="shrink-0 text-gray-300" />
+                            <Box size="1.15vw" className={`shrink-0 ${dashboardMode === '3d' ? 'text-white' : 'text-gray-300'}`} />
                             <span>Add 3D Models</span>
                         </div>
                     </div>
 
                     {/* Favorites */}
                     <div
-                        onClick={() => { setActiveFolder('Favorites'); setSelectedBooks([]); }}
+                        onClick={() => {
+                            if (setDashboardMode) setDashboardMode('books');
+                            setActiveFolder('Favorites');
+                            setSelectedBooks([]);
+                        }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            activeFolder === 'Favorites'
+                            dashboardMode === 'books' && activeFolder === 'Favorites'
                                 ? 'bg-[#2c3749] text-white font-medium'
                                 : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Heart size="1.15vw" className={`shrink-0 ${activeFolder === 'Favorites' ? 'text-white' : 'text-gray-300'}`} />
+                            <Heart size="1.15vw" className={`shrink-0 ${dashboardMode === 'books' && activeFolder === 'Favorites' ? 'text-white' : 'text-gray-300'}`} />
                             <span>Favorites</span>
                         </div>
-                        <span className={`text-[0.8vw] ${activeFolder === 'Favorites' ? 'text-white font-medium' : 'text-gray-400'}`}>
+                        <span className={`text-[0.8vw] ${dashboardMode === 'books' && activeFolder === 'Favorites' ? 'text-white font-medium' : 'text-gray-400'}`}>
                             {favoritesCount}
                         </span>
                     </div>
 
                     {/* Trash */}
                     <div
-                        onClick={() => { setActiveFolder('Trash'); setSelectedBooks([]); }}
+                        onClick={() => {
+                            if (setDashboardMode) setDashboardMode('books');
+                            setActiveFolder('Trash');
+                            setSelectedBooks([]);
+                        }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            activeFolder === 'Trash'
+                            dashboardMode === 'books' && activeFolder === 'Trash'
                                 ? 'bg-[#2c3749] text-[#ef4444] font-medium'
                                 : 'text-[#ef4444] hover:bg-[#1e2738] hover:text-[#f87171] font-normal'
                         }`}
@@ -153,71 +264,222 @@ export default function FlipbooksSidebar({
                 {/* Divider */}
                 <div className="my-[1vw] border-b border-[#243042] flex-none"></div>
 
-                {/* Your Folders Header */}
+                {/* Folders Section Header (Dynamic: 3D Folders vs Your Folders) */}
                 <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
-                    <span className="text-[0.95vw] font-bold text-white">Your Folders</span>
+                    <span className="text-[0.95vw] font-bold text-white">
+                        {dashboardMode === '3d' ? '3D Folders' : 'Your Folders'}
+                    </span>
                     <button
-                        onClick={handleAddFolderClick}
+                        onClick={() => {
+                            if (dashboardMode === '3d') {
+                                setIsCreating3dFolder(true);
+                                setNew3dFolderInputName('');
+                            } else {
+                                handleAddFolderClick();
+                            }
+                        }}
                         className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
                     >
                         <Plus size="0.85vw" /> Add
                     </button>
                 </div>
 
-                {/* Scrollable Folder List (Includes All Flipbooks, Recent, and Custom Folders) */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-[0.25vw] pb-[1vw]" ref={folderListRef}>
-                    <div className="space-y-[0.25vw]">
-                        {/* All Flipbooks */}
-                        <div
-                            onClick={() => { setActiveFolder('All Flipbook'); setSelectedBooks([]); }}
-                            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
-                                    ? 'bg-[#2c3749] text-white font-medium'
-                                    : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
-                            }`}
-                        >
-                            <div className="flex items-center gap-[0.75vw]">
-                                <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
-                                <span>All Flipbooks</span>
+                {/* Scrollable Folder List */}
+                <CustomScrollbar
+                    ref={folderListRef}
+                    color="#2c3749"
+                    hoverColor="#3e4e66"
+                    width="0.3vw"
+                    className="flex-1 pr-[0.25vw] pb-[1vw]"
+                >
+                    {dashboardMode === '3d' ? (
+                        /* 3D Folders List */
+                        <div className="space-y-[0.25vw]">
+                            {/* All Models */}
+                            <div
+                                onClick={() => setActive3dFolder?.('All Models')}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    (!active3dFolder || active3dFolder === 'All Models')
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Models</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    8
+                                </span>
                             </div>
-                            <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                {allCount}
-                            </span>
-                        </div>
 
-                        {/* Recent */}
-                        <div
-                            onClick={() => { setActiveFolder('Recent'); setSelectedBooks([]); }}
-                            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                (activeFolder === 'Recent' || activeFolder === 'Recent Book')
-                                    ? 'bg-[#2c3749] text-white font-medium'
-                                    : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
-                            }`}
-                        >
-                            <div className="flex items-center gap-[0.75vw]">
-                                <RotateCcw size="1.1vw" className={`shrink-0 ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white' : 'text-gray-300'}`} />
-                                <span>Recent</span>
+                            {/* Recent */}
+                            <div
+                                onClick={() => setActive3dFolder?.('Recent')}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    active3dFolder === 'Recent'
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <RotateCcw size="1.1vw" className={`shrink-0 ${active3dFolder === 'Recent' ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>Recent</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${active3dFolder === 'Recent' ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    4
+                                </span>
                             </div>
-                            <span className={`text-[0.8vw] ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                {recentCount}
-                            </span>
-                        </div>
 
-                        {/* Custom Folders */}
-                        {folders.map((folder, index) => {
-                            const isEditing = editingId === folder.id;
-                            const isActive = activeFolder === folder.name;
-                            const isDragging = dragFolderIndex === index;
-                            const isDragOver = dragOverFolderIndex === index && dragFolderIndex !== null && dragFolderIndex !== index;
-                            const folderCount = books.filter(b => b.folder === folder.name && !b.trash).length;
-                            const folderColor = FOLDER_COLORS[index % FOLDER_COLORS.length];
+                            {/* Custom 3D Folders */}
+                            {threeDFolders.map((folder, index) => {
+                                const isEditing = editing3dFolderId === folder.id;
+                                const isActive = active3dFolder === folder.name;
+                                const isMenuOpen = activeMenuId === folder.id;
 
-                            return isEditing ? (
-                                <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
+                                return isEditing ? (
+                                    <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={temp3dFolderName}
+                                            onChange={(e) => setTemp3dFolderName(e.target.value)}
+                                            onBlur={save3dEdit}
+                                            onKeyDown={handle3dKeyDown}
+                                            className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div
+                                        key={folder.id}
+                                        onClick={() => setActive3dFolder?.(folder.name)}
+                                        className={`relative group folder-item-row w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none ${
+                                            isActive
+                                                ? 'bg-[#2c3749] text-white font-medium'
+                                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                        }`}
+                                    >
+                                        <Folder
+                                            size="1.15vw"
+                                            className="shrink-0 fill-current"
+                                            style={{ color: folder.color }}
+                                        />
+                                        <span className="truncate flex-1 font-medium">{folder.name}</span>
+
+                                        <div className="relative flex items-center justify-end h-[1.5vw] min-w-[1.5vw]">
+                                            <span className={`folder-count-span text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-white font-medium' : 'text-gray-400 font-normal'} ${isMenuOpen ? 'has-active-menu pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
+                                                {folder.count}
+                                            </span>
+
+                                            {/* Options Menu Trigger */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (activeMenuId === folder.id) {
+                                                        setActiveMenuId(null);
+                                                    } else {
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                        const isDropup = spaceBelow < 120;
+                                                        setFolderMenuPos({
+                                                            top: isDropup ? rect.top - 5 : rect.bottom + 5,
+                                                            left: rect.right,
+                                                            isDropup
+                                                        });
+                                                        setActiveMenuId(folder.id);
+                                                    }
+                                                }}
+                                                className={`folder-menu-btn absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer hover:bg-[#344257] text-gray-400 hover:text-white ${
+                                                    isMenuOpen ? 'active opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                                }`}
+                                            >
+                                                <MoreVertical size="0.9vw" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* New 3D Folder Inline Input */}
+                            {isCreating3dFolder && (
+                                <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
                                     <input
                                         autoFocus
                                         type="text"
-                                        value={tempName}
+                                        placeholder="Folder Name..."
+                                        value={new3dFolderInputName}
+                                        onChange={(e) => setNew3dFolderInputName(e.target.value)}
+                                        onBlur={saveNew3dFolder}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                saveNew3dFolder();
+                                            }
+                                            if (e.key === 'Escape') {
+                                                setIsCreating3dFolder(false);
+                                                setNew3dFolderInputName('');
+                                            }
+                                        }}
+                                        className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none placeholder-gray-500"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* Flipbook Folders List */
+                        <div className="space-y-[0.25vw]">
+                            {/* All Flipbooks */}
+                            <div
+                                onClick={() => { setActiveFolder('All Flipbook'); setSelectedBooks([]); }}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Flipbooks</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {allCount}
+                                </span>
+                            </div>
+
+                            {/* Recent */}
+                            <div
+                                onClick={() => { setActiveFolder('Recent'); setSelectedBooks([]); }}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    (activeFolder === 'Recent' || activeFolder === 'Recent Book')
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <RotateCcw size="1.1vw" className={`shrink-0 ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>Recent</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {recentCount}
+                                </span>
+                            </div>
+
+                            {/* Custom Folders */}
+                            {folders.map((folder, index) => {
+                                const isEditing = editingId === folder.id;
+                                const isActive = activeFolder === folder.name;
+                                const isDragging = dragFolderIndex === index;
+                                const isDragOver = dragOverFolderIndex === index && dragFolderIndex !== null && dragFolderIndex !== index;
+                                const folderCount = books.filter(b => b.folder === folder.name && !b.trash).length;
+                                const folderColor = FOLDER_COLORS[index % FOLDER_COLORS.length];
+
+                                return isEditing ? (
+                                    <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={tempName}
+
                                         onChange={(e) => setTempName(e.target.value)}
                                         onBlur={saveEdit}
                                         onKeyDown={handleKeyDown}
@@ -234,7 +496,7 @@ export default function FlipbooksSidebar({
                                     onDrop={(e) => handleFolderDrop(e, index, folder)}
                                     onDragEnd={handleFolderDragEnd}
                                     onClick={() => { setActiveFolder(folder.name); setSelectedBooks([]); }}
-                                    className={`relative group w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none
+                                    className={`relative group folder-item-row w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none
                                         ${isDragging ? 'opacity-40 scale-[0.98] border border-dashed border-[#ec5137]' : ''}
                                         ${isDragOver ? 'border-t-2 border-t-[#ec5137] bg-white/5' : ''}
                                         ${isActive
@@ -253,7 +515,7 @@ export default function FlipbooksSidebar({
                                     <span className="truncate flex-1 font-medium">{folder.name}</span>
 
                                     <div className="relative flex items-center justify-end h-[1.5vw] min-w-[1.5vw]">
-                                        <span className={`text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-white font-medium' : 'text-gray-400 font-normal'} ${activeMenuId === folder.id ? 'pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
+                                        <span className={`folder-count-span text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-white font-medium' : 'text-gray-400 font-normal'} ${activeMenuId === folder.id ? 'has-active-menu pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
                                             {folderCount}
                                         </span>
 
@@ -275,8 +537,8 @@ export default function FlipbooksSidebar({
                                                     setActiveMenuId(folder.id);
                                                 }
                                             }}
-                                            className={`absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer hover:bg-[#344257] text-gray-400 hover:text-white ${
-                                                activeMenuId === folder.id ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'
+                                            className={`folder-menu-btn absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer hover:bg-[#344257] text-gray-400 hover:text-white ${
+                                                activeMenuId === folder.id ? 'active opacity-100' : 'opacity-0 group-hover:opacity-100'
                                             }`}
                                         >
                                             <MoreVertical size="0.9vw" />
@@ -322,7 +584,8 @@ export default function FlipbooksSidebar({
                             </div>
                         )}
                     </div>
-                </div>
+                )}
+                </CustomScrollbar>
             </div>
 
             {/* Storage & Upgrade Profile Card */}
@@ -469,7 +732,7 @@ export default function FlipbooksSidebar({
                 <>
                     <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}></div>
                     <div
-                        className="fixed z-[101] w-[12vw] min-w-[165px] bg-white rounded-[0.75vw] shadow-xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                        className="fixed z-[101] w-[12vw] min-w-[165px] bg-[#1a2433] rounded-[0.65vw] shadow-[0_12px_36px_rgba(0,0,0,0.5)] border border-[#2b3a4e] overflow-hidden animate-in fade-in zoom-in-95 duration-100"
                         style={{
                             top: folderMenuPos.top,
                             left: folderMenuPos.left,
@@ -477,42 +740,58 @@ export default function FlipbooksSidebar({
                         }}
                     >
                         {(() => {
-                            const folder = folders.find(f => f.id === activeMenuId);
+                            const flipbookFolder = folders?.find(f => f.id === activeMenuId);
+                            const threeDFolder = threeDFolders?.find(f => f.id === activeMenuId);
+                            const folder = flipbookFolder || threeDFolder;
                             if (!folder) return null;
+                            const is3d = Boolean(threeDFolder);
+
                             return (
                                 <>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            startEditing(folder);
                                             setActiveMenuId(null);
+                                            if (is3d) {
+                                                startEditing3dFolder(folder);
+                                            } else {
+                                                startEditing(folder);
+                                            }
                                         }}
-                                        className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-semibold text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
+                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors border-b border-[#253346] group cursor-pointer"
                                     >
-                                        <Edit2 size="0.9vw" className="group-hover:text-white" />
-                                        Rename
+                                        <Edit2 size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
+                                        <span>Rename</span>
                                     </button>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDuplicateFolder(folder);
                                             setActiveMenuId(null);
+                                            if (is3d) {
+                                                handleDuplicate3dFolder(folder);
+                                            } else {
+                                                handleDuplicateFolder(folder);
+                                            }
                                         }}
-                                        className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-600 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
+                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors border-b border-[#253346] group cursor-pointer"
                                     >
-                                        <Copy size="0.9vw" className="group-hover:text-white" />
-                                        Duplicate
+                                        <Copy size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
+                                        <span>Duplicate</span>
                                     </button>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDeleteFolderClick(folder);
                                             setActiveMenuId(null);
+                                            if (is3d) {
+                                                handleDelete3dFolder(folder);
+                                            } else {
+                                                handleDeleteFolderClick(folder);
+                                            }
                                         }}
-                                        className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors group cursor-pointer"
+                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-[#f87171] hover:bg-[#ef4444] hover:text-white transition-colors group cursor-pointer"
                                     >
-                                        <Trash2 size="0.9vw" className="group-hover:text-white" />
-                                        Delete
+                                        <Trash2 size="0.88vw" className="text-[#f87171] group-hover:text-white transition-colors shrink-0" />
+                                        <span>Delete</span>
                                     </button>
                                 </>
                             );

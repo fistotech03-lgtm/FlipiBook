@@ -33,8 +33,8 @@ const sendOtpEmail = async (toEmail, otp) => {
           .header { background: linear-gradient(135deg, #EC5137 0%, #F07037 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
           .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
           .content { padding: 32px 28px; line-height: 1.6; }
-          .otp-card { background-color: #FFF5F2; border: 2px dashed #EC5137; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0; }
-          .otp-code { font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #EC5137; font-family: monospace; }
+          .otp-card { background-color: #FFF5F2; border: 2px dashed #EC5137; border-radius: 10px; padding: 22px 16px; text-align: center; margin: 24px 0; }
+          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #EC5137; font-family: Consolas, 'Courier New', Courier, monospace; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all; cursor: pointer; display: inline-block; padding: 6px 14px; background: #ffffff; border-radius: 8px; border: 1px solid #fed7cc; }
           .footer { background-color: #fafafa; padding: 18px 24px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee; }
         </style>
       </head>
@@ -47,9 +47,9 @@ const sendOtpEmail = async (toEmail, otp) => {
             <p style="font-size: 16px; margin-top: 0;">Hello,</p>
             <p style="font-size: 14px; color: #555555;">We received a request to reset your password for your Flipbook account associated with <strong>${toEmail}</strong>.</p>
             <div class="otp-card">
-              <span style="font-size: 13px; text-transform: uppercase; color: #777777; font-weight: 600; display: block; margin-bottom: 6px;">One-Time Verification Code</span>
-              <div class="otp-code">${otp}</div>
-              <span style="font-size: 12px; color: #888888; display: block; margin-top: 6px;">Valid for 10 minutes</span>
+              <span style="font-size: 12px; text-transform: uppercase; color: #777777; font-weight: 700; display: block; margin-bottom: 10px; letter-spacing: 0.5px;">Your Verification Code</span>
+              <div class="otp-code" title="Click to select code">${otp}</div>
+              <span style="font-size: 11px; color: #999999; display: block; margin-top: 8px;">(Click or tap code to select & copy) &bull; Valid for 10 minutes</span>
             </div>
             <p style="font-size: 13px; color: #777777;">If you did not request this code, please ignore this email or contact support if you suspect unauthorized activity.</p>
           </div>
@@ -91,8 +91,8 @@ const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
           .header { background: linear-gradient(135deg, #FF725B 0%, #EC5137 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
           .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
           .content { padding: 32px 28px; line-height: 1.6; }
-          .otp-card { background-color: #FFF5F2; border: 2px dashed #EC5137; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0; }
-          .otp-code { font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #EC5137; font-family: monospace; }
+          .otp-card { background-color: #FFF5F2; border: 2px dashed #EC5137; border-radius: 10px; padding: 22px 16px; text-align: center; margin: 24px 0; }
+          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #EC5137; font-family: Consolas, 'Courier New', Courier, monospace; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all; cursor: pointer; display: inline-block; padding: 6px 14px; background: #ffffff; border-radius: 8px; border: 1px solid #fed7cc; }
           .footer { background-color: #fafafa; padding: 18px 24px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee; }
         </style>
       </head>
@@ -105,9 +105,9 @@ const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
             <p style="font-size: 16px; margin-top: 0;">${greeting}</p>
             <p style="font-size: 14px; color: #555555;">Thank you for registering with Flipbook. To complete your account creation, please verify your email address (<strong>${toEmail}</strong>) using the verification code below:</p>
             <div class="otp-card">
-              <span style="font-size: 13px; text-transform: uppercase; color: #777777; font-weight: 600; display: block; margin-bottom: 6px;">Registration Verification Code</span>
-              <div class="otp-code">${otp}</div>
-              <span style="font-size: 12px; color: #888888; display: block; margin-top: 6px;">Valid for 10 minutes</span>
+              <span style="font-size: 12px; text-transform: uppercase; color: #777777; font-weight: 700; display: block; margin-bottom: 10px; letter-spacing: 0.5px;">Registration Verification Code</span>
+              <div class="otp-code" title="Click to select code">${otp}</div>
+              <span style="font-size: 11px; color: #999999; display: block; margin-top: 8px;">(Click or tap code to select & copy) &bull; Valid for 10 minutes</span>
             </div>
             <p style="font-size: 13px; color: #777777;">If you did not initiate this registration, please safely ignore this email.</p>
           </div>

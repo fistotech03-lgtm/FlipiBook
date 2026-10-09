@@ -231,7 +231,7 @@ export default function ProfileModal({ isOpen, onClose, isAutoSaveEnabled, onTog
         {/* User Info Card with Free Ribbon */}
         <div 
           onClick={() => { 
-            navigate(user?.email && user?.email !== 'No Email' ? `/settings/profile/${encodeURIComponent(user.email)}` : '/settings/profile'); 
+            navigate('/settings/profile'); 
             onClose(); 
           }}
           className="relative border border-gray-100 rounded-[0.8vw] p-[0.85vw] shadow-sm bg-white flex items-center gap-[0.85vw] mb-[1vw] cursor-pointer hover:bg-gray-50/80 hover:border-gray-200 hover:shadow transition-all group"
@@ -326,7 +326,7 @@ export default function ProfileModal({ isOpen, onClose, isAutoSaveEnabled, onTog
           {/* Settings */}
           <div
             onClick={() => { 
-              navigate(user?.email && user?.email !== 'No Email' ? `/settings/profile/${encodeURIComponent(user.email)}` : '/settings/profile'); 
+              navigate('/settings/profile'); 
               onClose(); 
             }}
             className="flex items-center justify-between py-[0.65vw] px-[0.25vw] hover:bg-gray-50 rounded-[0.4vw] cursor-pointer transition-colors group"
@@ -346,7 +346,7 @@ export default function ProfileModal({ isOpen, onClose, isAutoSaveEnabled, onTog
         {/* Upgrade Profile Button */}
         <button 
           onClick={() => { 
-            navigate(user?.email && user?.email !== 'No Email' ? `/settings/profile/${encodeURIComponent(user.email)}` : '/settings/profile'); 
+            navigate('/settings/profile'); 
             onClose(); 
           }}
           className="w-full bg-[#18181b] hover:bg-black text-white py-[0.65vw] px-[1vw] rounded-[0.75vw] text-[0.8vw] font-bold flex items-center justify-center gap-[0.4vw] shadow-md transition-all cursor-pointer"

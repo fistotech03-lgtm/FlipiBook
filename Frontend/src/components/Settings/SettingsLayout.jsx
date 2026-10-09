@@ -53,29 +53,11 @@ const defaultProfile = {
   }
 };
 
-const getInitialProfile = () => {
-  try {
-    const cached = localStorage.getItem('user_profile') || localStorage.getItem('user');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      const email = parsed.emailId || parsed.email || '';
-      return {
-        ...defaultProfile,
-        ...parsed,
-        email,
-        emailId: email,
-        name: parsed.name || (email ? email.split('@')[0] : 'User')
-      };
-    }
-  } catch (e) {}
-  return defaultProfile;
-};
-
 const SettingsLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
-  const [user, setUser] = useState(getInitialProfile);
+  const { user: authUser, logout } = useAuth();
+  const [user, setUser] = useState(defaultProfile);
 
   const handleLogout = async () => {
     try {
@@ -104,64 +86,26 @@ const SettingsLayout = () => {
   };
 
   useEffect(() => {
-    let targetEmail = '';
-    const storedUser = localStorage.getItem('user_profile') || localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        targetEmail = parsedUser.emailId || parsedUser.email || '';
-        setUser(prev => ({
-          ...defaultProfile,
-          ...prev,
-          ...parsedUser,
-          name: parsedUser.name || (targetEmail ? targetEmail.split('@')[0] : 'User'),
-          email: targetEmail || '',
-          emailId: targetEmail || '',
-          picture: parsedUser.picture || null,
-          avatarBgColor: parsedUser.avatarBgColor || '#E8D4C8'
-        }));
-      } catch (e) {
-        console.error("Failed to parse user data", e);
-      }
+    if (authUser) {
+      const email = authUser.emailId || authUser.email || '';
+      setUser(prev => ({
+        ...defaultProfile,
+        ...prev,
+        ...authUser,
+        name: authUser.name || authUser.userName || (email ? email.split('@')[0] : prev.name),
+        email,
+        emailId: email,
+        picture: authUser.picture || prev.picture,
+        avatarBgColor: authUser.avatarBgColor || prev.avatarBgColor || '#E8D4C8'
+      }));
     }
-
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-    fetch(`${backendUrl}/api/auth/verify`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data?.user) {
-          setUser(prev => ({
-            ...prev,
-            name: data.user.name || prev.name,
-            email: data.user.emailId || data.user.email || prev.email,
-            emailId: data.user.emailId || data.user.email || prev.emailId,
-            picture: data.user.picture || prev.picture
-          }));
-          const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
-          const parsed = stored ? JSON.parse(stored) : {};
-          const updated = { ...parsed, ...data.user };
-          localStorage.setItem('user', JSON.stringify(updated));
-          localStorage.setItem('user_profile', JSON.stringify(updated));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Sync user state to localStorage when it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('user_profile', JSON.stringify(user));
-    } catch (e) {}
-  }, [user]);
-
-  const userEmail = user?.emailId || user?.email || '';
-  const profilePath = userEmail ? `profile/${encodeURIComponent(userEmail)}` : 'profile';
+  }, [authUser]);
 
   const sidebarGroups = [
     {
       title: 'General',
       items: [
-        { path: profilePath, id: 'profile', label: 'Profile', icon: 'mingcute:profile-line' },
+        { path: 'profile', id: 'profile', label: 'Profile', icon: 'mingcute:profile-line' },
         { path: 'account', id: 'account', label: 'Account', icon: 'iconamoon:profile' },
         { path: 'notifications', id: 'notifications', label: 'Notifications', icon: 'basil:notification-on-outline' },
         { path: 'my-shelf', id: 'my-shelf', label: 'My Shelf', icon: 'clarity:library-line' },

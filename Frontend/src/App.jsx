@@ -44,18 +44,14 @@ const Notifications = lazy(() => import('./components/Settings/Notifications'));
 const MyShelf = lazy(() => import('./components/Settings/MyShelf'));
 
 function SettingsIndexRedirect() {
-  let email = '';
-  try {
-    const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
-    if (stored) {
-      const u = JSON.parse(stored);
-      email = u.emailId || u.email || '';
-    }
-  } catch (e) {}
+  const { user, isLoading } = useAuth();
 
-  if (email) {
-    return <Navigate to={`profile/${encodeURIComponent(email)}`} replace />;
+  if (isLoading) {
+    return null;
   }
+
+  const email = user?.emailId || user?.email || '';
+
   return <Navigate to="profile" replace />;
 }
 
@@ -125,38 +121,7 @@ export default function App() {
                 </Suspense>
               }
             />
-            <Route
-              path="/about"
-              element={
-                <Suspense fallback={null}>
-                  <AboutUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/about-us"
-              element={
-                <Suspense fallback={null}>
-                  <AboutUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/contact"
-              element={
-                <Suspense fallback={null}>
-                  <ContactUs />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/contact-us"
-              element={
-                <Suspense fallback={null}>
-                  <ContactUs />
-                </Suspense>
-              }
-            />
+          
             <Route
               path="/help"
               element={
@@ -194,14 +159,6 @@ export default function App() {
               <Route index element={<SettingsIndexRedirect />} />
               <Route
                 path="profile"
-                element={
-                  <Suspense fallback={null}>
-                    <Profile />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="profile/:useremail"
                 element={
                   <Suspense fallback={null}>
                     <Profile />

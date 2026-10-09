@@ -31,11 +31,10 @@ const getClientIp = (req) => {
  * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
-  if (!req) return process.env.NODE_ENV === 'production';
-  const proto = req.headers?.['x-forwarded-proto'] || (req.secure ? 'https' : '') || req.protocol;
-  const referer = req.headers?.['referer'] || '';
-  const origin = req.headers?.['origin'] || '';
-  return proto === 'https' || referer.startsWith('https://') || origin.startsWith('https://') || process.env.NODE_ENV === 'production';
+  if (req?.headers?.host?.includes('localhost:') || req?.headers?.['x-forwarded-host']?.includes('localhost:')) {
+    return false;
+  }
+  return true;
 };
 
 /**
@@ -49,7 +48,7 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
   const cookieOptions = {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: SEVEN_DAYS,
     path: '/'
   };
@@ -74,7 +73,7 @@ const clearAuthCookies = (res, req = null) => {
   const cookieOpts = {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'none' : 'lax',
+    sameSite: 'lax',
     path: '/'
   };
   res.clearCookie('token', cookieOpts);

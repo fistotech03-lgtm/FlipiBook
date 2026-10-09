@@ -1,11 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-
-const CERTS_DIR = path.resolve(__dirname, '../../certs');
-const PRIVATE_KEY_PATH = path.join(CERTS_DIR, 'private.pem');
-const PUBLIC_KEY_PATH = path.join(CERTS_DIR, 'public.pem');
 
 /**
  * Format RSA Key string from env (supports raw PEM, \n escaped, or base64)
@@ -16,7 +9,6 @@ const parseKey = (keyString) => {
   if (trimmed.startsWith('-----BEGIN')) {
     return trimmed.replace(/\\n/g, '\n');
   }
-  // Try base64 decoding
   try {
     const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
     if (decoded.includes('-----BEGIN')) {
@@ -28,104 +20,68 @@ const parseKey = (keyString) => {
   return trimmed.replace(/\\n/g, '\n');
 };
 
-// 1. Check environment variables
-let privateKey = parseKey(process.env.RSA_PRIVATE_KEY);
-let publicKey = parseKey(process.env.RSA_PUBLIC_KEY);
+// 1. Explicit RSA Keys from Environment (if provided)
+const privateKey = parseKey(process.env.RSA_PRIVATE_KEY);
+const publicKey = parseKey(process.env.RSA_PUBLIC_KEY);
 
-// 2. Fallback to certs directory files if not provided via env
-if (!privateKey && fs.existsSync(PRIVATE_KEY_PATH)) {
-  try {
-    privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
-  } catch (err) {
-    console.error('[JWT Error] Failed to read private.pem:', err.message);
-  }
-}
-
-if (!publicKey && fs.existsSync(PUBLIC_KEY_PATH)) {
-  try {
-    publicKey = fs.readFileSync(PUBLIC_KEY_PATH, 'utf8');
-  } catch (err) {
-    console.error('[JWT Error] Failed to read public.pem:', err.message);
-  }
-}
-
-// 3. If still missing, generate a deterministic stable RSA 2048 key pair
-// using a stable seed so restarts and replicas never rotate keys unexpectedly
-if (!privateKey || !publicKey) {
-  try {
-    if (!fs.existsSync(CERTS_DIR)) {
-      fs.mkdirSync(CERTS_DIR, { recursive: true });
-    }
-    
-    // Seed using a stable application secret or MONGO_URI to guarantee consistency
-    const seed = process.env.JWT_SECRET || process.env.MONGO_URI || 'flipibook_secure_auth_signing_seed_2026';
-    const modulusLength = 2048;
-    
-    console.log('[JWT] Initializing stable RSA 2048 key pair...');
-    // Generate deterministic RSA keypair
-    const { privateKey: newPriv, publicKey: newPub } = crypto.generateKeyPairSync('rsa', {
-      modulusLength,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-    });
-    
-    privateKey = newPriv;
-    publicKey = newPub;
-    try {
-      fs.writeFileSync(PRIVATE_KEY_PATH, newPriv);
-      fs.writeFileSync(PUBLIC_KEY_PATH, newPub);
-    } catch {
-      // Disk write optional in read-only containers
-    }
-  } catch (err) {
-    console.error('[JWT Error] Failed to initialize RSA keys:', err.message);
-  }
-}
+// 2. Shared Secret for guaranteed consistency across all containers, replicas, and restarts
+const SHARED_SECRET = process.env.JWT_SECRET || process.env.MONGO_URI || 'flipibook_secure_cluster_secret_key_2026';
+const useRSA = !!(privateKey && publicKey);
 
 const ACCESS_TOKEN_EXPIRES_IN = '1h';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 /**
- * Sign Access Token using RS256 algorithm with RSA Private Key (1 hour)
+ * Sign Access Token (1 hour)
  */
 const generateToken = (payload) => {
-  if (!privateKey) {
-    throw new Error('[JWT] Cannot sign token: RSA private key is missing');
+  if (useRSA) {
+    return jwt.sign(payload, privateKey, {
+      algorithm: 'RS256',
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN
+    });
   }
-  return jwt.sign(payload, privateKey, {
-    algorithm: 'RS256',
+  return jwt.sign(payload, SHARED_SECRET, {
+    algorithm: 'HS256',
     expiresIn: ACCESS_TOKEN_EXPIRES_IN
   });
 };
 
 /**
- * Sign Refresh Token using RS256 algorithm with RSA Private Key (7 days)
+ * Sign Refresh Token (7 days)
  */
 const generateRefreshToken = (payload) => {
-  if (!privateKey) {
-    throw new Error('[JWT] Cannot sign refresh token: RSA private key is missing');
+  if (useRSA) {
+    return jwt.sign({ ...payload, type: 'refresh' }, privateKey, {
+      algorithm: 'RS256',
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN
+    });
   }
-  return jwt.sign({ ...payload, type: 'refresh' }, privateKey, {
-    algorithm: 'RS256',
+  return jwt.sign({ ...payload, type: 'refresh' }, SHARED_SECRET, {
+    algorithm: 'HS256',
     expiresIn: REFRESH_TOKEN_EXPIRES_IN
   });
 };
 
 /**
- * Verify token using RS256 algorithm with RSA Public Key
+ * Verify token across all backend replicas consistently
  */
 const verifyToken = (token) => {
   if (!token) return null;
-  if (!publicKey) {
-    console.error('[JWT Verify Error] Cannot verify token: RSA public key is missing');
-    return null;
+
+  // Try RSA (RS256) first if public key is configured
+  if (publicKey) {
+    try {
+      return jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+    } catch {
+      // Fall through to shared secret verification
+    }
   }
+
+  // Verify with SHARED_SECRET (HS256)
   try {
-    return jwt.verify(token, publicKey, {
-      algorithms: ['RS256']
-    });
+    return jwt.verify(token, SHARED_SECRET, { algorithms: ['HS256'] });
   } catch (err) {
-    console.warn('[JWT Verify Warning]:', err.message);
     return null;
   }
 };
@@ -137,4 +93,3 @@ module.exports = {
   publicKey,
   privateKey
 };
-

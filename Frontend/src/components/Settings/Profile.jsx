@@ -162,28 +162,10 @@ const defaultProfile = {
   }
 };
 
-const getInitialUserProfile = () => {
-  try {
-    const cached = localStorage.getItem('user_profile') || localStorage.getItem('user');
-    if (cached) {
-      const p = JSON.parse(cached);
-      const email = p.emailId || p.email || '';
-      return {
-        ...defaultProfile,
-        ...p,
-        email,
-        emailId: email,
-        name: p.name || (email ? email.split('@')[0] : 'User')
-      };
-    }
-  } catch (e) {}
-  return defaultProfile;
-};
-
 const Profile = () => {
   const context = useOutletContext();
   const navigate = useNavigate();
-  const [localUser, setLocalUser] = useState(getInitialUserProfile);
+  const [localUser, setLocalUser] = useState(defaultProfile);
   const user = context?.user ? { ...defaultProfile, ...context.user } : localUser;
   const setUser = context?.setUser || setLocalUser;
 
@@ -191,18 +173,9 @@ const Profile = () => {
   const [activeStatsBookId, setActiveStatsBookId] = useState(null);
   const [isAvatarPopupOpen, setIsAvatarPopupOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Your IDC');
-  const [bannerBg, setBannerBg] = useState(() => {
-    try {
-      const cached = localStorage.getItem('user_profile');
-      if (cached) {
-        const p = JSON.parse(cached);
-        if (p.bannerBg) return p.bannerBg;
-      }
-    } catch (e) {}
-    return {
-      type: 'gradient',
-      value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
-    };
+  const [bannerBg, setBannerBg] = useState({
+    type: 'gradient',
+    value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
   });
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -224,29 +197,8 @@ const Profile = () => {
 
   const { useremail } = useParams();
   const rawRouteEmail = useremail ? decodeURIComponent(useremail).trim() : '';
-
-  // Get logged-in user's authentic email
-  const ownEmail = (() => {
-    try {
-      const stored = localStorage.getItem('user') || localStorage.getItem('user_profile');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return (parsed.emailId || parsed.email || '').trim();
-      }
-    } catch (e) {}
-    return (user?.emailId || user?.email || '').trim();
-  })();
-
+  const ownEmail = (user?.emailId || user?.email || '').trim();
   const effectiveEmail = ownEmail || rawRouteEmail;
-
-  // Protect route: redirect to own email if URL has no email or has another user's email
-  useEffect(() => {
-    if (ownEmail) {
-      if (!rawRouteEmail || rawRouteEmail.toLowerCase() !== ownEmail.toLowerCase()) {
-        navigate(`/settings/profile/${encodeURIComponent(ownEmail)}`, { replace: true });
-      }
-    }
-  }, [rawRouteEmail, ownEmail, navigate]);
 
   // 1. Fetch user profile from backend
   useEffect(() => {
@@ -309,14 +261,6 @@ const Profile = () => {
         });
         if (res.data?.success && res.data?.bannerBg) {
           setBannerBg(res.data.bannerBg);
-          try {
-            const cached = localStorage.getItem('user_profile');
-            if (cached) {
-              const p = JSON.parse(cached);
-              p.bannerBg = res.data.bannerBg;
-              localStorage.setItem('user_profile', JSON.stringify(p));
-            }
-          } catch (e) {}
         }
       } catch (err) {
         console.error("Error uploading banner to Profile folder:", err);
@@ -331,14 +275,6 @@ const Profile = () => {
         });
         if (res.data?.success && res.data?.bannerBg) {
           setBannerBg(res.data.bannerBg);
-          try {
-            const cached = localStorage.getItem('user_profile');
-            if (cached) {
-              const p = JSON.parse(cached);
-              p.bannerBg = res.data.bannerBg;
-              localStorage.setItem('user_profile', JSON.stringify(p));
-            }
-          } catch (e) {}
         }
       } catch (err) {
         console.error("Error updating banner in backend:", err);
@@ -462,19 +398,9 @@ const Profile = () => {
     fetchUserFlipbooks();
   }, [effectiveEmail, backendUrl]);
 
-  // Sync user state to localStorage and dispatch update events
+  // Dispatch profile update events
   useEffect(() => {
     try {
-      localStorage.setItem('user_profile', JSON.stringify(user));
-      const stored = localStorage.getItem('user');
-      const parsed = stored ? JSON.parse(stored) : {};
-      localStorage.setItem('user', JSON.stringify({
-        ...parsed,
-        name: user.name,
-        emailId: user.emailId || user.email,
-        picture: user.picture,
-        avatarBgColor: user.avatarBgColor
-      }));
       window.dispatchEvent(new CustomEvent('profileUpdate', { detail: user }));
     } catch (e) {}
   }, [user]);

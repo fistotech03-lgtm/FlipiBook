@@ -7,3 +7,5 @@ export { default as FlipbooksEmptyState } from './FlipbooksEmptyState';
 export { default as FlipbookActionMenu } from './FlipbookActionMenu';
 export { default as MoveToFolderModal } from './MoveToFolderModal';
 export { default as ConflictModal } from './ConflictModal';
+export { default as ThreeDDashboard } from './ThreeDDashboard';
+export { default as CustomScrollbar, getScrollbarStyle } from '../CustomScrollbar';

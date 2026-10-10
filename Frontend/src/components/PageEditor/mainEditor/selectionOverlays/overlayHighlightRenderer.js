@@ -70,13 +70,62 @@ export const createOverlayHighlightRenderer = ({
     const overlay = getOverlayForElement(el);
     if (!overlay) return;
 
-    // Purge stale or competing overlays for this element to prevent duplicate selection boxes
+    // Purge stale or competing overlays to prevent duplicate selection boxes
     if (type.includes('selected')) {
-      overlay.querySelectorAll(`[id*="${el.id}"]`).forEach(node => {
-        if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
-          node.remove();
-        }
+      const isMulti = multiSelectedIdsRef.current && multiSelectedIdsRef.current.size > 1;
+
+      // 1. Purge stale/competing overlays for this exact element across ALL overlay layers
+      document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
+        ov.querySelectorAll(`[id*="${el.id}"]`).forEach(node => {
+          if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
+            node.remove();
+          }
+        });
       });
+
+      // 2. If single-selecting (or during single element drag), purge ANY other selection polygon in the entire document!
+      if (!isMulti) {
+        document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
+          ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
+            if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
+              node.remove();
+            }
+          });
+          const mb = ov.querySelector('#overlay-poly-selected-multi-selection-bounds, #overlay-poly-selected-multi');
+          if (mb) mb.remove();
+        });
+        document.querySelectorAll('[id^="highlight-overlay-html-"]').forEach(htmlOv => {
+          htmlOv.querySelectorAll('.resize-handle, [id^="rotate-handle-"], [id^="rotation-degree-badge-"], [id^="rotate-hotspot-"]').forEach(handle => {
+            if (!handle.id.includes(el.id)) {
+              handle.remove();
+            }
+          });
+        });
+      }
+
+      // 3. Purge descendant element overlays (e.g. inner <foreignObject>, <image>, etc. of a group)
+      if (typeof el.querySelectorAll === 'function') {
+        el.querySelectorAll('[id]').forEach(child => {
+          document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
+            ov.querySelectorAll(`[id*="${child.id}"]`).forEach(node => {
+              if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
+                node.remove();
+              }
+            });
+          });
+        });
+      }
+
+      // 4. Purge ancestor group overlays (e.g. parent <g> if child is being highlighted)
+      let parent = el.parentElement;
+      while (parent && parent.tagName && parent.tagName.toLowerCase() !== 'svg') {
+        if (parent.id) {
+          document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
+            ov.querySelectorAll(`[id="overlay-poly-selected-${parent.id}"], [id="overlay-poly-child-selected-${parent.id}"], [id="overlay-path-selected-${parent.id}"], [id="overlay-path-child-selected-${parent.id}"]`).forEach(node => node.remove());
+          });
+        }
+        parent = parent.parentElement;
+      }
     }
 
     if (type === 'hover' || type === 'child-hover') {
@@ -291,8 +340,7 @@ export const createOverlayHighlightRenderer = ({
               if (isDragging) {
                 const existingHandles = htmlOverlay.querySelectorAll(`[id^="resize-handle-${el.id}-"], [id^="rotate-handle-${el.id}"], [id^="rotation-degree-badge-${el.id}"], [id^="rotate-hotspot-${el.id}-"]`);
                 existingHandles.forEach(h => { h.style.display = 'none'; });
-                return;
-              }
+              } else {
 
               const { cornersMap, visualRotation } = getVisualCornersAndRotation(mapped, localToOverlay, el);
               const rotation = visualRotation;
@@ -451,8 +499,12 @@ export const createOverlayHighlightRenderer = ({
                 htmlOverlay.querySelectorAll(`[id^="rotate-handle-${el.id}"], [id^="rotate-hotspot-${el.id}-"]`).forEach(h => h.remove());
               }
             }
+          }
+        }
 
-            if (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') {
+          if (isSelected && !isBeingEditedCheck && (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation')) {
+            const htmlOverlay = getHtmlOverlayForElement(el);
+            if (htmlOverlay) {
               drawInteractionBadge(el, mapped, htmlOverlay, zoomScale, bbox);
             }
           }
@@ -602,8 +654,7 @@ export const createOverlayHighlightRenderer = ({
             htmlOverlay.querySelectorAll(`[id^="resize-handle-${el.id}-"], [id^="rotate-handle-${el.id}"], [id^="rotation-degree-badge-${el.id}"], [id^="rotate-hotspot-${el.id}-"]`).forEach(h => {
               h.style.display = 'none';
             });
-            return;
-          }
+          } else {
 
           const matrix = getElementMatrix(el);
           const { cornersMap, visualRotation } = getVisualCornersAndRotation(mapped, matrix, el);
@@ -834,13 +885,17 @@ export const createOverlayHighlightRenderer = ({
           toggleBtn.onmousedown = handleToggleAction;
           toggleBtn.onclick = handleToggleAction;
         }
-
-        // ── INTERACTION BADGE ──
-        if (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') {
-          drawInteractionBadge(el, mapped, htmlOverlay, zoom / 100, bbox);
-        }
       }
-    } catch { /* ignored */ }
+    }
+
+    // ── INTERACTION BADGE (Fallback path) ──
+    if (isSelected && !isBeingEdited && (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation')) {
+      const htmlOverlay = getHtmlOverlayForElement(el);
+      if (htmlOverlay) {
+        drawInteractionBadge(el, mapped, htmlOverlay, zoom / 100, bbox);
+      }
+    }
+  } catch { /* ignored */ }
   };
 
   return { drawOverlayHighlight };

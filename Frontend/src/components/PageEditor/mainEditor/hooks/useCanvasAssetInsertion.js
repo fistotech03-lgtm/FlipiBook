@@ -512,20 +512,94 @@ export const useCanvasAssetInsertion = ({
         if (match && match[1]) finalEmbedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
       }
 
-      const newId = `video-${Date.now()}`;
-      let displayWidth = 120;
-      let displayHeight = 67.5;
+      // 1. Resolve true page dimensions from viewBox and background Overlay
+      let pageX = 0, pageY = 0, pageW = baseWidth || 210, pageH = baseHeight || 297;
+      const viewBoxAttr = svg.getAttribute('viewBox');
+      if (viewBoxAttr) {
+        const vb = viewBoxAttr.split(/[\s,]+/).map(Number);
+        if (vb.length === 4 && !isNaN(vb[2]) && !isNaN(vb[3]) && vb[2] > 0 && vb[3] > 0) {
+          pageX = vb[0];
+          pageY = vb[1];
+          pageW = vb[2];
+          pageH = vb[3];
+        }
+      }
 
-      const svgW = (svg.getAttribute('width') && !svg.getAttribute('width').includes('%')) ? parseFloat(svg.getAttribute('width')) : (baseWidth || 210);
-      const svgH = (svg.getAttribute('height') && !svg.getAttribute('height').includes('%')) ? parseFloat(svg.getAttribute('height')) : (baseHeight || 297);
+      const bgRect = svg.querySelector('[data-name="Overlay"]');
+      if (bgRect) {
+        const bgW = parseFloat(bgRect.getAttribute('width'));
+        const bgH = parseFloat(bgRect.getAttribute('height'));
+        const bgX = parseFloat(bgRect.getAttribute('x')) || 0;
+        const bgY = parseFloat(bgRect.getAttribute('y')) || 0;
+        if (!isNaN(bgW) && bgW > 0 && !isNaN(bgH) && bgH > 0) {
+          pageX = bgX;
+          pageY = bgY;
+          pageW = bgW;
+          pageH = bgH;
+        }
+      }
+
+      // 2. Proportional initial dimensions (fit nicely in page at 16:9 ratio)
+      const targetInitialW = Math.min(pageW * 0.65, 150);
+      let displayWidth = targetInitialW;
+      let displayHeight = displayWidth * (9 / 16);
+      if (displayHeight > pageH * 0.6) {
+        displayHeight = pageH * 0.6;
+        displayWidth = displayHeight * (16 / 9);
+      }
+
+      const dropPoint = e.detail?.dropPoint;
+      const initialCx = (dropPoint && typeof dropPoint.x === 'number') ? dropPoint.x : (pageX + pageW / 2);
+      const initialCy = (dropPoint && typeof dropPoint.y === 'number') ? dropPoint.y : (pageY + pageH / 2);
+      const initialX = initialCx - displayWidth / 2;
+      const initialY = initialCy - displayHeight / 2;
+
+      const groupId = `video-group-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const foId = `video-${Date.now()}`;
+
+      const videoGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      videoGroup.id = groupId;
+      videoGroup.setAttribute('data-type', 'video');
+      videoGroup.setAttribute('data-name', 'Video Group');
+      videoGroup.setAttribute('data-is-video-group', 'true');
+
+      // Concrete SVG graphic shape covering bounds to prevent Chromium compositor trailing glitch
+      const boundsRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      boundsRect.setAttribute('class', 'video-damage-rect');
+      boundsRect.setAttribute('x', initialX.toString());
+      boundsRect.setAttribute('y', initialY.toString());
+      boundsRect.setAttribute('width', displayWidth.toString());
+      boundsRect.setAttribute('height', displayHeight.toString());
+      boundsRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
+      boundsRect.setAttribute('stroke', 'none');
+      boundsRect.setAttribute('pointer-events', 'none');
+      videoGroup.appendChild(boundsRect);
 
       const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-      fo.id = newId;
+      fo.id = foId;
       fo.setAttribute('data-type', 'video');
       fo.setAttribute('data-name', 'Video');
       fo.setAttribute('data-object-fit', 'Fit');
+      fo.setAttribute('x', initialX.toString());
+      fo.setAttribute('y', initialY.toString());
+      fo.setAttribute('width', displayWidth.toString());
+      fo.setAttribute('height', displayHeight.toString());
       if (file && file.name) fo.setAttribute('data-filename', file.name);
       if (file && file.size) fo.setAttribute('data-filesize', file.size);
+
+      const videoWrapper = document.createElement('div');
+      videoWrapper.className = 'video-container';
+      Object.assign(videoWrapper.style, {
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#000000',
+        borderRadius: '0px'
+      });
 
       if (isIframe) {
         fo.setAttribute('data-is-iframe', 'true');
@@ -539,13 +613,7 @@ export const useCanvasAssetInsertion = ({
         iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
         iframe.setAttribute('allowfullscreen', 'true');
 
-        const intrinsicW = 640;
-        const intrinsicH = 360;
-        const targetW = Math.min(svgW * 0.75, 160);
-        displayWidth = targetW;
-        displayHeight = (intrinsicH / intrinsicW) * displayWidth;
-
-        fo.appendChild(iframe);
+        videoWrapper.appendChild(iframe);
       } else {
         const video = document.createElement('video');
         video.src = videoUrl;
@@ -553,7 +621,6 @@ export const useCanvasAssetInsertion = ({
         video.style.height = '100%';
         video.style.objectFit = 'contain';
         video.style.display = 'block';
-        video.setAttribute('controls', 'true');
         video.setAttribute('playsinline', 'true');
         video.setAttribute('preload', 'metadata');
 
@@ -562,52 +629,58 @@ export const useCanvasAssetInsertion = ({
         tempVid.onloadedmetadata = () => {
           if (tempVid.videoWidth && tempVid.videoHeight) {
             const aspect = tempVid.videoWidth / tempVid.videoHeight;
-            const targetW = Math.min(svgW * 0.75, 160);
-            const dynamicW = targetW;
-            const dynamicH = dynamicW / aspect;
+            let dynamicW = displayWidth;
+            let dynamicH = dynamicW / aspect;
+            if (dynamicH > pageH * 0.7) {
+              dynamicH = pageH * 0.7;
+              dynamicW = dynamicH * aspect;
+            }
+            const curX = parseFloat(fo.getAttribute('x')) || initialX;
+            const curY = parseFloat(fo.getAttribute('y')) || initialY;
+            const curW = parseFloat(fo.getAttribute('width')) || displayWidth;
+            const curH = parseFloat(fo.getAttribute('height')) || displayHeight;
+            const cX = curX + curW / 2;
+            const cY = curY + curH / 2;
+
             fo.setAttribute('width', dynamicW.toString());
             fo.setAttribute('height', dynamicH.toString());
-            fo.setAttribute('x', ((svgW - dynamicW) / 2).toString());
-            fo.setAttribute('y', ((svgH - dynamicH) / 2).toString());
+            fo.setAttribute('x', (cX - dynamicW / 2).toString());
+            fo.setAttribute('y', (cY - dynamicH / 2).toString());
+
+            boundsRect.setAttribute('width', dynamicW.toString());
+            boundsRect.setAttribute('height', dynamicH.toString());
+            boundsRect.setAttribute('x', (cX - dynamicW / 2).toString());
+            boundsRect.setAttribute('y', (cY - dynamicH / 2).toString());
+
+            const tempBar = fo.querySelector('.custom-video-overlay');
+            if (tempBar) tempBar.remove();
+
             if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
           }
         };
 
-        fo.appendChild(video);
+        videoWrapper.appendChild(video);
       }
 
-      const topFrames = getTopLevelFrames(svg);
-      const rootFrame = topFrames[0] || svg.querySelector('g') || svg;
+      fo.appendChild(videoWrapper);
+      videoGroup.appendChild(fo);
 
-      let cx = svgW / 2;
-      let cy = svgH / 2;
-      try {
-        if (rootFrame.getBBox) {
-          const bbox = rootFrame.getBBox();
-          if (bbox.width > 0 && bbox.height > 0) {
-            cx = bbox.x + bbox.width / 2;
-            cy = bbox.y + bbox.height / 2;
-          }
-        }
-      } catch { /* ignored */ }
-
-      fo.setAttribute('width', displayWidth.toString());
-      fo.setAttribute('height', displayHeight.toString());
-      fo.setAttribute('x', (cx - displayWidth / 2).toString());
-      fo.setAttribute('y', (cy - displayHeight / 2).toString());
-
-      rootFrame.appendChild(fo);
+      // Append to the page canvas container, NOT to an arbitrary child layer
+      const targetContainer = svg.querySelector('[data-type="frame"]') ||
+        svg.querySelector('[data-name="Overlay"]')?.parentElement ||
+        svg;
+      targetContainer.appendChild(videoGroup);
 
       if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
 
-      if (setSelectedLayerId) setSelectedLayerId(newId);
-      if (selectedLayerIdRef) selectedLayerIdRef.current = newId;
-      if (setMultiSelectedIds) setMultiSelectedIds(new Set([newId]));
-      if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([newId]);
+      if (setSelectedLayerId) setSelectedLayerId(groupId);
+      if (selectedLayerIdRef) selectedLayerIdRef.current = groupId;
+      if (setMultiSelectedIds) setMultiSelectedIds(new Set([groupId]));
+      if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([groupId]);
 
       if (setActiveMainTool) setActiveMainTool('select');
       setTimeout(() => {
-        const el = document.getElementById(newId);
+        const el = document.getElementById(groupId) || document.getElementById(foId);
         if (el && typeof drawOverlayHighlight === 'function') {
           drawOverlayHighlight(el, 'selected');
         }

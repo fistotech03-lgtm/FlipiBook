@@ -1766,6 +1766,31 @@ export const useCanvasPointerEvents = ({
 
     if (newSet.size <= 1) {
       document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
+      const mb = document.getElementById('overlay-poly-selected-multi-selection-bounds');
+      if (mb) mb.remove();
+      const mbOld = document.getElementById('overlay-poly-selected-multi');
+      if (mbOld) mbOld.remove();
+    }
+
+    if (id) {
+      // Purge selection overlays for other elements across all overlay layers
+      document.querySelectorAll('.selection-overlay-layer').forEach(overlay => {
+        overlay.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
+          if (!node.id.endsWith(`-${id}`)) {
+            node.remove();
+          }
+        });
+      });
+      document.querySelectorAll('[id^="highlight-overlay-html-"]').forEach(htmlOverlay => {
+        htmlOverlay.querySelectorAll('.resize-handle, .corner-value-badge, [id^="rotation-degree-badge-"], [id^="rotate-handle-"], [id^="rotate-hotspot-"]').forEach(node => {
+          if (!node.id.includes(id)) {
+            node.remove();
+          }
+        });
+      });
+    } else {
+      clearOverlayType('selected');
+      clearOverlayType('child-selected');
     }
 
     // ── Figma-style: auto-convert <text> to <foreignObject> on first selection ──

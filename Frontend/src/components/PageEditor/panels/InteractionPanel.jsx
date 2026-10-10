@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -10,11 +9,11 @@ import PopupTemplateSelection, { TEMPLATES } from '../modals/PopupTemplateSelect
 import ModelGalleryModal from '../../ThreedEditor/Components/ModelGalleryModal';
 import AlertModal from '../../AlertModal';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Stage, OrbitControls, useGLTF, Environment, Center, Bounds } from '@react-three/drei';
+import { OrbitControls, useGLTF, Environment, Center } from '@react-three/drei';
 import * as THREE from 'three';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
-import { fontFamilies, fontWeights } from '../../../utils/constants';
+import { fontFamilies } from '../../../utils/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import ColorPicker from '../properties/ColorPicker';
 import HotspotCustomizationPopup from '../modals/HotspotCustomizationPopup';
@@ -24,7 +23,7 @@ import { useAuth } from '../../../context/AuthContext';
 
 const GlbModelScene = ({ url }) => {
   const { scene, animations } = useGLTF(url);
-  const { camera, size } = useThree();
+  const { camera } = useThree();
   const controls = useThree(state => state.controls);
   const mixerRef = useRef(null);
 
@@ -36,7 +35,7 @@ const GlbModelScene = ({ url }) => {
         try {
           mixerRef.current.stopAllAction();
           mixerRef.current.uncacheRoot(scene);
-        } catch (_) {}
+        } catch {}
         mixerRef.current = null;
       }
       return;
@@ -93,7 +92,7 @@ const GlbModelScene = ({ url }) => {
       try {
         mixer.stopAllAction();
         mixer.uncacheRoot(scene);
-      } catch (e) {}
+      } catch {}
       mixerRef.current = null;
     };
   }, [scene, animations]);
@@ -207,7 +206,7 @@ const ZoomTargetThumbnail = ({ targetId }) => {
             const rect = el.getBoundingClientRect();
             localBox = { x: 0, y: 0, width: rect.width || 100, height: rect.height || 100 };
           }
-        } catch (e) { }
+        } catch { }
 
         if (pageSvg && typeof pageSvg.createSVGPoint === 'function') {
           try {
@@ -227,7 +226,7 @@ const ZoomTargetThumbnail = ({ targetId }) => {
             } else {
               absBox = localBox;
             }
-          } catch (e) {
+          } catch {
             absBox = localBox;
           }
         } else {
@@ -346,7 +345,7 @@ const CallInteractionInput = ({ initialValue, onSave, isWhatsApp }) => {
           dialCode: phoneNumber.countryCallingCode
         };
       }
-    } catch (e) {}
+    } catch {}
     return { country: defaultCountry, nationalNumber: '', dialCode: defaultDialCode };
   }, [initialValue]);
 
@@ -356,7 +355,6 @@ const CallInteractionInput = ({ initialValue, onSave, isWhatsApp }) => {
   const [isSaved, setIsSaved] = useState(true);
   const containerRef = useRef(null);
 
-  const cleanLocal = localValue.replace(/\D/g, '');
   let isInvalid = false;
   let hasDigits = false;
 
@@ -364,7 +362,7 @@ const CallInteractionInput = ({ initialValue, onSave, isWhatsApp }) => {
   if (hasDigits) {
     try {
       isInvalid = !isValidPhoneNumber(localValue, selectedCountry.toUpperCase());
-    } catch (e) {
+    } catch {
       isInvalid = true;
     }
   }
@@ -386,7 +384,7 @@ const CallInteractionInput = ({ initialValue, onSave, isWhatsApp }) => {
           setLocalValue(phoneNumber.nationalNumber);
           setDialCode(phoneNumber.countryCallingCode);
         }
-      } catch (e) {}
+      } catch {}
     } else {
       setLocalValue('');
       setSelectedCountry(defaultCountry);
@@ -631,7 +629,7 @@ const getSocialPlatform = (item, currentVal = '') => {
   };
 };
 
-const ActionDropdown = ({ item, currentAction, actionTypes, isDropdownOpen, setOpenDropdownId, updateElementAttribute, activePageIndex, setCardActionOverrides, setItemValueOverrides, setLocalInputValues, setTooltipSettingsOverrides, isCollapsed, onExpandAccordion }) => {
+const ActionDropdown = ({ item, currentAction, actionTypes, isDropdownOpen, setOpenDropdownId, updateElementAttribute, activePageIndex, setCardActionOverrides, setItemValueOverrides, setLocalInputValues, setTooltipSettingsOverrides, isCollapsed }) => {
   const triggerRef = useRef(null);
   const [dropdownStyles, setDropdownStyles] = useState({});
 
@@ -860,7 +858,7 @@ const getFormattedPopupSvg = (svgString) => {
     svg.style.maxHeight = '100%';
     svg.style.display = 'block';
     return new XMLSerializer().serializeToString(svg);
-  } catch (_) {
+  } catch {
     return svgString;
   }
 };
@@ -872,7 +870,6 @@ const InteractionPanel = ({
   updateElementAttribute,
   deleteLayer,
   pages,
-  flipbookDimensions = { width: 210, height: 297 },
   onCustomizePopup,
   setIs3DModalOpen,
   setCurrent3DItem,
@@ -889,12 +886,8 @@ const InteractionPanel = ({
   const effectiveBook = flipbookNameProp || location?.state?.flipbookName || 'Untitled Flipbook';
   const [activeTemplateSelectionId, setActiveTemplateSelectionId] = useState(null);
   const [alertState, setAlertState] = useState({ isOpen: false, title: '', message: '', type: 'warning', showCancel: false, confirmText: 'Okay', cancelText: 'Cancel', onConfirm: null });
-  const [dimensionUnit, setDimensionUnit] = useState('px');
   const [openCardIds, setOpenCardIds] = useState({});
-  const [isInteractionCardExpanded, setIsInteractionCardExpanded] = useState(true);
-  const [isActionDropdownOpen, setIsActionDropdownOpen] = useState(false);
   const [activeLayerId, setActiveLayerId] = useState(selectedLayerId || null);
-  const [urlValue, setUrlValue] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [collapsedCardIds, setCollapsedCardIds] = useState({});
   // Immediate local override for action type so card header updates without waiting for pages re-sync
@@ -906,7 +899,7 @@ const InteractionPanel = ({
 
   // Immediate local overrides for input values and triggers to eliminate dropdown lag and system hang
   const [itemValueOverrides, setItemValueOverrides] = useState({});
-  const [itemTriggerOverrides, setItemTriggerOverrides] = useState({});
+  const [, setItemTriggerOverrides] = useState({});
   const [localInputValues, setLocalInputValues] = useState({});
   const [dropdownDirectionOverrides, setDropdownDirectionOverrides] = useState({});
   const [uploadingItems, setUploadingItems] = useState({});
@@ -915,7 +908,7 @@ const InteractionPanel = ({
   const [playingAudioId, setPlayingAudioId] = useState(null);
   const [audioPlaybackTimes, setAudioPlaybackTimes] = useState({});
   const [audioProgressPercent, setAudioProgressPercent] = useState({});
-  const [tooltipSettingsOverrides, setTooltipSettingsOverrides] = useState({});
+  const [, setTooltipSettingsOverrides] = useState({});
   const [linkBehaviorOverrides, setLinkBehaviorOverrides] = useState({});
   const [whatsappMessageOverrides, setWhatsappMessageOverrides] = useState({});
   const [highlightOverrides, setHighlightOverrides] = useState({});
@@ -925,14 +918,12 @@ const InteractionPanel = ({
   // Audio recording state
   const [audioSourceMode, setAudioSourceMode] = useState({}); // { [itemId]: 'upload' | 'record' }
   const [recordingItemId, setRecordingItemId] = useState(null);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [, setRecordingSeconds] = useState(0);
   const [recordingMillis, setRecordingMillis] = useState(0);
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordingWaveform, setRecordingWaveform] = useState([]);
   const [recordedDataMap, setRecordedDataMap] = useState({}); // { [itemId]: { blob, url, duration, durationMs, waveform, mimeType, fileExt } }
   const [recordedPreviewPlaying, setRecordedPreviewPlaying] = useState(null);
-  const [recordedPreviewTimes, setRecordedPreviewTimes] = useState({});
-  const [recordedPreviewPercent, setRecordedPreviewPercent] = useState({});
 
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -1069,7 +1060,7 @@ const InteractionPanel = ({
             updateTimesAndProgress();
           };
           audio.addEventListener('timeupdate', onTimeFix);
-        } catch (_) {}
+        } catch {}
       } else {
         updateTimesAndProgress();
       }
@@ -1206,7 +1197,7 @@ const InteractionPanel = ({
           mediaStreamRef.current = null;
         }
         if (audioContextRef.current) {
-          try { audioContextRef.current.close(); } catch (_) {}
+          try { audioContextRef.current.close(); } catch {}
           audioContextRef.current = null;
           analyserRef.current = null;
         }
@@ -1265,7 +1256,7 @@ const InteractionPanel = ({
     if (!isRecordingPaused) {
       // Pause
       if (mediaRecorderRef.current.state === 'recording') {
-        try { mediaRecorderRef.current.pause(); } catch (_) {}
+        try { mediaRecorderRef.current.pause(); } catch {}
       }
       recordingAccumulatedMsRef.current += (Date.now() - recordingStartTimeRef.current);
       if (recordingTimerRef.current) {
@@ -1280,7 +1271,7 @@ const InteractionPanel = ({
     } else {
       // Resume / Play
       if (mediaRecorderRef.current.state === 'paused') {
-        try { mediaRecorderRef.current.resume(); } catch (_) {}
+        try { mediaRecorderRef.current.resume(); } catch {}
       }
       recordingStartTimeRef.current = Date.now();
       setIsRecordingPaused(false);
@@ -1312,7 +1303,7 @@ const InteractionPanel = ({
     }
   };
 
-  const handleStopRecording = (itemId) => {
+  const handleStopRecording = () => {
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
@@ -1325,7 +1316,7 @@ const InteractionPanel = ({
       recordingAccumulatedMsRef.current += (Date.now() - recordingStartTimeRef.current);
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try { mediaRecorderRef.current.stop(); } catch (_) {}
+      try { mediaRecorderRef.current.stop(); } catch {}
     }
     setIsRecordingPaused(false);
     setRecordingItemId(null);
@@ -1342,13 +1333,13 @@ const InteractionPanel = ({
       waveformIntervalRef.current = null;
     }
     if (audioContextRef.current) {
-      try { audioContextRef.current.close(); } catch (_) {}
+      try { audioContextRef.current.close(); } catch {}
       audioContextRef.current = null;
       analyserRef.current = null;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.onstop = null;
-      try { mediaRecorderRef.current.stop(); } catch (_) {}
+      try { mediaRecorderRef.current.stop(); } catch {}
       mediaRecorderRef.current = null;
     }
     if (mediaStreamRef.current) {
@@ -1369,62 +1360,6 @@ const InteractionPanel = ({
     setIsRecordingPaused(false);
     setRecordingWaveform([]);
     recordingAccumulatedMsRef.current = 0;
-  };
-
-  const handleTogglePlayRecordedPreview = (itemId) => {
-    const itemData = recordedDataMap[itemId];
-    if (!itemData || !itemData.url) return;
-
-    if (recordedPreviewPlaying === itemId && recordedPreviewAudioRef.current) {
-      if (!recordedPreviewAudioRef.current.paused) {
-        recordedPreviewAudioRef.current.pause();
-        setRecordedPreviewPlaying(null);
-        return;
-      }
-    }
-
-    if (recordedPreviewAudioRef.current) {
-      recordedPreviewAudioRef.current.pause();
-      recordedPreviewAudioRef.current = null;
-    }
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      setPlayingAudioId(null);
-    }
-
-    const audio = new Audio(itemData.url);
-    recordedPreviewAudioRef.current = audio;
-    setRecordedPreviewPlaying(itemId);
-
-    const knownDur = itemData.duration || (itemData.durationMs ? itemData.durationMs / 1000 : 0);
-
-    audio.ontimeupdate = () => {
-      const cur = audio.currentTime || 0;
-      const dur = (audio.duration && isFinite(audio.duration) && audio.duration !== Infinity && audio.duration > 0)
-        ? audio.duration
-        : (knownDur || 1);
-      const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
-      setRecordingMillis(Math.round(cur * 1000));
-      setRecordedPreviewTimes(prev => ({
-        ...prev,
-        [itemId]: `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`
-      }));
-      setRecordedPreviewPercent(prev => ({
-        ...prev,
-        [itemId]: pct
-      }));
-    };
-
-    audio.onended = () => {
-      setRecordedPreviewPlaying(null);
-      setRecordedPreviewPercent(prev => ({ ...prev, [itemId]: 0 }));
-      setRecordingMillis(itemData.durationMs || (itemData.duration * 1000));
-    };
-
-    audio.play().catch(err => {
-      console.error("Failed to play recorded preview:", err);
-      setRecordedPreviewPlaying(null);
-    });
   };
 
   const handleSaveRecordedAudio = async (item, overrideData) => {
@@ -1521,7 +1456,7 @@ const InteractionPanel = ({
         clearInterval(waveformIntervalRef.current);
       }
       if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch (_) {}
+        try { audioContextRef.current.close(); } catch {}
       }
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(t => t.stop());
@@ -1552,7 +1487,6 @@ const InteractionPanel = ({
     { id: 'audio', label: 'Audio', icon: 'lucide:volume-2' },
     { id: 'info-box', label: 'Info Box', icon: 'fontisto:info' }
   ];
-  const [selectedActionType, setSelectedActionType] = useState(actionTypes[0]);
 
   const panelStateRef = useRef({ updateElementAttribute, activePageIndex, pages, actionTypes });
   useEffect(() => {
@@ -1570,9 +1504,6 @@ const InteractionPanel = ({
     if (selectedLayerId) {
       setActiveLayerId(selectedLayerId);
       if (selectedElementProps) {
-        const savedVal = selectedElementProps['data-interaction-value'] || '';
-        setUrlValue(savedVal);
-
         const interactionType = selectedElementProps['data-interaction'];
         if (interactionType) {
           setOpenCardIds(prev => {
@@ -1597,7 +1528,6 @@ const InteractionPanel = ({
       });
     } else {
       setActiveLayerId(null);
-      setUrlValue('');
     }
 
     // ONLY clear temporary local overrides if the user actually clicked a DIFFERENT element
@@ -1744,7 +1674,7 @@ const InteractionPanel = ({
       try {
         const parser = new DOMParser();
         doc = parser.parseFromString(page.html, 'image/svg+xml');
-      } catch (e) {
+      } catch {
         return;
       }
     }
@@ -1856,112 +1786,6 @@ const InteractionPanel = ({
     return () => window.removeEventListener('mousedown', handleGlobalMouseDown, true);
   }, [openDropdownId]);
 
-  // Dynamic element type and ID extraction helper
-  const detectElementDisplayInfo = (id, targetPageIndex = null) => {
-    if (!id) return { type: 'Element', number: '432', name: 'Element 432' };
-
-    // 1. Try to find the element in the live DOM first (fastest and most accurate!)
-    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-
-    // Search within the target page's container to avoid matching duplicate IDs from other pages
-    const pageIdxToSearch = targetPageIndex !== null ? targetPageIndex : activePageIndex;
-    const activeContainer = editorDoc.querySelector(`.page-svg-container[data-page-index="${pageIdxToSearch}"]`);
-    let el = activeContainer ? activeContainer.querySelector(`[id="${CSS.escape(id)}"]`) : editorDoc.getElementById(id);
-
-    // 2. If not found in live DOM, use our super fast cached parsed DOMs
-    if (!el) {
-      if (targetPageIndex !== null) {
-        const cached = parsedPagesDOMsRef.current[targetPageIndex];
-        if (cached && cached.doc) {
-          el = cached.doc.getElementById(id);
-        } else {
-          const page = pages[targetPageIndex];
-          if (page && page.html) {
-            try {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(page.html, 'image/svg+xml');
-              parsedPagesDOMsRef.current[targetPageIndex] = { html: page.html, doc };
-              el = doc.getElementById(id);
-            } catch (e) {
-              console.error("DOM Parsing failed", e);
-            }
-          }
-        }
-      } else {
-        // Search all pages
-        for (let i = 0; i < pages.length; i++) {
-          const cached = parsedPagesDOMsRef.current[i];
-          if (cached && cached.doc) {
-            const found = cached.doc.getElementById(id);
-            if (found) {
-              el = found;
-              break;
-            }
-          } else {
-            const page = pages[i];
-            if (page && page.html) {
-              try {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(page.html, 'image/svg+xml');
-                parsedPagesDOMsRef.current[i] = { html: page.html, doc };
-                const found = doc.getElementById(id);
-                if (found) {
-                  el = found;
-                  break;
-                }
-              } catch (e) {
-                console.error("DOM Parsing failed", e);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Fallback number from id
-    const idNum = id.match(/\d+/)?.[0] || id.substring(Math.max(0, id.length - 3));
-
-    if (!el) {
-      return { type: 'Element', number: idNum, name: `Element ${idNum}` };
-    }
-
-    const tagName = el.tagName.toLowerCase();
-    const dataType = (el.getAttribute('data-type') || '').toLowerCase();
-    const dataName = (el.getAttribute('data-name') || '').toLowerCase();
-    const idLower = el.id.toLowerCase();
-    const href = el.getAttribute('href') || el.getAttribute('xlink:href') || '';
-
-    let detectedType = 'Element';
-    if (tagName === 'g' || tagName === 'svg') {
-      const deepType = deepDetectType(el);
-      if (deepType) {
-        detectedType = deepType;
-      } else {
-        detectedType = 'Group';
-      }
-    } else {
-      if (dataType === 'gif' || dataName.includes('gif') || idLower.includes('gif') || href.toLowerCase().endsWith('.gif')) {
-        detectedType = 'GIF';
-      } else if (dataType === 'video' || tagName === 'video' || idLower.includes('video')) {
-        detectedType = 'Video';
-      } else if (dataType === 'icon' || dataType === 'hotspot' || idLower.includes('icon') || idLower.includes('hotspot') || el.classList?.contains('iconify')) {
-        detectedType = 'Icon';
-      } else if (tagName === 'image' || tagName === 'img' || dataType === 'image' || idLower.includes('image')) {
-        detectedType = 'Image';
-      } else if (tagName === 'text' || tagName === 'tspan' || dataType === 'text' || idLower.includes('text')) {
-        detectedType = 'Text';
-      } else if (tagName === 'rect' || tagName === 'circle' || tagName === 'ellipse' || tagName === 'path' || tagName === 'polygon' || tagName === 'polyline') {
-        detectedType = 'Shape';
-      }
-    }
-
-    return {
-      type: detectedType,
-      number: idNum,
-      name: `${detectedType} ${idNum}`
-    };
-  };
-
   function detectTypeFromElement(el, id) {
     const idNum = id.match(/\d+/)?.[0] || id.substring(Math.max(0, id.length - 3));
     if (!el) return { type: 'Element', number: idNum, name: `Element ${idNum}` };
@@ -2032,7 +1856,6 @@ const InteractionPanel = ({
 
     openCardKeys.forEach(id => {
       let foundEl = null;
-      let foundPageIndex = -1;
 
       // 1. ALWAYS check cached DOMs first (guaranteed in sync with React state `pages`)
       for (let i = 0; i < pages.length; i++) {
@@ -2041,7 +1864,6 @@ const InteractionPanel = ({
           const el = cached.doc.getElementById(id);
           if (el) {
             foundEl = el;
-            foundPageIndex = i;
             break;
           }
         }
@@ -2054,7 +1876,6 @@ const InteractionPanel = ({
         const liveEl = activeContainer ? activeContainer.querySelector(`[id="${CSS.escape(id)}"]`) : editorDoc.getElementById(id);
         if (liveEl) {
           foundEl = liveEl;
-          foundPageIndex = activePageIndex;
         }
       }
 
@@ -2148,28 +1969,6 @@ const InteractionPanel = ({
     return list;
   }, [pages, openCardIds, activePageIndex]);
 
-  const convertValue = (mmValue) => {
-    const val = parseFloat(mmValue || 0);
-    if (dimensionUnit === 'px') return Math.round(val * 96 / 25.4);
-    if (dimensionUnit === 'cm') return (val / 10).toFixed(2);
-    return Math.round(val); // mm
-  };
-
-  const handleDimensionChange = (attr, rawValue) => {
-    if (!selectedElementProps) return;
-    const tag = selectedElementProps.tagName;
-    const finalAttr = tag === 'circle' ? 'r' : attr;
-
-    let finalVal = rawValue;
-    if (tag === 'circle') {
-      finalVal = (parseFloat(rawValue) / 2).toString();
-    }
-
-    updateElementAttribute(activePageIndex, selectedLayerId, finalAttr, finalVal);
-  };
-
-  const groupId = selectedElementProps?.['data-group-id'] || '432';
-
   // Deep recursive helper: scan all descendants for dominant type
   function deepDetectType(el) {
     if (!el) return null;
@@ -2205,79 +2004,6 @@ const InteractionPanel = ({
     return found;
   }
 
-  // Detect element type label from props and DOM attributes
-  const getElementLabel = (props) => {
-    if (!props) return 'Element';
-
-    // Try parsed active page DOM element first (most accurate and scoped to prevent duplicates!)
-    let el = null;
-    if (activeLayerId) {
-      const cached = parsedPagesDOMsRef.current[activePageIndex];
-      if (cached && cached.doc) {
-        el = cached.doc.getElementById(activeLayerId);
-      } else {
-        const page = pages[activePageIndex];
-        if (page && page.html) {
-          try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(page.html, 'image/svg+xml');
-            parsedPagesDOMsRef.current[activePageIndex] = { html: page.html, doc };
-            el = doc.getElementById(activeLayerId);
-          } catch (e) {
-            console.error("DOM label Parsing failed", e);
-          }
-        }
-      }
-    }
-    // Fallback to live DOM if not parsed
-    if (!el && activeLayerId) {
-      const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-      const activeContainer = editorDoc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
-      el = activeContainer ? activeContainer.querySelector(`[id="${CSS.escape(activeLayerId)}"]`) : editorDoc.getElementById(activeLayerId);
-    }
-
-    const tagName = (props.tagName || el?.tagName || '').toLowerCase();
-    const dataType = (el?.getAttribute('data-type') || '').toLowerCase();
-    const dataName = (el?.getAttribute('data-name') || '').toLowerCase();
-
-    // Quick wins from props flags (set in RightSidebar)
-    if (props.isText) return 'Text';
-    if (props.isGif) return 'GIF';
-    if (props.isVideo) return 'Video';
-    if (props.isIcon) return 'Icon';
-    if (props.isImage) return 'Image';
-
-    // Check data-type/data-name on the element itself
-    if (dataType === 'text' || dataName.includes('text')) return 'Text';
-    if (dataType === 'gif' || dataName.includes('gif')) return 'GIF';
-    if (dataType === 'video' || dataName.includes('video')) return 'Video';
-    if (dataType === 'icon' || dataType === 'hotspot' || dataName.includes('icon') || dataName.includes('hotspot')) return 'Icon';
-    if (dataType === 'image' || dataName.includes('image')) return 'Image';
-
-    // For groups: deep-scan all descendants
-    if (tagName === 'g' || tagName === 'svg') {
-      const deepType = deepDetectType(el);
-      if (deepType) {
-        // If group contains a single dominant type, label it as "Type Group"
-        if (['Image', 'Text', 'Icon', 'GIF', 'Video'].includes(deepType)) return `${deepType} Group`;
-        return deepType;
-      }
-      return 'Group';
-    }
-
-    // Single element fallback
-    if (tagName === 'image' || tagName === 'img') return 'Image';
-    if (tagName === 'text' || tagName === 'tspan') return 'Text';
-    if (tagName === 'rect') return 'Rectangle';
-    if (tagName === 'circle') return 'Circle';
-    if (tagName === 'ellipse') return 'Ellipse';
-    if (tagName === 'path' || tagName === 'polygon' || tagName === 'polyline') return 'Shape';
-    if (tagName === 'line') return 'Line';
-    if (tagName === 'foreignobject') return props.isVideo ? 'Video' : 'Text';
-
-    return 'Element';
-  };
-
   return (
     <div className="flex flex-col gap-[2vh] px-[1.5vw] pt-[1.8vh] pb-[1.5vw] bg-[#fbfbfb] h-full overflow-y-auto no-scrollbar">
 
@@ -2300,27 +2026,8 @@ const InteractionPanel = ({
               const resolvedActionId = cardActionOverrides[item.id] || item.actionId;
               const currentAction = actionTypes.find(a => a.id === resolvedActionId) || actionTypes[0];
               // Respect trigger and value local overrides to bypass DOM parsing lag
-              const resolvedTrigger = itemTriggerOverrides[item.id] !== undefined ? itemTriggerOverrides[item.id] : (item.trigger || 'click');
               const resolvedValue = itemValueOverrides[item.id] !== undefined ? itemValueOverrides[item.id] : item.value;
-
               const isSelected = activeLayerId === item.id;
-
-              let tooltipSettings = {
-                text: 'Tooltip',
-                textColor: '#ffffff',
-                bgColor: '#1a1a1a',
-                fontFamily: 'Poppins',
-                fontWeight: 'Regular',
-                fontSize: 14,
-                align: 'center',
-                bold: false,
-                italic: false
-              };
-              if (item.tooltipSettings) {
-                try {
-                  tooltipSettings = { ...tooltipSettings, ...JSON.parse(item.tooltipSettings) };
-                } catch (e) { }
-              }
 
               return (
                 <div
@@ -2560,7 +2267,7 @@ const InteractionPanel = ({
                                       infoData.text = infoData.text.slice(0, 15);
                                     }
                                   }
-                                } catch (e) { }
+                                } catch { }
 
                                 const handleInfoChange = (key, val) => {
                                   const processedVal = (key === 'text' && typeof val === 'string') ? val.slice(0, 15) : val;
@@ -2980,7 +2687,7 @@ const InteractionPanel = ({
                                   if (resolvedValue && resolvedValue.startsWith('{')) {
                                     fileMeta = JSON.parse(resolvedValue);
                                   }
-                                } catch (e) { }
+                                } catch { }
 
                                 return (
                                   <div className="flex flex-col w-full gap-[0.8vh]" onClick={(e) => e.stopPropagation()}>
@@ -3111,7 +2818,7 @@ const InteractionPanel = ({
                                   } else if (resolvedValue) {
                                     fileMeta = { name: 'Audio File', data: resolvedValue, url: resolvedValue };
                                   }
-                                } catch (e) { }
+                                } catch { }
 
                                 const isRecordMode = audioSourceMode[item.id] === 'record';
                                 const isRecordingThisItem = recordingItemId === item.id;
@@ -3582,7 +3289,7 @@ const InteractionPanel = ({
                                     images = JSON.parse(resolvedValue);
                                     if (!Array.isArray(images)) images = [];
                                   }
-                                } catch (e) { }
+                                } catch { }
 
                                 const handleFilesToAdd = (files) => {
                                   const fileArray = Array.from(files || []);
@@ -3974,7 +3681,7 @@ const InteractionPanel = ({
                                     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                                     const liveEl = editorDoc.getElementById?.(item.id) || document.getElementById(item.id);
                                     resolvedPopupHtml = liveEl?.getAttribute('data-interaction-popup-custom-html') || null;
-                                  } catch (_) {}
+                                  } catch {}
                                 }
 
                                 const templateImage = TEMPLATES.find(tpl => tpl.id === resolvedValue)?.image;
@@ -4109,7 +3816,7 @@ const InteractionPanel = ({
                                   if (resolvedValue && resolvedValue.startsWith('{')) {
                                     fileMeta = JSON.parse(resolvedValue);
                                   }
-                                } catch (e) { }
+                                } catch { }
 
                                 return (
                                   <div className="flex-1 min-w-0 flex flex-col gap-[1vh]" onClick={(e) => e.stopPropagation()}>
@@ -4270,7 +3977,7 @@ const InteractionPanel = ({
                                                                               localStorage.setItem('tempThreedEditModel', JSON.stringify({ url: newMeta.data, name: newMeta.name, type: newMeta.type || 'glb' }));
                                                                               const editUrl = newMeta.v_id ? `/editor/threed_editor/${newMeta.v_id}` : '/editor/threed_editor';
                                                                               window.open(editUrl, '_blank');
-                                                                            } catch (e) { }
+                                                                            } catch { }
                                                                           }
                                                                         }, 200);
                                                                       };
@@ -4835,7 +4542,7 @@ const InteractionPanel = ({
                                                     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                                                     const el = editorDoc.getElementById(item.id);
                                                     if (el) el.setAttribute('data-interaction-popup-animation', anim.value);
-                                                  } catch (_) {}
+                                                  } catch {}
                                                   setOpenDropdownId(null);
                                                 }}
                                               >
@@ -4902,7 +4609,7 @@ const InteractionPanel = ({
                                                     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                                                     const el = editorDoc.getElementById(item.id);
                                                     if (el) el.setAttribute('data-interaction-popup-speed', speed);
-                                                  } catch (_) {}
+                                                  } catch {}
                                                   setOpenDropdownId(null);
                                                 }}
                                               >
@@ -5009,8 +4716,7 @@ const InteractionPanel = ({
                                     'data-tooltip-settings': null
                                   });
                                 }
-                                if (typeof setSelectedLayerId !== 'undefined' && setSelectedLayerId) setSelectedLayerId(null);
-                                if (typeof setMultiSelectedIds !== 'undefined' && setMultiSelectedIds) setMultiSelectedIds(new Set());
+                                window.dispatchEvent(new CustomEvent('select-layer', { detail: { layerId: null } }));
 
                                 setItemValueOverrides(prev => { const next = { ...prev }; delete next[item.id]; return next; });
                                 setCardActionOverrides(prev => { const next = { ...prev }; delete next[item.id]; return next; });
@@ -5072,7 +4778,7 @@ const InteractionPanel = ({
                 if (res.ok) {
                   fallbackHtml = await res.text();
                 }
-              } catch (err) { }
+              } catch { }
             }
             if (!fallbackHtml) {
               fallbackHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
@@ -5198,7 +4904,7 @@ const InteractionPanel = ({
               : '';
             try {
               if (raw) currentImages = JSON.parse(raw);
-            } catch (e) {}
+            } catch {}
           }
 
           if (currentImages.length >= 6) {

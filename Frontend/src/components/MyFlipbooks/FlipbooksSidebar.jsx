@@ -1,52 +1,186 @@
-import React from 'react';
-import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
+
+const DEFAULT_FOLDER_COLORS = [
+    '#f59e0b', // Yellow / Amber
+    '#f43f5e', // Coral / Red / Rose
+    '#10b981', // Emerald / Green
+    '#38bdf8', // Sky Blue
+    '#8b5cf6', // Violet / Purple
+    '#f97316', // Orange
+    '#06b6d4', // Cyan
+    '#ec4899', // Pink
+    '#6366f1', // Indigo
+];
 
 export default function FlipbooksSidebar({
     activeFolder,
     setActiveFolder,
-    setSelectedBooks,
-    books,
-    folders,
-    handleAddFolderClick,
-    folderListRef,
-    editingId,
-    tempName,
-    setTempName,
-    saveEdit,
-    handleKeyDown,
-    dragFolderIndex,
-    dragOverFolderIndex,
-    handleFolderDragStart,
-    handleFolderDragOver,
-    handleFolderDragLeave,
-    handleFolderDrop,
-    handleFolderDragEnd,
-    activeMenuId,
-    setActiveMenuId,
-    folderMenuPos,
-    setFolderMenuPos,
-    isCreatingFolder,
-    setIsCreatingFolder,
-    newFolderInputName,
-    setNewFolderInputName,
-    saveNewFolder,
+    setSelectedBooks = () => {},
+    books = [],
+    folders = [],
+    setFolders,
+    onCreateFolder,
+    onRenameFolder,
+    onDeleteFolder,
+    onDuplicateFolder,
+    onReorderFolders,
     creatingFolderName,
     storage,
     isLoadingStorage,
     isUpgradeCardClosed,
     setIsUpgradeCardClosed,
-    navigate,
-    startEditing,
-    handleDuplicateFolder,
-    handleDeleteFolderClick,
-    FOLDER_COLORS,
-    setIsCreateModalOpen,
     dashboardMode = 'books',
     setDashboardMode,
     active3dFolder = 'All Models',
     setActive3dFolder,
+    // Optional overrides for backwards compatibility
+    navigate: navigateProp,
+    FOLDER_COLORS = DEFAULT_FOLDER_COLORS,
+    ...rest
 }) {
+    const routerNavigate = useNavigate();
+    const navigate = navigateProp || routerNavigate;
+
+    // Folder Drag & Drop internal state
+    const [dragFolderIndex, setDragFolderIndex] = useState(null);
+    const [dragOverFolderIndex, setDragOverFolderIndex] = useState(null);
+
+    // Context Menu internal state
+    const [activeMenuId, setActiveMenuId] = useState(null);
+    const [folderMenuPos, setFolderMenuPos] = useState({ top: 0, left: 0, isDropup: false });
+
+    // Inline Folder Creation internal state
+    const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+    const [newFolderInputName, setNewFolderInputName] = useState('');
+    const internalFolderListRef = useRef(null);
+    const folderListRef = rest.folderListRef || internalFolderListRef;
+
+    // Inline Folder Renaming internal state
+    const [editingId, setEditingId] = useState(null);
+    const [tempName, setTempName] = useState('');
+
+    const handleAddFolderClick = rest.handleAddFolderClick || (() => {
+        setIsCreatingFolder(true);
+        setNewFolderInputName('');
+    });
+
+    const saveNewFolder = rest.saveNewFolder || (() => {
+        const trimmed = newFolderInputName.trim();
+        if (!trimmed) {
+            setIsCreatingFolder(false);
+            setNewFolderInputName('');
+            return;
+        }
+        setIsCreatingFolder(false);
+        setNewFolderInputName('');
+        onCreateFolder?.(trimmed);
+    });
+
+    const startEditing = rest.startEditing || ((folder) => {
+        setEditingId(folder.id);
+        setTempName(folder.name);
+    });
+
+    const saveEdit = rest.saveEdit || (() => {
+        if (!editingId || !tempName.trim()) {
+            setEditingId(null);
+            return;
+        }
+        const folder = folders.find(f => f.id === editingId);
+        if (!folder || folder.name === tempName.trim()) {
+            setEditingId(null);
+            return;
+        }
+        const currentFolderId = folder.id;
+        const oldName = folder.name;
+        const newName = tempName.trim();
+        setEditingId(null);
+        onRenameFolder?.(currentFolderId, oldName, newName);
+    });
+
+    const handleKeyDown = rest.handleKeyDown || ((e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            setEditingId(null);
+            setTempName('');
+        }
+    });
+
+    const handleFolderDragStart = rest.handleFolderDragStart || ((e, index, folder) => {
+        if (folder.name === 'Recent Book') {
+            e.preventDefault();
+            return;
+        }
+        setDragFolderIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(index));
+    });
+
+    const handleFolderDragOver = rest.handleFolderDragOver || ((e, index, folder) => {
+        if (folder.name === 'Recent Book' || dragFolderIndex === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverFolderIndex !== index) {
+            setDragOverFolderIndex(index);
+        }
+    });
+
+    const handleFolderDragLeave = rest.handleFolderDragLeave || ((e, index) => {
+        if (dragOverFolderIndex === index) {
+            setDragOverFolderIndex(null);
+        }
+    });
+
+    const handleFolderDrop = rest.handleFolderDrop || ((e, dropIndex, targetFolder) => {
+        e.preventDefault();
+        if (targetFolder.name === 'Recent Book' || dragFolderIndex === null || dragFolderIndex === dropIndex) {
+            setDragFolderIndex(null);
+            setDragOverFolderIndex(null);
+            return;
+        }
+        const next = [...folders];
+        const [movedItem] = next.splice(dragFolderIndex, 1);
+        next.splice(dropIndex, 0, movedItem);
+        if (setFolders) setFolders(next);
+        if (onReorderFolders) onReorderFolders(next);
+        setDragFolderIndex(null);
+        setDragOverFolderIndex(null);
+    });
+
+    const handleFolderDragEnd = rest.handleFolderDragEnd || (() => {
+        setDragFolderIndex(null);
+        setDragOverFolderIndex(null);
+    });
+
+    const handleDeleteFolderClick = (folder) => {
+        if (onDeleteFolder) {
+            onDeleteFolder(folder);
+        } else if (rest.handleDeleteFolderClick) {
+            rest.handleDeleteFolderClick(folder);
+        }
+    };
+
+    const handleDuplicateFolder = (folder) => {
+        if (onDuplicateFolder) {
+            onDuplicateFolder(folder);
+        } else if (rest.handleDuplicateFolder) {
+            rest.handleDuplicateFolder(folder);
+        }
+    };
+
+    useEffect(() => {
+        if ((isCreatingFolder || creatingFolderName) && folderListRef.current) {
+            folderListRef.current.scrollTo({
+                top: folderListRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [isCreatingFolder, creatingFolderName, folderListRef]);
     // 3D Folders state matching the reference mockup
     const [threeDFolders, setThreeDFolders] = React.useState([
         { id: '3d-1', name: 'Motors', count: 1, color: '#f59e0b' },
@@ -213,6 +347,25 @@ export default function FlipbooksSidebar({
                         <div className="flex items-center gap-[0.75vw]">
                             <Box size="1.15vw" className={`shrink-0 ${dashboardMode === '3d' ? 'text-white' : 'text-gray-300'}`} />
                             <span>Add 3D Models</span>
+                        </div>
+                    </div>
+
+                    {/* My Shelf (Shelf Dashboard Switcher) */}
+                    <div
+                        onClick={() => {
+                            if (setDashboardMode) {
+                                setDashboardMode('shelf');
+                            }
+                        }}
+                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                            dashboardMode === 'shelf'
+                                ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                        }`}
+                    >
+                        <div className="flex items-center gap-[0.75vw]">
+                            <Library size="1.15vw" className={`shrink-0 ${dashboardMode === 'shelf' ? 'text-white' : 'text-gray-300'}`} />
+                            <span>My Shelf</span>
                         </div>
                     </div>
 

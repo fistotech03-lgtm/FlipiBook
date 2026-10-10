@@ -216,7 +216,7 @@ const Model3DEditor = ({
         if (Array.isArray(parsed.hotspots) && parsed.hotspots.length > 0) {
           setLocalHotspots(parsed.hotspots);
         }
-      } catch (e) {}
+      } catch {}
     }
   }, [dataUrl]);
 
@@ -256,7 +256,7 @@ const Model3DEditor = ({
         const parsed = JSON.parse(dataUrl);
         if (parsed.v_id) resolvedVId = parsed.v_id;
         if (parsed.vId) resolvedVId = parsed.vId;
-      } catch (e) {}
+      } catch {}
     }
 
     if (resolvedVId) {
@@ -274,7 +274,7 @@ const Model3DEditor = ({
     } else {
       try {
         resolvedUrl = new URL(dataUrl, window.location.href).href;
-      } catch (e) {
+      } catch {
         resolvedUrl = dataUrl;
       }
     }

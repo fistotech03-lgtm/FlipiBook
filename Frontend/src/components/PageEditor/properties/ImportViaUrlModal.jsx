@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Link, Check, Loader2, FileText, Video, Image as ImageIcon } from 'lucide-react';
-import { Icon } from '@iconify/react';
+import { X, Link, Check, Loader2, FileText } from 'lucide-react';
 
 const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
   const [url, setUrl] = useState('');
@@ -63,7 +62,7 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
 
     // Google Drive
     if (lower.includes("drive.google.com")) {
-      const match = url.match(/\/d\/([^\/]+)/);
+      const match = url.match(/\/d\/([^/]+)/);
       if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
     }
 

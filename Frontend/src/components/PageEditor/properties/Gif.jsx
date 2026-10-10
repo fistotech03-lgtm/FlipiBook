@@ -1,46 +1,12 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import ReactDOM from 'react-dom';
+import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import useDeviceDetection from '../hooks/useDeviceDetection';
 import { resolveUploadsPath } from "../../../utils/assetUtils";
 import { useAuth } from "../../../context/AuthContext";
 import {
   Image as ImageIcon,
-  Upload,
-  Replace,
-  ChevronUp,
-  ChevronDown,
-  Link as LinkIcon,
-  Link2Off,
-  Edit3,
-  ImagePlay,
-  Grid,
-  Search,
-  X,
-  Trash2,
-  Repeat,
-  Sliders,
-  Type,
-  Maximize,
-  Layout,
-  Palette,
-  Layers,
-  Settings2,
-  AlignCenterVertical,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Pipette,
-  Sparkles,
-  RotateCcw,
-  Minus,
-  Plus,
-  Check,
-  MousePointerClick,
-  Pencil
+  ChevronDown
 } from "lucide-react";
-import ColorPicker, { parseGradient } from './ColorPicker';
 import { Icon } from '@iconify/react';
 
 import CornerRadius from './CornerRadius';
@@ -48,31 +14,16 @@ import Adjustment from './Adjustment';
 import Effect from './Effect';
 import ReplaceMediaModal from './ReplaceMediaModal';
 import Color from './Color';
-
-const galleryPreviewImages = [
-  "https://media.giphy.com/media/3o7aD2saalEvTe2v0c/giphy.gif",
-  "https://media.giphy.com/media/l41YtZOb9EUABnuqA/giphy.gif",
-  "https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif"
-];
+import { parseGradient } from './ColorPicker';
 
 const GifEditor = ({
   selectedElement,
   selectedLayerId: propSelectedLayerId,
   onUpdate,
-  onPopupPreviewUpdate,
   currentPageVId,
   flipbookVId,
   folderName,
   flipbookName,
-  activePopupElement,
-  onPopupUpdate,
-  TextEditorComponent,
-  ImageEditorComponent,
-  VideoEditorComponent,
-  GifEditorComponent,
-  IconEditorComponent,
-  showInteraction = true,
-  pages,
   activePageIndex,
   onDeleteLayer
 }) => {
@@ -84,13 +35,10 @@ const GifEditor = ({
   const selectedLayerId = propSelectedLayerId || selectedElement?.id;
 
   const fileInputRef = useRef(null);
-  const [activeSection, setActiveSection] = useState('main');
-  const [isUrlAdded, setIsUrlAdded] = useState(false);
 
   const [gifResolution, setGifResolution] = useState('');
   const [gifFileSize, setGifFileSize] = useState('');
 
-  const [showGallery, setShowGallery] = useState(false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [opacity, setOpacity] = useState(100);
   const [imageType, setImageType] = useState('Fit');
@@ -99,7 +47,6 @@ const GifEditor = ({
   const [customLoopCount, setCustomLoopCount] = useState("");
   const [showLoopDropdown, setShowLoopDropdown] = useState(false);
   const [openSubSection, setOpenSubSection] = useState(null);
-  const [activePopup, setActivePopup] = useState(null);
 
   const [filters, setFilters] = useState({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
   const [radius, setRadius] = useState({ tl: 0, tr: 0, br: 0, bl: 0 });
@@ -121,13 +68,7 @@ const GifEditor = ({
   });
 
   const [activeColorPicker, setActiveColorPicker] = useState(null);
-  const [pickerPosition, setPickerPosition] = useState({ top: 0, right: 0 });
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
   const [showStrokeSettings, setShowStrokeSettings] = useState(false);
-  const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
-  const [isDashPosOpen, setIsDashPosOpen] = useState(false);
-  const [colorsOnPage, setColorsOnPage] = useState([]);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
   const isUpdatingDOM = useRef(false);
@@ -515,7 +456,7 @@ const GifEditor = ({
               const rootSvg = liveElement.closest('svg') || document;
               try {
                 patternEl = rootSvg.querySelector(`pattern[id="${patternId}"]`);
-              } catch (e) {
+              } catch {
                 patternEl = null;
               }
               if (!patternEl) {
@@ -547,7 +488,7 @@ const GifEditor = ({
       let targetElForPath = svgImageEl || liveElement;
       if (isSvgEl) {
         let bBox = { x: 0, y: 0, width: 100, height: 100 };
-        try { bBox = targetElForPath.getBBox(); } catch (e) { }
+        try { bBox = targetElForPath.getBBox(); } catch { }
         let bxStr = liveElement.getAttribute('data-crop-orig-x') || targetElForPath.getAttribute('x') || '0';
         let byStr = liveElement.getAttribute('data-crop-orig-y') || targetElForPath.getAttribute('y') || '0';
         let bwStr = liveElement.getAttribute('data-crop-orig-w') || targetElForPath.getAttribute('width') || '100%';
@@ -725,7 +666,7 @@ const GifEditor = ({
 
               const measureEl = targetToWrap || liveElement;
               let bb = { x: 0, y: 0, width: 100, height: 100 };
-              try { bb = measureEl.getBBox(); } catch (e) { }
+              try { bb = measureEl.getBBox(); } catch { }
 
               let cxStr = measureEl.getAttribute('x') || '0';
               let cyStr = measureEl.getAttribute('y') || '0';
@@ -762,7 +703,7 @@ const GifEditor = ({
                     measureEl = svgImageEl.parentNode;
                   }
                   let bb = { x: 0, y: 0, width: 100, height: 100 };
-                  try { bb = measureEl.getBBox(); } catch (e) { }
+                  try { bb = measureEl.getBBox(); } catch { }
                   let cxStr = measureEl.getAttribute('x') || '0';
                   let cyStr = measureEl.getAttribute('y') || '0';
                   let cwStr = measureEl.getAttribute('width') || '100%';
@@ -776,7 +717,7 @@ const GifEditor = ({
                   try {
                     const saved = (svgImageEl || liveElement).getAttribute('data-radius') || liveElement.getAttribute('data-radius');
                     if (saved) currentRadius = JSON.parse(saved);
-                  } catch (e) { }
+                  } catch { }
                   const mxR = Math.min(ncw, nch) / 2;
                   const c_tl = Math.max(0, Math.min(currentRadius.tl || 0, mxR));
                   const c_tr = Math.max(0, Math.min(currentRadius.tr || 0, mxR));
@@ -856,9 +797,7 @@ const GifEditor = ({
       const totalHtmlFilter = `${adjustOnlyStr} ${blurStr} ${dsCssString}`.trim() || 'none';
 
       if (isSvgEl) {
-        const hasClip = anyR || forceClip;
-
-        // 1. Apply Adjustments to the actual image content (leaf)
+                // 1. Apply Adjustments to the actual image content (leaf)
         if (svgImageEl) {
           let leafFilter = adjustOnlyFilter;
           if (forceClip && blurOnlyFilter !== 'none') {
@@ -891,7 +830,7 @@ const GifEditor = ({
                 tEl = svgImageEl.parentNode;
               }
               let bb = { x: 0, y: 0, width: 100, height: 100 };
-              try { bb = tEl.getBBox(); } catch (e) { }
+              try { bb = tEl.getBBox(); } catch { }
 
               let cxStr = tEl.getAttribute('x') || '0';
               let cyStr = tEl.getAttribute('y') || '0';
@@ -907,7 +846,7 @@ const GifEditor = ({
               try {
                 const saved = (svgImageEl || liveElement).getAttribute('data-radius') || liveElement.getAttribute('data-radius');
                 if (saved) currentRadius = JSON.parse(saved);
-              } catch (e) { }
+              } catch { }
 
               const d = getPathD(ncx, ncy, Math.max(0, ncw), Math.max(0, nch), currentRadius.tl || 0, currentRadius.tr || 0, currentRadius.br || 0, currentRadius.bl || 0);
               sCaster.setAttribute('d', d);
@@ -1160,8 +1099,7 @@ const GifEditor = ({
               liveElement.appendChild(strokeOverlay);
 
               // Attach a mutation observer to keep the overlay perfectly synced with the image's layout
-              const targetForStroke = svgImageEl && svgImageEl.parentNode?.tagName?.toLowerCase() === 'svg' && svgImageEl.parentNode.classList.contains('svg-crop-wrapper') ? svgImageEl.parentNode : svgImageEl;
-              const syncOverlay = () => {
+                            const syncOverlay = () => {
                 if (!strokeOverlay.isConnected) return;
                 const weight = parseFloat(strokeOverlay.getAttribute('stroke-width')) || 0;
                 const pos = strokeOverlay.getAttribute('data-img-stroke-position') || 'Center';
@@ -1172,7 +1110,7 @@ const GifEditor = ({
                   targetEl = svgImageEl.parentNode;
                 }
                 let bBox = { x: 0, y: 0, width: 100, height: 100 };
-                try { bBox = targetEl.getBBox(); } catch (e) { }
+                try { bBox = targetEl.getBBox(); } catch { }
                 let bxStr = liveElement.getAttribute('data-crop-orig-x') || targetEl.getAttribute('x') || '0';
                 let byStr = liveElement.getAttribute('data-crop-orig-y') || targetEl.getAttribute('y') || '0';
                 let bwStr = liveElement.getAttribute('data-crop-orig-w') || targetEl.getAttribute('width') || '100%';
@@ -1192,14 +1130,14 @@ const GifEditor = ({
                     by = by + (parseFloat(crop.top) / 100) * bh;
                     bw = bw * (parseFloat(crop.width) / 100);
                     bh = bh * (parseFloat(crop.height) / 100);
-                  } catch (e) { }
+                  } catch { }
                 }
 
                 let scaleX = 1; let scaleY = 1;
                 try {
                   const ctm = targetEl.getScreenCTM();
                   if (ctm) { scaleX = Math.abs(ctm.a) || 1; scaleY = Math.abs(ctm.d) || 1; }
-                } catch (e) { }
+                } catch { }
 
                 const offsetX = (weight / 2) / scaleX;
                 const offsetY = (weight / 2) / scaleY;
@@ -1215,7 +1153,7 @@ const GifEditor = ({
                 try {
                   const saved = targetEl.getAttribute('data-radius') || liveElement.getAttribute('data-radius');
                   if (saved) currentRadius = JSON.parse(saved);
-                } catch (e) { }
+                } catch { }
                 let tl = currentRadius.tl || 0; let tr = currentRadius.tr || 0; let br = currentRadius.br || 0; let bl = currentRadius.bl || 0;
                 if (pos === 'Inside') {
                   tl = Math.max(0, tl - offsetX); tr = Math.max(0, tr - offsetX); br = Math.max(0, br - offsetX); bl = Math.max(0, bl - offsetX);
@@ -1270,7 +1208,7 @@ const GifEditor = ({
               targetEl = svgImageEl.parentNode;
             }
             let bBox = { x: 0, y: 0, width: 100, height: 100 };
-            try { bBox = targetEl.getBBox(); } catch (e) { }
+            try { bBox = targetEl.getBBox(); } catch { }
 
             let bxStr = liveElement.getAttribute('data-crop-orig-x') || targetEl.getAttribute('x') || '0';
             let byStr = liveElement.getAttribute('data-crop-orig-y') || targetEl.getAttribute('y') || '0';
@@ -1291,7 +1229,7 @@ const GifEditor = ({
                 by = by + (parseFloat(crop.top) / 100) * bh;
                 bw = bw * (parseFloat(crop.width) / 100);
                 bh = bh * (parseFloat(crop.height) / 100);
-              } catch (e) { }
+              } catch { }
             }
 
             const pos = backgroundColor.strokePosition || 'Center';
@@ -1305,7 +1243,7 @@ const GifEditor = ({
                 scaleX = Math.abs(ctm.a) || 1;
                 scaleY = Math.abs(ctm.d) || 1;
               }
-            } catch (e) { }
+            } catch { }
 
             const offsetX = (sw / 2) / scaleX;
             const offsetY = (sw / 2) / scaleY;
@@ -1592,7 +1530,7 @@ const GifEditor = ({
                 tEl = svgImageEl.parentNode;
               }
               let bBox = { x: 0, y: 0, width: 100, height: 100 };
-              try { bBox = tEl.getBBox(); } catch (e) { }
+              try { bBox = tEl.getBBox(); } catch { }
 
               let xStr = tEl.getAttribute('x') || '0';
               let yStr = tEl.getAttribute('y') || '0';
@@ -1608,7 +1546,7 @@ const GifEditor = ({
               try {
                 const saved = tEl.getAttribute('data-radius') || liveElement.getAttribute('data-radius');
                 if (saved) currentRadius = JSON.parse(saved);
-              } catch (e) { }
+              } catch { }
               const mxR = Math.min(obw, obh) / 2;
               const ctl = Math.max(0, Math.min(currentRadius.tl || 0, mxR));
               const ctr = Math.max(0, Math.min(currentRadius.tr || 0, mxR));
@@ -1640,7 +1578,7 @@ const GifEditor = ({
           }
 
           let box = { x: 0, y: 0, width: 100, height: 100 };
-          try { box = targetEl.getBBox(); } catch (e) { }
+          try { box = targetEl.getBBox(); } catch { }
 
           let bxStr = targetEl.getAttribute('x') || '0';
           let byStr = targetEl.getAttribute('y') || '0';
@@ -1822,27 +1760,6 @@ const GifEditor = ({
     applyVisuals();
   }, [applyVisuals]);
 
-  const updateRadius = (corner, value) => {
-    const val = Math.max(0, Number(value) || 0);
-    const next = isRadiusLinked ? { tl: val, tr: val, br: val, bl: val } : { ...radius, [corner]: val };
-    setRadius(next);
-  };
-
-  const updateEffectSetting = (effect, key, value) => {
-    setEffectSettings(prev => ({ ...prev, [effect]: { ...prev[effect], [key]: value } }));
-  };
-
-  const handleColorPick = async (effectName) => {
-    if (!window.EyeDropper) return;
-    try {
-      const eyeDropper = new window.EyeDropper();
-      const result = await eyeDropper.open();
-      updateEffectSetting(effectName, 'color', result.sRGBHex);
-    } catch (e) {
-      console.error('Color selection cancelled or failed', e);
-    }
-  };
-
   const getSrc = useCallback((el) => {
     if (!el) return "";
     return el.src || el.getAttribute("href") || el.getAttribute("xlink:href") || "";
@@ -1901,7 +1818,7 @@ const GifEditor = ({
     if (!el) return;
     if (el.tagName?.toLowerCase() === "image") {
       el.setAttribute("href", url);
-      try { el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); } catch (e) { }
+      try { el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); } catch { }
     } else {
       el.src = url;
     }
@@ -1917,7 +1834,7 @@ const GifEditor = ({
     const liveElement = (selectedLayerId && pageContainer) ? pageContainer.querySelector(`[id="${selectedLayerId}"]`) : selectedElement;
     const targetImg = getSvgImageEl(liveElement) || liveElement;
 
-    const processUpload = async (nw, nh) => {
+    const processUpload = async () => {
       setSrc(targetImg, url);
       liveElement.dataset.mediaType = "gif";
       onUpdateRef.current?.({ shouldRefresh: true });
@@ -2034,7 +1951,7 @@ const GifEditor = ({
                                 croppedY = origY + (origH * (cd.top || 0)) / 100;
                                 croppedW = origW * (cd.width || 100) / 100;
                                 croppedH = origH * (cd.height || 100) / 100;
-                              } catch (e) { }
+                              } catch { }
                             }
                           }
 
@@ -2334,7 +2251,7 @@ function syncGradient(doc, element, baseAttr) {
   if (!stopsJson) return;
 
   let stops = [];
-  try { stops = JSON.parse(stopsJson); } catch (e) { return; }
+  try { stops = JSON.parse(stopsJson); } catch { return; }
   if (!stops || !Array.isArray(stops)) return;
 
   const svgRoot = element.closest('svg') || doc.querySelector('svg') || (doc.tagName?.toLowerCase() === 'svg' ? doc : null);

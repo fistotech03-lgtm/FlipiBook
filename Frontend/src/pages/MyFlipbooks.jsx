@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart } from 'lucide-react';
 import { Icon } from '@iconify/react';
@@ -11,6 +10,7 @@ import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumen
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import ShareModal from '../components/ShareModal';
 import ExportModal from '../components/ExportModal';
+import MyShelf from '../components/Settings/MyShelf';
 import dashboardBannerImg from '../assets/Dashboard/Main.png';
 import {
     FlipbooksSidebar,
@@ -24,11 +24,9 @@ import {
     ThreeDDashboard,
     CustomScrollbar
 } from '../components/MyFlipbooks';
-
-const resolveUploadsPath = (path) => path || '';
-const getSupabaseBaseUrl = () => '';
-
-
+import { useAuth } from '../context/AuthContext';
+import flipbookApi from '../api/flipbookApi';
+import useUserStorage from '../hooks/useUserStorage';
 
 
 const sortCategories = [
@@ -42,7 +40,7 @@ const sortCategories = [
         id: 'name',
         title: 'Name',
         subtitle: 'Recent Activity',
-        options: ['Name (A â†’ Z)', 'Name (Z â†’ A)']
+        options: ['Name (A → Z)', 'Name (Z → A)']
     },
     {
         id: 'performance',
@@ -54,103 +52,64 @@ const sortCategories = [
         id: 'size',
         title: 'File & Size',
         subtitle: 'Recent Activity',
-        options: ['Largest File Size', 'Smallest File Size', 'Total Pages (High â†’ Low)', 'Total Pages (Low â†’ High)']
+        options: ['Largest File Size', 'Smallest File Size', 'Total Pages (High → Low)', 'Total Pages (Low → High)']
     }
 ];
 
 const templates = [
-    { id: 'corporate', label: 'A4', title: 'A4 Page', dim: '210 Ã— 297 mm', width: 'w-[2.0vw]', height: 'h-[2.8vw]' },
-    { id: 'large_catalogue', label: 'A3', title: 'A3 Page', dim: '297 Ã— 420 mm', width: 'w-[2.7vw]', height: 'h-[3.8vw]' },
-    { id: 'mini', label: 'A5', title: 'A5 Page', dim: '148 Ã— 210 mm', width: 'w-[1.4vw]', height: 'h-[2.0vw]' },
-    { id: 'letter', label: 'Letter', title: 'Letter Page', dim: '216 Ã— 279 mm', width: 'w-[2.1vw]', height: 'h-[2.7vw]' },
-    { id: 'legal', label: 'Legal', title: 'Legal Page', dim: '216 Ã— 356 mm', width: 'w-[2.0vw]', height: 'h-[3.4vw]' },
-    { id: 'dl', label: 'DL', title: 'DL Flyer', dim: '99 Ã— 210 mm', width: 'w-[1.0vw]', height: 'h-[2.1vw]' },
-    { id: 'square', label: 'Square', title: 'Square Page', dim: '210 Ã— 210 mm', width: 'w-[2.1vw]', height: 'h-[2.1vw]' },
-];
-
-
-const FOLDER_COLORS = [
-    '#f59e0b', // Yellow / Amber
-    '#f43f5e', // Coral / Red / Rose
-    '#10b981', // Emerald / Green
-    '#38bdf8', // Sky Blue
-    '#8b5cf6', // Violet / Purple
-    '#f97316', // Orange
-    '#06b6d4', // Cyan
-    '#ec4899', // Pink
-    '#6366f1', // Indigo
+    { id: 'corporate', label: 'A4', title: 'A4 Page', dim: '210 × 297 mm', width: 'w-[2.0vw]', height: 'h-[2.8vw]' },
+    { id: 'large_catalogue', label: 'A3', title: 'A3 Page', dim: '297 × 420 mm', width: 'w-[2.7vw]', height: 'h-[3.8vw]' },
+    { id: 'mini', label: 'A5', title: 'A5 Page', dim: '148 × 210 mm', width: 'w-[1.4vw]', height: 'h-[2.0vw]' },
+    { id: 'letter', label: 'Letter', title: 'Letter Page', dim: '216 × 279 mm', width: 'w-[2.1vw]', height: 'h-[2.7vw]' },
+    { id: 'legal', label: 'Legal', title: 'Legal Page', dim: '216 × 356 mm', width: 'w-[2.0vw]', height: 'h-[3.4vw]' },
+    { id: 'dl', label: 'DL', title: 'DL Flyer', dim: '99 × 210 mm', width: 'w-[1.0vw]', height: 'h-[2.1vw]' },
 ];
 
 export default function MyFlipbooks() {
     const navigate = useNavigate();
 
-    // User Data
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-    const emailId = user?.emailId;
+    // User Data from Redux Auth (with fallback to localStorage for backward compatibility)
+    const { user: authUser } = useAuth();
+    const user = authUser || (() => {
+        try {
+            const storedUser = localStorage.getItem('user');
+            return storedUser ? JSON.parse(storedUser) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+    const emailId = user?.emailId || user?.email;
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
-    // Storage Analysis State (Synced with /api/usersetting/get-settings like ProfileModal)
-    const [storage, setStorage] = useState(() => {
-        try {
-            const cached = localStorage.getItem('user_storage_settings');
-            if (cached) return JSON.parse(cached);
-        } catch (e) {}
-        return { used: 0, total: 300 * 1024 * 1024 };
-    });
-    const [isLoadingStorage, setIsLoadingStorage] = useState(false);
-    const [isUpgradeCardClosed, setIsUpgradeCardClosed] = useState(() => {
-        try {
-            return localStorage.getItem('hide_upgrade_card') === 'true' || sessionStorage.getItem('hide_upgrade_card') === 'true';
-        } catch (e) {
-            return false;
-        }
-    });
+    // Storage Analysis State (managed via useUserStorage custom hook)
+    const {
+        storage,
+        setStorage,
+        isLoadingStorage,
+        isUpgradeCardClosed,
+        setIsUpgradeCardClosed,
+        fetchLiveStorageSettings,
+    } = useUserStorage(emailId);
 
-    const fetchLiveStorageSettings = useCallback(async () => {
-        let targetEmail = emailId;
-        if (!targetEmail) {
-            try {
-                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('user_profile'));
-                targetEmail = u?.emailId || u?.email;
-            } catch (e) {}
-        }
-        if (!targetEmail || targetEmail === 'No Email' || targetEmail === 'guest@example.com') return;
-
-        setIsLoadingStorage(true);
-        try {
-            const response = await fetch(`${backendUrl}/api/usersetting/get-settings?emailId=${encodeURIComponent(targetEmail)}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data) {
-                    const newStorage = {
-                        used: typeof data.usedStorage === 'number' ? data.usedStorage : 0,
-                        total: typeof data.maxStorage === 'number' ? data.maxStorage : 300 * 1024 * 1024
-                    };
-                    setStorage(newStorage);
-                    try {
-                        localStorage.setItem('user_storage_settings', JSON.stringify(newStorage));
-                        window.dispatchEvent(new Event('storage'));
-                    } catch (e) {}
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching live storage settings in MyFlipbooks:", error);
-        } finally {
-            setIsLoadingStorage(false);
-        }
-    }, [emailId, backendUrl]);
-
-    useEffect(() => {
-        fetchLiveStorageSettings();
-    }, [fetchLiveStorageSettings]);
-
+    const [searchParams] = useSearchParams();
     const [activeFolder, setActiveFolder] = useState(() => {
         const saved = localStorage.getItem('last_active_folder');
         if (saved === 'Recent Book') return 'Recent';
         return saved || 'All Flipbook';
     });
-    const [dashboardMode, setDashboardMode] = useState('books'); // 'books' | '3d'
+    const [dashboardMode, setDashboardMode] = useState(() => {
+        return searchParams.get('tab') === 'shelf' ? 'shelf' : (searchParams.get('tab') === '3d' ? '3d' : 'books');
+    }); // 'books' | '3d' | 'shelf'
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'shelf') {
+            setDashboardMode('shelf');
+        } else if (tab === '3d') {
+            setDashboardMode('3d');
+        }
+    }, [searchParams]);
+
     const [active3dFolder, setActive3dFolder] = useState('All Models');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
@@ -208,7 +167,7 @@ export default function MyFlipbooks() {
         setIsLoading(true);
         try {
             // Fetch Folders (already ordered with id and name according to UserFolder MongoDB schema)
-            const folderRes = await axios.get(`${backendUrl}/api/flipbook/folders`, { params: { emailId } });
+            const folderRes = await flipbookApi.getFolders(emailId);
             // Filter out Quick Access / System Folders and map properly with persistent id
             let fetchedFolders = (folderRes.data.folders || []).filter(f => {
                 const name = typeof f === 'string' ? f : f?.name;
@@ -236,7 +195,7 @@ export default function MyFlipbooks() {
             setFolders(fetchedFolders);
 
             // Fetch Books
-            const booksRes = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId } });
+            const booksRes = await flipbookApi.getBooks(emailId);
             const rawBooks = booksRes.data.books || [];
             const sanitizedBooks = rawBooks.map(b => {
                 const f = b.folder || b.folderName;
@@ -280,21 +239,7 @@ export default function MyFlipbooks() {
     };
 
     // Inline Folder Creation State
-    const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-    const [newFolderInputName, setNewFolderInputName] = useState('');
     const [creatingFolderName, setCreatingFolderName] = useState(null);
-    const isSavingFolderRef = useRef(false);
-    const folderListRef = useRef(null);
-
-    // Auto-scroll to bottom when creating folder or loading item appears
-    useEffect(() => {
-        if ((isCreatingFolder || creatingFolderName) && folderListRef.current) {
-            folderListRef.current.scrollTo({
-                top: folderListRef.current.scrollHeight,
-                behavior: 'smooth'
-            });
-        }
-    }, [isCreatingFolder, creatingFolderName]);
 
     const [isLoading, setIsLoading] = useState(false);
     const [processingProgress, setProcessingProgress] = useState(null);
@@ -474,7 +419,7 @@ export default function MyFlipbooks() {
                     fileName: uniqueName,
                     stage: 'saving'
                 });
-                const createRes = await axios.post(`${backendUrl}/api/flipbook/save`, {
+                const createRes = await flipbookApi.saveBook({
                     emailId,
                     flipbookName: uniqueName,
                     pages: allPages,
@@ -487,7 +432,7 @@ export default function MyFlipbooks() {
                 createdFlipbookVIdRef.current = v_id;
 
                 if (isUploadCancelledRef.current) {
-                    axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => {});
+                    flipbookApi.deleteBook(emailId, v_id).catch(() => {});
                     return;
                 }
 
@@ -507,7 +452,7 @@ export default function MyFlipbooks() {
 
             // For extra large flipbooks (> 20 pages), save initial batch then batch remaining
             const initialBatch = allPages.slice(0, 20);
-            const createRes = await axios.post(`${backendUrl}/api/flipbook/save`, {
+            const createRes = await flipbookApi.saveBook({
                 emailId,
                 flipbookName: uniqueName,
                 pages: initialBatch,
@@ -522,7 +467,7 @@ export default function MyFlipbooks() {
             const BATCH_SIZE = 15;
             for (let i = 20; i < allPages.length; i += BATCH_SIZE) {
                 if (isUploadCancelledRef.current) {
-                    axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => {});
+                    flipbookApi.deleteBook(emailId, v_id).catch(() => {});
                     return;
                 }
                 const batchPages = allPages.slice(i, i + BATCH_SIZE);
@@ -534,7 +479,7 @@ export default function MyFlipbooks() {
                     fileName: uniqueName,
                     stage: 'saving'
                 });
-                await axios.post(`${backendUrl}/api/flipbook/save-pages-batch`, {
+                await flipbookApi.savePagesBatch({
                     emailId,
                     v_id,
                     pages: batchPages,
@@ -544,7 +489,7 @@ export default function MyFlipbooks() {
             }
 
             if (isUploadCancelledRef.current) {
-                axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => {});
+                flipbookApi.deleteBook(emailId, v_id).catch(() => {});
                 return;
             }
 
@@ -583,7 +528,7 @@ export default function MyFlipbooks() {
         setIsLoading(false);
         setProcessingProgress(null);
         if (createdFlipbookVIdRef.current) {
-            axios.delete(`${backendUrl}/api/flipbook/delete/${createdFlipbookVIdRef.current}`, { params: { emailId } }).catch(() => {});
+            flipbookApi.deleteBook(emailId, createdFlipbookVIdRef.current).catch(() => {});
             createdFlipbookVIdRef.current = null;
         }
     };
@@ -624,7 +569,7 @@ export default function MyFlipbooks() {
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
 
             console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}"...`);
-            const res = await axios.post(`${backendUrl}/api/flipbook/save`, {
+            const res = await flipbookApi.saveBook({
                 emailId,
                 flipbookName: uniqueName,
                 pages: pages,
@@ -657,14 +602,6 @@ export default function MyFlipbooks() {
         }
     };
 
-    // Renaming States
-    const [editingId, setEditingId] = useState(null);
-    const [tempName, setTempName] = useState('');
-
-    // Folder Drag & Drop to Rearrange State
-    const [dragFolderIndex, setDragFolderIndex] = useState(null);
-    const [dragOverFolderIndex, setDragOverFolderIndex] = useState(null);
-
     // Save custom folder order to MongoDB UserFolder schema in backend
     const saveFolderOrder = async (updatedFolders) => {
         if (!emailId) return;
@@ -672,90 +609,9 @@ export default function MyFlipbooks() {
             .filter(f => f.name !== 'Recent Book')
             .map(f => ({ id: f.id, name: f.name }));
         try {
-            await axios.post(`${backendUrl}/api/flipbook/folder/reorder`, {
-                emailId,
-                folders: customOrder
-            });
+            await flipbookApi.reorderFolders(emailId, customOrder);
         } catch (err) {
             console.error("Error persisting folder order in db:", err);
-        }
-    };
-
-    const handleFolderDragStart = (e, index, folder) => {
-        if (folder.name === 'Recent Book') {
-            e.preventDefault();
-            return;
-        }
-        setDragFolderIndex(index);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(index));
-    };
-
-    const handleFolderDragOver = (e, index, folder) => {
-        if (folder.name === 'Recent Book' || dragFolderIndex === null) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (dragOverFolderIndex !== index) {
-            setDragOverFolderIndex(index);
-        }
-    };
-
-    const handleFolderDragLeave = (e, index) => {
-        if (dragOverFolderIndex === index) {
-            setDragOverFolderIndex(null);
-        }
-    };
-
-    const handleFolderDrop = (e, dropIndex, targetFolder) => {
-        e.preventDefault();
-        if (targetFolder.name === 'Recent Book' || dragFolderIndex === null || dragFolderIndex === dropIndex) {
-            setDragFolderIndex(null);
-            setDragOverFolderIndex(null);
-            return;
-        }
-
-        setFolders(prev => {
-            const next = [...prev];
-            const [movedItem] = next.splice(dragFolderIndex, 1);
-            next.splice(dropIndex, 0, movedItem);
-            saveFolderOrder(next);
-            return next;
-        });
-
-        setDragFolderIndex(null);
-        setDragOverFolderIndex(null);
-    };
-
-    const handleFolderDragEnd = () => {
-        setDragFolderIndex(null);
-        setDragOverFolderIndex(null);
-    };
-
-    // Menu Action State
-    const [activeMenuId, setActiveMenuId] = useState(null);
-    const [folderMenuPos, setFolderMenuPos] = useState({ top: 0, left: 0, isDropup: false });
-
-    // Open Inline Create
-    const handleAddFolderClick = () => {
-        setIsCreatingFolder(true);
-        setNewFolderInputName('');
-    };
-
-    const saveNewFolder = async () => {
-        if (isSavingFolderRef.current) return;
-        const nameToCreate = newFolderInputName.trim();
-        if (!nameToCreate) {
-            setIsCreatingFolder(false);
-            setNewFolderInputName('');
-            return;
-        }
-        isSavingFolderRef.current = true;
-        setIsCreatingFolder(false);
-        setNewFolderInputName('');
-        try {
-            await handleCreateFolder(nameToCreate);
-        } finally {
-            isSavingFolderRef.current = false;
         }
     };
 
@@ -763,7 +619,7 @@ export default function MyFlipbooks() {
     const handleCreateFolder = async (name) => {
         setCreatingFolderName(name);
         try {
-            const res = await axios.post(`${backendUrl}/api/flipbook/folder/create`, { emailId, folderName: name });
+            const res = await flipbookApi.createFolder(emailId, name);
             const createdId = res.data?.id || name;
             
             // Instantly update folder list locally without heavy fetchData() flipbook reloads
@@ -782,42 +638,15 @@ export default function MyFlipbooks() {
         }
     };
 
-    const startEditing = (folder) => {
-        setEditingId(folder.id);
-        setTempName(folder.name);
-    };
-
-    const saveEdit = async () => {
-        if (!editingId || !tempName.trim()) {
-            setEditingId(null);
-            return;
-        }
-
-        const folder = folders.find(f => f.id === editingId);
-        const oldName = folder?.name;
-        const newName = tempName.trim();
-        const currentFolderId = folder?.id;
-
-        if (!folder || oldName === newName) {
-            setEditingId(null);
-            return;
-        }
-
-        // Close editing immediately for instant UX
-        setEditingId(null);
-
+    // Rename Folder
+    const handleRenameFolder = async (currentFolderId, oldName, newName) => {
         // Optimistic UI updates: update folder name and matching books immediately
         setFolders(prev => prev.map(f => f.id === currentFolderId ? { ...f, name: newName } : f));
         if (activeFolder === oldName) setActiveFolder(newName);
         setBooks(prev => prev.map(b => b.folder === oldName ? { ...b, folder: newName } : b));
 
         try {
-            await axios.post(`${backendUrl}/api/flipbook/folder/rename`, {
-                emailId,
-                oldName,
-                newName,
-                folderId: currentFolderId
-            });
+            await flipbookApi.renameFolder(emailId, oldName, newName, currentFolderId);
         } catch (err) {
             console.error(err);
             // Revert state on failure
@@ -826,13 +655,6 @@ export default function MyFlipbooks() {
             setBooks(prev => prev.map(b => b.folder === newName ? { ...b, folder: oldName } : b));
             const msg = err.response?.status === 409 ? 'Folder name already exists.' : (err.response?.data?.message || err.message);
             showAlert('Rename Failed', msg);
-        }
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveEdit();
         }
     };
 
@@ -876,9 +698,7 @@ export default function MyFlipbooks() {
             setBooks(prev => prev.filter(b => b.folder !== folderName));
 
             try {
-                await axios.delete(`${backendUrl}/api/flipbook/folder`, {
-                    data: { emailId, folderName, folderId }
-                });
+                await flipbookApi.deleteFolder(emailId, folderName, folderId);
             } catch (err) {
                 console.error("Delete folder error:", err);
                 showAlert('Delete Failed', err.response?.data?.message || err.message);
@@ -888,18 +708,10 @@ export default function MyFlipbooks() {
     };
 
     const handleDuplicateFolder = async (folder) => {
-        setActiveMenuId(null);
         setIsLoading(true);
         try {
-            const res = await axios.post(`${backendUrl}/api/flipbook/folder/duplicate`, {
-                emailId, folderName: folder.name
-            });
-            const newName = res.data.newFolderName;
-
+            await flipbookApi.duplicateFolder(emailId, folder.name);
             await fetchData();
-
-            startEditing({ id: newName, name: newName });
-
         } catch (err) {
             console.error(err);
             showAlert('Duplicate Failed', err.response?.data?.message || err.message);
@@ -1013,11 +825,11 @@ export default function MyFlipbooks() {
         setSelectedBooks([]);
         try {
             await Promise.all(targetBooks.map(book =>
-                axios.post(`${backendUrl}/api/flipbook/restore`, {
+                flipbookApi.restoreBook(
                     emailId,
-                    bookName: book.realName,
-                    v_id: book.v_id
-                })
+                    book.realName,
+                    book.originalFolder || book.folder
+                )
             ));
         } catch (err) {
             console.error(err);
@@ -1041,7 +853,7 @@ export default function MyFlipbooks() {
         setActiveBookMenu(null);
         setIsLoading(true);
         try {
-            const res = await axios.post(`${backendUrl}/api/flipbook/duplicate`, {
+            const res = await flipbookApi.duplicateBook({
                 emailId,
                 folderName: book.folder,
                 bookName: book.realName
@@ -1078,7 +890,7 @@ export default function MyFlipbooks() {
         // Optimistically update all occurrences of this book in state (both real folder and recent view)
         setBooks(prev => prev.map(b => (b.v_id && b.v_id === book.v_id) || (book.realName && b.realName === book.realName) ? { ...b, isFavorite: nextFav } : b));
         try {
-            await axios.post(`${backendUrl}/api/flipbook/favorite`, {
+            await flipbookApi.toggleFavorite({
                 emailId,
                 bookName: book.realName || book.title,
                 v_id: book.v_id,
@@ -1095,7 +907,7 @@ export default function MyFlipbooks() {
         setActiveBookMenu(null);
         setIsLoading(true);
         try {
-            await axios.post(`${backendUrl}/api/flipbook/remove-recent`, {
+            await flipbookApi.removeRecent({
                 emailId,
                 bookName: book.realName
             });
@@ -1137,11 +949,11 @@ export default function MyFlipbooks() {
         const restoreFolder = book.originalFolder || 'My_Flipbooks';
         setBooks(prev => prev.map(b => b.id === book.id ? { ...b, trash: false, folder: restoreFolder } : b));
         try {
-            await axios.post(`${backendUrl}/api/flipbook/restore`, {
+            await flipbookApi.restoreBook(
                 emailId,
-                bookName: book.realName,
-                v_id: book.v_id
-            });
+                book.realName,
+                restoreFolder
+            );
         } catch (err) {
             console.error(err);
             setBooks(prevBooks);
@@ -1187,7 +999,7 @@ export default function MyFlipbooks() {
             }
 
             try {
-                await axios.post(`${backendUrl}/api/flipbook/empty-trash`, { emailId });
+                await flipbookApi.emptyTrash(emailId);
                 await fetchLiveStorageSettings();
             } catch (err) {
                 console.error(err);
@@ -1264,12 +1076,12 @@ export default function MyFlipbooks() {
                 await Promise.all(targetBooks.map(async (book) => {
                     const isPub = Boolean(book.isPublished || book.published || book.is_published || book.status === 'publish');
                     if (isPub) {
-                        await axios.post(`${backendUrl}/api/flipbook/unpublish`, {
+                        await flipbookApi.unpublishBook({
                             emailId,
                             v_id: book.v_id
                         }).catch(e => console.warn("Unpublish during trash warning:", e));
                     }
-                    return axios.post(`${backendUrl}/api/flipbook/trash`, {
+                    return flipbookApi.trashBook({
                         emailId,
                         folderName: book.folder,
                         bookName: book.realName,
@@ -1310,15 +1122,13 @@ export default function MyFlipbooks() {
         try {
             await Promise.all(removedBooks.map(book => {
                 if (isRecent) {
-                    return axios.post(endpoint, { emailId, bookName: book.realName });
+                    return flipbookApi.removeRecent({ emailId, bookName: book.realName });
                 } else {
-                    return axios.delete(endpoint, {
-                        data: {
-                            emailId,
-                            folderName: book.originalFolder || book.folder,
-                            bookName: book.realName,
-                            v_id: book.v_id
-                        }
+                    return flipbookApi.deleteBookPermanently({
+                        emailId,
+                        folderName: book.originalFolder || book.folder,
+                        bookName: book.realName,
+                        v_id: book.v_id
                     });
                 }
             }));
@@ -1360,7 +1170,7 @@ export default function MyFlipbooks() {
             if (book && book.title !== tempBookTitle.trim()) {
                 setIsLoading(true);
                 try {
-                    await axios.post(`${backendUrl}/api/flipbook/rename`, {
+                    await flipbookApi.renameBook({
                         emailId,
                         folderName: book.folder,
                         oldName: book.realName,
@@ -1396,7 +1206,7 @@ export default function MyFlipbooks() {
     const confirmMoveBook = async (targetFolder) => {
         // Helper to perform the actual move request
         const performMove = async (book, targetId) => {
-            await axios.post(`${backendUrl}/api/flipbook/move`, {
+            await flipbookApi.moveBook({
                 emailId,
                 bookName: book.realName,
                 currentFolder: book.folder,
@@ -1461,7 +1271,7 @@ export default function MyFlipbooks() {
 
         try {
             // 1. Rename in Source
-            await axios.post(`${backendUrl}/api/flipbook/rename`, {
+            await flipbookApi.renameBook({
                 emailId,
                 folderName: book.folder,
                 oldName: book.realName,
@@ -1469,7 +1279,7 @@ export default function MyFlipbooks() {
             });
 
             // 2. Move to Target
-            await axios.post(`${backendUrl}/api/flipbook/move`, {
+            await flipbookApi.moveBook({
                 emailId,
                 bookName: trimmedNewName,
                 currentFolder: book.folder,
@@ -1506,7 +1316,7 @@ export default function MyFlipbooks() {
             return updated.sort((a, b) => a.name.localeCompare(b.name));
         });
         try {
-            axios.post(`${backendUrl}/api/flipbook/folder/create`, { emailId, folderName: name }).catch(console.error);
+            flipbookApi.createFolder(emailId, name).catch(console.error);
             await confirmMoveBook(name);
         } catch (err) { console.error(err); }
     };
@@ -1612,10 +1422,10 @@ export default function MyFlipbooks() {
             // Fallback to created date if opened/modified fields don't exist
             return parseDate(b.mtime || b.updatedAt || b.createdAt || b.created) - parseDate(a.mtime || a.updatedAt || a.createdAt || a.created);
         }
-        if (sortOption === 'Name (A â†’ Z)') {
+        if (sortOption === 'Name (A → Z)') {
             return (a.title || '').localeCompare(b.title || '');
         }
-        if (sortOption === 'Name (Z â†’ A)') {
+        if (sortOption === 'Name (Z → A)') {
             return (b.title || '').localeCompare(a.title || '');
         }
         if (sortOption === 'Most Viewed' || sortOption === 'Most Shared' || sortOption === 'Most Downloaded' || sortOption === 'Most Liked') {
@@ -1650,10 +1460,10 @@ export default function MyFlipbooks() {
             };
             return getBytes(a) - getBytes(b);
         }
-        if (sortOption === 'Total Pages (High â†’ Low)') {
+        if (sortOption === 'Total Pages (High → Low)') {
             return (parseInt(b.pages) || 0) - (parseInt(a.pages) || 0);
         }
-        if (sortOption === 'Total Pages (Low â†’ High)') {
+        if (sortOption === 'Total Pages (Low → High)') {
             return (parseInt(a.pages) || 0) - (parseInt(b.pages) || 0);
         }
         return 0;
@@ -1723,40 +1533,17 @@ export default function MyFlipbooks() {
                     setSelectedBooks={setSelectedBooks}
                     books={books}
                     folders={folders}
-                    handleAddFolderClick={handleAddFolderClick}
-                    folderListRef={folderListRef}
-                    editingId={editingId}
-                    tempName={tempName}
-                    setTempName={setTempName}
-                    saveEdit={saveEdit}
-                    handleKeyDown={handleKeyDown}
-                    dragFolderIndex={dragFolderIndex}
-                    dragOverFolderIndex={dragOverFolderIndex}
-                    handleFolderDragStart={handleFolderDragStart}
-                    handleFolderDragOver={handleFolderDragOver}
-                    handleFolderDragLeave={handleFolderDragLeave}
-                    handleFolderDrop={handleFolderDrop}
-                    handleFolderDragEnd={handleFolderDragEnd}
-                    activeMenuId={activeMenuId}
-                    setActiveMenuId={setActiveMenuId}
-                    folderMenuPos={folderMenuPos}
-                    setFolderMenuPos={setFolderMenuPos}
-                    isCreatingFolder={isCreatingFolder}
-                    setIsCreatingFolder={setIsCreatingFolder}
-                    newFolderInputName={newFolderInputName}
-                    setNewFolderInputName={setNewFolderInputName}
-                    saveNewFolder={saveNewFolder}
+                    setFolders={setFolders}
+                    onCreateFolder={handleCreateFolder}
+                    onRenameFolder={handleRenameFolder}
+                    onDeleteFolder={handleDeleteFolderClick}
+                    onDuplicateFolder={handleDuplicateFolder}
+                    onReorderFolders={saveFolderOrder}
                     creatingFolderName={creatingFolderName}
                     storage={storage}
                     isLoadingStorage={isLoadingStorage}
                     isUpgradeCardClosed={isUpgradeCardClosed}
                     setIsUpgradeCardClosed={setIsUpgradeCardClosed}
-                    navigate={navigate}
-                    startEditing={startEditing}
-                    handleDuplicateFolder={handleDuplicateFolder}
-                    handleDeleteFolderClick={handleDeleteFolderClick}
-                    FOLDER_COLORS={FOLDER_COLORS}
-                    setIsCreateModalOpen={setIsCreateModalOpen}
                     dashboardMode={dashboardMode}
                     setDashboardMode={setDashboardMode}
                     active3dFolder={active3dFolder}
@@ -1772,6 +1559,10 @@ export default function MyFlipbooks() {
                         navigate={navigate}
                         activeFolder={active3dFolder}
                     />
+                ) : dashboardMode === 'shelf' ? (
+                    <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-white rounded-[1vw] shadow-xs p-[1vw]">
+                        <MyShelf />
+                    </div>
                 ) : (
                     <>
                         {/* Welcome Banner */}
@@ -1838,7 +1629,7 @@ export default function MyFlipbooks() {
                             }
 
                             const iframeBaseUrl = getSupabaseBaseUrl(
-                                user?.emailId?.replace(/[@.]/g, "_"),
+                                emailId?.replace(/[@.]/g, "_"),
                                 actualFolder,
                                 book.realName
                             );

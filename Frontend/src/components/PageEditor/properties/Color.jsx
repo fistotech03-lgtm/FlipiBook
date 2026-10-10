@@ -3,66 +3,7 @@ import { Icon } from '@iconify/react';
 import { createPortal } from 'react-dom';
 import ColorPicker, { parseGradient } from './ColorPicker';
 import { generateGradientString } from "../../CustomizedEditor/AppearanceShared";
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, X, Pipette } from 'lucide-react';
-
-const DashInput = ({ label, initialValue, onChange }) => {
-  const [localVal, setLocalVal] = useState(initialValue);
-  const [isFocused, setIsFocused] = useState(false);
-
-  const displayVal = isFocused ? localVal : initialValue;
-
-  const handleManualInput = (val) => {
-    setLocalVal(val);
-    const num = parseInt(val);
-    if (!isNaN(num)) {
-      onChange(Math.max(1, num));
-    }
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    let num = parseInt(localVal);
-    if (isNaN(num) || num < 1) num = 1;
-    onChange(num);
-  };
-
-  const handleFocus = () => {
-    setLocalVal(initialValue);
-    setIsFocused(true);
-  };
-
-  const safeNumericVal = parseInt(initialValue) || 1;
-
-  return (
-    <div className="flex items-center justify-between">
-      <span
-        className="text-[0.75vw] font-semibold text-gray-600 cursor-ew-resize select-none hover:text-indigo-600 transition-colors"
-        onPointerDown={(e) => handleScrubHelper(e, safeNumericVal, (v) => onChange(Math.max(1, parseInt(v))))}
-      >{label} :</span>
-      <div
-        className="flex items-center gap-[0.4vw] h-[2vw] cursor-ew-resize select-none"
-        onPointerDown={(e) => {
-          if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
-          handleScrubHelper(e, safeNumericVal, (newVal) => onChange(Math.max(1, parseInt(newVal))));
-        }}
-      >
-        <button onPointerDown={(e) => { e.stopPropagation(); onChange(Math.max(1, safeNumericVal - 1)); }} className="text-gray-400 hover:text-indigo-600 pointer-events-auto"><ChevronLeft size="0.9vw" /></button>
-        <div className="w-[3.5vw] h-full border border-gray-200 rounded-[0.3vw] flex items-center justify-center bg-white shadow-sm pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
-          <input
-            type="number"
-            value={displayVal === '' ? '' : displayVal}
-            onChange={(e) => handleManualInput(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full text-center text-[0.75vw] font-semibold text-gray-700 outline-none no-spin bg-transparent cursor-text"
-          />
-        </div>
-        <button onPointerDown={(e) => { e.stopPropagation(); onChange(Math.max(1, safeNumericVal + 1)); }} className="text-gray-400 hover:text-indigo-600 pointer-events-auto"><ChevronRight size="0.9vw" /></button>
-      </div>
-    </div>
-  );
-};
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export const handleScrubHelper = (e, initialVal, updateFn, sensitivity = 5) => {
   const sValue = parseFloat(initialVal) || 0;
@@ -75,7 +16,7 @@ export const handleScrubHelper = (e, initialVal, updateFn, sensitivity = 5) => {
   if (e.pointerId !== undefined) {
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (err) { }
+    } catch { }
   }
 
   const vCursor = document.createElement('div');
@@ -107,7 +48,7 @@ export const handleScrubHelper = (e, initialVal, updateFn, sensitivity = 5) => {
 
   const onMouseUp = (moveEvent) => {
     if (moveEvent.pointerId !== undefined) {
-      try { moveEvent.target.releasePointerCapture(moveEvent.pointerId); } catch (e) { }
+      try { moveEvent.target.releasePointerCapture(moveEvent.pointerId); } catch { }
     }
     if (vCursor.parentNode) vCursor.parentNode.removeChild(vCursor);
     document.body.classList.remove('is-scrubbing');
@@ -183,13 +124,9 @@ const Color = ({
   openSubSection, setOpenSubSection,
   backgroundColor: externalBackgroundColor, setBackgroundColor: setExternalBackgroundColor,
   activeColorPicker: externalActiveColorPicker, setActiveColorPicker: setExternalActiveColorPicker,
-  showStrokeSettings, setShowStrokeSettings,
   isStrokeStyleOpen, setIsStrokeStyleOpen,
-  dropdownPos, setDropdownPos,
-  strokeSettingsPos, setStrokeSettingsPos,
   isDashPosOpen, setIsDashPosOpen,
   colorsOnPage,
-  showDetailedPicker, setShowDetailedPicker,
   hideFill = false,
   standaloneMode = false,
   selectedElement = null,
@@ -197,8 +134,7 @@ const Color = ({
   isText = false,
   sizingMode = 'auto-width',
   isScrollable = false,
-  selectedElementProps = null,
-  ...props
+  selectedElementProps = null
 }) => {
   const containerRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -329,7 +265,6 @@ const Color = ({
 
     const applyColorsToDOM = () => {
       const el = selectedElement;
-      const isSvgEl = el.namespaceURI === "http://www.w3.org/2000/svg";
       const isImage = el.tagName?.toLowerCase() === 'image' || el.tagName?.toLowerCase() === 'g';
 
       // Apply Fill
@@ -733,10 +668,6 @@ const Color = ({
 
   const updateAttr = (attribute, value) => {
     handleUpdate(undefined, undefined, attribute, value);
-  };
-
-  const handleScrub = (e, initialVal, updateFn, sensitivity = 5) => {
-    handleScrubHelper(e, initialVal, updateFn, sensitivity);
   };
 
   const defaultStops = [

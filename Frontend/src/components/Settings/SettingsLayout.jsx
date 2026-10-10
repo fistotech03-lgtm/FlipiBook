@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Icon } from '@iconify/react';
-import { clearSession } from '../../utils/authUtils';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import { clearSession } from "../../utils/authUtils";
+import { useAuth } from "../../context/AuthContext";
 
 const defaultColors = [
-  '#4c5add', '#2563eb', '#059669', '#d97706', '#dc2626', 
-  '#7c3aed', '#db2777', '#0891b2', '#8a4419', '#597810'
+  "#4c5add",
+  "#2563eb",
+  "#059669",
+  "#d97706",
+  "#dc2626",
+  "#7c3aed",
+  "#db2777",
+  "#0891b2",
+  "#8a4419",
+  "#597810",
 ];
 
 export const getAvatarColor = (identifier, customColor) => {
-  if (customColor && customColor !== '#E8D4C8' && customColor !== '#ffffff' && customColor !== 'transparent') {
+  if (
+    customColor &&
+    customColor !== "#E8D4C8" &&
+    customColor !== "#ffffff" &&
+    customColor !== "transparent"
+  ) {
     return customColor;
   }
   if (!identifier) return defaultColors[0];
@@ -22,35 +35,35 @@ export const getAvatarColor = (identifier, customColor) => {
 };
 
 const defaultProfile = {
-  name: 'User',
-  email: '',
-  emailId: '',
+  name: "User",
+  email: "",
+  emailId: "",
   picture: null,
-  avatarBgColor: '#E8D4C8',
-  about: '',
-  mobile: '',
-  companyName: '',
-  industryType: '',
-  companyEmail: '',
-  website: '',
+  avatarBgColor: "#E8D4C8",
+  about: "",
+  mobile: "",
+  companyName: "",
+  industryType: "",
+  companyEmail: "",
+  website: "",
   services: [],
-  address1: '',
-  address2: '',
-  city: '',
-  pincode: '',
-  state: '',
-  country: 'INDIA',
+  address1: "",
+  address2: "",
+  city: "",
+  pincode: "",
+  state: "",
+  country: "INDIA",
   socials: {
-    website: '',
-    instagram: '',
-    linkedin: '',
-    facebook: '',
-    whatsapp: ''
+    website: "",
+    instagram: "",
+    linkedin: "",
+    facebook: "",
+    whatsapp: "",
   },
   bannerBg: {
-    type: 'gradient',
-    value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
-  }
+    type: "gradient",
+    value: "linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)",
+  },
 };
 
 const SettingsLayout = () => {
@@ -63,18 +76,18 @@ const SettingsLayout = () => {
     try {
       await logout();
     } catch (e) {
-      console.warn('Logout error:', e);
+      console.warn("Logout error:", e);
     }
 
     // Clear client session and user data
     clearSession();
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_profile');
-    localStorage.removeItem('token');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('last_active_folder');
-    localStorage.removeItem('hide_upgrade_card');
-    localStorage.removeItem('isAutoSaveEnabled');
+    localStorage.removeItem("user");
+    localStorage.removeItem("user_profile");
+    localStorage.removeItem("token");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("last_active_folder");
+    localStorage.removeItem("hide_upgrade_card");
+    localStorage.removeItem("isAutoSaveEnabled");
     sessionStorage.clear();
 
     if (window.google?.accounts?.id) {
@@ -82,62 +95,83 @@ const SettingsLayout = () => {
     }
 
     setUser(defaultProfile);
-    navigate('/home');
+    navigate("/home");
   };
 
   useEffect(() => {
     if (authUser) {
-      const email = authUser.emailId || authUser.email || '';
-      setUser(prev => ({
+      const email = authUser.emailId || authUser.email || "";
+      setUser((prev) => ({
         ...defaultProfile,
         ...prev,
         ...authUser,
-        name: authUser.name || authUser.userName || (email ? email.split('@')[0] : prev.name),
+        name:
+          authUser.name ||
+          authUser.userName ||
+          (email ? email.split("@")[0] : prev.name),
         email,
         emailId: email,
         picture: authUser.picture || prev.picture,
-        avatarBgColor: authUser.avatarBgColor || prev.avatarBgColor || '#E8D4C8'
+        avatarBgColor:
+          authUser.avatarBgColor || prev.avatarBgColor || "#E8D4C8",
       }));
     }
   }, [authUser]);
 
   const sidebarGroups = [
     {
-      title: 'General',
+      title: "General",
       items: [
-        { path: 'profile', id: 'profile', label: 'Profile', icon: 'mingcute:profile-line' },
-        { path: 'account', id: 'account', label: 'Account', icon: 'iconamoon:profile' },
-        { path: 'notifications', id: 'notifications', label: 'Notifications', icon: 'basil:notification-on-outline' },
-        { path: 'my-shelf', id: 'my-shelf', label: 'My Shelf', icon: 'clarity:library-line' },
-      ]
-    }
+        {
+          path: "profile",
+          id: "profile",
+          label: "Profile",
+          icon: "mingcute:profile-line",
+        },
+        {
+          path: "account",
+          id: "account",
+          label: "Account",
+          icon: "iconamoon:profile",
+        },
+        {
+          path: "notifications",
+          id: "notifications",
+          label: "Notifications",
+          icon: "basil:notification-on-outline",
+        },
+      ],
+    },
   ];
 
   return (
     <div className="flex h-full bg-white font-sans overflow-hidden">
-      
       {/* Sidebar */}
       <aside className="w-[16vw] mt-[1.5vw] flex-shrink-0 border-r border-gray-100 flex flex-col">
-        
         {/* Navigation Links */}
         <div className="flex-1 px-[1vw] pb-[2vw] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {sidebarGroups.map((group, index) => (
             <div key={index} className="mb-[1vw]">
-              
               {/* Group Title with Line */}
               <div className="flex items-center gap-[1vw] mb-[0.8vw] px-[0.5vw]">
                 <h4 className="text-[0.95vw] font-semibold text-gray-700 whitespace-nowrap">
                   {group.title}
                 </h4>
-                <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+                <div
+                  className="h-[0.0925vw] bg-gray-200 flex-1"
+                  style={{ marginRight: "-1.5vw" }}
+                >
+                  {" "}
+                </div>
               </div>
 
               <div className="flex flex-col gap-[0.2vw]">
                 {group.items.map((item) => {
-                  const isProfile = item.id === 'profile';
-                  const isActive = isProfile 
-                    ? location.pathname.startsWith('/settings/profile')
-                    : location.pathname === `/settings/${item.path}` || location.pathname.startsWith(`/settings/${item.path}/`);
+                  const isProfile = item.id === "profile";
+                  const isActive = isProfile
+                    ? location.pathname.startsWith("/settings/profile")
+                    : location.pathname === `/settings/${item.path}` ||
+                      location.pathname.startsWith(`/settings/${item.path}/`);
 
                   return (
                     <Link
@@ -145,16 +179,17 @@ const SettingsLayout = () => {
                       to={`/settings/${item.path}`}
                       className={`
                         flex items-center gap-[1vw] px-[0.75vw] py-[0.4vw] rounded-[0.5vw] text-[0.8125vw] font-semibold transition-colors
-                        ${isActive 
-                          ? 'bg-[#F2F2F2] text-gray-800' 
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                        ${
+                          isActive
+                            ? "bg-[#F2F2F2] text-gray-800"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
                         }
                       `}
                     >
-                      <Icon 
-                        icon={item.icon} 
-                        className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith('gcp:') ? 'grayscale brightness-0 opacity-90' : ''}`} 
-                        style={{ strokeWidth: '1.2px' }}
+                      <Icon
+                        icon={item.icon}
+                        className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
+                        style={{ strokeWidth: "1.2px" }}
                       />
                       {item.label}
                     </Link>
@@ -167,15 +202,17 @@ const SettingsLayout = () => {
 
         {/* Log Out Button */}
         <div className="p-[0.5vw] mb-[0.5vw]">
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full relative overflow-hidden bg-transparent border-2 border-red-600 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white active:scale-[0.98] rounded-[0.8vw] py-[0.65vw] flex items-center justify-center gap-[0.5vw] transition-all duration-200 cursor-pointer font-semibold text-[0.85vw] shadow-xs hover:shadow-md hover:shadow-red-500/20 group"
           >
-            <Icon icon="lucide:log-out" className="w-[1.05vw] h-[1.05vw] transition-transform group-hover:-translate-x-0.5" />
+            <Icon
+              icon="lucide:log-out"
+              className="w-[1.05vw] h-[1.05vw] transition-transform group-hover:-translate-x-0.5"
+            />
             <span>Log Out</span>
           </button>
         </div>
-
       </aside>
 
       {/* Main Content */}

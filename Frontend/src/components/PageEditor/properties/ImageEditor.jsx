@@ -1,41 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Icon } from '@iconify/react';
-import ReactDOM from 'react-dom';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
-import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
 import { getSvgImageEl, syncGradient } from '../utils/editorUtils';
 import {
-  Image as ImageIcon,
-  Upload,
-  Replace,
-  ChevronUp,
   ChevronDown,
-  Link as LinkIcon,
-  Link2Off,
-  Edit3,
-  X,
-  Plus,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Pipette,
-  MousePointerClick,
-  Sparkles,
-  Repeat,
-  ArrowLeft,
-  ArrowRight,
-  Filter,
-  Pencil,
-  Search,
-  Maximize2,
-  Check,
-  RotateCcw,
-  Minus,
-  MoreVertical,
 } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import ColorPicker, { parseGradient } from './ColorPicker';
+import { parseGradient } from './ColorPicker';
 import SlideshowProperties from './SlideshowProperties';
 import Color from './Color';
 import CornerRadius from './CornerRadius';
@@ -49,16 +19,7 @@ const ImageEditor = ({
   selectedLayerId,
   activePageIndex,
   onUpdate,
-  onPopupPreviewUpdate,
-  activePopupElement,
-  onPopupUpdate,
   pages,
-  TextEditorComponent,
-  ImageEditorComponent,
-  VideoEditorComponent,
-  GifEditorComponent,
-  IconEditorComponent,
-  showInteraction = true,
   // Metadata for uploads
   folderName,
   flipbookName,
@@ -83,7 +44,6 @@ const ImageEditor = ({
   const observerRef = useRef(null);
   const isHydrating = useRef(true);
   const onUpdateTimerRef = useRef(null);
-  const lastAppliedIdRef = useRef(null);
   const onUpdateRef = useRef(onUpdate);
   const applyVisualsRef = useRef(null);
 
@@ -92,13 +52,11 @@ const ImageEditor = ({
     onUpdateRef.current = onUpdate;
   });
 
-  const [activeSection, setActiveSection] = useState('main');
-  const isMainPanelOpen = activeSection === 'main';
+  const isMainPanelOpen = true;
   const [showImageTypeDropdown, setShowImageTypeDropdown] = useState(false);
 
   const [openSubSection, setOpenSubSection] = useState(null);
   const [isRadiusLinked, setIsRadiusLinked] = useState(true);
-  const [showGallery, setShowGallery] = useState(false);
   const [previewSrc, setPreviewSrc] = useState(() => {
     if (!selectedElement) return '';
     const imgEl = getSvgImageEl(selectedElement);
@@ -209,31 +167,13 @@ const ImageEditor = ({
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
   const [isSlideshow, setIsSlideshow] = useState(false);
-  const lastElementIdRef = useRef(null);
-  const [showTransitionDropdown, setShowTransitionDropdown] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
   const [showStrokeSettings, setShowStrokeSettings] = useState(false);
   const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
   const [isDashPosOpen, setIsDashPosOpen] = useState(false);
-  const [colorsOnPage, setColorsOnPage] = useState([]);
-
-  // Memoize static gallery previews
-  const galleryPreviews = useMemo(
-    () => [
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-      "https://images.unsplash.com/photo-1519046904884-53103b34b206",
-      "https://images.unsplash.com/photo-1473116763249-2faaef81ccda",
-      "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3",
-      "https://images.unsplash.com/photo-1533827432537-70133748f5c8",
-      "https://images.unsplash.com/photo-1558981806-ec527fa84f3d",
-    ],
-    [],
-  );
-
-  // Ref to prevent persistence for one cycle during hydration
-  const shouldSkipPersistence = useRef(false);
+  const [colorsOnPage] = useState([]);
 
   const lastHydratedElementRef = useRef(null);
 
@@ -324,18 +264,18 @@ const ImageEditor = ({
     if (targetImg) {
       const isSvgImage = targetImg.tagName?.toLowerCase() === 'image';
 
-      const processUpload = async (nw, nh) => {
+      const processUpload = async () => {
         // Retain the current element's dimension size and don't recalculate based on new aspect ratio.
         // This ensures replacing an image keeps the exact same size and bounding box.
 
         if (isSvgImage) {
           targetImg.setAttribute('href', imageUrl);
-          try { targetImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch (e) { }
+          try { targetImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch { }
 
           const patImg = liveElement.querySelector('.internal-crop-image');
           if (patImg) {
             patImg.setAttribute('href', imageUrl);
-            try { patImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch (e) { }
+            try { patImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch { }
           }
 
           const origFill = liveElement.getAttribute('data-original-fill');
@@ -347,7 +287,7 @@ const ImageEditor = ({
                 const origImg = origPat.querySelector('image');
                 if (origImg) {
                   origImg.setAttribute('href', imageUrl);
-                  try { origImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch (e) { }
+                  try { origImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageUrl); } catch { }
                 }
               }
             }
@@ -394,7 +334,7 @@ const ImageEditor = ({
               const svgImgSrv = getSvgImageEl(selectedElement);
               if (svgImgSrv) {
                 svgImgSrv.setAttribute('href', serverUrl);
-                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', serverUrl); } catch (e) { }
+                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', serverUrl); } catch { }
               } else {
                 selectedElement.src = serverUrl;
               }
@@ -539,7 +479,6 @@ const ImageEditor = ({
     } else {
       // Fallback to CSS parsing if no data attribute exists (e.g. initial load of legacy templates)
       const filterStr = selectedElement.style.filter || '';
-      const backdropStr = selectedElement.style.backdropFilter || selectedElement.style.webkitBackdropFilter || '';
       const overlay = selectedElement.parentElement?.querySelector('.inner-shadow-overlay') || selectedElement.parentElement?.querySelector('.svg-inner-shadow-overlay');
       const shadowStr = selectedElement.style.boxShadow || (overlay ? overlay.style.boxShadow : '') || '';
 
@@ -804,7 +743,7 @@ const ImageEditor = ({
       const t = el.tagName?.toLowerCase();
       if (t === 'image') {
         el.setAttribute('href', src);
-        try { el.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', src); } catch (e) { }
+        try { el.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', src); } catch { }
       } else {
         el.src = src;
         el.setAttribute('src', src);
@@ -914,7 +853,6 @@ const ImageEditor = ({
         shadowFilter = `drop-shadow(${ds.x}px ${ds.y}px ${ds.blur}px ${colorWithAlpha}) `;
       }
 
-      const totalFilter = (adjustmentFilters + effectFilters + shadowFilter).trim() || 'none';
       const adjustOnlyFilter = adjustmentFilters.trim() || 'none';
       const shadowOnlyFilter = shadowFilter.trim() || 'none';
       const blurOnlyFilter = effectFilters.trim() || 'none';
@@ -941,7 +879,6 @@ const ImageEditor = ({
         const effImgType = liveElement.getAttribute('data-object-fit') || imageType;
         // Only images use CSS clip-path which clips shadows. Shapes use native rx/ry.
         const forceClip = activeEffects.includes('Blur') && effectSettings['Blur']?.clipContent;
-        const hasClip = forceClip || (isImageElement && ((effImgType === 'Crop') || (radius.tl || radius.tr || radius.br || radius.bl)));
         const useShadowCaster = true;
 
         if (shadowOnlyFilter !== 'none' && useShadowCaster) {
@@ -969,7 +906,7 @@ const ImageEditor = ({
             }
 
             let bb = { x: 0, y: 0, width: 100, height: 100 };
-            try { bb = (svgImageEl || targetElForShadow).getBBox(); } catch (e) { }
+            try { bb = (svgImageEl || targetElForShadow).getBBox(); } catch { }
 
             let cxStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetElForShadow.getAttribute('x') || '0';
             let cyStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetElForShadow.getAttribute('y') || '0';
@@ -989,7 +926,7 @@ const ImageEditor = ({
                 cy = cy + (parseFloat(crop.top) / 100) * ch;
                 cw = cw * (parseFloat(crop.width) / 100);
                 ch = ch * (parseFloat(crop.height) / 100);
-              } catch (e) { }
+              } catch { }
             }
 
             const trans = targetElForShadow.getAttribute('transform') || '';
@@ -1053,7 +990,6 @@ const ImageEditor = ({
 
         // 3. Apply layer-level filters
         const hasCropWrapper = liveElement.parentElement?.classList.contains('svg-crop-wrapper');
-        const activeShadowFilter = ''; // We always use shadowCaster for drop-shadows now
         const innerFilter = adjustmentFilters.trim() || 'none';
 
         if (!hasCropWrapper) {
@@ -1087,7 +1023,7 @@ const ImageEditor = ({
           if (forceClip && !applyToLeaf) {
             let targetElForShadow = liveElement;
             let bb = { x: 0, y: 0, width: 100, height: 100 };
-            try { bb = targetElForShadow.getBBox(); } catch (e) { }
+            try { bb = targetElForShadow.getBBox(); } catch { }
             let cxStr = targetElForShadow.getAttribute('x') || '0';
             let cyStr = targetElForShadow.getAttribute('y') || '0';
             let cwStr = targetElForShadow.getAttribute('width') || '100%';
@@ -1183,7 +1119,7 @@ const ImageEditor = ({
             }
 
             let bb = { x: 0, y: 0, width: 100, height: 100 };
-            try { bb = (svgImageEl || targetElForShadow).getBBox(); } catch (e) { }
+            try { bb = (svgImageEl || targetElForShadow).getBBox(); } catch { }
             let cxStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetElForShadow.getAttribute('x') || '0';
             let cyStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetElForShadow.getAttribute('y') || '0';
             let cwStr = liveElement.getAttribute('data-crop-orig-w') || svgImageEl?.getAttribute('width') || targetElForShadow.getAttribute('width') || '100%';
@@ -1200,7 +1136,7 @@ const ImageEditor = ({
                 cy = cy + (parseFloat(crop.top) / 100) * ch;
                 cw = cw * (parseFloat(crop.width) / 100);
                 ch = ch * (parseFloat(crop.height) / 100);
-              } catch (e) { }
+              } catch { }
             }
 
             let clipId = `clip-content-${liveElement.id || 'image'}`;
@@ -1355,7 +1291,7 @@ const ImageEditor = ({
               // Try querySelector first, fallback to getElementById for tricky characters
               try {
                 patternEl = rootSvg.querySelector(`pattern[id="${patternId}"]`);
-              } catch (e) {
+              } catch {
                 patternEl = null;
               }
               if (!patternEl) {
@@ -1388,7 +1324,6 @@ const ImageEditor = ({
 
           } else if (svgImageEl) {
             // --- SVG PATH (Container with inner image) ---
-            let targetEl = liveElement;
             let imgEl = svgImageEl;
 
             // We physically shrink the wrapper and offset the image to fix bounding box issues
@@ -1406,7 +1341,6 @@ const ImageEditor = ({
               if (innerImg) {
                 wrapper.parentNode.insertBefore(innerImg, wrapper);
                 imgEl = innerImg;
-                targetEl = liveElement;
               }
               wrapper.remove();
             }
@@ -1455,7 +1389,7 @@ const ImageEditor = ({
                   xNum = bb.x;
                   yNum = bb.y;
                 }
-              } catch (e) {
+              } catch {
                 wNum = wNum || 100;
                 hNum = hNum || 100;
               }
@@ -1475,9 +1409,6 @@ const ImageEditor = ({
             imgEl.style.removeProperty('clip-path');
             imgEl.removeAttribute('clip-path');
 
-            const scale = parseFloat(crop.scale) || 1;
-            const offX = parseFloat(crop.offX) || 0;
-            const offY = parseFloat(crop.offY) || 0;
             const cLeft = parseFloat(crop.left) || 0;
             const cTop = parseFloat(crop.top) || 0;
             const cWidth = parseFloat(crop.width) || 100;
@@ -1616,7 +1547,7 @@ const ImageEditor = ({
               if (patImg) {
                 const updatedHref = imgEl.getAttribute('href') || imgEl.getAttribute('xlink:href') || imgEl.src || '';
                 patImg.setAttribute('href', updatedHref);
-                try { patImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', updatedHref); } catch (e) { }
+                try { patImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', updatedHref); } catch { }
                 patImg.setAttribute('width', origW.toString());
                 patImg.setAttribute('height', origH.toString());
                 const isWPercent = origW.toString().includes('%');
@@ -1634,7 +1565,7 @@ const ImageEditor = ({
                       const origImg = origPat.querySelector('image');
                       if (origImg) {
                         origImg.setAttribute('href', updatedHref);
-                        try { origImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', updatedHref); } catch (e) { }
+                        try { origImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', updatedHref); } catch { }
                       }
                     }
                   }
@@ -1721,7 +1652,7 @@ const ImageEditor = ({
               let pEl = null;
               try {
                 pEl = rootSvg.querySelector(`pattern[id="${patternId}"]`);
-              } catch (e) { }
+              } catch { }
               if (!pEl) pEl = document.getElementById(patternId);
 
               if (pEl) {
@@ -1855,7 +1786,7 @@ const ImageEditor = ({
 
                   liveElement.setAttribute('data-saved-crop-data', cropStr);
                   liveElement.removeAttribute('data-crop-data');
-                } catch (e) { }
+                } catch { }
               }
             }
 
@@ -1967,6 +1898,7 @@ const ImageEditor = ({
           liveElement.style.setProperty('object-fit', fitMap[effectiveImageType] || 'fill', 'important');
         }
 
+        const anyR = radius.tl || radius.tr || radius.br || radius.bl;
         if (anyR) {
           const radiusStr = `${radius.tl}px ${radius.tr}px ${radius.br}px ${radius.bl}px`;
           const clipVal = `inset(0% 0% 0% 0% round ${radiusStr})`;
@@ -2170,7 +2102,7 @@ const ImageEditor = ({
             targetEl = svgImageEl.parentNode;
           }
           let box = { x: 0, y: 0, width: 100, height: 100 };
-          try { box = (svgImageEl || targetEl).getBBox(); } catch (e) { }
+          try { box = (svgImageEl || targetEl).getBBox(); } catch { }
 
           let ixStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetEl.getAttribute('x') || '0';
           let iyStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetEl.getAttribute('y') || '0';
@@ -2192,7 +2124,7 @@ const ImageEditor = ({
               iy = iy + (parseFloat(crop.top) / 100) * ih;
               iw = iw * (parseFloat(crop.width) / 100);
               ih = ih * (parseFloat(crop.height) / 100);
-            } catch (e) { }
+            } catch { }
           }
 
           if (isContainer) {
@@ -2323,7 +2255,7 @@ const ImageEditor = ({
           }
 
           let bBox = { x: 0, y: 0, width: 100, height: 100 };
-          try { bBox = (svgImageEl || targetElForFill).getBBox(); } catch (e) { }
+          try { bBox = (svgImageEl || targetElForFill).getBBox(); } catch { }
 
           let bxStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetElForFill.getAttribute('x') || '0';
           let byStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetElForFill.getAttribute('y') || '0';
@@ -2344,7 +2276,7 @@ const ImageEditor = ({
               by = by + (parseFloat(crop.top) / 100) * bh;
               bw = bw * (parseFloat(crop.width) / 100);
               bh = bh * (parseFloat(crop.height) / 100);
-            } catch (e) { }
+            } catch { }
           }
 
           if (isPatternShape && patternEl) {
@@ -2592,7 +2524,7 @@ const ImageEditor = ({
             }
 
             let bBox = { x: 0, y: 0, width: 100, height: 100 };
-            try { bBox = (svgImageEl || targetElForStrokeSync).getBBox(); } catch (e) { }
+            try { bBox = (svgImageEl || targetElForStrokeSync).getBBox(); } catch { }
 
             let bxStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetElForStrokeSync.getAttribute('x') || '0';
             let byStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetElForStrokeSync.getAttribute('y') || '0';
@@ -2613,7 +2545,7 @@ const ImageEditor = ({
                 by = by + (parseFloat(crop.top) / 100) * bh;
                 bw = bw * (parseFloat(crop.width) / 100);
                 bh = bh * (parseFloat(crop.height) / 100);
-              } catch (e) { }
+              } catch { }
             }
 
             let scaleX = 1;
@@ -2624,7 +2556,7 @@ const ImageEditor = ({
                 scaleX = Math.abs(ctm.a) || 1;
                 scaleY = Math.abs(ctm.d) || 1;
               }
-            } catch (e) { }
+            } catch { }
 
             const swSync = backgroundColor.strokeWeight || 0;
             const posSync = backgroundColor.strokePosition || 'Center';
@@ -2701,7 +2633,7 @@ const ImageEditor = ({
           }
 
           let bBox = { x: 0, y: 0, width: 100, height: 100 };
-          try { bBox = (svgImageEl || targetElForStroke).getBBox(); } catch (e) { }
+          try { bBox = (svgImageEl || targetElForStroke).getBBox(); } catch { }
 
           let bxStr = liveElement.getAttribute('data-crop-orig-x') || svgImageEl?.getAttribute('x') || targetElForStroke.getAttribute('x') || '0';
           let byStr = liveElement.getAttribute('data-crop-orig-y') || svgImageEl?.getAttribute('y') || targetElForStroke.getAttribute('y') || '0';
@@ -2722,7 +2654,7 @@ const ImageEditor = ({
               by = by + (parseFloat(crop.top) / 100) * bh;
               bw = bw * (parseFloat(crop.width) / 100);
               bh = bh * (parseFloat(crop.height) / 100);
-            } catch (e) { }
+            } catch { }
           }
 
           const pos = backgroundColor.strokePosition || 'Center';
@@ -2740,7 +2672,7 @@ const ImageEditor = ({
               scaleX = Math.abs(ctm.a) || 1;
               scaleY = Math.abs(ctm.d) || 1;
             }
-          } catch (e) { }
+          } catch { }
 
           const offsetX = (sw / 2) / scaleX;
           const offsetY = (sw / 2) / scaleY;
@@ -2912,8 +2844,6 @@ const ImageEditor = ({
             clipPathEl.setAttribute('d', getPathD(clipBx, clipBy, Math.max(0, bw), Math.max(0, bh), inner_tl, inner_tr, inner_br, inner_bl));
           }
 
-          const isStrokeCropped = imageType === 'Crop' && (liveElement.getAttribute('data-crop-data') || (selectedElement && selectedElement.getAttribute('data-crop-data')));
-
           if (targetElForStroke) {
             let innerGroupForClip = liveElement.querySelector('.image-inner-content');
             if (innerGroupForClip && targetElForStroke === liveElement) {
@@ -3075,27 +3005,7 @@ const ImageEditor = ({
     applyVisuals();
   }, [applyVisuals]);
 
-  const updateRadius = (corner, value) => {
-    const val = Math.max(0, Number(value) || 0);
-    const next = isRadiusLinked ? { tl: val, tr: val, br: val, bl: val } : { ...radius, [corner]: val };
-    setRadius(next);
-    // applyVisuals handles DOM via dependency array
-  };
 
-  const updateEffectSetting = (effect, key, value) => {
-    setEffectSettings(prev => ({ ...prev, [effect]: { ...prev[effect], [key]: value } }));
-  };
-
-  const handleColorPick = async (effectName) => {
-    if (!window.EyeDropper) return;
-    try {
-      const eyeDropper = new window.EyeDropper();
-      const result = await eyeDropper.open();
-      updateEffectSetting(effectName, 'color', result.sRGBHex);
-    } catch (e) {
-      console.error('Color selection cancelled or failed', e);
-    }
-  };
 
 
 
@@ -3187,7 +3097,7 @@ const ImageEditor = ({
                       if (parsed.images && parsed.images.length > 0) {
                         firstImageSrc = parsed.images[0].url || parsed.images[0].src;
                       }
-                    } catch (e) { }
+                    } catch { }
                   }
 
                   // Remove from both to ensure sync
@@ -3219,7 +3129,7 @@ const ImageEditor = ({
 
                   if (actualSlideshowEl?.id) {
                     const localKey = `slideshow_${flipbookVId || 'local'}_${actualSlideshowEl.id}`;
-                    try { localStorage.removeItem(localKey); } catch (e) { }
+                    try { localStorage.removeItem(localKey); } catch { }
                   }
 
                   // Cleanup DOM artifacts and clones
@@ -3313,7 +3223,7 @@ const ImageEditor = ({
                             if (parsed.images && parsed.images.length > 0) {
                               firstImageSrc = parsed.images[0].url || parsed.images[0].src;
                             }
-                          } catch (e) { }
+                          } catch { }
                         }
 
                         // Remove from both
@@ -3345,7 +3255,7 @@ const ImageEditor = ({
 
                         if (actualSlideshowEl?.id) {
                           const localKey = `slideshow_${flipbookVId || 'local'}_${actualSlideshowEl.id}`;
-                          try { localStorage.removeItem(localKey); } catch (e) { }
+                          try { localStorage.removeItem(localKey); } catch { }
                         }
 
                         // Cleanup DOM artifacts and clones
@@ -3542,7 +3452,7 @@ const ImageEditor = ({
                                         croppedY = origY + (origH * (cd.top || 0)) / 100;
                                         croppedW = origW * (cd.width || 100) / 100;
                                         croppedH = origH * (cd.height || 100) / 100;
-                                      } catch (e) { }
+                                      } catch { }
                                     }
                                   }
 
@@ -3632,7 +3542,7 @@ const ImageEditor = ({
                                           innerImg.setAttribute('width', Math.abs(br.x - tl.x));
                                           innerImg.setAttribute('height', Math.abs(br.y - tl.y));
                                         }
-                                      } catch (e) {
+                                      } catch {
                                         // Fallback: just remove the transform
                                         innerContentGroup.removeAttribute('transform');
                                       }

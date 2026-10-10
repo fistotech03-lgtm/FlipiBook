@@ -1,16 +1,11 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, animate } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import {
-  Sparkles,
   ChevronDown,
   ArrowRightLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
   X,
-  Replace,
   ScanEye
 } from 'lucide-react';
 
@@ -349,7 +344,7 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
 
       // Clear inline styles that might have been left over by WAAPI animations
       if (target.__currentAnimation) {
-        try { target.__currentAnimation.cancel(); } catch(err) {}
+        try { target.__currentAnimation.cancel(); } catch {}
         target.__currentAnimation = null;
       }
     });
@@ -589,7 +584,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       // 1. Run all registered preview cleanup functions
       if (previewCleanupRef.current && previewCleanupRef.current.length > 0) {
         previewCleanupRef.current.forEach(cancel => {
-          try { cancel(); } catch (_) { }
+          try { cancel(); } catch { }
         });
         previewCleanupRef.current = [];
       }
@@ -599,12 +594,12 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
         try {
           const anims = el.getAnimations?.() || [];
           anims.forEach(anim => {
-            try { anim.cancel(); } catch (_) { }
+            try { anim.cancel(); } catch { }
           });
           el.removeAttribute('data-is-animating');
           if (el.__currentAnimation) el.__currentAnimation = null;
           if (el.__shadowAnimation) el.__shadowAnimation = null;
-        } catch (_) { }
+        } catch { }
       });
     };
   }, []);
@@ -732,9 +727,6 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       return map[name] || 'linear';
     };
 
-    const LOOP_ANIMATIONS = ['pulse', 'tada', 'rubber-band', 'jello', 'heartbeat', 'glitch', 'neon-glow', 'swing', 'wobble', 'float'];
-    const action = target.getAttribute('data-animation-action');
-    const isLoop = LOOP_ANIMATIONS.includes(type) || action === 'Always' || settings?.repeat === 'Infinite';
     const duration = (parseFloat(settings?.duration || 1)) * 1000;
     const delay = (parseFloat(settings?.delay || 0)) * 1000;
     const easing = getWaapiEase(settings?.easing || 'Linear');
@@ -749,7 +741,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
         cy = cachedBBox.y + cachedBBox.height / 2;
         useMathOrigin = true;
         target.style.transformOrigin = '0 0';
-      } catch (e) {
+      } catch {
         target.style.transformBox = 'fill-box';
         target.style.transformOrigin = 'center';
       }
@@ -758,7 +750,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
     try {
       // Cancel previous on this specific target
       if (target.__currentAnimation) {
-        try { target.__currentAnimation.cancel(); } catch (err) { }
+        try { target.__currentAnimation.cancel(); } catch { }
       }
 
       if (target.__originalTransform === undefined) {
@@ -776,7 +768,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                   baseTransform = `matrix(${m.a}, ${m.b}, ${m.c}, ${m.d}, ${m.e}, ${m.f})`;
                 }
               }
-            } catch (e) { }
+            } catch { }
           }
         }
         target.__originalTransform = (!baseTransform || baseTransform === 'none') ? '' : baseTransform;
@@ -853,7 +845,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
 
       const cleanup = () => {
         target.removeAttribute('data-is-animating');
-        try { anim.cancel(); } catch (err) { }
+        try { anim.cancel(); } catch { }
         target.style.translate = '';
         target.style.scale = '';
         target.style.rotate = '';
@@ -876,52 +868,12 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       } else {
         previewTime = (duration * iterations) + delay + 500; // Hold for 500ms after all repeats
       }
-      const timer = setTimeout(cleanup, previewTime);
+      setTimeout(cleanup, previewTime);
 
     } catch (err) {
       console.error("Preview error:", err);
     }
   }, []);
-
-  const handleReset = React.useCallback((e) => {
-    if (e) e.stopPropagation();
-    if (!selectedElement) return;
-
-    // 1. Remove ALL data-animation- attributes
-    const attributes = selectedElement.attributes;
-    const toRemove = [];
-    for (let i = 0; i < attributes.length; i++) {
-      const name = attributes[i].name;
-      if (name.startsWith('data-animation-') && name !== 'data-animation-group') {
-        toRemove.push(name);
-      }
-    }
-    toRemove.forEach(attr => selectedElement.removeAttribute(attr));
-
-    // 2. Clear element styles that might have been left by WAAPI fill:forwards
-    selectedElement.style.opacity = '';
-    selectedElement.style.transform = '';
-    selectedElement.style.filter = '';
-    selectedElement.style.backdropFilter = '';
-    selectedElement.style.translate = '';
-    selectedElement.style.scale = '';
-    selectedElement.style.rotate = '';
-
-    // 3. Reset local states to complete defaults
-    const defaultSettings = {
-      type: 'none', delay: 0, duration: 1, easing: 'Linear', repeat: 'None',
-      everyVisit: true, fadeStart: true, fadeStartEnd: true, fadeEnd: true
-    };
-
-    setOpenSettings(defaultSettings);
-    setCloseSettings(defaultSettings);
-    setInteractSettings(defaultSettings);
-    setMainType('While Opening');
-    setActionType('Click');
-
-    // 4. Notify parent of the change
-    if (onUpdate) onUpdate();
-  }, [selectedElement, onUpdate]);
 
   const handleDeleteAnimation = React.useCallback((targets) => {
     const ids = targets.map(t => t.id || t.getAttribute('data-name')).filter(Boolean);
@@ -967,13 +919,13 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
 
           // Play live animation preview on element immediately!
           const type = el.getAttribute('data-animation-open-type') || 'fade-in';
-          if (typeof playAnimationOnTarget === 'function') {
-            playAnimationOnTarget(el, type, {
+          if (typeof previewAnimation === 'function') {
+            previewAnimation(null, type, {
               duration: el.getAttribute('data-animation-open-duration') || '1',
               delay: el.getAttribute('data-animation-open-delay') || '0',
               speed: '1',
               easing: 'Linear'
-            });
+            }, el);
           }
         }
       };
@@ -1036,17 +988,6 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       setPreviewKey(prev => prev + 1);
     }
   };
-
-  // removed null check to allow page-level rendering
-  const currentTrigger = selectedElement?.getAttribute ? (selectedElement.getAttribute('data-animation-trigger') || 'While Opening') : 'While Opening';
-  const currentPrefix = currentTrigger === 'While Opening' ? 'open' : 'interact';
-
-  // Comprehensive check for ANY animation (sync with MainEditor)
-  const hasAnimation = selectedElement?.getAttribute ? (
-    (selectedElement.getAttribute('data-animation-open-type') && selectedElement.getAttribute('data-animation-open-type') !== 'none') ||
-    (selectedElement.getAttribute('data-animation-interact-type') && selectedElement.getAttribute('data-animation-interact-type') !== 'none') ||
-    selectedElement.getAttribute('data-animation-intent') === 'true'
-  ) : false;
 
   return (
     <div className="relative flex flex-col w-full h-full">
@@ -1127,9 +1068,6 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
             const id = isGroup ? item.name : (el.id || el.getAttribute('data-name'));
             const name = isGroup ? item.name : (el.getAttribute('data-name') || el.id);
             const isExpanded = expandedElementId === id;
-            const trigger = el.getAttribute('data-animation-trigger') || 'While Opening';
-            const prefix = trigger === 'While Opening' ? 'open' : 'interact';
-            const hasAnim = el.getAttribute(`data-animation-${prefix}-type`) && el.getAttribute(`data-animation-${prefix}-type`) !== 'none';
 
             return (
               <div

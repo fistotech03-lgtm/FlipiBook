@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronUp } from 'lucide-react';
-import { ColorField, handleScrubHelper } from './Color';
+import { handleScrubHelper } from './Color';
 import Effect from './Effect';
 import ColorPicker from './ColorPicker';
 
@@ -41,21 +41,6 @@ export default function GroupProperties({
     }
     return [];
   };
-
-  // 1. Synchronize state from selected element(s)
-  useEffect(() => {
-    const nodes = getSelectedNodes();
-    if (nodes.length === 0) return;
-
-    // Opacity: take average or first node opacity
-    const firstNode = nodes[0];
-    const opAttr = firstNode.getAttribute('opacity') || firstNode.style?.opacity || '1';
-    const parsedOp = Math.round(parseFloat(opAttr) * 100);
-    setOpacity(isNaN(parsedOp) ? 100 : parsedOp);
-
-    // Extract colors across all selected elements recursively
-    extractGroupColors();
-  }, [selectedElement, selectedLayerId, multiSelectedIds, activePageIndex, isMultiSelect]);
 
   // Helper to normalize color strings to hex
   const normalizeHex = (colorStr) => {
@@ -126,6 +111,21 @@ export default function GroupProperties({
     nodes.forEach(scanNode);
     setColors(Array.from(colorMap.values()));
   };
+
+  // 1. Synchronize state from selected element(s)
+  useEffect(() => {
+    const nodes = getSelectedNodes();
+    if (nodes.length === 0) return;
+
+    // Opacity: take average or first node opacity
+    const firstNode = nodes[0];
+    const opAttr = firstNode.getAttribute('opacity') || firstNode.style?.opacity || '1';
+    const parsedOp = Math.round(parseFloat(opAttr) * 100);
+    setOpacity(isNaN(parsedOp) ? 100 : parsedOp);
+
+    // Extract colors across all selected elements recursively
+    extractGroupColors();
+  }, [selectedElement, selectedLayerId, multiSelectedIds, activePageIndex, isMultiSelect]);
 
   // 2. Handle Opacity Change across selected element(s)
   const handleOpacityChange = (newVal) => {
@@ -552,7 +552,6 @@ export default function GroupProperties({
         const y = el.getAttribute('data-effect-drop-shadow-y') || 2;
         const blur = el.getAttribute('data-effect-drop-shadow-blur') || 4;
         const color = el.getAttribute('data-effect-drop-shadow-color') || '#000000';
-        const opacity = (parseFloat(el.getAttribute('data-effect-drop-shadow-opacity') || 35) / 100).toFixed(2);
         filters.push(`drop-shadow(${x}px ${y}px ${blur}px ${color})`);
       }
       if (hasBlur) {

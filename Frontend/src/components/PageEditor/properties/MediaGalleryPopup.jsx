@@ -539,7 +539,11 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         if (renamingItemId === item.id) return;
-                        selectedAsset?.id === item.id ? setSelectedAsset(null) : setSelectedAsset(item); 
+                        if (selectedAsset?.id === item.id) {
+                          setSelectedAsset(null);
+                        } else {
+                          setSelectedAsset(item);
+                        }
                         setActiveGalleryDropdown(null); 
                       }}
                     >

@@ -38,6 +38,8 @@ import cover3 from '../../assets/Explore/c-bg3.png';
 import cover4 from '../../assets/Explore/c-bg4.png';
 import cover5 from '../../assets/Explore/c-bg5.png';
 
+import { useAuth } from '../../context/AuthContext';
+
 const covers = [cover1, cover2, cover3, cover4, cover5];
 
 const shelfOptions = [
@@ -47,6 +49,7 @@ const shelfOptions = [
 ];
 
 const MyShelf = () => {
+  const { user } = useAuth();
   const [view, setView] = useState('shelf');
   const [showShelfModal, setShowShelfModal] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -73,21 +76,7 @@ const MyShelf = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-  const currentUserEmail = (() => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const u = JSON.parse(storedUser);
-        if (u?.emailId || u?.email) return (u.emailId || u.email).toLowerCase();
-      }
-      const storedProfile = localStorage.getItem('user_profile');
-      if (storedProfile) {
-        const p = JSON.parse(storedProfile);
-        if (p?.emailId || p?.email) return (p.emailId || p.email).toLowerCase();
-      }
-    } catch (e) { }
-    return '';
-  })();
+  const currentUserEmail = (user?.emailId || user?.email || '').toLowerCase();
 
   useEffect(() => {
     const fetchMyBooks = async () => {

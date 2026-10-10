@@ -30,17 +30,12 @@ export const setSessionToken = () => {};
 export const getSessionToken = () => null;
 
 /**
- * Clear client-side session state and non-sensitive cache.
+ * Clear client-side session state indicator.
  */
 export const clearSession = () => {
   try {
     // Clear the client-readable cookie indicator
     document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
-    // Clear residual profile cache
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_profile');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('token');
   } catch (err) {
     console.warn('Session clear error:', err);
   }

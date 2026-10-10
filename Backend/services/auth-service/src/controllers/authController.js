@@ -15,14 +15,27 @@ const hashOtp = (otp) => {
 };
 
 /**
- * Extract client IP address accurately from request
+ * Extract client IP address accurately from request and normalize IPv6 localhost / IPv4-mapped addresses
  */
 const getClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
+  let ip = req.headers['cf-connecting-ip'] || 
+           req.headers['x-real-ip'] || 
+           req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+           req.socket?.remoteAddress || 
+           req.ip || 
+           '127.0.0.1';
+
+  // Normalize IPv4-mapped IPv6 address (e.g. "::ffff:127.0.0.1" -> "127.0.0.1")
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
   }
-  return req.socket?.remoteAddress || req.ip || '127.0.0.1';
+
+  // Normalize IPv6 localhost loopback "::1" to standard "127.0.0.1"
+  if (ip === '::1') {
+    ip = '127.0.0.1';
+  }
+
+  return ip;
 };
 
 /**

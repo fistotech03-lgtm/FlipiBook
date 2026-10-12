@@ -964,11 +964,19 @@ const logout = async (req, res) => {
       decodeToken(accessToken) ||
       decodeToken(refreshToken);
 
-    let filter = {};
+    let updatedCount = 0;
 
+    // 1. Try updating specific session by sessionId
     if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
-      filter = { _id: decoded.sessionId };
-    } else if (decoded?.id || decoded?.userId || decoded?.emailId) {
+      const resSession = await LoginLog.updateOne(
+        { _id: decoded.sessionId },
+        { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+      );
+      updatedCount = resSession.modifiedCount;
+    }
+
+    // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
+    if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
       const orClauses = [
         decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
           ? { userObjectId: decoded.id }
@@ -978,21 +986,15 @@ const logout = async (req, res) => {
       ].filter(Boolean);
 
       if (orClauses.length > 0) {
-        filter = { $or: orClauses, status: "ACTIVE" };
+        const resUser = await LoginLog.updateMany(
+          { $or: orClauses, status: "ACTIVE" },
+          { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+        );
+        updatedCount = resUser.modifiedCount;
       }
     }
 
-    if (Object.keys(filter).length > 0) {
-      const updateResult = await LoginLog.updateMany(filter, {
-        $set: {
-          logoutTime: new Date(),
-          status: "LOGGED_OUT",
-        },
-      });
-      console.log(`[Logout] Updated ${updateResult.modifiedCount} login logs to LOGGED_OUT for:`, decoded?.emailId || decoded?.userId || decoded?.sessionId);
-    } else {
-      console.warn("[Logout] No active session identified to mark LOGGED_OUT");
-    }
+    console.log(`[Logout] Successfully marked ${updatedCount} session(s) as LOGGED_OUT for:`, decoded?.emailId || decoded?.userId || decoded?.sessionId || "unknown");
 
     clearAuthCookies(res, req);
 

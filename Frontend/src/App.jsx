@@ -41,6 +41,9 @@ const PageEditor = lazy(() => import("./components/PageEditor/PageEditor"));
 const CustomizedEditor = lazy(
   () => import("./components/CustomizedEditor/CustomizedEditor"),
 );
+const ThreedEditor = lazy(
+  () => import("./components/ThreedEditor/ThreedEditor"),
+);
 
 // Settings Components
 const SettingsLayout = lazy(
@@ -49,7 +52,7 @@ const SettingsLayout = lazy(
 const Profile = lazy(() => import("./components/Settings/Profile"));
 const Account = lazy(() => import("./components/Settings/Account"));
 const Notifications = lazy(() => import("./components/Settings/Notifications"));
-const MyShelf = lazy(() => import("./components/Settings/MyShelf"));
+const MyShelf = lazy(() => import("./components/MyFlipbooks/MyShelf"));
 
 function SettingsIndexRedirect() {
   const { user, isLoading } = useAuth();
@@ -271,7 +274,41 @@ export default function App() {
                     </Suspense>
                   }
                 />
+                <Route
+                  path="threed_editor"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThreedEditor />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="threed_editor/:modelId"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThreedEditor />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="threed_editor/:folder/:modelId"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThreedEditor />
+                    </Suspense>
+                  }
+                />
               </Route>
+
+              {/* Standalone 3D Editor Redirects */}
+              <Route
+                path="/threed_editor"
+                element={<Navigate to="/editor/threed_editor" replace />}
+              />
+              <Route
+                path="/threed_editor/:modelId"
+                element={<Navigate to="/editor/threed_editor" replace />}
+              />
 
               {/* Catch-all fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

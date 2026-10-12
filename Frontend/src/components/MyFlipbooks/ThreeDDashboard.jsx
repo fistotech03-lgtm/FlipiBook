@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { ArrowRight, Eye, MoreVertical, Check } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Eye, MoreVertical, Check, Plus } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import CustomScrollbar from '../CustomScrollbar';
 
-// Default dummy 3D models matching the reference screenshot
+// Original 3D models content
 const DUMMY_3D_MODELS = [
     {
         id: '1',
@@ -24,7 +25,7 @@ const DUMMY_3D_MODELS = [
         category: 'Pumps',
         badgeBg: 'bg-[#e0f2fe]',
         badgeText: 'text-[#0284c7]',
-        iconName: 'solar:water-pump-bold',
+        iconName: 'material-symbols-light:water-pump',
         accentColor: '#0284c7'
     },
     {
@@ -68,11 +69,19 @@ export default function ThreeDDashboard({
     onAddToFlipbook,
     activeFolder = 'All Models'
 }) {
+    const internalNavigate = useNavigate();
+    const nav = navigate || internalNavigate;
     const fileInputRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [models, setModels] = useState(DUMMY_3D_MODELS);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [addedIds, setAddedIds] = useState([]);
+
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
 
     const displayedModels = models.filter(m => {
         if (!activeFolder || activeFolder === 'All Models' || activeFolder === 'Recent') return true;
@@ -128,13 +137,13 @@ export default function ThreeDDashboard({
 
     return (
         <div className="flex-1 flex flex-col select-none h-full overflow-hidden">
-            {/* Top 3D Viewport / Upload Area (Matching FlipbooksBanner exact dimensions) */}
+            {/* Top 3D Viewport / Upload Area */}
             <div
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                className={`w-full h-[11.4vw] min-h-[11.4vw] max-h-[11.4vw] flex-shrink-0 rounded-[1.2vw] mb-[0.95vw] relative overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all border shadow-[0_4px_24px_rgba(0,0,0,0.18)] ${
+                className={`w-full h-[11.4vw] min-h-[11.4vw] max-h-[11.4vw] flex-shrink-0 rounded-[1.2vw] mb-[0.95vw] relative overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all border shadow-[0_0.25vw_1.5vw_rgba(0,0,0,0.18)] ${
                     isDragging ? 'border-[#ec5137] ring-2 ring-[#ec5137]/30' : 'border-[#1e2738] hover:border-[#ec5137]/50'
                 } bg-[#141a24] group select-none`}
                 style={{
@@ -157,7 +166,7 @@ export default function ThreeDDashboard({
                     }}
                 />
 
-                {/* Subtle coordinate ground axis lines */}
+                {/* Coordinate ground axis lines */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <div className="w-full h-px bg-red-500/25 absolute"></div>
                     <div className="h-full w-px bg-green-500/25 absolute"></div>
@@ -165,7 +174,6 @@ export default function ThreeDDashboard({
 
                 {/* Upload Content in Center */}
                 <div className="relative z-10 flex flex-col items-center justify-center text-center px-[2vw]">
-                    {/* Header: Drag & Drop or Click to Upload */}
                     <p className="text-[0.88vw] text-gray-200 font-medium mb-[0.45vw] group-hover:text-white transition-colors">
                         Drag & Drop or Click to <span className="text-[#ec5137] font-semibold">Upload</span>
                     </p>
@@ -176,25 +184,21 @@ export default function ThreeDDashboard({
                             viewBox="0 0 48 48"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-[2.6vw] h-[2.6vw] text-white/90 drop-shadow-[0_4px_12px_rgba(236,81,55,0.25)]"
+                            className="w-[2.6vw] h-[2.6vw] text-white/90 drop-shadow-[0_0.25vw_0.75vw_rgba(236,81,55,0.25)]"
                         >
-                            {/* Outer wireframe cube */}
                             <path
                                 d="M24 4L42 14V34L24 44L6 34V14L24 4Z"
                                 stroke="currentColor"
                                 strokeWidth="1.8"
                                 strokeLinejoin="round"
                             />
-                            {/* Inner isometric lines meeting at center */}
                             <path
                                 d="M24 24L42 14M24 24L6 14M24 24V44"
                                 stroke="currentColor"
                                 strokeWidth="1.8"
                                 strokeLinejoin="round"
                             />
-                            {/* Central coordinate node */}
                             <circle cx="24" cy="24" r="2.2" fill="#ec5137" />
-                            {/* Sub axes dots */}
                             <circle cx="24" cy="4" r="1.5" fill="#38bdf8" />
                             <circle cx="42" cy="14" r="1.5" fill="#ef4444" />
                             <circle cx="6" cy="14" r="1.5" fill="#10b981" />
@@ -202,12 +206,9 @@ export default function ThreeDDashboard({
                         </svg>
                     </div>
 
-                    {/* Supported File Label */}
                     <p className="text-[#ec5137] font-semibold text-[0.8vw] mb-[0.15vw] tracking-wide">
                         Supported File
                     </p>
-
-                    {/* Format Extensions */}
                     <p className="text-gray-400 text-[0.65vw] font-normal tracking-wider uppercase">
                         STEP, OBJ, FBX, GLB, GLTF, BLENDER, MAYA
                     </p>
@@ -224,7 +225,7 @@ export default function ThreeDDashboard({
             </div>
 
             {/* Bottom White Container: Recent 3D Models */}
-            <div className="w-full bg-white rounded-[1.2vw] p-[1.1vw] border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex-1 flex flex-col min-h-0">
+            <div className="w-full bg-white rounded-[1.2vw] p-[1.1vw] border border-gray-100 shadow-[0_0.15vw_0.6vw_rgba(0,0,0,0.02)] flex-1 flex flex-col min-h-0">
                 {/* Header Row */}
                 <div className="flex items-center justify-between mb-[0.9vw] flex-none">
                     <h2 className="text-[1.1vw] font-bold text-[#1f2937]">Recent 3D Models</h2>
@@ -237,140 +238,152 @@ export default function ThreeDDashboard({
                     </button>
                 </div>
 
-                {/* Cards Row */}
+                {/* Cards Row matching FavoritesScreen card style exactly */}
                 <CustomScrollbar
-                    color="#ec5137"
-                    hoverColor="#d64129"
+                    color="#d1d5db"
+                    hoverColor="#9ca3af"
                     width="0.35vw"
-                    className="flex-1 grid grid-cols-5 gap-[1vw] min-h-0 pb-[0.4vw]"
+                    className="flex-1 pr-[0.3vw] pb-[0.5vw] min-h-0"
                 >
-                    {displayedModels.map((model) => {
-                        const isAdded = addedIds.includes(model.id);
+                    <div className="grid grid-cols-5 gap-[1.1vw]">
+                        {displayedModels.map((model) => {
+                            const isAdded = addedIds.includes(model.id);
 
-                        return (
-                            <div
-                                key={model.id}
-                                className="bg-white rounded-[0.7vw] border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-md p-[0.75vw] flex flex-col justify-between transition-all group relative"
-                            >
-                                {/* Top: 3-dots Menu */}
-                                <div className="flex justify-end mb-[0.3vw] relative">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveMenuId(activeMenuId === model.id ? null : model.id);
-                                        }}
-                                        className="w-[1.4vw] h-[1.4vw] rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                                    >
-                                        <MoreVertical size="0.85vw" />
-                                    </button>
-
-                                    {/* Action Dropdown Menu */}
-                                    {activeMenuId === model.id && (
+                            return (
+                                <div
+                                    key={model.id}
+                                    className="bg-white rounded-[0.7vw] overflow-hidden flex flex-col shadow-[0_0.25vw_1.2vw_rgba(0,0,0,0.05)] hover:shadow-[0_0.5vw_1.8vw_rgba(0,0,0,0.08)] transition-all border-[0.06vw] border-transparent hover:border-gray-100 relative group"
+                                >
+                                    {/* Explore/Favorites Card Preview Box (4:3 ratio) */}
+                                    <div className="relative w-full aspect-[4/3] bg-[#fae8dc] overflow-hidden flex items-center justify-center">
+                                        {/* Stylized 3D Object Graphic */}
                                         <div
-                                            className="absolute right-0 top-[1.6vw] w-[9vw] bg-white rounded-[0.5vw] shadow-xl border border-gray-100 py-[0.3vw] z-30 animate-in fade-in zoom-in-95 duration-150"
-                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-[4.8vw] h-[4.8vw] rounded-[0.8vw] flex items-center justify-center shadow-xs transition-transform group-hover:scale-110 group-hover:rotate-3"
+                                            style={{ backgroundColor: `${model.accentColor || '#ea543a'}18` }}
                                         >
+                                            <Icon
+                                                icon={model.iconName || 'solar:box-bold-duotone'}
+                                                className="w-[2.8vw] h-[2.8vw]"
+                                                style={{ color: model.accentColor || '#ea543a' }}
+                                            />
+                                        </div>
+
+                                        {/* Subtle 3D Tag */}
+                                        <div className="absolute bottom-[0.5vw] left-[0.5vw] px-[0.4vw] py-[0.12vw] rounded-[0.25vw] bg-black/60 text-white text-[0.55vw] font-bold backdrop-blur-xs">
+                                            3D
+                                        </div>
+
+                                        {/* Top-Right Floating Action Button matching Favorites heart button */}
+                                        <div className="absolute top-[0.6vw] right-[0.6vw] z-20">
                                             <button
-                                                onClick={() => {
-                                                    setActiveMenuId(null);
-                                                    if (navigate) navigate('/editor/threed_editor');
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuId(activeMenuId === model.id ? null : model.id);
                                                 }}
-                                                className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-gray-700 hover:bg-gray-50 flex items-center gap-[0.4vw]"
+                                                className="w-[1.9vw] h-[1.9vw] rounded-full bg-white shadow-[0_0.15vw_0.5vw_rgba(0,0,0,0.12)] flex items-center justify-center text-gray-500 hover:text-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+                                                title="Options"
                                             >
-                                                <Icon icon="solar:pen-new-square-linear" className="w-[0.85vw] h-[0.85vw]" />
-                                                Edit in 3D Editor
+                                                <MoreVertical size="0.95vw" />
                                             </button>
+
+                                            {/* Action Dropdown Menu */}
+                                            {activeMenuId === model.id && (
+                                                <div
+                                                    className="absolute right-0 top-[2.2vw] w-[9vw] bg-white rounded-[0.5vw] shadow-xl border border-gray-100 py-[0.3vw] z-30 animate-in fade-in zoom-in-95 duration-150"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <button
+                                                        onClick={() => {
+                                                            setActiveMenuId(null);
+                                                            if (nav) nav(model.id ? `/editor/threed_editor/${model.id}` : '/editor/threed_editor');
+                                                        }}
+                                                        className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-gray-700 hover:bg-gray-50 flex items-center gap-[0.4vw] cursor-pointer"
+                                                    >
+                                                        <Icon icon="solar:pen-new-square-linear" className="w-[0.85vw] h-[0.85vw]" />
+                                                        Edit in 3D Editor
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setActiveMenuId(null)}
+                                                        className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-gray-700 hover:bg-gray-50 flex items-center gap-[0.4vw] cursor-pointer"
+                                                    >
+                                                        <Icon icon="solar:download-linear" className="w-[0.85vw] h-[0.85vw]" />
+                                                        Download
+                                                    </button>
+                                                    <div className="h-px bg-gray-100 my-[0.2vw]"></div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setModels(prev => prev.filter(m => m.id !== model.id));
+                                                            setActiveMenuId(null);
+                                                        }}
+                                                        className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-red-600 hover:bg-red-50 flex items-center gap-[0.4vw] cursor-pointer"
+                                                    >
+                                                        <Icon icon="solar:trash-bin-trash-linear" className="w-[0.85vw] h-[0.85vw]" />
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Card Details Body (styled with FavoritesScreen padding & typography) */}
+                                    <div className="p-[0.9vw] flex flex-col flex-1 bg-white justify-between">
+                                        <div>
+                                            <h4 className="text-[0.88vw] font-bold text-gray-900 truncate tracking-tight mb-[0.15vw]" title={model.title}>
+                                                {model.title}
+                                            </h4>
+                                            <p className="text-[0.68vw] text-gray-400 font-normal">
+                                                {model.format} • {model.size}
+                                            </p>
+
+                                            {/* Category Pill */}
+                                            <div className="mt-[0.35vw] mb-[0.65vw]">
+                                                <span className={`inline-block px-[0.55vw] py-[0.12vw] rounded-full text-[0.62vw] font-medium ${model.badgeBg} ${model.badgeText}`}>
+                                                    {model.category}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Bottom Action Buttons */}
+                                        <div className="flex items-center gap-[0.35vw] pt-[0.2vw]">
                                             <button
-                                                onClick={() => setActiveMenuId(null)}
-                                                className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-gray-700 hover:bg-gray-50 flex items-center gap-[0.4vw]"
-                                            >
-                                                <Icon icon="solar:download-linear" className="w-[0.85vw] h-[0.85vw]" />
-                                                Download
-                                            </button>
-                                            <div className="h-px bg-gray-100 my-[0.2vw]"></div>
-                                            <button
+                                                type="button"
                                                 onClick={() => {
-                                                    setModels(prev => prev.filter(m => m.id !== model.id));
-                                                    setActiveMenuId(null);
+                                                    if (nav) nav(model.id ? `/editor/threed_editor/${model.id}` : '/editor/threed_editor');
                                                 }}
-                                                className="w-full px-[0.7vw] py-[0.35vw] text-left text-[0.72vw] text-red-600 hover:bg-red-50 flex items-center gap-[0.4vw]"
+                                                className="h-[1.85vw] px-[0.65vw] rounded-[0.45vw] border-[0.06vw] border-gray-200 hover:border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-[0.65vw] font-semibold flex items-center justify-center gap-[0.25vw] transition-all cursor-pointer shadow-xs whitespace-nowrap flex-shrink-0 active:scale-95"
                                             >
-                                                <Icon icon="solar:trash-bin-trash-linear" className="w-[0.85vw] h-[0.85vw]" />
-                                                Delete
+                                                <Eye size="0.75vw" />
+                                                <span>View</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddClick(model.id)}
+                                                className={`flex-1 h-[1.85vw] rounded-[0.45vw] text-white text-[0.63vw] font-semibold flex items-center justify-center gap-[0.2vw] transition-all cursor-pointer shadow-xs whitespace-nowrap px-[0.35vw] active:scale-95 ${
+                                                    isAdded
+                                                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                                                        : 'bg-[#ec5137] hover:bg-[#d64129]'
+                                                }`}
+                                            >
+                                                {isAdded ? (
+                                                    <>
+                                                        <Check size="0.75vw" />
+                                                        <span>Added</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Plus size="0.72vw" />
+                                                        <span>Add to Flipbook</span>
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* Model Dummy 3D Preview Box */}
-                                <div className="w-full aspect-[4/3] rounded-[0.55vw] bg-gradient-to-b from-gray-50 to-gray-100/80 flex items-center justify-center p-[0.7vw] relative overflow-hidden group-hover:scale-[1.02] transition-transform">
-                                    {/* Stylized Dummy 3D Object Illustration */}
-                                    <div
-                                        className="w-[4.8vw] h-[4.8vw] rounded-[0.7vw] flex items-center justify-center shadow-xs transition-transform group-hover:rotate-3"
-                                        style={{ backgroundColor: `${model.accentColor || '#ea543a'}15` }}
-                                    >
-                                        <Icon
-                                            icon={model.iconName || 'solar:box-bold-duotone'}
-                                            className="w-[2.6vw] h-[2.6vw] transition-transform group-hover:scale-110"
-                                            style={{ color: model.accentColor || '#ea543a' }}
-                                        />
-                                    </div>
-
-                                    {/* Subtle 3D Tag */}
-                                    <div className="absolute bottom-[0.3vw] right-[0.4vw] px-[0.4vw] py-[0.1vw] rounded-[0.2vw] bg-white/80 backdrop-blur-xs text-[0.55vw] font-bold text-gray-500 shadow-2xs">
-                                        3D
                                     </div>
                                 </div>
-
-                                {/* Model Details */}
-                                <div className="mt-[0.6vw] mb-[0.6vw]">
-                                    <h3 className="text-[0.84vw] font-bold text-[#1f2937] leading-tight truncate" title={model.title}>
-                                        {model.title}
-                                    </h3>
-                                    <p className="text-[0.65vw] text-gray-400 font-normal mt-[0.15vw]">
-                                        {model.format} • {model.size}
-                                    </p>
-                                    {/* Category Pill */}
-                                    <div className="mt-[0.4vw]">
-                                        <span className={`inline-block px-[0.55vw] py-[0.12vw] rounded-full text-[0.62vw] font-medium ${model.badgeBg} ${model.badgeText}`}>
-                                            {model.category}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Bottom Buttons: View & Add to Flipbook */}
-                                <div className="flex items-center gap-[0.4vw] pt-[0.2vw]">
-                                    <button
-                                        onClick={() => {
-                                            if (navigate) navigate('/editor/threed_editor');
-                                        }}
-                                        className="flex-1 py-[0.35vw] px-[0.4vw] rounded-[0.4vw] border border-gray-200 hover:border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-[0.68vw] font-medium flex items-center justify-center gap-[0.3vw] transition-all cursor-pointer shadow-2xs"
-                                    >
-                                        <Eye size="0.75vw" />
-                                        <span>View</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => handleAddClick(model.id)}
-                                        className={`flex-1 py-[0.35vw] px-[0.4vw] rounded-[0.4vw] text-white text-[0.68vw] font-medium flex items-center justify-center gap-[0.2vw] transition-all cursor-pointer shadow-2xs ${
-                                            isAdded
-                                                ? 'bg-emerald-600'
-                                                : 'bg-[#ec5137] hover:bg-[#d64129]'
-                                        }`}
-                                    >
-                                        {isAdded ? (
-                                            <>
-                                                <Check size="0.75vw" />
-                                                <span>Added</span>
-                                            </>
-                                        ) : (
-                                            <span>+ Add to Flipbook</span>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </CustomScrollbar>
             </div>
         </div>

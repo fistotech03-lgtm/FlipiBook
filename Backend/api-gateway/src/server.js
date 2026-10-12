@@ -8,7 +8,7 @@ const os = require('os');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 const PORT = process.env.GATEWAY_PORT || process.env.PORT || 8000;
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
 
@@ -69,6 +69,20 @@ app.use(
     cookieDomainRewrite: '',
     cookiePathRewrite: '/',
     on: {
+      proxyReq: (proxyReq, req) => {
+        // Forward real public client IP to internal microservices
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
       error: (err, req, res) => {
         console.error('[API Gateway] Proxy error to auth-service:', err.message);
         if (!res.headersSent) {

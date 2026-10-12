@@ -1,0 +1,7 @@
+node_modules
+Frontend/node_modules
+Backend/node_modules
+Backend/services/auth-service/node_modules
+Backend/api-gateway/node_modules
+.git
+.DS_Store

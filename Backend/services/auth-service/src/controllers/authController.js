@@ -8,6 +8,7 @@ const {
   generateToken,
   generateRefreshToken,
   verifyToken,
+  decodeToken,
 } = require("../utils/jwtHelper");
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 
@@ -53,6 +54,17 @@ const getClientIp = (req) => {
   }
 
   return ip;
+};
+
+/**
+ * Helper to reliably extract cookies from req.cookies or raw req.headers.cookie
+ */
+const getCookie = (req, name) => {
+  if (req.cookies?.[name]) return req.cookies[name];
+  const raw = req.headers?.cookie;
+  if (!raw) return null;
+  const match = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 };
 
 /**
@@ -225,29 +237,34 @@ const signup = async (req, res) => {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
 
-    const loginLog = await LoginLog.create({
-      userId: user.userID,
-      userObjectId: user._id,
-      emailId: user.emailId,
-      ipAddress,
-      userAgent,
-      loginTime: new Date(),
-      status: "ACTIVE",
-      loginMethod: "EMAIL_PASSWORD",
-    });
+    let loginLog = null;
+    try {
+      loginLog = await LoginLog.create({
+        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userObjectId: user._id,
+        emailId: user.emailId,
+        ipAddress,
+        userAgent,
+        loginTime: new Date(),
+        status: "ACTIVE",
+        loginMethod: "EMAIL_PASSWORD",
+      });
+    } catch (logErr) {
+      console.error("[Signup LoginLog Error]:", logErr.message);
+    }
 
     const token = generateToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     setAuthCookies(res, token, refreshToken, req);
@@ -419,29 +436,34 @@ const verifySignupOtp = async (req, res) => {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
 
-    const loginLog = await LoginLog.create({
-      userId: user.userID,
-      userObjectId: user._id,
-      emailId: user.emailId,
-      ipAddress,
-      userAgent,
-      loginTime: new Date(),
-      status: "ACTIVE",
-      loginMethod: "EMAIL_PASSWORD",
-    });
+    let loginLog = null;
+    try {
+      loginLog = await LoginLog.create({
+        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userObjectId: user._id,
+        emailId: user.emailId,
+        ipAddress,
+        userAgent,
+        loginTime: new Date(),
+        status: "ACTIVE",
+        loginMethod: "EMAIL_PASSWORD",
+      });
+    } catch (logErr) {
+      console.error("[Verify Signup LoginLog Error]:", logErr.message);
+    }
 
     const token = generateToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     setAuthCookies(res, token, refreshToken, req);
@@ -552,29 +574,34 @@ const login = async (req, res) => {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
 
-    const loginLog = await LoginLog.create({
-      userId: user.userID,
-      userObjectId: user._id,
-      emailId: user.emailId,
-      ipAddress,
-      userAgent,
-      loginTime: new Date(),
-      status: "ACTIVE",
-      loginMethod: "EMAIL_PASSWORD",
-    });
+    let loginLog = null;
+    try {
+      loginLog = await LoginLog.create({
+        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userObjectId: user._id,
+        emailId: user.emailId,
+        ipAddress,
+        userAgent,
+        loginTime: new Date(),
+        status: "ACTIVE",
+        loginMethod: "EMAIL_PASSWORD",
+      });
+    } catch (logErr) {
+      console.error("[Login Log Error]:", logErr.message);
+    }
 
     const token = generateToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     setAuthCookies(res, token, refreshToken, req);
@@ -674,29 +701,34 @@ const googleLogin = async (req, res) => {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
 
-    const loginLog = await LoginLog.create({
-      userId: user.userID,
-      userObjectId: user._id,
-      emailId: user.emailId,
-      ipAddress,
-      userAgent,
-      loginTime: new Date(),
-      status: "ACTIVE",
-      loginMethod: "GOOGLE",
-    });
+    let loginLog = null;
+    try {
+      loginLog = await LoginLog.create({
+        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userObjectId: user._id,
+        emailId: user.emailId,
+        ipAddress,
+        userAgent,
+        loginTime: new Date(),
+        status: "ACTIVE",
+        loginMethod: "GOOGLE",
+      });
+    } catch (logErr) {
+      console.error("[Google Login Log Error]:", logErr.message);
+    }
 
     const token = generateToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog._id,
+      sessionId: loginLog?._id,
     });
 
     setAuthCookies(res, token, refreshToken, req);
@@ -861,30 +893,48 @@ const resetPassword = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
-    const token =
-      req.cookies?.token ||
+    const accessToken =
+      getCookie(req, "token") ||
       (req.headers.authorization?.startsWith("Bearer ")
         ? req.headers.authorization.split(" ")[1]
         : null);
+    const refreshToken = getCookie(req, "refreshToken");
+
+    // Decode token to identify who is logging out (try verification first, then fallback to decode)
+    const decoded =
+      verifyToken(accessToken) ||
+      verifyToken(refreshToken) ||
+      decodeToken(accessToken) ||
+      decodeToken(refreshToken);
+
     let filter = {};
 
-    if (token) {
-      const decoded = verifyToken(token);
-      if (decoded?.sessionId) {
-        filter._id = decoded.sessionId;
-      } else if (decoded?.userId) {
-        filter.userId = decoded.userId;
-        filter.status = "ACTIVE";
+    if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
+      filter = { _id: decoded.sessionId };
+    } else if (decoded?.id || decoded?.userId || decoded?.emailId) {
+      const orClauses = [
+        decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
+          ? { userObjectId: decoded.id }
+          : null,
+        decoded.userId ? { userId: decoded.userId } : null,
+        decoded.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
+      ].filter(Boolean);
+
+      if (orClauses.length > 0) {
+        filter = { $or: orClauses, status: "ACTIVE" };
       }
     }
 
     if (Object.keys(filter).length > 0) {
-      await LoginLog.updateMany(filter, {
+      const updateResult = await LoginLog.updateMany(filter, {
         $set: {
           logoutTime: new Date(),
           status: "LOGGED_OUT",
         },
       });
+      console.log(`[Logout] Updated ${updateResult.modifiedCount} login logs to LOGGED_OUT for:`, decoded?.emailId || decoded?.userId || decoded?.sessionId);
+    } else {
+      console.warn("[Logout] No active session identified to mark LOGGED_OUT");
     }
 
     clearAuthCookies(res, req);
@@ -895,12 +945,11 @@ const logout = async (req, res) => {
     });
   } catch (error) {
     console.error("[Logout Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Error during logout",
-      });
+    clearAuthCookies(res, req);
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
   }
 };
 
@@ -911,15 +960,26 @@ const getLoginLogs = async (req, res) => {
   try {
     const { limit = 50 } = req.query;
 
-    if (!req.user || !req.user.userId) {
+    if (!req.user) {
       return res.status(401).json({
         success: false,
         message: "Authentication required",
       });
     }
 
-    // Strictly restrict logs to the currently authenticated user
-    const query = { userId: req.user.userId };
+    const userIdentifier = req.user.userId;
+    const userObjectId = req.user.id;
+    const userEmail = req.user.emailId;
+
+    const orClauses = [
+      userIdentifier ? { userId: userIdentifier } : null,
+      userObjectId && mongoose.Types.ObjectId.isValid(userObjectId)
+        ? { userObjectId }
+        : null,
+      userEmail ? { emailId: userEmail.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const query = orClauses.length > 0 ? { $or: orClauses } : {};
 
     const logs = await LoginLog.find(query)
       .sort({ loginTime: -1 })
@@ -943,17 +1003,6 @@ const getLoginLogs = async (req, res) => {
 };
 
 /**
- * Helper to reliably extract cookies from req.cookies or raw req.headers.cookie
- */
-const getCookie = (req, name) => {
-  if (req.cookies?.[name]) return req.cookies[name];
-  const raw = req.headers.cookie;
-  if (!raw) return null;
-  const match = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
-/**
  * 8. Verify Session (Current Authenticated User Context)
  */
 const verifySession = async (req, res) => {
@@ -973,6 +1022,19 @@ const verifySession = async (req, res) => {
     if (accessToken) {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
+        // Verify session is active in LoginLog
+        if (decodedAccess.sessionId && mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)) {
+          const session = await LoginLog.findById(decodedAccess.sessionId);
+          if (session && session.status === "LOGGED_OUT") {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been logged out",
+            });
+          }
+        }
         targetUserId = decodedAccess.id;
         tokenEmail = decodedAccess.emailId || null;
         activeToken = accessToken;

@@ -32,28 +32,85 @@ const safeCompare = (a, b) => {
 };
 
 /**
- * Extract client IP address accurately from request and normalize IPv6 localhost / IPv4-mapped addresses
+ * Check if an IP address is a private, loopback, or internal Docker bridge address
+ */
+const isPrivateOrLoopbackIp = (ip) => {
+  if (!ip) return true;
+  const clean = ip.replace(/^::ffff:/, "").trim();
+  return (
+    clean === "127.0.0.1" ||
+    clean === "::1" ||
+    clean === "localhost" ||
+    clean === "unknown" ||
+    clean.startsWith("10.") ||
+    clean.startsWith("192.168.") ||
+    clean.startsWith("fc00:") ||
+    clean.startsWith("fe80:") ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(clean)
+  );
+};
+
+const normalizeIp = (ip) => {
+  if (!ip) return "";
+  let clean = String(ip).trim();
+  if (clean.startsWith("::ffff:")) {
+    clean = clean.substring(7);
+  }
+  if (clean === "::1") {
+    clean = "127.0.0.1";
+  }
+  return clean;
+};
+
+/**
+ * Extract client IP address accurately from request across multiple proxy hops.
+ * Prioritizes real routable public IPs over internal Docker / loopback IPs.
  */
 const getClientIp = (req) => {
-  let ip =
-    req.headers["cf-connecting-ip"] ||
-    req.headers["x-real-ip"] ||
-    req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-    req.socket?.remoteAddress ||
-    req.ip ||
-    "127.0.0.1";
+  const candidates = [];
 
-  // Normalize IPv4-mapped IPv6 address (e.g. "::ffff:127.0.0.1" -> "127.0.0.1")
-  if (ip.startsWith("::ffff:")) {
-    ip = ip.substring(7);
+  // 1. Cloudflare direct client header
+  if (req.headers?.["cf-connecting-ip"]) {
+    candidates.push(req.headers["cf-connecting-ip"]);
   }
 
-  // Normalize IPv6 localhost loopback "::1" to standard "127.0.0.1"
-  if (ip === "::1") {
-    ip = "127.0.0.1";
+  // 2. Explicit gateway forwarded client IP
+  if (req.headers?.["x-client-ip"]) {
+    candidates.push(req.headers["x-client-ip"]);
   }
 
-  return ip;
+  // 3. X-Real-IP (set by Nginx / Traefik / Dokploy)
+  if (req.headers?.["x-real-ip"]) {
+    candidates.push(req.headers["x-real-ip"]);
+  }
+
+  // 4. X-Forwarded-For header (can contain a comma-separated list of IPs)
+  const xForwardedFor = req.headers?.["x-forwarded-for"];
+  if (xForwardedFor) {
+    const ips = String(xForwardedFor)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    candidates.push(...ips);
+  }
+
+  // 5. Express / socket remote address
+  if (req.ip) candidates.push(req.ip);
+  if (req.socket?.remoteAddress) candidates.push(req.socket.remoteAddress);
+
+  // Normalize all candidate IPs
+  const normalizedList = candidates
+    .map(normalizeIp)
+    .filter((ip) => Boolean(ip) && ip !== "unknown");
+
+  // First priority: find the first non-private, non-loopback public routable IP
+  const publicIp = normalizedList.find((ip) => !isPrivateOrLoopbackIp(ip));
+  if (publicIp) {
+    return publicIp;
+  }
+
+  // Fallback: return the first normalized IP or default 127.0.0.1
+  return normalizedList[0] || "127.0.0.1";
 };
 
 /**

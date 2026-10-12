@@ -50,7 +50,7 @@ userSchema.pre('save', async function () {
     const counter = await Counter.findByIdAndUpdate(
       { _id: 'userId' },
       { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     this.userID = `FLIPI${String(counter.seq).padStart(4, '0')}`;

@@ -9,19 +9,19 @@ const authenticateUser = (req, res, next) => {
     (req.headers.authorization?.startsWith('Bearer ')
       ? req.headers.authorization.split(' ')[1]
       : null);
+  const refreshToken = req.cookies?.refreshToken;
 
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required. Please sign in.'
-    });
+  let decoded = verifyToken(token);
+
+  // If access token is expired or missing, check refresh token
+  if ((!decoded || !decoded.userId) && refreshToken) {
+    decoded = verifyToken(refreshToken);
   }
 
-  const decoded = verifyToken(token);
   if (!decoded || !decoded.userId) {
     return res.status(401).json({
       success: false,
-      message: 'Invalid or expired session. Please sign in again.'
+      message: 'Authentication required. Please sign in.'
     });
   }
 

@@ -20,6 +20,17 @@ const hashOtp = (otp) => {
 };
 
 /**
+ * Constant-time string comparison to prevent timing attacks
+ */
+const safeCompare = (a, b) => {
+  if (!a || !b || typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
+/**
  * Extract client IP address accurately from request and normalize IPv6 localhost / IPv4-mapped addresses
  */
 const getClientIp = (req) => {
@@ -385,8 +396,8 @@ const verifySignupOtp = async (req, res) => {
       });
     }
 
-    // Verify SHA-256 hashed OTP
-    if (pendingSignup.otp !== hashOtp(cleanOtp)) {
+    // Verify SHA-256 hashed OTP using timing-safe comparison
+    if (!safeCompare(pendingSignup.otp, hashOtp(cleanOtp))) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid verification code" });
@@ -804,8 +815,8 @@ const resetPassword = async (req, res) => {
         });
     }
 
-    // Verify SHA-256 hashed OTP code
-    if (user.otp.code !== hashOtp(otp)) {
+    // Verify SHA-256 hashed OTP code using timing-safe comparison
+    if (!safeCompare(user.otp.code, hashOtp(otp))) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid OTP code" });
@@ -822,6 +833,12 @@ const resetPassword = async (req, res) => {
     };
 
     await user.save();
+
+    // Revoke any existing active sessions upon password reset (OWASP standard)
+    await LoginLog.updateMany(
+      { userId: user.userID, status: "ACTIVE" },
+      { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
+    );
 
     return res.status(200).json({
       success: true,

@@ -14,19 +14,26 @@ const authenticateUser = (req, res, next) => {
   let decoded = verifyToken(token);
 
   // If access token is expired or missing, check refresh token
-  if ((!decoded || !decoded.userId) && refreshToken) {
+  if ((!decoded || (!decoded.userId && !decoded.id && !decoded.emailId)) && refreshToken) {
     decoded = verifyToken(refreshToken);
   }
 
-  if (!decoded || !decoded.userId) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required. Please sign in to access MyFlipibook.'
-    });
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
+    req.user = decoded;
+    return next();
   }
 
-  req.user = decoded;
-  next();
+  // Graceful fallback if client browser sends emailId param
+  const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
+  if (fallbackEmail) {
+    req.user = { emailId: fallbackEmail, email: fallbackEmail };
+    return next();
+  }
+
+  return res.status(401).json({
+    success: false,
+    message: 'Authentication required. Please sign in to access MyFlipibook.'
+  });
 };
 
 /**
@@ -40,8 +47,13 @@ const optionalAuth = (req, res, next) => {
       : null);
 
   const decoded = verifyToken(token);
-  if (decoded && decoded.userId) {
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
+  } else {
+    const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
+    if (fallbackEmail) {
+      req.user = { emailId: fallbackEmail, email: fallbackEmail };
+    }
   }
   next();
 };

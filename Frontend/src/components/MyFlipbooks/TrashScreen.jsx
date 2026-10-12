@@ -286,7 +286,7 @@ export default function TrashScreen({ navigate, onEmptyTrash, onRestoreBook, onD
                                     {/* Stats: Pages | Views | Rating */}
                                     <div className="flex items-center gap-[0.45vw] justify-start text-[0.72vw] text-gray-700 font-medium mt-[0.75vw] whitespace-nowrap">
                                         <div className="flex items-center gap-[0.2vw]">
-                                            <span className="text-black font-semibold">{book.pages}</span>
+                                            <span className="text-black font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span>
                                             <span className="font-normal text-gray-500">Pages</span>
                                         </div>
                                         <span className="text-gray-300">|</span>

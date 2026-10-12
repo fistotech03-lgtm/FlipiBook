@@ -795,7 +795,7 @@ const Profile = () => {
                                   />
                                 </div>
                                 <div className="absolute bottom-[0.5vw] right-[0.5vw] bg-black/60 backdrop-blur-sm text-white text-[0.55vw] font-medium px-[0.6vw] py-[0.2vw] rounded-full z-10 pointer-events-none">
-                                  {book.pages || 0} Pages
+                                  {(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0} Pages
                                 </div>
                               </div>
 
@@ -823,7 +823,7 @@ const Profile = () => {
                                     <div className="absolute bottom-[3vw] right-[0.5vw] w-[10vw] bg-[#424242]/95 backdrop-blur-md border border-gray-600/30 rounded-[0.6vw] p-[0.5vw] shadow-2xl z-30 text-white animate-in fade-in zoom-in-95 duration-200">
                                       <div className="flex flex-col gap-[0.4vw] text-[0.65vw] font-medium text-gray-300">
                                         <div>Views : <span className="text-white font-semibold">{book.viewsCount !== undefined ? book.viewsCount : (book.views !== undefined ? book.views : 0)}</span></div>
-                                        <div>No of Pages : <span className="text-white font-semibold">{book.pages || 0}</span></div>
+                                        <div>No of Pages : <span className="text-white font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span></div>
                                         <div>Added to Shelf : <span className="text-white font-semibold">250k</span></div>
                                         <div className="flex items-center gap-[0.2vw]">
                                           Ratings :

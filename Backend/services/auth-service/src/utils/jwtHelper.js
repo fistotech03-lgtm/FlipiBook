@@ -100,10 +100,23 @@ const verifyToken = (token) => {
   }
 };
 
+/**
+ * Decode token payload without signature verification (useful for logout/audit tracking on expired tokens)
+ */
+const decodeToken = (token) => {
+  if (!token) return null;
+  try {
+    return jwt.decode(token);
+  } catch (err) {
+    return null;
+  }
+};
+
 module.exports = {
   generateToken,
   generateRefreshToken,
   verifyToken,
+  decodeToken,
   publicKey,
   privateKey
 };

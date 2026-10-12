@@ -51,15 +51,25 @@ const getClientIp = (req) => {
  */
 const isSecureConnection = (req) => {
   // 1. If connection is explicitly HTTPS (via TLS terminating reverse proxy like Nginx, Dokploy/Traefik, Cloudflare)
-  if (req?.headers?.["x-forwarded-proto"] === "https" || req?.secure) {
+  if (
+    req?.secure ||
+    req?.headers?.["x-forwarded-proto"]?.includes("https") ||
+    req?.headers?.origin?.startsWith("https:") ||
+    req?.headers?.referer?.startsWith("https:")
+  ) {
     return true;
   }
-  // 2. If forwarded host is a live domain (not localhost / loopback)
+  // 2. If configured CLIENT_URL in docker-compose is HTTPS (testing / production environments)
+  if (process.env.CLIENT_URL?.startsWith("https:")) {
+    return true;
+  }
+  // 3. If forwarded host is a live external domain (not localhost, not 127.0.0.1, not docker internal 'backend')
   const forwardedHost = req?.headers?.["x-forwarded-host"] || "";
   if (
     forwardedHost &&
     !forwardedHost.includes("localhost") &&
-    !forwardedHost.includes("127.0.0.1")
+    !forwardedHost.includes("127.0.0.1") &&
+    !forwardedHost.includes("backend")
   ) {
     return true;
   }

@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const LoginLog = require("../models/LoginLog");
 const SignupOtp = require("../models/SignupOtp");
@@ -49,13 +50,20 @@ const getClientIp = (req) => {
  * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
-  if (
-    req?.headers?.host?.includes("localhost:") ||
-    req?.headers?.["x-forwarded-host"]?.includes("localhost:")
-  ) {
-    return false;
+  // 1. If connection is explicitly HTTPS (via TLS terminating reverse proxy like Nginx, Dokploy/Traefik, Cloudflare)
+  if (req?.headers?.["x-forwarded-proto"] === "https" || req?.secure) {
+    return true;
   }
-  return true;
+  // 2. If forwarded host is a live domain (not localhost / loopback)
+  const forwardedHost = req?.headers?.["x-forwarded-host"] || "";
+  if (
+    forwardedHost &&
+    !forwardedHost.includes("localhost") &&
+    !forwardedHost.includes("127.0.0.1")
+  ) {
+    return true;
+  }
+  return false;
 };
 
 /**
@@ -857,12 +865,14 @@ const verifySession = async (req, res) => {
 
     let targetUserId = null;
     let activeToken = accessToken;
+    let tokenEmail = null;
 
     // 1. Try verifying the Access Token (1 hour)
     if (accessToken) {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
         targetUserId = decodedAccess.id;
+        tokenEmail = decodedAccess.emailId || null;
         activeToken = accessToken;
       }
     }
@@ -871,6 +881,7 @@ const verifySession = async (req, res) => {
     if (!targetUserId && refreshToken) {
       const decodedRefresh = verifyToken(refreshToken);
       if (decodedRefresh && decodedRefresh.id) {
+        tokenEmail = decodedRefresh.emailId || null;
         // Verify session is active in LoginLog
         if (decodedRefresh.sessionId) {
           const session = await LoginLog.findById(decodedRefresh.sessionId);
@@ -911,7 +922,7 @@ const verifySession = async (req, res) => {
     }
 
     // 4. If tokens were provided but could not be validated or refreshed, clear and return unauthenticated
-    if (!targetUserId) {
+    if (!targetUserId && !tokenEmail) {
       clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
@@ -921,12 +932,33 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 5. Retrieve user details
-    const user = await User.findById(targetUserId).select(
-      "name picture emailId",
-    );
+    // 5. Retrieve user details by ID
+    let user = null;
+    if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
+      user = await User.findById(targetUserId).select(
+        "name picture emailId userID",
+      );
+    }
+
+    // Fallback: If not found by _id, check if user exists by verified email in token
+    if (!user && tokenEmail) {
+      user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
+        "name picture emailId userID",
+      );
+      if (user) {
+        // Auto-repair cookie session with current active user _id
+        const repairedAccessToken = generateToken({
+          userId: user.userID,
+          emailId: user.emailId,
+          id: user._id,
+        });
+        setAuthCookies(res, repairedAccessToken, refreshToken, req);
+        activeToken = repairedAccessToken;
+      }
+    }
+
     if (!user) {
-      console.warn("[Verify Session] User not found for id:", targetUserId);
+      console.warn("[Verify Session] User not found for id/email:", targetUserId || tokenEmail);
       clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,

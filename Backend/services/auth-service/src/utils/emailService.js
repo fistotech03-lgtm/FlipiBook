@@ -1,11 +1,18 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_APP_PASSWORD;
+
+  if (!emailUser || !emailPass) {
+    console.warn('[Email Service] Warning: EMAIL_USER or EMAIL_APP_PASSWORD not set in environment.');
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER || 'fistotech04@gmail.com',
-      pass: process.env.EMAIL_APP_PASSWORD || 'ghrn izix para kuyg'
+      user: emailUser,
+      pass: emailPass
     }
   });
 };
@@ -17,10 +24,12 @@ const createTransporter = () => {
  */
 const sendOtpEmail = async (toEmail, otp) => {
   const transporter = createTransporter();
+  const senderEmail = process.env.EMAIL_USER || 'no-reply@flipibook.com';
 
   const mailOptions = {
-    from: `"Flipbook Security" <${process.env.EMAIL_USER || 'fistotech04@gmail.com'}>`,
+    from: `"Flipbook Security" <${senderEmail}>`,
     to: toEmail,
+
     subject: `🔐 Your Flipbook Password Reset Code: ${otp}`,
     html: `
       <!DOCTYPE html>
@@ -76,8 +85,10 @@ const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
 
   const greeting = userName ? `Hello ${userName},` : 'Hello,';
 
+  const senderEmail = process.env.EMAIL_USER || 'no-reply@flipibook.com';
+
   const mailOptions = {
-    from: `"Flipbook Security" <${process.env.EMAIL_USER || 'fistotech04@gmail.com'}>`,
+    from: `"Flipbook Security" <${senderEmail}>`,
     to: toEmail,
     subject: `🎉 Your Flipbook Account Verification Code: ${otp}`,
     html: `

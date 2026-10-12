@@ -45,6 +45,57 @@ const getClientIp = (req) => {
 };
 
 /**
+ * Verify Google token directly against Google's OAuth2 endpoints.
+ * Supports Google OAuth2 access_token and Google ID token (credential).
+ * Ensures email is cryptographically verified by Google before granting access.
+ */
+const verifyGoogleIdentity = async ({ accessToken, credential }) => {
+  try {
+    // 1. Verify via Google OAuth2 access token
+    if (accessToken) {
+      const gRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (gRes.ok) {
+        const data = await gRes.json();
+        if (data?.email && (data.email_verified === true || data.email_verified === "true")) {
+          return {
+            email: data.email,
+            name: data.name || "",
+            picture: data.picture || "",
+            sub: data.sub,
+          };
+        }
+      }
+    }
+
+    // 2. Verify via Google ID token (credential)
+    if (credential) {
+      const gRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+      );
+      if (gRes.ok) {
+        const data = await gRes.json();
+        if (data?.email && (data.email_verified === true || data.email_verified === "true")) {
+          return {
+            email: data.email,
+            name: data.name || "",
+            picture: data.picture || "",
+            sub: data.sub,
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error("[Google Verification Error]:", err.message);
+    return null;
+  }
+};
+
+
+/**
  * Helper to determine if current connection is HTTPS / Secure
  * If the connection is plain HTTP (e.g. preview sslip.io or localhost), cookies must NOT have secure=true
  * otherwise modern browsers will reject and drop the cookie.
@@ -269,7 +320,7 @@ const sendSignupOtp = async (req, res) => {
         otp: hashOtp(otp),
         expiresAt,
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
     );
 
     // Send signup verification email (plaintext to recipient)
@@ -544,15 +595,30 @@ const login = async (req, res) => {
  */
 const googleLogin = async (req, res) => {
   try {
-    const { email, name, picture, mode } = req.body;
+    const { accessToken, credential, mode } = req.body;
 
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Google account email is required" });
+    if (!accessToken && !credential) {
+      return res.status(400).json({
+        success: false,
+        message: "Google verification token is required",
+      });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    // Verify token directly with Google's servers
+    const googleProfile = await verifyGoogleIdentity({ accessToken, credential });
+
+    if (!googleProfile || !googleProfile.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired Google authentication token. Please sign in again.",
+      });
+    }
+
+    // Strictly trust Google's verified email
+    const cleanEmail = googleProfile.email.trim().toLowerCase();
+    const verifiedName = googleProfile.name || req.body.name || "";
+    const verifiedPicture = googleProfile.picture || req.body.picture || "";
+
     let user = await User.findOne({ emailId: cleanEmail });
 
     // From the Sign Up tab: never log into an existing account
@@ -575,21 +641,21 @@ const googleLogin = async (req, res) => {
 
     if (!user) {
       // Auto-register google user with a secure random password hash
-      const randomPassword = Math.random().toString(36).slice(-12) + "!FliPi";
+      const randomPassword = crypto.randomBytes(32).toString("hex") + "!FliPi";
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(randomPassword, salt);
 
       user = new User({
-        name: name || "",
+        name: verifiedName,
         emailId: cleanEmail,
         password: hashedPassword,
-        picture: picture || "",
+        picture: verifiedPicture,
       });
 
       await user.save();
-    } else if (picture && (!user.picture || user.picture !== picture)) {
-      user.picture = picture;
-      if (name && !user.name) user.name = name;
+    } else if (verifiedPicture && (!user.picture || user.picture !== verifiedPicture)) {
+      user.picture = verifiedPicture;
+      if (verifiedName && !user.name) user.name = verifiedName;
       await user.save();
     }
 
@@ -826,12 +892,21 @@ const logout = async (req, res) => {
  */
 const getLoginLogs = async (req, res) => {
   try {
-    const { userId, limit = 50 } = req.query;
-    const query = userId ? { userId } : {};
+    const { limit = 50 } = req.query;
+
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    // Strictly restrict logs to the currently authenticated user
+    const query = { userId: req.user.userId };
 
     const logs = await LoginLog.find(query)
       .sort({ loginTime: -1 })
-      .limit(Number(limit))
+      .limit(Math.min(Math.max(1, Number(limit) || 50), 100))
       .select("-__v");
 
     return res.status(200).json({

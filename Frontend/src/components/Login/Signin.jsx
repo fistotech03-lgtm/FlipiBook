@@ -51,6 +51,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
           const res = await axios.post(
             `${backendUrl}/api/auth/google-login`,
             {
+              accessToken: tokenResponse.access_token,
               isAccessToken: true,
               email: userInfo.data.email,
               name: userInfo.data.name,

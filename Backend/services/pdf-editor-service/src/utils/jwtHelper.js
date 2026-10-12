@@ -30,8 +30,10 @@ const loadPublicKey = () => {
 
   if (!pub) {
     const possiblePaths = [
+      path.resolve(__dirname, '../../../auth-service/certs/public.pem'),
       path.resolve(__dirname, '../../auth-service/certs/public.pem'),
       path.resolve(__dirname, '../certs/public.pem'),
+      path.resolve(process.cwd(), 'Backend/services/auth-service/certs/public.pem'),
       path.resolve(process.cwd(), 'services/auth-service/certs/public.pem'),
       path.resolve(process.cwd(), 'certs/public.pem')
     ];

@@ -29,6 +29,8 @@ storage/
 */storage/
 uploads/
 */uploads/
+temp_uploads/
+*/temp_uploads/
 
 # Logs
 logs/

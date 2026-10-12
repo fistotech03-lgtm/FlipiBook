@@ -522,6 +522,7 @@ export const inspectDocumentViaBackend = async (file, backendUrl = null) => {
     const response = await fetch(`${resolvedBackendUrl}/api/flipbook/inspect-document`, {
       method: 'POST',
       body: formData,
+      credentials: 'include',
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -803,7 +804,8 @@ export const convertOfficeDocumentToPdf = async (file, backendUrl = null) => {
 
   const response = await fetch(`${resolvedBackendUrl}/api/flipbook/convert-office-to-pdf`, {
     method: 'POST',
-    body: formData
+    body: formData,
+    credentials: 'include'
   });
 
   if (!response.ok) {
@@ -849,7 +851,8 @@ export const convertPdfWithInkscape = async (file, maxPages = Infinity, backendU
 
     const response = await fetch(`${resolvedBackendUrl}/api/flipbook/convert-pdf-inkscape`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {

@@ -99,6 +99,52 @@ app.use(
   })
 );
 
+// Proxy PDF / Office conversion & inspection routes to PDF Editor Service (port 5004)
+const isPdfConversionRoute = (pathname) => {
+  return /^\/api\/flipbook\/(convert-pdf-inkscape|convert-office-to-pdf|inspect-document|export-vector-pdf|inkscape-status|office-status|check-inkscape|check-libreoffice)(\/|$|\?)/i.test(pathname);
+};
+
+const pdfConversionProxy = createProxyMiddleware({
+  target: PDF_EDITOR_SERVICE_URL,
+  changeOrigin: true,
+  xfwd: true,
+  timeout: 300000,
+  proxyTimeout: 300000,
+  cookieDomainRewrite: '',
+  cookiePathRewrite: '/',
+  on: {
+    proxyReq: (proxyReq, req) => {
+      const clientIp =
+        req.headers['cf-connecting-ip'] ||
+        req.headers['x-real-ip'] ||
+        (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+        req.socket?.remoteAddress ||
+        req.ip;
+
+      if (clientIp) {
+        proxyReq.setHeader('x-client-ip', clientIp);
+        proxyReq.setHeader('x-real-ip', clientIp);
+      }
+    },
+    error: (err, req, res) => {
+      console.error(`[API Gateway] Proxy error to pdf-editor-service for ${req.originalUrl}:`, err.message);
+      if (!res.headersSent) {
+        res.status(502).json({
+          success: false,
+          message: 'PDF Editor Service unavailable. Please ensure pdf-editor-service is running.'
+        });
+      }
+    }
+  }
+});
+
+app.use((req, res, next) => {
+  if (isPdfConversionRoute(req.path) || isPdfConversionRoute(req.originalUrl)) {
+    return pdfConversionProxy(req, res, next);
+  }
+  next();
+});
+
 // Proxy /api/flipbook requests to MyFlipibook Service
 app.use(
   '/api/flipbook',

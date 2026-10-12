@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
-const { deleteBookStorage, getStorageRoot } = require('../utils/storageHelper');
+const { deleteBookStorage, getStorageRoot, initFlipbookStorage } = require('../utils/storageHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 
 // In-memory cache for chunked uploads
@@ -552,16 +552,21 @@ exports.saveBook = async (req, res) => {
       });
     }
 
-    // Persist pages to local disk storage
+    // Persist pages and full workspace structure to local disk storage
     try {
       const storageRoot = getStorageRoot();
-      const userFolder = objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default');
-      const bookDir = path.join(storageRoot, 'flipbooks', userFolder, targetFolder[0] || 'My_Flipbooks', safeName);
-      const pagesDir = path.join(bookDir, 'pages');
-      if (!fs.existsSync(pagesDir)) {
-        fs.mkdirSync(pagesDir, { recursive: true });
-      }
+      const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
+      const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
+
+      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, safeName);
+      initFlipbookStorage(wsBookDir);
+
+      const pagesDir = path.join(wsBookDir, 'pages');
       safePages.forEach((sp) => {
+        const htmlContent = sp.html || sp.content || '';
+        if (htmlContent) {
+          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+        }
         if (sp.content) {
           fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
         }
@@ -638,16 +643,21 @@ exports.savePagesBatch = async (req, res) => {
     book.lastUpdated = new Date();
     await book.save();
 
-    // Persist pages to disk
+    // Persist pages and workspace structure to disk
     try {
       const storageRoot = getStorageRoot();
-      const userFolder = objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default');
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      const pagesDir = path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages');
-      if (!fs.existsSync(pagesDir)) {
-        fs.mkdirSync(pagesDir, { recursive: true });
-      }
+      const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
+
+      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
+      initFlipbookStorage(wsBookDir);
+
+      const pagesDir = path.join(wsBookDir, 'pages');
       book.pages.forEach((sp) => {
+        const htmlContent = sp.html || sp.content || '';
+        if (htmlContent) {
+          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+        }
         if (sp.content) {
           fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
         }
@@ -706,17 +716,43 @@ exports.getBook = async (req, res) => {
 
     // Disk fallback if MongoDB pages lack content
     const storageRoot = getStorageRoot();
-    const userFolder = book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : '');
+    const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
     const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-    const pagesDir = (userFolder && folder && book.flipbookName)
-      ? path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages')
-      : null;
+
+    // Check candidate directories in priority order
+    let pagesDir = null;
+    let bookDir = null;
+    if (userFolder && folder && book.flipbookName) {
+      const candidateDirs = [
+        path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName),
+        path.join(storageRoot, userFolder, folder, book.flipbookName),
+        path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName)
+      ];
+      for (const d of candidateDirs) {
+        if (fs.existsSync(path.join(d, 'pages')) || fs.existsSync(d)) {
+          bookDir = d;
+          pagesDir = path.join(d, 'pages');
+          break;
+        }
+      }
+    }
 
     const populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = pageObj.content || pageObj.html || '';
 
+      if (!pageContent && bookDir) {
+        // Try Page X.html first
+        const htmlPath = path.join(bookDir, `Page ${pageObj.pageNumber}.html`);
+        if (fs.existsSync(htmlPath)) {
+          try {
+            pageContent = fs.readFileSync(htmlPath, 'utf8');
+          } catch (e) {}
+        }
+      }
+
       if (!pageContent && pagesDir) {
+        // Try pages/X.svg
         const svgPath = path.join(pagesDir, `${pageObj.pageNumber}.svg`);
         if (fs.existsSync(svgPath)) {
           try {
@@ -814,14 +850,21 @@ exports.previewBook = async (req, res) => {
 
     if (!firstPageHtml && firstPage) {
       const storageRoot = getStorageRoot();
-      const userFolder = book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : '');
+      const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
       if (userFolder && folder && book.flipbookName) {
-        const svgPath = path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`);
-        if (fs.existsSync(svgPath)) {
-          try {
-            firstPageHtml = fs.readFileSync(svgPath, 'utf8');
-          } catch (e) {}
+        const candidateFiles = [
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, `Page ${firstPage.pageNumber}.html`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`),
+          path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`)
+        ];
+        for (const filePath of candidateFiles) {
+          if (fs.existsSync(filePath)) {
+            try {
+              firstPageHtml = fs.readFileSync(filePath, 'utf8');
+              break;
+            } catch (e) {}
+          }
         }
       }
     }

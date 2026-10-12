@@ -8,6 +8,7 @@ import { saveAs } from 'file-saver';
 import html2canvas from 'html2canvas';
 import domtoimage from 'dom-to-image-more';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
+import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
 
 
 const SCRIBBLE_ICONS = {

@@ -60,7 +60,7 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found on page-editor-service' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Page Editor Service] Running on port ${PORT}`);
 });
 

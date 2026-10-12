@@ -10,10 +10,10 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.GATEWAY_PORT || process.env.PORT || 8000;
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
-const MYFLIPIBOOK_SERVICE_URL = process.env.MYFLIPIBOOK_SERVICE_URL || 'http://localhost:5002';
-const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://localhost:5003';
-const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://localhost:5004';
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001';
+const MYFLIPIBOOK_SERVICE_URL = process.env.MYFLIPIBOOK_SERVICE_URL || 'http://127.0.0.1:5002';
+const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://127.0.0.1:5003';
+const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127.0.0.1:5004';
 
 // Global Middleware
 const allowedOrigins = [
@@ -99,6 +99,42 @@ app.use(
   })
 );
 
+// Proxy /api/flipbook requests to MyFlipibook Service
+app.use(
+  '/api/flipbook',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/flipbook`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for flipbook:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'MyFlipibook Service unavailable. Please ensure myflipibook service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 // Proxy /api/myflipibook requests to MyFlipibook Service
 app.use(
   '/api/myflipibook',
@@ -123,7 +159,7 @@ app.use(
         }
       },
       error: (err, req, res) => {
-        console.error('[API Gateway] Proxy error to myflipibook-service:', err.message);
+        console.error('[API Gateway] Proxy error to myflipibook-service for myflipibook:', err.message);
         if (!res.headersSent) {
           res.status(502).json({
             success: false,
@@ -134,6 +170,43 @@ app.use(
     }
   })
 );
+
+// Proxy /api/usersetting requests to MyFlipibook Service
+app.use(
+  '/api/usersetting',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/usersetting`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for usersetting:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'MyFlipibook Service unavailable. Please ensure myflipibook service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 
 // Proxy /api/page-editor requests to Page Editor Service
 app.use(
@@ -207,10 +280,12 @@ app.use(
   })
 );
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/flipbook -> ${MYFLIPIBOOK_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/myflipibook -> ${MYFLIPIBOOK_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/usersetting -> ${MYFLIPIBOOK_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/page-editor -> ${PAGE_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/pdf-editor -> ${PDF_EDITOR_SERVICE_URL}`);
 });

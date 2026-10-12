@@ -7,6 +7,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const myflipibookRoutes = require('./routes/myflipibookRoutes');
+const userSettingRoutes = require('./routes/userSettingRoutes');
 
 const app = express();
 app.set('trust proxy', true);
@@ -44,23 +45,28 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'myflipibook-service' });
 });
 
-// Service routes
+// Service routes (Both /api/myflipibook and /api/flipbook, plus root fallback for full compatibility)
 app.use('/api/myflipibook', myflipibookRoutes);
+app.use('/api/flipbook', myflipibookRoutes);
+app.use('/api/usersetting', userSettingRoutes);
+app.use('/usersetting', userSettingRoutes);
+app.use('/', userSettingRoutes);
+app.use('/', myflipibookRoutes);
 
 // Fallback 404
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found on myflipibook-service' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[MyFlipibook Service] Running on port ${PORT}`);
 });
 

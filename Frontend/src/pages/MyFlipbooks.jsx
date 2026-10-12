@@ -28,6 +28,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import flipbookApi from '../api/flipbookApi';
 import useUserStorage from '../hooks/useUserStorage';
+import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
 
 
 const sortCategories = [
@@ -212,10 +213,16 @@ export default function MyFlipbooks() {
             const rawBooks = booksRes.data.books || [];
             const sanitizedBooks = rawBooks.map(b => {
                 const f = b.folder || b.folderName;
-                if (!f || f === 'All Flipbook' || f === 'All Flipbooks') {
-                    return { ...b, folder: 'My_Flipbooks' };
-                }
-                return b;
+                const pageCount = Array.isArray(b.pages)
+                    ? b.pages.length
+                    : (typeof b.pages === 'number' ? b.pages : (parseInt(b.pagesCount, 10) || 1));
+                return {
+                    ...b,
+                    folder: (!f || f === 'All Flipbook' || f === 'All Flipbooks') ? 'My_Flipbooks' : f,
+                    pages: pageCount,
+                    pagesCount: pageCount,
+                    pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || [])
+                };
             });
             setBooks(sanitizedBooks);
         } catch (error) {
@@ -1652,7 +1659,7 @@ export default function MyFlipbooks() {
                                 if (physicalBook) actualFolder = physicalBook.folder;
                             }
 
-                            const iframeBaseUrl = getSupabaseBaseUrl(
+                            const iframeBaseUrl = getAssetBaseUrl(
                                 emailId?.replace(/[@.]/g, "_"),
                                 actualFolder,
                                 book.realName

@@ -265,7 +265,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook }) => {
                 {/* Stats */}
                 <div className="flex items-center gap-2 justify-start text-xs text-gray-700 font-medium mt-4 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                        <span className="text-black font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span>
                         <span className="font-normal text-gray-500">Pages</span>
                     </div>
                     <span className="text-gray-300">|</span>
@@ -1354,7 +1354,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
                                                                                                         {/* Stats */}
                                                                                                         <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
                                                                                                             <div className="flex items-center gap-1">
-                                                                                                                <span className="text-black font-semibold">{book.pages || 0}</span>
+                                                                                                                <span className="text-black font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span>
                                                                                                                 <span className="font-normal text-gray-500">Pages</span>
                                                                                                             </div>
                                                                                                             <span className="text-gray-300">|</span>

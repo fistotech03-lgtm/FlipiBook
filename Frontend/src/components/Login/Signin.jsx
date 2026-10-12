@@ -39,24 +39,10 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
         setIsLoading(true);
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
-          const userInfo = await axios.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            {
-              headers: {
-                Authorization: `Bearer ${tokenResponse.access_token}`,
-              },
-            },
-          );
-
           const res = await axios.post(
             `${backendUrl}/api/auth/google-login`,
             {
               accessToken: tokenResponse.access_token,
-              isAccessToken: true,
-              email: userInfo.data.email,
-              name: userInfo.data.name,
-              picture: userInfo.data.picture,
-              sub: userInfo.data.sub,
               mode: 'signin',
             },
             { withCredentials: true },
@@ -66,7 +52,7 @@ export default function Signin({ onSwitchToSignup, onSwitchToForgotPassword }) {
             if (res.data.token) {
               setSessionToken(res.data.token);
             }
-            setUser(res.data.user || { name: userInfo.data.name, picture: userInfo.data.picture });
+            setUser(res.data.user);
             toast.success("Login successful with Google!");
             closeAuthModal?.();
             if (authRedirectPath) {

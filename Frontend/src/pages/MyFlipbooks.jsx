@@ -686,7 +686,6 @@ export default function MyFlipbooks() {
     });
 
     const handleDeleteFolderClick = (folder) => {
-        setActiveMenuId(null);
         if (folder.name?.toLowerCase() === 'my_flipbooks') {
             showAlert('Cannot Delete', 'My_Flipbooks is the default folder and cannot be deleted.');
             return;

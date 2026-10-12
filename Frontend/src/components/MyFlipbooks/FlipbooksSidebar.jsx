@@ -158,6 +158,7 @@ export default function FlipbooksSidebar({
     });
 
     const handleDeleteFolderClick = (folder) => {
+        setActiveMenuId(null);
         if (onDeleteFolder) {
             onDeleteFolder(folder);
         } else if (rest.handleDeleteFolderClick) {

@@ -86,238 +86,144 @@ const MyShelf = () => {
   const [draftShelfStyle, setDraftShelfStyle] = useState(shelfOptions[0].id);
 
   const [booksData, setBooksData] = useState([]);
-  const [profileData, setProfileData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
   const currentUserEmail = (user?.emailId || user?.email || '').toLowerCase();
 
+  const generateDefaultBooks = () => {
+    const titles = [
+      'Annual Company Report 2026',
+      'Product Catalog & Pricing',
+      'Summer Fashion Lookbook',
+      'Modern Architecture Portfolio',
+      'Gourmet Culinary Recipes',
+      'Tech Horizons Magazine',
+      'Digital Art & Photography',
+      'Travel Guide: Scandinavia',
+      'Brand Identity Guidelines',
+      'Financial Outlook Quarterly',
+      'Creative Writing Anthology',
+      'Interior Decor Inspiration',
+      'Wellness & Lifestyle Journal',
+      'Automotive Innovation',
+      'Startup Pitch Deck',
+      'Urban Landscape Stories',
+      'Coffee Roaster Chronicles',
+      'Eco-Friendly Living Guide',
+      'Minimalist Home Design'
+    ];
+    const categories = [
+      'Product Catalogue', 'Annual Report', 'Fashion', 'Architecture', 'Cooking', 'Technology', 'Photography', 'Travel'
+    ];
+
+    return initialBooks.map((coverImg, idx) => {
+      const folderName = idx < 12 ? 'My Flipbooks' : idx < 16 ? 'Design Showcase' : 'Product Catalogues';
+      const createdDate = new Date(Date.now() - (idx * 2 + 1) * 86400000).toISOString();
+      const updatedDate = new Date(Date.now() - idx * 43200000).toISOString();
+      const title = titles[idx] || `Flipbook ${idx + 1}`;
+      const v_id = `shelf_book_${idx + 1}`;
+
+      return {
+        rawBook: {
+          v_id,
+          title,
+          folder: folderName,
+          pages: 8 + ((idx * 2) % 24),
+          createdAt: createdDate,
+          updatedAt: updatedDate,
+          isPublished: idx % 2 === 0,
+          userEmail: currentUserEmail || 'creator@flipibook.com'
+        },
+        v_id,
+        shareId: v_id,
+        access: idx % 3 === 0 ? 'private' : 'public',
+        title,
+        cover: coverImg,
+        pages: 8 + ((idx * 2) % 24),
+        views: `${(1.2 + (idx * 0.3)).toFixed(1)}k`,
+        rating: (4.5 + ((idx % 5) * 0.1)).toFixed(1),
+        description: 'Bring your content to life with a real, interactive experience',
+        category: categories[idx % categories.length],
+        authorName: user?.name || (currentUserEmail ? currentUserEmail.split('@')[0] : 'Creator'),
+        authorPicture: user?.picture || null,
+        authorBgColor: '#4c5add',
+        location: 'Coimbatore',
+        createdAt: createdDate,
+        updatedAt: updatedDate
+      };
+    });
+  };
+
+  const saveFoldersToStorage = (updatedFolders) => {
+    try {
+      localStorage.setItem('flipibook_myshelf_folders', JSON.stringify(updatedFolders));
+    } catch (e) {
+      console.warn('Failed to save to localStorage:', e);
+    }
+  };
+
+  // Initialize folders and books in frontend
   useEffect(() => {
-    const fetchMyBooks = async () => {
-      setIsLoading(true);
-      try {
-        if (!currentUserEmail) {
+    try {
+      const savedData = localStorage.getItem('flipibook_myshelf_folders');
+      if (savedData) {
+        const parsedFolders = JSON.parse(savedData);
+        if (Array.isArray(parsedFolders) && parsedFolders.length > 0) {
+          const restoredFolders = parsedFolders.map(folder => ({
+            ...folder,
+            books: (folder.books || []).map((b, bIdx) => ({
+              ...b,
+              cover: b.cover || initialBooks[bIdx % initialBooks.length]
+            }))
+          }));
+          setFolders(restoredFolders);
+          const allBooks = restoredFolders.flatMap(f => f.books || []);
+          setBooksData(allBooks);
           setIsLoading(false);
           return;
         }
-        const timestamp = Date.now();
-        const [creatorRes, listRes, shelfRes] = await Promise.all([
-          axios.get(`${backendUrl}/api/explore/creator`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} })),
-          axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} })),
-          axios.get(`${backendUrl}/api/profile/my-shelf-books`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} }))
-        ]);
-
-        if (creatorRes.data?.profile) {
-          setProfileData(creatorRes.data.profile);
-        }
-
-        const rawBooks = listRes.data?.books || [];
-        const shelfBooks = shelfRes.data?.books || [];
-
-        // Filter out 'Recent Book' virtual tags so we only show actual folder contents, or filter by specific folder
-        const actualCreatedBooks = rawBooks.filter(b => b.folder !== 'Recent Book');
-
-        // Combine created books and shelf books, avoiding duplicates if a user somehow added their own book to the shelf
-        const combinedBooksMap = new Map();
-        actualCreatedBooks.forEach(b => {
-          combinedBooksMap.set(b.v_id, b);
-        });
-        shelfBooks.forEach(b => {
-          if (!combinedBooksMap.has(b.v_id)) {
-            combinedBooksMap.set(b.v_id, b);
-          } else {
-            // Update folder if the shelf explicitly categorized it differently
-            const existing = combinedBooksMap.get(b.v_id);
-            existing.folder = b.folder;
-          }
-        });
-
-        const actualBooks = Array.from(combinedBooksMap.values());
-        const fetchedProfile = creatorRes.data?.profile || profileData;
-
-        const formatted = actualBooks.map((b, idx) => {
-          const isMyBook = !b.isAddedToShelf || (b.userEmail && b.userEmail.toLowerCase() === currentUserEmail);
-
-          let aName = b.authorName;
-          let aPic = b.authorPicture;
-          let aBg = b.authorBgColor;
-          let aLoc = b.city || b.location;
-
-          if (isMyBook && fetchedProfile) {
-            aName = aName || fetchedProfile.name;
-            aPic = aPic || (fetchedProfile.picture !== 'color_only' ? fetchedProfile.picture : null);
-            aBg = aBg || fetchedProfile.avatarBgColor;
-            aLoc = aLoc || fetchedProfile.city || fetchedProfile.state;
-          }
-
-          aName = aName || (b.userEmail ? b.userEmail.split('@')[0] : 'Creator');
-          aBg = aBg || '#4c5add';
-          aLoc = aLoc || 'Coimbatore';
-
-          return {
-            rawBook: b,
-            v_id: b.v_id,
-            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || b.v_id,
-            access: b.Customized_Settings?.Visibility?.access || b.Visibility?.access || 'public',
-            title: b.title || b.flipbookName || `Flipbook ${idx + 1}`,
-            cover: b.image || covers[idx % covers.length],
-            pages: typeof b.pages === 'number' ? b.pages : (b.pages?.length || 0),
-            views: b.views || '1.2k',
-            rating: b.rating || 4.5,
-            description: b.Customized_Settings?.FlipbookInfo?.quotes || b.quotes || 'â€œBring your content to life with a real, interactive experienceâ€',
-            category: b.Customized_Settings?.FlipbookInfo?.category || b.category || 'Product Catalogue',
-            authorName: aName,
-            authorPicture: aPic,
-            authorBgColor: aBg,
-            location: aLoc
-          };
-        });
-
-        setBooksData(formatted);
-
-        // Re-group books into folders
-        const folderMap = {};
-
-        // First, initialize folderMap with any existing folders from the profile
-        const actualMyShelf = shelfRes.data?.myShelf || (fetchedProfile && fetchedProfile.myShelf);
-        const folderDesignMap = {};
-        const bookToFolderMap = new Map();
-        
-        if (actualMyShelf && actualMyShelf.folders) {
-          actualMyShelf.folders.forEach(f => {
-            const fName = f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks');
-            if (!folderMap[fName]) folderMap[fName] = [];
-            folderDesignMap[fName] = f.shelf_design || 1;
-            
-            if (f.books && Array.isArray(f.books)) {
-              f.books.forEach(b => {
-                const v_id = typeof b === 'string' ? b : b.v_id;
-                if (v_id) bookToFolderMap.set(v_id, fName);
-              });
-            }
-          });
-        }
-
-        formatted.forEach(b => {
-          let folderName = bookToFolderMap.get(b.v_id) || b.rawBook.folder || 'My Flipbooks';
-          if (folderName === 'My_Flipbooks') {
-            folderName = 'My Flipbooks';
-          }
-          if (!folderMap[folderName]) folderMap[folderName] = [];
-          folderMap[folderName].push(b);
-        });
-
-        // Sort books based on their row and order from DB
-        if (actualMyShelf && actualMyShelf.folders) {
-          const globalDbOrder = new Map();
-          actualMyShelf.folders.forEach(f => {
-            const fName = f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks');
-            if (f.books && Array.isArray(f.books)) {
-              f.books.forEach((b) => {
-                const v_id = typeof b === 'string' ? b : b.v_id;
-                if (v_id) {
-                  globalDbOrder.set(`${fName}_${v_id}`, { row: b.row || 0, order: b.order || 0 });
-                }
-              });
-            }
-          });
-
-          // Apply sorting based on folder mapping
-          Object.keys(folderMap).forEach(fName => {
-            folderMap[fName].sort((a, b) => {
-              const aOrder = globalDbOrder.get(`${fName}_${a.v_id}`);
-              const bOrder = globalDbOrder.get(`${fName}_${b.v_id}`);
-              if (aOrder && bOrder) {
-                if (aOrder.row !== bOrder.row) return aOrder.row - bOrder.row;
-                return aOrder.order - bOrder.order;
-              }
-              if (aOrder) return -1;
-              if (bOrder) return 1;
-              return 0; // Keep existing order if both missing
-            });
-          });
-        }
-
-        const newFolders = Object.keys(folderMap).map(folderName => ({
-          name: folderName,
-          books: folderMap[folderName],
-          shelf_design: folderDesignMap[folderName] || 1
-        }));
-
-        // Ensure 'My Flipbooks' always exists
-        if (!newFolders.some(f => f.name === 'My Flipbooks')) {
-          newFolders.unshift({ name: 'My Flipbooks', books: [], shelf_design: folderDesignMap['My Flipbooks'] || 1 });
-        }
-
-        setFolders(newFolders);
-
-        // The active shelf style will be synced by the useEffect depending on selectedFolder
-
-        // Auto-sync migration for missing legacy books or removed books
-        if (actualMyShelf && actualMyShelf.folders) {
-          newFolders.forEach(folder => {
-            const dbFolder = actualMyShelf.folders.find(f => f.folderName === folder.name || (folder.name === 'My Flipbooks' && f.folderName === 'My_Flipbooks'));
-            const dbBookCount = dbFolder && dbFolder.books ? dbFolder.books.length : 0;
-            
-            if (folder.books.length !== dbBookCount) {
-              try {
-                const bookIds = folder.books.map(b => b.v_id);
-                axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-                  emailId: currentUserEmail,
-                  folderName: folder.name,
-                  bookIds
-                }).catch(e => console.warn("Auto-sync warning:", e));
-              } catch (e) { }
-            }
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching my shelf books:", err);
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    fetchMyBooks();
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchMyBooks();
-      }
-    };
-
-    const handlePageShow = (e) => {
-      if (e.persisted) {
-        fetchMyBooks();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pageshow', handlePageShow);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-    };
-  }, [backendUrl, currentUserEmail]);
-
-  const handleRemoveBook = async (v_id) => {
-    if (!v_id) return;
-    try {
-      await axios.post(`${backendUrl}/api/profile/remove-from-shelf`, {
-        emailId: currentUserEmail,
-        bookId: v_id
-      });
-
-      // Remove from local state
-      setBooksData(prev => prev.filter(b => b.v_id !== v_id));
-      setFolders(prev => prev.map(f => ({
-        ...f,
-        books: f.books.filter(b => b.v_id !== v_id)
-      })));
-    } catch (err) {
-      console.error("Failed to remove book:", err);
+    } catch (e) {
+      console.warn('Failed to load shelf from localStorage:', e);
     }
+
+    const defaultBooks = generateDefaultBooks();
+    setBooksData(defaultBooks);
+
+    const initialFolders = [
+      {
+        name: 'My Flipbooks',
+        shelf_design: 1,
+        books: defaultBooks.filter(b => b.rawBook.folder === 'My Flipbooks')
+      },
+      {
+        name: 'Design Showcase',
+        shelf_design: 2,
+        books: defaultBooks.filter(b => b.rawBook.folder === 'Design Showcase')
+      },
+      {
+        name: 'Product Catalogues',
+        shelf_design: 3,
+        books: defaultBooks.filter(b => b.rawBook.folder === 'Product Catalogues')
+      }
+    ];
+
+    setFolders(initialFolders);
+    setIsLoading(false);
+  }, [currentUserEmail]);
+
+  const handleRemoveBook = (v_id) => {
+    if (!v_id) return;
+    setBooksData(prev => prev.filter(b => b.v_id !== v_id));
+    setFolders(prev => {
+      const updated = prev.map(f => ({
+        ...f,
+        books: (f.books || []).filter(b => b.v_id !== v_id)
+      }));
+      saveFoldersToStorage(updated);
+      return updated;
+    });
   };
 
   // Sync active shelf style with the selected folder
@@ -347,31 +253,23 @@ const MyShelf = () => {
     setShowShelfModal(true);
   };
 
-  const applyShelfStyle = async () => {
+  const applyShelfStyle = () => {
     setActiveShelfStyle(draftShelfStyle);
     setShowShelfModal(false);
 
-    if (!currentUserEmail || !selectedFolder) return;
-    try {
-      const shelfDesignNum = parseInt(draftShelfStyle.replace('customize', '')) || 1;
-      await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
-        emailId: currentUserEmail,
-        folderName: selectedFolder,
-        shelf_design: shelfDesignNum
-      });
-
-      setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelf_design: shelfDesignNum } : f));
-    } catch (err) {
-      console.error("Failed to update shelf design:", err);
-    }
+    if (!selectedFolder) return;
+    const shelfDesignNum = parseInt(draftShelfStyle.replace('customize', '')) || 1;
+    setFolders(prev => {
+      const updated = prev.map(f => f.name === selectedFolder ? { ...f, shelf_design: shelfDesignNum } : f);
+      saveFoldersToStorage(updated);
+      return updated;
+    });
   };
 
-  const handleMoveSubmit = async () => {
+  const handleMoveSubmit = () => {
     if (targetMoveFolder === '__add_shelf__') {
       if (!newShelfName.trim()) return;
       const newFolderName = newShelfName.trim();
-      let updatedSourceBooks = [];
-      let newFolderBooks = [];
 
       setFolders(prev => {
         const sourceFolderIdx = prev.findIndex(f => f.name === selectedFolder);
@@ -379,33 +277,17 @@ const MyShelf = () => {
 
         const newSourceBooks = [...prev[sourceFolderIdx].books];
         const [movedBook] = newSourceBooks.splice(bookToMoveIndex, 1);
-
-        updatedSourceBooks = newSourceBooks;
-        newFolderBooks = [movedBook];
+        if (!movedBook) return prev;
+        movedBook.rawBook = { ...movedBook.rawBook, folder: newFolderName };
 
         const updatedFolders = prev.map((f, idx) =>
           idx === sourceFolderIdx ? { ...f, books: newSourceBooks } : f
         );
 
-        return [{ name: newFolderName, books: newFolderBooks }, ...updatedFolders];
+        const result = [{ name: newFolderName, shelf_design: 1, books: [movedBook] }, ...updatedFolders];
+        saveFoldersToStorage(result);
+        return result;
       });
-
-      if (currentUserEmail) {
-        try {
-          await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-            emailId: currentUserEmail,
-            folderName: newFolderName,
-            bookIds: newFolderBooks.map(b => b.v_id)
-          });
-          await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-            emailId: currentUserEmail,
-            folderName: selectedFolder,
-            bookIds: updatedSourceBooks.map(b => b.v_id)
-          });
-        } catch (e) {
-          console.error("Failed to sync move", e);
-        }
-      }
 
       setNewShelfName('');
       setShowMoveModal(false);
@@ -418,9 +300,6 @@ const MyShelf = () => {
       return;
     }
 
-    let updatedSourceBooks = [];
-    let updatedTargetBooks = [];
-
     setFolders(prev => {
       const sourceFolderIdx = prev.findIndex(f => f.name === selectedFolder);
       const targetFolderIdx = prev.findIndex(f => f.name === targetMoveFolder);
@@ -429,40 +308,20 @@ const MyShelf = () => {
       const newFolders = [...prev];
       const newSourceBooks = [...newFolders[sourceFolderIdx].books];
       const [movedBook] = newSourceBooks.splice(bookToMoveIndex, 1);
+      if (!movedBook) return prev;
+      movedBook.rawBook = { ...movedBook.rawBook, folder: targetMoveFolder };
 
-      const newTargetBooks = [...newFolders[targetFolderIdx].books];
-      newTargetBooks.push(movedBook);
-
-      updatedSourceBooks = newSourceBooks;
-      updatedTargetBooks = newTargetBooks;
+      const newTargetBooks = [...newFolders[targetFolderIdx].books, movedBook];
 
       newFolders[sourceFolderIdx] = { ...newFolders[sourceFolderIdx], books: newSourceBooks };
       newFolders[targetFolderIdx] = { ...newFolders[targetFolderIdx], books: newTargetBooks };
+      saveFoldersToStorage(newFolders);
       return newFolders;
     });
-
-    if (currentUserEmail) {
-      try {
-        await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-          emailId: currentUserEmail,
-          folderName: targetMoveFolder,
-          bookIds: updatedTargetBooks.map(b => b.v_id)
-        });
-        await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-          emailId: currentUserEmail,
-          folderName: selectedFolder,
-          bookIds: updatedSourceBooks.map(b => b.v_id)
-        });
-      } catch (e) {
-        console.error("Failed to sync move", e);
-      }
-    }
 
     setShowMoveModal(false);
     setBookToMoveIndex(null);
   };
-
-
 
   const handleDragStart = (e, index) => {
     setDraggedBookIndex(index);
@@ -474,7 +333,7 @@ const MyShelf = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = async (e, targetIndex) => {
+  const handleDrop = (e, targetIndex) => {
     e.preventDefault();
     if (draggedBookIndex === null || draggedBookIndex === targetIndex) return;
 
@@ -500,25 +359,18 @@ const MyShelf = () => {
 
     newBooks.splice(actualTargetIndex, 0, draggedBook);
 
-    setFolders(prev => prev.map(folder => {
-      if (folder.name === selectedFolder) {
-        return { ...folder, books: newBooks };
-      }
-      return folder;
-    }));
+    setFolders(prev => {
+      const updated = prev.map(folder => {
+        if (folder.name === selectedFolder) {
+          return { ...folder, books: newBooks };
+        }
+        return folder;
+      });
+      saveFoldersToStorage(updated);
+      return updated;
+    });
     
     setDraggedBookIndex(null);
-
-    try {
-      const bookIds = newBooks.map(b => b.v_id);
-      await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-        emailId: currentUserEmail,
-        folderName: selectedFolder,
-        bookIds
-      });
-    } catch (err) {
-      console.error("Failed to update shelf order:", err);
-    }
   };
 
   const handleDragEnd = () => {
@@ -991,14 +843,22 @@ const MyShelf = () => {
                                     style={{ width: activeAssets.bookWidth || '12%' }}
                                   >
                                     <div className="w-[100%] aspect-[2.5/3.5] relative rounded-[0.2vw] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
-                                      <LazyPreview
-                                        v_id={book.v_id}
-                                        emailId={book.rawBook?.userEmail || currentUserEmail}
-                                        backendUrl={backendUrl}
-                                        iframeBaseUrl={basePath}
-                                        title={book.title}
-                                        imageUrl={null}
-                                      />
+                                      {book.cover ? (
+                                        <img
+                                          src={book.cover}
+                                          alt={book.title}
+                                          className="w-full h-full object-cover rounded-[0.2vw] shadow-sm select-none pointer-events-none"
+                                        />
+                                      ) : (
+                                        <LazyPreview
+                                          v_id={book.v_id}
+                                          emailId={book.rawBook?.userEmail || currentUserEmail}
+                                          backendUrl={backendUrl}
+                                          iframeBaseUrl={basePath}
+                                          title={book.title}
+                                          imageUrl={null}
+                                        />
+                                      )}
                                     </div>
 
                                 {/* Hover Menu Pill */}
@@ -1459,7 +1319,11 @@ const MyShelf = () => {
               <button
                 onClick={() => {
                   if (newShelfName.trim()) {
-                    setFolders(prev => [{ name: newShelfName.trim(), books: [] }, ...prev]);
+                    setFolders(prev => {
+                      const updated = [{ name: newShelfName.trim(), shelf_design: 1, books: [] }, ...prev];
+                      saveFoldersToStorage(updated);
+                      return updated;
+                    });
                     setSelectedFolder(newShelfName.trim());
                     setNewShelfName('');
                     setShowAddShelfModal(false);
@@ -1559,7 +1423,10 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
-    if (!v_id || loaded) return;
+    if (!v_id || loaded || (typeof v_id === 'string' && v_id.startsWith('shelf_')) || imageUrl) {
+      setLoaded(true);
+      return;
+    }
     const el = containerRef.current;
     if (!el) return;
 

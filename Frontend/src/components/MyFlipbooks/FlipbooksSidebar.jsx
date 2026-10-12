@@ -294,6 +294,12 @@ export default function FlipbooksSidebar({
         : `${Math.round(effectiveTotal / (1024 * 1024))} MB`;
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
 
+    const isBooksActive = dashboardMode === 'books' && activeFolder !== 'Favorites' && activeFolder !== 'Trash';
+    const is3dActive = dashboardMode === '3d';
+    const isShelfActive = dashboardMode === 'shelf';
+    const isFavoritesActive = dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites');
+    const isTrashActive = dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash');
+
     return (
         <aside className="w-[18vw] bg-[#151c28] h-[93vh] fixed left-0 top-[7vh] border-r border-[#1f293d] flex flex-col p-[1.2vw] z-20 select-none text-white">
             {/* Top Navigation: Go to Home */}
@@ -318,15 +324,18 @@ export default function FlipbooksSidebar({
                             if (setDashboardMode) {
                                 setDashboardMode('books');
                             }
+                            if (activeFolder === 'Favorites' || activeFolder === 'Trash') {
+                                setActiveFolder('All Flipbook');
+                            }
                         }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            dashboardMode === 'books'
+                            isBooksActive
                                 ? 'bg-[#2c3749] text-white font-medium shadow-xs'
                                 : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <BookOpen size="1.15vw" className={`shrink-0 ${dashboardMode === 'books' ? 'text-white' : 'text-gray-300'}`} />
+                            <BookOpen size="1.15vw" className={`shrink-0 ${isBooksActive ? 'text-white' : 'text-gray-300'}`} />
                             <span>Create Flipibooks</span>
                         </div>
                     </div>
@@ -337,15 +346,18 @@ export default function FlipbooksSidebar({
                             if (setDashboardMode) {
                                 setDashboardMode('3d');
                             }
+                            if (activeFolder === 'Favorites' || activeFolder === 'Trash') {
+                                setActiveFolder('All Flipbook');
+                            }
                         }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            dashboardMode === '3d'
+                            is3dActive
                                 ? 'bg-[#2c3749] text-white font-medium shadow-xs'
                                 : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Box size="1.15vw" className={`shrink-0 ${dashboardMode === '3d' ? 'text-white' : 'text-gray-300'}`} />
+                            <Box size="1.15vw" className={`shrink-0 ${is3dActive ? 'text-white' : 'text-gray-300'}`} />
                             <span>Add 3D Models</span>
                         </div>
                     </div>
@@ -356,15 +368,18 @@ export default function FlipbooksSidebar({
                             if (setDashboardMode) {
                                 setDashboardMode('shelf');
                             }
+                            if (activeFolder === 'Favorites' || activeFolder === 'Trash') {
+                                setActiveFolder('All Flipbook');
+                            }
                         }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            dashboardMode === 'shelf'
+                            isShelfActive
                                 ? 'bg-[#2c3749] text-white font-medium shadow-xs'
                                 : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Library size="1.15vw" className={`shrink-0 ${dashboardMode === 'shelf' ? 'text-white' : 'text-gray-300'}`} />
+                            <Library size="1.15vw" className={`shrink-0 ${isShelfActive ? 'text-white' : 'text-gray-300'}`} />
                             <span>My Shelf</span>
                         </div>
                     </div>
@@ -372,21 +387,21 @@ export default function FlipbooksSidebar({
                     {/* Favorites */}
                     <div
                         onClick={() => {
-                            if (setDashboardMode) setDashboardMode('books');
+                            if (setDashboardMode) setDashboardMode('favorites');
                             setActiveFolder('Favorites');
                             setSelectedBooks([]);
                         }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            dashboardMode === 'books' && activeFolder === 'Favorites'
+                            isFavoritesActive
                                 ? 'bg-[#2c3749] text-white font-medium'
                                 : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                         }`}
                     >
                         <div className="flex items-center gap-[0.75vw]">
-                            <Heart size="1.15vw" className={`shrink-0 ${dashboardMode === 'books' && activeFolder === 'Favorites' ? 'text-white' : 'text-gray-300'}`} />
+                            <Heart size="1.15vw" className={`shrink-0 ${isFavoritesActive ? 'text-white' : 'text-gray-300'}`} />
                             <span>Favorites</span>
                         </div>
-                        <span className={`text-[0.8vw] ${dashboardMode === 'books' && activeFolder === 'Favorites' ? 'text-white font-medium' : 'text-gray-400'}`}>
+                        <span className={`text-[0.8vw] ${isFavoritesActive ? 'text-white font-medium' : 'text-gray-400'}`}>
                             {favoritesCount}
                         </span>
                     </div>
@@ -394,12 +409,12 @@ export default function FlipbooksSidebar({
                     {/* Trash */}
                     <div
                         onClick={() => {
-                            if (setDashboardMode) setDashboardMode('books');
+                            if (setDashboardMode) setDashboardMode('trash');
                             setActiveFolder('Trash');
                             setSelectedBooks([]);
                         }}
                         className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                            dashboardMode === 'books' && activeFolder === 'Trash'
+                            isTrashActive
                                 ? 'bg-[#2c3749] text-[#ef4444] font-medium'
                                 : 'text-[#ef4444] hover:bg-[#1e2738] hover:text-[#f87171] font-normal'
                         }`}
@@ -417,25 +432,27 @@ export default function FlipbooksSidebar({
                 {/* Divider */}
                 <div className="my-[1vw] border-b border-[#243042] flex-none"></div>
 
-                {/* Folders Section Header (Dynamic: 3D Folders vs Your Folders) */}
-                <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
-                    <span className="text-[0.95vw] font-bold text-white">
-                        {dashboardMode === '3d' ? '3D Folders' : 'Your Folders'}
-                    </span>
-                    <button
-                        onClick={() => {
-                            if (dashboardMode === '3d') {
-                                setIsCreating3dFolder(true);
-                                setNew3dFolderInputName('');
-                            } else {
-                                handleAddFolderClick();
-                            }
-                        }}
-                        className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
-                    >
-                        <Plus size="0.85vw" /> Add
-                    </button>
-                </div>
+                {!(isFavoritesActive || isTrashActive || isShelfActive) ? (
+                    <>
+                        {/* Folders Section Header (Dynamic: 3D Folders vs Your Folders) */}
+                        <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
+                            <span className="text-[0.95vw] font-bold text-white">
+                                {dashboardMode === '3d' ? '3D Folders' : 'Your Folders'}
+                            </span>
+                            <button
+                                onClick={() => {
+                                    if (dashboardMode === '3d') {
+                                        setIsCreating3dFolder(true);
+                                        setNew3dFolderInputName('');
+                                    } else {
+                                        handleAddFolderClick();
+                                    }
+                                }}
+                                className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
+                            >
+                                <Plus size="0.85vw" /> Add
+                            </button>
+                        </div>
 
                 {/* Scrollable Folder List */}
                 <CustomScrollbar
@@ -739,6 +756,10 @@ export default function FlipbooksSidebar({
                     </div>
                 )}
                 </CustomScrollbar>
+                    </>
+                ) : (
+                    <div className="flex-1" />
+                )}
             </div>
 
             {/* Storage & Upgrade Profile Card */}

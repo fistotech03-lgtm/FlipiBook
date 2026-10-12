@@ -10,8 +10,6 @@ import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumen
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import ShareModal from '../components/ShareModal';
 import ExportModal from '../components/ExportModal';
-import MyShelf from '../components/Settings/MyShelf';
-import dashboardBannerImg from '../assets/Dashboard/Main.png';
 import {
     FlipbooksSidebar,
     FlipbooksBanner,
@@ -22,6 +20,9 @@ import {
     MoveToFolderModal,
     ConflictModal,
     ThreeDDashboard,
+    FavoritesScreen,
+    TrashScreen,
+    MyShelf,
     CustomScrollbar
 } from '../components/MyFlipbooks';
 import { useAuth } from '../context/AuthContext';
@@ -98,8 +99,16 @@ export default function MyFlipbooks() {
         return saved || 'All Flipbook';
     });
     const [dashboardMode, setDashboardMode] = useState(() => {
-        return searchParams.get('tab') === 'shelf' ? 'shelf' : (searchParams.get('tab') === '3d' ? '3d' : 'books');
-    }); // 'books' | '3d' | 'shelf'
+        const tab = searchParams.get('tab');
+        if (tab === 'shelf') return 'shelf';
+        if (tab === '3d') return '3d';
+        if (tab === 'favorites') return 'favorites';
+        if (tab === 'trash') return 'trash';
+        const saved = localStorage.getItem('last_active_folder');
+        if (saved === 'Favorites') return 'favorites';
+        if (saved === 'Trash') return 'trash';
+        return 'books';
+    }); // 'books' | '3d' | 'shelf' | 'favorites' | 'trash'
 
     useEffect(() => {
         const tab = searchParams.get('tab');
@@ -107,6 +116,10 @@ export default function MyFlipbooks() {
             setDashboardMode('shelf');
         } else if (tab === '3d') {
             setDashboardMode('3d');
+        } else if (tab === 'favorites') {
+            setDashboardMode('favorites');
+        } else if (tab === 'trash') {
+            setDashboardMode('trash');
         }
     }, [searchParams]);
 
@@ -1563,6 +1576,17 @@ export default function MyFlipbooks() {
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-white rounded-[1vw] shadow-xs p-[1vw]">
                         <MyShelf />
                     </div>
+                ) : (dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites')) ? (
+                    <FavoritesScreen
+                        navigate={navigate}
+                    />
+                ) : (dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash')) ? (
+                    <TrashScreen
+                        navigate={navigate}
+                        onEmptyTrash={handleEmptyTrashClick}
+                        onRestoreBook={handleRestoreBook}
+                        onDeleteBook={handlePermanentDeleteBookClick}
+                    />
                 ) : (
                     <>
                         {/* Welcome Banner */}

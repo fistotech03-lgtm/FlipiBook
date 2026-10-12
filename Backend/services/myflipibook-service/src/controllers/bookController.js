@@ -4,6 +4,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
 const { deleteBookStorage, getStorageRoot } = require('../utils/storageHelper');
+const { initFlipbookWorkspace } = require('../utils/workspaceHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 
 // In-memory cache for chunked uploads
@@ -552,19 +553,40 @@ exports.saveBook = async (req, res) => {
       });
     }
 
-    // Persist pages to local disk storage
+    // Persist pages and full workspace structure to local disk storage
     try {
       const storageRoot = getStorageRoot();
-      const userFolder = objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default');
-      const bookDir = path.join(storageRoot, 'flipbooks', userFolder, targetFolder[0] || 'My_Flipbooks', safeName);
-      const pagesDir = path.join(bookDir, 'pages');
-      if (!fs.existsSync(pagesDir)) {
-        fs.mkdirSync(pagesDir, { recursive: true });
-      }
-      safePages.forEach((sp) => {
-        if (sp.content) {
-          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
-        }
+      const userFolders = new Set();
+      if (objectId) userFolders.add(String(objectId));
+      if (book.userId) userFolders.add(String(book.userId));
+      if (book.userID) userFolders.add(String(book.userID));
+      if (emailId) userFolders.add(emailId.replace(/[@.]/g, '_'));
+
+      const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
+
+      userFolders.forEach((uFolder) => {
+        // 1. User workspace structure: <storageRoot>/<uFolder>/My_Flipbooks/<targetSubfolder>/<safeName>
+        const wsBookDir = path.join(storageRoot, uFolder, 'My_Flipbooks', targetSubfolder, safeName);
+        initFlipbookWorkspace(wsBookDir);
+
+        // 2. Legacy structure: <storageRoot>/flipbooks/<uFolder>/<targetSubfolder>/<safeName>
+        const legacyBookDir = path.join(storageRoot, 'flipbooks', uFolder, targetSubfolder, safeName);
+        initFlipbookWorkspace(legacyBookDir);
+
+        [wsBookDir, legacyBookDir].forEach((dir) => {
+          const pagesDir = path.join(dir, 'pages');
+          safePages.forEach((sp) => {
+            // Write Page X.html directly inside the book directory as per user specification (Image 3)
+            const htmlContent = sp.html || sp.content || '';
+            if (htmlContent) {
+              fs.writeFileSync(path.join(dir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+            }
+            // Also write .svg in pages/ directory
+            if (sp.content) {
+              fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+            }
+          });
+        });
       });
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing pages to disk:', fsErr.message);
@@ -638,19 +660,35 @@ exports.savePagesBatch = async (req, res) => {
     book.lastUpdated = new Date();
     await book.save();
 
-    // Persist pages to disk
+    // Persist pages and workspace structure to disk
     try {
       const storageRoot = getStorageRoot();
-      const userFolder = objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default');
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      const pagesDir = path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages');
-      if (!fs.existsSync(pagesDir)) {
-        fs.mkdirSync(pagesDir, { recursive: true });
-      }
-      book.pages.forEach((sp) => {
-        if (sp.content) {
-          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
-        }
+      const userFolders = new Set();
+      if (objectId) userFolders.add(String(objectId));
+      if (book.userId) userFolders.add(String(book.userId));
+      if (book.userID) userFolders.add(String(book.userID));
+      if (emailId) userFolders.add(emailId.replace(/[@.]/g, '_'));
+
+      userFolders.forEach((uFolder) => {
+        const wsBookDir = path.join(storageRoot, uFolder, 'My_Flipbooks', folder, book.flipbookName);
+        initFlipbookWorkspace(wsBookDir);
+
+        const legacyBookDir = path.join(storageRoot, 'flipbooks', uFolder, folder, book.flipbookName);
+        initFlipbookWorkspace(legacyBookDir);
+
+        [wsBookDir, legacyBookDir].forEach((dir) => {
+          const pagesDir = path.join(dir, 'pages');
+          book.pages.forEach((sp) => {
+            const htmlContent = sp.html || sp.content || '';
+            if (htmlContent) {
+              fs.writeFileSync(path.join(dir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+            }
+            if (sp.content) {
+              fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+            }
+          });
+        });
       });
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing batch pages to disk:', fsErr.message);

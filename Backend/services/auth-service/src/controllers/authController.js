@@ -11,6 +11,7 @@ const {
   decodeToken,
 } = require("../utils/jwtHelper");
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
+const { createUserWorkspace } = require("../utils/workspaceHelper");
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -290,6 +291,13 @@ const signup = async (req, res) => {
 
     await user.save();
 
+    // Create user storage workspace
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning]:", wsErr.message);
+    }
+
     // Capture IP & Create Login Log
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
@@ -486,6 +494,13 @@ const verifySignupOtp = async (req, res) => {
 
     await user.save();
 
+    // Create user storage workspace
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning]:", wsErr.message);
+    }
+
     // Clean up pending OTP record
     await SignupOtp.deleteOne({ _id: pendingSignup._id });
 
@@ -627,6 +642,13 @@ const login = async (req, res) => {
         });
     }
 
+    // Ensure user storage workspace exists
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning]:", wsErr.message);
+    }
+
     // Track Login in LoginLog Table
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
@@ -748,10 +770,28 @@ const googleLogin = async (req, res) => {
       });
 
       await user.save();
+
+      // Create user storage workspace
+      try {
+        createUserWorkspace(user);
+      } catch (wsErr) {
+        console.warn("[Workspace Creation Warning]:", wsErr.message);
+      }
     } else if (verifiedPicture && (!user.picture || user.picture !== verifiedPicture)) {
       user.picture = verifiedPicture;
       if (verifiedName && !user.name) user.name = verifiedName;
       await user.save();
+      try {
+        createUserWorkspace(user);
+      } catch (wsErr) {
+        console.warn("[Workspace Creation Warning]:", wsErr.message);
+      }
+    } else {
+      try {
+        createUserWorkspace(user);
+      } catch (wsErr) {
+        console.warn("[Workspace Creation Warning]:", wsErr.message);
+      }
     }
 
     // Log the Google Sign-in event

@@ -738,9 +738,17 @@ const PageEditor = () => {
               orientation: targetOrientation
             }));
 
+            const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;
+
             const processPageItem = (p, i) => {
               const name = p.name || `Page ${i + 1}`;
               let pageHtml = p.html || p.content;
+
+              const pageUniqueId = (p.id && p.id !== bookVId)
+                ? p.id
+                : (p.v_id && p.v_id !== bookVId)
+                  ? p.v_id
+                  : `page_${p.pageNumber || i + 1}_${bookVId || 'book'}`;
 
               if ((!pageHtml || typeof pageHtml !== 'string' || pageHtml.trim() === '') && location.state?.templatePages?.[i]) {
                 pageHtml = location.state.templatePages[i];
@@ -751,8 +759,8 @@ const PageEditor = () => {
               if (!pageHtml || typeof pageHtml !== 'string' || pageHtml.trim() === '') {
                 const { html, layers } = createDefaultPageDataRef.current(name, targetWidth, targetHeight);
                 return {
-                  id: p.v_id || i + 1,
-                  v_id: p.v_id,
+                  id: pageUniqueId,
+                  v_id: pageUniqueId,
                   name: name,
                   isHidden: p.hide == 1 || String(p.hide) === '1',
                   html: html,
@@ -772,12 +780,12 @@ const PageEditor = () => {
               }
               updatedHtml = updatedHtml.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
 
-              const cachedLayers = pageCacheManager.getCachedLayers(p.v_id || i + 1, updatedHtml);
+              const cachedLayers = pageCacheManager.getCachedLayers(pageUniqueId, updatedHtml);
               if (cachedLayers && cachedLayers.length > 0) {
-                pageCacheManager.getThumbnail(p.v_id || i + 1, updatedHtml);
+                pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
                 return {
-                  id: p.v_id || i + 1,
-                  v_id: p.v_id,
+                  id: pageUniqueId,
+                  v_id: pageUniqueId,
                   name: name,
                   isHidden: p.hide == 1 || String(p.hide) === '1',
                   html: updatedHtml,
@@ -843,12 +851,12 @@ const PageEditor = () => {
                 layers = svgEl ? parseLayersFromSVG(svgEl) : [];
               }
 
-              pageCacheManager.setCachedLayers(p.v_id || i + 1, updatedHtml, layers);
-              pageCacheManager.getThumbnail(p.v_id || i + 1, updatedHtml);
+              pageCacheManager.setCachedLayers(pageUniqueId, updatedHtml, layers);
+              pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
 
               return {
-                id: p.v_id || i + 1,
-                v_id: p.v_id,
+                id: pageUniqueId,
+                v_id: pageUniqueId,
                 name: name,
                 isHidden: p.hide == 1 || String(p.hide) === '1',
                 html: updatedHtml,

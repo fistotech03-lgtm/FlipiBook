@@ -165,7 +165,7 @@ export default function FlipbookCard({
 
                     {/* Subtitle: Pages */}
                     <p className="text-[0.72vw] text-gray-400 font-normal mt-[0.1vw] mb-[0.6vw]">
-                        {book.pages || 12} Pages
+                        {(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 1} Pages
                     </p>
 
                     {/* Action Buttons Row */}
@@ -195,8 +195,8 @@ export default function FlipbookCard({
                                             const physicalBook = books.find(b => b.realName === book.realName && b.folder !== 'Recent Book');
                                             if (physicalBook) targetFolder = physicalBook.folder;
                                         }
-                                        const identifier = book.v_id || encodeURIComponent(book.realName);
-                                        navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${identifier}`, { state: { flipbookName: book.realName, pageCount: book.pages } });
+                                        const pageCountVal = (Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 1;
+                                        navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${identifier}`, { state: { flipbookName: book.realName, pageCount: pageCountVal } });
                                     }}
                                     className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-[#ea543a] hover:text-[#d4452d] transition-colors whitespace-nowrap shrink-0"
                                 >

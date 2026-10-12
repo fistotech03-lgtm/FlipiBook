@@ -1047,7 +1047,7 @@ const MyShelf = () => {
                                         {/* Stats */}
                                         <div className="flex items-center gap-[0.4vw] justify-start text-[0.65vw] text-gray-700 font-medium whitespace-nowrap">
                                           <div className="flex items-center gap-[0.2vw]">
-                                            <span className="text-black font-semibold">{book.pages || 0}</span>
+                                            <span className="text-black font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span>
                                             <span className="font-normal text-gray-500">Pages</span>
                                           </div>
                                           <span className="text-gray-300">|</span>
@@ -1248,7 +1248,7 @@ const MyShelf = () => {
                       {/* Stats */}
                       <div className="flex items-center gap-[0.4vw] justify-start text-[0.65vw] text-gray-700 font-medium mt-[0.8vw] whitespace-nowrap">
                         <div className="flex items-center gap-[0.2vw]">
-                          <span className="text-black font-semibold">{book.pages || 0}</span>
+                          <span className="text-black font-semibold">{(Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : book.pagesCount)) || 0}</span>
                           <span className="font-normal text-gray-500">Pages</span>
                         </div>
                         <span className="text-gray-300">|</span>

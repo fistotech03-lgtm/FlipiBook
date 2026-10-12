@@ -38,13 +38,7 @@ export default function FlipbookActionMenu({
                             <Edit2 size="0.9vw" className="group-hover:text-white" />
                             Rename
                         </button>
-                        <button
-                            onClick={() => handleMoveBookClick(book)}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-600 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                        >
-                            <FolderInput size="0.9vw" className="group-hover:text-white" />
-                            Move to folder
-                        </button>
+
                         {activeFolder !== 'Recent Book' && activeFolder !== 'Recent' && (
                             <button
                                 onClick={() => handleDuplicateBook(book)}

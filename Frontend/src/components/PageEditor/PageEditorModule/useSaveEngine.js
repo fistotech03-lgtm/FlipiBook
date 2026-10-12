@@ -687,7 +687,7 @@ export const useSaveEngine = ({
           const backendPages = lastRes?.data?.pages || [];
           return prevPages.map((page, idx) => {
             const bPage = backendPages[idx];
-            if (bPage && bPage.v_id && !page.v_id) {
+            if (bPage && bPage.v_id && bPage.v_id !== currentVId && !page.v_id) {
               return { ...page, v_id: bPage.v_id };
             }
             return page;

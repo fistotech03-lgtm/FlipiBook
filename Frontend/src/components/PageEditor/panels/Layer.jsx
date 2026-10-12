@@ -1200,12 +1200,13 @@ const Layer = ({
               {(!isPdfProject && activeTab === 'layers') ?
                 pages.map((page, index) => {
                   const isExpanded = checkIsExpanded(index);
+                  const pageKey = (page.id && page.id !== v_id) ? page.id : `page-card-${page.pageNumber || index + 1}-${index}`;
 
                   return (
                     <div
-                      key={page.id}
+                      key={pageKey}
                       className="flex flex-col relative"
-                      id={`page-card-${page.id}`}
+                      id={`page-card-${page.id || pageKey}`}
                       onDragOver={(e) => handleDragOver(e, index)}
                       onDragLeave={handleDragLeave}
                       onDragEnd={handleDragEnd}
@@ -1383,6 +1384,7 @@ const Layer = ({
                 : (
                   <div className="flex flex-col gap-[2.5vh]">
                     {pages.map((page, index) => {
+                      const pageKey = (page.id && page.id !== v_id) ? page.id : `page-preview-${page.pageNumber || index + 1}-${index}`;
                       const viewBoxMatch = page.html ? page.html.match(/viewBox=["']\d+ \d+ (\d+(\.\d+)?) (\d+(\.\d+)?)["']/) : null;
                       const aspectRatio = viewBoxMatch ? parseFloat(viewBoxMatch[1]) / parseFloat(viewBoxMatch[3]) : 1 / 1.414;
 
@@ -1392,7 +1394,7 @@ const Layer = ({
 
                       return (
                         <div
-                          key={page.id}
+                          key={pageKey}
                           className="flex flex-col relative"
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragLeave={handleDragLeave}

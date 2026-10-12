@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import QRCodeStyling from 'qr-code-styling';
 import html2canvas from 'html2canvas';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
+import { getAssetBaseUrl, getSupabaseBaseUrl, rewriteHtmlUploadsToSupabase } from '../utils/assetUtils';
 
 
 // Lazy-load preview iframe: only fetches HTML when card is visible in viewport

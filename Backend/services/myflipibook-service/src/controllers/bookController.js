@@ -556,37 +556,21 @@ exports.saveBook = async (req, res) => {
     // Persist pages and full workspace structure to local disk storage
     try {
       const storageRoot = getStorageRoot();
-      const userFolders = new Set();
-      if (objectId) userFolders.add(String(objectId));
-      if (book.userId) userFolders.add(String(book.userId));
-      if (book.userID) userFolders.add(String(book.userID));
-      if (emailId) userFolders.add(emailId.replace(/[@.]/g, '_'));
-
+      const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
       const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
 
-      userFolders.forEach((uFolder) => {
-        // 1. User workspace structure: <storageRoot>/<uFolder>/My_Flipbooks/<targetSubfolder>/<safeName>
-        const wsBookDir = path.join(storageRoot, uFolder, 'My_Flipbooks', targetSubfolder, safeName);
-        initFlipbookWorkspace(wsBookDir);
+      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, safeName);
+      initFlipbookWorkspace(wsBookDir);
 
-        // 2. Legacy structure: <storageRoot>/flipbooks/<uFolder>/<targetSubfolder>/<safeName>
-        const legacyBookDir = path.join(storageRoot, 'flipbooks', uFolder, targetSubfolder, safeName);
-        initFlipbookWorkspace(legacyBookDir);
-
-        [wsBookDir, legacyBookDir].forEach((dir) => {
-          const pagesDir = path.join(dir, 'pages');
-          safePages.forEach((sp) => {
-            // Write Page X.html directly inside the book directory as per user specification (Image 3)
-            const htmlContent = sp.html || sp.content || '';
-            if (htmlContent) {
-              fs.writeFileSync(path.join(dir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
-            }
-            // Also write .svg in pages/ directory
-            if (sp.content) {
-              fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
-            }
-          });
-        });
+      const pagesDir = path.join(wsBookDir, 'pages');
+      safePages.forEach((sp) => {
+        const htmlContent = sp.html || sp.content || '';
+        if (htmlContent) {
+          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+        }
+        if (sp.content) {
+          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+        }
       });
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing pages to disk:', fsErr.message);
@@ -664,31 +648,20 @@ exports.savePagesBatch = async (req, res) => {
     try {
       const storageRoot = getStorageRoot();
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      const userFolders = new Set();
-      if (objectId) userFolders.add(String(objectId));
-      if (book.userId) userFolders.add(String(book.userId));
-      if (book.userID) userFolders.add(String(book.userID));
-      if (emailId) userFolders.add(emailId.replace(/[@.]/g, '_'));
+      const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
 
-      userFolders.forEach((uFolder) => {
-        const wsBookDir = path.join(storageRoot, uFolder, 'My_Flipbooks', folder, book.flipbookName);
-        initFlipbookWorkspace(wsBookDir);
+      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
+      initFlipbookWorkspace(wsBookDir);
 
-        const legacyBookDir = path.join(storageRoot, 'flipbooks', uFolder, folder, book.flipbookName);
-        initFlipbookWorkspace(legacyBookDir);
-
-        [wsBookDir, legacyBookDir].forEach((dir) => {
-          const pagesDir = path.join(dir, 'pages');
-          book.pages.forEach((sp) => {
-            const htmlContent = sp.html || sp.content || '';
-            if (htmlContent) {
-              fs.writeFileSync(path.join(dir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
-            }
-            if (sp.content) {
-              fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
-            }
-          });
-        });
+      const pagesDir = path.join(wsBookDir, 'pages');
+      book.pages.forEach((sp) => {
+        const htmlContent = sp.html || sp.content || '';
+        if (htmlContent) {
+          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+        }
+        if (sp.content) {
+          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+        }
       });
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing batch pages to disk:', fsErr.message);
@@ -744,17 +717,43 @@ exports.getBook = async (req, res) => {
 
     // Disk fallback if MongoDB pages lack content
     const storageRoot = getStorageRoot();
-    const userFolder = book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : '');
+    const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
     const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-    const pagesDir = (userFolder && folder && book.flipbookName)
-      ? path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages')
-      : null;
+
+    // Check candidate directories in priority order
+    let pagesDir = null;
+    let bookDir = null;
+    if (userFolder && folder && book.flipbookName) {
+      const candidateDirs = [
+        path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName),
+        path.join(storageRoot, userFolder, folder, book.flipbookName),
+        path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName)
+      ];
+      for (const d of candidateDirs) {
+        if (fs.existsSync(path.join(d, 'pages')) || fs.existsSync(d)) {
+          bookDir = d;
+          pagesDir = path.join(d, 'pages');
+          break;
+        }
+      }
+    }
 
     const populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = pageObj.content || pageObj.html || '';
 
+      if (!pageContent && bookDir) {
+        // Try Page X.html first
+        const htmlPath = path.join(bookDir, `Page ${pageObj.pageNumber}.html`);
+        if (fs.existsSync(htmlPath)) {
+          try {
+            pageContent = fs.readFileSync(htmlPath, 'utf8');
+          } catch (e) {}
+        }
+      }
+
       if (!pageContent && pagesDir) {
+        // Try pages/X.svg
         const svgPath = path.join(pagesDir, `${pageObj.pageNumber}.svg`);
         if (fs.existsSync(svgPath)) {
           try {
@@ -852,14 +851,21 @@ exports.previewBook = async (req, res) => {
 
     if (!firstPageHtml && firstPage) {
       const storageRoot = getStorageRoot();
-      const userFolder = book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : '');
+      const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
       if (userFolder && folder && book.flipbookName) {
-        const svgPath = path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`);
-        if (fs.existsSync(svgPath)) {
-          try {
-            firstPageHtml = fs.readFileSync(svgPath, 'utf8');
-          } catch (e) {}
+        const candidateFiles = [
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, `Page ${firstPage.pageNumber}.html`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`),
+          path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`)
+        ];
+        for (const filePath of candidateFiles) {
+          if (fs.existsSync(filePath)) {
+            try {
+              firstPageHtml = fs.readFileSync(filePath, 'utf8');
+              break;
+            } catch (e) {}
+          }
         }
       }
     }

@@ -43,27 +43,35 @@ const getDirSize = (dirPath) => {
 };
 
 /**
- * Calculate user's active disk storage usage in bytes by ObjectId (with email fallback)
+ * Calculate user's active disk storage usage in bytes by ObjectId or custom UserID
  */
 const calculateUserStorage = (userId, emailId, userBooks = []) => {
   try {
     const storageRoot = getStorageRoot();
     let diskSize = 0;
 
-    // 1. Primary: Check by userId ObjectId directory
+    // 1. Primary: Check by userId workspace directory (e.g. storage/<userId>/My_Flipbooks)
     if (userId) {
-      const userDirById = path.join(storageRoot, 'flipbooks', String(userId));
+      const userDirById = path.join(storageRoot, String(userId));
       if (fs.existsSync(userDirById)) {
         diskSize = getDirSize(userDirById);
       }
+      const legacyDirById = path.join(storageRoot, 'flipbooks', String(userId));
+      if (diskSize === 0 && fs.existsSync(legacyDirById)) {
+        diskSize = getDirSize(legacyDirById);
+      }
     }
 
-    // 2. Legacy fallback: Check by sanitized email directory
+    // 2. Fallback: Check by sanitized email directory
     if (diskSize === 0 && emailId) {
       const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const userDirByEmail = path.join(storageRoot, 'flipbooks', sanitizedEmail);
+      const userDirByEmail = path.join(storageRoot, sanitizedEmail);
       if (fs.existsSync(userDirByEmail)) {
         diskSize = getDirSize(userDirByEmail);
+      }
+      const legacyDirByEmail = path.join(storageRoot, 'flipbooks', sanitizedEmail);
+      if (diskSize === 0 && fs.existsSync(legacyDirByEmail)) {
+        diskSize = getDirSize(legacyDirByEmail);
       }
     }
 
@@ -95,17 +103,25 @@ const deleteBookStorage = (userId, emailId, folderName, bookName) => {
   try {
     const storageRoot = getStorageRoot();
     if (userId) {
-      const dirById = path.join(storageRoot, 'flipbooks', String(userId), folderName, bookName);
-      if (fs.existsSync(dirById)) {
-        fs.rmSync(dirById, { recursive: true, force: true });
-      }
+      const dirs = [
+        path.join(storageRoot, String(userId), 'My_Flipbooks', folderName, bookName),
+        path.join(storageRoot, String(userId), folderName, bookName),
+        path.join(storageRoot, 'flipbooks', String(userId), folderName, bookName)
+      ];
+      dirs.forEach(d => {
+        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
+      });
     }
     if (emailId) {
       const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const dirByEmail = path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName, bookName);
-      if (fs.existsSync(dirByEmail)) {
-        fs.rmSync(dirByEmail, { recursive: true, force: true });
-      }
+      const dirs = [
+        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', folderName, bookName),
+        path.join(storageRoot, sanitizedEmail, folderName, bookName),
+        path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName, bookName)
+      ];
+      dirs.forEach(d => {
+        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
+      });
     }
   } catch (err) {
     console.warn('[Storage Helper] Warning deleting book directory:', err.message);
@@ -119,17 +135,25 @@ const deleteFolderStorage = (userId, emailId, folderName) => {
   try {
     const storageRoot = getStorageRoot();
     if (userId) {
-      const dirById = path.join(storageRoot, 'flipbooks', String(userId), folderName);
-      if (fs.existsSync(dirById)) {
-        fs.rmSync(dirById, { recursive: true, force: true });
-      }
+      const dirs = [
+        path.join(storageRoot, String(userId), 'My_Flipbooks', folderName),
+        path.join(storageRoot, String(userId), folderName),
+        path.join(storageRoot, 'flipbooks', String(userId), folderName)
+      ];
+      dirs.forEach(d => {
+        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
+      });
     }
     if (emailId) {
       const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const dirByEmail = path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName);
-      if (fs.existsSync(dirByEmail)) {
-        fs.rmSync(dirByEmail, { recursive: true, force: true });
-      }
+      const dirs = [
+        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', folderName),
+        path.join(storageRoot, sanitizedEmail, folderName),
+        path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName)
+      ];
+      dirs.forEach(d => {
+        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
+      });
     }
   } catch (err) {
     console.warn('[Storage Helper] Warning deleting folder directory:', err.message);

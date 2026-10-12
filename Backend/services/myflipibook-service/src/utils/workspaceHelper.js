@@ -40,39 +40,28 @@ const createUserWorkspace = (user) => {
       fs.mkdirSync(storageRoot, { recursive: true });
     }
 
-    const identifiers = new Set();
-    if (user.userID) identifiers.add(String(user.userID).trim());
-    if (user._id) identifiers.add(String(user._id).trim());
-    if (user.id) identifiers.add(String(user.id).trim());
-    if (identifiers.size === 0 && user.emailId) {
-      identifiers.add(user.emailId.replace(/[@.]/g, '_'));
+    const userId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : (user.emailId ? user.emailId.replace(/[@.]/g, '_') : null)));
+    if (!userId) return null;
+
+    const userDir = path.join(storageRoot, userId);
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
     }
 
-    for (const id of identifiers) {
-      const userDir = path.join(storageRoot, id);
-      if (!fs.existsSync(userDir)) {
-        fs.mkdirSync(userDir, { recursive: true });
-      }
-
-      for (const folder of WORKSPACE_FOLDERS) {
-        const folderPath = path.join(userDir, folder);
-        if (!fs.existsSync(folderPath)) {
-          fs.mkdirSync(folderPath, { recursive: true });
-        }
-      }
-
-      const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
-      if (!fs.existsSync(defaultFolder)) {
-        fs.mkdirSync(defaultFolder, { recursive: true });
-      }
-
-      const legacyFlipbooksDir = path.join(storageRoot, 'flipbooks', id, 'My_Flipbooks');
-      if (!fs.existsSync(legacyFlipbooksDir)) {
-        fs.mkdirSync(legacyFlipbooksDir, { recursive: true });
+    for (const folder of WORKSPACE_FOLDERS) {
+      const folderPath = path.join(userDir, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
       }
     }
 
-    return true;
+    const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
+    if (!fs.existsSync(defaultFolder)) {
+      fs.mkdirSync(defaultFolder, { recursive: true });
+    }
+
+    console.log(`[Workspace Helper] Successfully created workspace for user: ${userId}`);
+    return userDir;
   } catch (err) {
     console.error('[Workspace Helper] Error initializing workspace:', err.message);
     return false;

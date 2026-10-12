@@ -403,7 +403,7 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pag
       {/* Sub-header */}
       <div className="h-[8vh] flex items-center justify-between px-[1vw] border-b border-gray-100">
         <div className="flex items-center gap-[0.5vw]">
-          <Icon icon="ant-design:control-outlined" className="w-[1.2vw] h-[1.2vw] text-gray-800 font-semibold" />
+          <Icon icon="fluent:layout-row-two-settings-24-regular" className="w-[1.2vw] h-[1.2vw] text-gray-800 font-semibold" />
           <span className="text-[1vw] font-semibold text-gray-900">Layout Settings</span>
         </div>
         <button onClick={onBack} className="text-gray-600 hover:text-gray-900">

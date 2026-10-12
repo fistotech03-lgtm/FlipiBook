@@ -16,15 +16,26 @@ const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001'
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:8000',
+  'https://testing.flipibook.com',
+  'https://flipibook.com',
   process.env.CLIENT_URL
 ].filter(Boolean);
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Server-to-server, curl, health probes
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)*flipibook\.com$/.test(origin)) return true;
+  return false;
+};
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(null, false);
   },
   credentials: true
 }));

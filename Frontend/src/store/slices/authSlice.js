@@ -1,38 +1,47 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { verifyToken, clearSession } from '../../utils/authUtils';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+import { verifyToken, clearSession } from "../../utils/authUtils";
 
-export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
+export const checkAuth = createAsyncThunk(
+  "auth/checkAuth",
+  async (_, { rejectWithValue }) => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+
+      const res = await axios.get(`${backendUrl}/api/auth/verify`, {
+        withCredentials: true,
+      });
+
+      if (res.data?.success && res.data?.isAuthenticated) {
+        return { isAuthenticated: true, user: res.data.user || null };
+      }
+
+      // Explicit unauthenticated response from server
+      if (res.data && res.data.isAuthenticated === false) {
+        clearSession();
+      }
+      return { isAuthenticated: false, user: null };
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        clearSession();
+      }
+      return rejectWithValue(
+        err.response?.data?.message || "Verification failed",
+      );
+    }
+  },
+);
+
+export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-
-    const res = await axios.get(`${backendUrl}/api/auth/verify`, {
-      withCredentials: true,
-    });
-
-    if (res.data?.success && res.data?.isAuthenticated) {
-      return { isAuthenticated: true, user: res.data.user || null };
-    }
-    
-    // Explicit unauthenticated response from server
-    if (res.data && res.data.isAuthenticated === false) {
-      clearSession();
-    }
-    return { isAuthenticated: false, user: null };
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+    await axios.post(
+      `${backendUrl}/api/auth/logout`,
+      {},
+      { withCredentials: true },
+    );
   } catch (err) {
-    if (err.response?.status === 401 || err.response?.status === 403) {
-      clearSession();
-    }
-    return rejectWithValue(err.response?.data?.message || 'Verification failed');
-  }
-});
-
-export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
-  try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-    await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
-  } catch (err) {
-    console.warn('Logout request warning:', err);
+    console.warn("Logout request warning:", err);
   } finally {
     clearSession();
   }
@@ -44,12 +53,12 @@ const initialState = {
   user: null,
   isLoading: true,
   isAuthModalOpen: false,
-  authModalMode: 'signin',
+  authModalMode: "signin",
   authRedirectPath: null,
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setUser: (state, action) => {
@@ -60,7 +69,7 @@ const authSlice = createSlice({
       state.isAuthenticated = action.payload;
     },
     openAuthModal: (state, action) => {
-      state.authModalMode = action.payload?.mode || 'signin';
+      state.authModalMode = action.payload?.mode || "signin";
       state.authRedirectPath = action.payload?.redirectPath || null;
       state.isAuthModalOpen = true;
     },

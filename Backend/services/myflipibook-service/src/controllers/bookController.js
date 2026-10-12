@@ -3,8 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
-const { deleteBookStorage, getStorageRoot } = require('../utils/storageHelper');
-const { initFlipbookWorkspace } = require('../utils/workspaceHelper');
+const { deleteBookStorage, getStorageRoot, initFlipbookStorage } = require('../utils/storageHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 
 // In-memory cache for chunked uploads
@@ -560,7 +559,7 @@ exports.saveBook = async (req, res) => {
       const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
 
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, safeName);
-      initFlipbookWorkspace(wsBookDir);
+      initFlipbookStorage(wsBookDir);
 
       const pagesDir = path.join(wsBookDir, 'pages');
       safePages.forEach((sp) => {
@@ -651,7 +650,7 @@ exports.savePagesBatch = async (req, res) => {
       const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
 
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
-      initFlipbookWorkspace(wsBookDir);
+      initFlipbookStorage(wsBookDir);
 
       const pagesDir = path.join(wsBookDir, 'pages');
       book.pages.forEach((sp) => {

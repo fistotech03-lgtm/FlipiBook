@@ -160,10 +160,51 @@ const deleteFolderStorage = (userId, emailId, folderName) => {
   }
 };
 
+/**
+ * Initialize subfolders for a specific flipbook directory on disk:
+ * - assets/audio
+ * - assets/download
+ * - assets/gif
+ * - assets/Image
+ * - assets/video
+ * - customized_assets
+ * - pages
+ */
+const initFlipbookStorage = (bookDir) => {
+  try {
+    if (!fs.existsSync(bookDir)) {
+      fs.mkdirSync(bookDir, { recursive: true });
+    }
+
+    const assetsDir = path.join(bookDir, 'assets');
+    const assetSubdirs = ['audio', 'download', 'gif', 'Image', 'video'];
+    assetSubdirs.forEach((sub) => {
+      const p = path.join(assetsDir, sub);
+      if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+    });
+
+    const customAssetsDir = path.join(bookDir, 'customized_assets');
+    if (!fs.existsSync(customAssetsDir)) {
+      fs.mkdirSync(customAssetsDir, { recursive: true });
+    }
+
+    const pagesDir = path.join(bookDir, 'pages');
+    if (!fs.existsSync(pagesDir)) {
+      fs.mkdirSync(pagesDir, { recursive: true });
+    }
+
+    return { bookDir, assetsDir, customAssetsDir, pagesDir };
+  } catch (err) {
+    console.error('[Storage Helper] Error initializing flipbook storage:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   getStorageRoot,
   getDirSize,
   calculateUserStorage,
   deleteBookStorage,
-  deleteFolderStorage
+  deleteFolderStorage,
+  initFlipbookStorage
 };

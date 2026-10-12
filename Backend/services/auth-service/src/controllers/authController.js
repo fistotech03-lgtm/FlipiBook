@@ -642,13 +642,6 @@ const login = async (req, res) => {
         });
     }
 
-    // Ensure user storage workspace exists
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
-    }
-
     // Track Login in LoginLog Table
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
@@ -781,17 +774,6 @@ const googleLogin = async (req, res) => {
       user.picture = verifiedPicture;
       if (verifiedName && !user.name) user.name = verifiedName;
       await user.save();
-      try {
-        createUserWorkspace(user);
-      } catch (wsErr) {
-        console.warn("[Workspace Creation Warning]:", wsErr.message);
-      }
-    } else {
-      try {
-        createUserWorkspace(user);
-      } catch (wsErr) {
-        console.warn("[Workspace Creation Warning]:", wsErr.message);
-      }
     }
 
     // Log the Google Sign-in event

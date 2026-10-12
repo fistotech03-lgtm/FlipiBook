@@ -797,15 +797,7 @@ export default function MyFlipbooks() {
 
     const handleBulkDelete = () => {
         if (selectedBooks.length === 0) return;
-        if (activeFolder === 'Trash') {
-            setDeleteBookConfirmation({
-                isOpen: true,
-                bookId: 'BULK',
-                bookTitle: `${selectedBooks.length} Selected Books`,
-                isTrash: false,
-                isPermanent: true
-            });
-        } else if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
+        if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
             setDeleteBookConfirmation({
                 isOpen: true,
                 bookId: 'BULK',
@@ -818,20 +810,22 @@ export default function MyFlipbooks() {
         }
     };
 
-    const handleBulkPermanentDelete = () => {
-        if (selectedBooks.length === 0) return;
+    const handleBulkPermanentDelete = (bulkIds) => {
+        const ids = bulkIds && bulkIds.length > 0 ? bulkIds : selectedBooks;
+        if (ids.length === 0) return;
+        if (bulkIds && bulkIds.length > 0) setSelectedBooks(bulkIds);
         setDeleteBookConfirmation({
             isOpen: true,
             bookId: 'BULK',
-            bookTitle: `${selectedBooks.length} Selected Books`,
+            bookTitle: `${ids.length} Selected Books`,
             isTrash: false,
             isPermanent: true
         });
     };
 
-    const handleBulkRestore = async () => {
-        if (selectedBooks.length === 0) return;
-        const selectedIds = [...selectedBooks];
+    const handleBulkRestore = async (bulkIds) => {
+        const selectedIds = bulkIds && bulkIds.length > 0 ? bulkIds : [...selectedBooks];
+        if (selectedIds.length === 0) return;
         const targetBooks = books.filter(b => selectedIds.includes(b.id));
         const prevBooks = [...books];
         setBooks(prev => prev.map(b => selectedIds.includes(b.id) ? { ...b, trash: false, folder: b.originalFolder || 'My_Flipbooks' } : b));
@@ -1340,9 +1334,7 @@ export default function MyFlipbooks() {
     const seenVIds = new Set();
     const filteredBooks = books.filter(book => {
         let matchesFolder = false;
-        if (activeFolder === 'Trash') {
-            matchesFolder = Boolean(book.trash || book.folder === 'Trash') && book.folder !== 'Recent Book' && book.folder !== 'Recent';
-        } else if (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') {
+        if (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') {
             matchesFolder = !book.trash && book.folder !== 'Trash' && book.folder !== 'Recent Book' && book.folder !== 'Recent';
         } else if (activeFolder === 'Recent' || activeFolder === 'Recent Book') {
             matchesFolder = !book.trash && (book.folder === 'Recent Book' || book.folder === 'Recent');
@@ -1583,9 +1575,12 @@ export default function MyFlipbooks() {
                 ) : (dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash')) ? (
                     <TrashScreen
                         navigate={navigate}
+                        trashedBooks={books.filter(b => Boolean(b.trash || b.folder === 'Trash') && b.folder !== 'Recent Book' && b.folder !== 'Recent')}
                         onEmptyTrash={handleEmptyTrashClick}
                         onRestoreBook={handleRestoreBook}
                         onDeleteBook={handlePermanentDeleteBookClick}
+                        onBulkRestore={handleBulkRestore}
+                        onBulkDelete={handleBulkPermanentDelete}
                     />
                 ) : (
                     <>
@@ -1622,9 +1617,6 @@ export default function MyFlipbooks() {
                     sortDropdownRef={sortDropdownRef}
                     filteredBooks={filteredBooks}
                     selectedBooks={selectedBooks}
-                    handleEmptyTrashClick={handleEmptyTrashClick}
-                    handleBulkRestore={handleBulkRestore}
-                    handleBulkPermanentDelete={handleBulkPermanentDelete}
                     handleBulkDelete={handleBulkDelete}
                     handleBulkMove={handleBulkMove}
                     isAllSelected={isAllSelected}
@@ -1676,8 +1668,6 @@ export default function MyFlipbooks() {
                                     iframeBaseUrl={iframeBaseUrl}
                                     formatDisplayDate={formatDisplayDate}
                                     formatDisplaySize={formatDisplaySize}
-                                    handleRestoreBook={handleRestoreBook}
-                                    handlePermanentDeleteBookClick={handlePermanentDeleteBookClick}
                                     handleShareClick={handleShareClick}
                                     handleDownloadClick={handleDownloadClick}
                                     navigate={navigate}
@@ -1706,8 +1696,6 @@ export default function MyFlipbooks() {
                 menuPosition={menuPosition}
                 books={books}
                 activeFolder={activeFolder}
-                handleRestoreBook={handleRestoreBook}
-                handlePermanentDeleteBookClick={handlePermanentDeleteBookClick}
                 startEditingBook={startEditingBook}
                 handleMoveBookClick={handleMoveBookClick}
                 handleDuplicateBook={handleDuplicateBook}

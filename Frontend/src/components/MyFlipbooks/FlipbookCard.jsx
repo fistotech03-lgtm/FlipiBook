@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Heart, Lock, Globe, RotateCcw, Trash2, Eye, Wrench, PenTool, BarChart2, Share2, Download, MoreVertical } from 'lucide-react';
+import { Check, Heart, Lock, Globe, Trash2, Eye, Wrench, PenTool, BarChart2, Share2, Download, MoreVertical } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import LazyPreview from './LazyPreview';
 
@@ -19,8 +19,6 @@ export default function FlipbookCard({
     iframeBaseUrl,
     formatDisplayDate,
     formatDisplaySize,
-    handleRestoreBook,
-    handlePermanentDeleteBookClick,
     handleShareClick,
     handleDownloadClick,
     navigate,
@@ -171,26 +169,9 @@ export default function FlipbookCard({
                     </p>
 
                     {/* Action Buttons Row */}
-                    <div className={`w-full flex items-center ${activeFolder === 'Trash' ? 'justify-end gap-[1.25vw]' : 'justify-between'} pt-[0.2vw]`}>
-                        {activeFolder === 'Trash' ? (
-                            <div className="flex items-center gap-[1.25vw] ml-auto">
-                                <button
-                                    onClick={() => handleRestoreBook(book)}
-                                    className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap shrink-0"
-                                >
-                                    <RotateCcw size="0.85vw" /> Restore
-                                </button>
-                                <button
-                                    onClick={() => handlePermanentDeleteBookClick(book)}
-                                    className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-red-500 hover:text-red-700 transition-colors whitespace-nowrap shrink-0"
-                                >
-                                    <Trash2 size="0.85vw" /> Delete Permanently
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <button 
-                                    onClick={() => {
+                    <div className="w-full flex items-center justify-between pt-[0.2vw]">
+                        <button 
+                            onClick={() => {
                                         const shareId = book.Visibility?.shareId || book.Customized_Settings?.Visibility?.shareId || book.shareId || book.share?.shareId || book.v_id || encodeURIComponent(book.realName);
                                         const rawAcc = String(book.Visibility?.access || book.Customized_Settings?.Visibility?.access || book.share?.access || 'public').toLowerCase();
                                         const accessPrefix = rawAcc.includes('private')
@@ -280,8 +261,6 @@ export default function FlipbookCard({
                                         <MoreVertical size="0.85vw" /> More
                                     </button>
                                 </div>
-                            </>
-                        )}
                     </div>
                 </div>
             </div>

@@ -322,6 +322,7 @@ export default function MyFlipbooks() {
     const handleUploadPDF = async (files, customName) => {
         if (!files || files.length === 0) return;
         setIsCreateModalOpen(false);
+        setInitialDroppedFiles(null);
         setIsLoading(true);
         isUploadCancelledRef.current = false;
         createdFlipbookVIdRef.current = null;
@@ -405,6 +406,21 @@ export default function MyFlipbooks() {
             if (!uniqueName || (uniqueName.startsWith('PDF_Flipbook_') && initialDocType !== 'pdf')) {
                 uniqueName = customName ? customName.replace(/^PDF_Flipbook_/, defaultPrefix) : `${defaultPrefix}${timeString}`;
             }
+
+            // Ensure uniqueName does not collide with existing flipbooks
+            const existingBookNames = new Set(
+                (books || []).map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase()).filter(Boolean)
+            );
+            let candidateBookName = (uniqueName || `${defaultPrefix}${timeString}`).trim();
+            if (existingBookNames.has(candidateBookName.toLowerCase())) {
+                let counter = 1;
+                while (existingBookNames.has(`${candidateBookName} (${counter})`.toLowerCase())) {
+                    counter++;
+                }
+                candidateBookName = `${candidateBookName} (${counter})`;
+            }
+            uniqueName = candidateBookName;
+
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
 
             // Step 2 â€” Encode pages and save flipbook in a single high-speed request
@@ -443,7 +459,7 @@ export default function MyFlipbooks() {
                     emailId,
                     flipbookName: uniqueName,
                     pages: allPages,
-                    overwrite: true,
+                    overwrite: false,
                     folderName: targetFolder,
                     keepBase64: true,
                     fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
@@ -466,7 +482,9 @@ export default function MyFlipbooks() {
                 });
 
                 // Navigate to the customized editor
-                navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+                navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {
+                    state: { flipbookName: uniqueName, pageCount: allPages.length }
+                });
                 return;
             }
 
@@ -476,7 +494,7 @@ export default function MyFlipbooks() {
                 emailId,
                 flipbookName: uniqueName,
                 pages: initialBatch,
-                overwrite: true,
+                overwrite: false,
                 folderName: targetFolder,
                 keepBase64: true,
                 fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
@@ -523,7 +541,9 @@ export default function MyFlipbooks() {
             });
 
             // Step 4 â€” Navigate to the customized editor
-            navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+            navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {
+                state: { flipbookName: uniqueName, pageCount: allPages.length }
+            });
 
         } catch (error) {
             if (!isUploadCancelledRef.current) {
@@ -585,7 +605,18 @@ export default function MyFlipbooks() {
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            const uniqueName = templateData.flipbookName || `Flipbook_${timeString}`;
+            let uniqueName = templateData.flipbookName || `Flipbook_${timeString}`;
+            const existingBookNames = new Set(
+                (books || []).map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase()).filter(Boolean)
+            );
+            if (existingBookNames.has(uniqueName.toLowerCase())) {
+                let counter = 1;
+                while (existingBookNames.has(`${uniqueName} (${counter})`.toLowerCase())) {
+                    counter++;
+                }
+                uniqueName = `${uniqueName} (${counter})`;
+            }
+
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
 
             console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}"...`);
@@ -593,7 +624,7 @@ export default function MyFlipbooks() {
                 emailId,
                 flipbookName: uniqueName,
                 pages: pages,
-                overwrite: true,
+                overwrite: false,
                 folderName: targetFolder,
                 meta: {
                     width: templateData.width,
@@ -1563,7 +1594,7 @@ export default function MyFlipbooks() {
 
             {/* Main Content */}
             <main
-                className="flex-1 ml-[18vw] px-[1vw] pt-[1vw] pb-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[92vh] max-h-[92vh] overflow-hidden"
+                className="flex-1 ml-[18vw] p-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[92vh] max-h-[92vh] overflow-hidden"
             >
                 {dashboardMode === '3d' ? (
                     <ThreeDDashboard
@@ -1571,12 +1602,36 @@ export default function MyFlipbooks() {
                         activeFolder={active3dFolder}
                     />
                 ) : dashboardMode === 'shelf' ? (
-                    <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-white rounded-[1vw] shadow-xs p-[1vw]">
+                    <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
                         <MyShelf />
                     </div>
                 ) : (dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites')) ? (
                     <FavoritesScreen
                         navigate={navigate}
+                        favoriteBooks={books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent' && Boolean(b.isFavorite || b.favorite || b.isFav))}
+                        books={books}
+                        folders={folders}
+                        user={user}
+                        emailId={emailId}
+                        backendUrl={backendUrl}
+                        onToggleFavorite={handleToggleFavorite}
+                        onShareClick={handleShareClick}
+                        onDownloadClick={handleDownloadClick}
+                        onTrashBook={handleTrashBookClick}
+                        onDuplicateBook={handleDuplicateBook}
+                        onRenameBook={startEditingBook}
+                        editingBookId={editingBookId}
+                        tempBookTitle={tempBookTitle}
+                        setTempBookTitle={setTempBookTitle}
+                        saveBookEdit={saveBookEdit}
+                        handleBookKeyDown={handleBookKeyDown}
+                        formatDisplayDate={formatDisplayDate}
+                        formatDisplaySize={formatDisplaySize}
+                        onBulkTrash={handleBulkTrash}
+                        activeBookMenu={activeBookMenu}
+                        setActiveBookMenu={setActiveBookMenu}
+                        menuPosition={menuPosition}
+                        setMenuPosition={setMenuPosition}
                     />
                 ) : (dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash')) ? (
                     <TrashScreen
@@ -1587,6 +1642,10 @@ export default function MyFlipbooks() {
                         onDeleteBook={handlePermanentDeleteBookClick}
                         onBulkRestore={handleBulkRestore}
                         onBulkDelete={handleBulkPermanentDelete}
+                        user={user}
+                        emailId={emailId}
+                        backendUrl={backendUrl}
+                        books={books}
                     />
                 ) : (
                     <>
@@ -1801,7 +1860,7 @@ export default function MyFlipbooks() {
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="fixed top-[8vh] left-0 right-0 bottom-0 z-40 flex flex-col items-center justify-center bg-white gap-3"
+                        className="fixed top-[7vh] left-0 right-0 bottom-0 z-40 flex flex-col items-center justify-center bg-white gap-3"
                     >
                         <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
                         <span className="text-[0.85vw] font-semibold text-gray-600 tracking-wide">Loading Flipbooks...</span>

@@ -16,7 +16,7 @@ export default function FlipbookActionMenu({
 }) {
     if (!activeBookMenu) return null;
 
-    const book = books.find(b => b.id === activeBookMenu);
+    const book = books.find(b => b.id === activeBookMenu || b.v_id === activeBookMenu || b._id === activeBookMenu || b.realName === activeBookMenu);
     if (!book) return null;
 
     return (

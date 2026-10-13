@@ -1,85 +1,39 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Filter, ArrowDownUp, Trash2, RotateCcw, ChevronDown, Check, Sparkles } from 'lucide-react';
+import { Search, Folder, ArrowDownUp, Trash2, RotateCcw, ChevronDown, Check, Minus, Lock, Globe } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import CustomScrollbar from '../CustomScrollbar';
-import cover1 from '../../assets/Explore/c-bg1.png';
-import p1 from '../../assets/Explore/p1.png';
-
-// 10 Clean Dummy Cards matching Explore book card style with light orange cover
-const DUMMY_TRASH_CARDS = Array.from({ length: 10 }, (_, index) => ({
-    id: `trash-${index + 1}`,
-    title: 'Name of the Flipbook',
-    authorName: 'Alex Johnson',
-    location: 'Coimbatore',
-    authorPicture: p1,
-    cover: cover1,
-    pages: 12,
-    views: '12.5k',
-    viewsCount: 12500,
-    rating: 4.5,
-    description: '“Bring your content to life with a real, interactive experience”',
-    deletedDaysAgo: (index * 2) + 1
-}));
+import FlipbookCard from './FlipbookCard';
+import LazyPreview from './LazyPreview';
+import { getAssetBaseUrl } from '../../utils/assetUtils';
 
 export default function TrashScreen({
     navigate,
-    trashedBooks,
+    trashedBooks = [],
     onEmptyTrash,
     onRestoreBook,
     onDeleteBook,
     onBulkRestore,
-    onBulkDelete
+    onBulkDelete,
+    user,
+    emailId,
+    backendUrl = import.meta.env.VITE_BACKEND_URL || '',
+    books = []
 }) {
-    const mapBookToCard = (b, index) => ({
-        id: b.id || b._id || `trash-${index + 1}`,
-        title: b.title || b.realName || 'Name of the Flipbook',
-        authorName: b.authorName || b.author || 'Alex Johnson',
-        location: b.location || 'Coimbatore',
-        authorPicture: b.authorPicture || p1,
-        cover: b.cover || (b.image ? (b.image.startsWith('http') || b.image.startsWith('data:') ? b.image : `${import.meta.env.VITE_BACKEND_URL || ''}${b.image.startsWith('/') ? '' : '/'}${b.image}`) : cover1),
-        pages: Array.isArray(b.pages) ? b.pages.length : (b.pageCount || b.pages || 12),
-        views: b.views || '12.5k',
-        viewsCount: typeof b.viewsCount === 'number' ? b.viewsCount : 12500,
-        rating: b.rating || 4.5,
-        description: b.description || '“Bring your content to life with a real, interactive experience”',
-        deletedDaysAgo: b.deletedDaysAgo ?? (b.deletedAt ? Math.max(0, Math.floor((Date.now() - new Date(b.deletedAt)) / (1000 * 60 * 60 * 24))) : ((index * 2) + 1)),
-        rawBook: b
-    });
-
-    const [cards, setCards] = useState(() => {
-        if (trashedBooks !== undefined) {
-            return trashedBooks.map((b, i) => mapBookToCard(b, i));
-        }
-        return DUMMY_TRASH_CARDS;
-    });
-
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('All Status');
+    const [sortOption, setSortOption] = useState('Recently Created');
+    const [isStatusOpen, setIsStatusOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
-    const [activeFilter, setActiveFilter] = useState('All');
-    const [activeSort, setActiveSort] = useState('Default');
-    const [toastMessage, setToastMessage] = useState(null);
 
-    const filterDropdownRef = useRef(null);
+    const statusDropdownRef = useRef(null);
     const sortDropdownRef = useRef(null);
 
-    useEffect(() => {
-        if (trashedBooks !== undefined) {
-            setCards(trashedBooks.map((b, i) => mapBookToCard(b, i)));
-        }
-    }, [trashedBooks]);
-
-    useEffect(() => {
-        if (!toastMessage) return;
-        const timer = setTimeout(() => setToastMessage(null), 2500);
-        return () => clearTimeout(timer);
-    }, [toastMessage]);
-
+    // Close dropdowns on outside click
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target)) {
-                setIsFilterOpen(false);
+            if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target)) {
+                setIsStatusOpen(false);
             }
             if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target)) {
                 setIsSortOpen(false);
@@ -89,408 +43,384 @@ export default function TrashScreen({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredCards = useMemo(() => {
-        return cards
-            .filter(card => {
-                const query = searchQuery.trim().toLowerCase();
-                const matchesQuery = !query ||
-                    card.title.toLowerCase().includes(query) ||
-                    card.authorName.toLowerCase().includes(query) ||
-                    card.location.toLowerCase().includes(query);
-
-                if (!matchesQuery) return false;
-                if (activeFilter === 'Recent (< 7 days)') return card.deletedDaysAgo < 7;
-                if (activeFilter === 'Older (7+ days)') return card.deletedDaysAgo >= 7;
-                return true;
-            })
-            .sort((a, b) => {
-                if (activeSort === 'Name (A-Z)') return a.title.localeCompare(b.title);
-                if (activeSort === 'Rating') return b.rating - a.rating;
-                if (activeSort === 'Views') return b.viewsCount - a.viewsCount;
-                return 0;
-            });
-    }, [cards, searchQuery, activeFilter, activeSort]);
-
-    const isAllSelected = filteredCards.length > 0 && filteredCards.every(c => selectedIds.includes(c.id));
-
-    const handleToggleSelectAll = () => {
-        if (isAllSelected) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(filteredCards.map(c => c.id));
+    const formatDisplayDate = (dateVal) => {
+        if (!dateVal) return '';
+        if (typeof dateVal === 'string' && dateVal.includes('-') && dateVal.includes(' ')) {
+            const parts = dateVal.split(' ')[0].split('-');
+            if (parts.length === 3 && parts[2].length === 4) return dateVal;
         }
+
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return String(dateVal);
+
+        const pad = (n) => n.toString().padStart(2, '0');
+        const day = pad(d.getDate());
+        const month = pad(d.getMonth() + 1);
+        const year = d.getFullYear();
+
+        let hours = d.getHours();
+        const minutes = pad(d.getMinutes());
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+
+        return `${day}-${month}-${year} ${pad(hours)}:${minutes} ${ampm}`;
     };
 
-    const handleToggleCardSelection = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    const formatDisplaySize = (book) => {
+        const bytes = book?.fileSize || book?.sizeBytes || 0;
+        if (bytes > 0) {
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        }
+        if (book?.size) return book.size;
+        return '0 B';
+    };
+
+    const getVisibilityType = (book) => {
+        const raw = String(
+            book.Visibility?.access ||
+            book.Visibility?.type ||
+            book.Customized_Settings?.Visibility?.access ||
+            book.Customized_Settings?.Visibility?.type ||
+            book.settings?.Visibility?.access ||
+            book.settings?.Visibility?.type ||
+            book.share?.access ||
+            book.share?.type ||
+            book.access ||
+            (book.isPublic === false ? 'private' : 'public')
+        ).toLowerCase().trim();
+
+        if (raw.includes('password') || raw.includes('protect')) return 'password';
+        if (raw.includes('invite') || raw.includes('email')) return 'invite';
+        if (raw.includes('private') || book.isPublic === false) return 'private';
+        return 'public';
+    };
+
+    const renderStatusBadge = (book) => {
+        const visType = getVisibilityType(book);
+        if (visType === 'password') {
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-amber-50 text-amber-600 border border-amber-200/60">
+                    <Icon icon="lucide:key-round" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>Password</span>
+                </span>
+            );
+        }
+        if (visType === 'invite') {
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200/60">
+                    <Icon icon="lucide:user-check" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>Invite</span>
+                </span>
+            );
+        }
+        if (visType === 'private') {
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.55vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-gray-100 text-gray-600">
+                    <Lock size="0.6vw" />
+                    <span>Private</span>
+                </span>
+            );
+        }
+        return (
+            <span className="flex items-center gap-[0.25vw] px-[0.55vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-[#e8f7ee] text-[#16a34a]">
+                <Globe size="0.6vw" />
+                <span>Public</span>
+            </span>
         );
     };
 
-    const handleRestore = (card, e) => {
-        if (e) e.stopPropagation();
-        setCards(prev => prev.filter(c => c.id !== card.id));
-        setSelectedIds(prev => prev.filter(id => id !== card.id));
-        setToastMessage(`Restored "${card.title}" successfully`);
-        if (onRestoreBook) onRestoreBook(card.rawBook || card);
+    const filteredBooks = useMemo(() => {
+        return (trashedBooks || [])
+            .filter((book) => {
+                const title = (book.title || book.realName || book.flipbookName || '').toLowerCase();
+                const query = searchQuery.trim().toLowerCase();
+                if (query && !title.includes(query)) return false;
+
+                if (statusFilter !== 'All Status') {
+                    const vis = getVisibilityType(book);
+                    if (statusFilter === 'Public' && vis !== 'public') return false;
+                    if (statusFilter === 'Private' && vis !== 'private') return false;
+                    if (statusFilter === 'Protected' && vis !== 'password') return false;
+                    if (statusFilter === 'Email' && vis !== 'invite') return false;
+                }
+                return true;
+            })
+            .sort((a, b) => {
+                if (sortOption === 'Recently Created') {
+                    return new Date(b.createdAt || b.created || 0) - new Date(a.createdAt || a.created || 0);
+                }
+                if (sortOption === 'Recently Modified') {
+                    return new Date(b.updatedAt || b.lastUpdated || b.mtime || b.createdAt || 0) - new Date(a.updatedAt || a.lastUpdated || a.mtime || a.createdAt || 0);
+                }
+                if (sortOption === 'Alphabetical (A-Z)' || sortOption === 'Name (A → Z)') {
+                    return (a.title || a.realName || '').localeCompare(b.title || b.realName || '');
+                }
+                if (sortOption === 'Alphabetical (Z-A)' || sortOption === 'Name (Z → A)') {
+                    return (b.title || b.realName || '').localeCompare(a.title || a.realName || '');
+                }
+                if (sortOption === 'Most Viewed') {
+                    return (b.viewsCount || b.views || 0) - (a.viewsCount || a.views || 0);
+                }
+                return 0;
+            });
+    }, [trashedBooks, searchQuery, statusFilter, sortOption]);
+
+    const getBookKey = (b) => b.id || b._id || b.v_id;
+
+    const isAllSelected = filteredBooks.length > 0 && filteredBooks.every((b) => selectedIds.includes(getBookKey(b)));
+    const isSomeSelected = selectedIds.length > 0 && !isAllSelected;
+
+    const toggleCardSelection = (id) => {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
     };
 
-    const handleDeletePermanent = (card, e) => {
-        if (e) e.stopPropagation();
-        setCards(prev => prev.filter(c => c.id !== card.id));
-        setSelectedIds(prev => prev.filter(id => id !== card.id));
-        setToastMessage(`Permanently deleted "${card.title}"`);
-        if (onDeleteBook) onDeleteBook(card.rawBook || card);
+    const handleMultipleSelectionToggle = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (isAllSelected) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredBooks.map((b) => getBookKey(b)));
+        }
     };
 
     const handleBulkRestoreClick = () => {
         if (selectedIds.length === 0) return;
-        const count = selectedIds.length;
-        const idsToRestore = [...selectedIds];
-        setCards(prev => prev.filter(c => !idsToRestore.includes(c.id)));
+        if (onBulkRestore) onBulkRestore(selectedIds);
         setSelectedIds([]);
-        setToastMessage(`Restored ${count} flipbook${count > 1 ? 's' : ''}`);
-        if (onBulkRestore) onBulkRestore(idsToRestore);
     };
 
     const handleBulkDeleteClick = () => {
         if (selectedIds.length === 0) return;
-        const count = selectedIds.length;
-        const idsToDelete = [...selectedIds];
+        if (onBulkDelete) onBulkDelete(selectedIds);
         setSelectedIds([]);
-        if (onBulkDelete) {
-            onBulkDelete(idsToDelete);
-        } else {
-            setCards(prev => prev.filter(c => !idsToDelete.includes(c.id)));
-            setToastMessage(`Permanently deleted ${count} flipbook${count > 1 ? 's' : ''}`);
-        }
-    };
-
-    const handleEmptyAll = () => {
-        if (cards.length === 0) return;
-        setCards([]);
-        setSelectedIds([]);
-        setToastMessage('Trash has been emptied');
-        if (onEmptyTrash) onEmptyTrash();
     };
 
     return (
-        <div className="flex-1 w-full h-full flex flex-col min-h-0 bg-[#f8f9fb] select-none relative">
-            {toastMessage && (
-                <div className="absolute top-[0.5vw] right-[1vw] z-50 bg-[#1e293b] text-white text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] shadow-lg flex items-center gap-[0.4vw] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Check size="0.85vw" className="text-emerald-400" />
-                    <span>{toastMessage}</span>
-                </div>
-            )}
+        <div className="flex flex-col w-full h-full px-[0.5vw] pb-0 pt-[0.2vw] overflow-visible font-sans text-gray-800">
+            {/* Page Header */}
+            <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">Trash</h2>
 
-            {/* Top Toolbar matching Create Flipbooks layout style */}
-            <div className="w-full mb-[0.9vw] relative z-20 flex-shrink-0">
-                <div className="flex items-center justify-between gap-[0.75vw]">
-                    <div>
-                        <h2 className="text-[1.25vw] font-bold text-[#1f2937] leading-tight flex items-center gap-[0.45vw]">
-                            <span>Trash</span>
-                            <span className="text-[0.82vw] font-semibold text-red-500 bg-red-50 px-[0.55vw] py-[0.1vw] rounded-full border border-red-200/70">
-                                {cards.length}
-                            </span>
-                        </h2>
-                        <p className="text-[0.82vw] text-gray-500 font-normal mt-[0.1vw]">
-                            Items in trash can be restored or permanently removed
-                        </p>
-                    </div>
-
-                    {/* Right: Search, Filter, Sort, Bulk Actions & Selection */}
-                    <div className="flex items-center gap-[0.65vw]">
-                        {/* Bulk Action Buttons when cards are selected */}
-                        {selectedIds.length > 0 && (
-                            <div className="flex items-center gap-[0.45vw] animate-in fade-in duration-150">
-                                <button
-                                    type="button"
-                                    onClick={handleBulkRestoreClick}
-                                    className="flex items-center gap-[0.35vw] px-[0.8vw] py-[0.48vw] bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white rounded-[0.55vw] text-[0.8vw] font-semibold shadow-xs cursor-pointer transition-colors"
-                                    title="Restore selected flipbooks"
-                                >
-                                    <RotateCcw size="0.85vw" />
-                                    <span>Restore ({selectedIds.length})</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleBulkDeleteClick}
-                                    className="flex items-center gap-[0.35vw] px-[0.8vw] py-[0.48vw] bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white rounded-[0.55vw] text-[0.8vw] font-semibold shadow-xs cursor-pointer transition-colors"
-                                    title="Permanently delete selected flipbooks"
-                                >
-                                    <Trash2 size="0.85vw" />
-                                    <span>Delete Permanently ({selectedIds.length})</span>
-                                </button>
-                            </div>
-                        )}
-
+            {/* Toolbar Row */}
+            <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
+                <div className="flex items-center justify-between w-full">
+                    {/* Left Controls: Search, Folder, Status, Sort */}
+                    <div className="flex items-center gap-[0.55vw] flex-shrink-0">
                         {/* Search Input */}
-                        <div className="relative w-[14vw]">
-                            <Search
-                                size="0.95vw"
-                                className="absolute left-[0.9vw] top-1/2 -translate-y-1/2 text-[#ec5137]"
-                            />
+                        <div className="relative w-[12.5vw] flex-shrink-0">
+                            <Search className="absolute left-[0.9vw] top-1/2 -translate-y-1/2 text-[#ec5137]" size="0.95vw" />
                             <input
                                 type="text"
-                                placeholder="Search Flipbook..."
+                                placeholder="Search..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-[2.4vw] pr-[1vw] py-[0.48vw] rounded-[0.6vw] border border-gray-200 text-[0.82vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-xs"
+                                className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-sm whitespace-nowrap"
                             />
                         </div>
 
-                        {/* Filter Dropdown */}
-                        <div className="relative" ref={filterDropdownRef}>
+                        {/* Folder Dropdown (Locked to Trash) */}
+                        <div className="relative flex-shrink-0">
+                            <button
+                                type="button"
+                                className="flex items-center gap-[0.45vw] px-[0.85vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer whitespace-nowrap flex-shrink-0"
+                            >
+                                <Folder size="0.9vw" className="text-[#ec5137] flex-shrink-0" />
+                                <span className="whitespace-nowrap">Trash</span>
+                                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.2vw] flex-shrink-0" />
+                            </button>
+                        </div>
+
+                        {/* Status Dropdown */}
+                        <div className="relative flex-shrink-0" ref={statusDropdownRef}>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setIsFilterOpen(!isFilterOpen);
+                                    setIsStatusOpen(!isStatusOpen);
                                     setIsSortOpen(false);
                                 }}
-                                className="flex items-center gap-[0.4vw] px-[0.8vw] py-[0.48vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.82vw] text-gray-700 hover:bg-gray-50 shadow-xs font-medium cursor-pointer"
+                                className="flex items-center gap-[0.45vw] px-[0.85vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
-                                <Filter size="0.85vw" className="text-[#ec5137]" />
-                                <span>{activeFilter === 'All' ? 'Filter' : activeFilter}</span>
-                                <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.15vw]" />
+                                <Icon icon="lucide:disc" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] flex-shrink-0" />
+                                <span className="whitespace-nowrap">{statusFilter}</span>
+                                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.2vw] flex-shrink-0" />
                             </button>
 
-                            {isFilterOpen && (
-                                <div className="absolute right-0 top-full mt-[0.25vw] w-[12vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 py-[0.25vw]">
-                                    {['All', 'Recent (< 7 days)', 'Older (7+ days)'].map((opt) => (
+                            {isStatusOpen && (
+                                <div className="absolute top-full left-0 mt-[0.25vw] min-w-[9vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 overflow-hidden">
+                                    {['All Status', 'Public', 'Private', 'Protected', 'Email'].map((opt) => (
                                         <button
                                             key={opt}
+                                            type="button"
                                             onClick={() => {
-                                                setActiveFilter(opt);
-                                                setIsFilterOpen(false);
+                                                setStatusFilter(opt);
+                                                setIsStatusOpen(false);
                                             }}
-                                            className={`w-full text-left px-[0.9vw] py-[0.45vw] text-[0.8vw] flex items-center justify-between cursor-pointer ${
-                                                activeFilter === opt
+                                            className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] whitespace-nowrap ${
+                                                statusFilter === opt
                                                     ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                    : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
                                             }`}
                                         >
-                                            <span>{opt}</span>
-                                            {activeFilter === opt && <Check size="0.75vw" className="text-[#ec5137]" />}
+                                            {opt}
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* Sort by Dropdown */}
-                        <div className="relative" ref={sortDropdownRef}>
+                        {/* Sort Dropdown */}
+                        <div className="relative flex-shrink-0" ref={sortDropdownRef}>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsSortOpen(!isSortOpen);
-                                    setIsFilterOpen(false);
+                                    setIsStatusOpen(false);
                                 }}
-                                className="flex items-center gap-[0.4vw] px-[0.8vw] py-[0.48vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.82vw] text-gray-700 hover:bg-gray-50 shadow-xs font-medium cursor-pointer"
+                                className="flex items-center gap-[0.45vw] px-[0.85vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
-                                <ArrowDownUp size="0.85vw" className="text-[#ec5137]" />
-                                <span>{activeSort === 'Default' ? 'Sort by' : activeSort}</span>
-                                <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.15vw]" />
+                                <ArrowDownUp size="0.9vw" className="text-[#ec5137] flex-shrink-0" />
+                                <span className="whitespace-nowrap">
+                                    Sort by - <span className="text-gray-500 font-normal">{sortOption}</span>
+                                </span>
+                                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.2vw] flex-shrink-0" />
                             </button>
 
                             {isSortOpen && (
-                                <div className="absolute right-0 top-full mt-[0.25vw] w-[11vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 py-[0.25vw]">
-                                    {['Default', 'Name (A-Z)', 'Views', 'Rating'].map((opt) => (
+                                <div className="absolute top-full left-0 mt-[0.25vw] min-w-[14vw] max-h-[22vw] overflow-y-auto overflow-x-hidden custom-scrollbar bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50">
+                                    {[
+                                        'Recently Created',
+                                        'Recently Modified',
+                                        'Name (A → Z)',
+                                        'Name (Z → A)',
+                                        'Most Viewed'
+                                    ].map((opt) => (
                                         <button
                                             key={opt}
+                                            type="button"
                                             onClick={() => {
-                                                setActiveSort(opt);
+                                                setSortOption(opt);
                                                 setIsSortOpen(false);
                                             }}
-                                            className={`w-full text-left px-[0.9vw] py-[0.45vw] text-[0.8vw] flex items-center justify-between cursor-pointer ${
-                                                activeSort === opt
+                                            className={`w-full flex items-center justify-between text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] whitespace-nowrap ${
+                                                sortOption === opt
                                                     ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                    : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
                                             }`}
                                         >
-                                            <span>{opt}</span>
-                                            {activeSort === opt && <Check size="0.75vw" className="text-[#ec5137]" />}
+                                            <span className="whitespace-nowrap">{opt}</span>
+                                            {sortOption === opt && <Check size="0.75vw" className="text-[#ec5137]" strokeWidth={2.5} />}
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        {/* Multiple Selection Checkbox */}
-                        {cards.length > 0 && (
-                            <label
-                                className="flex items-center gap-[0.45vw] px-[0.6vw] py-[0.48vw] cursor-pointer select-none border border-gray-200 bg-white rounded-[0.6vw] hover:bg-gray-50 shadow-xs transition-colors"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    handleToggleSelectAll();
-                                }}
-                            >
-                                <div className={`w-[1.1vw] h-[1.1vw] rounded-[0.2vw] border flex items-center justify-center transition-all ${
-                                    isAllSelected ? 'bg-gray-800 border-gray-800' : 'border-gray-400 bg-white'
-                                }`}>
-                                    {isAllSelected && <Check size="0.75vw" className="text-white" strokeWidth={3} />}
-                                </div>
-                                <span className="text-[0.82vw] font-medium text-gray-700">Multiple Selection</span>
-                            </label>
-                        )}
-
-                        {/* Empty Trash Button (when not selecting specific items) */}
-                        {cards.length > 0 && selectedIds.length === 0 && (
+                    {/* Right Controls: Empty Trash & Multiple Selection */}
+                    <div className="flex items-center gap-[0.6vw] flex-shrink-0">
+                        {/* Empty Trash Button (when no selection) */}
+                        {selectedIds.length === 0 && filteredBooks.length > 0 && (
                             <button
                                 type="button"
-                                onClick={handleEmptyAll}
-                                className="flex items-center gap-[0.35vw] px-[0.8vw] py-[0.48vw] bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-[0.6vw] text-[0.82vw] font-semibold shadow-xs cursor-pointer transition-colors"
+                                onClick={onEmptyTrash}
+                                className="flex items-center gap-[0.4vw] px-[0.75vw] py-[0.45vw] bg-white text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-[0.5vw] transition-all shadow-sm text-[0.75vw] font-semibold cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
-                                <Trash2 size="0.85vw" />
-                                <span>Empty Trash</span>
+                                <Trash2 size="0.85vw" className="text-red-500 flex-shrink-0" />
+                                <span className="whitespace-nowrap">Empty Trash</span>
                             </button>
                         )}
+
+                        {/* Bulk Action Buttons (when items selected) */}
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center gap-[0.45vw] flex-shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={handleBulkRestoreClick}
+                                    className="flex items-center gap-[0.4vw] px-[0.75vw] py-[0.45vw] bg-blue-600 text-white rounded-[0.5vw] hover:bg-blue-700 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer whitespace-nowrap flex-shrink-0"
+                                >
+                                    <RotateCcw size="0.85vw" className="flex-shrink-0" />
+                                    <span className="whitespace-nowrap">Restore ({selectedIds.length})</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleBulkDeleteClick}
+                                    className="flex items-center gap-[0.4vw] px-[0.75vw] py-[0.45vw] bg-white text-red-500 border border-red-200 rounded-[0.5vw] hover:bg-red-50 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer whitespace-nowrap flex-shrink-0"
+                                >
+                                    <Trash2 size="0.85vw" className="flex-shrink-0" />
+                                    <span className="whitespace-nowrap">Delete Permanently ({selectedIds.length})</span>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Multiple Selection Checkbox */}
+                        <label
+                            onClick={handleMultipleSelectionToggle}
+                            className="flex items-center gap-[0.45vw] cursor-pointer select-none whitespace-nowrap flex-shrink-0"
+                        >
+                            <div
+                                className={`w-[1.1vw] h-[1.1vw] rounded-[0.2vw] border flex items-center justify-center transition-all flex-shrink-0 ${
+                                    isAllSelected || isSomeSelected
+                                        ? 'bg-gray-700 border-gray-700 text-white'
+                                        : 'border-gray-400 bg-white'
+                                }`}
+                            >
+                                {isAllSelected && <Check size="0.75vw" className="text-white" strokeWidth={3} />}
+                                {isSomeSelected && <Minus size="0.75vw" className="text-white" strokeWidth={3} />}
+                            </div>
+                            <span className="text-[0.84vw] font-medium text-gray-600 whitespace-nowrap">Multiple Selection</span>
+                        </label>
                     </div>
                 </div>
             </div>
 
-            {/* Grid of Explore-Style Book Cards */}
-            <CustomScrollbar
-                color="#d1d5db"
-                hoverColor="#9ca3af"
-                width="0.35vw"
-                className="flex-1 pr-[0.3vw] pb-[2vw] min-h-0"
-            >
-                {filteredCards.length === 0 ? (
-                    <div className="w-full flex flex-col items-center justify-center py-[5vw] text-gray-400">
-                        <Sparkles size="2.5vw" className="text-gray-300 mb-[0.6vw]" />
-                        <p className="text-[0.9vw] font-medium text-gray-500">Trash is completely empty</p>
+            {/* Trashed Books List */}
+            {filteredBooks.length > 0 ? (
+                <CustomScrollbar
+                    color="#d1d5db"
+                    hoverColor="#9ca3af"
+                    width="0.35vw"
+                    className="flex-1 pr-[0.3vw] pb-[2vw] z-10 space-y-[0.85vw] min-h-0"
+                >
+                    {filteredBooks.map((book) => (
+                        <FlipbookCard
+                            key={getBookKey(book)}
+                            book={book}
+                            variant="trash"
+                            selectedIds={selectedIds}
+                            toggleCardSelection={toggleCardSelection}
+                            activeFolder="Trash"
+                            emailId={emailId}
+                            backendUrl={backendUrl}
+                            formatDisplayDate={formatDisplayDate}
+                            formatDisplaySize={formatDisplaySize}
+                            renderStatusBadge={renderStatusBadge}
+                            onRestoreBook={onRestoreBook}
+                            onDeleteBook={onDeleteBook}
+                            navigate={navigate}
+                            books={books}
+                        />
+                    ))}
+                </CustomScrollbar>
+            ) : (
+                /* Empty Trash State */
+                <div className="flex-1 flex flex-col items-center justify-center py-[5vw] text-center">
+                    <div className="w-[4.5vw] h-[4.5vw] rounded-full bg-red-50 flex items-center justify-center mb-[1vw] text-red-400 shadow-sm border border-red-100">
+                        <Trash2 size="2.2vw" />
                     </div>
-                ) : (
-                    <div className="grid grid-cols-5 gap-[1.1vw]">
-                        {filteredCards.map((book) => {
-                            const isSelected = selectedIds.includes(book.id);
-
-                            return (
-                                <div
-                                    key={book.id}
-                                    onClick={() => {
-                                        if (selectedIds.length > 0) {
-                                            handleToggleCardSelection(book.id);
-                                        }
-                                    }}
-                                    className={`bg-white rounded-[0.7vw] overflow-hidden flex flex-col shadow-[0_0.25vw_1.2vw_rgba(0,0,0,0.05)] hover:shadow-[0_0.5vw_1.8vw_rgba(0,0,0,0.08)] transition-all border relative group cursor-pointer ${
-                                        isSelected
-                                            ? 'border-red-400 ring-2 ring-red-400/50 shadow-md'
-                                            : 'border-transparent hover:border-gray-200'
-                                    }`}
-                                >
-                                    {/* Explore Book Image Area (4:3 ratio) */}
-                                    <div className="relative w-full aspect-[4/3] bg-[#fae8dc] overflow-hidden">
-                                        <img
-                                            src={book.cover}
-                                            alt={book.title || "Flipbook Cover"}
-                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                        />
-
-                                        {/* Card Selection Checkbox (Top Left) */}
-                                        <div
-                                            className={`absolute top-[0.6vw] left-[0.6vw] z-20 cursor-pointer transition-all duration-200 ${
-                                                isSelected || selectedIds.length > 0
-                                                    ? 'opacity-100 scale-100'
-                                                    : 'opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100'
-                                            }`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleToggleCardSelection(book.id);
-                                            }}
-                                        >
-                                            <div className={`w-[1.3vw] h-[1.3vw] rounded-[0.25vw] border flex items-center justify-center transition-all shadow-md ${
-                                                isSelected
-                                                    ? 'bg-gray-800 border-gray-800 text-white'
-                                                    : 'bg-white/95 border-gray-300 text-transparent hover:border-gray-500'
-                                            }`}>
-                                                <Check size="0.85vw" className={isSelected ? "text-white" : "opacity-0"} strokeWidth={3} />
-                                            </div>
-                                        </div>
-
-                                        {/* Top Right Trash Status Badge */}
-                                        <div
-                                            className="absolute top-[0.6vw] right-[0.6vw] w-[1.9vw] h-[1.9vw] rounded-full bg-white shadow-[0_0.15vw_0.5vw_rgba(0,0,0,0.12)] flex items-center justify-center z-10"
-                                            title={`In trash (${book.deletedDaysAgo} days ago)`}
-                                        >
-                                            <Trash2 size="0.95vw" className="text-[#ef4444]" />
-                                        </div>
-                                    </div>
-
-                                    {/* Explore Card Details */}
-                                    <div className="p-[0.9vw] flex flex-col flex-1 bg-white justify-between">
-                                        {/* Author Info */}
-                                        <div className="flex items-center gap-[0.65vw]">
-                                            <img
-                                                src={book.authorPicture}
-                                                alt={book.authorName}
-                                                className="w-[2.2vw] h-[2.2vw] rounded-full border-[0.06vw] border-gray-200 object-cover shrink-0"
-                                            />
-                                            <div className="flex flex-col min-w-0 pr-[0.2vw]">
-                                                <span className="text-[0.82vw] font-semibold text-gray-900 leading-tight truncate">
-                                                    {book.authorName}
-                                                </span>
-                                                <span className="flex items-center gap-[0.2vw] text-[0.68vw] text-gray-400 mt-[0.1vw] truncate">
-                                                    <Icon icon="lucide:map-pin" className="w-[0.7vw] h-[0.7vw] text-gray-400 shrink-0" />
-                                                    <span className="truncate">{book.location}</span>
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Stats: Pages | Views | Rating */}
-                                        <div className="flex items-center gap-[0.45vw] justify-start text-[0.72vw] text-gray-700 font-medium mt-[0.75vw] whitespace-nowrap">
-                                            <div className="flex items-center gap-[0.2vw]">
-                                                <span className="text-black font-semibold">{book.pages}</span>
-                                                <span className="font-normal text-gray-500">Pages</span>
-                                            </div>
-                                            <span className="text-gray-300">|</span>
-                                            <span className="flex items-center gap-[0.2vw]">
-                                                <Icon icon="lucide:eye" className="w-[0.8vw] h-[0.8vw] text-gray-400" />
-                                                <span>{book.views}</span>
-                                            </span>
-                                            <span className="text-gray-300">|</span>
-                                            <span className="flex items-center gap-[0.2vw]">
-                                                <Icon icon="material-symbols:star" className="w-[0.9vw] h-[0.9vw] text-yellow-400" />
-                                                <span>{book.rating}</span>
-                                            </span>
-                                        </div>
-
-                                        {/* Title & Desc & Buttons */}
-                                        <div className="relative flex-1 mt-[0.65vw]">
-                                            <h4 className="text-[0.88vw] font-semibold text-black truncate tracking-tight mb-[0.2vw]" title={book.title}>
-                                                {book.title}
-                                            </h4>
-                                            <p className="text-[0.7vw] text-gray-500 leading-relaxed pr-[3.8vw] line-clamp-2">
-                                                {book.description}
-                                            </p>
-
-                                            {/* Action Buttons: Restore & Delete */}
-                                            <div className="absolute bottom-0 right-0 flex items-center gap-[0.35vw]">
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => handleRestore(book, e)}
-                                                    className="w-[1.7vw] h-[1.7vw] rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center border-[0.06vw] border-blue-200 transition-colors shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                                                    title="Restore flipbook"
-                                                >
-                                                    <RotateCcw size="0.85vw" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => handleDeletePermanent(book, e)}
-                                                    className="w-[1.7vw] h-[1.7vw] rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center border-[0.06vw] border-red-200 transition-colors shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                                                    title="Delete permanently"
-                                                >
-                                                    <Trash2 size="0.85vw" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </CustomScrollbar>
+                    <h3 className="text-[1.1vw] font-bold text-gray-800 mb-[0.3vw]">Trash is empty</h3>
+                    <p className="text-[0.82vw] text-gray-400 max-w-[20vw]">
+                        Deleted flipbooks will appear here. You can restore them or permanently delete them at any time.
+                    </p>
+                </div>
+            )}
         </div>
     );
 }

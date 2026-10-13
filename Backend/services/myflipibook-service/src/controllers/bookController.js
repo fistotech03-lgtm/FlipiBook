@@ -57,7 +57,34 @@ exports.getBooks = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    const rawBooks = await Flipbook.find(userQuery).sort({ updatedAt: -1 });
+    // Sort by createdAt ascending to determine original vs subsequent duplicate books
+    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 });
+
+    // Auto-heal duplicate flipbook names for this user
+    const seenNames = new Map();
+    for (const b of rawBooks) {
+      const currentName = (b.flipbookName || 'Flipbook').trim();
+      const lower = currentName.toLowerCase();
+      if (!seenNames.has(lower)) {
+        seenNames.set(lower, 1);
+      } else {
+        let counter = seenNames.get(lower);
+        let newName = `${currentName} (${counter})`;
+        while (seenNames.has(newName.toLowerCase())) {
+          counter++;
+          newName = `${currentName} (${counter})`;
+        }
+        seenNames.set(lower, counter + 1);
+        seenNames.set(newName.toLowerCase(), 1);
+
+        console.log(`[Book Controller] Auto-healing duplicate flipbook name: "${b.flipbookName}" -> "${newName}" for v_id ${b.v_id}`);
+        b.flipbookName = newName;
+        await Flipbook.updateOne({ _id: b._id }, { $set: { flipbookName: newName } });
+      }
+    }
+
+    // Sort newest updated/created first for display
+    rawBooks.sort((a, b) => new Date(b.updatedAt || b.lastUpdated || b.createdAt) - new Date(a.updatedAt || a.lastUpdated || a.createdAt));
     const formattedBooks = rawBooks.map(formatBook);
 
     res.status(200).json({
@@ -477,8 +504,22 @@ exports.saveBook = async (req, res) => {
     let book = null;
     if (providedVId) {
       book = await Flipbook.findOne({ ...userQuery, v_id: providedVId });
-    } else if (overwrite) {
-      book = await Flipbook.findOne({ ...userQuery, flipbookName: safeName });
+    }
+
+    let finalFlipbookName = safeName;
+    if (!book) {
+      // New book creation: strictly guarantee unique flipbookName to avoid collisions
+      const existingBooks = await Flipbook.find(userQuery).select('flipbookName').lean();
+      const existingNames = new Set(existingBooks.map(eb => (eb.flipbookName || '').trim().toLowerCase()));
+      if (existingNames.has(finalFlipbookName.toLowerCase())) {
+        let counter = 1;
+        let testName = `${finalFlipbookName} (${counter})`;
+        while (existingNames.has(testName.toLowerCase())) {
+          counter++;
+          testName = `${finalFlipbookName} (${counter})`;
+        }
+        finalFlipbookName = testName;
+      }
     }
 
     const resolvedVId = book?.v_id || providedVId || crypto.randomBytes(8).toString('hex');
@@ -543,7 +584,7 @@ exports.saveBook = async (req, res) => {
         ...(customUserId ? { userID: customUserId } : {}),
         userEmail: emailId,
         v_id: resolvedVId,
-        flipbookName: safeName,
+        flipbookName: finalFlipbookName,
         folderName: targetFolder,
         pages: safePages,
         fileSize: fileSize || 0,
@@ -558,19 +599,24 @@ exports.saveBook = async (req, res) => {
       const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
       const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
 
-      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, safeName);
-      initFlipbookStorage(wsBookDir);
+      const wsBookDirs = [
+        path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, finalFlipbookName),
+        path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, resolvedVId)
+      ];
 
-      const pagesDir = path.join(wsBookDir, 'pages');
-      safePages.forEach((sp) => {
-        const htmlContent = sp.html || sp.content || '';
-        if (htmlContent) {
-          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
-        }
-        if (sp.content) {
-          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
-        }
-      });
+      for (const dir of wsBookDirs) {
+        initFlipbookStorage(dir);
+        const pagesDir = path.join(dir, 'pages');
+        safePages.forEach((sp) => {
+          const htmlContent = sp.html || sp.content || '';
+          if (htmlContent) {
+            fs.writeFileSync(path.join(dir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+          }
+          if (sp.content) {
+            fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+          }
+        });
+      }
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing pages to disk:', fsErr.message);
     }
@@ -687,21 +733,15 @@ exports.getBook = async (req, res) => {
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName, folderName } = req.query;
 
-    const queryConditions = [];
+    let filter;
     if (v_id) {
-      queryConditions.push({ v_id });
-    }
-    if (bookName && bookName !== 'undefined') {
-      queryConditions.push({ flipbookName: bookName });
-    }
-
-    if (queryConditions.length === 0) {
+      filter = { v_id };
+      if (userQuery) filter = { ...filter, ...userQuery };
+    } else if (bookName && bookName !== 'undefined') {
+      filter = { flipbookName: bookName };
+      if (userQuery) filter = { ...filter, ...userQuery };
+    } else {
       return res.status(400).json({ success: false, message: 'Missing book identifier (v_id or bookName)' });
-    }
-
-    let filter = queryConditions.length === 1 ? queryConditions[0] : { $or: queryConditions };
-    if (userQuery) {
-      filter = { ...filter, ...userQuery };
     }
 
     let book = await Flipbook.findOne(filter);
@@ -719,13 +759,17 @@ exports.getBook = async (req, res) => {
     const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
     const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
 
-    // Check candidate directories in priority order
+    // Check candidate directories in priority order (v_id prioritized over generic name)
     let pagesDir = null;
     let bookDir = null;
-    if (userFolder && folder && book.flipbookName) {
+    if (userFolder && folder) {
       const candidateDirs = [
+        path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id),
+        path.join(storageRoot, userFolder, 'My_Flipbooks', folder, `${book.flipbookName}_${book.v_id}`),
         path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName),
+        path.join(storageRoot, userFolder, folder, book.v_id),
         path.join(storageRoot, userFolder, folder, book.flipbookName),
+        path.join(storageRoot, 'flipbooks', userFolder, folder, book.v_id),
         path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName)
       ];
       for (const d of candidateDirs) {
@@ -852,8 +896,11 @@ exports.previewBook = async (req, res) => {
       const storageRoot = getStorageRoot();
       const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      if (userFolder && folder && book.flipbookName) {
+      if (userFolder && folder) {
         const candidateFiles = [
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, `Page ${firstPage.pageNumber}.html`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, 'pages', `${firstPage.pageNumber}.svg`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, `${book.flipbookName}_${book.v_id}`, `Page ${firstPage.pageNumber}.html`),
           path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, `Page ${firstPage.pageNumber}.html`),
           path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`),
           path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`)

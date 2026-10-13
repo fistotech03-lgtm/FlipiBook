@@ -433,7 +433,7 @@ export default function FlipbooksSidebar({
                 {/* Divider */}
                 <div className="my-[1vw] border-b border-[#243042] flex-none"></div>
 
-                {!(isFavoritesActive || isTrashActive || isShelfActive) ? (
+                {!isShelfActive ? (
                     <>
                         {/* Folders Section Header (Dynamic: 3D Folders vs Your Folders) */}
                         <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
@@ -601,7 +601,11 @@ export default function FlipbooksSidebar({
                         <div className="space-y-[0.25vw]">
                             {/* All Flipbooks */}
                             <div
-                                onClick={() => { setActiveFolder('All Flipbook'); setSelectedBooks([]); }}
+                                onClick={() => {
+                                    if (setDashboardMode) setDashboardMode('books');
+                                    setActiveFolder('All Flipbook');
+                                    setSelectedBooks([]);
+                                }}
                                 className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
                                     (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
                                         ? 'bg-[#2c3749] text-white font-medium'
@@ -619,7 +623,11 @@ export default function FlipbooksSidebar({
 
                             {/* Recent */}
                             <div
-                                onClick={() => { setActiveFolder('Recent'); setSelectedBooks([]); }}
+                                onClick={() => {
+                                    if (setDashboardMode) setDashboardMode('books');
+                                    setActiveFolder('Recent');
+                                    setSelectedBooks([]);
+                                }}
                                 className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
                                     (activeFolder === 'Recent' || activeFolder === 'Recent Book')
                                         ? 'bg-[#2c3749] text-white font-medium'
@@ -666,7 +674,11 @@ export default function FlipbooksSidebar({
                                     onDragLeave={(e) => handleFolderDragLeave(e, index)}
                                     onDrop={(e) => handleFolderDrop(e, index, folder)}
                                     onDragEnd={handleFolderDragEnd}
-                                    onClick={() => { setActiveFolder(folder.name); setSelectedBooks([]); }}
+                                    onClick={() => {
+                                        if (setDashboardMode) setDashboardMode('books');
+                                        setActiveFolder(folder.name);
+                                        setSelectedBooks([]);
+                                    }}
                                     className={`relative group folder-item-row w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none
                                         ${isDragging ? 'opacity-40 scale-[0.98] border border-dashed border-[#ec5137]' : ''}
                                         ${isDragOver ? 'border-t-2 border-t-[#ec5137] bg-white/5' : ''}

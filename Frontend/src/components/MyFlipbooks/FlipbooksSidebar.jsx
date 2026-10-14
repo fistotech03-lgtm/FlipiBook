@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
+import { FolderSkeleton } from './FlipbookSkeleton';
 
 const DEFAULT_FOLDER_COLORS = [
     '#f59e0b', // Yellow / Amber
@@ -30,6 +31,7 @@ export default function FlipbooksSidebar({
     creatingFolderName,
     storage,
     isLoadingStorage,
+    isLoadingFolders = false,
     isUpgradeCardClosed,
     setIsUpgradeCardClosed,
     dashboardMode = 'books',
@@ -644,7 +646,10 @@ export default function FlipbooksSidebar({
                             </div>
 
                             {/* Custom Folders */}
-                            {folders.map((folder, index) => {
+                            {isLoadingFolders && (!folders || folders.length === 0) ? (
+                                <FolderSkeleton count={4} />
+                            ) : (
+                                folders.map((folder, index) => {
                                 const isEditing = editingId === folder.id;
                                 const isActive = activeFolder === folder.name;
                                 const isDragging = dragFolderIndex === index;
@@ -729,7 +734,8 @@ export default function FlipbooksSidebar({
                                     </div>
                                 </div>
                             );
-                        })}
+                        })
+                    )}
 
                         {/* New Folder Input */}
                         {isCreatingFolder && (

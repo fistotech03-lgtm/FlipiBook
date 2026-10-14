@@ -54,6 +54,9 @@ services:
         aliases:
           - backend-gateway
           - backend
+      dokploy-network:
+        aliases:
+          - main-backend-gateway
 
 networks:
   main-internal:

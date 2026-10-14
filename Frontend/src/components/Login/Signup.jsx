@@ -8,6 +8,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useToast } from '../CustomToast';
 import { useAuth } from '../../context/AuthContext';
 import { getErrorMessage, setSessionToken } from '../../utils/authUtils';
+import { prefetchMyFlipbooks } from '../../queryClient';
 
 export default function Signup({ onSwitchToSignin }) {
   const { setUser, closeAuthModal, authRedirectPath } = useAuth();
@@ -70,6 +71,7 @@ export default function Signup({ onSwitchToSignin }) {
               setSessionToken(res.data.token);
             }
             setUser(res.data.user);
+            prefetchMyFlipbooks(res.data.user?.emailId || res.data.user?.email);
             toast.success('Registration successful with Google!');
             closeAuthModal?.();
             if (authRedirectPath) {
@@ -194,6 +196,7 @@ export default function Signup({ onSwitchToSignin }) {
           setSessionToken(res.data.token);
         }
         setUser(res.data.user || { emailId: cleanEmail });
+        prefetchMyFlipbooks(res.data.user?.emailId || cleanEmail);
         toast.success('Account created & verified successfully!');
         closeAuthModal?.();
         if (authRedirectPath) {

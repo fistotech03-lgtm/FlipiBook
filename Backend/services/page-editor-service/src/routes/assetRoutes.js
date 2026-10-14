@@ -11,6 +11,6 @@ router.delete('/delete-asset', optionalAuth, assetController.deleteAsset);
 router.get('/get-gallery-assets', optionalAuth, assetController.getGalleryAssets);
 router.post('/rename-gallery-asset', optionalAuth, assetController.renameGalleryAsset);
 router.post('/delete-gallery-asset', optionalAuth, assetController.deleteGalleryAsset);
+router.post('/use-gallery-asset', optionalAuth, assetController.useGalleryAsset);
 
 module.exports = router;
-

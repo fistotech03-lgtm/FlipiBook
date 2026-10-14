@@ -487,14 +487,14 @@ export const useSaveEngine = ({
               if (uploadRes.data && uploadRes.data.url) {
                 const finalUrl = uploadRes.data.url;
                 const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
+                const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.relativeUrl || finalUrl;
                 const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
                 const absoluteUrl = assetPathMatch
                   ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
                   : finalUrl;
 
-                // Replace the data URI directly in the raw HTML
-
-                newHtml = newHtml.split(actualDataUri).join(absoluteUrl);
+                // Replace the data URI directly in the raw HTML with clean relative path
+                newHtml = newHtml.split(actualDataUri).join(relativeUrl);
 
                 // Update the live DOM element so InteractionPanel shows the image immediately
                 try {
@@ -613,6 +613,10 @@ export const useSaveEngine = ({
           const projectBaseUrl = getSupabaseBaseUrl(sanitizedEmail, fName, bName);
 
           // Convert absolute paths back to relative for storage portability
+          const flipbookAssetRegex = /(?:https?:\/\/[^\/"'\s]+)?\/(?:storage|uploads)\/[^/"'\s]+\/My_Flipbooks\/(?:[^/"'\s]+\/)+assets\/([^/"'\s]+)\/([^"&'<>)\s,]+)/gi;
+          if (content) {
+            content = content.replace(flipbookAssetRegex, './assets/$1/$2');
+          }
           if (content && content.includes(projectBaseUrl)) {
             content = content.split(projectBaseUrl).join('./');
           }

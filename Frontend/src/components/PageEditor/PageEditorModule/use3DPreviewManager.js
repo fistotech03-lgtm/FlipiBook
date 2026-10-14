@@ -7,13 +7,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth, usePageEditorState } from '../../../store/hooks';
 
 export const use3DPreviewManager = ({
   setPages,
   activePageIndex
 }) => {
   const { user } = useAuth();
+  const {
+    set3DInspectorValues,
+    setIs3DModalOpen: setRedux3DModalOpen,
+    setPreview3DDataUrl: setRedux3DDataUrl,
+    setCurrent3DVId: setRedux3DVId
+  } = usePageEditorState();
+
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [current3DItem, setCurrent3DItem] = useState(null);
   const [shadowStrength, setShadowStrength] = useState(1);
@@ -157,6 +164,51 @@ export const use3DPreviewManager = ({
     } catch { /* ignore */ }
     return null;
   }, [current3DItem]);
+
+  useEffect(() => {
+    setRedux3DModalOpen(is3DModalOpen);
+  }, [is3DModalOpen, setRedux3DModalOpen]);
+
+  useEffect(() => {
+    setRedux3DDataUrl(preview3DDataUrl);
+  }, [preview3DDataUrl, setRedux3DDataUrl]);
+
+  useEffect(() => {
+    setRedux3DVId(current3DVId);
+  }, [current3DVId, setRedux3DVId]);
+
+  useEffect(() => {
+    set3DInspectorValues({
+      shadowStrength,
+      shadowSoftness,
+      autoRotate,
+      autoRotateSpeed,
+      lockMaxZoom,
+      maxZoom,
+      bgType,
+      bgColor,
+      customBg,
+      enableAR,
+      qrText,
+      qrColor,
+      qrBgType,
+      qrBgColor,
+      qrLevel,
+      qrDotType,
+      qrCornerSquareType,
+      qrCornerDotType,
+      qrLogo,
+      topText,
+      bottomText,
+      current3DHotspots,
+      active3DHotspotId
+    });
+  }, [
+    shadowStrength, shadowSoftness, autoRotate, autoRotateSpeed, lockMaxZoom, maxZoom,
+    bgType, bgColor, customBg, enableAR, qrText, qrColor, qrBgType, qrBgColor, qrLevel,
+    qrDotType, qrCornerSquareType, qrCornerDotType, qrLogo, topText, bottomText,
+    current3DHotspots, active3DHotspotId
+  ]);
 
   return {
     is3DModalOpen,

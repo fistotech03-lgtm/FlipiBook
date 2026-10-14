@@ -6,10 +6,20 @@ const Flipbook = require('../models/Flipbook');
 const FlipbookAsset = require('../models/FlipbookAsset');
 const { deleteBookStorage, getStorageRoot, initFlipbookStorage } = require('../utils/storageHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
-const { processAndSaveBase64Assets } = require('../utils/base64Helper');
+const { processAndSaveBase64Assets, normalizeToRelativeAssetPaths } = require('../utils/base64Helper');
 
-// In-memory cache for chunked uploads
+// In-memory cache for chunked uploads with 30-minute TTL eviction to prevent memory leaks
+const CHUNK_TTL_MS = 30 * 60 * 1000;
 const chunkUploads = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of chunkUploads.entries()) {
+    if (session.timestamp && (now - session.timestamp > CHUNK_TTL_MS)) {
+      chunkUploads.delete(id);
+    }
+  }
+}, 10 * 60 * 1000).unref();
 
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
@@ -60,8 +70,8 @@ exports.getBooks = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    // Sort by createdAt ascending to determine original vs subsequent duplicate books
-    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 });
+    // Sort by createdAt ascending to determine original vs subsequent duplicate books (using .lean() for performance)
+    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 }).lean();
 
     // Auto-heal duplicate flipbook names for this user
     const seenNames = new Map();
@@ -291,20 +301,54 @@ exports.renameBook = async (req, res) => {
     if (v_id) query.v_id = v_id;
     else query.flipbookName = bookName;
 
-    const updated = await Flipbook.findOneAndUpdate(
-      query,
-      { $set: { flipbookName: trimmedNew, lastUpdated: new Date() } },
-      { returnDocument: 'after' }
-    );
-
-    if (!updated) {
+    const existing = await Flipbook.findOne(query);
+    if (!existing) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
+    }
+
+    const oldName = existing.flipbookName;
+    existing.flipbookName = trimmedNew;
+    existing.lastUpdated = new Date();
+    await existing.save();
+
+    // Rename directory on disk if it exists
+    if (oldName !== trimmedNew) {
+      try {
+        const storageRoot = getStorageRoot();
+        const userFolders = [
+          existing.userID,
+          existing.userId ? String(existing.userId) : null,
+          existing.userEmail ? existing.userEmail.replace(/[@.]/g, '_') : null
+        ].filter(Boolean);
+        const folder = Array.isArray(existing.folderName) ? existing.folderName[0] : (existing.folderName || 'My_Flipbooks');
+
+        for (const uf of userFolders) {
+          const candidateOldDirs = [
+            path.join(storageRoot, uf, 'My_Flipbooks', folder, oldName),
+            path.join(storageRoot, uf, folder, oldName),
+            path.join(storageRoot, uf, 'My_Flipbooks', oldName),
+            path.join(storageRoot, uf, oldName)
+          ];
+          for (const oldDir of candidateOldDirs) {
+            if (fs.existsSync(oldDir)) {
+              const newDir = path.join(path.dirname(oldDir), trimmedNew);
+              if (!fs.existsSync(newDir)) {
+                fs.renameSync(oldDir, newDir);
+                console.log(`[Book Controller] Renamed physical book directory: ${oldDir} -> ${newDir}`);
+              }
+              break;
+            }
+          }
+        }
+      } catch (renameErr) {
+        console.warn('[Book Controller] Warning renaming physical folder on disk:', renameErr.message);
+      }
     }
 
     res.status(200).json({
       success: true,
       message: 'Renamed successfully',
-      book: formatBook(updated)
+      book: formatBook(existing)
     });
   } catch (err) {
     console.error('[Book Controller] Error renaming book:', err);
@@ -645,7 +689,7 @@ exports.saveBook = async (req, res) => {
       const newFlipbookAssets = [];
       const keepBase64 = reqKeepBase64 !== undefined ? Boolean(reqKeepBase64) : false;
 
-      safePages.forEach((sp) => {
+      for (const sp of safePages) {
         let svgContent = sp.content || sp.html || '';
         const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
 
@@ -663,7 +707,7 @@ exports.saveBook = async (req, res) => {
             const candPath = path.join(pagesDir, cand);
             if (fs.existsSync(candPath)) {
               try {
-                const diskStr = fs.readFileSync(candPath, 'utf8');
+                const diskStr = await fs.promises.readFile(candPath, 'utf8');
                 if (diskStr && diskStr.trim()) {
                   svgContent = diskStr;
                   break;
@@ -700,7 +744,7 @@ exports.saveBook = async (req, res) => {
           skipBase64Extraction: keepBase64
         });
 
-        fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+        await fs.promises.writeFile(path.join(pagesDir, targetFileName), svgContent, 'utf8');
         sp.size = Buffer.byteLength(svgContent, 'utf8');
 
         // If this page was renamed, remove its old physical file
@@ -708,12 +752,12 @@ exports.saveBook = async (req, res) => {
           try {
             const oldFilePath = path.join(pagesDir, sp.existingFileName);
             if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
+              await fs.promises.unlink(oldFilePath);
               console.log(`[Book Controller] Cleaned up renamed old page file: ${sp.existingFileName}`);
             }
           } catch (e) {}
         }
-      });
+      }
 
       // Upsert extracted base64 assets in MongoDB
       if (newFlipbookAssets.length > 0) {
@@ -925,6 +969,7 @@ exports.savePagesBatch = async (req, res) => {
             skipBase64Extraction: keepBase64
           });
 
+          svgContent = normalizeToRelativeAssetPaths(svgContent);
           fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
           sp.size = Buffer.byteLength(svgContent, 'utf8');
         }
@@ -1173,6 +1218,7 @@ exports.updateSettings = async (req, res) => {
 exports.previewBook = async (req, res) => {
   try {
     const v_id = req.params?.v_id;
+    const reqEmail = req.query?.emailId;
     const book = await Flipbook.findOne({ v_id });
     if (!book) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
@@ -1180,27 +1226,139 @@ exports.previewBook = async (req, res) => {
     const firstPage = book.pages && book.pages.length > 0 ? book.pages[0] : null;
     let firstPageHtml = firstPage?.html || firstPage?.content || '';
 
-    if (!firstPageHtml && firstPage) {
+    if (!firstPageHtml) {
       const storageRoot = getStorageRoot();
-      const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
-      const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      if (userFolder && folder) {
-        const candidateFiles = [
-          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, `Page ${firstPage.pageNumber}.html`),
-          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, 'pages', `${firstPage.pageNumber}.svg`),
-          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, `${book.flipbookName}_${book.v_id}`, `Page ${firstPage.pageNumber}.html`),
-          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, `Page ${firstPage.pageNumber}.html`),
-          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`),
-          path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`)
+      const userFolders = Array.from(new Set([
+        book.userID,
+        book.userId ? String(book.userId) : null,
+        book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null,
+        reqEmail ? String(reqEmail).replace(/[@.]/g, '_') : null
+      ].filter(Boolean)));
+
+      const primaryFolder = Array.isArray(book.folderName) ? book.folderName[0] : book.folderName;
+      const folders = Array.from(new Set([
+        primaryFolder,
+        'My_Flipbooks'
+      ].filter(Boolean)));
+
+      const bookNames = Array.from(new Set([
+        book.flipbookName,
+        book.v_id,
+        `${book.flipbookName}_${book.v_id}`
+      ].filter(Boolean)));
+
+      // 1. Build all candidate directories
+      const candidateDirs = [];
+      for (const uf of userFolders) {
+        for (const f of folders) {
+          for (const bn of bookNames) {
+            candidateDirs.push(
+              path.join(storageRoot, uf, 'My_Flipbooks', f, bn),
+              path.join(storageRoot, uf, f, bn),
+              path.join(storageRoot, uf, 'My_Flipbooks', bn),
+              path.join(storageRoot, uf, bn),
+              path.join(storageRoot, 'flipbooks', uf, f, bn),
+              path.join(storageRoot, 'flipbooks', uf, bn)
+            );
+          }
+        }
+      }
+
+      // 2. Fallback scan for matching book directory
+      for (const uf of userFolders) {
+        const searchBases = [
+          path.join(storageRoot, uf, 'My_Flipbooks', 'My_Flipbooks'),
+          path.join(storageRoot, uf, 'My_Flipbooks'),
+          path.join(storageRoot, uf)
         ];
-        for (const filePath of candidateFiles) {
-          if (fs.existsSync(filePath)) {
+        for (const sb of searchBases) {
+          if (fs.existsSync(sb)) {
             try {
-              firstPageHtml = fs.readFileSync(filePath, 'utf8');
-              break;
+              const subdirs = fs.readdirSync(sb);
+              for (const sd of subdirs) {
+                const fullSd = path.join(sb, sd);
+                try {
+                  if (fs.statSync(fullSd).isDirectory()) {
+                    const sdLower = sd.toLowerCase();
+                    if (
+                      (book.flipbookName && (sdLower === book.flipbookName.toLowerCase() || sdLower.includes(book.flipbookName.toLowerCase()))) ||
+                      (book.v_id && (sdLower === book.v_id.toLowerCase() || sdLower.includes(book.v_id.toLowerCase())))
+                    ) {
+                      candidateDirs.push(fullSd);
+                    }
+                  }
+                } catch (e) {}
+              }
             } catch (e) {}
           }
         }
+      }
+
+      const uniqueCandidateDirs = Array.from(new Set(candidateDirs));
+
+      // 3. Build candidate file names for the first page
+      const pageNum = firstPage?.pageNumber || 1;
+      const cleanName = firstPage?.name ? String(firstPage.name).replace(/[\\/:*?"<>|]/g, '').trim() : '';
+      const cleanFileName = firstPage?.fileName ? String(firstPage.fileName).replace(/[\\/:*?"<>|]/g, '').trim() : '';
+
+      const candidateFileNames = Array.from(new Set([
+        cleanFileName,
+        cleanName ? (cleanName.toLowerCase().endsWith('.svg') ? cleanName : `${cleanName}.svg`) : null,
+        `Page ${pageNum}.svg`,
+        `page ${pageNum}.svg`,
+        `Page_${pageNum}.svg`,
+        `${pageNum}.svg`,
+        'Page 1.svg',
+        'page 1.svg',
+        '1.svg',
+        `Page ${pageNum}.html`,
+        `page ${pageNum}.html`,
+        'Page 1.html',
+        'page 1.html',
+        '1.html'
+      ].filter(Boolean)));
+
+      // 4. Search candidate directories for the first page file
+      for (const candDir of uniqueCandidateDirs) {
+        if (!fs.existsSync(candDir)) continue;
+
+        for (const fName of candidateFileNames) {
+          const candidatePaths = [
+            path.join(candDir, 'pages', fName),
+            path.join(candDir, fName)
+          ];
+          for (const candPath of candidatePaths) {
+            if (fs.existsSync(candPath)) {
+              try {
+                const content = fs.readFileSync(candPath, 'utf8');
+                if (content && content.trim()) {
+                  firstPageHtml = content;
+                  break;
+                }
+              } catch (e) {}
+            }
+          }
+          if (firstPageHtml) break;
+        }
+
+        // Check if pages directory exists and has any .svg/.html files
+        if (!firstPageHtml) {
+          const pagesDir = path.join(candDir, 'pages');
+          if (fs.existsSync(pagesDir)) {
+            try {
+              const files = fs.readdirSync(pagesDir).filter(f => f.endsWith('.svg') || f.endsWith('.html'));
+              if (files.length > 0) {
+                const firstSvg = files.find(f => /page\s*1\b|^1\./i.test(f)) || files[0];
+                const content = fs.readFileSync(path.join(pagesDir, firstSvg), 'utf8');
+                if (content && content.trim()) {
+                  firstPageHtml = content;
+                }
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (firstPageHtml) break;
       }
     }
 
@@ -1211,6 +1369,7 @@ exports.previewBook = async (req, res) => {
       html: firstPageHtml
     });
   } catch (err) {
+    console.error('[Book Controller] Error fetching preview:', err);
     res.status(500).json({ success: false, message: 'Server error fetching preview' });
   }
 };
@@ -1364,6 +1523,203 @@ exports.getGalleryAssets = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error fetching gallery assets',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Copy a gallery asset into a flipbook's own assets folder and create a new FlipbookAsset DB record
+ * @route POST /api/flipbook/use-gallery-asset
+ */
+exports.useGalleryAsset = async (req, res) => {
+  try {
+    const { emailId: authEmail } = getAuthUser(req);
+    const {
+      emailId: reqEmail,
+      v_id,
+      folderName,
+      flipbookName,
+      galleryUrl,
+      fileName: reqFileName,
+      page_v_id,
+      assetType: reqAssetType
+    } = req.body;
+
+    const emailId = authEmail || reqEmail;
+    if (!emailId || !galleryUrl) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: emailId and galleryUrl' });
+    }
+
+    let dbDoc = null;
+    let safeFolderName = (folderName || 'My_Flipbooks').replace(/[\\/:*?"<>|]/g, '').trim() || 'My_Flipbooks';
+    let safeFlipbookName = (flipbookName || 'Untitled_Document').replace(/[\\/:*?"<>|]/g, '').trim() || 'Untitled_Document';
+
+    if (v_id) {
+      dbDoc = await Flipbook.findOne({ v_id });
+      if (dbDoc) {
+        if (dbDoc.flipbookName) safeFlipbookName = dbDoc.flipbookName.replace(/[\\/:*?"<>|]/g, '').trim() || safeFlipbookName;
+        const realFolders = Array.isArray(dbDoc.folderName)
+          ? dbDoc.folderName.filter((f) => f !== 'Recent Book' && f !== 'Recent' && f !== 'Recent book')
+          : [dbDoc.folderName];
+        if (realFolders[0]) safeFolderName = realFolders[0].replace(/[\\/:*?"<>|]/g, '').trim() || safeFolderName;
+      }
+    }
+
+    const sanitizedEmail = emailId.replace(/[@.]/g, '_');
+    let resolvedUserId = dbDoc?.userID || (dbDoc?.userId ? String(dbDoc.userId) : null);
+
+    if (!resolvedUserId && emailId) {
+      try {
+        const anyBook = await Flipbook.findOne({
+          userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+        }).select('userID userId');
+        if (anyBook) {
+          resolvedUserId = anyBook.userID || (anyBook.userId ? String(anyBook.userId) : null);
+        }
+      } catch (e) {}
+    }
+
+    if (!resolvedUserId) {
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          const userRec = await mongoose.connection.db.collection('users').findOne({
+            emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+          });
+          if (userRec && userRec.userID) {
+            resolvedUserId = userRec.userID;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const storageRoot = getStorageRoot();
+    if (!resolvedUserId) {
+      try {
+        if (fs.existsSync(storageRoot)) {
+          const topDirs = fs.readdirSync(storageRoot);
+          const flipiDir = topDirs.find(d => /^FLIPI\d+/i.test(d));
+          if (flipiDir) {
+            resolvedUserId = flipiDir;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const userFolder = resolvedUserId || sanitizedEmail;
+    const candidateDirs = Array.from(new Set([resolvedUserId, userFolder, sanitizedEmail].filter(Boolean)));
+
+    // Parse source filename from URL
+    const cleanUrl = galleryUrl.split('?')[0].split('#')[0];
+    const sourceFileName = reqFileName || path.basename(cleanUrl);
+
+    // Determine target subfolder
+    let subFolder = 'Image';
+    const cleanLower = cleanUrl.toLowerCase();
+    const typeLower = (reqAssetType || '').toLowerCase();
+    if (typeLower.includes('video') || cleanLower.includes('/videos/') || cleanLower.endsWith('.mp4') || cleanLower.endsWith('.mkv') || cleanLower.endsWith('.webm')) {
+      subFolder = 'video';
+    } else if (typeLower.includes('gif') || cleanLower.includes('/gifs/') || cleanLower.endsWith('.gif')) {
+      subFolder = 'gif';
+    } else if (typeLower.includes('audio') || cleanLower.includes('/audio/') || cleanLower.endsWith('.mp3') || cleanLower.endsWith('.wav') || cleanLower.endsWith('.ogg')) {
+      subFolder = 'audio';
+    } else if (typeLower.includes('3d') || cleanLower.includes('/3d_models/') || cleanLower.endsWith('.glb') || cleanLower.endsWith('.gltf')) {
+      subFolder = '3D_Model';
+    } else if (typeLower.includes('download') || cleanLower.includes('/download/')) {
+      subFolder = 'download';
+    }
+
+    // Locate source file on disk in gallery
+    let srcFilePath = null;
+    const gallerySubs = ['Images', 'Videos', 'gifs', 'audio', '3D_Models', 'download'];
+    for (const uDir of candidateDirs) {
+      for (const gsub of gallerySubs) {
+        const p1 = path.join(storageRoot, uDir, gsub, sourceFileName);
+        const p2 = path.join(storageRoot, uDir, 'Gallery', gsub, sourceFileName);
+        if (fs.existsSync(p1)) {
+          srcFilePath = p1;
+          break;
+        }
+        if (fs.existsSync(p2)) {
+          srcFilePath = p2;
+          break;
+        }
+      }
+      if (srcFilePath) break;
+    }
+
+    // Target flipbook assets folder
+    const targetDir = path.join(
+      storageRoot,
+      userFolder,
+      'My_Flipbooks',
+      safeFolderName,
+      safeFlipbookName,
+      'assets',
+      subFolder
+    );
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const fileExt = path.extname(sourceFileName);
+    const newFileVId = crypto.randomBytes(8).toString('hex');
+    const newFileName = `${newFileVId}${fileExt}`;
+    const destinationPath = path.join(targetDir, newFileName);
+
+    let fileSize = 0;
+    if (srcFilePath && fs.existsSync(srcFilePath)) {
+      fs.copyFileSync(srcFilePath, destinationPath);
+      fileSize = fs.statSync(destinationPath).size;
+    } else {
+      try {
+        const fetchUrl = galleryUrl.startsWith('http') ? galleryUrl : `http://localhost:8000${galleryUrl.startsWith('/') ? '' : '/'}${galleryUrl}`;
+        const response = await fetch(fetchUrl);
+        const arrayBuf = await response.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        fs.writeFileSync(destinationPath, buf);
+        fileSize = buf.length;
+      } catch (fErr) {
+        console.warn('[Book Controller] Failed to fetch remote gallery asset:', fErr.message);
+      }
+    }
+
+    const relativeUrl = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
+    const svgRelativePath = `./assets/${subFolder}/${newFileName}`;
+
+    // Create a NEW FlipbookAsset document for this flipbook (isGallery: false)
+    const newAsset = new FlipbookAsset({
+      flipbook_v_id: v_id || 'flipbook_asset',
+      file_v_id: newFileVId,
+      page_v_id: page_v_id || 'global',
+      assetType: subFolder,
+      fileName: newFileName,
+      originalName: sourceFileName,
+      userEmail: emailId,
+      isGallery: false,
+      flipbookName: safeFlipbookName,
+      folderName: safeFolderName,
+      url: relativeUrl,
+      size: fileSize
+    });
+
+    await newAsset.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Gallery asset copied to flipbook assets folder',
+      url: relativeUrl,
+      relativeUrl: svgRelativePath,
+      file_v_id: newFileVId,
+      fileName: newFileName,
+      name: sourceFileName,
+      size: fileSize
+    });
+  } catch (err) {
+    console.error('[Book Controller] Error using gallery asset:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error copying gallery asset to flipbook',
       error: err.message
     });
   }

@@ -988,32 +988,44 @@ const logout = async (req, res) => {
 
     let updatedCount = 0;
 
-    // 1. Try updating specific session by sessionId
-    if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
-      const resSession = await LoginLog.updateOne(
-        { _id: decoded.sessionId },
-        { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
-      );
-      updatedCount = resSession.modifiedCount;
-    }
+    try {
+      const dbUpdatePromise = (async () => {
+        // 1. Try updating specific session by sessionId
+        if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
+          const resSession = await LoginLog.updateOne(
+            { _id: decoded.sessionId },
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+          );
+          updatedCount = resSession.modifiedCount;
+        }
 
-    // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
-    if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
-      const orClauses = [
-        decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
-          ? { userObjectId: decoded.id }
-          : null,
-        decoded.userId ? { userId: decoded.userId } : null,
-        decoded.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
-      ].filter(Boolean);
+        // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
+        if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
+          const orClauses = [
+            decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
+              ? { userObjectId: decoded.id }
+              : null,
+            decoded.userId ? { userId: decoded.userId } : null,
+            decoded.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
+          ].filter(Boolean);
 
-      if (orClauses.length > 0) {
-        const resUser = await LoginLog.updateMany(
-          { $or: orClauses, status: "ACTIVE" },
-          { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
-        );
-        updatedCount = resUser.modifiedCount;
-      }
+          if (orClauses.length > 0) {
+            const resUser = await LoginLog.updateMany(
+              { $or: orClauses, status: "ACTIVE" },
+              { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+            );
+            updatedCount = resUser.modifiedCount;
+          }
+        }
+      })();
+
+      // Race with 1000ms timeout so logout response is never blocked by DB connection buffering
+      await Promise.race([
+        dbUpdatePromise,
+        new Promise((resolve) => setTimeout(resolve, 1000))
+      ]);
+    } catch (logErr) {
+      console.warn('[Logout] Non-critical error updating session log:', logErr.message);
     }
 
     console.log(`[Logout] Successfully marked ${updatedCount} session(s) as LOGGED_OUT for:`, decoded?.emailId || decoded?.userId || decoded?.sessionId || "unknown");

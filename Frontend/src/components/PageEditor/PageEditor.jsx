@@ -8,7 +8,7 @@ import MainEditor from './MainEditor';
 import RightSidebar from './panels/RightSidebar';
 import TooltipCustomization from './modals/TooltipCustomization';
 import TemplateModal from './modals/TemplateModal';
-import FlipbookPreview from './modals/FlipbookPreview';
+const FlipbookPreview = React.lazy(() => import('./modals/FlipbookPreview'));
 import AlertModal from '../AlertModal';
 import PdfProcessingLoader from '../PdfProcessingLoader';
 import PopupTemplateSelection from './modals/PopupTemplateSelection';
@@ -1285,15 +1285,17 @@ const PageEditor = () => {
         )}
 
         {showPreview && (
-          <FlipbookPreview
-            pages={pages.filter(p => !p.isHidden).map(p => ({ ...p, content: p.html || '' }))}
-            pageName={currentBook?.flipbookName || 'Preview'}
-            onClose={() => setShowPreview(false)}
-            isMobile={false}
-            isDoublePage={isDoublePage}
-            targetPage={0}
-            settings={{}}
-          />
+          <React.Suspense fallback={null}>
+            <FlipbookPreview
+              pages={pages.filter(p => !p.isHidden).map(p => ({ ...p, content: p.html || '' }))}
+              pageName={currentBook?.flipbookName || 'Preview'}
+              onClose={() => setShowPreview(false)}
+              isMobile={false}
+              isDoublePage={isDoublePage}
+              targetPage={0}
+              settings={{}}
+            />
+          </React.Suspense>
         )}
 
         {/* Hidden File Input for PDF / Office Document Upload */}

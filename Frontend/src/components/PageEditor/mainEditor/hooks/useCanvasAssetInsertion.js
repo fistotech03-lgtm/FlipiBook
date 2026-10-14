@@ -1,4 +1,7 @@
 import { useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../../../context/AuthContext';
+import { getSupabaseBaseUrl } from '../../../../utils/assetUtils';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 
 /**
@@ -23,9 +26,14 @@ export const useCanvasAssetInsertion = ({
   currentFrameIdRef,
   setCurrentFrameId,
   selectedLayerIdRef,
-  multiSelectedIdsRef
+  multiSelectedIdsRef,
+  v_id,
+  flipbookVId,
+  folderName,
+  flipbookName
 }) => {
-  const insertImageIntoPage = useCallback((pageIdx, rawDataUrl, dataType = 'image', dropPoint = null, targetShapeId = null) => {
+  const { user } = useAuth();
+  const insertImageIntoPage = useCallback((pageIdx, rawDataUrl, dataType = 'image', dropPoint = null, targetShapeId = null, file = null) => {
     if (!rawDataUrl) return;
     if (typeof setActiveMainTool === 'function') {
       setActiveMainTool('select');
@@ -86,6 +94,63 @@ export const useCanvasAssetInsertion = ({
     const placeImageInFrame = (imgWidth = 100, imgHeight = 100) => {
       if (inserted) return;
       inserted = true;
+
+      const uploadAssetInBackground = async (imgNode, groupNode, fileObj, sourceBlobUrl) => {
+        try {
+          let uploadFile = fileObj;
+          if (!uploadFile && sourceBlobUrl && typeof sourceBlobUrl === 'string' && sourceBlobUrl.startsWith('blob:')) {
+            const res = await fetch(sourceBlobUrl);
+            const blob = await res.blob();
+            const ext = dataType === 'gif' ? '.gif' : (blob.type?.includes('png') ? '.png' : '.jpg');
+            uploadFile = new File([blob], `asset_${Date.now()}${ext}`, { type: blob.type || 'image/png' });
+          }
+          if (!uploadFile) return;
+
+          const emailId = user?.emailId || user?.email;
+          if (!emailId) return;
+
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const folderArr = Array.isArray(folderName) ? folderName : [folderName || 'Recent Book'];
+          const resolvedFolder = folderArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderArr[0] || 'Recent Book';
+          const resolvedBook = flipbookName || 'Untitled Flipbook';
+          const subFolder = dataType === 'gif' ? 'gif' : 'Image';
+
+          const formData = new FormData();
+          formData.append('emailId', emailId);
+          if (flipbookVId || v_id) formData.append('v_id', flipbookVId || v_id);
+          formData.append('folderName', resolvedFolder);
+          formData.append('flipbookName', resolvedBook);
+          formData.append('type', dataType || 'image');
+          formData.append('assetType', subFolder);
+          formData.append('page_v_id', pages[pageIdx]?.v_id || pages[pageIdx]?.id || 'global');
+          formData.append('file', uploadFile);
+
+          const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
+          if (res.data && (res.data.url || res.data.filename)) {
+            const filename = res.data.filename;
+            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/${subFolder}/${filename}`;
+
+            imgNode.setAttribute('href', relativePath);
+            try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch {}
+            if (res.data.file_v_id) {
+              imgNode.dataset.fileVid = res.data.file_v_id;
+              if (groupNode) {
+                groupNode.dataset.fileVid = res.data.file_v_id;
+                groupNode.setAttribute('data-file-vid', res.data.file_v_id);
+              }
+            }
+
+            if (saveModifiedPageHtml) {
+              saveModifiedPageHtml(pageIdx, svg);
+            } else if (updatePageHtml) {
+              updatePageHtml(pageIdx, svg.outerHTML);
+            }
+            console.log(`[CanvasAssetInsertion] Background asset uploaded: ${relativePath}`);
+          }
+        } catch (err) {
+          console.error('[CanvasAssetInsertion] Background asset upload failed:', err);
+        }
+      };
 
       if (targetShapeId && dataType === 'image') {
         const shapeEl = svg.querySelector(`[id="${targetShapeId}"]`);
@@ -169,6 +234,8 @@ export const useCanvasAssetInsertion = ({
               updatePageHtml(pageIdx, svg.outerHTML);
             }
 
+            uploadAssetInBackground(imageEl, shapeEl, file, dataUrl);
+
             if (setSelectedLayerId) setSelectedLayerId(targetShapeId);
             if (selectedLayerIdRef) selectedLayerIdRef.current = targetShapeId;
             if (setMultiSelectedIds) setMultiSelectedIds(new Set([targetShapeId]));
@@ -246,6 +313,8 @@ export const useCanvasAssetInsertion = ({
             updatePageHtml(pageIdx, svg.outerHTML);
           }
 
+          uploadAssetInBackground(newImg, newGroup, file, dataUrl);
+
           if (setSelectedLayerId) setSelectedLayerId(groupId);
           if (selectedLayerIdRef) selectedLayerIdRef.current = groupId;
           if (setMultiSelectedIds) setMultiSelectedIds(new Set([groupId]));
@@ -278,7 +347,7 @@ export const useCanvasAssetInsertion = ({
       placeImageInFrame(100, 100);
     };
     i.src = dataUrl;
-  }, [baseHeight, baseWidth, currentFrameIdRef, drawOverlayHighlight, multiSelectedIdsRef, saveModifiedPageHtml, selectedLayerIdRef, setActiveMainTool, setCurrentFrameId, setMultiSelectedIds, setSelectedLayerId, updatePageHtml]);
+  }, [baseHeight, baseWidth, currentFrameIdRef, drawOverlayHighlight, multiSelectedIdsRef, saveModifiedPageHtml, selectedLayerIdRef, setActiveMainTool, setCurrentFrameId, setMultiSelectedIds, setSelectedLayerId, updatePageHtml, user, folderName, flipbookName, flipbookVId, v_id, pages]);
 
   // Handle external asset insertion events
   useEffect(() => {
@@ -673,6 +742,55 @@ export const useCanvasAssetInsertion = ({
 
       if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
 
+      if (!isIframe && (file || (videoUrl && typeof videoUrl === 'string' && videoUrl.startsWith('blob:')))) {
+        (async () => {
+          try {
+            let uploadFile = file;
+            if (!uploadFile && videoUrl && videoUrl.startsWith('blob:')) {
+              const res = await fetch(videoUrl);
+              const blob = await res.blob();
+              uploadFile = new File([blob], `video_${Date.now()}.mp4`, { type: blob.type || 'video/mp4' });
+            }
+            if (!uploadFile) return;
+
+            const emailId = user?.emailId || user?.email;
+            if (!emailId) return;
+
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const folderArr = Array.isArray(folderName) ? folderName : [folderName || 'Recent Book'];
+            const resolvedFolder = folderArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderArr[0] || 'Recent Book';
+            const resolvedBook = flipbookName || 'Untitled Flipbook';
+
+            const formData = new FormData();
+            formData.append('emailId', emailId);
+            if (flipbookVId || v_id) formData.append('v_id', flipbookVId || v_id);
+            formData.append('folderName', resolvedFolder);
+            formData.append('flipbookName', resolvedBook);
+            formData.append('type', 'video');
+            formData.append('assetType', 'video');
+            formData.append('page_v_id', pages[targetPageIndex]?.v_id || pages[targetPageIndex]?.id || 'global');
+            formData.append('file', uploadFile);
+
+            const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
+            if (res.data && (res.data.url || res.data.filename)) {
+              const filename = res.data.filename;
+              const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/video/${filename}`;
+
+              fo.setAttribute('data-video-src', relativePath);
+              fo.setAttribute('data-relative-src', relativePath);
+              if (res.data.file_v_id) {
+                fo.setAttribute('data-file-vid', res.data.file_v_id);
+                videoGroup.setAttribute('data-file-vid', res.data.file_v_id);
+              }
+              if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
+              console.log(`[CanvasAssetInsertion] Background video uploaded: ${relativePath}`);
+            }
+          } catch (err) {
+            console.error('[CanvasAssetInsertion] Background video upload failed:', err);
+          }
+        })();
+      }
+
       if (setSelectedLayerId) setSelectedLayerId(groupId);
       if (selectedLayerIdRef) selectedLayerIdRef.current = groupId;
       if (setMultiSelectedIds) setMultiSelectedIds(new Set([groupId]));
@@ -691,12 +809,12 @@ export const useCanvasAssetInsertion = ({
       if (typeof setActiveMainTool === 'function') {
         setActiveMainTool('select');
       }
-      const { url, gifUrl, pageIndex, dropPoint, type, targetShapeId } = e.detail || {};
+      const { url, gifUrl, pageIndex, dropPoint, type, targetShapeId, file } = e.detail || {};
       const targetPageIndex = pageIndex !== undefined ? pageIndex : activePageIndex;
       const mediaUrl = gifUrl || url;
       if (!mediaUrl) return;
       const dataType = type || (gifUrl || mediaUrl.toLowerCase().endsWith('.gif') ? 'gif' : 'image');
-      insertImageIntoPage(targetPageIndex, mediaUrl, dataType, dropPoint, targetShapeId);
+      insertImageIntoPage(targetPageIndex, mediaUrl, dataType, dropPoint, targetShapeId, file);
     };
 
     const handleUploadImageEvent = (e) => {
@@ -745,7 +863,7 @@ export const useCanvasAssetInsertion = ({
       window.removeEventListener('upload-video-to-editor', handleUploadVideo);
       window.removeEventListener('upload-image-to-editor', handleUploadImageEvent);
     };
-  }, [activePageIndex, pages, updatePageHtml, setSelectedLayerId, selectedLayerIdRef, setMultiSelectedIds, multiSelectedIdsRef, setActiveMainTool, setActiveTopTool, drawOverlayHighlight, baseWidth, baseHeight, insertImageIntoPage]);
+  }, [activePageIndex, pages, updatePageHtml, setSelectedLayerId, selectedLayerIdRef, setMultiSelectedIds, multiSelectedIdsRef, setActiveMainTool, setActiveTopTool, drawOverlayHighlight, baseWidth, baseHeight, insertImageIntoPage, user, folderName, flipbookName, flipbookVId, v_id]);
 
   // Pre-load all images for instant view
   useEffect(() => {

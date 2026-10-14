@@ -331,12 +331,13 @@ const ImageEditor = ({
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
             if (res.data.url) {
               const serverUrl = resolveUploadsPath(res.data.url);
+              const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/Image/${res.data.filename}`;
               const svgImgSrv = getSvgImageEl(selectedElement);
               if (svgImgSrv) {
-                svgImgSrv.setAttribute('href', serverUrl);
-                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', serverUrl); } catch { }
+                svgImgSrv.setAttribute('href', relativePath);
+                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch { }
               } else {
-                selectedElement.src = serverUrl;
+                selectedElement.src = relativePath;
               }
               selectedElement.dataset.fileVid = res.data.file_v_id;
               setPreviewSrc(serverUrl);

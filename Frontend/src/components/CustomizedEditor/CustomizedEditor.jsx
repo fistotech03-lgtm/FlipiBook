@@ -11,7 +11,6 @@ import AdvancedSettings from './AdvancedSettings';
 import LeadForm from './LeadForm';
 import Visibility from './Visibility';
 import Statistic from './Statistic';
-import FlipbookPreview from '../PageEditor/modals/FlipbookPreview.jsx';
 import { getFromDB, saveToDB } from '../../utils/dbUtils';
 import { getDominantColors, REACT_BITS_THEMES_COLORS } from '../../utils/colorExtractor';
 import { getSupabaseBaseUrl } from '../../utils/assetUtils';

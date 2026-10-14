@@ -1852,7 +1852,8 @@ const GifEditor = ({
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data.url) {
             const serverUrl = resolveUploadsPath(res.data.url);
-            setSrc(targetImg, serverUrl);
+            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/gif/${res.data.filename}`;
+            setSrc(targetImg, relativePath);
             liveElement.dataset.fileVid = res.data.file_v_id;
             onUpdateRef.current?.();
           }

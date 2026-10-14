@@ -78,16 +78,35 @@ export const useSaveEngine = ({
       const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      // Extract and upload 3D models into the flipbook's assets/3D_Model/ folder before saving
-      const fNameFor3D = Array.isArray(currentBook?.folderName)
-        ? currentBook.folderName.find(f => f !== 'Recent Book' && f !== 'Recent book') || currentBook.folderName[0]
-        : (currentBook?.folderName || location.state?.folderName || 'Recent Book');
+      // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
+      const folderNameArr = Array.isArray(currentBook?.folderName)
+        ? currentBook.folderName
+        : [currentBook?.folderName || location.state?.folderName || 'Recent Book'];
+      const fNameFor3D = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
       const bNameFor3D = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
+      const userFolderForAsset = currentBook?.userID || currentBook?.userId || sanitizedEmail;
+      const projectBaseUrl = getSupabaseBaseUrl(userFolderForAsset, fNameFor3D, bNameFor3D);
+
+      const normalizePageAssetUrls = (htmlStr) => {
+        if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
+        const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
+        let res = htmlStr.replace(assetRegex, './assets/$1/$2');
+        const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
+        res = res.replace(escapedAssetRegex, './assets/$1/$2');
+        res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+        res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+        res = res.replace(/(?:\.\/)+assets\//g, './assets/');
+        if (projectBaseUrl && res.includes(projectBaseUrl)) {
+          res = res.split(projectBaseUrl).join('./');
+        }
+        return res;
+      };
 
       pagesToSave = await Promise.all(pagesToSave.map(async (p) => {
-        if (!p.html || (!p.html.includes('data-interaction="3d-viewer"') && !p.html.includes('data-interaction="slideshow"') && !p.html.includes('data-interaction="download"') && !p.html.includes('data-interaction="audio"'))) return p;
+        if (!p.html) return p;
 
         let newHtml = p.html;
+        if (newHtml.includes('data-interaction="3d-viewer"') || newHtml.includes('data-interaction="slideshow"') || newHtml.includes('data-interaction="download"') || newHtml.includes('data-interaction="audio"')) {
         try {
           const parser = new DOMParser();
           const doc = parser.parseFromString(newHtml, 'image/svg+xml');
@@ -339,16 +358,13 @@ export const useSaveEngine = ({
                       if (uploadRes.data && uploadRes.data.url) {
                         const finalUrl = uploadRes.data.url;
                         const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-                        const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
-                        const absoluteUrl = assetPathMatch
-                          ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
-                          : resolveUploadsPath(finalUrl);
+                        const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('./') ? finalUrl : `./${finalUrl}`);
 
                         hasChanges = true;
                         return {
                           ...imgObj,
-                          data: absoluteUrl,
-                          url: absoluteUrl,
+                          data: relativeUrl,
+                          url: relativeUrl,
                           file_v_id: uploadRes.data.file_v_id
                         };
                       }
@@ -390,138 +406,233 @@ export const useSaveEngine = ({
           }
 
           newHtml = new XMLSerializer().serializeToString(doc.documentElement);
-          // --- DIRECT STRING SEARCH base64 extraction and upload ---
-          // Regex engines often fail silently or hit length limits on 3MB+ contiguous strings.
-          // We use a pure indexOf search to safely extract huge data URIs.
-          const uniqueDataUris = new Set();
-          let searchIndex = 0;
-          while (searchIndex < newHtml.length) {
-            const imgIdx = newHtml.indexOf('data:image/', searchIndex);
-            const audIdx = newHtml.indexOf('data:audio/', searchIndex);
-            const vidIdx = newHtml.indexOf('data:video/', searchIndex);
-
-            let foundIdx = -1;
-            const indices = [imgIdx, audIdx, vidIdx].filter(idx => idx !== -1);
-            if (indices.length > 0) {
-              foundIdx = Math.min(...indices);
-            }
-
-            if (foundIdx === -1) break;
-
-            // Find nearest delimiter character
-            const endChars = ['"', "'", '&quot;', '&apos;', ')', '>', ' ', '\n', '\r'];
-            let endIdx = -1;
-            for (const ch of endChars) {
-              const idx = newHtml.indexOf(ch, foundIdx);
-              if (idx !== -1 && (endIdx === -1 || idx < endIdx)) {
-                endIdx = idx;
-              }
-            }
-
-            if (endIdx !== -1) {
-              const dataUri = newHtml.substring(foundIdx, endIdx);
-              if (dataUri.includes(';base64,')) {
-                uniqueDataUris.add(dataUri);
-              }
-              searchIndex = endIdx;
-            } else {
-              break;
-            }
-          }
-
-          for (const actualDataUri of uniqueDataUris) {
-            try {
-              // Browsers (like Chrome) limit fetch() URLs to ~2MB.
-              // To handle 3MB+ data URIs, we manually convert base64 to Blob.
-              const parts = actualDataUri.split(',');
-              const mimeString = parts[0].split(':')[1].split(';')[0];
-
-              // Handle URL encoded data URIs (e.g. svg+xml) or pure base64
-              let byteString;
-              if (parts[0].indexOf('base64') >= 0) {
-                byteString = atob(parts[1]);
-              } else {
-                byteString = decodeURI(parts[1]);
-              }
-
-              const ab = new ArrayBuffer(byteString.length);
-              const ia = new Uint8Array(ab);
-              for (let i = 0; i < byteString.length; i++) {
-                ia[i] = byteString.charCodeAt(i);
-              }
-              const blob = new Blob([ab], { type: mimeString });
-
-              const isAudio = blob.type.startsWith('audio/');
-              const isVideo = blob.type.startsWith('video/');
-              const assetType = isAudio ? 'audio' : (isVideo ? 'video' : 'image');
-
-              let fileExt = '.bin';
-              if (isAudio) {
-                if (mimeString.includes('mpeg') || mimeString.includes('mp3')) fileExt = '.mp3';
-                else if (mimeString.includes('wav')) fileExt = '.wav';
-                else if (mimeString.includes('ogg')) fileExt = '.ogg';
-                else if (mimeString.includes('mp4') || mimeString.includes('m4a')) fileExt = '.m4a';
-                else if (mimeString.includes('aac')) fileExt = '.aac';
-                else fileExt = '.mp3';
-              } else if (isVideo) {
-                fileExt = mimeString.includes('webm') ? '.webm' : '.mp4';
-              } else {
-                fileExt = mimeString.includes('png') ? '.png' : (mimeString.includes('webp') ? '.webp' : '.jpg');
-              }
-
-              const formData = new FormData();
-              formData.append('emailId', user?.emailId);
-              formData.append('folderName', fNameFor3D);
-              formData.append('flipbookName', bNameFor3D);
-              formData.append('type', assetType);
-              formData.append('page_v_id', 'global');
-              if (currentVId || v_id) {
-                formData.append('v_id', currentVId || v_id);
-              }
-              formData.append('file', blob, `asset_${Date.now()}${fileExt}`);
-
-              const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-              });
-
-              if (uploadRes.data && uploadRes.data.url) {
-                const finalUrl = uploadRes.data.url;
-                const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-                const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
-                const absoluteUrl = assetPathMatch
-                  ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
-                  : finalUrl;
-
-                // Replace the data URI directly in the raw HTML
-
-                newHtml = newHtml.split(actualDataUri).join(absoluteUrl);
-
-                // Update the live DOM element so InteractionPanel shows the image immediately
-                try {
-                  const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                  if (editorDoc) {
-                    const liveEls = editorDoc.querySelectorAll(`[data-interaction="download"], [data-interaction="audio"]`);
-                    liveEls.forEach(lEl => {
-                      const lDataVal = lEl.getAttribute('data-interaction-value');
-                      if (lDataVal && lDataVal.includes(actualDataUri)) {
-                        lEl.setAttribute('data-interaction-value', lDataVal.split(actualDataUri).join(absoluteUrl));
-                      }
-                    });
-                  }
-                } catch  { /* ignore */ }
-
-                console.log(`[Save] Uploaded large asset directly: ${absoluteUrl}`);
-              }
-            } catch (err) {
-              console.error('[Save] Failed to upload large asset directly:', err);
-            }
-          }
         } catch (err) {
-          console.error('Error processing 3D models or assets in page before save', err);
+          console.error('Error processing 3D models or interactions in page before save', err);
+        }
+      }
+
+      // 2. EPHEMERAL BLOB URL EXTRACTION AND PERSISTENCE TO DISK
+      const blobRegex = /blob:https?:\/\/[^\s"'<>)\],]+/g;
+      const uniqueBlobUris = Array.from(new Set(newHtml.match(blobRegex) || []));
+      for (const blobUrl of uniqueBlobUris) {
+        try {
+          const res = await fetch(blobUrl);
+          const blob = await res.blob();
+          const mimeType = (blob.type || '').toLowerCase();
+          const isVideo = mimeType.startsWith('video/');
+          const isAudio = mimeType.startsWith('audio/');
+          const isGif = mimeType === 'image/gif' || blobUrl.toLowerCase().includes('.gif');
+          const assetType = isVideo ? 'video' : (isAudio ? 'audio' : (isGif ? 'gif' : 'image'));
+          const subFolder = isVideo ? 'video' : (isAudio ? 'audio' : (isGif ? 'gif' : 'Image'));
+
+          let fileExt = '.png';
+          if (isVideo) {
+            fileExt = mimeType.includes('webm') ? '.webm' : '.mp4';
+          } else if (isAudio) {
+            fileExt = mimeType.includes('ogg') ? '.ogg' : (mimeType.includes('wav') ? '.wav' : '.mp3');
+          } else if (isGif) {
+            fileExt = '.gif';
+          } else {
+            fileExt = mimeType.includes('jpeg') || mimeType.includes('jpg') ? '.jpg' : (mimeType.includes('webp') ? '.webp' : '.png');
+          }
+
+          const formData = new FormData();
+          formData.append('emailId', userEmail);
+          formData.append('folderName', fNameFor3D);
+          formData.append('flipbookName', bNameFor3D);
+          formData.append('type', assetType);
+          formData.append('assetType', subFolder);
+          formData.append('page_v_id', p.v_id || p.id || 'global');
+          if (currentVId || v_id) {
+            formData.append('v_id', currentVId || v_id);
+          }
+          formData.append('file', blob, `asset_${Date.now()}_${Math.random().toString(36).substr(2, 5)}${fileExt}`);
+
+          const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+
+          if (uploadRes.data && (uploadRes.data.url || uploadRes.data.filename)) {
+            const filename = uploadRes.data.filename;
+            const relativeUrl = uploadRes.data.flipbookPath || (uploadRes.data.url?.startsWith('./') ? uploadRes.data.url : `./assets/${subFolder}/${filename}`);
+            const absoluteUrl = `${projectBaseUrl}assets/${subFolder}/${filename}`;
+
+            // Replace blobUrl with clean relativeUrl in page SVG
+            newHtml = newHtml.split(blobUrl).join(relativeUrl);
+
+            // Update live DOM in editor to absoluteUrl so canvas stays visually responsive
+            try {
+              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+              if (editorDoc) {
+                const liveImgs = editorDoc.querySelectorAll(`image[href*="${blobUrl}"], image[*|href*="${blobUrl}"]`);
+                liveImgs.forEach(img => {
+                  img.setAttribute('href', absoluteUrl);
+                  try { img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', absoluteUrl); } catch {}
+                  if (uploadRes.data.file_v_id) {
+                    img.parentElement?.setAttribute('data-file-vid', uploadRes.data.file_v_id);
+                  }
+                });
+
+                const liveVids = editorDoc.querySelectorAll(`video[src*="${blobUrl}"]`);
+                liveVids.forEach(vid => {
+                  vid.src = absoluteUrl;
+                  vid.setAttribute('src', absoluteUrl);
+                  if (uploadRes.data.file_v_id) {
+                    vid.closest('g')?.setAttribute('data-file-vid', uploadRes.data.file_v_id);
+                  }
+                });
+
+                const maskedEls = editorDoc.querySelectorAll(`[data-masked-image-url*="${blobUrl}"]`);
+                maskedEls.forEach(mEl => {
+                  mEl.setAttribute('data-masked-image-url', absoluteUrl);
+                });
+              }
+            } catch (domErr) {
+              console.warn('Failed to update live DOM after blob upload:', domErr);
+            }
+
+            console.log(`[Save] Uploaded blob asset to flipbook disk: ${relativeUrl} (${absoluteUrl})`);
+          }
+        } catch (blobErr) {
+          console.error('[Save] Failed to fetch and upload blob asset:', blobUrl, blobErr);
+        }
+      }
+
+      // --- 3. DIRECT STRING SEARCH base64 extraction and upload ---
+      // Regex engines often fail silently or hit length limits on 3MB+ contiguous strings.
+      // We use a pure indexOf search to safely extract huge data URIs.
+      const uniqueDataUris = new Set();
+      let searchIndex = 0;
+      while (searchIndex < newHtml.length) {
+        const imgIdx = newHtml.indexOf('data:image/', searchIndex);
+        const audIdx = newHtml.indexOf('data:audio/', searchIndex);
+        const vidIdx = newHtml.indexOf('data:video/', searchIndex);
+
+        let foundIdx = -1;
+        const indices = [imgIdx, audIdx, vidIdx].filter(idx => idx !== -1);
+        if (indices.length > 0) {
+          foundIdx = Math.min(...indices);
         }
 
-        if (newHtml && !newHtml.includes('id="global-fonts-style"')) {
-          const fontsStyle = `<style id="global-fonts-style">
+        if (foundIdx === -1) break;
+
+        // Find nearest delimiter character
+        const endChars = ['"', "'", '&quot;', '&apos;', ')', '>', ' ', '\n', '\r'];
+        let endIdx = -1;
+        for (const ch of endChars) {
+          const idx = newHtml.indexOf(ch, foundIdx);
+          if (idx !== -1 && (endIdx === -1 || idx < endIdx)) {
+            endIdx = idx;
+          }
+        }
+
+        if (endIdx !== -1) {
+          const dataUri = newHtml.substring(foundIdx, endIdx);
+          if (dataUri.includes(';base64,')) {
+            uniqueDataUris.add(dataUri);
+          }
+          searchIndex = endIdx;
+        } else {
+          break;
+        }
+      }
+
+      for (const actualDataUri of uniqueDataUris) {
+        try {
+          // Browsers (like Chrome) limit fetch() URLs to ~2MB.
+          // To handle 3MB+ data URIs, we manually convert base64 to Blob.
+          const parts = actualDataUri.split(',');
+          const mimeString = parts[0].split(':')[1].split(';')[0];
+
+          // Handle URL encoded data URIs (e.g. svg+xml) or pure base64
+          let byteString;
+          if (parts[0].indexOf('base64') >= 0) {
+            byteString = atob(parts[1]);
+          } else {
+            byteString = decodeURI(parts[1]);
+          }
+
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], { type: mimeString });
+
+          const isAudio = blob.type.startsWith('audio/');
+          const isVideo = blob.type.startsWith('video/');
+          const assetType = isAudio ? 'audio' : (isVideo ? 'video' : 'image');
+
+          let fileExt = '.bin';
+          if (isAudio) {
+            if (mimeString.includes('mpeg') || mimeString.includes('mp3')) fileExt = '.mp3';
+            else if (mimeString.includes('wav')) fileExt = '.wav';
+            else if (mimeString.includes('ogg')) fileExt = '.ogg';
+            else if (mimeString.includes('mp4') || mimeString.includes('m4a')) fileExt = '.m4a';
+            else if (mimeString.includes('aac')) fileExt = '.aac';
+            else fileExt = '.mp3';
+          } else if (isVideo) {
+            fileExt = mimeString.includes('webm') ? '.webm' : '.mp4';
+          } else {
+            fileExt = mimeString.includes('png') ? '.png' : (mimeString.includes('webp') ? '.webp' : '.jpg');
+          }
+
+          const formData = new FormData();
+          formData.append('emailId', user?.emailId || user?.email);
+          formData.append('folderName', fNameFor3D);
+          formData.append('flipbookName', bNameFor3D);
+          formData.append('type', assetType);
+          formData.append('assetType', assetType === 'image' ? 'Image' : assetType);
+          formData.append('page_v_id', p.v_id || p.id || 'global');
+          if (currentVId || v_id) {
+            formData.append('v_id', currentVId || v_id);
+          }
+          formData.append('file', blob, `asset_${Date.now()}${fileExt}`);
+
+          const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+
+          if (uploadRes.data && uploadRes.data.url) {
+            const finalUrl = uploadRes.data.url;
+            const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
+            const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.relativeUrl || finalUrl;
+            const sanitizedEmail = (user?.emailId || user?.email)?.replace(/[@.]/g, "_");
+            const absoluteUrl = assetPathMatch
+              ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
+              : finalUrl;
+
+            // Replace the data URI directly in the raw HTML with clean relative path
+            newHtml = newHtml.split(actualDataUri).join(relativeUrl);
+
+            // Update the live DOM element so InteractionPanel shows the image immediately
+            try {
+              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+              if (editorDoc) {
+                const liveEls = editorDoc.querySelectorAll(`[data-interaction="download"], [data-interaction="audio"]`);
+                liveEls.forEach(lEl => {
+                  const lDataVal = lEl.getAttribute('data-interaction-value');
+                  if (lDataVal && lDataVal.includes(actualDataUri)) {
+                    lEl.setAttribute('data-interaction-value', lDataVal.split(actualDataUri).join(absoluteUrl));
+                  }
+                });
+                const liveImgs = editorDoc.querySelectorAll(`image[href*="${actualDataUri}"], image[*|href*="${actualDataUri}"]`);
+                liveImgs.forEach(img => {
+                  img.setAttribute('href', absoluteUrl);
+                  try { img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', absoluteUrl); } catch {}
+                });
+              }
+            } catch  { /* ignore */ }
+
+            console.log(`[Save] Uploaded large asset directly: ${absoluteUrl}`);
+          }
+        } catch (err) {
+          console.error('[Save] Failed to upload large asset directly:', err);
+        }
+      }
+
+      if (newHtml && !newHtml.includes('id="global-fonts-style"')) {
+        const fontsStyle = `<style id="global-fonts-style">
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700;900&amp;family=Roboto:wght@300;400;500;700;900&amp;family=Outfit:wght@300;400;500;600;700;900&amp;family=Montserrat:wght@300;400;500;600;700;900&amp;family=Playfair+Display:ital,wght@0,400..900;1,400..900&amp;family=Nunito+Sans:wght@300;400;500;600;700;900&amp;display=swap');
 @font-face { font-family: 'Designer_Signature'; src: url('${window.location.origin}/lib/Fonts/designer_signature/Designer_Signature.otf') format('opentype'); }
 @font-face { font-family: 'Open Sans'; src: url('${window.location.origin}/lib/Fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype'); }
@@ -542,27 +653,28 @@ export const useSaveEngine = ({
 @font-face { font-family: 'Cabin'; src: url('${window.location.origin}/lib/Fonts/Cabin/Cabin-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 400 700; font-style: normal; }
 @font-face { font-family: 'Cabin'; src: url('${window.location.origin}/lib/Fonts/Cabin/Cabin-Italic-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 400 700; font-style: italic; }
 </style>`;
-          if (newHtml.includes('<defs>')) {
-            newHtml = newHtml.replace('<defs>', '<defs>' + fontsStyle);
-          } else {
-            newHtml = newHtml.replace(/<svg[^>]*>/i, '$&<defs>' + fontsStyle + '</defs>');
-          }
+        if (newHtml.includes('<defs>')) {
+          newHtml = newHtml.replace('<defs>', '<defs>' + fontsStyle);
+        } else {
+          newHtml = newHtml.replace(/<svg[^>]*>/i, '$&<defs>' + fontsStyle + '</defs>');
         }
+      }
 
-        return { ...p, html: newHtml };
-      }));
+      newHtml = normalizePageAssetUrls(newHtml);
+      return { ...p, html: newHtml };
+    }));
 
-      const modifiedPagesIndices = [];
-      pagesToSave.forEach((p, index) => {
-        const pid = p.v_id || p.id;
-        const isKnownSaved = pid && lastSavedHtmlsRef.current[pid] && lastSavedHtmlsRef.current[pid] === p.html;
-        if (!isKnownSaved) {
-          modifiedPagesIndices.push(index);
-        }
-      });
+    const modifiedPagesIndices = [];
+    pagesToSave.forEach((p, index) => {
+      const pid = p.v_id || p.id;
+      const isKnownSaved = pid && lastSavedHtmlsRef.current[pid] && lastSavedHtmlsRef.current[pid] === p.html;
+      if (!isKnownSaved) {
+        modifiedPagesIndices.push(index);
+      }
+    });
 
-            let currentVId = v_id;
-      let lastRes = null;
+    let currentVId = v_id;
+    let lastRes = null;
 
       if (modifiedPagesIndices.length === 0) {
         // Send full structure with content so reordering/deletions never lose page data
@@ -570,7 +682,7 @@ export const useSaveEngine = ({
           pageNumber: index + 1,
           pageName: p.name || `Page ${index + 1}`,
           fileName: p.fileName || (p.name ? (p.name.endsWith('.svg') ? p.name : `${p.name}.svg`) : `${index + 1}.svg`),
-          content: p.html,
+          content: normalizePageAssetUrls(p.html),
           hide: p.isHidden ? 1 : 0,
           v_id: p.v_id || (typeof p.id === 'string' && p.id.length > 5 ? p.id : null)
         }));
@@ -604,18 +716,8 @@ export const useSaveEngine = ({
           const isModified = modifiedSet.has(index);
           const pid = p.v_id || p.id;
           const isKnownSaved = pid && lastSavedHtmlsRef.current[pid] && lastSavedHtmlsRef.current[pid] === p.html;
-          let content = (isModified || !isKnownSaved) ? p.html : undefined;
+          let content = (isModified || !isKnownSaved) ? normalizePageAssetUrls(p.html) : undefined;
           let contentChunkId = undefined;
-
-          const folderNameArr = Array.isArray(currentBook?.folderName) ? currentBook.folderName : [currentBook?.folderName || location.state?.folderName || 'Recent Book'];
-          const fName = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
-          const bName = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
-          const projectBaseUrl = getSupabaseBaseUrl(sanitizedEmail, fName, bName);
-
-          // Convert absolute paths back to relative for storage portability
-          if (content && content.includes(projectBaseUrl)) {
-            content = content.split(projectBaseUrl).join('./');
-          }
 
           // CHUNKED UPLOAD LOGIC: If content is too large (> 2MB), upload in chunks
           const CHUNK_THRESHOLD = 2 * 1024 * 1024; // 2MB

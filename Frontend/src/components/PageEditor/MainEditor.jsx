@@ -73,7 +73,11 @@ const MainEditor = ({
   setActiveTopTool,
   updateElementAttribute,
   flipbookDimensions = null,
-  isPopupEditor = false
+  isPopupEditor = false,
+  v_id,
+  flipbookVId,
+  folderName,
+  flipbookName
 }) => {
   usePreventBrowserZoom();const { width: baseWidth, height: baseHeight } = flipbookDimensions || { width: 210, height: 297 };
   const canvasAspectRatio = baseWidth && baseHeight ? `${baseWidth} / ${baseHeight}` : '210 / 297';
@@ -392,7 +396,11 @@ const MainEditor = ({
     currentFrameIdRef,
     setCurrentFrameId,
     selectedLayerIdRef,
-    multiSelectedIdsRef
+    multiSelectedIdsRef,
+    v_id,
+    flipbookVId,
+    folderName,
+    flipbookName
   });
 
   // ── Marquee Selection State ───────────────────────────────────────────────

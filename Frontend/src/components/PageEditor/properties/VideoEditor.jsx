@@ -1795,8 +1795,13 @@ const VideoEditor = ({
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data.url) {
             const serverUrl = resolveUploadsPath(res.data.url);
+            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/video/${res.data.filename}`;
+            target.setAttribute("src", relativePath);
+            if (source) source.setAttribute("src", relativePath);
             target.src = serverUrl;
             if (source) source.src = serverUrl;
+            if (liveElement) liveElement.dataset.fileVid = res.data.file_v_id;
+            setPreviewSrc(serverUrl);
             debouncedUpdate();
           }
         } catch (err) {

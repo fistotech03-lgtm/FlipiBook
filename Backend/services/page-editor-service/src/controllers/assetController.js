@@ -189,7 +189,10 @@ const uploadAsset = async (req, res) => {
     }
 
     const relativeUrl = `${relativeUrlBase}/${uniqueFilename}`;
+    const flipbookPath = isGallery ? null : `./assets/${subFolder}/${uniqueFilename}`;
     const finalPageVId = page_v_id || 'global';
+
+    const assetSavedUrl = isGallery ? relativeUrl : flipbookPath;
 
     // Save to Database
     const newAsset = new FlipbookAsset({
@@ -203,7 +206,7 @@ const uploadAsset = async (req, res) => {
       isGallery,
       flipbookName: isGallery ? 'Gallery' : safeFlipbookName,
       folderName: isGallery ? 'Gallery' : safeFolderName,
-      url: relativeUrl,
+      url: assetSavedUrl,
       size: file.size
     });
 
@@ -212,11 +215,14 @@ const uploadAsset = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Asset uploaded successfully',
-      url: relativeUrl,
+      url: assetSavedUrl,
+      relativeUrl: flipbookPath || relativeUrl,
+      flipbookPath,
       file_v_id,
       filename: uniqueFilename,
       name: file.originalname,
-      size: file.size
+      size: file.size,
+      assetType: subFolder
     });
   } catch (err) {
     console.error('[Asset Controller] Upload Error:', err);
@@ -504,21 +510,23 @@ const deleteGalleryAsset = async (req, res) => {
     const { candidateDirs } = await resolveUserFolder(emailId);
     const storageRoot = getStorageRoot();
 
-    // Delete DB records
+    // Delete DB records where isGallery is true ONLY (protects flipbook assets that copied this file)
     if (file_v_id) {
       await FlipbookAsset.deleteMany({
         file_v_id,
+        isGallery: true,
         userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
       });
     }
     if (fileName) {
       await FlipbookAsset.deleteMany({
         fileName,
+        isGallery: true,
         userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
       });
     }
 
-    // Delete file from disk across all candidate locations
+    // Delete file from disk across gallery locations ONLY (never touches My_Flipbooks)
     if (fileName) {
       const subs = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
       for (const uDir of candidateDirs) {
@@ -546,10 +554,166 @@ const deleteGalleryAsset = async (req, res) => {
   }
 };
 
+/**
+ * Copy a gallery asset into a flipbook's own assets folder and create a new FlipbookAsset DB record
+ * @route POST /api/page-editor/use-gallery-asset & /api/flipbook/use-gallery-asset
+ */
+const useGalleryAsset = async (req, res) => {
+  try {
+    const { emailId: authEmail } = getAuthUser(req);
+    const {
+      emailId: reqEmail,
+      v_id,
+      folderName,
+      flipbookName,
+      galleryUrl,
+      fileName: reqFileName,
+      page_v_id,
+      assetType: reqAssetType
+    } = req.body;
+
+    const emailId = authEmail || reqEmail;
+    if (!emailId || !galleryUrl) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: emailId and galleryUrl' });
+    }
+
+    let dbDoc = null;
+    let safeFolderName = sanitizeName(folderName, 'My_Flipbooks');
+    let safeFlipbookName = sanitizeName(flipbookName, 'Untitled_Document');
+
+    if (v_id) {
+      dbDoc = await Flipbook.findOne({ v_id });
+      if (dbDoc) {
+        safeFlipbookName = sanitizeName(dbDoc.flipbookName, safeFlipbookName);
+        safeFolderName = sanitizeName(resolveFolder(dbDoc.folderName), safeFolderName);
+      }
+    }
+
+    const { userFolder, candidateDirs } = await resolveUserFolder(emailId, dbDoc);
+    const storageRoot = getStorageRoot();
+
+    // Parse source filename from URL
+    const cleanUrl = galleryUrl.split('?')[0].split('#')[0];
+    const sourceFileName = reqFileName || path.basename(cleanUrl);
+
+    // Determine target subfolder
+    let subFolder = 'Image';
+    const cleanLower = cleanUrl.toLowerCase();
+    const typeLower = (reqAssetType || '').toLowerCase();
+    if (typeLower.includes('video') || cleanLower.includes('/videos/') || cleanLower.endsWith('.mp4') || cleanLower.endsWith('.mkv') || cleanLower.endsWith('.webm')) {
+      subFolder = 'video';
+    } else if (typeLower.includes('gif') || cleanLower.includes('/gifs/') || cleanLower.endsWith('.gif')) {
+      subFolder = 'gif';
+    } else if (typeLower.includes('audio') || cleanLower.includes('/audio/') || cleanLower.endsWith('.mp3') || cleanLower.endsWith('.wav') || cleanLower.endsWith('.ogg')) {
+      subFolder = 'audio';
+    } else if (typeLower.includes('3d') || cleanLower.includes('/3d_models/') || cleanLower.endsWith('.glb') || cleanLower.endsWith('.gltf')) {
+      subFolder = '3D_Model';
+    } else if (typeLower.includes('download') || cleanLower.includes('/download/')) {
+      subFolder = 'download';
+    }
+
+    // Locate source file on disk in gallery
+    let srcFilePath = null;
+    const gallerySubs = ['Images', 'Videos', 'gifs', 'audio', '3D_Models', 'download'];
+    for (const uDir of candidateDirs) {
+      for (const gsub of gallerySubs) {
+        const p1 = path.join(storageRoot, uDir, gsub, sourceFileName);
+        const p2 = path.join(storageRoot, uDir, 'Gallery', gsub, sourceFileName);
+        if (fs.existsSync(p1)) {
+          srcFilePath = p1;
+          break;
+        }
+        if (fs.existsSync(p2)) {
+          srcFilePath = p2;
+          break;
+        }
+      }
+      if (srcFilePath) break;
+    }
+
+    // Target flipbook assets folder
+    const targetDir = path.join(
+      storageRoot,
+      userFolder,
+      'My_Flipbooks',
+      safeFolderName,
+      safeFlipbookName,
+      'assets',
+      subFolder
+    );
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const fileExt = path.extname(sourceFileName);
+    const newFileVId = generateId(16);
+    const newFileName = `${newFileVId}${fileExt}`;
+    const destinationPath = path.join(targetDir, newFileName);
+
+    let fileSize = 0;
+    if (srcFilePath && fs.existsSync(srcFilePath)) {
+      fs.copyFileSync(srcFilePath, destinationPath);
+      fileSize = fs.statSync(destinationPath).size;
+    } else {
+      try {
+        const fetchUrl = galleryUrl.startsWith('http') ? galleryUrl : `http://localhost:8000${galleryUrl.startsWith('/') ? '' : '/'}${galleryUrl}`;
+        const response = await fetch(fetchUrl);
+        const arrayBuf = await response.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        fs.writeFileSync(destinationPath, buf);
+        fileSize = buf.length;
+      } catch (fErr) {
+        console.warn('[Asset Controller] Failed to fetch remote gallery asset:', fErr.message);
+      }
+    }
+
+    const relativeUrl = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
+    const svgRelativePath = `./assets/${subFolder}/${newFileName}`;
+
+    // Create a NEW FlipbookAsset document for this flipbook (isGallery: false)
+    const newAsset = new FlipbookAsset({
+      flipbook_v_id: v_id || 'flipbook_asset',
+      file_v_id: newFileVId,
+      page_v_id: page_v_id || 'global',
+      assetType: subFolder,
+      fileName: newFileName,
+      originalName: sourceFileName,
+      userEmail: emailId,
+      isGallery: false,
+      flipbookName: safeFlipbookName,
+      folderName: safeFolderName,
+      url: relativeUrl,
+      size: fileSize
+    });
+
+    await newAsset.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Gallery asset copied to flipbook assets folder',
+      url: relativeUrl,
+      relativeUrl: svgRelativePath,
+      file_v_id: newFileVId,
+      fileName: newFileName,
+      name: sourceFileName,
+      size: fileSize
+    });
+  } catch (err) {
+    console.error('[Asset Controller] Error using gallery asset:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error copying gallery asset to flipbook',
+      error: err.message
+    });
+  }
+};
+
 module.exports = {
   uploadAsset,
   deleteAsset,
   getGalleryAssets,
   renameGalleryAsset,
-  deleteGalleryAsset
+  deleteGalleryAsset,
+  useGalleryAsset
 };
+

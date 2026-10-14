@@ -8,6 +8,7 @@ const bookController = require('../controllers/bookController');
 router.get('/preview/:v_id', optionalAuth, bookController.previewBook);
 router.get('/get', optionalAuth, bookController.getBook);
 router.get('/get-gallery-assets', optionalAuth, bookController.getGalleryAssets);
+router.post('/use-gallery-asset', optionalAuth, bookController.useGalleryAsset);
 
 // All other flipbook & folder routes require authentication
 router.use(authenticateUser);

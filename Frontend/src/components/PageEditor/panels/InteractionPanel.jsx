@@ -4925,14 +4925,14 @@ const InteractionPanel = ({
             }
           };
 
-          if (asset && asset.url) {
-            addImage(asset.url, asset.name);
-          } else if (file) {
+          if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
               addImage(e.target.result, file.name);
             };
             reader.readAsDataURL(file);
+          } else if (asset && asset.url) {
+            addImage(asset.url, asset.name);
           }
         }}
       />

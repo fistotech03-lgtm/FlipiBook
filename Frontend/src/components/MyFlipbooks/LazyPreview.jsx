@@ -96,10 +96,10 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
                 // Fallback: asset image if no HTML was found
                 <img src={resolveUploadsPath(imageUrl)} alt={title} className="w-full h-full object-contain" />
             ) : loaded && !html ? (
-                // Loaded but nothing available
-                <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
-                    <BookOpen size="1.8vw" strokeWidth={1.5} />
-                    <span className="text-[0.7vw] mt-1 font-semibold">No Preview</span>
+                // Loaded but nothing available — clean, styled placeholder
+                <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-2">
+                    <BookOpen size="1.6vw" strokeWidth={1.5} className="text-gray-400 mb-1" />
+                    <span className="text-[0.65vw] font-semibold text-gray-500 text-center line-clamp-1">{title || 'Preview'}</span>
                 </div>
             ) : null}
         </div>

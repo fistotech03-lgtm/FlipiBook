@@ -22,6 +22,58 @@ setInterval(() => {
 }, 10 * 60 * 1000).unref();
 
 /**
+ * Resolve real physical folder from flipbook folderName
+ */
+const resolveFolder = (folderName) => {
+  if (Array.isArray(folderName)) {
+    const realFolders = folderName.filter(
+      (f) => f && f !== 'Recent Book' && f !== 'Recent book' && f !== 'All Flipbook' && f !== 'All Flipbooks'
+    );
+    return realFolders.length > 0 ? realFolders[0] : 'My_Flipbooks';
+  }
+  if (typeof folderName === 'string' && folderName.trim()) {
+    const clean = folderName.trim();
+    if (clean === 'Recent Book' || clean === 'Recent book' || clean === 'All Flipbook' || clean === 'All Flipbooks') return 'My_Flipbooks';
+    return clean;
+  }
+  return 'My_Flipbooks';
+};
+
+/**
+ * Generate a modern, elegant SVG book cover preview fallback if disk file is missing
+ */
+const generateFallbackBookCoverSvg = (bookTitle, pageCount = 1) => {
+  const safeTitle = (bookTitle || 'Flipbook').replace(/[<>&"']/g, '');
+  const count = pageCount || 1;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 560" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cardCoverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="cardSpineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(0,0,0,0.3)" />
+      <stop offset="70%" stop-color="rgba(0,0,0,0.1)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0.15)" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#cardCoverGrad)" rx="8" />
+  <rect x="0" y="0" width="30" height="100%" fill="url(#cardSpineGrad)" rx="4" />
+  <line x1="30" y1="0" x2="30" y2="100%" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" />
+  <rect x="46" y="44" width="308" height="472" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" rx="6" stroke-dasharray="5 3" />
+  <g transform="translate(200, 210)" text-anchor="middle">
+    <circle cx="0" cy="0" r="38" fill="rgba(255,255,255,0.18)" />
+    <path d="M-14 -10 L0 -16 L14 -10 L14 12 L0 6 L-14 12 Z M0 -16 L0 6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+  </g>
+  <text x="200" y="295" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">${safeTitle.length > 22 ? safeTitle.slice(0, 20) + '...' : safeTitle}</text>
+  <rect x="140" y="322" width="120" height="26" rx="13" fill="rgba(255,255,255,0.22)" />
+  <text x="200" y="339" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">${count} ${count === 1 ? 'Page' : 'Pages'}</text>
+  <text x="200" y="475" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="rgba(255,255,255,0.6)" text-anchor="middle" letter-spacing="1.5">FLIPIBOOK</text>
+</svg>`;
+};
+
+/**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
 const formatBook = (doc) => {
@@ -652,11 +704,14 @@ exports.saveBook = async (req, res) => {
       hide: p.hide
     }));
 
+    const firstPageContent = (safePages[0]?.content || safePages[0]?.html || '').trim();
+
     if (book) {
       book.flipbookName = safeName;
       book.folderName = targetFolder;
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
+      if (firstPageContent) book.firstPageHtml = firstPageContent;
       if (meta) book.Customized_Settings = { ...(book.Customized_Settings || {}), ...meta };
       book.lastUpdated = new Date();
       await book.save();
@@ -669,6 +724,7 @@ exports.saveBook = async (req, res) => {
         flipbookName: finalFlipbookName,
         folderName: targetFolder,
         pages: mongoPages,
+        firstPageHtml: firstPageContent,
         fileSize: fileSize || 0,
         Customized_Settings: meta || {},
         lastUpdated: new Date()
@@ -746,6 +802,11 @@ exports.saveBook = async (req, res) => {
 
         await fs.promises.writeFile(path.join(pagesDir, targetFileName), svgContent, 'utf8');
         sp.size = Buffer.byteLength(svgContent, 'utf8');
+
+        if (sp.pageNumber === 1 && svgContent) {
+          book.firstPageHtml = svgContent;
+          Flipbook.updateOne({ _id: book._id }, { $set: { firstPageHtml: svgContent } }).catch(() => {});
+        }
 
         // If this page was renamed, remove its old physical file
         if (sp.existingFileName && sp.existingFileName.toLowerCase() !== targetFileName.toLowerCase()) {
@@ -972,6 +1033,11 @@ exports.savePagesBatch = async (req, res) => {
           svgContent = normalizeToRelativeAssetPaths(svgContent);
           fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
           sp.size = Buffer.byteLength(svgContent, 'utf8');
+
+          if (sp.pageNumber === 1 && svgContent) {
+            book.firstPageHtml = svgContent;
+            Flipbook.updateOne({ _id: book._id }, { $set: { firstPageHtml: svgContent } }).catch(() => {});
+          }
         }
       });
 
@@ -1224,7 +1290,7 @@ exports.previewBook = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
     const firstPage = book.pages && book.pages.length > 0 ? book.pages[0] : null;
-    let firstPageHtml = firstPage?.html || firstPage?.content || '';
+    let firstPageHtml = book.firstPageHtml || book.previewHtml || book.Customized_Settings?.firstPagePreview || firstPage?.html || firstPage?.content || '';
 
     if (!firstPageHtml) {
       const storageRoot = getStorageRoot();
@@ -1236,8 +1302,10 @@ exports.previewBook = async (req, res) => {
       ].filter(Boolean)));
 
       const primaryFolder = Array.isArray(book.folderName) ? book.folderName[0] : book.folderName;
+      const resolvedPrimary = resolveFolder(book.folderName);
       const folders = Array.from(new Set([
         primaryFolder,
+        resolvedPrimary,
         'My_Flipbooks'
       ].filter(Boolean)));
 
@@ -1292,6 +1360,28 @@ exports.previewBook = async (req, res) => {
             } catch (e) {}
           }
         }
+      }
+
+      // 2b. Global fallback: scan all user workspaces in storageRoot if candidateDirs didn't exist
+      if (fs.existsSync(storageRoot)) {
+        try {
+          const rootEntries = fs.readdirSync(storageRoot);
+          for (const entry of rootEntries) {
+            const entryPath = path.join(storageRoot, entry);
+            if (fs.existsSync(entryPath) && fs.statSync(entryPath).isDirectory()) {
+              for (const f of folders) {
+                for (const bn of bookNames) {
+                  candidateDirs.push(
+                    path.join(entryPath, 'My_Flipbooks', f, bn),
+                    path.join(entryPath, f, bn),
+                    path.join(entryPath, 'My_Flipbooks', bn),
+                    path.join(entryPath, bn)
+                  );
+                }
+              }
+            }
+          }
+        } catch (e) {}
       }
 
       const uniqueCandidateDirs = Array.from(new Set(candidateDirs));
@@ -1360,13 +1450,27 @@ exports.previewBook = async (req, res) => {
 
         if (firstPageHtml) break;
       }
+
+      // If found on disk, cache to MongoDB for instant future previews
+      if (firstPageHtml) {
+        Flipbook.updateOne({ _id: book._id }, { $set: { firstPageHtml } }).catch(() => {});
+      }
+    }
+
+    // Fallback: If no preview SVG exists on disk or in DB, generate a high-aesthetic cover SVG
+    let isFallback = false;
+    if (!firstPageHtml || !firstPageHtml.trim()) {
+      const pageCount = Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : 1);
+      firstPageHtml = generateFallbackBookCoverSvg(book.flipbookName, pageCount);
+      isFallback = true;
     }
 
     res.status(200).json({
       success: true,
       book: formatBook(book),
       pages: book.pages || [],
-      html: firstPageHtml
+      html: firstPageHtml,
+      isFallback
     });
   } catch (err) {
     console.error('[Book Controller] Error fetching preview:', err);

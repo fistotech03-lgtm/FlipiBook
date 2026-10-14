@@ -530,18 +530,23 @@ exports.saveBook = async (req, res) => {
 
     const resolvedVId = book?.v_id || providedVId || crypto.randomBytes(8).toString('hex');
 
-    // Index existing pages by v_id and pageNumber to prevent overwriting unchanged pages
-    const existingPagesMap = new Map();
+    // Index existing pages by v_id, fileName, and name to preserve pages across reordering
+    const existingByVId = new Map();
+    const existingByFileName = new Map();
+    const existingByName = new Map();
     if (book && Array.isArray(book.pages)) {
       book.pages.forEach((p) => {
-        if (p.v_id) existingPagesMap.set(p.v_id, p);
-        if (p.pageNumber !== undefined) existingPagesMap.set(String(p.pageNumber), p);
+        if (p.v_id) existingByVId.set(p.v_id, p);
+        if (p.fileName) existingByFileName.set(p.fileName.toLowerCase(), p);
+        if (p.name) existingByName.set(p.name.toLowerCase(), p);
       });
     }
 
     const safePages = Array.isArray(pages) ? pages.map((p, idx) => {
-      const pageNum = p.pageNumber !== undefined ? p.pageNumber : (idx + 1);
-      const existingPage = existingPagesMap.get(p.v_id) || existingPagesMap.get(String(pageNum));
+      const pageNum = idx + 1;
+      const existingPage = (p.v_id && existingByVId.get(p.v_id))
+        || (p.fileName && existingByFileName.get(p.fileName.toLowerCase()))
+        || (p.name && existingByName.get(p.name.toLowerCase()));
 
       // Resolve chunked upload if applicable
       let chunkedContent = null;
@@ -550,13 +555,13 @@ exports.saveBook = async (req, res) => {
         chunkUploads.delete(p.contentChunkId);
       }
 
-      const pageContent = (chunkedContent !== null)
+      let pageContent = (chunkedContent !== null)
         ? chunkedContent
         : (p.content !== undefined && p.content !== null)
           ? p.content
           : (p.html !== undefined && p.html !== null)
             ? p.html
-            : (existingPage?.content || existingPage?.html || '');
+            : '';
 
       const pageVId = (p.v_id && p.v_id !== resolvedVId)
         ? p.v_id
@@ -566,7 +571,7 @@ exports.saveBook = async (req, res) => {
 
       const pageName = p.name || p.pageName || existingPage?.name || `Page ${pageNum}`;
       const cleanPageName = String(pageName || '').replace(/[\\/:*?"<>|]/g, '').trim();
-      const pageFileName = p.fileName || (cleanPageName ? (cleanPageName.endsWith('.svg') ? cleanPageName : `${cleanPageName}.svg`) : `${pageNum}.svg`);
+      const pageFileName = p.fileName || existingPage?.fileName || (cleanPageName ? (cleanPageName.endsWith('.svg') ? cleanPageName : `${cleanPageName}.svg`) : `${pageNum}.svg`);
 
       return {
         pageNumber: pageNum,
@@ -576,7 +581,8 @@ exports.saveBook = async (req, res) => {
         size: p.size || (pageContent ? Buffer.byteLength(pageContent, 'utf8') : existingPage?.size || 0),
         hide: p.hide !== undefined ? p.hide : (existingPage?.hide || 0),
         content: pageContent,
-        html: pageContent
+        html: pageContent,
+        existingFileName: existingPage?.fileName
       };
     }) : [];
 
@@ -626,14 +632,26 @@ exports.saveBook = async (req, res) => {
         const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
 
         if (!svgContent || svgContent.trim() === '') {
-          const targetFilePath = path.join(pagesDir, targetFileName);
-          if (fs.existsSync(targetFilePath)) {
-            try {
-              const diskStr = fs.readFileSync(targetFilePath, 'utf8');
-              if (diskStr && diskStr.trim()) {
-                svgContent = diskStr;
-              }
-            } catch (e) {}
+          const candidateNames = [
+            targetFileName,
+            sp.existingFileName,
+            sp.fileName,
+            sp.name ? `${sp.name}.svg` : null,
+            `${sp.pageNumber}.svg`,
+            `Page ${sp.pageNumber}.svg`
+          ].filter(Boolean);
+
+          for (const cand of candidateNames) {
+            const candPath = path.join(pagesDir, cand);
+            if (fs.existsSync(candPath)) {
+              try {
+                const diskStr = fs.readFileSync(candPath, 'utf8');
+                if (diskStr && diskStr.trim()) {
+                  svgContent = diskStr;
+                  break;
+                }
+              } catch (e) {}
+            }
           }
         }
 
@@ -650,32 +668,33 @@ exports.saveBook = async (req, res) => {
         }
         fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
 
-        // Clean up older mismatched filenames for this page
-        const candidateOldNames = [`${sp.pageNumber}.svg`, `Page ${sp.pageNumber}.svg`];
-        candidateOldNames.forEach(oldName => {
-          if (oldName !== targetFileName) {
-            try {
-              const oldFp = path.join(pagesDir, oldName);
-              if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
-            } catch (e) {}
-          }
-        });
+        // If this page was renamed, remove its old physical file
+        if (sp.existingFileName && sp.existingFileName.toLowerCase() !== targetFileName.toLowerCase()) {
+          try {
+            const oldFilePath = path.join(pagesDir, sp.existingFileName);
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+              console.log(`[Book Controller] Cleaned up renamed old page file: ${sp.existingFileName}`);
+            }
+          } catch (e) {}
+        }
       });
 
       // Clean up physical files for any pages that were deleted
       try {
-        if (fs.existsSync(pagesDir)) {
-          const activeFileNames = new Set(safePages.map(sp => sp.fileName).filter(Boolean));
+        if (fs.existsSync(pagesDir) && safePages.length > 0) {
+          const activeFileNames = new Set();
           safePages.forEach(sp => {
-            if (sp.pageNumber) activeFileNames.add(`${sp.pageNumber}.svg`);
+            if (sp.fileName) activeFileNames.add(sp.fileName.toLowerCase());
             if (sp.name) {
-              const clean = String(sp.name).replace(/[\\/:*?"<>|]/g, '').trim();
+              const clean = String(sp.name).replace(/[\\/:*?"<>|]/g, '').trim().toLowerCase();
               if (clean) activeFileNames.add(`${clean}.svg`);
             }
           });
           const diskFiles = fs.readdirSync(pagesDir);
           diskFiles.forEach(df => {
-            if ((df.endsWith('.svg') || df.endsWith('.html')) && !activeFileNames.has(df)) {
+            const dfLower = df.toLowerCase();
+            if ((dfLower.endsWith('.svg') || dfLower.endsWith('.html')) && !activeFileNames.has(dfLower)) {
               try {
                 fs.unlinkSync(path.join(pagesDir, df));
                 console.log(`[Book Controller] Cleaned up deleted page file from disk: ${df}`);
@@ -805,33 +824,28 @@ exports.savePagesBatch = async (req, res) => {
           }
           fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
 
-          // Clean up older mismatched filenames for this page
-          const candidateOldNames = [`${sp.pageNumber}.svg`, `Page ${sp.pageNumber}.svg`];
-          candidateOldNames.forEach(oldName => {
-            if (oldName !== targetFileName) {
-              try {
-                const oldFp = path.join(pagesDir, oldName);
-                if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
-              } catch (e) {}
-            }
-          });
         }
       });
 
       // Clean up physical files for any pages that were deleted
       try {
-        if (fs.existsSync(pagesDir)) {
-          const activeFileNames = new Set(allSortedPages.map(p => p.fileName).filter(Boolean));
+        if (fs.existsSync(pagesDir) && allSortedPages.length > 0) {
+          const activeFileNames = new Set();
           allSortedPages.forEach(p => {
-            if (p.pageNumber) activeFileNames.add(`${p.pageNumber}.svg`);
+            if (p.fileName) activeFileNames.add(p.fileName.toLowerCase());
+            if (p.pageNumber) {
+              activeFileNames.add(`${p.pageNumber}.svg`.toLowerCase());
+              activeFileNames.add(`page ${p.pageNumber}.svg`.toLowerCase());
+            }
             if (p.name) {
-              const clean = String(p.name).replace(/[\\/:*?"<>|]/g, '').trim();
+              const clean = String(p.name).replace(/[\\/:*?"<>|]/g, '').trim().toLowerCase();
               if (clean) activeFileNames.add(`${clean}.svg`);
             }
           });
           const diskFiles = fs.readdirSync(pagesDir);
           diskFiles.forEach(df => {
-            if ((df.endsWith('.svg') || df.endsWith('.html')) && !activeFileNames.has(df)) {
+            const dfLower = df.toLowerCase();
+            if ((dfLower.endsWith('.svg') || dfLower.endsWith('.html')) && !activeFileNames.has(dfLower)) {
               try {
                 fs.unlinkSync(path.join(pagesDir, df));
                 console.log(`[Book Controller] Cleaned up deleted page file from disk: ${df}`);
@@ -1380,16 +1394,23 @@ exports.deletePage = async (req, res) => {
 
     const pagesDir = path.join(wsBookDir, 'pages');
 
-    const filesToRemove = [
+    const otherPages = book.pages.filter((_, idx) => idx !== pageIndex);
+    const otherFileNames = new Set();
+    otherPages.forEach(p => {
+      if (p.fileName) otherFileNames.add(p.fileName.toLowerCase());
+      if (p.name) otherFileNames.add(`${p.name.toLowerCase()}.svg`);
+    });
+
+    const candidateFilesToRemove = [
       pageToDelete.fileName,
       fileName,
-      `${pageToDelete.name}.svg`,
+      pageToDelete.name ? `${pageToDelete.name}.svg` : null,
       oldPageName ? `${oldPageName}.svg` : null,
-      `${pageToDelete.pageNumber}.svg`,
-      `Page ${pageToDelete.pageNumber}.svg`,
-      `${pageToDelete.name}.html`,
-      `Page ${pageToDelete.pageNumber}.html`
+      pageToDelete.name ? `${pageToDelete.name}.html` : null
     ].filter(Boolean);
+
+    // Only delete candidate files that do NOT belong to any remaining active page!
+    const filesToRemove = candidateFilesToRemove.filter(f => !otherFileNames.has(f.toLowerCase()));
 
     if (fs.existsSync(pagesDir)) {
       filesToRemove.forEach(f => {

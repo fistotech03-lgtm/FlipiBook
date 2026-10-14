@@ -7,7 +7,6 @@
 import { useState, useCallback } from 'react';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import pageCacheManager from '../utils/PageCacheManager';
-import pageEditorApi from '../../../api/pageEditorApi';
 
 const MAX_HISTORY = 50;
 
@@ -354,20 +353,6 @@ export const usePageManager = ({
       return p;
     }));
     setHasUnsavedChanges(true);
-
-    // Call backend API to immediately rename the physical file on disk
-    const bookVId = v_id || currentBook?.v_id;
-    if (bookVId && targetPage) {
-      pageEditorApi.renamePage({
-        v_id: bookVId,
-        pageId: targetPage.v_id || targetPage.id || id,
-        pageNumber: targetPage.pageNumber,
-        oldPageName: targetPage.name,
-        newPageName: trimmedName
-      }).catch(err => {
-        console.warn('Backend page rename non-blocking sync error:', err.message);
-      });
-    }
   };
 
   const togglePageVisibility = (index) => {
@@ -407,20 +392,6 @@ export const usePageManager = ({
       setActivePageIndex(Math.max(0, pages.length - 2));
     }
     setHasUnsavedChanges(true);
-
-    // Call backend API to remove the page from MongoDB and delete its physical file on disk immediately
-    const bookVId = v_id || currentBook?.v_id;
-    if (bookVId && pageToDelete) {
-      pageEditorApi.deletePage({
-        v_id: bookVId,
-        pageId: pageToDelete.v_id || pageToDelete.id,
-        pageNumber: pageToDelete.pageNumber || (index + 1),
-        fileName: pageToDelete.fileName,
-        oldPageName: pageToDelete.name
-      }).catch(err => {
-        console.warn('Backend page delete non-blocking sync error:', err.message);
-      });
-    }
   };
 
   const movePageUp = (index) => {

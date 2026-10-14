@@ -14,8 +14,7 @@
     "dev:auth": "node --watch services/auth-service/src/server.js",
     "dev:myflipibook": "node --watch services/myflipibook-service/src/server.js",
     "dev:page-editor": "node --watch services/page-editor-service/src/server.js",
-    "dev:pdf-editor": "node --watch services/pdf-editor-service/src/server.js",
-    "test:audit": "node scripts/audit_myflipibook.js"
+    "dev:pdf-editor": "node --watch services/pdf-editor-service/src/server.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

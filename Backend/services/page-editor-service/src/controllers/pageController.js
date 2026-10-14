@@ -686,16 +686,23 @@ const deletePage = async (req, res) => {
 
     const pagesDir = path.join(bookDir, 'pages');
 
-    const filesToRemove = [
+    const otherPages = doc.pages.filter((_, idx) => idx !== pageIndex);
+    const otherFileNames = new Set();
+    otherPages.forEach(p => {
+      if (p.fileName) otherFileNames.add(p.fileName.toLowerCase());
+      if (p.name) otherFileNames.add(`${p.name.toLowerCase()}.svg`);
+    });
+
+    const candidateFilesToRemove = [
       pageToDelete.fileName,
       fileName,
-      `${pageToDelete.name}.svg`,
+      pageToDelete.name ? `${pageToDelete.name}.svg` : null,
       oldPageName ? `${oldPageName}.svg` : null,
-      `${pageToDelete.pageNumber}.svg`,
-      `Page ${pageToDelete.pageNumber}.svg`,
-      `${pageToDelete.name}.html`,
-      `Page ${pageToDelete.pageNumber}.html`
+      pageToDelete.name ? `${pageToDelete.name}.html` : null
     ].filter(Boolean);
+
+    // Only delete candidate files that do NOT belong to any remaining active page!
+    const filesToRemove = candidateFilesToRemove.filter(f => !otherFileNames.has(f.toLowerCase()));
 
     if (fs.existsSync(pagesDir)) {
       filesToRemove.forEach(f => {

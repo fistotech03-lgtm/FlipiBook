@@ -1706,7 +1706,7 @@ export default function MyFlipbooks() {
                             }
 
                             const iframeBaseUrl = getAssetBaseUrl(
-                                emailId?.replace(/[@.]/g, "_"),
+                                book.userID || emailId?.replace(/[@.]/g, "_"),
                                 actualFolder,
                                 book.realName
                             );

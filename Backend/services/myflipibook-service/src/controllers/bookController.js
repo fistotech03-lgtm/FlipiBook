@@ -3,8 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
+const FlipbookAsset = require('../models/FlipbookAsset');
 const { deleteBookStorage, getStorageRoot, initFlipbookStorage } = require('../utils/storageHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
+const { processAndSaveBase64Assets } = require('../utils/base64Helper');
 
 // In-memory cache for chunked uploads
 const chunkUploads = new Map();
@@ -22,6 +24,7 @@ const formatBook = (doc) => {
     id: doc._id.toString(),
     _id: doc._id.toString(),
     userId: doc.userId ? doc.userId.toString() : null,
+    userID: doc.userID || (doc.userId ? doc.userId.toString() : null),
     v_id: doc.v_id,
     title: doc.flipbookName,
     realName: doc.flipbookName,
@@ -251,6 +254,13 @@ exports.emptyTrash = async (req, res) => {
       deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', b.flipbookName, b);
     }
 
+    const trashedVIds = trashedBooks.map(b => b.v_id).filter(Boolean);
+    if (trashedVIds.length > 0) {
+      try {
+        await FlipbookAsset.deleteMany({ flipbook_v_id: { $in: trashedVIds } });
+      } catch (e) {}
+    }
+
     const deleteResult = await Flipbook.deleteMany({ ...userQuery, trash: true });
 
     res.status(200).json({
@@ -389,6 +399,9 @@ exports.deleteBookPermanently = async (req, res) => {
     deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', book.flipbookName, book);
 
     await Flipbook.deleteOne({ _id: book._id });
+    try {
+      await FlipbookAsset.deleteMany({ flipbook_v_id: book.v_id });
+    } catch (e) {}
 
     res.status(200).json({
       success: true,
@@ -496,7 +509,7 @@ exports.saveBook = async (req, res) => {
   try {
     const { objectId, customUserId, emailId } = getAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
-    const { flipbookName, pages, folderName, fileSize, overwrite, v_id: providedVId, meta } = req.body;
+    const { flipbookName, pages, folderName, fileSize, overwrite, v_id: providedVId, meta, keepBase64: reqKeepBase64 } = req.body;
 
     if (!userQuery || !flipbookName) {
       return res.status(400).json({ success: false, message: 'Missing required flipbookName' });
@@ -627,6 +640,11 @@ exports.saveBook = async (req, res) => {
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, finalFlipbookName);
       initFlipbookStorage(wsBookDir);
       const pagesDir = path.join(wsBookDir, 'pages');
+
+      const savedBase64Map = new Map();
+      const newFlipbookAssets = [];
+      const keepBase64 = reqKeepBase64 !== undefined ? Boolean(reqKeepBase64) : false;
+
       safePages.forEach((sp) => {
         let svgContent = sp.content || sp.html || '';
         const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
@@ -666,7 +684,24 @@ exports.saveBook = async (req, res) => {
           const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
           svgContent = svgContent.replace(/(<svg\b[^>]*>)/i, `$1\n<g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame">`).replace(/<\/svg>/i, '</g>\n</svg>');
         }
+
+        // Extract base64 assets, write to assets/ folder on disk, and link with ./assets/... in SVG
+        svgContent = processAndSaveBase64Assets({
+          htmlContent: svgContent,
+          pageVId: sp.v_id,
+          wsBookDir,
+          flipbook_v_id: resolvedVId,
+          flipbookName: finalFlipbookName,
+          folderName: targetSubfolder,
+          userEmail: emailId,
+          userFolder,
+          newFlipbookAssets,
+          savedBase64Map,
+          skipBase64Extraction: keepBase64
+        });
+
         fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+        sp.size = Buffer.byteLength(svgContent, 'utf8');
 
         // If this page was renamed, remove its old physical file
         if (sp.existingFileName && sp.existingFileName.toLowerCase() !== targetFileName.toLowerCase()) {
@@ -679,6 +714,54 @@ exports.saveBook = async (req, res) => {
           } catch (e) {}
         }
       });
+
+      // Upsert extracted base64 assets in MongoDB
+      if (newFlipbookAssets.length > 0) {
+        for (const assetObj of newFlipbookAssets) {
+          try {
+            await FlipbookAsset.updateOne(
+              { flipbook_v_id: assetObj.flipbook_v_id, fileName: assetObj.fileName },
+              { $set: assetObj },
+              { upsert: true }
+            );
+          } catch (assetUpsertErr) {
+            console.error('[Book Controller] Error upserting asset to DB:', assetUpsertErr.message);
+          }
+        }
+        console.log(`[Book Controller] Upserted ${newFlipbookAssets.length} extracted base64 assets in DB`);
+      }
+
+      // Clean up unused FlipbookAsset records & files if removed from canvas
+      try {
+        const allFlipbookAssets = await FlipbookAsset.find({ flipbook_v_id: resolvedVId });
+        if (allFlipbookAssets.length > 0 && fs.existsSync(pagesDir)) {
+          let allPageSvgs = '';
+          const pageFiles = fs.readdirSync(pagesDir);
+          pageFiles.forEach(pf => {
+            if (pf.endsWith('.svg') || pf.endsWith('.html')) {
+              try {
+                allPageSvgs += ' ' + fs.readFileSync(path.join(pagesDir, pf), 'utf8').toLowerCase();
+              } catch (e) {}
+            }
+          });
+
+          for (const asset of allFlipbookAssets) {
+            if (asset.isGallery) continue;
+            const fNameLower = (asset.fileName || '').toLowerCase();
+            const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
+            if (!isReferenced) {
+              const diskAssetPath = path.join(wsBookDir, 'assets', asset.assetType || 'Image', asset.fileName);
+              if (fs.existsSync(diskAssetPath)) {
+                try { fs.unlinkSync(diskAssetPath); } catch (e) {}
+              }
+              await FlipbookAsset.deleteOne({ _id: asset._id });
+              console.log(`[Book Controller] Cleaned up unused asset from disk & DB: ${asset.fileName}`);
+            }
+          }
+        }
+      } catch (assetCleanErr) {
+        console.warn('[Book Controller] Warning cleaning up unused assets:', assetCleanErr.message);
+      }
 
       // Clean up physical files for any pages that were deleted
       try {
@@ -813,6 +896,11 @@ exports.savePagesBatch = async (req, res) => {
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
       initFlipbookStorage(wsBookDir);
       const pagesDir = path.join(wsBookDir, 'pages');
+
+      const savedBase64Map = new Map();
+      const newFlipbookAssets = [];
+      const keepBase64 = req.body?.keepBase64 !== undefined ? Boolean(req.body.keepBase64) : false;
+
       fullBatchPages.forEach((sp) => {
         let svgContent = sp.content || sp.html || '';
         const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
@@ -822,10 +910,39 @@ exports.savePagesBatch = async (req, res) => {
             const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
             svgContent = svgContent.replace(/(<svg\b[^>]*>)/i, `$1\n<g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame">`).replace(/<\/svg>/i, '</g>\n</svg>');
           }
-          fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
 
+          svgContent = processAndSaveBase64Assets({
+            htmlContent: svgContent,
+            pageVId: sp.v_id,
+            wsBookDir,
+            flipbook_v_id: book.v_id,
+            flipbookName: book.flipbookName,
+            folderName: folder,
+            userEmail: emailId,
+            userFolder,
+            newFlipbookAssets,
+            savedBase64Map,
+            skipBase64Extraction: keepBase64
+          });
+
+          fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+          sp.size = Buffer.byteLength(svgContent, 'utf8');
         }
       });
+
+      if (newFlipbookAssets.length > 0) {
+        for (const assetObj of newFlipbookAssets) {
+          try {
+            await FlipbookAsset.updateOne(
+              { flipbook_v_id: assetObj.flipbook_v_id, fileName: assetObj.fileName },
+              { $set: assetObj },
+              { upsert: true }
+            );
+          } catch (assetUpsertErr) {
+            console.error('[Book Controller] Error upserting asset in savePagesBatch:', assetUpsertErr.message);
+          }
+        }
+      }
 
       // Clean up physical files for any pages that were deleted
       try {

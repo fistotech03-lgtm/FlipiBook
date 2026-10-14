@@ -560,7 +560,7 @@ const Model3DPreviewModal = ({
         u = parsed.data || parsed.url || u;
       } catch (e) {}
     }
-    if (typeof u === 'string' && u.startsWith('/uploads/')) {
+    if (typeof u === 'string' && (u.startsWith('/storage/') || u.startsWith('/uploads/'))) {
       u = resolveUploadsPath(u);
     }
     return u;

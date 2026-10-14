@@ -50,7 +50,8 @@ app.use(cookieParser());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Static file serving for uploads/assets
+// Static file serving for storage/assets (and legacy /uploads)
+app.use('/storage', express.static(getStorageRoot()));
 app.use('/uploads', express.static(getStorageRoot()));
 
 // Health check endpoint

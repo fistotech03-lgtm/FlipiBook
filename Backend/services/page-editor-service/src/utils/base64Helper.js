@@ -123,7 +123,7 @@ const processAndSaveBase64Assets = ({
       const filePath = path.join(targetDir, assetFileName);
       fs.writeFileSync(filePath, buffer);
 
-      const absoluteUrl = `/uploads/${sanitizedEmail}/My_Flipbooks/${physicalFolderName}/${flipbookName}/assets/${subfolder}/${assetFileName}`;
+      const absoluteUrl = `/storage/${sanitizedEmail}/My_Flipbooks/${physicalFolderName}/${flipbookName}/assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
         flipbook_v_id: flipbook_v_id,

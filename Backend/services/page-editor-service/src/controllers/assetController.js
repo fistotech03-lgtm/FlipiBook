@@ -50,6 +50,7 @@ const uploadAsset = async (req, res) => {
     const safeFolderName = sanitizeName(folderName, 'My_Flipbooks');
     const safeFlipbookName = sanitizeName(flipbookName, 'Untitled_Document');
     const sanitizedEmail = sanitizeEmail(emailId);
+    const userFolder = dbDoc?.userID || (dbDoc?.userId ? String(dbDoc.userId) : sanitizedEmail);
     const storageRoot = getStorageRoot();
 
     const isGallery = reqIsGallery === 'true' || reqIsGallery === true;
@@ -61,6 +62,7 @@ const uploadAsset = async (req, res) => {
     else if (assetType === 'audio') subFolder = 'audio';
     else if (assetType === 'gif' || assetType === 'gifs') subFolder = 'gif';
     else if (assetType === 'download') subFolder = 'download';
+    else if (assetType === '3d' || assetType === '3d_model' || assetType === 'model') subFolder = '3D_Model';
 
     let targetDir;
     let relativeUrlBase;
@@ -73,19 +75,19 @@ const uploadAsset = async (req, res) => {
         audio: 'audio'
       };
       const gallerySub = galleryFolderMap[assetType] || 'Images';
-      targetDir = path.join(storageRoot, sanitizedEmail, 'Gallery', gallerySub);
-      relativeUrlBase = `/uploads/${sanitizedEmail}/Gallery/${gallerySub}`;
+      targetDir = path.join(storageRoot, userFolder, 'Gallery', gallerySub);
+      relativeUrlBase = `/storage/${userFolder}/Gallery/${gallerySub}`;
     } else {
       targetDir = path.join(
         storageRoot,
-        sanitizedEmail,
+        userFolder,
         'My_Flipbooks',
         safeFolderName,
         safeFlipbookName,
         'assets',
         subFolder
       );
-      relativeUrlBase = `/uploads/${sanitizedEmail}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}`;
+      relativeUrlBase = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}`;
     }
 
     if (!fs.existsSync(targetDir)) {
@@ -316,7 +318,7 @@ const getGalleryAssets = async (req, res) => {
             else if (sub === 'audio') t = 'audio';
 
             if (!requestedType || t === requestedType) {
-              const publicUrl = `/uploads/${sanitizedEmail}/Gallery/${sub}/${f}`;
+              const publicUrl = `/storage/${sanitizedEmail}/Gallery/${sub}/${f}`;
               assetsMap.set(f, {
                 id: f,
                 name: f,

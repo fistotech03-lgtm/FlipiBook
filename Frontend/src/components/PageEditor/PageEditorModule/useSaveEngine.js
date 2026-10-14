@@ -582,7 +582,7 @@ export const useSaveEngine = ({
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
           overwrite: true,
-          keepBase64: true,
+          keepBase64: false,
           pages: payloadPages,
           meta: {
             width: activeDims.width,
@@ -657,7 +657,7 @@ export const useSaveEngine = ({
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
           overwrite: true,
-          keepBase64: true,
+          keepBase64: false,
           pages: payloadPages,
           meta: {
             width: activeDims.width,

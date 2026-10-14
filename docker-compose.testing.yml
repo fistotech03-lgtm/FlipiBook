@@ -48,7 +48,10 @@ services:
       - path: ./.env
         required: false
     networks:
-      - testing-internal
+      testing-internal:
+        aliases:
+          - backend-gateway
+          - backend
 
 networks:
   testing-internal:

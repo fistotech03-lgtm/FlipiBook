@@ -48,8 +48,10 @@ services:
       - path: ./.env
         required: false
     networks:
-      - main-internal
-      - dokploy-network
+      main-internal:
+        aliases:
+          - backend-gateway
+          - backend
 
 networks:
   main-internal:

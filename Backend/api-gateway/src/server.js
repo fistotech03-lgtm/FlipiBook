@@ -228,6 +228,8 @@ app.use(
     target: `${MYFLIPIBOOK_SERVICE_URL}/api/flipbook`,
     changeOrigin: true,
     xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
     cookieDomainRewrite: '',
     cookiePathRewrite: '/',
     on: {
@@ -264,6 +266,8 @@ app.use(
     target: `${MYFLIPIBOOK_SERVICE_URL}/api/myflipibook`,
     changeOrigin: true,
     xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
     cookieDomainRewrite: '',
     cookiePathRewrite: '/',
     on: {

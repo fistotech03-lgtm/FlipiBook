@@ -28,7 +28,7 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
   const segments = [email, 'My_Flipbooks', folder, book].filter(Boolean);
   const fullPath = segments.join('/');
 
-  return BACKEND_URL ? `${BACKEND_URL}/uploads/${fullPath}/` : `/uploads/${fullPath}/`;
+  return BACKEND_URL ? `${BACKEND_URL}/storage/${fullPath}/` : `/storage/${fullPath}/`;
 }
 
 // Alias for seamless backward compatibility across migrated modules
@@ -72,9 +72,10 @@ export function resolveUploadsPath(path) {
     return BACKEND_URL ? `${BACKEND_URL}${slash}${cleanPath}` : `${slash}${cleanPath}`;
   }
 
-  // Handle /uploads path
+  // Handle /storage and legacy /uploads paths
+  const isStorage = cleanPath.startsWith('/storage') || cleanPath.startsWith('storage/');
   const isUpload = cleanPath.startsWith('/uploads') || cleanPath.startsWith('uploads/');
-  if (isUpload) {
+  if (isStorage || isUpload) {
     const slash = cleanPath.startsWith('/') ? '' : '/';
     return BACKEND_URL ? `${BACKEND_URL}${slash}${cleanPath}` : `${slash}${cleanPath}`;
   }
@@ -92,6 +93,7 @@ export function rewriteHtmlUploads(html) {
   if (!html) return html;
   if (!BACKEND_URL) return html;
 
+  const storageBase = `${BACKEND_URL}/storage/`;
   const base = `${BACKEND_URL}/uploads/`;
   const DATA_URI_RE = /(data:[^;]+;base64,[A-Za-z0-9+/=\s]+)/g;
   const parts = html.split(DATA_URI_RE);
@@ -99,6 +101,8 @@ export function rewriteHtmlUploads(html) {
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 !== 0) continue;
     parts[i] = parts[i]
+      .replace(/(src|href|xlink:href)=(['"])(\/storage\/|storage\/)/g, `$1=$2${storageBase}`)
+      .replace(/(url\(\s*['"]?)\/storage\//g, `$1${storageBase}`)
       .replace(/(src|href|xlink:href)=(['"])(\/uploads\/|uploads\/)/g, `$1=$2${base}`)
       .replace(/(url\(\s*['"]?)\/uploads\//g, `$1${base}`);
   }

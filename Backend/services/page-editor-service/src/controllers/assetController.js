@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
 const FlipbookAsset = require('../models/FlipbookAsset');
 const { getAuthUser } = require('../utils/userHelper');
@@ -12,6 +13,55 @@ const {
   resolveFlipbookPaths,
   initFlipbookStorage
 } = require('../utils/storageHelper');
+
+/**
+ * Helper to resolve user's folder on disk (e.g. FLIPI0001 or fistotech04_gmail_com)
+ */
+const resolveUserFolder = async (emailId, dbDoc = null) => {
+  const sanitizedEmail = sanitizeEmail(emailId);
+  let resolvedUserId = dbDoc?.userID || (dbDoc?.userId ? String(dbDoc.userId) : null);
+
+  if (!resolvedUserId && emailId) {
+    try {
+      const anyBook = await Flipbook.findOne({
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      }).select('userID userId');
+      if (anyBook) {
+        resolvedUserId = anyBook.userID || (anyBook.userId ? String(anyBook.userId) : null);
+      }
+    } catch (e) {}
+  }
+
+  if (!resolvedUserId && emailId) {
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        const userRec = await mongoose.connection.db.collection('users').findOne({
+          emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+        });
+        if (userRec && userRec.userID) {
+          resolvedUserId = userRec.userID;
+        }
+      }
+    } catch (e) {}
+  }
+
+  const storageRoot = getStorageRoot();
+  if (!resolvedUserId) {
+    try {
+      if (fs.existsSync(storageRoot)) {
+        const topDirs = fs.readdirSync(storageRoot);
+        const flipiDir = topDirs.find(d => /^FLIPI\d+/i.test(d));
+        if (flipiDir) {
+          resolvedUserId = flipiDir;
+        }
+      }
+    } catch (e) {}
+  }
+
+  const userFolder = resolvedUserId || sanitizedEmail;
+  const candidateDirs = Array.from(new Set([resolvedUserId, userFolder, sanitizedEmail].filter(Boolean)));
+  return { userFolder, resolvedUserId, sanitizedEmail, candidateDirs };
+};
 
 /**
  * Upload an asset for a flipbook page or gallery
@@ -30,18 +80,22 @@ const uploadAsset = async (req, res) => {
     }
 
     if (!emailId) {
-      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      if (file && fs.existsSync(file.path)) {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      }
       return res.status(400).json({ success: false, message: 'Missing required field: emailId' });
     }
 
-    // Resolve flipbook metadata if v_id provided
+    let dbDoc = null;
     if (v_id) {
-      const dbDoc = await Flipbook.findOne({ v_id });
+      dbDoc = await Flipbook.findOne({ v_id });
       if (dbDoc) {
         flipbookName = dbDoc.flipbookName;
         folderName = resolveFolder(dbDoc.folderName);
         if (emailId && dbDoc.userEmail && dbDoc.userEmail.toLowerCase() !== emailId.toLowerCase()) {
-          if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+          if (file && fs.existsSync(file.path)) {
+            try { fs.unlinkSync(file.path); } catch (e) {}
+          }
           return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
       }
@@ -49,7 +103,7 @@ const uploadAsset = async (req, res) => {
 
     const safeFolderName = sanitizeName(folderName, 'My_Flipbooks');
     const safeFlipbookName = sanitizeName(flipbookName, 'Untitled_Document');
-    const sanitizedEmail = sanitizeEmail(emailId);
+    const { userFolder, candidateDirs } = await resolveUserFolder(emailId, dbDoc);
     const storageRoot = getStorageRoot();
 
     const isGallery = reqIsGallery === 'true' || reqIsGallery === true;
@@ -61,6 +115,7 @@ const uploadAsset = async (req, res) => {
     else if (assetType === 'audio') subFolder = 'audio';
     else if (assetType === 'gif' || assetType === 'gifs') subFolder = 'gif';
     else if (assetType === 'download') subFolder = 'download';
+    else if (assetType === '3d' || assetType === '3d_model' || assetType === 'model') subFolder = '3D_Model';
 
     let targetDir;
     let relativeUrlBase;
@@ -70,22 +125,24 @@ const uploadAsset = async (req, res) => {
         image: 'Images',
         video: 'Videos',
         gif: 'gifs',
-        audio: 'audio'
+        audio: 'audio',
+        '3d': '3D_Models',
+        '3d_model': '3D_Models'
       };
       const gallerySub = galleryFolderMap[assetType] || 'Images';
-      targetDir = path.join(storageRoot, sanitizedEmail, 'Gallery', gallerySub);
-      relativeUrlBase = `/uploads/${sanitizedEmail}/Gallery/${gallerySub}`;
+      targetDir = path.join(storageRoot, userFolder, gallerySub);
+      relativeUrlBase = `/storage/${userFolder}/${gallerySub}`;
     } else {
       targetDir = path.join(
         storageRoot,
-        sanitizedEmail,
+        userFolder,
         'My_Flipbooks',
         safeFolderName,
         safeFlipbookName,
         'assets',
         subFolder
       );
-      relativeUrlBase = `/uploads/${sanitizedEmail}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}`;
+      relativeUrlBase = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}`;
     }
 
     if (!fs.existsSync(targetDir)) {
@@ -99,14 +156,18 @@ const uploadAsset = async (req, res) => {
         if (replacing_file_v_id) {
           oldAsset = await FlipbookAsset.findOne({ file_v_id: replacing_file_v_id });
         } else if (replacing_file_url) {
-          let urlQuery = decodeURIComponent(replacing_file_url);
-          oldAsset = await FlipbookAsset.findOne({ url: { $regex: urlQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' } });
+          const urlQuery = decodeURIComponent(replacing_file_url);
+          oldAsset = await FlipbookAsset.findOne({
+            url: { $regex: urlQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' }
+          });
         }
 
         if (oldAsset) {
           if (oldAsset.fileName) {
             const oldFilePath = path.join(targetDir, oldAsset.fileName);
-            if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+            if (fs.existsSync(oldFilePath)) {
+              try { fs.unlinkSync(oldFilePath); } catch (e) {}
+            }
           }
           await FlipbookAsset.deleteOne({ _id: oldAsset._id });
         }
@@ -132,7 +193,7 @@ const uploadAsset = async (req, res) => {
 
     // Save to Database
     const newAsset = new FlipbookAsset({
-      flipbook_v_id: v_id || `temp_${Date.now()}`,
+      flipbook_v_id: v_id || 'gallery',
       file_v_id,
       page_v_id: finalPageVId,
       assetType: subFolder,
@@ -140,7 +201,7 @@ const uploadAsset = async (req, res) => {
       originalName: file.originalname,
       userEmail: emailId,
       isGallery,
-      flipbookName: safeFlipbookName,
+      flipbookName: isGallery ? 'Gallery' : safeFlipbookName,
       folderName: isGallery ? 'Gallery' : safeFolderName,
       url: relativeUrl,
       size: file.size
@@ -195,10 +256,15 @@ const deleteAsset = async (req, res) => {
     }
     if (!asset && assetUrl) {
       const urlQuery = decodeURIComponent(assetUrl);
-      asset = await FlipbookAsset.findOne({ url: { $regex: urlQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' } });
+      asset = await FlipbookAsset.findOne({
+        url: { $regex: urlQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' }
+      });
     }
     if (!asset && fileName && emailId) {
-      asset = await FlipbookAsset.findOne({ fileName, userEmail: emailId });
+      asset = await FlipbookAsset.findOne({
+        fileName,
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      });
     }
 
     if (asset) {
@@ -208,25 +274,34 @@ const deleteAsset = async (req, res) => {
     // Delete file from disk
     const storageRoot = getStorageRoot();
     if (emailId && fileName) {
-      const sanitizedEmail = sanitizeEmail(emailId);
+      const { candidateDirs } = await resolveUserFolder(emailId);
       const safeFolder = sanitizeName(folderName, 'My_Flipbooks');
       const safeBook = sanitizeName(bookName, 'Untitled_Document');
 
-      const candidatePaths = [
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', assetType, fileName),
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'Image', fileName),
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'video', fileName),
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'audio', fileName),
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'gif', fileName),
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'download', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'Images', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'Videos', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'gifs', fileName)
-      ];
+      for (const uDir of candidateDirs) {
+        const candidatePaths = [
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', assetType, fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'Image', fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'video', fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'audio', fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'gif', fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', 'download', fileName),
+          path.join(storageRoot, uDir, 'My_Flipbooks', safeFolder, safeBook, 'assets', '3D_Model', fileName),
+          path.join(storageRoot, uDir, 'Images', fileName),
+          path.join(storageRoot, uDir, 'Videos', fileName),
+          path.join(storageRoot, uDir, 'gifs', fileName),
+          path.join(storageRoot, uDir, 'audio', fileName),
+          path.join(storageRoot, uDir, '3D_Models', fileName),
+          path.join(storageRoot, uDir, 'Gallery', 'Images', fileName),
+          path.join(storageRoot, uDir, 'Gallery', 'Videos', fileName),
+          path.join(storageRoot, uDir, 'Gallery', 'gifs', fileName),
+          path.join(storageRoot, uDir, 'Gallery', 'audio', fileName)
+        ];
 
-      for (const p of candidatePaths) {
-        if (fs.existsSync(p)) {
-          try { fs.unlinkSync(p); } catch (e) {}
+        for (const p of candidatePaths) {
+          if (fs.existsSync(p)) {
+            try { fs.unlinkSync(p); } catch (e) {}
+          }
         }
       }
     }
@@ -262,17 +337,18 @@ const getGalleryAssets = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing emailId' });
     }
 
-    const sanitizedEmail = sanitizeEmail(emailId);
+    const { userFolder, candidateDirs } = await resolveUserFolder(emailId);
     const requestedType = type ? type.toLowerCase() : null;
     const assetsMap = new Map();
-    const validMediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|mkv|mp3|wav|ogg)$/i;
+    const validMediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|mkv|mp3|wav|ogg|glb|gltf)$/i;
 
     // 1. Query FlipbookAsset collection for gallery assets
     const dbAssets = await FlipbookAsset.find({
-      userEmail: emailId,
+      userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
       $or: [
         { isGallery: true },
-        { folderName: 'Gallery' }
+        { folderName: 'Gallery' },
+        { flipbook_v_id: 'gallery' }
       ]
     }).sort({ createdAt: -1 });
 
@@ -282,9 +358,12 @@ const getGalleryAssets = async (req, res) => {
         if (currentUrl && asset.url.toLowerCase().includes(currentUrl.toLowerCase())) continue;
 
         let detectedType = (asset.assetType || '').toLowerCase();
-        if (detectedType === 'images') detectedType = 'image';
-        else if (detectedType === 'videos') detectedType = 'video';
-        else if (!detectedType) detectedType = 'image';
+        if (detectedType === 'images' || detectedType === 'image') detectedType = 'image';
+        else if (detectedType === 'videos' || detectedType === 'video') detectedType = 'video';
+        else if (detectedType === 'gifs' || detectedType === 'gif') detectedType = 'gif';
+        else if (detectedType === 'audio') detectedType = 'audio';
+        else if (detectedType === '3d' || detectedType === '3d_model' || detectedType === 'model') detectedType = '3d';
+        else detectedType = 'image';
 
         if (!requestedType || detectedType === requestedType) {
           assetsMap.set(asset.fileName, {
@@ -302,29 +381,44 @@ const getGalleryAssets = async (req, res) => {
 
     // 2. Scan physical gallery folders on disk
     const storageRoot = getStorageRoot();
-    const gallerySubfolders = ['Images', 'Videos', 'gifs', 'audio'];
-    for (const sub of gallerySubfolders) {
-      const diskDir = path.join(storageRoot, sanitizedEmail, 'Gallery', sub);
-      if (fs.existsSync(diskDir)) {
-        const files = fs.readdirSync(diskDir);
-        for (const f of files) {
-          if (validMediaExtensions.test(f) && !assetsMap.has(f)) {
-            const stats = fs.statSync(path.join(diskDir, f));
-            let t = 'image';
-            if (sub === 'Videos') t = 'video';
-            else if (sub === 'gifs') t = 'gif';
-            else if (sub === 'audio') t = 'audio';
+    const gallerySubfolders = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
 
-            if (!requestedType || t === requestedType) {
-              const publicUrl = `/uploads/${sanitizedEmail}/Gallery/${sub}/${f}`;
-              assetsMap.set(f, {
-                id: f,
-                name: f,
-                url: publicUrl,
-                type: t,
-                size: stats.size,
-                uploadedAt: stats.mtime
-              });
+    for (const uDir of candidateDirs) {
+      for (const sub of gallerySubfolders) {
+        const checkPaths = [
+          { dir: path.join(storageRoot, uDir, sub), urlPrefix: `/storage/${uDir}/${sub}` },
+          { dir: path.join(storageRoot, uDir, 'Gallery', sub), urlPrefix: `/storage/${uDir}/Gallery/${sub}` }
+        ];
+
+        for (const { dir: diskDir, urlPrefix } of checkPaths) {
+          if (fs.existsSync(diskDir)) {
+            try {
+              const files = fs.readdirSync(diskDir);
+              for (const f of files) {
+                if (validMediaExtensions.test(f) && !assetsMap.has(f)) {
+                  const stats = fs.statSync(path.join(diskDir, f));
+                  let t = 'image';
+                  if (sub === 'Videos') t = 'video';
+                  else if (sub === 'gifs') t = 'gif';
+                  else if (sub === 'audio') t = 'audio';
+                  else if (sub === '3D_Models') t = '3d';
+
+                  if (!requestedType || t === requestedType) {
+                    const publicUrl = `${urlPrefix}/${f}`;
+                    assetsMap.set(f, {
+                      id: f,
+                      file_v_id: f.split('.')[0] || f,
+                      name: f,
+                      url: publicUrl,
+                      type: t,
+                      size: stats.size,
+                      uploadedAt: stats.mtime
+                    });
+                  }
+                }
+              }
+            } catch (scanErr) {
+              console.warn('[Asset Controller] Error scanning gallery folder:', diskDir, scanErr.message);
             }
           }
         }
@@ -364,7 +458,9 @@ const renameGalleryAsset = async (req, res) => {
     else if (fileName) query.fileName = fileName;
     else return res.status(400).json({ success: false, message: 'Missing file identifier' });
 
-    if (emailId) query.userEmail = emailId;
+    if (emailId) {
+      query.userEmail = new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    }
 
     const updatedAsset = await FlipbookAsset.findOneAndUpdate(
       query,
@@ -405,29 +501,36 @@ const deleteGalleryAsset = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing emailId' });
     }
 
-    const sanitizedEmail = sanitizeEmail(emailId);
+    const { candidateDirs } = await resolveUserFolder(emailId);
     const storageRoot = getStorageRoot();
 
     // Delete DB records
     if (file_v_id) {
-      await FlipbookAsset.deleteMany({ file_v_id, userEmail: emailId });
+      await FlipbookAsset.deleteMany({
+        file_v_id,
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      });
     }
     if (fileName) {
-      await FlipbookAsset.deleteMany({ fileName, userEmail: emailId });
+      await FlipbookAsset.deleteMany({
+        fileName,
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      });
     }
 
-    // Delete file from disk
+    // Delete file from disk across all candidate locations
     if (fileName) {
-      const candidatePaths = [
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'Images', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'Videos', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'gifs', fileName),
-        path.join(storageRoot, sanitizedEmail, 'Gallery', 'audio', fileName)
-      ];
-
-      for (const p of candidatePaths) {
-        if (fs.existsSync(p)) {
-          try { fs.unlinkSync(p); } catch (e) {}
+      const subs = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
+      for (const uDir of candidateDirs) {
+        for (const sub of subs) {
+          const p1 = path.join(storageRoot, uDir, sub, fileName);
+          const p2 = path.join(storageRoot, uDir, 'Gallery', sub, fileName);
+          if (fs.existsSync(p1)) {
+            try { fs.unlinkSync(p1); } catch (e) {}
+          }
+          if (fs.existsSync(p2)) {
+            try { fs.unlinkSync(p2); } catch (e) {}
+          }
         }
       }
     }

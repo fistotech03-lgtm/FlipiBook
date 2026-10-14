@@ -149,7 +149,7 @@ export const use3DPreviewManager = ({
       if (val.startsWith('{')) {
         finalVal = JSON.parse(val).data || JSON.parse(val).url || val;
       }
-      if (typeof finalVal === 'string' && finalVal.startsWith('/uploads/')) {
+      if (typeof finalVal === 'string' && (finalVal.startsWith('/storage/') || finalVal.startsWith('/uploads/'))) {
         finalVal = resolveUploadsPath(finalVal);
       }
 

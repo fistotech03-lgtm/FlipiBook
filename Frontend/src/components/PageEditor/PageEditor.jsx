@@ -720,7 +720,8 @@ const PageEditor = () => {
             const folderNameArr = Array.isArray(res.data.meta.folderName) ? res.data.meta.folderName : [res.data.meta.folderName || 'Recent Book'];
             const actualFolderName = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
             const bookName = res.data.meta.flipbookName || 'Untitled Flipbook';
-            const projectBaseUrl = getSupabaseBaseUrl(sanitizedEmail, actualFolderName, bookName);
+            const userFolder = res.data.meta.userID || sanitizedEmail;
+            const projectBaseUrl = getSupabaseBaseUrl(userFolder, actualFolderName, bookName);
 
             const fetchedMeta = res.data.meta || {};
             const fetchedSettings = res.data.settings || {};
@@ -1004,7 +1005,7 @@ const PageEditor = () => {
       if (val.startsWith('{')) {
         finalVal = JSON.parse(val).data || JSON.parse(val).url || val;
       }
-      if (typeof finalVal === 'string' && finalVal.startsWith('/uploads/')) {
+      if (typeof finalVal === 'string' && (finalVal.startsWith('/storage/') || finalVal.startsWith('/uploads/'))) {
         finalVal = resolveUploadsPath(finalVal);
       }
       return finalVal;

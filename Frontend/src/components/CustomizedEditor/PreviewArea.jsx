@@ -10,7 +10,6 @@ import { resolveUploadsPath } from '../../utils/assetUtils';
 
 import { LAYOUT_DEFAULT_COLORS } from './Layout';
 import LeadFormPopup from './popups/LeadFormPopup';
-import { getFromDB, saveToDB } from '../../utils/dbUtils';
 
 
 import {
@@ -1218,7 +1217,7 @@ const PreviewArea = React.memo(({
                 setActiveSlideshowInteraction(null);
             } else if (e.data && e.data.type === 'show-3d-viewer' && e.data.url) {
                 let finalUrl = e.data.url;
-                if (typeof finalUrl === 'string' && finalUrl.startsWith('/uploads/')) {
+                if (typeof finalUrl === 'string' && (finalUrl.startsWith('/storage/') || finalUrl.startsWith('/uploads/'))) {
                     finalUrl = resolveUploadsPath(finalUrl);
                 }
                 setActive3DModelUrl(finalUrl);

@@ -201,7 +201,7 @@ export const getInteractionScript = (pageNumber) => `  <style>
                                    targetWin = window;
                                }
 
-                               if (typeof audioSrc === 'string' && audioSrc.startsWith('/uploads/')) {
+                               if (typeof audioSrc === 'string' && (audioSrc.startsWith('/storage/') || audioSrc.startsWith('/uploads/'))) {
                                    try {
                                        if (targetWin && typeof targetWin.resolveUploadsPath === 'function') {
                                            audioSrc = targetWin.resolveUploadsPath(audioSrc);
@@ -529,5 +529,6 @@ export const getInteractionScript = (pageNumber) => `  <style>
     })();
   </script>
 `;
-;
+
+;
 export default getInteractionScript;

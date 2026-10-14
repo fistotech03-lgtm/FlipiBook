@@ -72,10 +72,13 @@ export function resolveUploadsPath(path) {
     return BACKEND_URL ? `${BACKEND_URL}${slash}${cleanPath}` : `${slash}${cleanPath}`;
   }
 
-  // Handle /storage and legacy /uploads paths
+  // Handle /storage and legacy /uploads paths (strictly rewrite to /storage)
   const isStorage = cleanPath.startsWith('/storage') || cleanPath.startsWith('storage/');
   const isUpload = cleanPath.startsWith('/uploads') || cleanPath.startsWith('uploads/');
   if (isStorage || isUpload) {
+    if (isUpload) {
+      cleanPath = cleanPath.replace(/^\/?uploads\//, '/storage/');
+    }
     const slash = cleanPath.startsWith('/') ? '' : '/';
     return BACKEND_URL ? `${BACKEND_URL}${slash}${cleanPath}` : `${slash}${cleanPath}`;
   }
@@ -94,7 +97,6 @@ export function rewriteHtmlUploads(html) {
   if (!BACKEND_URL) return html;
 
   const storageBase = `${BACKEND_URL}/storage/`;
-  const base = `${BACKEND_URL}/uploads/`;
   const DATA_URI_RE = /(data:[^;]+;base64,[A-Za-z0-9+/=\s]+)/g;
   const parts = html.split(DATA_URI_RE);
 
@@ -103,8 +105,8 @@ export function rewriteHtmlUploads(html) {
     parts[i] = parts[i]
       .replace(/(src|href|xlink:href)=(['"])(\/storage\/|storage\/)/g, `$1=$2${storageBase}`)
       .replace(/(url\(\s*['"]?)\/storage\//g, `$1${storageBase}`)
-      .replace(/(src|href|xlink:href)=(['"])(\/uploads\/|uploads\/)/g, `$1=$2${base}`)
-      .replace(/(url\(\s*['"]?)\/uploads\//g, `$1${base}`);
+      .replace(/(src|href|xlink:href)=(['"])(\/uploads\/|uploads\/)/g, `$1=$2${storageBase}`)
+      .replace(/(url\(\s*['"]?)\/uploads\//g, `$1${storageBase}`);
   }
 
   return parts.join('');

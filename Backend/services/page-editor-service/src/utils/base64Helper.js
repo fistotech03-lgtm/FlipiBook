@@ -107,6 +107,34 @@ const processAndCopyGalleryAssets = ({
 };
 
 /**
+ * Normalizes all absolute and full storage flipbook asset URLs to relative paths (./assets/<subfolder>/<filename>)
+ * Handles production domains (e.g. https://testing.flipibook.com/...), localhost, /storage/..., /uploads/...,
+ * and JSON-escaped URLs.
+ */
+const normalizeToRelativeAssetPaths = (html) => {
+  if (!html || typeof html !== 'string') return html;
+
+  // 1. Matches any absolute or root-relative URL pointing to a flipbook asset, but NOT already relative ./assets/
+  const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
+  let res = html.replace(assetRegex, './assets/$1/$2');
+
+  // 2. Also handle JSON-escaped backslash versions (e.g. https:\/\/testing.flipibook.com\/...)
+  const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
+  res = res.replace(escapedAssetRegex, './assets/$1/$2');
+
+  // 3. Ensure any /assets/... without leading dot becomes ./assets/...
+  res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+
+  // 4. Ensure any bare assets/... becomes ./assets/...
+  res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+
+  // 5. Clean up any accidental double-dot-slashes (././assets/ -> ./assets/)
+  res = res.replace(/(?:\.\/)+assets\//g, './assets/');
+
+  return res;
+};
+
+/**
  * Extracts base64 assets from page HTML, saves them to flipbook assets folder on disk,
  * and tracks new FlipbookAsset model records.
  * Also detects and copies any Gallery assets into the flipbook's own assets folder.
@@ -126,7 +154,7 @@ const processAndSaveBase64Assets = ({
   skipBase64Extraction = false
 }) => {
   if (!htmlContent) return '';
-  if (skipBase64Extraction) return htmlContent;
+  if (skipBase64Extraction) return normalizeToRelativeAssetPaths(htmlContent);
 
   // Protect PDF Background elements from being extracted into separate asset files.
   const pdfBgPlaceholders = new Map();
@@ -230,7 +258,7 @@ const processAndSaveBase64Assets = ({
       const filePath = path.join(targetDir, assetFileName);
       fs.writeFileSync(filePath, buffer);
 
-      const absoluteUrl = `/storage/${resolvedUFolder}/My_Flipbooks/${physicalFolderName}/${flipbookName}/assets/${subfolder}/${assetFileName}`;
+      const relativeAssetUrl = `./assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
         flipbook_v_id: flipbook_v_id,
@@ -243,7 +271,7 @@ const processAndSaveBase64Assets = ({
         isGallery: false,
         flipbookName: flipbookName,
         folderName: physicalFolderName,
-        url: absoluteUrl,
+        url: relativeAssetUrl,
         size: buffer.length
       });
 
@@ -270,14 +298,7 @@ const processAndSaveBase64Assets = ({
   });
 
   // 4. Normalize any absolute or full flipbook storage URLs to clean relative paths (./assets/<subfolder>/<filename>)
-  // Matches:
-  // http://localhost:8000/storage/.../My_Flipbooks/.../assets/<subfolder>/<filename>
-  // /storage/.../My_Flipbooks/.../assets/<subfolder>/<filename>
-  const flipbookAssetRegex = /(?:https?:\/\/[^\/"'\s]+)?\/(?:storage|uploads)\/[^/"'\s]+\/My_Flipbooks\/(?:[^/"'\s]+\/)+assets\/([^/"'\s]+)\/([^"&'<>)\s,]+)/gi;
-  processedHtml = processedHtml.replace(flipbookAssetRegex, './assets/$1/$2');
-
-  const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+)?\\?\/(?:storage|uploads)\\?\/[^\\/"'\s]+\\?\/My_Flipbooks\\?\/(?:[^\\/"'\s]+\\?\/)+assets\\?\/([^\\/"'\s]+)\\?\/([^"&'<>)\s,\\]+)/gi;
-  processedHtml = processedHtml.replace(escapedAssetRegex, './assets/$1/$2');
+  processedHtml = normalizeToRelativeAssetPaths(processedHtml);
 
   // Restore protected PDF Background groups/tags
   if (pdfBgPlaceholders.size > 0) {
@@ -291,5 +312,6 @@ const processAndSaveBase64Assets = ({
 
 module.exports = {
   processAndSaveBase64Assets,
-  processAndCopyGalleryAssets
+  processAndCopyGalleryAssets,
+  normalizeToRelativeAssetPaths
 };

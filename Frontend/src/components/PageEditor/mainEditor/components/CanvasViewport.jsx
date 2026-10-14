@@ -282,6 +282,7 @@ export const CanvasViewport = ({
                                             detail: {
                                               pageIndex: displayIndex,
                                               url: fileUrl,
+                                              file,
                                               gifUrl: isGif ? fileUrl : undefined,
                                               name: file.name,
                                               type: isGif ? 'gif' : 'image',

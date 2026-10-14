@@ -192,6 +192,8 @@ const uploadAsset = async (req, res) => {
     const flipbookPath = isGallery ? null : `./assets/${subFolder}/${uniqueFilename}`;
     const finalPageVId = page_v_id || 'global';
 
+    const assetSavedUrl = isGallery ? relativeUrl : flipbookPath;
+
     // Save to Database
     const newAsset = new FlipbookAsset({
       flipbook_v_id: v_id || 'gallery',
@@ -204,7 +206,7 @@ const uploadAsset = async (req, res) => {
       isGallery,
       flipbookName: isGallery ? 'Gallery' : safeFlipbookName,
       folderName: isGallery ? 'Gallery' : safeFolderName,
-      url: relativeUrl,
+      url: assetSavedUrl,
       size: file.size
     });
 
@@ -213,7 +215,7 @@ const uploadAsset = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Asset uploaded successfully',
-      url: relativeUrl,
+      url: assetSavedUrl,
       relativeUrl: flipbookPath || relativeUrl,
       flipbookPath,
       file_v_id,

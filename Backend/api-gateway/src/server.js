@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
@@ -14,6 +15,39 @@ const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001'
 const MYFLIPIBOOK_SERVICE_URL = process.env.MYFLIPIBOOK_SERVICE_URL || 'http://127.0.0.1:5002';
 const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://127.0.0.1:5003';
 const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127.0.0.1:5004';
+
+const storageRoot = process.env.STORAGE_PATH
+  ? path.resolve(process.env.STORAGE_PATH)
+  : path.resolve(__dirname, '../../storage');
+
+// Static storage serving with fallback across user folder aliases (e.g. FLIPI0001 vs sanitizedEmail)
+const storageStaticMiddleware = (req, res, next) => {
+  const relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
+  const directPath = path.join(storageRoot, relPath);
+  if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
+    return res.sendFile(directPath);
+  }
+
+  const parts = relPath.split(/[/\\]/);
+  if (parts.length > 1) {
+    const restOfPath = parts.slice(1).join(path.sep);
+    try {
+      const topDirs = fs.readdirSync(storageRoot);
+      for (const d of topDirs) {
+        const candidatePath = path.join(storageRoot, d, restOfPath);
+        if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
+          return res.sendFile(candidatePath);
+        }
+      }
+    } catch (e) {}
+  }
+  next();
+};
+
+app.use('/storage', storageStaticMiddleware);
+app.use('/storage', express.static(storageRoot));
+app.use('/uploads', storageStaticMiddleware);
+app.use('/uploads', express.static(storageRoot));
 
 // Global Middleware
 const allowedOrigins = [

@@ -10,7 +10,22 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     optimizeDeps: {
-      include: ["gifuct-js", "ogl", "fabric"],
+      include: ["gifuct-js", "ogl"],
+    },
+    build: {
+      chunkSizeWarningLimit: 1200,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/three/') || id.includes('node_modules/@react-three/')) {
+              return 'three-bundle';
+            }
+            if (id.includes('node_modules/jspdf/') || id.includes('node_modules/html2canvas/')) {
+              return 'export-libs';
+            }
+          }
+        }
+      }
     },
     server: {
       host: "0.0.0.0",

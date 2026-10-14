@@ -21,22 +21,42 @@ const storageRoot = process.env.STORAGE_PATH
   : path.resolve(__dirname, '../../storage');
 
 // Static storage serving with fallback across user folder aliases (e.g. FLIPI0001 vs sanitizedEmail)
-const storageStaticMiddleware = (req, res, next) => {
+// Cache top directories in memory with a 60-second TTL to avoid crawling disk on every missing asset/404
+let cachedTopDirs = null;
+let lastDirsFetch = 0;
+const getCachedTopDirs = async () => {
+  const now = Date.now();
+  if (!cachedTopDirs || (now - lastDirsFetch > 60000)) {
+    try {
+      cachedTopDirs = await fs.promises.readdir(storageRoot);
+      lastDirsFetch = now;
+    } catch (e) {
+      cachedTopDirs = [];
+    }
+  }
+  return cachedTopDirs;
+};
+
+const storageStaticMiddleware = async (req, res, next) => {
   const relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
   const directPath = path.join(storageRoot, relPath);
-  if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
-    return res.sendFile(directPath);
-  }
+  try {
+    const stat = await fs.promises.stat(directPath).catch(() => null);
+    if (stat && stat.isFile()) {
+      return res.sendFile(directPath, { maxAge: '1d' });
+    }
+  } catch (e) {}
 
   const parts = relPath.split(/[/\\]/);
   if (parts.length > 1) {
     const restOfPath = parts.slice(1).join(path.sep);
     try {
-      const topDirs = fs.readdirSync(storageRoot);
+      const topDirs = await getCachedTopDirs();
       for (const d of topDirs) {
         const candidatePath = path.join(storageRoot, d, restOfPath);
-        if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
-          return res.sendFile(candidatePath);
+        const candStat = await fs.promises.stat(candidatePath).catch(() => null);
+        if (candStat && candStat.isFile()) {
+          return res.sendFile(candidatePath, { maxAge: '1d' });
         }
       }
     } catch (e) {}

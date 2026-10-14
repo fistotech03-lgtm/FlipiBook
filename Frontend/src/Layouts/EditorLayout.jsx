@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import EditorNavbar from '../components/NavBar/EditorNav';
-import ExportModal from '../components/ExportModal';
-import PublishModal from '../components/PublishModal';
 import AlertModal from '../components/AlertModal';
+const ExportModal = React.lazy(() => import('../components/ExportModal'));
+const PublishModal = React.lazy(() => import('../components/PublishModal'));
 import axios from 'axios';
 import { getFromDB, saveToDB } from '../utils/dbUtils';
 import { useAuth, useActiveBook, useUIModals } from '../store/hooks';
@@ -395,27 +395,35 @@ const EditorLayout = () => {
       </div>
       
       {/* Export Modal */}
-      <ExportModal 
-        isOpen={isExportModalOpen} 
-        onClose={() => setModalOpen('isExportModalOpen', false)}
-        currentBook={currentBook}
-        pages={exportContext.pages}
-        currentPageIndex={exportContext.activePageIndex}
-      />
+      {isExportModalOpen && (
+        <React.Suspense fallback={null}>
+          <ExportModal 
+            isOpen={isExportModalOpen} 
+            onClose={() => setModalOpen('isExportModalOpen', false)}
+            currentBook={currentBook}
+            pages={exportContext.pages}
+            currentPageIndex={exportContext.activePageIndex}
+          />
+        </React.Suspense>
+      )}
 
       {/* Publish Modal */}
-      <PublishModal 
-        isOpen={isPublishModalOpen}
-        onClose={() => setModalOpen('isPublishModalOpen', false)}
-        currentBook={currentBook}
-        onPublishSuccess={(data) => {
-          setCurrentBook({
-            ...(currentBook || {}),
-            ...(data || {}),
-            isPublished: true
-          });
-        }}
-      />
+      {isPublishModalOpen && (
+        <React.Suspense fallback={null}>
+          <PublishModal 
+            isOpen={isPublishModalOpen}
+            onClose={() => setModalOpen('isPublishModalOpen', false)}
+            currentBook={currentBook}
+            onPublishSuccess={(data) => {
+              setCurrentBook({
+                ...(currentBook || {}),
+                ...(data || {}),
+                isPublished: true
+              });
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {/* Unpublish Warning Modal */}
       <AlertModal 

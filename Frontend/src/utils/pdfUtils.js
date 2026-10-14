@@ -1,4 +1,11 @@
-import * as mupdf from 'mupdf';
+let mupdfModule = null;
+const getMuPdf = async () => {
+  if (!mupdfModule) {
+    mupdfModule = await import('mupdf');
+  }
+  return mupdfModule;
+};
+
 import JSZip from 'jszip';
 
 /**
@@ -9,6 +16,9 @@ import JSZip from 'jszip';
 export const getPdfPageCount = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
+  const fast = fastScanPdfDetails(uint8Array);
+  if (fast && fast.count > 0) return fast.count;
+  const mupdf = await getMuPdf();
   const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
   const count = doc.countPages();
   doc.destroy();
@@ -135,6 +145,7 @@ export const getPdfDetails = async (file, backendUrl = null) => {
   // 2. Client-side MuPDF WASM: fast page-0 inspect + sampling
   if (uint8Array) {
     try {
+      const mupdf = await getMuPdf();
       const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
       const count = doc.countPages();
       
@@ -302,6 +313,7 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity)
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
   
+  const mupdf = await getMuPdf();
   const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
   const totalPages = doc.countPages();
   const numPages = Math.min(totalPages, maxPages);
@@ -443,6 +455,7 @@ export const splitPdfIntoPageFiles = async (file, maxPages = Infinity) => {
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
+    const mupdf = await getMuPdf();
     const tempDoc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
     const total = tempDoc.countPages();
     tempDoc.destroy();

@@ -29,6 +29,23 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
   const [renamingItemId, setRenamingItemId] = useState(null);
   const [renameInput, setRenameInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [filePreviewUrl, setFilePreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (!replaceModalFile) {
+      setFilePreviewUrl('');
+      return;
+    }
+    if (replaceModalFile.url) {
+      setFilePreviewUrl(replaceModalFile.url);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(replaceModalFile);
+    setFilePreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [replaceModalFile]);
 
   const validateMediaFile = async (file) => {
     if (mediaType === 'video') return file.type.startsWith('video/');
@@ -304,9 +321,9 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                 <div className="flex-1 flex flex-col min-h-0 w-[95%] mx-auto mt-[0.5vw]">
                   <div className="w-full aspect-video relative overflow-hidden bg-gray-100 group flex items-center justify-center shrink-0">
                     {mediaType === 'video' ? (
-                      <video src={replaceModalFile.url || URL.createObjectURL(replaceModalFile)} className="w-full h-full object-contain" controls />
+                      <video src={filePreviewUrl} className="w-full h-full object-contain" controls />
                     ) : (
-                      <img src={replaceModalFile.url || URL.createObjectURL(replaceModalFile)} alt="Preview" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                      <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
                     )}
                     <span className="absolute top-[0.5vw] left-[0.5vw] text-white text-[0.75vw] font-medium drop-shadow-md">Preview</span>
                     <button onClick={() => setReplaceModalFile(null)} className="absolute top-[0.5vw] right-[0.5vw] text-white p-[0.3vw] rounded-[0.3vw] transition-colors drop-shadow-md hover:bg-black/20">

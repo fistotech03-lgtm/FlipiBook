@@ -8,8 +8,18 @@ const { deleteBookStorage, getStorageRoot, initFlipbookStorage } = require('../u
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 const { processAndSaveBase64Assets } = require('../utils/base64Helper');
 
-// In-memory cache for chunked uploads
+// In-memory cache for chunked uploads with 30-minute TTL eviction to prevent memory leaks
+const CHUNK_TTL_MS = 30 * 60 * 1000;
 const chunkUploads = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of chunkUploads.entries()) {
+    if (session.timestamp && (now - session.timestamp > CHUNK_TTL_MS)) {
+      chunkUploads.delete(id);
+    }
+  }
+}, 10 * 60 * 1000).unref();
 
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
@@ -60,8 +70,8 @@ exports.getBooks = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    // Sort by createdAt ascending to determine original vs subsequent duplicate books
-    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 });
+    // Sort by createdAt ascending to determine original vs subsequent duplicate books (using .lean() for performance)
+    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 }).lean();
 
     // Auto-heal duplicate flipbook names for this user
     const seenNames = new Map();
@@ -645,7 +655,7 @@ exports.saveBook = async (req, res) => {
       const newFlipbookAssets = [];
       const keepBase64 = reqKeepBase64 !== undefined ? Boolean(reqKeepBase64) : false;
 
-      safePages.forEach((sp) => {
+      for (const sp of safePages) {
         let svgContent = sp.content || sp.html || '';
         const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
 
@@ -663,7 +673,7 @@ exports.saveBook = async (req, res) => {
             const candPath = path.join(pagesDir, cand);
             if (fs.existsSync(candPath)) {
               try {
-                const diskStr = fs.readFileSync(candPath, 'utf8');
+                const diskStr = await fs.promises.readFile(candPath, 'utf8');
                 if (diskStr && diskStr.trim()) {
                   svgContent = diskStr;
                   break;
@@ -700,7 +710,7 @@ exports.saveBook = async (req, res) => {
           skipBase64Extraction: keepBase64
         });
 
-        fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+        await fs.promises.writeFile(path.join(pagesDir, targetFileName), svgContent, 'utf8');
         sp.size = Buffer.byteLength(svgContent, 'utf8');
 
         // If this page was renamed, remove its old physical file
@@ -708,12 +718,12 @@ exports.saveBook = async (req, res) => {
           try {
             const oldFilePath = path.join(pagesDir, sp.existingFileName);
             if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
+              await fs.promises.unlink(oldFilePath);
               console.log(`[Book Controller] Cleaned up renamed old page file: ${sp.existingFileName}`);
             }
           } catch (e) {}
         }
-      });
+      }
 
       // Upsert extracted base64 assets in MongoDB
       if (newFlipbookAssets.length > 0) {

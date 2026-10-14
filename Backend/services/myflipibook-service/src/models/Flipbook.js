@@ -82,4 +82,9 @@ const flipbookSchema = new mongoose.Schema(
   }
 );
 
+// High-performance compound indexes for user dashboard, favorites, and trash sorting
+flipbookSchema.index({ userEmail: 1, trash: 1, updatedAt: -1 });
+flipbookSchema.index({ userEmail: 1, folderName: 1, trash: 1 });
+flipbookSchema.index({ userEmail: 1, isFavorite: 1, trash: 1 });
+
 module.exports = mongoose.models.Flipbook || mongoose.model('Flipbook', flipbookSchema);

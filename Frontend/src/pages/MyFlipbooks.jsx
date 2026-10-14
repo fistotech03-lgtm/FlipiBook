@@ -8,8 +8,8 @@ import AlertModal from '../components/AlertModal';
 import CreateBookLayout from '../Layouts/CreateBookLayout';
 import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
-import ShareModal from '../components/ShareModal';
-import ExportModal from '../components/ExportModal';
+const ShareModal = React.lazy(() => import('../components/ShareModal'));
+const ExportModal = React.lazy(() => import('../components/ExportModal'));
 import {
     FlipbooksSidebar,
     FlipbooksBanner,
@@ -1868,20 +1868,28 @@ export default function MyFlipbooks() {
             />
 
             {/* Share Modal */}
-            <ShareModal
-                isOpen={isShareModalOpen}
-                onClose={() => setIsShareModalOpen(false)}
-                currentBook={selectedFlipbook}
-                flipbookThumbnail={selectedFlipbook?.image ? resolveUploadsPath(selectedFlipbook.image) : null}
-            />
+            {isShareModalOpen && (
+                <React.Suspense fallback={null}>
+                    <ShareModal
+                        isOpen={isShareModalOpen}
+                        onClose={() => setIsShareModalOpen(false)}
+                        currentBook={selectedFlipbook}
+                        flipbookThumbnail={selectedFlipbook?.image ? resolveUploadsPath(selectedFlipbook.image) : null}
+                    />
+                </React.Suspense>
+            )}
 
             {/* Export Modal */}
-            <ExportModal
-                isOpen={isExportModalOpen}
-                onClose={() => setIsExportModalOpen(false)}
-                currentBook={selectedFlipbook}
-                isFromMyFlipbooks={true}
-            />
+            {isExportModalOpen && (
+                <React.Suspense fallback={null}>
+                    <ExportModal
+                        isOpen={isExportModalOpen}
+                        onClose={() => setIsExportModalOpen(false)}
+                        currentBook={selectedFlipbook}
+                        isFromMyFlipbooks={true}
+                    />
+                </React.Suspense>
+            )}
         </div>
         </CreateBookLayout>
     );

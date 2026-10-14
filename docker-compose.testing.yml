@@ -49,7 +49,6 @@ services:
         required: false
     networks:
       - testing-internal
-      - dokploy-network
 
 networks:
   testing-internal:

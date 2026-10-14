@@ -100,7 +100,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[MyFlipibook Service] Running on port ${PORT}`);
+  console.log(`[MyFlipibook Service] Running on port ${PORT} (reloaded: ${Date.now()})`);
 });
 
 module.exports = app;

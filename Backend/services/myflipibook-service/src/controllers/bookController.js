@@ -1221,12 +1221,151 @@ exports.previewBook = async (req, res) => {
  */
 exports.getGalleryAssets = async (req, res) => {
   try {
-    res.status(200).json({
-      success: true,
-      assets: []
-    });
+    const { emailId: authEmail } = getAuthUser(req);
+    const { emailId: reqEmail, type, currentUrl, currentFileName } = req.query;
+    const emailId = authEmail || reqEmail;
+
+    if (!emailId) {
+      return res.status(400).json({ success: false, message: 'Missing emailId' });
+    }
+
+    const sanitizedEmail = emailId.replace(/[@.]/g, '_');
+    let resolvedUserId = null;
+
+    try {
+      const anyBook = await Flipbook.findOne({
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      }).select('userID userId');
+      if (anyBook) {
+        resolvedUserId = anyBook.userID || (anyBook.userId ? String(anyBook.userId) : null);
+      }
+    } catch (e) {}
+
+    if (!resolvedUserId) {
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          const userRec = await mongoose.connection.db.collection('users').findOne({
+            emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+          });
+          if (userRec && userRec.userID) {
+            resolvedUserId = userRec.userID;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const storageRoot = getStorageRoot();
+    if (!resolvedUserId) {
+      try {
+        if (fs.existsSync(storageRoot)) {
+          const topDirs = fs.readdirSync(storageRoot);
+          const flipiDir = topDirs.find(d => /^FLIPI\d+/i.test(d));
+          if (flipiDir) {
+            resolvedUserId = flipiDir;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const userFolder = resolvedUserId || sanitizedEmail;
+    const candidateDirs = Array.from(new Set([resolvedUserId, userFolder, sanitizedEmail].filter(Boolean)));
+    const requestedType = type ? type.toLowerCase() : null;
+    const assetsMap = new Map();
+    const validMediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|mkv|mp3|wav|ogg|glb|gltf)$/i;
+
+    // 1. Query FlipbookAsset collection for gallery assets
+    const dbAssets = await FlipbookAsset.find({
+      userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      $or: [
+        { isGallery: true },
+        { folderName: 'Gallery' },
+        { flipbook_v_id: 'gallery' }
+      ]
+    }).sort({ createdAt: -1 });
+
+    for (const asset of dbAssets) {
+      if (asset.url && asset.fileName && validMediaExtensions.test(asset.fileName)) {
+        if (currentFileName && (asset.fileName === currentFileName || asset.file_v_id === currentFileName)) continue;
+        if (currentUrl && asset.url.toLowerCase().includes(currentUrl.toLowerCase())) continue;
+
+        let detectedType = (asset.assetType || '').toLowerCase();
+        if (detectedType === 'images' || detectedType === 'image') detectedType = 'image';
+        else if (detectedType === 'videos' || detectedType === 'video') detectedType = 'video';
+        else if (detectedType === 'gifs' || detectedType === 'gif') detectedType = 'gif';
+        else if (detectedType === 'audio') detectedType = 'audio';
+        else if (detectedType === '3d' || detectedType === '3d_model' || detectedType === 'model') detectedType = '3d';
+        else detectedType = 'image';
+
+        if (!requestedType || detectedType === requestedType) {
+          assetsMap.set(asset.fileName, {
+            id: asset.fileName,
+            file_v_id: asset.file_v_id,
+            name: asset.originalName || asset.fileName,
+            url: asset.url,
+            type: detectedType,
+            size: asset.size || 0,
+            uploadedAt: asset.createdAt || new Date()
+          });
+        }
+      }
+    }
+
+    // 2. Scan physical gallery folders on disk
+    const gallerySubfolders = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
+
+    for (const uDir of candidateDirs) {
+      for (const sub of gallerySubfolders) {
+        const checkPaths = [
+          { dir: path.join(storageRoot, uDir, sub), urlPrefix: `/storage/${uDir}/${sub}` },
+          { dir: path.join(storageRoot, uDir, 'Gallery', sub), urlPrefix: `/storage/${uDir}/Gallery/${sub}` }
+        ];
+
+        for (const { dir: diskDir, urlPrefix } of checkPaths) {
+          if (fs.existsSync(diskDir)) {
+            try {
+              const files = fs.readdirSync(diskDir);
+              for (const f of files) {
+                if (validMediaExtensions.test(f) && !assetsMap.has(f)) {
+                  const stats = fs.statSync(path.join(diskDir, f));
+                  let t = 'image';
+                  if (sub === 'Videos') t = 'video';
+                  else if (sub === 'gifs') t = 'gif';
+                  else if (sub === 'audio') t = 'audio';
+                  else if (sub === '3D_Models') t = '3d';
+
+                  if (!requestedType || t === requestedType) {
+                    const publicUrl = `${urlPrefix}/${f}`;
+                    assetsMap.set(f, {
+                      id: f,
+                      file_v_id: f.split('.')[0] || f,
+                      name: f,
+                      url: publicUrl,
+                      type: t,
+                      size: stats.size,
+                      uploadedAt: stats.mtime
+                    });
+                  }
+                }
+              }
+            } catch (scanErr) {
+              console.warn('[Book Controller] Error scanning gallery folder:', diskDir, scanErr.message);
+            }
+          }
+        }
+      }
+    }
+
+    let assets = Array.from(assetsMap.values());
+    assets.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+
+    return res.status(200).json({ success: true, assets });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error fetching gallery assets' });
+    console.error('[Book Controller] Error fetching gallery assets:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error fetching gallery assets',
+      error: err.message
+    });
   }
 };
 

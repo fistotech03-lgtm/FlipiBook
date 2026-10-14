@@ -99,7 +99,7 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
                 // Loaded but nothing available
                 <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
                     <BookOpen size="1.8vw" strokeWidth={1.5} />
-                    <span className="text-[0.55vw] mt-1 uppercase font-bold tracking-wider">No Preview</span>
+                    <span className="text-[0.7vw] mt-1 font-semibold">No Preview</span>
                 </div>
             ) : null}
         </div>

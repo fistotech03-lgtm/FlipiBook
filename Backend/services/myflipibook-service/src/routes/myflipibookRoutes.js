@@ -35,6 +35,8 @@ router.post('/unpublish', bookController.unpublishBook);
 router.post('/save', bookController.saveBook);
 router.post('/save/chunk', bookController.saveChunk);
 router.post('/save-pages-batch', bookController.savePagesBatch);
+router.post('/rename-page', bookController.renamePage);
+router.post('/delete-page', bookController.deletePage);
 router.post('/update-settings', bookController.updateSettings);
 
 module.exports = router;

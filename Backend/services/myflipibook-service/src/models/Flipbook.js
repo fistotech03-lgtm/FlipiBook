@@ -7,9 +7,7 @@ const pageSchema = new mongoose.Schema(
     fileName: { type: String, default: '' },
     v_id: { type: String, required: true },
     size: { type: Number, default: 0 },
-    hide: { type: Number, default: 0 },
-    html: { type: String, default: '' },
-    content: { type: String, default: '' }
+    hide: { type: Number, default: 0 }
   },
   { _id: false }
 );
@@ -84,4 +82,4 @@ const flipbookSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Flipbook', flipbookSchema);
+module.exports = mongoose.models.Flipbook || mongoose.model('Flipbook', flipbookSchema);

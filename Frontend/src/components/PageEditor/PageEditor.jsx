@@ -299,7 +299,8 @@ const PageEditor = () => {
     prevSelectedLayerIdRef,
     prevMultiSelectedIdsRef,
     setAlertState,
-    currentBook
+    currentBook,
+    v_id
   });
 
   // ── Hook 2: Element Attribute & Background Sync ────────────────────────────

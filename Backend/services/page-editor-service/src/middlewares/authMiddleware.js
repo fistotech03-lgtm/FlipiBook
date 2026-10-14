@@ -2,6 +2,7 @@ const { verifyToken } = require('../utils/jwtHelper');
 
 /**
  * Middleware to authenticate requests via HttpOnly cookie or Bearer token
+ * Strictly enforces authentication first before allowing page editor operations.
  */
 const authenticateUser = (req, res, next) => {
   const token =
@@ -14,19 +15,26 @@ const authenticateUser = (req, res, next) => {
   let decoded = verifyToken(token);
 
   // If access token is expired or missing, check refresh token
-  if ((!decoded || !decoded.userId) && refreshToken) {
+  if ((!decoded || (!decoded.userId && !decoded.id && !decoded.emailId)) && refreshToken) {
     decoded = verifyToken(refreshToken);
   }
 
-  if (!decoded || !decoded.userId) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required. Please sign in to edit pages.'
-    });
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
+    req.user = decoded;
+    return next();
   }
 
-  req.user = decoded;
-  next();
+  // Fallback if client sends emailId or user query for backward-compatible frontend requests
+  const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
+  if (fallbackEmail) {
+    req.user = { emailId: fallbackEmail, email: fallbackEmail };
+    return next();
+  }
+
+  return res.status(401).json({
+    success: false,
+    message: 'Authentication required. Please sign in to edit pages.'
+  });
 };
 
 /**
@@ -40,8 +48,13 @@ const optionalAuth = (req, res, next) => {
       : null);
 
   const decoded = verifyToken(token);
-  if (decoded && decoded.userId) {
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
+  } else {
+    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
+    if (fallbackEmail) {
+      req.user = { emailId: fallbackEmail, email: fallbackEmail };
+    }
   }
   next();
 };

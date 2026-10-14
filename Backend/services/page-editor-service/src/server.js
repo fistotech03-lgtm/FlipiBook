@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
+const { getStorageRoot } = require('./utils/storageHelper');
 const pageEditorRoutes = require('./routes/pageEditorRoutes');
 
 const app = express();
@@ -33,27 +34,33 @@ const isAllowedOrigin = (origin) => {
   return false;
 };
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (isAllowedOrigin(origin)) {
-      return callback(null, true);
-    }
-    return callback(null, false);
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true
+  })
+);
 
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Static file serving for uploads/assets
+app.use('/uploads', express.static(getStorageRoot()));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'page-editor-service' });
 });
 
-// Service routes
+// Service routes - support both /api/page-editor and /api/flipbook prefixes
 app.use('/api/page-editor', pageEditorRoutes);
+app.use('/api/flipbook', pageEditorRoutes);
 
 // Fallback 404
 app.use((req, res) => {

@@ -1,0 +1,81 @@
+const mongoose = require('mongoose');
+
+/**
+ * Safely extracts authentication identifiers from request
+ * Returns:
+ * - objectId: Mongoose ObjectId (if candidate is a valid 24-character hex string)
+ * - rawId: String representation of the ObjectId
+ * - customUserId: Human-readable ID like 'FLIPI0001'
+ * - emailId: Lowercase email address
+ */
+const getAuthUser = (req) => {
+  const user = req.user || {};
+
+  let objectId = null;
+  let rawId = null;
+
+  // Search candidate keys that might hold a 24-char hex ObjectId
+  const candidates = [user.id, user._id, user.userId];
+  for (const cand of candidates) {
+    if (cand && typeof cand === 'string' && /^[0-9a-fA-F]{24}$/.test(cand)) {
+      objectId = new mongoose.Types.ObjectId(cand);
+      rawId = cand;
+      break;
+    } else if (cand && typeof cand === 'object' && mongoose.Types.ObjectId.isValid(cand)) {
+      objectId = cand;
+      rawId = cand.toString();
+      break;
+    }
+  }
+
+  // Custom user string identifier (e.g. 'FLIPI0001')
+  const customUserId = (
+    user.userID ||
+    (user.userId && (!objectId || String(user.userId) !== rawId) ? user.userId : '')
+  ).toString().trim();
+
+  // Email address
+  const emailId = (
+    user.emailId ||
+    user.email ||
+    req.query?.emailId ||
+    req.body?.emailId ||
+    req.query?.userEmail ||
+    req.body?.userEmail ||
+    ''
+  ).toString().trim().toLowerCase();
+
+  return {
+    objectId,
+    rawId,
+    customUserId: customUserId || null,
+    emailId: emailId || null
+  };
+};
+
+/**
+ * Builds user query for Flipbook collection
+ */
+const getFlipbookUserQuery = (req) => {
+  const { objectId, customUserId, emailId } = getAuthUser(req);
+  const conds = [];
+
+  if (objectId) {
+    conds.push({ userId: objectId });
+  }
+  if (customUserId) {
+    conds.push({ userID: customUserId });
+  }
+  if (emailId) {
+    conds.push({ userEmail: emailId });
+  }
+
+  if (conds.length === 1) return conds[0];
+  if (conds.length > 1) return { $or: conds };
+  return null;
+};
+
+module.exports = {
+  getAuthUser,
+  getFlipbookUserQuery
+};

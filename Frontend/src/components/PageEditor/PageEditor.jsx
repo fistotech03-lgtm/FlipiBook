@@ -774,6 +774,9 @@ const PageEditor = () => {
               }
 
               let updatedHtml = pageHtml;
+              if (updatedHtml.includes('../assets/')) {
+                updatedHtml = updatedHtml.split('../assets/').join(`${projectBaseUrl}assets/`);
+              }
               if (updatedHtml.includes('./assets/')) {
                 updatedHtml = updatedHtml.split('./assets/').join(`${projectBaseUrl}assets/`);
               }

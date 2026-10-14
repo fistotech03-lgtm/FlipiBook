@@ -128,7 +128,7 @@ export const useCanvasAssetInsertion = ({
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data && (res.data.url || res.data.filename)) {
             const filename = res.data.filename;
-            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/${subFolder}/${filename}`;
+            const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/${subFolder}/${filename}`);
 
             imgNode.setAttribute('href', relativePath);
             try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch {}
@@ -774,7 +774,7 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
-              const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/video/${filename}`;
+              const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${filename}`);
 
               fo.setAttribute('data-video-src', relativePath);
               fo.setAttribute('data-relative-src', relativePath);

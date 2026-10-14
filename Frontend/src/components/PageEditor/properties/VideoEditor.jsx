@@ -1795,7 +1795,7 @@ const VideoEditor = ({
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data.url) {
             const serverUrl = resolveUploadsPath(res.data.url);
-            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/video/${res.data.filename}`;
+            const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${res.data.filename}`);
             target.setAttribute("src", relativePath);
             if (source) source.setAttribute("src", relativePath);
             target.src = serverUrl;

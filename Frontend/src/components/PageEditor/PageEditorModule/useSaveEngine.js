@@ -90,14 +90,15 @@ export const useSaveEngine = ({
       const normalizePageAssetUrls = (htmlStr) => {
         if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
         const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
-        let res = htmlStr.replace(assetRegex, './assets/$1/$2');
+        let res = htmlStr.replace(assetRegex, '../assets/$1/$2');
         const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
-        res = res.replace(escapedAssetRegex, './assets/$1/$2');
-        res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
-        res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
-        res = res.replace(/(?:\.\/)+assets\//g, './assets/');
+        res = res.replace(escapedAssetRegex, '../assets/$1/$2');
+        res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, '../assets/');
         if (projectBaseUrl && res.includes(projectBaseUrl)) {
-          res = res.split(projectBaseUrl).join('./');
+          res = res.split(projectBaseUrl).join('../');
         }
         return res;
       };
@@ -358,7 +359,7 @@ export const useSaveEngine = ({
                       if (uploadRes.data && uploadRes.data.url) {
                         const finalUrl = uploadRes.data.url;
                         const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-                        const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('./') ? finalUrl : `./${finalUrl}`);
+                        const relativeUrl = assetPathMatch ? `../${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('../') ? finalUrl : `../${finalUrl.replace(/^(\.\/|\/)/, '')}`);
 
                         hasChanges = true;
                         return {
@@ -454,7 +455,7 @@ export const useSaveEngine = ({
 
           if (uploadRes.data && (uploadRes.data.url || uploadRes.data.filename)) {
             const filename = uploadRes.data.filename;
-            const relativeUrl = uploadRes.data.flipbookPath || (uploadRes.data.url?.startsWith('./') ? uploadRes.data.url : `./assets/${subFolder}/${filename}`);
+            const relativeUrl = uploadRes.data.flipbookPath || (uploadRes.data.url?.startsWith('../') ? uploadRes.data.url : `../assets/${subFolder}/${filename}`);
             const absoluteUrl = `${projectBaseUrl}assets/${subFolder}/${filename}`;
 
             // Replace blobUrl with clean relativeUrl in page SVG
@@ -596,10 +597,10 @@ export const useSaveEngine = ({
           if (uploadRes.data && uploadRes.data.url) {
             const finalUrl = uploadRes.data.url;
             const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-            const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.relativeUrl || finalUrl;
-            const sanitizedEmail = (user?.emailId || user?.email)?.replace(/[@.]/g, "_");
+            const relativeUrl = assetPathMatch ? `../${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('../') ? finalUrl : `../${finalUrl.replace(/^(\.\/|\/)/, '')}`);
+            const userFolder = currentBook?.userID || currentBook?.userId || sanitizedEmail;
             const absoluteUrl = assetPathMatch
-              ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
+              ? `${getSupabaseBaseUrl(userFolder, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
               : finalUrl;
 
             // Replace the data URI directly in the raw HTML with clean relative path

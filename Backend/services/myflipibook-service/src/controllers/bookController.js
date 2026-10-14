@@ -1676,7 +1676,7 @@ exports.useGalleryAsset = async (req, res) => {
     }
 
     const relativeUrl = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
-    const svgRelativePath = `./assets/${subFolder}/${newFileName}`;
+    const svgRelativePath = `../assets/${subFolder}/${newFileName}`;
 
     // Create a NEW FlipbookAsset document for this flipbook (isGallery: false)
     const newAsset = new FlipbookAsset({
@@ -1690,7 +1690,7 @@ exports.useGalleryAsset = async (req, res) => {
       isGallery: false,
       flipbookName: safeFlipbookName,
       folderName: safeFolderName,
-      url: relativeUrl,
+      url: svgRelativePath,
       size: fileSize
     });
 
@@ -1699,7 +1699,7 @@ exports.useGalleryAsset = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Gallery asset copied to flipbook assets folder',
-      url: relativeUrl,
+      url: svgRelativePath,
       relativeUrl: svgRelativePath,
       file_v_id: newFileVId,
       fileName: newFileName,

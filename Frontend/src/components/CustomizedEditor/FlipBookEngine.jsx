@@ -273,6 +273,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
     },
     ref
 ) {
+    const containerRef = useRef(null); // DOM node for outer wrapper
     const bookEl = useRef(null);   // DOM node for turn.js
     const reactFlipRef = useRef(null);   // ref for react-pageflip
     const onFlipRef = useRef(onFlip); // always-current onFlip — avoids stale closure in turn.js
@@ -510,17 +511,23 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         (async () => {
             try {
                 if (!window.jQuery) await loadScript('/lib/jquery.min.js');
-                if (!window.jQuery?.fn?.turn) await loadScript('/lib/turn.min.js?v=3');
+                if (!window.jQuery?.fn?.turn) await loadScript('/lib/turn.min.js?v=4');
                 if (alive) setReady(true);
             } catch (err) {
                 console.error('[FlipBookEngine] Script load failed:', err);
             }
         })();
 
-        // Global mouseup to cancel drag state
+        // Global mouseup/touchend safeguard to ensure drag overlay class is removed if mouse is released outside
         const handleGlobalMouseUp = () => {
+            if (containerRef.current) containerRef.current.classList.remove('fbe-is-dragging');
+            if (bookEl.current) bookEl.current.classList.remove('fbe-is-dragging');
             document.querySelectorAll('.fbe-is-dragging').forEach(el => el.classList.remove('fbe-is-dragging'));
+            document.querySelectorAll('.fbe-wrapper iframe, .fbe-book iframe').forEach(el => {
+                el.style.pointerEvents = 'auto';
+            });
         };
+
         window.addEventListener('mouseup', handleGlobalMouseUp);
         window.addEventListener('touchend', handleGlobalMouseUp);
 
@@ -678,6 +685,25 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     try {
                         if (iframe.contentDocument) {
                             initGifRunner(iframe.contentDocument);
+
+                            // Forward mousemove and mouseup from inside iframe so turn.js never drops mouse tracking
+                            iframe.contentDocument.addEventListener('mousemove', (e) => {
+                                const rect = iframe.getBoundingClientRect();
+                                const parentEvt = new MouseEvent('mousemove', {
+                                    clientX: rect.left + e.clientX,
+                                    clientY: rect.top + e.clientY,
+                                    pageX: rect.left + e.clientX + window.scrollX,
+                                    pageY: rect.top + e.clientY + window.scrollY,
+                                    bubbles: true,
+                                    cancelable: true
+                                });
+                                document.dispatchEvent(parentEvt);
+                            }, { passive: true });
+
+                            iframe.contentDocument.addEventListener('mouseup', () => {
+                                const parentEvt = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+                                document.dispatchEvent(parentEvt);
+                            }, { passive: true });
                         }
                     } catch(err) { console.error("Error init gif runner", err); }
                 };
@@ -700,7 +726,34 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
 
                 pageDiv.appendChild(inner);
 
-                // Removed custom click-blocking logic to allow native turn.js behavior
+                // Add Corner Peel Hotspots over the iframe so mouse hover triggers auto-peel and drag flips smoothly
+                const isRightPage = (i % 2 === 0);
+                const cornerHotspotSize = 100;
+
+                const createHotspot = (corner) => {
+                    const hs = document.createElement('div');
+                    hs.className = `fbe-corner-hotspot fbe-corner-${corner}`;
+                    hs.setAttribute('data-corner', corner);
+                    hs.style.cssText = `position:absolute;width:${cornerHotspotSize}px;height:${cornerHotspotSize}px;z-index:50;cursor:grab;pointer-events:auto;background:transparent;`;
+                    if (corner === 'tr') { hs.style.top = '0'; hs.style.right = '0'; }
+                    else if (corner === 'br') { hs.style.bottom = '0'; hs.style.right = '0'; }
+                    else if (corner === 'tl') { hs.style.top = '0'; hs.style.left = '0'; }
+                    else if (corner === 'bl') { hs.style.bottom = '0'; hs.style.left = '0'; }
+                    return hs;
+                };
+
+                if (singlePage) {
+                    pageDiv.appendChild(createHotspot('tl'));
+                    pageDiv.appendChild(createHotspot('tr'));
+                    pageDiv.appendChild(createHotspot('bl'));
+                    pageDiv.appendChild(createHotspot('br'));
+                } else if (isRightPage) {
+                    pageDiv.appendChild(createHotspot('tr'));
+                    pageDiv.appendChild(createHotspot('br'));
+                } else {
+                    pageDiv.appendChild(createHotspot('tl'));
+                    pageDiv.appendChild(createHotspot('bl'));
+                }
             } else {
                 // Invisible pad page
                 pageDiv.style.cssText = 'opacity:0;pointer-events:none;background:transparent;';
@@ -718,29 +771,37 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
             width: singlePage ? width : width * 2,
             height,
             display: singlePage ? 'single' : 'double',
-            duration: flipTime,
-            acceleration: flipStyle === 'Smooth Flip' || flipStyle === '3D Flip',
+            duration: (typeof flipTime === 'number' && flipTime > 50) ? flipTime : 600,
+            acceleration: false, // 2D transforms eliminate 3D compositor clipping artifacts and white cutouts
             gradients: true,
-            cornerSize: Math.max(100, width / 2),
-            elevation: flipStyle === '3D Flip' ? 80 : 10,
+            cornerSize: 100,
+            elevation: 50,
             pages: totalPages,
             page: initPage,
             autoCenter: false,
             when: {
                 start: (e, pageObject, corner) => {
-                    // Only apply dragging overlay if it's a manual drag (corner is provided)
-                    if (bookEl.current && corner) bookEl.current.classList.add('fbe-is-dragging');
+                    // Apply dragging overlay to ensure mousemove tracking
+                    if (containerRef.current) containerRef.current.classList.add('fbe-is-dragging');
+                    if (bookEl.current) bookEl.current.classList.add('fbe-is-dragging');
+                    document.querySelectorAll('.fbe-wrapper iframe, .fbe-book iframe').forEach(el => {
+                        el.style.pointerEvents = 'none';
+                    });
                     // Prevent peel animation for the last page of an odd-numbered flipbook
                     if (!singlePage && augmented.length % 2 !== 0) {
                         // pageObject.page is the 1-based page being dragged.
                         // If it's the last page, and we pull from the right corners, block it.
-                        if (pageObject.page === augmented.length && (corner === 'r' || corner === 'tr' || corner === 'br')) {
+                        if (pageObject && pageObject.page === augmented.length && (corner === 'r' || corner === 'tr' || corner === 'br')) {
                             e.preventDefault();
                         }
                     }
                 },
                 end: (e, pageObject, turned) => {
+                    if (containerRef.current) containerRef.current.classList.remove('fbe-is-dragging');
                     if (bookEl.current) bookEl.current.classList.remove('fbe-is-dragging');
+                    document.querySelectorAll('.fbe-wrapper iframe, .fbe-book iframe').forEach(el => {
+                        el.style.pointerEvents = 'auto';
+                    });
                 },
                 turning: (e, turnPage) => {
                     // Prevent turning past the last page in odd-numbered flipbooks
@@ -757,9 +818,13 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     // Use the ref so we always call the latest onFlip from PreviewArea
                     if (onFlipRef.current) onFlipRef.current({ data: logical });
                     
-                    // Remove dragging class to restore iframe pointer events after programmatic flip
+                    // Remove dragging class to restore iframe pointer events after flip
+                    if (containerRef.current) containerRef.current.classList.remove('fbe-is-dragging');
                     if (bookEl.current) bookEl.current.classList.remove('fbe-is-dragging');
                     document.querySelectorAll('.fbe-is-dragging').forEach(el => el.classList.remove('fbe-is-dragging'));
+                    document.querySelectorAll('.fbe-wrapper iframe, .fbe-book iframe').forEach(el => {
+                        el.style.pointerEvents = 'auto';
+                    });
                     
                     refocusActiveIframe(logical);
                 },
@@ -977,6 +1042,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
     /* ── Render ── */
     return (
         <div
+            ref={containerRef}
             className={`fbe-wrapper ${className}`}
             data-single-page={singlePage}
             data-mobile-shadow={mobileShadowSide}
@@ -1285,36 +1351,38 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                 }
                 
                 /* Hand cursor for turn.js pages and drag overlays */
-                .fbe-drag-overlay {
+                .fbe-drag-overlay,
+                .fbe-corner-hotspot {
                     cursor: grab !important;
                     pointer-events: auto !important;
                 }
-                .fbe-drag-overlay:active {
+                .fbe-drag-overlay:active,
+                .fbe-corner-hotspot:active {
                     cursor: grabbing !important;
                 }
                 .turn-page-wrapper, .turn-page {
-                    cursor: grab;
-                }
-                .turn-page-wrapper:active, .turn-page:active {
-                    cursor: grabbing;
+                    cursor: default;
                 }
                 
                 /* When dragging, disable iframe pointer events so they don't swallow mouse movements */
                 .fbe-is-dragging iframe,
-                .fbe-wrapper.fbe-is-dragging iframe {
+                .fbe-wrapper.fbe-is-dragging iframe,
+                .fbe-book.fbe-is-dragging iframe {
                     pointer-events: none !important;
                 }
 
                 /* Add a global invisible shield over the entire wrapper during a drag to guarantee mousemove tracking */
-                .fbe-wrapper.fbe-is-dragging::after {
+                .fbe-wrapper.fbe-is-dragging::after,
+                .fbe-book.fbe-is-dragging::after {
                     content: '';
-                    position: absolute;
-                    top: -100px;
-                    left: -100px;
-                    right: -100px;
-                    bottom: -100px;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
                     z-index: 9999;
                     cursor: grabbing !important;
+                    pointer-events: none;
                 }
             `}</style>
         </div>

@@ -184,14 +184,14 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
   const tabConfigs = {
     'logo': { icon: 'fluent-mdl2:verified-brand', top: 154 },
     'profile': { icon: 'lucide:user', top: 206 },
-    'background': { icon: 'fa6-regular:image', top: 326 },
+    'background': { icon: 'andrsrxn:background', top: 326 },
     'layout': { icon: 'lucide:layout-panel-left', top: 378 },
     'bookappearance': { icon: 'basil:book-open-outline', top: 430 },
-    'menubar': { icon: 'ant-design:control-outlined', top: 482 },
+    'menubar': { icon: 'fluent:layout-row-two-settings-24-regular', top: 482 },
     'othersetup': { icon: 'qlementine-icons:page-setup-16', top: 534 },
-    'leadform': { icon: 'fluent:form-48-regular', top: 586 },
+    'leadform': { icon: 'fluent:form-multiple-24-regular', top: 586 },
     'visibility': { icon: 'si:lock-line', top: 638 },
-    'statistic': { icon: 'oui:ws-analytics', top: 690 },
+    'statistic': { icon: 'famicons:analytics', top: 690 },
   };
 
   const activeTab = tabConfigs[activeSubView];
@@ -364,7 +364,7 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
           <>
             <SidebarItem
               id="section-background"
-              icon="fa6-regular:image"
+              icon="andrsrxn:background"
               label="Background"
               isActive={activeSubView === 'background'}
               onClick={() => setActiveSubView('background')}
@@ -382,7 +382,7 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
 
             <SidebarItem
               id="section-menubar"
-              icon="ant-design:control-outlined"
+              icon="fluent:layout-row-two-settings-24-regular"
               label="Layout Settings"
               isActive={activeSubView === 'menubar'}
               onClick={() => setActiveSubView('menubar')}
@@ -400,7 +400,7 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
 
             <SidebarItem
               id="section-leadform"
-              icon="fluent:form-48-regular"
+              icon="fluent:form-multiple-24-regular"
               label="Lead Form"
               isActive={activeSubView === 'leadform'}
               onClick={() => setActiveSubView('leadform')}
@@ -418,7 +418,7 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
 
             <SidebarItem
               id="section-statistic"
-              icon="oui:ws-analytics"
+              icon="famicons:analytics"
               label="Analytics"
               isActive={activeSubView === 'statistic'}
               onClick={() => setActiveSubView('statistic')}

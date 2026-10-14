@@ -898,7 +898,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
       <div className="h-[8vh] flex items-center justify-between px-[1.25vw] bg-white border-b border-gray-100">
         <div className="flex items-center gap-[0.75vw]">
           <Icon
-            icon="lucide:eye"
+            icon="si:lock-line"
             className="w-[1.25vw] h-[1.25vw] text-gray-800"
           />
           <span className="text-[1.1vw] font-bold text-gray-900">Visibility</span>

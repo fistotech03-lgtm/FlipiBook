@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Folder, ChevronDown, ArrowDownUp, Trash2, RotateCcw, FolderInput, Check } from 'lucide-react';
+import { Search, Folder, ChevronDown, ArrowDownUp, Trash2, FolderInput, Check } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
 export default function FlipbooksToolbar({
@@ -24,9 +24,6 @@ export default function FlipbooksToolbar({
     sortDropdownRef,
     filteredBooks,
     selectedBooks,
-    handleEmptyTrashClick,
-    handleBulkRestore,
-    handleBulkPermanentDelete,
     handleBulkDelete,
     handleBulkMove,
     isAllSelected,
@@ -178,50 +175,21 @@ export default function FlipbooksToolbar({
 
                 {/* Right: Selected Actions & Multiple Selection */}
                 <div className="flex items-center gap-[1vw]">
-                    {/* Empty Trash button when in Trash and no books selected */}
-                    {activeFolder === 'Trash' && selectedBooks.length === 0 && filteredBooks.length > 0 && (
-                        <button
-                            onClick={handleEmptyTrashClick}
-                            className="flex items-center gap-[0.35vw] px-[0.75vw] py-[0.4vw] bg-white text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-[0.5vw] transition-all shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-                        >
-                            <Trash2 size="0.85vw" /> Empty Trash
-                        </button>
-                    )}
-
                     {selectedBooks.length > 0 && (
                         <div className="flex items-center gap-[0.5vw]">
-                            {activeFolder === 'Trash' ? (
-                                <>
-                                    <button
-                                        onClick={handleBulkRestore}
-                                        className="flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-blue-600 text-white rounded-[0.5vw] hover:bg-blue-700 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-                                    >
-                                        <RotateCcw size="0.9vw" /> Restore ({selectedBooks.length})
-                                    </button>
-                                    <button
-                                        onClick={handleBulkPermanentDelete}
-                                        className="flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-white text-red-500 border border-red-200 rounded-[0.5vw] hover:bg-red-50 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-                                    >
-                                        <Trash2 size="0.9vw" /> Delete Permanently ({selectedBooks.length})
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.4vw] bg-white text-red-500 border border-red-200 rounded-[0.5vw] hover:bg-red-50 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-                                    >
-                                        <Trash2 size="0.9vw" /> {(activeFolder === 'Recent Book' || activeFolder === 'Recent') ? 'Remove' : 'Move to trash'}
-                                    </button>
-                                    {activeFolder !== 'Recent Book' && activeFolder !== 'Recent' && (
-                                        <button
-                                            onClick={handleBulkMove}
-                                            className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.4vw] bg-[#ec5137] text-white rounded-[0.5vw] hover:bg-[#d4432a] transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-                                        >
-                                            <FolderInput size="0.9vw" /> Move
-                                        </button>
-                                    )}
-                                </>
+                            <button
+                                onClick={handleBulkDelete}
+                                className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.4vw] bg-white text-red-500 border border-red-200 rounded-[0.5vw] hover:bg-red-50 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
+                            >
+                                <Trash2 size="0.9vw" /> {(activeFolder === 'Recent Book' || activeFolder === 'Recent') ? 'Remove' : 'Move to trash'}
+                            </button>
+                            {activeFolder !== 'Recent Book' && activeFolder !== 'Recent' && (
+                                <button
+                                    onClick={handleBulkMove}
+                                    className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.4vw] bg-[#ec5137] text-white rounded-[0.5vw] hover:bg-[#d4432a] transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
+                                >
+                                    <FolderInput size="0.9vw" /> Move
+                                </button>
                             )}
                         </div>
                     )}

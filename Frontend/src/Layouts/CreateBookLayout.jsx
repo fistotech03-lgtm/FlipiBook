@@ -39,6 +39,7 @@ export default function CreateBookLayout({
   }, [controlledOnClose]);
 
   const handleUpload = useCallback((files, name, dims) => {
+    setDroppedFiles(null);
     if (controlledOnUpload) {
       controlledOnUpload(files, name, dims);
     }

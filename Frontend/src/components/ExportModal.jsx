@@ -1626,6 +1626,7 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
             },
             {
               responseType: 'blob',
+              withCredentials: true,
               timeout: 300000, // 5 minutes timeout for multi-page vector conversions
             }
           );

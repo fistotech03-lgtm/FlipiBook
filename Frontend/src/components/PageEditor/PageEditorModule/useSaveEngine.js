@@ -565,10 +565,12 @@ export const useSaveEngine = ({
       let lastRes = null;
 
       if (modifiedPagesIndices.length === 0) {
-        // No content changes, but maybe order/name/deletions changed. Send just the structure!
+        // Send full structure with content so reordering/deletions never lose page data
         const payloadPages = pagesToSave.map((p, index) => ({
+          pageNumber: index + 1,
           pageName: p.name || `Page ${index + 1}`,
-          content: undefined,
+          fileName: p.fileName || (p.name ? (p.name.endsWith('.svg') ? p.name : `${p.name}.svg`) : `${index + 1}.svg`),
+          content: p.html,
           hide: p.isHidden ? 1 : 0,
           v_id: p.v_id || (typeof p.id === 'string' && p.id.length > 5 ? p.id : null)
         }));
@@ -638,7 +640,9 @@ export const useSaveEngine = ({
           }
 
           return {
+            pageNumber: index + 1,
             pageName: p.name || `Page ${index + 1}`,
+            fileName: p.fileName || (p.name ? (p.name.endsWith('.svg') ? p.name : `${p.name}.svg`) : `${index + 1}.svg`),
             content,
             contentChunkId,
             hide: p.isHidden ? 1 : 0,

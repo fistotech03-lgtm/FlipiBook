@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Trash2, Edit2, FolderInput, Plus, Heart } from 'lucide-react';
+import { Edit2, FolderInput, Plus, Heart, Trash2 } from 'lucide-react';
 
 export default function FlipbookActionMenu({
     activeBookMenu,
@@ -7,8 +7,6 @@ export default function FlipbookActionMenu({
     menuPosition,
     books,
     activeFolder,
-    handleRestoreBook,
-    handlePermanentDeleteBookClick,
     startEditingBook,
     handleMoveBookClick,
     handleDuplicateBook,
@@ -18,7 +16,7 @@ export default function FlipbookActionMenu({
 }) {
     if (!activeBookMenu) return null;
 
-    const book = books.find(b => b.id === activeBookMenu);
+    const book = books.find(b => b.id === activeBookMenu || b.v_id === activeBookMenu || b._id === activeBookMenu || b.realName === activeBookMenu);
     if (!book) return null;
 
     return (
@@ -32,25 +30,7 @@ export default function FlipbookActionMenu({
                     transform: menuPosition.isDropup ? 'translate(-100%, -100%)' : 'translate(-100%, 0)'
                 }}
             >
-                {activeFolder === 'Trash' ? (
-                    <>
-                        <button
-                            onClick={() => handleRestoreBook(book)}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-700 hover:bg-blue-600 hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                        >
-                            <RotateCcw size="0.9vw" className="text-blue-600 group-hover:text-white" />
-                            Restore
-                        </button>
-                        <button
-                            onClick={() => handlePermanentDeleteBookClick(book)}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors group cursor-pointer"
-                        >
-                            <Trash2 size="0.9vw" className="group-hover:text-white" />
-                            Delete Permanently
-                        </button>
-                    </>
-                ) : (
-                    <>
+                <>
                         <button
                             onClick={() => startEditingBook(book)}
                             className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-semibold text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
@@ -92,7 +72,6 @@ export default function FlipbookActionMenu({
                             {(activeFolder === 'Recent Book' || activeFolder === 'Recent') ? 'Remove' : 'Move to trash'}
                         </button>
                     </>
-                )}
             </div>
         </>
     );

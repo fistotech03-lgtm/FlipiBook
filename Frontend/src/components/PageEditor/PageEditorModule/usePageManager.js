@@ -25,7 +25,8 @@ export const usePageManager = ({
   prevSelectedLayerIdRef,
   prevMultiSelectedIdsRef,
   setAlertState,
-  currentBook
+  currentBook,
+  v_id
 }) => {
   const [history, setHistory] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
@@ -324,9 +325,16 @@ export const usePageManager = ({
   };
 
   const renamePage = (id, newName) => {
-    setPages(prev => prev.map(p => {
-      if (p.id === id) {
-        const updatedPage = { ...p, name: newName };
+    const trimmedName = (newName || '').trim();
+    if (!trimmedName) return;
+
+    const cleanFileName = trimmedName.replace(/[\\/:*?"<>|]/g, '').trim() + '.svg';
+    let targetPage = null;
+
+    setPages(prev => prev.map((p, idx) => {
+      if (p.id === id || p.v_id === id || idx === id) {
+        targetPage = p;
+        const updatedPage = { ...p, name: trimmedName, fileName: cleanFileName };
 
         // Synchronize name with the SVG's root frame data-name
         if (p.html) {
@@ -334,7 +342,7 @@ export const usePageManager = ({
           const doc = parser.parseFromString(p.html, 'image/svg+xml');
           const rootGroup = doc.querySelector('g[data-type="frame"]');
           if (rootGroup) {
-            rootGroup.setAttribute('data-name', newName);
+            rootGroup.setAttribute('data-name', trimmedName);
             updatedPage.html = new XMLSerializer().serializeToString(doc);
             // Re-parse layers to keep the layer panel header in sync
             updatedPage.layers = parseLayersFromSVG(doc.documentElement);
@@ -374,6 +382,7 @@ export const usePageManager = ({
       });
       return;
     }
+    const pageToDelete = pages[index];
     saveToHistory();
     setPages(prev => {
       const updated = prev.filter((_p, i) => i !== index);

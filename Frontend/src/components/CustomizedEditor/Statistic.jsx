@@ -7,7 +7,7 @@ const Statistic = ({ onBack }) => {
       {/* Header */}
       <div className="h-[8vh] flex items-center justify-between px-[1vw] border-b border-gray-100">
         <div className="flex items-center gap-[0.5vw]">
-          <Icon icon="material-symbols:leaderboard-rounded" className="w-[1vw] h-[1vw] text-gray-700 font-semibold" />
+          <Icon icon="famicons:analytics" className="w-[1.5vw] h-[1.5vw] text-gray-700 font-semibold" />
           <span className="text-[1.1vw] font-semibold text-gray-900">Statistic</span>
         </div>
         <button onClick={onBack} className="text-gray-600 hover:text-gray-900">

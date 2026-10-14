@@ -299,7 +299,8 @@ const PageEditor = () => {
     prevSelectedLayerIdRef,
     prevMultiSelectedIdsRef,
     setAlertState,
-    currentBook
+    currentBook,
+    v_id
   });
 
   // ── Hook 2: Element Attribute & Background Sync ────────────────────────────
@@ -762,6 +763,8 @@ const PageEditor = () => {
                   id: pageUniqueId,
                   v_id: pageUniqueId,
                   name: name,
+                  fileName: p.fileName || (name ? (name.endsWith('.svg') ? name : `${name}.svg`) : `${p.pageNumber || i + 1}.svg`),
+                  pageNumber: p.pageNumber || (i + 1),
                   isHidden: p.hide == 1 || String(p.hide) === '1',
                   html: html,
                   layers: layers,
@@ -858,6 +861,8 @@ const PageEditor = () => {
                 id: pageUniqueId,
                 v_id: pageUniqueId,
                 name: name,
+                fileName: p.fileName || (name ? (name.endsWith('.svg') ? name : `${name}.svg`) : `${p.pageNumber || i + 1}.svg`),
+                pageNumber: p.pageNumber || (i + 1),
                 isHidden: p.hide == 1 || String(p.hide) === '1',
                 html: updatedHtml,
                 layers: layers,

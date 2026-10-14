@@ -26,7 +26,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true;
+  if (!origin) return true; // Server-to-server, curl, health probes
   if (allowedOrigins.includes(origin)) return true;
   if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
   if (/^https:\/\/([a-zA-Z0-9-]+\.)*flipibook\.com$/.test(origin)) return true;
@@ -44,16 +44,18 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'pdf-editor-service' });
 });
 
-// Service routes
+// Service routes - mounted for both /api/pdf-editor and /api/flipbook compatibility
 app.use('/api/pdf-editor', pdfEditorRoutes);
+app.use('/api/flipbook', pdfEditorRoutes);
+app.use('/', pdfEditorRoutes);
 
 // Fallback 404
 app.use((req, res) => {

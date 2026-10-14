@@ -99,30 +99,60 @@ const calculateUserStorage = (userId, emailId, userBooks = []) => {
 /**
  * Delete a user's book directory from disk
  */
-const deleteBookStorage = (userId, emailId, folderName, bookName) => {
+const deleteBookStorage = (userId, emailId, folderName, bookName, book = null) => {
   try {
     const storageRoot = getStorageRoot();
-    if (userId) {
-      const dirs = [
-        path.join(storageRoot, String(userId), 'My_Flipbooks', folderName, bookName),
-        path.join(storageRoot, String(userId), folderName, bookName),
-        path.join(storageRoot, 'flipbooks', String(userId), folderName, bookName)
-      ];
-      dirs.forEach(d => {
-        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
+    const userFolders = [
+      book?.userID,
+      book?.userId ? String(book.userId) : null,
+      userId ? String(userId) : null,
+      emailId ? emailId.replace(/[@.]/g, '_') : null,
+      book?.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
+    ].filter(Boolean);
+
+    const targetFolders = [
+      folderName,
+      'My_Flipbooks',
+      ...(book && Array.isArray(book.folderName) ? book.folderName : (book?.folderName ? [book.folderName] : []))
+    ].filter(Boolean);
+
+    const bookNames = [
+      bookName,
+      book?.flipbookName,
+      book ? `${book.flipbookName}_${book.v_id}` : null,
+      book?.v_id
+    ].filter(Boolean);
+
+    const dirsToDelete = new Set();
+
+    userFolders.forEach(uf => {
+      targetFolders.forEach(tf => {
+        bookNames.forEach(bn => {
+          dirsToDelete.add(path.join(storageRoot, uf, 'My_Flipbooks', tf, bn));
+          dirsToDelete.add(path.join(storageRoot, uf, tf, bn));
+          dirsToDelete.add(path.join(storageRoot, 'flipbooks', uf, tf, bn));
+        });
       });
-    }
-    if (emailId) {
-      const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const dirs = [
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', folderName, bookName),
-        path.join(storageRoot, sanitizedEmail, folderName, bookName),
-        path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName, bookName)
-      ];
-      dirs.forEach(d => {
-        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
-      });
-    }
+      // Also inspect subdirectories in My_Flipbooks directly
+      const userMyFlipbooks = path.join(storageRoot, uf, 'My_Flipbooks');
+      if (fs.existsSync(userMyFlipbooks)) {
+        try {
+          const subdirs = fs.readdirSync(userMyFlipbooks);
+          subdirs.forEach(sd => {
+            bookNames.forEach(bn => {
+              dirsToDelete.add(path.join(userMyFlipbooks, sd, bn));
+            });
+          });
+        } catch (e) {}
+      }
+    });
+
+    dirsToDelete.forEach(d => {
+      if (fs.existsSync(d)) {
+        console.log(`[Storage Helper] Deleting disk folder: ${d}`);
+        fs.rmSync(d, { recursive: true, force: true });
+      }
+    });
   } catch (err) {
     console.warn('[Storage Helper] Warning deleting book directory:', err.message);
   }

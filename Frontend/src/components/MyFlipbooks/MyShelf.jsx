@@ -562,7 +562,7 @@ const MyShelf = () => {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-xs"
+              className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-sm"
             />
           </div>
 
@@ -571,7 +571,7 @@ const MyShelf = () => {
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'flipbooks' ? null : 'flipbooks')}
-              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-xs font-medium cursor-pointer"
+              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
             >
               <Folder size="0.9vw" className="text-[#ec5137]" />
               <span>{selectedFolder === 'All Folders' || selectedFolder === 'All' ? 'All Folders' : (selectedFolder === 'add_shelf' ? '+ Add Shelf' : selectedFolder)}</span>
@@ -629,7 +629,7 @@ const MyShelf = () => {
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
-              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-xs font-medium cursor-pointer"
+              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
             >
               <Icon icon="lucide:disc" className="w-[0.9vw] h-[0.9vw] text-[#ec5137]" />
               <span>{selectedStatus}</span>
@@ -663,7 +663,7 @@ const MyShelf = () => {
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'sort' ? null : 'sort')}
-              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-xs font-medium cursor-pointer"
+              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
             >
               <ArrowDownUp size="0.9vw" className="text-[#ec5137]" />
               <span>Sort by - <span className="text-gray-500 font-normal">{sortOption}</span></span>
@@ -688,7 +688,7 @@ const MyShelf = () => {
                         }`}
                       >
                         <span>{opt}</span>
-                        {sortOption === opt && <Check size="0.85vw" className="text-[#ec5137]" />}
+                        {sortOption === opt && <Check size="0.75vw" className="text-[#ec5137]" strokeWidth={2.5} />}
                       </button>
                     ))}
                   </div>
@@ -703,10 +703,10 @@ const MyShelf = () => {
           <button
             type="button"
             onClick={() => setView('shelf')}
-            className={`flex items-center gap-[0.35vw] px-[0.8vw] py-[0.45vw] rounded-[0.55vw] text-[0.78vw] font-semibold transition-all border cursor-pointer ${
+            className={`flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] rounded-[0.6vw] text-[0.84vw] font-medium transition-all border shadow-sm cursor-pointer ${
               view === 'shelf'
                 ? 'bg-[#fff5f3] text-[#ec5137] border-[#fecdd3]'
-                : 'bg-white text-gray-500 hover:text-gray-700 border-gray-200 hover:bg-gray-50'
+                : 'bg-white text-gray-700 hover:text-gray-900 border-gray-200 hover:bg-gray-50'
             }`}
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-[0.9vw] h-[0.9vw]">
@@ -717,10 +717,10 @@ const MyShelf = () => {
           <button
             type="button"
             onClick={() => setView('list')}
-            className={`flex items-center gap-[0.35vw] px-[0.8vw] py-[0.45vw] rounded-[0.55vw] text-[0.78vw] font-semibold transition-all border cursor-pointer ${
+            className={`flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] rounded-[0.6vw] text-[0.84vw] font-medium transition-all border shadow-sm cursor-pointer ${
               view === 'list'
                 ? 'bg-[#fff5f3] text-[#ec5137] border-[#fecdd3]'
-                : 'bg-white text-gray-500 hover:text-gray-700 border-gray-200 hover:bg-gray-50'
+                : 'bg-white text-gray-700 hover:text-gray-900 border-gray-200 hover:bg-gray-50'
             }`}
           >
             <Icon icon="circum:box-list" className="w-[0.9vw] h-[0.9vw]" />

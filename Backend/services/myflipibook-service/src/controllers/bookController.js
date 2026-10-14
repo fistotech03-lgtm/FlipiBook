@@ -57,7 +57,34 @@ exports.getBooks = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    const rawBooks = await Flipbook.find(userQuery).sort({ updatedAt: -1 });
+    // Sort by createdAt ascending to determine original vs subsequent duplicate books
+    const rawBooks = await Flipbook.find(userQuery).sort({ createdAt: 1 });
+
+    // Auto-heal duplicate flipbook names for this user
+    const seenNames = new Map();
+    for (const b of rawBooks) {
+      const currentName = (b.flipbookName || 'Flipbook').trim();
+      const lower = currentName.toLowerCase();
+      if (!seenNames.has(lower)) {
+        seenNames.set(lower, 1);
+      } else {
+        let counter = seenNames.get(lower);
+        let newName = `${currentName} (${counter})`;
+        while (seenNames.has(newName.toLowerCase())) {
+          counter++;
+          newName = `${currentName} (${counter})`;
+        }
+        seenNames.set(lower, counter + 1);
+        seenNames.set(newName.toLowerCase(), 1);
+
+        console.log(`[Book Controller] Auto-healing duplicate flipbook name: "${b.flipbookName}" -> "${newName}" for v_id ${b.v_id}`);
+        b.flipbookName = newName;
+        await Flipbook.updateOne({ _id: b._id }, { $set: { flipbookName: newName } });
+      }
+    }
+
+    // Sort newest updated/created first for display
+    rawBooks.sort((a, b) => new Date(b.updatedAt || b.lastUpdated || b.createdAt) - new Date(a.updatedAt || a.lastUpdated || a.createdAt));
     const formattedBooks = rawBooks.map(formatBook);
 
     res.status(200).json({
@@ -221,7 +248,7 @@ exports.emptyTrash = async (req, res) => {
     // Clean up local disk files for trashed books
     for (const b of trashedBooks) {
       const folder = Array.isArray(b.folderName) ? b.folderName[0] : b.folderName;
-      deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', b.flipbookName);
+      deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', b.flipbookName, b);
     }
 
     const deleteResult = await Flipbook.deleteMany({ ...userQuery, trash: true });
@@ -347,13 +374,19 @@ exports.deleteBookPermanently = async (req, res) => {
     if (v_id) query.v_id = v_id;
     else query.flipbookName = bookName;
 
-    const book = await Flipbook.findOne(query);
+    let book = await Flipbook.findOne(query);
+    if (!book && v_id) {
+      book = await Flipbook.findOne({ v_id });
+      if (book && emailId && book.userEmail && book.userEmail.toLowerCase() !== emailId.toLowerCase()) {
+        book = null;
+      }
+    }
     if (!book) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
 
     const folder = Array.isArray(book.folderName) ? book.folderName[0] : book.folderName;
-    deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', book.flipbookName);
+    deleteBookStorage(rawId || customUserId, emailId, folder || 'My_Flipbooks', book.flipbookName, book);
 
     await Flipbook.deleteOne({ _id: book._id });
 
@@ -477,24 +510,43 @@ exports.saveBook = async (req, res) => {
     let book = null;
     if (providedVId) {
       book = await Flipbook.findOne({ ...userQuery, v_id: providedVId });
-    } else if (overwrite) {
-      book = await Flipbook.findOne({ ...userQuery, flipbookName: safeName });
+    }
+
+    let finalFlipbookName = safeName;
+    if (!book) {
+      // New book creation: strictly guarantee unique flipbookName to avoid collisions
+      const existingBooks = await Flipbook.find(userQuery).select('flipbookName').lean();
+      const existingNames = new Set(existingBooks.map(eb => (eb.flipbookName || '').trim().toLowerCase()));
+      if (existingNames.has(finalFlipbookName.toLowerCase())) {
+        let counter = 1;
+        let testName = `${finalFlipbookName} (${counter})`;
+        while (existingNames.has(testName.toLowerCase())) {
+          counter++;
+          testName = `${finalFlipbookName} (${counter})`;
+        }
+        finalFlipbookName = testName;
+      }
     }
 
     const resolvedVId = book?.v_id || providedVId || crypto.randomBytes(8).toString('hex');
 
-    // Index existing pages by v_id and pageNumber to prevent overwriting unchanged pages
-    const existingPagesMap = new Map();
+    // Index existing pages by v_id, fileName, and name to preserve pages across reordering
+    const existingByVId = new Map();
+    const existingByFileName = new Map();
+    const existingByName = new Map();
     if (book && Array.isArray(book.pages)) {
       book.pages.forEach((p) => {
-        if (p.v_id) existingPagesMap.set(p.v_id, p);
-        if (p.pageNumber !== undefined) existingPagesMap.set(String(p.pageNumber), p);
+        if (p.v_id) existingByVId.set(p.v_id, p);
+        if (p.fileName) existingByFileName.set(p.fileName.toLowerCase(), p);
+        if (p.name) existingByName.set(p.name.toLowerCase(), p);
       });
     }
 
     const safePages = Array.isArray(pages) ? pages.map((p, idx) => {
-      const pageNum = p.pageNumber !== undefined ? p.pageNumber : (idx + 1);
-      const existingPage = existingPagesMap.get(p.v_id) || existingPagesMap.get(String(pageNum));
+      const pageNum = idx + 1;
+      const existingPage = (p.v_id && existingByVId.get(p.v_id))
+        || (p.fileName && existingByFileName.get(p.fileName.toLowerCase()))
+        || (p.name && existingByName.get(p.name.toLowerCase()));
 
       // Resolve chunked upload if applicable
       let chunkedContent = null;
@@ -503,13 +555,13 @@ exports.saveBook = async (req, res) => {
         chunkUploads.delete(p.contentChunkId);
       }
 
-      const pageContent = (chunkedContent !== null)
+      let pageContent = (chunkedContent !== null)
         ? chunkedContent
         : (p.content !== undefined && p.content !== null)
           ? p.content
           : (p.html !== undefined && p.html !== null)
             ? p.html
-            : (existingPage?.content || existingPage?.html || '');
+            : '';
 
       const pageVId = (p.v_id && p.v_id !== resolvedVId)
         ? p.v_id
@@ -517,22 +569,36 @@ exports.saveBook = async (req, res) => {
           ? existingPage.v_id
           : crypto.randomBytes(6).toString('hex');
 
+      const pageName = p.name || p.pageName || existingPage?.name || `Page ${pageNum}`;
+      const cleanPageName = String(pageName || '').replace(/[\\/:*?"<>|]/g, '').trim();
+      const pageFileName = p.fileName || existingPage?.fileName || (cleanPageName ? (cleanPageName.endsWith('.svg') ? cleanPageName : `${cleanPageName}.svg`) : `${pageNum}.svg`);
+
       return {
         pageNumber: pageNum,
-        name: p.name || p.pageName || existingPage?.name || `Page ${pageNum}`,
-        fileName: p.fileName || existingPage?.fileName || `${pageNum}.svg`,
+        name: pageName,
+        fileName: pageFileName,
         v_id: pageVId,
         size: p.size || (pageContent ? Buffer.byteLength(pageContent, 'utf8') : existingPage?.size || 0),
         hide: p.hide !== undefined ? p.hide : (existingPage?.hide || 0),
         content: pageContent,
-        html: pageContent
+        html: pageContent,
+        existingFileName: existingPage?.fileName
       };
     }) : [];
+
+    const mongoPages = safePages.map((p) => ({
+      pageNumber: p.pageNumber,
+      name: p.name,
+      fileName: p.fileName,
+      v_id: p.v_id,
+      size: p.size,
+      hide: p.hide
+    }));
 
     if (book) {
       book.flipbookName = safeName;
       book.folderName = targetFolder;
-      if (safePages.length > 0) book.pages = safePages;
+      if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
       if (meta) book.Customized_Settings = { ...(book.Customized_Settings || {}), ...meta };
       book.lastUpdated = new Date();
@@ -543,34 +609,112 @@ exports.saveBook = async (req, res) => {
         ...(customUserId ? { userID: customUserId } : {}),
         userEmail: emailId,
         v_id: resolvedVId,
-        flipbookName: safeName,
+        flipbookName: finalFlipbookName,
         folderName: targetFolder,
-        pages: safePages,
+        pages: mongoPages,
         fileSize: fileSize || 0,
         Customized_Settings: meta || {},
         lastUpdated: new Date()
       });
     }
 
-    // Persist pages and full workspace structure to local disk storage
+    // Persist full pages and complete workspace structure to local disk storage
     try {
       const storageRoot = getStorageRoot();
       const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
       const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
 
-      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, safeName);
+      const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, finalFlipbookName);
       initFlipbookStorage(wsBookDir);
-
       const pagesDir = path.join(wsBookDir, 'pages');
       safePages.forEach((sp) => {
-        const htmlContent = sp.html || sp.content || '';
-        if (htmlContent) {
-          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
+        let svgContent = sp.content || sp.html || '';
+        const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
+
+        if (!svgContent || svgContent.trim() === '') {
+          const candidateNames = [
+            targetFileName,
+            sp.existingFileName,
+            sp.fileName,
+            sp.name ? `${sp.name}.svg` : null,
+            `${sp.pageNumber}.svg`,
+            `Page ${sp.pageNumber}.svg`
+          ].filter(Boolean);
+
+          for (const cand of candidateNames) {
+            const candPath = path.join(pagesDir, cand);
+            if (fs.existsSync(candPath)) {
+              try {
+                const diskStr = fs.readFileSync(candPath, 'utf8');
+                if (diskStr && diskStr.trim()) {
+                  svgContent = diskStr;
+                  break;
+                }
+              } catch (e) {}
+            }
+          }
         }
-        if (sp.content) {
-          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+
+        if (!svgContent || svgContent.trim() === '') {
+          const pageWidth = meta?.width || book.Customized_Settings?.width || 595;
+          const pageHeight = meta?.height || book.Customized_Settings?.height || 842;
+          const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+          const rectId = `rect_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+          svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%" style="overflow: visible"><defs></defs><g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame"><rect id="${rectId}" x="0" y="0" width="${pageWidth}" height="${pageHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges"/></g></svg>`;
+        } else if (svgContent.includes('<svg') && !svgContent.includes('data-name="Page ') && !svgContent.includes(`data-name="${sp.name}"`)) {
+          // Ensure root Page frame folder exists for layers panel
+          const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+          svgContent = svgContent.replace(/(<svg\b[^>]*>)/i, `$1\n<g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame">`).replace(/<\/svg>/i, '</g>\n</svg>');
+        }
+        fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+
+        // If this page was renamed, remove its old physical file
+        if (sp.existingFileName && sp.existingFileName.toLowerCase() !== targetFileName.toLowerCase()) {
+          try {
+            const oldFilePath = path.join(pagesDir, sp.existingFileName);
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+              console.log(`[Book Controller] Cleaned up renamed old page file: ${sp.existingFileName}`);
+            }
+          } catch (e) {}
         }
       });
+
+      // Clean up physical files for any pages that were deleted
+      try {
+        if (fs.existsSync(pagesDir) && safePages.length > 0) {
+          const activeFileNames = new Set();
+          safePages.forEach(sp => {
+            if (sp.fileName) activeFileNames.add(sp.fileName.toLowerCase());
+            if (sp.name) {
+              const clean = String(sp.name).replace(/[\\/:*?"<>|]/g, '').trim().toLowerCase();
+              if (clean) activeFileNames.add(`${clean}.svg`);
+            }
+          });
+          const diskFiles = fs.readdirSync(pagesDir);
+          diskFiles.forEach(df => {
+            const dfLower = df.toLowerCase();
+            if ((dfLower.endsWith('.svg') || dfLower.endsWith('.html')) && !activeFileNames.has(dfLower)) {
+              try {
+                fs.unlinkSync(path.join(pagesDir, df));
+                console.log(`[Book Controller] Cleaned up deleted page file from disk: ${df}`);
+              } catch (e) {}
+            }
+          });
+        }
+      } catch (cleanErr) {}
+
+      // Clean up any stray Page *.html files from root book folder
+      try {
+        if (fs.existsSync(wsBookDir)) {
+          const rootFiles = fs.readdirSync(wsBookDir);
+          rootFiles.forEach((rf) => {
+            if (/^Page\s*\d+\.html$/i.test(rf) || (rf.endsWith('.html') && !rf.includes('index'))) {
+              try { fs.unlinkSync(path.join(wsBookDir, rf)); } catch (e) {}
+            }
+          });
+        }
+      } catch (cleanErr) {}
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing pages to disk:', fsErr.message);
     }
@@ -580,11 +724,11 @@ exports.saveBook = async (req, res) => {
       message: 'Flipbook saved successfully',
       v_id: resolvedVId,
       book: formatBook(book),
-      pages: book.pages || []
+      pages: safePages
     });
   } catch (err) {
     console.error('[Book Controller] Error saving book:', err);
-    res.status(500).json({ success: false, message: 'Server error saving book' });
+    res.status(500).json({ success: false, message: err.message || 'Server error saving book' });
   }
 };
 
@@ -610,6 +754,7 @@ exports.savePagesBatch = async (req, res) => {
     const newPagesMap = new Map();
     (book.pages || []).forEach(p => newPagesMap.set(p.pageNumber, p));
 
+    const fullBatchPages = [];
     pages.forEach((p, idx) => {
       const pageNum = p.pageNumber !== undefined ? p.pageNumber : (newPagesMap.size + idx + 1);
       const existingPage = newPagesMap.get(pageNum);
@@ -626,19 +771,35 @@ exports.savePagesBatch = async (req, res) => {
           ? existingPage.v_id
           : crypto.randomBytes(6).toString('hex');
 
-      newPagesMap.set(pageNum, {
+      const pageName = p.name || p.pageName || existingPage?.name || `Page ${pageNum}`;
+      const cleanPageName = String(pageName || '').replace(/[\\/:*?"<>|]/g, '').trim();
+      const pageFileName = p.fileName || (cleanPageName ? (cleanPageName.endsWith('.svg') ? cleanPageName : `${cleanPageName}.svg`) : `${pageNum}.svg`);
+
+      const fullPage = {
         pageNumber: pageNum,
-        name: p.name || p.pageName || existingPage?.name || `Page ${pageNum}`,
-        fileName: p.fileName || existingPage?.fileName || `${pageNum}.svg`,
+        name: pageName,
+        fileName: pageFileName,
         v_id: pageVId,
         size: p.size || (pageContent ? Buffer.byteLength(pageContent, 'utf8') : existingPage?.size || 0),
         hide: p.hide !== undefined ? p.hide : (existingPage?.hide || 0),
         content: pageContent,
         html: pageContent
-      });
+      };
+      fullBatchPages.push(fullPage);
+      newPagesMap.set(pageNum, fullPage);
     });
 
-    book.pages = Array.from(newPagesMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+    const allSortedPages = Array.from(newPagesMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+
+    book.pages = allSortedPages.map(p => ({
+      pageNumber: p.pageNumber,
+      name: p.name,
+      fileName: p.fileName,
+      v_id: p.v_id,
+      size: p.size,
+      hide: p.hide
+    }));
+
     if (fileSize !== undefined) book.fileSize = fileSize;
     book.lastUpdated = new Date();
     await book.save();
@@ -651,17 +812,59 @@ exports.savePagesBatch = async (req, res) => {
 
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
       initFlipbookStorage(wsBookDir);
-
       const pagesDir = path.join(wsBookDir, 'pages');
-      book.pages.forEach((sp) => {
-        const htmlContent = sp.html || sp.content || '';
-        if (htmlContent) {
-          fs.writeFileSync(path.join(wsBookDir, `Page ${sp.pageNumber}.html`), htmlContent, 'utf8');
-        }
-        if (sp.content) {
-          fs.writeFileSync(path.join(pagesDir, `${sp.pageNumber}.svg`), sp.content, 'utf8');
+      fullBatchPages.forEach((sp) => {
+        let svgContent = sp.content || sp.html || '';
+        const targetFileName = sp.fileName || `${sp.pageNumber}.svg`;
+
+        if (svgContent) {
+          if (svgContent.includes('<svg') && !svgContent.includes('data-name="Page ') && !svgContent.includes(`data-name="${sp.name}"`)) {
+            const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+            svgContent = svgContent.replace(/(<svg\b[^>]*>)/i, `$1\n<g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame">`).replace(/<\/svg>/i, '</g>\n</svg>');
+          }
+          fs.writeFileSync(path.join(pagesDir, targetFileName), svgContent, 'utf8');
+
         }
       });
+
+      // Clean up physical files for any pages that were deleted
+      try {
+        if (fs.existsSync(pagesDir) && allSortedPages.length > 0) {
+          const activeFileNames = new Set();
+          allSortedPages.forEach(p => {
+            if (p.fileName) activeFileNames.add(p.fileName.toLowerCase());
+            if (p.pageNumber) {
+              activeFileNames.add(`${p.pageNumber}.svg`.toLowerCase());
+              activeFileNames.add(`page ${p.pageNumber}.svg`.toLowerCase());
+            }
+            if (p.name) {
+              const clean = String(p.name).replace(/[\\/:*?"<>|]/g, '').trim().toLowerCase();
+              if (clean) activeFileNames.add(`${clean}.svg`);
+            }
+          });
+          const diskFiles = fs.readdirSync(pagesDir);
+          diskFiles.forEach(df => {
+            const dfLower = df.toLowerCase();
+            if ((dfLower.endsWith('.svg') || dfLower.endsWith('.html')) && !activeFileNames.has(dfLower)) {
+              try {
+                fs.unlinkSync(path.join(pagesDir, df));
+                console.log(`[Book Controller] Cleaned up deleted page file from disk: ${df}`);
+              } catch (e) {}
+            }
+          });
+        }
+      } catch (cleanErr) {}
+      // Clean up any stray Page *.html files
+      try {
+        if (fs.existsSync(wsBookDir)) {
+          const rootFiles = fs.readdirSync(wsBookDir);
+          rootFiles.forEach((rf) => {
+            if (/^Page\s*\d+\.html$/i.test(rf) || (rf.endsWith('.html') && !rf.includes('index'))) {
+              try { fs.unlinkSync(path.join(wsBookDir, rf)); } catch (e) {}
+            }
+          });
+        }
+      } catch (cleanErr) {}
     } catch (fsErr) {
       console.warn('[Book Controller] Warning writing batch pages to disk:', fsErr.message);
     }
@@ -670,11 +873,11 @@ exports.savePagesBatch = async (req, res) => {
       success: true,
       message: 'Pages batch saved',
       v_id: book.v_id,
-      pages: book.pages
+      pages: allSortedPages
     });
   } catch (err) {
     console.error('[Book Controller] Error saving pages batch:', err);
-    res.status(500).json({ success: false, message: 'Server error saving pages batch' });
+    res.status(500).json({ success: false, message: err.message || 'Server error saving pages batch' });
   }
 };
 
@@ -687,21 +890,15 @@ exports.getBook = async (req, res) => {
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName, folderName } = req.query;
 
-    const queryConditions = [];
+    let filter;
     if (v_id) {
-      queryConditions.push({ v_id });
-    }
-    if (bookName && bookName !== 'undefined') {
-      queryConditions.push({ flipbookName: bookName });
-    }
-
-    if (queryConditions.length === 0) {
+      filter = { v_id };
+      if (userQuery) filter = { ...filter, ...userQuery };
+    } else if (bookName && bookName !== 'undefined') {
+      filter = { flipbookName: bookName };
+      if (userQuery) filter = { ...filter, ...userQuery };
+    } else {
       return res.status(400).json({ success: false, message: 'Missing book identifier (v_id or bookName)' });
-    }
-
-    let filter = queryConditions.length === 1 ? queryConditions[0] : { $or: queryConditions };
-    if (userQuery) {
-      filter = { ...filter, ...userQuery };
     }
 
     let book = await Flipbook.findOne(filter);
@@ -714,55 +911,73 @@ exports.getBook = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
 
-    // Disk fallback if MongoDB pages lack content
+    // Disk storage root
     const storageRoot = getStorageRoot();
-    const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
-    const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
+    const userFolders = [
+      book.userID,
+      book.userId ? String(book.userId) : null,
+      book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
+    ].filter(Boolean);
+    const folders = [
+      Array.isArray(book.folderName) ? book.folderName[0] : book.folderName,
+      'My_Flipbooks'
+    ].filter(Boolean);
 
-    // Check candidate directories in priority order
-    let pagesDir = null;
-    let bookDir = null;
-    if (userFolder && folder && book.flipbookName) {
-      const candidateDirs = [
-        path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName),
-        path.join(storageRoot, userFolder, folder, book.flipbookName),
-        path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName)
-      ];
-      for (const d of candidateDirs) {
-        if (fs.existsSync(path.join(d, 'pages')) || fs.existsSync(d)) {
-          bookDir = d;
-          pagesDir = path.join(d, 'pages');
-          break;
-        }
+    // Build all possible candidate directories on disk
+    const candidateDirs = [];
+    for (const uf of userFolders) {
+      for (const f of folders) {
+        candidateDirs.push(
+          path.join(storageRoot, uf, 'My_Flipbooks', f, book.flipbookName),
+          path.join(storageRoot, uf, 'My_Flipbooks', f, book.v_id),
+          path.join(storageRoot, uf, 'My_Flipbooks', f, `${book.flipbookName}_${book.v_id}`),
+          path.join(storageRoot, uf, f, book.flipbookName),
+          path.join(storageRoot, uf, f, book.v_id),
+          path.join(storageRoot, 'flipbooks', uf, f, book.flipbookName),
+          path.join(storageRoot, 'flipbooks', uf, f, book.v_id)
+        );
       }
     }
 
     const populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
-      let pageContent = pageObj.content || pageObj.html || '';
+      let pageContent = '';
 
-      if (!pageContent && bookDir) {
-        // Try Page X.html first
-        const htmlPath = path.join(bookDir, `Page ${pageObj.pageNumber}.html`);
-        if (fs.existsSync(htmlPath)) {
-          try {
-            pageContent = fs.readFileSync(htmlPath, 'utf8');
-          } catch (e) {}
+      // 1. MUST load page data directly from local storage file on disk first
+      for (const candDir of candidateDirs) {
+        const candidateFiles = [
+          pageObj.fileName ? path.join(candDir, 'pages', pageObj.fileName) : null,
+          pageObj.name ? path.join(candDir, 'pages', `${pageObj.name}.svg`) : null,
+          path.join(candDir, 'pages', `${pageObj.pageNumber}.svg`),
+          path.join(candDir, 'pages', `Page ${pageObj.pageNumber}.svg`),
+          path.join(candDir, `Page ${pageObj.pageNumber}.html`)
+        ].filter(Boolean);
+
+        for (const fPath of candidateFiles) {
+          if (fs.existsSync(fPath)) {
+            try {
+              const str = fs.readFileSync(fPath, 'utf8');
+              if (str && str.trim()) {
+                pageContent = str;
+                break;
+              }
+            } catch (e) {}
+          }
         }
+        if (pageContent) break;
       }
 
-      if (!pageContent && pagesDir) {
-        // Try pages/X.svg
-        const svgPath = path.join(pagesDir, `${pageObj.pageNumber}.svg`);
-        if (fs.existsSync(svgPath)) {
-          try {
-            pageContent = fs.readFileSync(svgPath, 'utf8');
-          } catch (e) {}
-        }
+      // 2. Fallback to MongoDB only if local storage file does not exist
+      if (!pageContent) {
+        pageContent = pageObj.content || pageObj.html || '';
       }
+
+      const cleanName = String(pageObj.name || '').replace(/[\\/:*?"<>|]/g, '').trim();
+      const resolvedFileName = pageObj.fileName || (cleanName ? (cleanName.endsWith('.svg') ? cleanName : `${cleanName}.svg`) : `${pageObj.pageNumber}.svg`);
 
       return {
         ...pageObj,
+        fileName: resolvedFileName,
         content: pageContent,
         html: pageContent
       };
@@ -852,8 +1067,11 @@ exports.previewBook = async (req, res) => {
       const storageRoot = getStorageRoot();
       const userFolder = book.userID || (book.userId ? String(book.userId) : (book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : ''));
       const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-      if (userFolder && folder && book.flipbookName) {
+      if (userFolder && folder) {
         const candidateFiles = [
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, `Page ${firstPage.pageNumber}.html`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.v_id, 'pages', `${firstPage.pageNumber}.svg`),
+          path.join(storageRoot, userFolder, 'My_Flipbooks', folder, `${book.flipbookName}_${book.v_id}`, `Page ${firstPage.pageNumber}.html`),
           path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, `Page ${firstPage.pageNumber}.html`),
           path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`),
           path.join(storageRoot, 'flipbooks', userFolder, folder, book.flipbookName, 'pages', `${firstPage.pageNumber}.svg`)
@@ -892,5 +1110,347 @@ exports.getGalleryAssets = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error fetching gallery assets' });
+  }
+};
+
+/**
+ * Rename a page and rename its corresponding physical file on disk
+ * @route POST /api/flipbook/rename-page
+ */
+exports.renamePage = async (req, res) => {
+  try {
+    const { emailId: authEmail, objectId, customUserId } = getAuthUser(req);
+    const { v_id, pageId, pageNumber, oldPageName, newPageName, emailId: reqEmail } = req.body;
+    const emailId = authEmail || reqEmail;
+
+    if (!v_id || !newPageName || !newPageName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'v_id and newPageName are required'
+      });
+    }
+
+    const trimmedNewName = newPageName.trim();
+    const book = await Flipbook.findOne({ v_id });
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Flipbook not found' });
+    }
+
+    if (emailId && book.userEmail && book.userEmail.toLowerCase() !== emailId.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to modify this flipbook' });
+    }
+
+    book.pages = book.pages || [];
+    let pageIndex = -1;
+    if (pageId) {
+      pageIndex = book.pages.findIndex((p) => p.v_id === pageId || p.id === pageId);
+    }
+    if (pageIndex === -1 && pageNumber !== undefined) {
+      pageIndex = book.pages.findIndex((p) => p.pageNumber === Number(pageNumber));
+    }
+    if (pageIndex === -1 && oldPageName) {
+      pageIndex = book.pages.findIndex((p) => p.name === oldPageName);
+    }
+
+    if (pageIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Page not found in flipbook' });
+    }
+
+    const page = book.pages[pageIndex];
+    const prevName = page.name;
+    const prevFileName = page.fileName;
+
+    const storageRoot = getStorageRoot();
+    const userFolders = [
+      book.userID,
+      book.userId ? String(book.userId) : null,
+      customUserId,
+      objectId ? String(objectId) : null,
+      emailId ? emailId.replace(/[@.]/g, '_') : null,
+      book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
+    ].filter(Boolean);
+
+    const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
+
+    // Find real existing bookDir on disk
+    let wsBookDir = path.join(storageRoot, userFolders[0] || 'default', 'My_Flipbooks', folder, book.flipbookName);
+    for (const uf of userFolders) {
+      const candidates = [
+        path.join(storageRoot, uf, 'My_Flipbooks', folder, book.flipbookName),
+        path.join(storageRoot, uf, 'My_Flipbooks', 'My_Flipbooks', book.flipbookName),
+        path.join(storageRoot, uf, folder, book.flipbookName)
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand)) {
+          wsBookDir = cand;
+          break;
+        }
+      }
+    }
+
+    initFlipbookStorage(wsBookDir);
+    const pagesDir = path.join(wsBookDir, 'pages');
+
+    const cleanNewName = trimmedNewName.replace(/[\\/:*?"<>|]/g, '').trim();
+    const newFileName = cleanNewName.endsWith('.svg') ? cleanNewName : `${cleanNewName}.svg`;
+    const newFilePath = path.join(pagesDir, newFileName);
+
+    const oldCandidateNames = [
+      prevFileName,
+      `${prevName}.svg`,
+      oldPageName ? `${oldPageName}.svg` : null,
+      `${page.pageNumber}.svg`,
+      `Page ${page.pageNumber}.svg`
+    ].filter(Boolean);
+
+    let foundOldFilePath = null;
+    for (const oldName of oldCandidateNames) {
+      const p = path.join(pagesDir, oldName);
+      if (fs.existsSync(p)) {
+        foundOldFilePath = p;
+        break;
+      }
+    }
+
+    let pageSvgContent = page.html || page.content || '';
+
+    if (foundOldFilePath) {
+      try {
+        const diskContent = fs.readFileSync(foundOldFilePath, 'utf8');
+        if (diskContent && diskContent.trim()) {
+          pageSvgContent = diskContent;
+        }
+      } catch (readErr) {}
+
+      if (path.resolve(foundOldFilePath) !== path.resolve(newFilePath)) {
+        try {
+          fs.renameSync(foundOldFilePath, newFilePath);
+        } catch (renameErr) {
+          try {
+            fs.copyFileSync(foundOldFilePath, newFilePath);
+            fs.unlinkSync(foundOldFilePath);
+          } catch (copyErr) {
+            console.error('[Book Controller] Fallback copy/unlink error:', copyErr.message);
+          }
+        }
+      }
+    } else {
+      if (!pageSvgContent || !pageSvgContent.trim()) {
+        const pageWidth = book.Customized_Settings?.width || 595;
+        const pageHeight = book.Customized_Settings?.height || 842;
+        const gId = `g_page_${page.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+        const rectId = `rect_${page.pageNumber}_${crypto.randomBytes(4).toString('hex')}`;
+        pageSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%" style="overflow: visible"><defs></defs><g id="${gId}" data-name="${trimmedNewName}" data-type="frame"><rect id="${rectId}" x="0" y="0" width="${pageWidth}" height="${pageHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges"/></g></svg>`;
+      }
+      fs.writeFileSync(newFilePath, pageSvgContent, 'utf8');
+    }
+
+    if (fs.existsSync(newFilePath)) {
+      try {
+        let svgStr = fs.readFileSync(newFilePath, 'utf8');
+        if (svgStr.includes('data-name="')) {
+          svgStr = svgStr.replace(/(<g\b[^>]*\bdata-type="frame"[^>]*\bdata-name=")[^"]*(")/i, `$1${trimmedNewName}$2`);
+          svgStr = svgStr.replace(/(<g\b[^>]*\bdata-name=")[^"]*("[^>]*\bdata-type="frame")/i, `$1${trimmedNewName}$2`);
+          fs.writeFileSync(newFilePath, svgStr, 'utf8');
+          pageSvgContent = svgStr;
+        }
+      } catch (xmlErr) {}
+    }
+
+    book.pages[pageIndex].name = trimmedNewName;
+    book.pages[pageIndex].fileName = newFileName;
+    book.lastUpdated = new Date();
+    book.markModified('pages');
+    await book.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Page renamed successfully and physical file updated',
+      pageNumber: page.pageNumber,
+      name: trimmedNewName,
+      fileName: newFileName
+    });
+  } catch (error) {
+    console.error('[Book Controller] Error renaming page:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error renaming page',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete a specific page from flipbook and remove its physical file from disk
+ * @route POST /api/flipbook/delete-page
+ */
+exports.deletePage = async (req, res) => {
+  try {
+    const { emailId: authEmail, objectId, customUserId } = getAuthUser(req);
+    const { v_id, pageId, pageNumber, fileName, oldPageName, emailId: reqEmail } = req.body;
+    const emailId = authEmail || reqEmail;
+
+    if (!v_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'v_id is required'
+      });
+    }
+
+    const book = await Flipbook.findOne({ v_id });
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Flipbook not found' });
+    }
+
+    if (emailId && book.userEmail && book.userEmail.toLowerCase() !== emailId.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to modify this flipbook' });
+    }
+
+    book.pages = book.pages || [];
+    if (book.pages.length <= 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'A flipbook must have at least one page. Cannot delete the only remaining page.'
+      });
+    }
+
+    let pageIndex = -1;
+    if (pageId) {
+      pageIndex = book.pages.findIndex((p) => p.v_id === pageId || p.id === pageId);
+    }
+    if (pageIndex === -1 && pageNumber !== undefined) {
+      pageIndex = book.pages.findIndex((p) => p.pageNumber === Number(pageNumber));
+    }
+    if (pageIndex === -1 && fileName) {
+      pageIndex = book.pages.findIndex((p) => p.fileName === fileName);
+    }
+    if (pageIndex === -1 && oldPageName) {
+      pageIndex = book.pages.findIndex((p) => p.name === oldPageName);
+    }
+
+    if (pageIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Page not found in flipbook' });
+    }
+
+    const pageToDelete = book.pages[pageIndex];
+
+    const storageRoot = getStorageRoot();
+    const userFolders = [
+      book.userID,
+      book.userId ? String(book.userId) : null,
+      customUserId,
+      objectId ? String(objectId) : null,
+      emailId ? emailId.replace(/[@.]/g, '_') : null,
+      book.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
+    ].filter(Boolean);
+
+    const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
+
+    // Find real existing bookDir on disk
+    const dirVariants = [
+      book.flipbookName,
+      book.v_id ? `${book.flipbookName}_${book.v_id}` : null,
+      book.v_id
+    ].filter(Boolean);
+
+    let wsBookDir = path.join(storageRoot, userFolders[0] || 'default', 'My_Flipbooks', folder, book.flipbookName);
+    let foundDir = false;
+
+    for (const uf of userFolders) {
+      if (foundDir) break;
+      for (const variant of dirVariants) {
+        const candidates = [
+          path.join(storageRoot, uf, 'My_Flipbooks', folder, variant),
+          path.join(storageRoot, uf, 'My_Flipbooks', 'My_Flipbooks', variant),
+          path.join(storageRoot, uf, folder, variant),
+          path.join(storageRoot, uf, variant)
+        ];
+        for (const cand of candidates) {
+          if (fs.existsSync(cand)) {
+            wsBookDir = cand;
+            foundDir = true;
+            break;
+          }
+        }
+        if (foundDir) break;
+
+        const myFlipbooksDir = path.join(storageRoot, uf, 'My_Flipbooks');
+        if (fs.existsSync(myFlipbooksDir)) {
+          try {
+            const subdirs = fs.readdirSync(myFlipbooksDir);
+            for (const sd of subdirs) {
+              const nestedCand = path.join(myFlipbooksDir, sd, variant);
+              if (fs.existsSync(nestedCand)) {
+                wsBookDir = nestedCand;
+                foundDir = true;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+        if (foundDir) break;
+      }
+    }
+
+    const pagesDir = path.join(wsBookDir, 'pages');
+
+    const otherPages = book.pages.filter((_, idx) => idx !== pageIndex);
+    const otherFileNames = new Set();
+    otherPages.forEach(p => {
+      if (p.fileName) otherFileNames.add(p.fileName.toLowerCase());
+      if (p.name) otherFileNames.add(`${p.name.toLowerCase()}.svg`);
+    });
+
+    const candidateFilesToRemove = [
+      pageToDelete.fileName,
+      fileName,
+      pageToDelete.name ? `${pageToDelete.name}.svg` : null,
+      oldPageName ? `${oldPageName}.svg` : null,
+      pageToDelete.name ? `${pageToDelete.name}.html` : null
+    ].filter(Boolean);
+
+    // Only delete candidate files that do NOT belong to any remaining active page!
+    const filesToRemove = candidateFilesToRemove.filter(f => !otherFileNames.has(f.toLowerCase()));
+
+    if (fs.existsSync(pagesDir)) {
+      filesToRemove.forEach(f => {
+        try {
+          const filePath = path.join(pagesDir, f);
+          if (fs.existsSync(filePath)) {
+            console.log(`[Book Controller] Deleting page file from disk: ${filePath}`);
+            fs.unlinkSync(filePath);
+          }
+        } catch (unlinkErr) {
+          console.warn('[Book Controller] Could not delete page file:', f, unlinkErr.message);
+        }
+      });
+    }
+
+    // Remove page from MongoDB pages array
+    book.pages.splice(pageIndex, 1);
+
+    // Renumber remaining pages
+    book.pages.forEach((p, idx) => {
+      p.pageNumber = idx + 1;
+    });
+
+    book.fileSize = book.pages.reduce((sum, p) => sum + (p.size || 0), 0);
+    book.lastUpdated = new Date();
+    book.markModified('pages');
+    await book.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Page deleted and physical file removed from disk',
+      totalPages: book.pages.length,
+      pages: book.pages
+    });
+  } catch (error) {
+    console.error('[Book Controller] Error deleting page:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error deleting page',
+      error: error.message
+    });
   }
 };

@@ -24,6 +24,8 @@ export const flipbookApi = {
     getBooks: (emailId) => api.get('/api/flipbook/list', { params: { emailId } }),
     saveBook: (payload) => api.post('/api/flipbook/save', payload),
     savePagesBatch: (payload) => api.post('/api/flipbook/save-pages-batch', payload),
+    renamePage: (payload) => api.post('/api/flipbook/rename-page', payload),
+    deletePage: (payload) => api.post('/api/flipbook/delete-page', payload),
     deleteBook: (emailId, v_id) => api.delete(`/api/flipbook/delete/${v_id}`, { params: { emailId } }),
     restoreBook: (emailId, bookName, folder) =>
         api.post('/api/flipbook/restore', { emailId, bookName, folder }),

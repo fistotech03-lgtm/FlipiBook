@@ -33,8 +33,8 @@ const Appearance = ({
       <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-[0.75vw] text-gray-800">
           <Icon 
-            icon={activeSub === 'bookappearance' ? 'basil:book-open-outline' : activeSub === 'background' ? 'fa6-regular:image' : 'lucide:layout-panel-left'} 
-            className="w-[1.2vw] h-[1.2vw] text-black" 
+            icon={activeSub === 'bookappearance' ? 'basil:book-open-outline' : activeSub === 'background' ? 'andrsrxn:background' : 'lucide:layout-panel-left'} 
+            className="w-[1.4vw] h-[1.4vw] text-black" 
           />
           <h2 className="text-[1vw] font-semibold text-gray-900">
             {activeSub === 'background' ? 'Background' : activeSub === 'layout' ? 'Layout Design' : 'Book Appearance'}

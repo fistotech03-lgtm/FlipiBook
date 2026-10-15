@@ -39,14 +39,35 @@ const getCachedTopDirs = async () => {
 };
 
 const storageStaticMiddleware = async (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
   const relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
-  const directPath = path.join(storageRoot, relPath);
-  try {
-    const stat = await fs.promises.stat(directPath).catch(() => null);
-    if (stat && stat.isFile()) {
-      return res.sendFile(directPath, { maxAge: '1d' });
-    }
-  } catch (e) {}
+  const candidateRelPaths = [
+    relPath,
+    relPath.includes('My_Flipbooks/My_Flipbooks')
+      ? relPath.replace('My_Flipbooks/My_Flipbooks', 'My_Flipbooks')
+      : null,
+    !relPath.includes('My_Flipbooks/My_Flipbooks') && relPath.includes('My_Flipbooks/')
+      ? relPath.replace('My_Flipbooks/', 'My_Flipbooks/My_Flipbooks/')
+      : null,
+  ].filter(Boolean);
+
+  for (const cRel of candidateRelPaths) {
+    const directPath = path.join(storageRoot, cRel);
+    try {
+      const stat = await fs.promises.stat(directPath).catch(() => null);
+      if (stat && stat.isFile()) {
+        return res.sendFile(directPath, { maxAge: '1d' }, (err) => {
+          if (err && !res.headersSent) next();
+        });
+      }
+    } catch (e) {}
+  }
 
   const parts = relPath.split(/[/\\]/);
   if (parts.length > 1) {
@@ -54,10 +75,23 @@ const storageStaticMiddleware = async (req, res, next) => {
     try {
       const topDirs = await getCachedTopDirs();
       for (const d of topDirs) {
-        const candidatePath = path.join(storageRoot, d, restOfPath);
-        const candStat = await fs.promises.stat(candidatePath).catch(() => null);
-        if (candStat && candStat.isFile()) {
-          return res.sendFile(candidatePath, { maxAge: '1d' });
+        const candidatePaths = [
+          path.join(storageRoot, d, restOfPath),
+          restOfPath.includes('My_Flipbooks/My_Flipbooks')
+            ? path.join(storageRoot, d, restOfPath.replace('My_Flipbooks/My_Flipbooks', 'My_Flipbooks'))
+            : null,
+          !restOfPath.includes('My_Flipbooks/My_Flipbooks') && restOfPath.includes('My_Flipbooks/')
+            ? path.join(storageRoot, d, restOfPath.replace('My_Flipbooks/', 'My_Flipbooks/My_Flipbooks/'))
+            : null
+        ].filter(Boolean);
+
+        for (const candidatePath of candidatePaths) {
+          const candStat = await fs.promises.stat(candidatePath).catch(() => null);
+          if (candStat && candStat.isFile()) {
+            return res.sendFile(candidatePath, { maxAge: '1d' }, (err) => {
+              if (err && !res.headersSent) next();
+            });
+          }
         }
       }
     } catch (e) {}
@@ -69,7 +103,7 @@ const storageStaticMiddleware = async (req, res, next) => {
     const assetSub = assetMatch[1];
     const assetFile = assetMatch[2];
     try {
-      const topDirs = fs.readdirSync(storageRoot);
+      const topDirs = await getCachedTopDirs();
       for (const d of topDirs) {
         const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
         if (fs.existsSync(userFlipbooksDir)) {
@@ -91,7 +125,11 @@ const storageStaticMiddleware = async (req, res, next) => {
             return null;
           };
           const found = scanForFile(userFlipbooksDir);
-          if (found) return res.sendFile(found);
+          if (found) {
+            return res.sendFile(found, { maxAge: '1d' }, (err) => {
+              if (err && !res.headersSent) next();
+            });
+          }
         }
       }
     } catch (e) {}

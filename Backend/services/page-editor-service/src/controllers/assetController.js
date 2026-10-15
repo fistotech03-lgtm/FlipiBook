@@ -71,7 +71,8 @@ const uploadAsset = async (req, res) => {
   const file = req.file;
   try {
     const { emailId: authEmail } = getAuthUser(req);
-    const { emailId: reqEmail, type, v_id, replacing_file_v_id, replacing_file_url, page_v_id, isGallery: reqIsGallery } = req.body;
+    const { emailId: reqEmail, type, replacing_file_v_id, replacing_file_url, page_v_id, isGallery: reqIsGallery } = req.body;
+    const v_id = req.body.v_id || req.body.flipbook_v_id || req.body.flipbookVId;
     let { folderName, flipbookName } = req.body;
     const emailId = authEmail || reqEmail;
 
@@ -89,19 +90,24 @@ const uploadAsset = async (req, res) => {
     let dbDoc = null;
     if (v_id) {
       dbDoc = await Flipbook.findOne({ v_id });
-      if (dbDoc) {
-        flipbookName = dbDoc.flipbookName;
-        folderName = resolveFolder(dbDoc.folderName);
-        if (emailId && dbDoc.userEmail && dbDoc.userEmail.toLowerCase() !== emailId.toLowerCase()) {
-          if (file && fs.existsSync(file.path)) {
-            try { fs.unlinkSync(file.path); } catch (e) {}
-          }
-          return res.status(403).json({ success: false, message: 'Unauthorized' });
-        }
-      }
+    } else if (page_v_id && page_v_id !== 'global') {
+      dbDoc = await Flipbook.findOne({ 'pages.v_id': page_v_id });
     }
 
-    const safeFolderName = sanitizeName(folderName, 'My_Flipbooks');
+    if (dbDoc) {
+      flipbookName = dbDoc.flipbookName || flipbookName;
+      folderName = resolveFolder(dbDoc.folderName);
+      if (emailId && dbDoc.userEmail && dbDoc.userEmail.toLowerCase() !== emailId.toLowerCase()) {
+        if (file && fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (e) {}
+        }
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
+    } else {
+      folderName = resolveFolder(folderName);
+    }
+
+    const safeFolderName = sanitizeName(resolveFolder(folderName), 'My_Flipbooks');
     const safeFlipbookName = sanitizeName(flipbookName, 'Untitled_Document');
     const { userFolder, candidateDirs } = await resolveUserFolder(emailId, dbDoc);
     const storageRoot = getStorageRoot();
@@ -196,7 +202,7 @@ const uploadAsset = async (req, res) => {
 
     // Save to Database
     const newAsset = new FlipbookAsset({
-      flipbook_v_id: v_id || 'gallery',
+      flipbook_v_id: dbDoc?.v_id || v_id || 'gallery',
       file_v_id,
       page_v_id: finalPageVId,
       assetType: subFolder,
@@ -563,7 +569,6 @@ const useGalleryAsset = async (req, res) => {
     const { emailId: authEmail } = getAuthUser(req);
     const {
       emailId: reqEmail,
-      v_id,
       folderName,
       flipbookName,
       galleryUrl,
@@ -571,6 +576,7 @@ const useGalleryAsset = async (req, res) => {
       page_v_id,
       assetType: reqAssetType
     } = req.body;
+    const v_id = req.body.v_id || req.body.flipbook_v_id || req.body.flipbookVId;
 
     const emailId = authEmail || reqEmail;
     if (!emailId || !galleryUrl) {
@@ -578,15 +584,18 @@ const useGalleryAsset = async (req, res) => {
     }
 
     let dbDoc = null;
-    let safeFolderName = sanitizeName(folderName, 'My_Flipbooks');
+    let safeFolderName = sanitizeName(resolveFolder(folderName), 'My_Flipbooks');
     let safeFlipbookName = sanitizeName(flipbookName, 'Untitled_Document');
 
     if (v_id) {
       dbDoc = await Flipbook.findOne({ v_id });
-      if (dbDoc) {
-        safeFlipbookName = sanitizeName(dbDoc.flipbookName, safeFlipbookName);
-        safeFolderName = sanitizeName(resolveFolder(dbDoc.folderName), safeFolderName);
-      }
+    } else if (page_v_id && page_v_id !== 'global') {
+      dbDoc = await Flipbook.findOne({ 'pages.v_id': page_v_id });
+    }
+
+    if (dbDoc) {
+      safeFlipbookName = sanitizeName(dbDoc.flipbookName, safeFlipbookName);
+      safeFolderName = sanitizeName(resolveFolder(dbDoc.folderName), safeFolderName);
     }
 
     const { userFolder, candidateDirs } = await resolveUserFolder(emailId, dbDoc);

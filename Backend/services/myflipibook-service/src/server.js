@@ -78,6 +78,41 @@ const storageStaticMiddleware = (req, res, next) => {
       }
     } catch (e) {}
   }
+
+  // Fallback for flipbook assets where relative navigation (e.g. ../assets/) skipped the book folder
+  const assetMatch = relPath.match(/assets[/\\](Image|video|gif|audio|3D_Model|download)[/\\]([^/\\]+)$/i);
+  if (assetMatch) {
+    const assetSub = assetMatch[1];
+    const assetFile = assetMatch[2];
+    try {
+      const topDirs = fs.readdirSync(storageRoot);
+      for (const d of topDirs) {
+        const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
+        if (fs.existsSync(userFlipbooksDir)) {
+          const scanForFile = (dir, depth = 0) => {
+            if (depth > 6) return null;
+            try {
+              const entries = fs.readdirSync(dir, { withFileTypes: true });
+              for (const ent of entries) {
+                const full = path.join(dir, ent.name);
+                if (ent.isFile() && ent.name.toLowerCase() === assetFile.toLowerCase()) {
+                  return full;
+                }
+                if (ent.isDirectory()) {
+                  const found = scanForFile(full, depth + 1);
+                  if (found) return found;
+                }
+              }
+            } catch (e) {}
+            return null;
+          };
+          const found = scanForFile(userFlipbooksDir);
+          if (found) return res.sendFile(found);
+        }
+      }
+    } catch (e) {}
+  }
+
   next();
 };
 

@@ -11,14 +11,28 @@ const { processAndSaveBase64Assets, normalizeToRelativeAssetPaths } = require('.
 // In-memory cache for chunked uploads
 const chunkUploads = new Map();
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
+const resolveFolder = (folderName) => {
+  if (Array.isArray(folderName)) {
+    const realFolders = folderName.filter(
+      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    );
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+  }
+  if (typeof folderName === 'string' && folderName.trim()) {
+    const clean = folderName.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean;
+  }
+  return 'My_Flipbooks';
+};
+
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
 const formatBook = (doc) => {
-  const realFolders = Array.isArray(doc.folderName)
-    ? doc.folderName.filter((f) => f !== 'Recent Book' && f !== 'Recent' && f !== 'Recent book')
-    : [doc.folderName];
-  const primaryFolder = realFolders[0] || 'My_Flipbooks';
+  const primaryFolder = resolveFolder(doc.folderName);
 
   return {
     id: doc._id.toString(),
@@ -550,9 +564,8 @@ exports.saveBook = async (req, res) => {
     }
 
     const safeName = flipbookName.trim();
-    const targetFolder = (folderName && typeof folderName === 'string')
-      ? [folderName.trim()]
-      : (Array.isArray(folderName) && folderName.length > 0 ? folderName : ['My_Flipbooks']);
+    const resolvedPhysical = resolveFolder(folderName);
+    const targetFolder = [resolvedPhysical];
 
     let book = null;
     if (providedVId) {
@@ -669,7 +682,7 @@ exports.saveBook = async (req, res) => {
     try {
       const storageRoot = getStorageRoot();
       const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
-      const targetSubfolder = targetFolder[0] || 'My_Flipbooks';
+      const targetSubfolder = resolvedPhysical || resolveFolder(book.folderName);
 
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', targetSubfolder, finalFlipbookName);
       initFlipbookStorage(wsBookDir);
@@ -925,7 +938,7 @@ exports.savePagesBatch = async (req, res) => {
     // Persist pages and workspace structure to disk
     try {
       const storageRoot = getStorageRoot();
-      const folder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
+      const folder = resolveFolder(book.folderName);
       const userFolder = book.userID || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
 
       const wsBookDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folder, book.flipbookName);
@@ -1543,17 +1556,14 @@ exports.useGalleryAsset = async (req, res) => {
     }
 
     let dbDoc = null;
-    let safeFolderName = (folderName || 'My_Flipbooks').replace(/[\\/:*?"<>|]/g, '').trim() || 'My_Flipbooks';
+    let safeFolderName = resolveFolder(folderName);
     let safeFlipbookName = (flipbookName || 'Untitled_Document').replace(/[\\/:*?"<>|]/g, '').trim() || 'Untitled_Document';
 
     if (v_id) {
       dbDoc = await Flipbook.findOne({ v_id });
       if (dbDoc) {
         if (dbDoc.flipbookName) safeFlipbookName = dbDoc.flipbookName.replace(/[\\/:*?"<>|]/g, '').trim() || safeFlipbookName;
-        const realFolders = Array.isArray(dbDoc.folderName)
-          ? dbDoc.folderName.filter((f) => f !== 'Recent Book' && f !== 'Recent' && f !== 'Recent book')
-          : [dbDoc.folderName];
-        if (realFolders[0]) safeFolderName = realFolders[0].replace(/[\\/:*?"<>|]/g, '').trim() || safeFolderName;
+        safeFolderName = resolveFolder(dbDoc.folderName);
       }
     }
 

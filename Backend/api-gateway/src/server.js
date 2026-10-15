@@ -15,6 +15,7 @@ const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001'
 const MYFLIPIBOOK_SERVICE_URL = process.env.MYFLIPIBOOK_SERVICE_URL || 'http://127.0.0.1:5002';
 const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://127.0.0.1:5003';
 const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127.0.0.1:5004';
+const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
 
 const storageRoot = process.env.STORAGE_PATH
   ? path.resolve(process.env.STORAGE_PATH)
@@ -41,6 +42,41 @@ const storageStaticMiddleware = (req, res, next) => {
       }
     } catch (e) {}
   }
+
+  // Fallback for flipbook assets where relative navigation (e.g. ../assets/) skipped the book folder
+  const assetMatch = relPath.match(/assets[/\\](Image|video|gif|audio|3D_Model|download)[/\\]([^/\\]+)$/i);
+  if (assetMatch) {
+    const assetSub = assetMatch[1];
+    const assetFile = assetMatch[2];
+    try {
+      const topDirs = fs.readdirSync(storageRoot);
+      for (const d of topDirs) {
+        const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
+        if (fs.existsSync(userFlipbooksDir)) {
+          const scanForFile = (dir, depth = 0) => {
+            if (depth > 6) return null;
+            try {
+              const entries = fs.readdirSync(dir, { withFileTypes: true });
+              for (const ent of entries) {
+                const full = path.join(dir, ent.name);
+                if (ent.isFile() && ent.name.toLowerCase() === assetFile.toLowerCase()) {
+                  return full;
+                }
+                if (ent.isDirectory()) {
+                  const found = scanForFile(full, depth + 1);
+                  if (found) return found;
+                }
+              }
+            } catch (e) {}
+            return null;
+          };
+          const found = scanForFile(userFlipbooksDir);
+          if (found) return res.sendFile(found);
+        }
+      }
+    } catch (e) {}
+  }
+
   next();
 };
 
@@ -402,6 +438,42 @@ app.use(
   })
 );
 
+// Proxy /api/customized-editor requests to Customized Editor Service
+app.use(
+  '/api/customized-editor',
+  createProxyMiddleware({
+    target: `${CUSTOMIZED_EDITOR_SERVICE_URL}/api/customized-editor`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to customized-editor-service:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Customized Editor Service unavailable. Please ensure customized-editor-service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
@@ -410,6 +482,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/usersetting -> ${MYFLIPIBOOK_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/page-editor -> ${PAGE_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/pdf-editor -> ${PDF_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
 });
 
 

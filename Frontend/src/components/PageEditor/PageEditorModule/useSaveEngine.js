@@ -10,6 +10,21 @@ import { getSupabaseBaseUrl, resolveUploadsPath } from '../../../utils/assetUtil
 import { validateInteractions } from './interactionValidation';
 import { useAuth } from '../../../context/AuthContext';
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
+const resolvePhysicalFolder = (folderInput) => {
+  if (Array.isArray(folderInput)) {
+    const real = folderInput.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
+    return real ? String(real).trim() : 'My_Flipbooks';
+  }
+  if (folderInput && typeof folderInput === 'string') {
+    const clean = folderInput.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean || 'My_Flipbooks';
+  }
+  return 'My_Flipbooks';
+};
+
 export const useSaveEngine = ({
   pages,
   setPages,
@@ -79,10 +94,7 @@ export const useSaveEngine = ({
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
-      const folderNameArr = Array.isArray(currentBook?.folderName)
-        ? currentBook.folderName
-        : [currentBook?.folderName || location.state?.folderName || 'Recent Book'];
-      const fNameFor3D = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
+      const fNameFor3D = resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName);
       const bNameFor3D = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
       const userFolderForAsset = currentBook?.userID || currentBook?.userId || sanitizedEmail;
       const projectBaseUrl = getSupabaseBaseUrl(userFolderForAsset, fNameFor3D, bNameFor3D);
@@ -693,7 +705,7 @@ export const useSaveEngine = ({
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -758,7 +770,7 @@ export const useSaveEngine = ({
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -803,14 +815,14 @@ export const useSaveEngine = ({
         window.dispatchEvent(new CustomEvent('flipbook-saved'));
         triggerSaveSuccess({
           name: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folder: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folder: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           isManual
         });
         console.log("Flipbook saved successfully:", lastRes.data);
 
         // Transition to project URL if we don't have a v_id yet
         if (!v_id) {
-          const folderName = Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book');
+          const folderName = resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName);
           const newUrl = `/editor/${encodeURIComponent(folderName)}/${lastRes.data.v_id}`;
           navigate(newUrl, { replace: true, state: location.state });
         }

@@ -62,6 +62,9 @@ const Appearance = ({
             bookAppearanceSettings={bookAppearanceSettings} 
             onUpdateBookAppearance={onUpdateBookAppearance} 
             pages={pages}
+            folder={folder}
+            flipbookName={flipbookName}
+            v_id={v_id}
           />
         ) : activeSub === 'layout' ? (
           <Layout

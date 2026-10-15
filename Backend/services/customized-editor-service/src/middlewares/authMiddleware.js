@@ -2,7 +2,7 @@ const { verifyToken } = require('../utils/jwtHelper');
 
 /**
  * Middleware to authenticate requests via HttpOnly cookie or Bearer token
- * Strictly enforces authentication before allowing access to protected customized editor endpoints.
+ * (Identical to myflipibook-service)
  */
 const authenticateUser = (req, res, next) => {
   const token =
@@ -24,10 +24,17 @@ const authenticateUser = (req, res, next) => {
     return next();
   }
 
-  // Graceful fallback if client sends emailId or user query for compatibility
-  const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
-  if (fallbackEmail) {
-    req.user = { emailId: fallbackEmail, email: fallbackEmail };
+  // Graceful fallback if client browser sends emailId or userEmail or userID
+  const fallbackEmail = (
+    req.query?.emailId ||
+    req.body?.emailId ||
+    req.query?.userEmail ||
+    req.body?.userEmail ||
+    ''
+  ).trim().toLowerCase();
+  const fallbackUserID = (req.query?.userID || req.body?.userID || '').trim();
+  if (fallbackEmail || fallbackUserID) {
+    req.user = { emailId: fallbackEmail, email: fallbackEmail, userID: fallbackUserID };
     return next();
   }
 
@@ -51,7 +58,7 @@ const optionalAuth = (req, res, next) => {
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
   } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
+    const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
     if (fallbackEmail) {
       req.user = { emailId: fallbackEmail, email: fallbackEmail };
     }

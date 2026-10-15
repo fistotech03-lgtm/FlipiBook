@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import EditorNavbar from '../components/NavBar/EditorNav';
 import AlertModal from '../components/AlertModal';
@@ -95,10 +95,23 @@ const EditorLayout = () => {
   };
 
   const navigate = useNavigate();
-  const [exportHandler, setExportHandler] = useState(null);
-  const [saveHandler, setSaveHandler] = useState(null);
-  const [previewHandler, setPreviewHandler] = useState(null);
-  const [clearHandler, setClearHandler] = useState(null);
+  const exportHandlerRef = useRef(null);
+  const saveHandlerRef = useRef(null);
+  const previewHandlerRef = useRef(null);
+  const clearHandlerRef = useRef(null);
+
+  const setExportHandler = useCallback((fn) => {
+    exportHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setSaveHandler = useCallback((fn) => {
+    saveHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setPreviewHandler = useCallback((fn) => {
+    previewHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setClearHandler = useCallback((fn) => {
+    clearHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
   const [canSave, setCanSave] = useState(true);
 
   // Prevent closing the tab if there are unsaved changes
@@ -126,22 +139,22 @@ const EditorLayout = () => {
   const handleExport = () => {
     setModalOpen('isExportModalOpen', true);
     triggerExport();
-    if (exportHandler) {
-      exportHandler();
+    if (exportHandlerRef.current) {
+      exportHandlerRef.current();
     }
   };
 
   const handleSave = () => {
     triggerSave();
-    if (saveHandler) {
-      saveHandler();
+    if (saveHandlerRef.current) {
+      saveHandlerRef.current();
     }
   };
 
   const handlePreview = () => {
     triggerPreview();
-    if (previewHandler) {
-      previewHandler();
+    if (previewHandlerRef.current) {
+      previewHandlerRef.current();
     }
   };
 
@@ -204,8 +217,8 @@ const EditorLayout = () => {
   const confirmClear = async () => {
     setIsClearing(true);
     try {
-      if (clearHandler) {
-        clearHandler();
+      if (clearHandlerRef.current) {
+        clearHandlerRef.current();
       } else {
         window.dispatchEvent(new CustomEvent('trigger-clear-flipbook'));
       }
@@ -279,7 +292,8 @@ const EditorLayout = () => {
     materialList: [],
   });
 
-  // Restore State from IndexedDB on Mount
+  // Restore State from IndexedDB on Mount (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const loadState = async () => {
       try {
@@ -313,8 +327,10 @@ const EditorLayout = () => {
     
     loadState();
   }, []);
+  */
 
-  // Save State to IndexedDB on Change
+  // Save State to IndexedDB on Change (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const saveTimer = setTimeout(() => {
       const stateToSave = {
@@ -332,6 +348,7 @@ const EditorLayout = () => {
 
     return () => clearTimeout(saveTimer);
   }, [threedState]);
+  */
 
   // Cleanup 3D Model URL on unmount
   useEffect(() => {

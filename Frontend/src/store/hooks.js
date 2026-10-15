@@ -144,11 +144,26 @@ export const useActiveBook = () => {
 
   return {
     ...activeBook,
-    setCurrentBook: (book) => dispatch(setCurrentBook(book)),
-    setBookName: (name) => dispatch(setBookName(name)),
-    setFolder: (folder) => dispatch(setFolder(folder)),
-    setHasUnsavedChanges: (val) => dispatch(setHasUnsavedChanges(val)),
-    setIsSaving: (val) => dispatch(setIsSaving(val)),
+    setCurrentBook: (bookOrUpdater) => {
+      const next = typeof bookOrUpdater === 'function' ? bookOrUpdater(activeBook.currentBook) : bookOrUpdater;
+      dispatch(setCurrentBook(next));
+    },
+    setBookName: (nameOrUpdater) => {
+      const next = typeof nameOrUpdater === 'function' ? nameOrUpdater(activeBook.bookName) : nameOrUpdater;
+      dispatch(setBookName(next));
+    },
+    setFolder: (folderOrUpdater) => {
+      const next = typeof folderOrUpdater === 'function' ? folderOrUpdater(activeBook.folder) : folderOrUpdater;
+      dispatch(setFolder(next));
+    },
+    setHasUnsavedChanges: (valOrUpdater) => {
+      const next = typeof valOrUpdater === 'function' ? valOrUpdater(activeBook.hasUnsavedChanges) : valOrUpdater;
+      dispatch(setHasUnsavedChanges(next));
+    },
+    setIsSaving: (valOrUpdater) => {
+      const next = typeof valOrUpdater === 'function' ? valOrUpdater(activeBook.isSaving) : valOrUpdater;
+      dispatch(setIsSaving(next));
+    },
     toggleAutoSave: (val) => dispatch(toggleAutoSave(val)),
     setActiveDevice: (device) => dispatch(setActiveDevice(device)),
     triggerSave: () => dispatch(triggerSave()),

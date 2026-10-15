@@ -28,7 +28,10 @@ const Switch = ({ enabled, onChange, disabled }) => (
 const BookAppearanceSection = ({
   bookAppearanceSettings,
   onUpdateBookAppearance,
-  pages = []
+  pages = [],
+  folder,
+  flipbookName,
+  v_id
 }) => {
   const [showShadowColorPicker, setShowShadowColorPicker] = useState(false);
   const [shadowPickerPos, setShadowPickerPos] = useState({ x: 0, y: 0 });
@@ -186,6 +189,9 @@ const BookAppearanceSection = ({
         bookAppearanceSettings={bookAppearanceSettings} 
         onUpdateBookAppearance={onUpdateBookAppearance} 
         pages={pages}
+        folder={folder}
+        flipbookName={flipbookName}
+        v_id={v_id}
       />
 
       {/* Page Flipping Styles */}

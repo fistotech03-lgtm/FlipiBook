@@ -8,6 +8,7 @@ import AlertModal from '../AlertModal';
 import { AdjustmentSlider, SectionLabel, ImageCropOverlay, CustomColorPicker } from './AppearanceShared';
 import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
 import MediaGalleryPopup from '../PageEditor/properties/MediaGalleryPopup';
+import { useAuth } from '../../context/AuthContext';
 
 const fontFamilies = [
   'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
@@ -29,6 +30,7 @@ const Branding = ({
   flipbookName,
   v_id
 }) => {
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
   const watermarkFileInputRef = useRef(null);
   const [pickerPos, setPickerPos] = useState({ x: 0, y: 0 });
@@ -211,14 +213,14 @@ const Branding = ({
 
   const uploadCustomizedAsset = async (file, assetType) => {
     try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser && file) {
-        const user = JSON.parse(storedUser);
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      if (file) {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const formData = new FormData();
         formData.append('action', 'upload');
         formData.append('file', file);
-        formData.append('emailId', user.emailId);
+        if (user?.emailId || user?.email) formData.append('emailId', user?.emailId || user?.email);
+        if (user?.userId || user?._id || user?.id) formData.append('userId', user?.userId || user?._id || user?.id);
+        if (user?.userID) formData.append('customUserId', user?.userID);
         formData.append('assetType', assetType);
         formData.append('folderName', folder || 'My_Flipbooks');
         formData.append('flipbookName', flipbookName || v_id || 'Untitled Document');
@@ -230,7 +232,8 @@ const Branding = ({
         }
 
         const res = await axios.post(`${backendUrl}/api/flipbook/branding`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          withCredentials: true
         });
         if (res.data?.url) {
           return res.data.url;
@@ -390,20 +393,18 @@ const Branding = ({
 
     if (targetSrc) {
       try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-          await axios.post(`${backendUrl}/api/flipbook/branding`, {
-            action: 'delete',
-            emailId: user.emailId,
-            v_id: v_id,
-            assetType: assetType,
-            src: targetSrc,
-            folderName: folder || 'My_Flipbooks',
-            flipbookName: flipbookName || v_id || 'Untitled Document'
-          });
-        }
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+        await axios.post(`${backendUrl}/api/flipbook/branding`, {
+          action: 'delete',
+          userId: user?.userId || user?._id || user?.id,
+          customUserId: user?.userID,
+          emailId: user?.emailId || user?.email,
+          v_id: v_id,
+          assetType: assetType,
+          src: targetSrc,
+          folderName: folder || 'My_Flipbooks',
+          flipbookName: flipbookName || v_id || 'Untitled Document'
+        }, { withCredentials: true });
       } catch (err) {
         console.warn(`[Branding] ${assetType} delete asset warning:`, err);
       }

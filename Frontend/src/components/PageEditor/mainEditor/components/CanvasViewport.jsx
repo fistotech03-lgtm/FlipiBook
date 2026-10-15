@@ -42,7 +42,8 @@ export const CanvasViewport = ({
   marqueeOverlayRef1,
   updateElementAttribute,
   onOpenTemplateModal,
-  setShowHotspotPopup
+  setShowHotspotPopup,
+  projectBaseUrl
 }) => {
   const lastRenderedHtmlRef = useRef({});
 
@@ -55,6 +56,17 @@ export const CanvasViewport = ({
       clean = clean.replace(/<[^>]*id="custom-ctrl-[^>]*>.*?[\s\S]*?<\/[^>]*>/gi, '');
     }
     clean = clean.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+
+    // Rewrite relative flipbook assets (../assets/, ./assets/, or assets/) to full projectBaseUrl so images render on canvas
+    if (projectBaseUrl) {
+      if (clean.includes('../assets/')) {
+        clean = clean.split('../assets/').join(`${projectBaseUrl}assets/`);
+      }
+      if (clean.includes('./assets/')) {
+        clean = clean.split('./assets/').join(`${projectBaseUrl}assets/`);
+      }
+      clean = clean.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\//gi, `$1${projectBaseUrl}assets/$2/`);
+    }
 
     // Ensure invisible Document Shield exists above PDF Background in converted document pages
     if ((isConvertedFlipbook || clean.includes('PDF Background') || clean.includes('pdf-vector-layer')) && !clean.includes('data-name="Document Shield"')) {

@@ -77,7 +77,8 @@ const MainEditor = ({
   v_id,
   flipbookVId,
   folderName,
-  flipbookName
+  flipbookName,
+  projectBaseUrl
 }) => {
   usePreventBrowserZoom();const { width: baseWidth, height: baseHeight } = flipbookDimensions || { width: 210, height: 297 };
   const canvasAspectRatio = baseWidth && baseHeight ? `${baseWidth} / ${baseHeight}` : '210 / 297';
@@ -400,7 +401,8 @@ const MainEditor = ({
     v_id,
     flipbookVId,
     folderName,
-    flipbookName
+    flipbookName,
+    projectBaseUrl
   });
 
   // ── Marquee Selection State ───────────────────────────────────────────────
@@ -1410,6 +1412,7 @@ const getDraggableElement = (target, canvasRoot) => {
             updateElementAttribute={updateElementAttribute}
             onOpenTemplateModal={onOpenTemplateModal}
             setShowHotspotPopup={setShowHotspotPopup}
+            projectBaseUrl={projectBaseUrl}
           />
           {/* Page Navigation Controls Widget */}
           <PageNavigationControls

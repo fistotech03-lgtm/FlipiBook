@@ -76,7 +76,8 @@ const RightSidebar = ({
   flipbookVId: flipbookVIdProp,
   folderName: folderNameProp,
   flipbookName: flipbookNameProp,
-  folder: folderProp
+  folder: folderProp,
+  projectBaseUrl
 }) => {
   const { user } = useAuth();
   const { folder: paramFolder, v_id: paramVId } = useParams();
@@ -1028,6 +1029,7 @@ const RightSidebar = ({
                           folderName={effectiveFolder}
                           flipbookName={effectiveBook}
                           flipbookVId={effectiveVId}
+                          projectBaseUrl={projectBaseUrl}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
                       ) : selectedElementProps?.isText ? (

@@ -541,6 +541,15 @@ const PageEditor = () => {
     };
   }, [setClearHandler, handleClearAllPages]);
 
+  const projectBaseUrl = useMemo(() => {
+    const userEmail = user?.emailId || user?.email;
+    const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
+    const actualFolderName = resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName);
+    const bookName = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
+    const userFolder = currentBook?.userID || sanitizedEmail;
+    return getSupabaseBaseUrl(userFolder, actualFolderName, bookName);
+  }, [user, currentBook, folder, location.state]);
+
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
@@ -1188,6 +1197,7 @@ const PageEditor = () => {
             flipbookName={currentBook?.flipbookName || location.state?.flipbookName || ''}
             isPopupEditor={!!popupEditContext}
             flipbookDimensions={popupEditContext ? (popupEditContext.dimensions || { width: 800, height: 600 }) : getFlipbookDimensions()}
+            projectBaseUrl={projectBaseUrl}
           />
 
           {(activeTopTool === 'interaction' || (isPdfProject && activeTopTool === 'editor' && activeMainTool !== 'upload')) && selectedElementInteraction?.['data-interaction'] === 'tooltip' && (
@@ -1289,6 +1299,7 @@ const PageEditor = () => {
           flipbookVId={v_id || currentBook?.v_id}
           folderName={resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName)}
           flipbookName={currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook'}
+          projectBaseUrl={projectBaseUrl}
         />
 
         {showTemplateModal && (

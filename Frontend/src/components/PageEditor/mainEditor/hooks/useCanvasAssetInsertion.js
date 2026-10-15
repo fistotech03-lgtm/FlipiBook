@@ -45,7 +45,8 @@ export const useCanvasAssetInsertion = ({
   v_id,
   flipbookVId,
   folderName,
-  flipbookName
+  flipbookName,
+  projectBaseUrl
 }) => {
   const { user } = useAuth();
   const insertImageIntoPage = useCallback((pageIdx, rawDataUrl, dataType = 'image', dropPoint = null, targetShapeId = null, file = null) => {
@@ -143,9 +144,11 @@ export const useCanvasAssetInsertion = ({
           if (res.data && (res.data.url || res.data.filename)) {
             const filename = res.data.filename;
             const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/${subFolder}/${filename}`);
+            const displayUrl = projectBaseUrl ? `${projectBaseUrl}assets/${subFolder}/${filename}` : relativePath;
 
-            imgNode.setAttribute('href', relativePath);
-            try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch {}
+            imgNode.setAttribute('href', displayUrl);
+            try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', displayUrl); } catch {}
+            imgNode.setAttribute('data-relative-src', relativePath);
             if (res.data.file_v_id) {
               imgNode.dataset.fileVid = res.data.file_v_id;
               if (groupNode) {
@@ -788,8 +791,9 @@ export const useCanvasAssetInsertion = ({
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
               const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${filename}`);
+              const displayUrl = projectBaseUrl ? `${projectBaseUrl}assets/video/${filename}` : relativePath;
 
-              fo.setAttribute('data-video-src', relativePath);
+              fo.setAttribute('data-video-src', displayUrl);
               fo.setAttribute('data-relative-src', relativePath);
               if (res.data.file_v_id) {
                 fo.setAttribute('data-file-vid', res.data.file_v_id);

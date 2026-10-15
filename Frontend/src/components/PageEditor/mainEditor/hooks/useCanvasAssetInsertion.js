@@ -192,21 +192,11 @@ export const useCanvasAssetInsertion = ({
             }
             if (!uploadFile) return;
 
-            let currentUser = user;
-            if (!currentUser) {
-              try {
-                currentUser = JSON.parse(
-                  localStorage.getItem("user") ||
-                  localStorage.getItem("user_profile") ||
-                  "{}"
-                );
-              } catch {}
-            }
             const emailId =
-              currentUser?.emailId ||
-              currentUser?.email ||
-              (typeof window !== "undefined" && window.__userEmail) ||
-              "admin@flipibook.com";
+              user?.emailId ||
+              user?.email ||
+              currentBook?.userEmail ||
+              "";
 
             const backendUrl =
               (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
@@ -231,6 +221,7 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(
               `${backendUrl}/api/flipbook/upload-asset`,
               formData,
+              { withCredentials: true }
             );
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
@@ -1051,8 +1042,11 @@ export const useCanvasAssetInsertion = ({
             }
             if (!uploadFile) return;
 
-            const emailId = user?.emailId || user?.email;
-            if (!emailId) return;
+            const emailId =
+              user?.emailId ||
+              user?.email ||
+              currentBook?.userEmail ||
+              "";
 
             const backendUrl =
               (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
@@ -1078,6 +1072,7 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(
               `${backendUrl}/api/flipbook/upload-asset`,
               formData,
+              { withCredentials: true }
             );
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;

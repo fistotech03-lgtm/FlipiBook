@@ -676,6 +676,12 @@ const login = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning]:", wsErr.message);
+    }
+
     setAuthCookies(res, token, refreshToken, req);
 
     return res.status(200).json({
@@ -1223,6 +1229,12 @@ const verifySession = async (req, res) => {
         user: null,
         message: "User no longer exists",
       });
+    }
+
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning]:", wsErr.message);
     }
 
     return res.status(200).json({

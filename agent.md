@@ -253,12 +253,12 @@ Choose the simplest efficient algorithm appropriate for the actual data size.
 
 ---
 
-# 8. User Identity Must Not Be Managed Through Frontend IDs
+# 8. User Identity Must Not Be Managed Through Frontend IDs & No User Details in LocalStorage
 
-Do not expose or depend on a user ID stored in frontend state, localStorage, sessionStorage, Redux, or URL parameters for authentication/identity purposes.
+Do not expose or depend on user details (user ID, email, profile, or authentication tokens) stored in `localStorage`, `sessionStorage`, or URL parameters.
+Never store user credentials, user profiles, or sensitive identity information in `localStorage`. All user data must be held in-memory (e.g. Redux state) and verified via secure HttpOnly session cookies.
 
 The frontend should not send:
-
 ```json
 {
   "userId": "123"

@@ -89,14 +89,8 @@ export const useSaveEngine = ({
       setIsSaving(true);
 
 
-      let currentUser = user;
-      if (!currentUser) {
-        try {
-          currentUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('user_profile') || '{}');
-        } catch {}
-      }
-      const userEmail = currentUser?.emailId || currentUser?.email || currentBook?.userEmail || 'admin@flipibook.com';
-      const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
+      const userEmail = user?.emailId || user?.email || currentBook?.userEmail || '';
+      const sanitizedEmail = userEmail ? userEmail.replace(/[@.]/g, "_") : "";
       const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '') || 'http://localhost:5000';
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
@@ -259,7 +253,8 @@ export const useSaveEngine = ({
               formData.append('model', blob, fileName);
 
               const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-3d-model`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                withCredentials: true
               });
 
               if (uploadRes.data && uploadRes.data.url) {
@@ -371,7 +366,8 @@ export const useSaveEngine = ({
                       formData.append('file', blob, safeName);
 
                       const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                        withCredentials: true
                       });
 
                       if (uploadRes.data && uploadRes.data.url) {
@@ -468,7 +464,8 @@ export const useSaveEngine = ({
           formData.append('file', blob, `asset_${Date.now()}_${Math.random().toString(36).substr(2, 5)}${fileExt}`);
 
           const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true
           });
 
           if (uploadRes.data && (uploadRes.data.url || uploadRes.data.filename)) {
@@ -645,7 +642,7 @@ export const useSaveEngine = ({
           }
 
           const formData = new FormData();
-          formData.append('emailId', user?.emailId || user?.email);
+          formData.append('emailId', userEmail);
           formData.append('folderName', fNameFor3D);
           formData.append('flipbookName', bNameFor3D);
           formData.append('type', assetType);
@@ -657,7 +654,8 @@ export const useSaveEngine = ({
           formData.append('file', blob, `asset_${Date.now()}${fileExt}`);
 
           const uploadRes = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true
           });
 
           if (uploadRes.data && uploadRes.data.url) {
@@ -756,7 +754,7 @@ export const useSaveEngine = ({
 
         const activeDims = getFlipbookDimensions();
         const payload = {
-          emailId: user?.emailId || user?.email,
+          emailId: userEmail,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
@@ -771,7 +769,7 @@ export const useSaveEngine = ({
           }
         };
 
-        lastRes = await axios.post(`${backendUrl}/api/flipbook/save`, payload);
+        lastRes = await axios.post(`${backendUrl}/api/flipbook/save`, payload, { withCredentials: true });
         if (lastRes.data && lastRes.data.v_id) {
           currentVId = lastRes.data.v_id;
         }
@@ -802,7 +800,7 @@ export const useSaveEngine = ({
                 chunkIndex: i,
                 totalChunks,
                 chunkData: chunk
-              });
+              }, { withCredentials: true });
             }
             content = undefined;
             contentChunkId = uploadId;
@@ -821,7 +819,7 @@ export const useSaveEngine = ({
 
         const activeDims = getFlipbookDimensions();
         const payload = {
-          emailId: user?.emailId || user?.email,
+          emailId: userEmail,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
           folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
@@ -839,7 +837,7 @@ export const useSaveEngine = ({
         const payloadSize = JSON.stringify(payload).length;
         console.log(`[Save] Sending modified pages ${Array.from(modifiedSet).map(n => n + 1).join(', ')}. Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
 
-        lastRes = await axios.post(`${backendUrl}/api/flipbook/save`, payload);
+        lastRes = await axios.post(`${backendUrl}/api/flipbook/save`, payload, { withCredentials: true });
         if (lastRes.data && lastRes.data.v_id) {
           currentVId = lastRes.data.v_id;
         }

@@ -134,12 +134,18 @@ const verifyGoogleIdentity = async ({ accessToken, credential }) => {
   try {
     // 1. Verify via Google OAuth2 access token
     if (accessToken) {
-      const gRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const gRes = await fetch(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
       if (gRes.ok) {
         const data = await gRes.json();
-        if (data?.email && (data.email_verified === true || data.email_verified === "true")) {
+        if (
+          data?.email &&
+          (data.email_verified === true || data.email_verified === "true")
+        ) {
           return {
             email: data.email,
             name: data.name || "",
@@ -153,11 +159,14 @@ const verifyGoogleIdentity = async ({ accessToken, credential }) => {
     // 2. Verify via Google ID token (credential)
     if (credential) {
       const gRes = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
       );
       if (gRes.ok) {
         const data = await gRes.json();
-        if (data?.email && (data.email_verified === true || data.email_verified === "true")) {
+        if (
+          data?.email &&
+          (data.email_verified === true || data.email_verified === "true")
+        ) {
           return {
             email: data.email,
             name: data.name || "",
@@ -174,7 +183,6 @@ const verifyGoogleIdentity = async ({ accessToken, credential }) => {
     return null;
   }
 };
-
 
 /**
  * Helper to determine if current connection is HTTPS / Secure
@@ -270,12 +278,10 @@ const signup = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ emailId: cleanEmail });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists",
+      });
     }
 
     // Hash password
@@ -305,7 +311,8 @@ const signup = async (req, res) => {
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userId:
+          user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
         ipAddress,
@@ -345,12 +352,10 @@ const signup = async (req, res) => {
     });
   } catch (error) {
     console.error("[Signup Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during signup",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error during signup",
+    });
   }
 };
 
@@ -368,12 +373,10 @@ const sendSignupOtp = async (req, res) => {
     }
 
     if (password.length < 6) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Password must be at least 6 characters",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
     }
 
     const cleanEmail = emailId.trim().toLowerCase();
@@ -387,12 +390,10 @@ const sendSignupOtp = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ emailId: cleanEmail });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists",
+      });
     }
 
     // Hash password
@@ -425,12 +426,10 @@ const sendSignupOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("[Send Signup OTP Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to send verification code",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send verification code",
+    });
   }
 };
 
@@ -453,12 +452,10 @@ const verifySignupOtp = async (req, res) => {
     // Check if user already registered
     const existingUser = await User.findOne({ emailId: cleanEmail });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists",
+      });
     }
 
     const pendingSignup = await SignupOtp.findOne({ emailId: cleanEmail });
@@ -511,7 +508,8 @@ const verifySignupOtp = async (req, res) => {
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userId:
+          user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
         ipAddress,
@@ -551,12 +549,10 @@ const verifySignupOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("[Verify Signup OTP Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during verification",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error during verification",
+    });
   }
 };
 
@@ -597,12 +593,10 @@ const resendSignupOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("[Resend Signup OTP Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to resend code",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to resend code",
+    });
   }
 };
 
@@ -634,12 +628,10 @@ const login = async (req, res) => {
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid password. Please try again.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid password. Please try again.",
+      });
     }
 
     // Track Login in LoginLog Table
@@ -649,7 +641,8 @@ const login = async (req, res) => {
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userId:
+          user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
         ipAddress,
@@ -676,12 +669,6 @@ const login = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
-    }
-
     setAuthCookies(res, token, refreshToken, req);
 
     return res.status(200).json({
@@ -697,12 +684,10 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("[Login Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during login",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error during login",
+    });
   }
 };
 
@@ -721,12 +706,16 @@ const googleLogin = async (req, res) => {
     }
 
     // Verify token directly with Google's servers
-    const googleProfile = await verifyGoogleIdentity({ accessToken, credential });
+    const googleProfile = await verifyGoogleIdentity({
+      accessToken,
+      credential,
+    });
 
     if (!googleProfile || !googleProfile.email) {
       return res.status(401).json({
         success: false,
-        message: "Invalid or expired Google authentication token. Please sign in again.",
+        message:
+          "Invalid or expired Google authentication token. Please sign in again.",
       });
     }
 
@@ -776,7 +765,10 @@ const googleLogin = async (req, res) => {
       } catch (wsErr) {
         console.warn("[Workspace Creation Warning]:", wsErr.message);
       }
-    } else if (verifiedPicture && (!user.picture || user.picture !== verifiedPicture)) {
+    } else if (
+      verifiedPicture &&
+      (!user.picture || user.picture !== verifiedPicture)
+    ) {
       user.picture = verifiedPicture;
       if (verifiedName && !user.name) user.name = verifiedName;
       await user.save();
@@ -789,7 +781,8 @@ const googleLogin = async (req, res) => {
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+        userId:
+          user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
         ipAddress,
@@ -831,12 +824,10 @@ const googleLogin = async (req, res) => {
     });
   } catch (error) {
     console.error("[Google Login Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during Google auth",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error during Google auth",
+    });
   }
 };
 
@@ -896,12 +887,10 @@ const resetPassword = async (req, res) => {
     const { emailId, otp, newPassword } = req.body;
 
     if (!emailId || !otp || !newPassword) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Email, OTP, and new password are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required",
+      });
     }
 
     const cleanEmail = emailId.trim().toLowerCase();
@@ -914,22 +903,18 @@ const resetPassword = async (req, res) => {
     }
 
     if (!user.otp || !user.otp.code) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "No OTP requested or OTP has already been used",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "No OTP requested or OTP has already been used",
+      });
     }
 
     // Check expiration
     if (new Date() > new Date(user.otp.expiresAt)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "OTP has expired. Please request a new one.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
     }
 
     // Verify SHA-256 hashed OTP code using timing-safe comparison
@@ -954,7 +939,7 @@ const resetPassword = async (req, res) => {
     // Revoke any existing active sessions upon password reset (OWASP standard)
     await LoginLog.updateMany(
       { userId: user.userID, status: "ACTIVE" },
-      { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
+      { $set: { status: "LOGGED_OUT", logoutTime: new Date() } },
     );
 
     return res.status(200).json({
@@ -964,12 +949,10 @@ const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("[Reset Password Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to reset password",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to reset password",
+    });
   }
 };
 
@@ -997,16 +980,22 @@ const logout = async (req, res) => {
     try {
       const dbUpdatePromise = (async () => {
         // 1. Try updating specific session by sessionId
-        if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
+        if (
+          decoded?.sessionId &&
+          mongoose.Types.ObjectId.isValid(decoded.sessionId)
+        ) {
           const resSession = await LoginLog.updateOne(
             { _id: decoded.sessionId },
-            { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } },
           );
           updatedCount = resSession.modifiedCount;
         }
 
         // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
-        if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
+        if (
+          updatedCount === 0 &&
+          (decoded?.id || decoded?.userId || decoded?.emailId)
+        ) {
           const orClauses = [
             decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
               ? { userObjectId: decoded.id }
@@ -1018,7 +1007,7 @@ const logout = async (req, res) => {
           if (orClauses.length > 0) {
             const resUser = await LoginLog.updateMany(
               { $or: orClauses, status: "ACTIVE" },
-              { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+              { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } },
             );
             updatedCount = resUser.modifiedCount;
           }
@@ -1028,13 +1017,19 @@ const logout = async (req, res) => {
       // Race with 1000ms timeout so logout response is never blocked by DB connection buffering
       await Promise.race([
         dbUpdatePromise,
-        new Promise((resolve) => setTimeout(resolve, 1000))
+        new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
     } catch (logErr) {
-      console.warn('[Logout] Non-critical error updating session log:', logErr.message);
+      console.warn(
+        "[Logout] Non-critical error updating session log:",
+        logErr.message,
+      );
     }
 
-    console.log(`[Logout] Successfully marked ${updatedCount} session(s) as LOGGED_OUT for:`, decoded?.emailId || decoded?.userId || decoded?.sessionId || "unknown");
+    console.log(
+      `[Logout] Successfully marked ${updatedCount} session(s) as LOGGED_OUT for:`,
+      decoded?.emailId || decoded?.userId || decoded?.sessionId || "unknown",
+    );
 
     clearAuthCookies(res, req);
 
@@ -1092,12 +1087,10 @@ const getLoginLogs = async (req, res) => {
     });
   } catch (error) {
     console.error("[Get Login Logs Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to fetch login logs",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch login logs",
+    });
   }
 };
 
@@ -1122,7 +1115,10 @@ const verifySession = async (req, res) => {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
         // Verify session is active in LoginLog
-        if (decodedAccess.sessionId && mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)) {
+        if (
+          decodedAccess.sessionId &&
+          mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)
+        ) {
           const session = await LoginLog.findById(decodedAccess.sessionId);
           if (session && session.status === "LOGGED_OUT") {
             clearAuthCookies(res, req);
@@ -1205,9 +1201,9 @@ const verifySession = async (req, res) => {
 
     // Fallback: If not found by _id, check if user exists by verified email in token
     if (!user && tokenEmail) {
-      user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
-        "name picture emailId userID",
-      );
+      user = await User.findOne({
+        emailId: tokenEmail.trim().toLowerCase(),
+      }).select("name picture emailId userID");
       if (user) {
         // Auto-repair cookie session with current active user _id
         const repairedAccessToken = generateToken({
@@ -1221,7 +1217,10 @@ const verifySession = async (req, res) => {
     }
 
     if (!user) {
-      console.warn("[Verify Session] User not found for id/email:", targetUserId || tokenEmail);
+      console.warn(
+        "[Verify Session] User not found for id/email:",
+        targetUserId || tokenEmail,
+      );
       clearAuthCookies(res, req);
       return res.status(200).json({
         success: true,
@@ -1229,12 +1228,6 @@ const verifySession = async (req, res) => {
         user: null,
         message: "User no longer exists",
       });
-    }
-
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
     }
 
     return res.status(200).json({

@@ -155,11 +155,10 @@ export default function FlipbookCard({
     }
 
     // Resolve Base URL for LazyPreview
-    const userFolderSegment = book.userID || emailId?.replace(/[@.]/g, '_');
     const resolvedIframeBaseUrl =
         iframeBaseUrl ||
         getAssetBaseUrl(
-            userFolderSegment,
+            emailId?.replace(/[@.]/g, '_'),
             actualFolder || 'My_Flipbooks',
             book.realName || book.title
         );

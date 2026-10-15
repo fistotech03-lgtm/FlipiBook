@@ -100,6 +100,11 @@ const storageStaticMiddleware = async (req, res, next) => {
   next();
 };
 
+app.use('/storage', storageStaticMiddleware);
+app.use('/storage', express.static(storageRoot));
+app.use('/uploads', storageStaticMiddleware);
+app.use('/uploads', express.static(storageRoot));
+
 // Global Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -127,11 +132,6 @@ app.use(cors({
   },
   credentials: true
 }));
-
-app.use('/storage', storageStaticMiddleware);
-app.use('/storage', express.static(storageRoot));
-app.use('/uploads', storageStaticMiddleware);
-app.use('/uploads', express.static(storageRoot));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -506,11 +506,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/usersetting -> ${MYFLIPIBOOK_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/page-editor -> ${PAGE_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/pdf-editor -> ${PDF_EDITOR_SERVICE_URL}`);
-  console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
-});
-
-
-module.exports = app;
   console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
 });
 

@@ -74,22 +74,20 @@ const uploadAsset = async (req, res) => {
     const { emailId: reqEmail, type, replacing_file_v_id, replacing_file_url, page_v_id, isGallery: reqIsGallery } = req.body;
     const v_id = req.body.v_id || req.body.flipbook_v_id || req.body.flipbookVId;
     let { folderName, flipbookName } = req.body;
-    const emailId = authEmail || reqEmail;
+    let emailId = authEmail || reqEmail;
 
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    if (!emailId) {
-      if (file && fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path); } catch (e) {}
-      }
-      return res.status(400).json({ success: false, message: 'Missing required field: emailId' });
-    }
-
     let dbDoc = null;
     if (v_id) {
-      dbDoc = await Flipbook.findOne({ v_id });
+      dbDoc = await Flipbook.findOne({
+        $or: [
+          { v_id },
+          ...(mongoose.isValidObjectId(v_id) ? [{ _id: v_id }] : [])
+        ]
+      });
     } else if (page_v_id && page_v_id !== 'global') {
       dbDoc = await Flipbook.findOne({ 'pages.v_id': page_v_id });
     }
@@ -97,14 +95,15 @@ const uploadAsset = async (req, res) => {
     if (dbDoc) {
       flipbookName = dbDoc.flipbookName || flipbookName;
       folderName = resolveFolder(dbDoc.folderName);
-      if (emailId && dbDoc.userEmail && dbDoc.userEmail.toLowerCase() !== emailId.toLowerCase()) {
-        if (file && fs.existsSync(file.path)) {
-          try { fs.unlinkSync(file.path); } catch (e) {}
-        }
-        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      if (dbDoc.userEmail) {
+        emailId = dbDoc.userEmail;
       }
     } else {
       folderName = resolveFolder(folderName);
+    }
+
+    if (!emailId) {
+      emailId = dbDoc?.userEmail || 'admin@flipibook.com';
     }
 
     const safeFolderName = sanitizeName(resolveFolder(folderName), 'My_Flipbooks');
@@ -139,16 +138,17 @@ const uploadAsset = async (req, res) => {
       targetDir = path.join(storageRoot, userFolder, gallerySub);
       relativeUrlBase = `/storage/${userFolder}/${gallerySub}`;
     } else {
-      targetDir = path.join(
-        storageRoot,
-        userFolder,
-        'My_Flipbooks',
-        safeFolderName,
-        safeFlipbookName,
-        'assets',
-        subFolder
-      );
-      relativeUrlBase = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}`;
+      const pathsInfo = await resolveFlipbookPaths({
+        v_id: dbDoc?.v_id || v_id,
+        emailId,
+        folderName: safeFolderName,
+        flipbookName: safeFlipbookName
+      });
+      const wsBookDir = pathsInfo.bookDir;
+      initFlipbookStorage(wsBookDir);
+      targetDir = path.join(wsBookDir, 'assets', subFolder);
+      const relBookPath = path.relative(storageRoot, wsBookDir).replace(/\\/g, '/');
+      relativeUrlBase = `/storage/${relBookPath}/assets/${subFolder}`;
     }
 
     if (!fs.existsSync(targetDir)) {

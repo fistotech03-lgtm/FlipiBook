@@ -59,6 +59,7 @@ export const CanvasViewport = ({
     user?.user_id ||
     user?.userID ||
     (user?.emailId || user?.email || "").replace(/[@.]/g, "_");
+
   const effectiveBaseUrl =
     projectBaseUrl ||
     getGlobalProjectBaseUrl() ||

@@ -61,6 +61,18 @@ const processAndCopyGalleryAssets = ({
     }
 
     if (!srcFile) {
+      try {
+        const topDirs = fs.readdirSync(storageRoot);
+        for (const td of topDirs) {
+          const testP1 = path.join(storageRoot, td, cleanSub, fileName);
+          const testP2 = path.join(storageRoot, td, 'Gallery', cleanSub, fileName);
+          if (fs.existsSync(testP1)) { srcFile = testP1; break; }
+          if (fs.existsSync(testP2)) { srcFile = testP2; break; }
+        }
+      } catch (e) {}
+    }
+
+    if (!srcFile) {
       return match;
     }
 

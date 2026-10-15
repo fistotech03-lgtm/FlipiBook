@@ -214,8 +214,13 @@ app.use('/temp_uploads', express.static(path.join(storageRoot, 'temp_uploads')))
 app.use('/assets', storageStaticMiddleware);
 
 // Handle direct standalone media filename requests (e.g. GET /dUIholYKvkWc1xdY.png or GET /wHrmoDmjpJnpziq0.png)
-app.get('/:filename([a-zA-Z0-9_.-]+\\.(?:png|jpe?g|gif|svg|webp|mp4|webm|mp3|wav|ogg|glb|gltf|pdf|ttf|otf|woff2?))', async (req, res, next) => {
-  const found = await findFileInStorage(req.params.filename);
+const MEDIA_EXT_REGEX = /\.(?:png|jpe?g|gif|svg|webp|mp4|webm|mp3|wav|ogg|glb|gltf|pdf|ttf|otf|woff2?)$/i;
+app.get('/:filename', async (req, res, next) => {
+  const filename = req.params.filename;
+  if (!filename || !MEDIA_EXT_REGEX.test(filename)) {
+    return next();
+  }
+  const found = await findFileInStorage(filename);
   if (found) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');

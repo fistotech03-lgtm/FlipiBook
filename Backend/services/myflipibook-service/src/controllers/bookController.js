@@ -805,8 +805,12 @@ exports.saveBook = async (req, res) => {
           for (const asset of allFlipbookAssets) {
             if (asset.isGallery) continue;
             const fNameLower = (asset.fileName || '').toLowerCase();
-            const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
-            if (!isReferenced) {
+            const fileVidLower = (asset.file_v_id || '').toLowerCase();
+            const isReferenced = (fNameLower && allPageSvgs.includes(fNameLower)) ||
+                                 (fileVidLower && allPageSvgs.includes(fileVidLower));
+            // Never delete newly uploaded assets (grace period: 60 minutes)
+            const isRecent = asset.createdAt && (Date.now() - new Date(asset.createdAt).getTime()) < 60 * 60 * 1000;
+            if (!isReferenced && !isRecent) {
               const diskAssetPath = path.join(wsBookDir, 'assets', asset.assetType || 'Image', asset.fileName);
               if (fs.existsSync(diskAssetPath)) {
                 try { fs.unlinkSync(diskAssetPath); } catch (e) {}

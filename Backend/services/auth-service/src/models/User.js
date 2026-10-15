@@ -47,15 +47,22 @@ userSchema.pre('save', async function () {
   if (this.userID) return;
 
   try {
-    const counter = await Counter.findByIdAndUpdate(
+    const counter = await Counter.findOneAndUpdate(
       { _id: 'userId' },
       { $inc: { seq: 1 } },
-      { returnDocument: 'after', upsert: true }
+      { new: true, upsert: true, returnDocument: 'after' }
     );
 
-    this.userID = `FLIPI${String(counter.seq).padStart(4, '0')}`;
+    const seq = counter && counter.seq ? counter.seq : 1;
+    this.userID = `FLIPI${String(seq).padStart(4, '0')}`;
   } catch (err) {
-    throw err;
+    console.error('[User Model] Counter error, using fallback count:', err.message);
+    try {
+      const count = await mongoose.model('User').countDocuments();
+      this.userID = `FLIPI${String(count + 1).padStart(4, '0')}`;
+    } catch (e) {
+      this.userID = `FLIPI${Math.floor(1000 + Math.random() * 9000)}`;
+    }
   }
 });
 

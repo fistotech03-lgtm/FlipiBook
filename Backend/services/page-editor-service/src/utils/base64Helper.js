@@ -61,6 +61,18 @@ const processAndCopyGalleryAssets = ({
     }
 
     if (!srcFile) {
+      try {
+        const topDirs = fs.readdirSync(storageRoot);
+        for (const td of topDirs) {
+          const testP1 = path.join(storageRoot, td, cleanSub, fileName);
+          const testP2 = path.join(storageRoot, td, 'Gallery', cleanSub, fileName);
+          if (fs.existsSync(testP1)) { srcFile = testP1; break; }
+          if (fs.existsSync(testP2)) { srcFile = testP2; break; }
+        }
+      } catch (e) {}
+    }
+
+    if (!srcFile) {
       return match;
     }
 
@@ -210,9 +222,21 @@ const processAndSaveBase64Assets = ({
   const storageRoot = getStorageRoot();
   const resolvedUFolder = userFolder || sanitizedEmail;
   let bookDir = path.join(storageRoot, resolvedUFolder, 'My_Flipbooks', physicalFolderName, flipbookName);
-  if (!fs.existsSync(bookDir) && sanitizedEmail && sanitizedEmail !== resolvedUFolder) {
-    const altDir = path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', physicalFolderName, flipbookName);
-    if (fs.existsSync(altDir)) bookDir = altDir;
+  if (!fs.existsSync(bookDir)) {
+    const candidateBookDirs = [
+      path.join(storageRoot, resolvedUFolder, 'My_Flipbooks', 'My_Flipbooks', flipbookName),
+      path.join(storageRoot, resolvedUFolder, 'My_Flipbooks', flipbookName),
+      path.join(storageRoot, resolvedUFolder, physicalFolderName, flipbookName),
+      sanitizedEmail ? path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', physicalFolderName, flipbookName) : null,
+      sanitizedEmail ? path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', 'My_Flipbooks', flipbookName) : null
+    ].filter(Boolean);
+
+    for (const cbd of candidateBookDirs) {
+      if (fs.existsSync(cbd)) {
+        bookDir = cbd;
+        break;
+      }
+    }
   }
 
   const base64Regex = /data:([^;]+);base64,([^"&'<>)\s]+)/g;

@@ -91,4 +91,53 @@ select:-webkit-autofill:focus {
   -webkit-transform: rotateY(180deg);
 }
 
+/* Universal Custom Scrollbar with dynamic CSS variables support */
+.custom-scrollbar,
+.custom-scrollbar-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: var(--custom-scrollbar-thumb, #9ca3af) var(--custom-scrollbar-track, transparent);
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.custom-scrollbar-wrapper::-webkit-scrollbar {
+  width: var(--custom-scrollbar-width, 0.35vw);
+  height: var(--custom-scrollbar-width, 0.35vw);
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+.custom-scrollbar-wrapper::-webkit-scrollbar-track {
+  background: var(--custom-scrollbar-track, transparent);
+  border-radius: var(--custom-scrollbar-radius, 1vw);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.custom-scrollbar-wrapper::-webkit-scrollbar-thumb {
+  background: var(--custom-scrollbar-thumb, #9ca3af);
+  border-radius: var(--custom-scrollbar-radius, 1vw);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--custom-scrollbar-thumb-hover, #6b7280);
+}
+
+/* Sidebar Folder Row 3-Dots Menu hover state */
+.folder-item-row .folder-menu-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease-in-out, background-color 0.15s ease-in-out !important;
+}
+
+.folder-item-row:hover .folder-menu-btn,
+.folder-item-row .folder-menu-btn.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.folder-item-row:hover .folder-count-span,
+.folder-item-row .folder-count-span.has-active-menu {
+  padding-right: 2vw !important;
+}
+
+
 

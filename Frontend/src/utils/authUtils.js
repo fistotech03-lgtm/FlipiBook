@@ -2,20 +2,19 @@
  * authUtils.js
  *
  * Secure cookie-based authentication utilities.
- * JWT tokens and user IDs are stored in HttpOnly cookies managed by the backend.
- * Zero credentials, zero user IDs, and zero tokens are stored in localStorage.
+ * JWT tokens and user IDs are stored in HttpOnly cookies managed exclusively by the backend.
+ * Zero tokens, zero credentials, and zero sensitive keys are stored in localStorage.
  */
 
 /**
- * Check if the browser currently has an active session cookie.
+ * Check if the browser currently has an active session cookie indicator.
  * This runs synchronously in O(1) time without extra network roundtrips.
  */
 export const verifyToken = () => {
   try {
-    // Check for the flipibook_logged_in cookie indicator set by backend
     const hasCookie = document.cookie
-      .split(';')
-      .some((item) => item.trim().startsWith('flipibook_logged_in=true'));
+      .split(";")
+      .some((item) => item.trim().startsWith("flipibook_logged_in=true"));
 
     return hasCookie;
   } catch {
@@ -24,96 +23,101 @@ export const verifyToken = () => {
 };
 
 /**
- * Store backup token in client storage to survive third-party cookie restrictions
+ * Safe no-op functions for components migrating away from localStorage tokens.
+ * All tokens are stored exclusively in HttpOnly cookies.
  */
-export const setSessionToken = (token) => {
-  try {
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    }
-  } catch (err) {
-    console.warn('Storage error:', err);
-  }
-};
+export const setSessionToken = () => {};
+export const getSessionToken = () => null;
 
 /**
- * Retrieve backup token
- */
-export const getSessionToken = () => {
-  try {
-    return localStorage.getItem('auth_token') || null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Clear client-side session state.
+ * Clear client-side session state indicator.
  */
 export const clearSession = () => {
   try {
     // Clear the client-readable cookie indicator
-    document.cookie = 'flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    // Clear any residual storage
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('auth_token');
+    document.cookie =
+      "flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;";
   } catch (err) {
-    console.warn('Error clearing session:', err);
+    console.warn("Session clear error:", err);
   }
 };
 
 /**
- * Extract user-friendly error message from Axios / Network / Backend responses
+ * Parse and normalize authentication error messages from backend responses
  */
-export const getErrorMessage = (err, fallbackMessage = 'An unexpected error occurred. Please try again.') => {
+export const getAuthErrorMessage = (
+  err,
+  fallbackMessage = "An unexpected error occurred",
+) => {
   if (!err) return fallbackMessage;
 
-  // 1. Direct string passed as error
-  if (typeof err === 'string') return err;
-
-  // 2. Backend JSON API error message field (message or error)
-  if (err.response?.data?.message && typeof err.response.data.message === 'string') {
+  // 1. Check if backend returned structured error message
+  if (err.response?.data?.message) {
     return err.response.data.message;
   }
-  if (err.response?.data?.error && typeof err.response.data.error === 'string') {
-    return err.response.data.error;
+
+  // 2. Check if backend returned errors array
+  if (
+    err.response?.data?.errors &&
+    Array.isArray(err.response.data.errors) &&
+    err.response.data.errors.length > 0
+  ) {
+    return (
+      err.response.data.errors[0].msg ||
+      err.response.data.errors[0].message ||
+      fallbackMessage
+    );
   }
 
-  // 3. HTTP Status code specific handling
+  // 3. HTTP status code specific fallbacks
   const status = err.response?.status;
-  if (status === 429) {
-    return err.response?.data?.message || 'Too many requests. Please wait a few minutes before trying again.';
-  }
-  if (status === 409) {
-    return err.response?.data?.message || 'An account with this email already exists. Please sign in.';
-  }
-  if (status === 404) {
-    return err.response?.data?.message || 'Requested account or resource was not found.';
+  if (status === 400) {
+    return (
+      err.response?.data?.message || "Invalid request. Please check your input."
+    );
   }
   if (status === 401) {
-    return err.response?.data?.message || 'Authentication required or session expired. Please sign in.';
+    return (
+      err.response?.data?.message ||
+      "Authentication required or session expired. Please sign in."
+    );
   }
   if (status === 403) {
-    return err.response?.data?.message || 'Access denied. You do not have permission.';
+    return (
+      err.response?.data?.message ||
+      "Access denied. You do not have permission."
+    );
   }
   if (status === 502 || status === 503 || status === 504) {
-    return 'Authentication service is temporarily unavailable. Please try again in a moment.';
+    return "Authentication service is temporarily unavailable. Please try again in a moment.";
   }
   if (status >= 500) {
-    return err.response?.data?.message || 'Internal server error. Please try again later.';
+    return (
+      err.response?.data?.message ||
+      "Internal server error. Please try again later."
+    );
   }
 
   // 4. Network or connection errors
-  if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || err.code === 'ECONNABORTED') {
-    return 'Unable to connect to server. Please check your internet connection.';
+  if (
+    err.code === "ERR_NETWORK" ||
+    err.message === "Network Error" ||
+    err.code === "ECONNABORTED"
+  ) {
+    return "Unable to connect to server. Please check your internet connection.";
   }
 
   // 5. Fallback to error message string
-  if (err.message && typeof err.message === 'string' && !err.message.includes('object Object')) {
+  if (
+    err.message &&
+    typeof err.message === "string" &&
+    !err.message.includes("object Object")
+  ) {
     return err.message;
   }
 
   return fallbackMessage;
 };
 
+// Backwards-compatibility alias
+export const getErrorMessage = getAuthErrorMessage;

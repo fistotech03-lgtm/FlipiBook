@@ -4,7 +4,7 @@ const loginLogSchema = new mongoose.Schema(
   {
     userId: {
       type: String, // e.g. FLIPI0001
-      required: true,
+      default: '',
       index: true
     },
     userObjectId: {

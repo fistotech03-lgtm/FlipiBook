@@ -15,6 +15,7 @@ const {
 } = require('../controllers/authController');
 
 const { authLimiter, otpLimiter, otpVerifyLimiter } = require('../middlewares/rateLimiter');
+const { authenticateUser } = require('../middlewares/authMiddleware');
 
 // Public Auth Endpoints
 router.post('/signup', authLimiter, signup);
@@ -30,7 +31,8 @@ router.post('/logout', logout);
 // Session Verification Endpoint (reads HttpOnly cookie)
 router.get('/verify', verifySession);
 
-// Tracked Login History Endpoint
-router.get('/logs', getLoginLogs);
+// Tracked Login History Endpoint (Protected - only authenticated users can access)
+router.get('/logs', authenticateUser, getLoginLogs);
 
 module.exports = router;
+

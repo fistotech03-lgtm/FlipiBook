@@ -3,12 +3,20 @@
   "version": "1.0.0",
   "description": "Flipbook Backend Microservices & API Gateway",
   "scripts": {
-    "dev": "concurrently -n \"GATEWAY,AUTH\" -c \"cyan,magenta\" \"npm run dev:gateway\" \"npm run dev:auth\"",
-    "start": "concurrently -n \"GATEWAY,AUTH\" -c \"cyan,magenta\" \"npm run start:gateway\" \"npm run start:auth\"",
-    "start:auth": "node services/auth-service/src/server.js",
+    "dev": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED\" -c \"cyan,magenta,blue,yellow,green,red\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:myflipibook\" \"npm run dev:page-editor\" \"npm run dev:pdf-editor\" \"npm run dev:customized-editor\"",
+    "start": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED\" -c \"cyan,magenta,blue,yellow,green,red\" \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:myflipibook\" \"npm run start:page-editor\" \"npm run start:pdf-editor\" \"npm run start:customized-editor\"",
     "start:gateway": "node api-gateway/src/server.js",
+    "start:auth": "node services/auth-service/src/server.js",
+    "start:myflipibook": "node services/myflipibook-service/src/server.js",
+    "start:page-editor": "node services/page-editor-service/src/server.js",
+    "start:pdf-editor": "node services/pdf-editor-service/src/server.js",
+    "start:customized-editor": "node services/customized-editor-service/src/server.js",
+    "dev:gateway": "node --watch api-gateway/src/server.js",
     "dev:auth": "node --watch services/auth-service/src/server.js",
-    "dev:gateway": "node --watch api-gateway/src/server.js"
+    "dev:myflipibook": "node --watch services/myflipibook-service/src/server.js",
+    "dev:page-editor": "node --watch services/page-editor-service/src/server.js",
+    "dev:pdf-editor": "node --watch services/pdf-editor-service/src/server.js",
+    "dev:customized-editor": "node --watch services/customized-editor-service/src/server.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
@@ -22,6 +30,10 @@
     "http-proxy-middleware": "^3.0.7",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.2",
-    "nodemailer": "^10.0.12"
+    "multer": "^2.4.0",
+    "nanoid": "^6.0.2",
+    "nodemailer": "^10.0.12",
+    "pdf-lib": "^1.17.1",
+    "adm-zip": "^0.6.1"
   }
 }

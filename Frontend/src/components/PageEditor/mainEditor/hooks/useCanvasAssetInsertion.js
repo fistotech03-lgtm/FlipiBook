@@ -192,8 +192,21 @@ export const useCanvasAssetInsertion = ({
             }
             if (!uploadFile) return;
 
-            const emailId = user?.emailId || user?.email;
-            if (!emailId) return;
+            let currentUser = user;
+            if (!currentUser) {
+              try {
+                currentUser = JSON.parse(
+                  localStorage.getItem("user") ||
+                  localStorage.getItem("user_profile") ||
+                  "{}"
+                );
+              } catch {}
+            }
+            const emailId =
+              currentUser?.emailId ||
+              currentUser?.email ||
+              (typeof window !== "undefined" && window.__userEmail) ||
+              "admin@flipibook.com";
 
             const backendUrl =
               (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");

@@ -89,9 +89,15 @@ export const useSaveEngine = ({
       setIsSaving(true);
 
 
-      const userEmail = user?.emailId || user?.email;
+      let currentUser = user;
+      if (!currentUser) {
+        try {
+          currentUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('user_profile') || '{}');
+        } catch {}
+      }
+      const userEmail = currentUser?.emailId || currentUser?.email || currentBook?.userEmail || 'admin@flipibook.com';
       const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '') || 'http://localhost:5000';
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
       const fNameFor3D = resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName);
@@ -507,7 +513,55 @@ export const useSaveEngine = ({
             console.log(`[Save] Uploaded blob asset to flipbook disk: ${relativeUrl} (${absoluteUrl})`);
           }
         } catch (blobErr) {
-          console.error('[Save] Failed to fetch and upload blob asset:', blobUrl, blobErr);
+          console.warn('[Save] Failed to fetch ephemeral blob asset (expired or revoked):', blobUrl, blobErr.message);
+          // Auto-heal dead blob URL:
+          // 1. Try to find if this blob URL is referenced by an element that already has data-relative-src, data-storage-url, or data-file-vid
+          let recoveredUrl = null;
+          try {
+            const parser = new DOMParser();
+            const tempDoc = parser.parseFromString(newHtml, 'image/svg+xml');
+            const targetEl = tempDoc.querySelector(`[href*="${blobUrl}"], [*|href*="${blobUrl}"], [src*="${blobUrl}"], [data-masked-image-url*="${blobUrl}"]`);
+            if (targetEl) {
+              const relSrc = targetEl.getAttribute('data-relative-src');
+              const storageUrl = targetEl.getAttribute('data-storage-url');
+              const fileVid = targetEl.getAttribute('data-file-vid') || targetEl.closest('g')?.getAttribute('data-file-vid');
+              if (relSrc) {
+                recoveredUrl = relSrc;
+              } else if (storageUrl) {
+                recoveredUrl = storageUrl;
+              } else if (fileVid) {
+                recoveredUrl = `../assets/Image/${fileVid}.png`;
+              }
+            }
+          } catch (e) {}
+
+          // 2. Also check live editor DOM if not found in SVG string
+          if (!recoveredUrl) {
+            try {
+              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+              if (editorDoc) {
+                const liveEl = editorDoc.querySelector(`[href*="${blobUrl}"], [*|href*="${blobUrl}"], [src*="${blobUrl}"], [data-masked-image-url*="${blobUrl}"]`);
+                if (liveEl) {
+                  const relSrc = liveEl.getAttribute('data-relative-src');
+                  const storageUrl = liveEl.getAttribute('data-storage-url');
+                  const fileVid = liveEl.getAttribute('data-file-vid') || liveEl.closest('g')?.getAttribute('data-file-vid');
+                  if (relSrc) recoveredUrl = relSrc;
+                  else if (storageUrl) recoveredUrl = storageUrl;
+                  else if (fileVid) recoveredUrl = `../assets/Image/${fileVid}.png`;
+                }
+              }
+            } catch (e) {}
+          }
+
+          // 3. If recovered, replace dead blob with recovered URL; otherwise replace with neutral transparent SVG placeholder so browser never throws net::ERR_FILE_NOT_FOUND
+          if (recoveredUrl) {
+            newHtml = newHtml.split(blobUrl).join(recoveredUrl);
+            console.log(`[Save] Auto-healed dead blob URL ${blobUrl} -> ${recoveredUrl}`);
+          } else {
+            const emptyPlaceholder = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+            newHtml = newHtml.split(blobUrl).join(emptyPlaceholder);
+            console.warn(`[Save] Replaced unrecoverable dead blob URL ${blobUrl} with placeholder to prevent ERR_FILE_NOT_FOUND`);
+          }
         }
       }
 

@@ -22,6 +22,70 @@ const storageRoot = process.env.STORAGE_PATH
   : path.resolve(__dirname, '../../storage');
 
 // Static storage serving with fallback across user folder aliases (e.g. FLIPI0001 vs sanitizedEmail)
+// Universal file index for storage assets (caches all discovered files in memory for instantaneous O(1) resolution)
+const storageFileIndex = new Map(); // lowercase filename -> full absolute path
+const negativeFileCache = new Map(); // lowercase filename -> timestamp of miss
+let lastFullScan = 0;
+const FULL_SCAN_INTERVAL = 30000; // 30 seconds
+
+const findFileInStorage = async (fileName) => {
+  if (!fileName || typeof fileName !== 'string') return null;
+  const cleanName = path.basename(decodeURIComponent(fileName)).split('?')[0].split('#')[0].trim();
+  if (!cleanName || cleanName === '.' || cleanName === '..') return null;
+  const lowerName = cleanName.toLowerCase();
+
+  // 1. Check in-memory index
+  if (storageFileIndex.has(lowerName)) {
+    const cachedPath = storageFileIndex.get(lowerName);
+    try {
+      const s = await fs.promises.stat(cachedPath).catch(() => null);
+      if (s && s.isFile()) return cachedPath;
+    } catch (e) {}
+    storageFileIndex.delete(lowerName);
+  }
+
+  // 2. Check negative cache
+  const negTime = negativeFileCache.get(lowerName);
+  if (negTime && Date.now() - negTime < 15000) {
+    return null;
+  }
+
+  // 3. Scan storage directory if cache is cold or TTL elapsed
+  const now = Date.now();
+  if (now - lastFullScan > FULL_SCAN_INTERVAL || storageFileIndex.size === 0) {
+    try {
+      const crawlDir = (dir, depth = 0) => {
+        if (depth > 8) return;
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const ent of entries) {
+            const fullPath = path.join(dir, ent.name);
+            if (ent.isFile()) {
+              storageFileIndex.set(ent.name.toLowerCase(), fullPath);
+            } else if (ent.isDirectory()) {
+              crawlDir(fullPath, depth + 1);
+            }
+          }
+        } catch (e) {}
+      };
+      crawlDir(storageRoot);
+      lastFullScan = Date.now();
+    } catch (e) {}
+  }
+
+  // 4. Re-check index after crawl
+  if (storageFileIndex.has(lowerName)) {
+    const cachedPath = storageFileIndex.get(lowerName);
+    try {
+      const s = await fs.promises.stat(cachedPath).catch(() => null);
+      if (s && s.isFile()) return cachedPath;
+    } catch (e) {}
+  }
+
+  negativeFileCache.set(lowerName, Date.now());
+  return null;
+};
+
 // Cache top directories in memory with a 60-second TTL to avoid crawling disk on every missing asset/404
 let cachedTopDirs = null;
 let lastDirsFetch = 0;
@@ -77,6 +141,7 @@ const storageStaticMiddleware = async (req, res, next) => {
       for (const d of topDirs) {
         const candidatePaths = [
           path.join(storageRoot, d, restOfPath),
+          path.join(storageRoot, d, 'Gallery', restOfPath),
           restOfPath.includes('My_Flipbooks/My_Flipbooks')
             ? path.join(storageRoot, d, restOfPath.replace('My_Flipbooks/My_Flipbooks', 'My_Flipbooks'))
             : null,
@@ -97,42 +162,16 @@ const storageStaticMiddleware = async (req, res, next) => {
     } catch (e) {}
   }
 
-  // Fallback for flipbook assets where relative navigation (e.g. ../assets/) skipped the book folder
-  const assetMatch = relPath.match(/assets[/\\](Image|video|gif|audio|3D_Model|download)[/\\]([^/\\]+)$/i);
-  if (assetMatch) {
-    const assetSub = assetMatch[1];
-    const assetFile = assetMatch[2];
-    try {
-      const topDirs = await getCachedTopDirs();
-      for (const d of topDirs) {
-        const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
-        if (fs.existsSync(userFlipbooksDir)) {
-          const scanForFile = (dir, depth = 0) => {
-            if (depth > 6) return null;
-            try {
-              const entries = fs.readdirSync(dir, { withFileTypes: true });
-              for (const ent of entries) {
-                const full = path.join(dir, ent.name);
-                if (ent.isFile() && ent.name.toLowerCase() === assetFile.toLowerCase()) {
-                  return full;
-                }
-                if (ent.isDirectory()) {
-                  const found = scanForFile(full, depth + 1);
-                  if (found) return found;
-                }
-              }
-            } catch (e) {}
-            return null;
-          };
-          const found = scanForFile(userFlipbooksDir);
-          if (found) {
-            return res.sendFile(found, { maxAge: '1d' }, (err) => {
-              if (err && !res.headersSent) next();
-            });
-          }
-        }
-      }
-    } catch (e) {}
+  // Universal Fallback: Search storageRoot for the requested filename regardless of folder structure
+  const fileName = path.basename(relPath).split('?')[0].split('#')[0];
+  const isMedia = /\.(png|jpe?g|gif|svg|webp|mp4|webm|mp3|wav|ogg|glb|gltf|pdf|json|ttf|otf|woff2?)$/i.test(fileName);
+  if (isMedia) {
+    const foundPath = await findFileInStorage(fileName);
+    if (foundPath) {
+      return res.sendFile(foundPath, { maxAge: '1d' }, (err) => {
+        if (err && !res.headersSent) next();
+      });
+    }
   }
 
   next();
@@ -170,6 +209,23 @@ app.use('/storage', storageStaticMiddleware);
 app.use('/storage', express.static(storageRoot));
 app.use('/uploads', storageStaticMiddleware);
 app.use('/uploads', express.static(storageRoot));
+app.use('/temp_uploads', storageStaticMiddleware);
+app.use('/temp_uploads', express.static(path.join(storageRoot, 'temp_uploads')));
+app.use('/assets', storageStaticMiddleware);
+
+// Handle direct standalone media filename requests (e.g. GET /dUIholYKvkWc1xdY.png or GET /wHrmoDmjpJnpziq0.png)
+app.get('/:filename([a-zA-Z0-9_.-]+\\.(?:png|jpe?g|gif|svg|webp|mp4|webm|mp3|wav|ogg|glb|gltf|pdf|ttf|otf|woff2?))', async (req, res, next) => {
+  const found = await findFileInStorage(req.params.filename);
+  if (found) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    return res.sendFile(found, { maxAge: '1d' }, (err) => {
+      if (err && !res.headersSent) next();
+    });
+  }
+  next();
+});
 
 // Health Check
 app.get('/health', (req, res) => {

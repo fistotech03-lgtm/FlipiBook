@@ -156,47 +156,25 @@ export const useCanvasAssetInsertion = ({
             if (
               !uploadFile &&
               sourceBlobUrl &&
-              typeof sourceBlobUrl === "string"
+              typeof sourceBlobUrl === "string" &&
+              sourceBlobUrl.startsWith("blob:")
             ) {
-              if (sourceBlobUrl.startsWith("blob:") || sourceBlobUrl.startsWith("data:")) {
-                try {
-                  const res = await fetch(sourceBlobUrl);
-                  const blob = await res.blob();
-                  const ext =
-                    dataType === "gif"
-                      ? ".gif"
-                      : blob.type?.includes("png")
-                        ? ".png"
-                        : blob.type?.includes("svg")
-                          ? ".svg"
-                          : ".jpg";
-                  uploadFile = new File([blob], `asset_${Date.now()}${ext}`, {
-                    type: blob.type || "image/png",
-                  });
-                } catch (fetchErr) {
-                  // Fallback for large data URIs where fetch() might fail in some browsers
-                  if (sourceBlobUrl.startsWith("data:")) {
-                    const parts = sourceBlobUrl.split(",");
-                    const mime = parts[0]?.match(/:(.*?);/)?.[1] || "image/png";
-                    const bstr = atob(parts[1]);
-                    let n = bstr.length;
-                    const u8arr = new Uint8Array(n);
-                    while (n--) {
-                      u8arr[n] = bstr.charCodeAt(n);
-                    }
-                    const ext = mime.includes("png") ? ".png" : (mime.includes("gif") ? ".gif" : (mime.includes("svg") ? ".svg" : ".jpg"));
-                    uploadFile = new File([u8arr], `asset_${Date.now()}${ext}`, { type: mime });
-                  }
-                }
-              }
+              const res = await fetch(sourceBlobUrl);
+              const blob = await res.blob();
+              const ext =
+                dataType === "gif"
+                  ? ".gif"
+                  : blob.type?.includes("png")
+                    ? ".png"
+                    : ".jpg";
+              uploadFile = new File([blob], `asset_${Date.now()}${ext}`, {
+                type: blob.type || "image/png",
+              });
             }
             if (!uploadFile) return;
 
-            const emailId =
-              user?.emailId ||
-              user?.email ||
-              currentBook?.userEmail ||
-              "";
+            const emailId = user?.emailId || user?.email;
+            if (!emailId) return;
 
             const backendUrl =
               (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
@@ -221,7 +199,6 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(
               `${backendUrl}/api/flipbook/upload-asset`,
               formData,
-              { withCredentials: true }
             );
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
@@ -1042,11 +1019,8 @@ export const useCanvasAssetInsertion = ({
             }
             if (!uploadFile) return;
 
-            const emailId =
-              user?.emailId ||
-              user?.email ||
-              currentBook?.userEmail ||
-              "";
+            const emailId = user?.emailId || user?.email;
+            if (!emailId) return;
 
             const backendUrl =
               (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
@@ -1072,7 +1046,6 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(
               `${backendUrl}/api/flipbook/upload-asset`,
               formData,
-              { withCredentials: true }
             );
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
@@ -1142,8 +1115,8 @@ export const useCanvasAssetInsertion = ({
     };
 
     const handleUploadImageEvent = (e) => {
-      const { pageIndex, dataUrl, dataType, file } = e.detail;
-      insertImageIntoPage(pageIndex, dataUrl, dataType, null, null, file);
+      const { pageIndex, dataUrl, dataType } = e.detail;
+      insertImageIntoPage(pageIndex, dataUrl, dataType);
     };
 
     window.addEventListener("add-icon-to-editor", handleAddIcon);
@@ -1254,5 +1227,6 @@ export const useCanvasAssetInsertion = ({
     insertImageIntoPage,
   };
 };
+
 
 export default useCanvasAssetInsertion;

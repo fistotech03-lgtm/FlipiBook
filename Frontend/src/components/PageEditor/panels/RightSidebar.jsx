@@ -123,7 +123,7 @@ const RightSidebar = ({
   folderName: folderNameProp,
   flipbookName: flipbookNameProp,
   folder: folderProp,
-  projectBaseUrl
+  projectBaseUrl,
 }) => {
   const { user } = useAuth();
   const { folder: paramFolder, v_id: paramVId } = useParams();
@@ -663,7 +663,6 @@ const RightSidebar = ({
               dataUrl: finalUrl,
               pageIndex: activePageIndex,
               dataType: isSvg ? "svg" : isGif ? "gif" : "image",
-              file: file,
             },
           }),
         );

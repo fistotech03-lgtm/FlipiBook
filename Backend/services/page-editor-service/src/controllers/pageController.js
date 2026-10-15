@@ -161,10 +161,6 @@ const savePage = async (req, res) => {
       });
     }
 
-    if (resolvedPageNumber === 1 && processedContent) {
-      doc.firstPageHtml = processedContent;
-    }
-
     doc.fileSize = doc.pages.reduce((sum, p) => sum + (p.size || 0), 0);
     doc.lastUpdated = new Date();
     doc.markModified('pages');
@@ -351,11 +347,6 @@ const savePagesBatch = async (req, res) => {
         }
       }
     } catch (cleanErr) {}
-
-    const firstPageRes = uploadResults.find(r => r.pageNumber === 1);
-    if (firstPageRes && firstPageRes.processedContent) {
-      doc.firstPageHtml = firstPageRes.processedContent;
-    }
 
     doc.lastUpdated = new Date();
     doc.markModified('pages');

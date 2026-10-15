@@ -86,20 +86,33 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
             )}
 
             {/* Actual preview — rendered on top once ready */}
-            {html ? (
-                <iframe
-                    title={`Preview of ${title}`}
-                    className="w-full h-full border-none pointer-events-none"
-                    srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${iframeBaseUrl}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;}svg{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${html.content.replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"')}</body></html>`}
-                />
-            ) : loaded && imageUrl ? (
+            {html ? (() => {
+                let processedContent = html.content || '';
+                const cleanBaseUrl = (iframeBaseUrl || '').trim();
+                let effectiveBaseHref = cleanBaseUrl;
+                if (cleanBaseUrl) {
+                    const bookBaseUrl = cleanBaseUrl.endsWith('/') ? cleanBaseUrl : `${cleanBaseUrl}/`;
+                    effectiveBaseHref = `${bookBaseUrl}pages/`;
+                    const assetsBaseUrl = `${bookBaseUrl}assets/`;
+                    processedContent = processedContent
+                        .replace(/(?:href|xlink:href)=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `href="${assetsBaseUrl}$1" xlink:href="${assetsBaseUrl}$1"`)
+                        .replace(/src=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `src="${assetsBaseUrl}$1"`);
+                }
+                return (
+                    <iframe
+                        title={`Preview of ${title}`}
+                        className="w-full h-full border-none pointer-events-none"
+                        srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${effectiveBaseHref}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;}svg{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${processedContent.replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"')}</body></html>`}
+                    />
+                );
+            })() : loaded && imageUrl ? (
                 // Fallback: asset image if no HTML was found
                 <img src={resolveUploadsPath(imageUrl)} alt={title} className="w-full h-full object-contain" />
             ) : loaded && !html ? (
-                // Loaded but nothing available — clean, styled placeholder
-                <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-2">
-                    <BookOpen size="1.6vw" strokeWidth={1.5} className="text-gray-400 mb-1" />
-                    <span className="text-[0.65vw] font-semibold text-gray-500 text-center line-clamp-1">{title || 'Preview'}</span>
+                // Loaded but nothing available
+                <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
+                    <BookOpen size="1.8vw" strokeWidth={1.5} />
+                    <span className="text-[0.7vw] mt-1 font-semibold">No Preview</span>
                 </div>
             ) : null}
         </div>

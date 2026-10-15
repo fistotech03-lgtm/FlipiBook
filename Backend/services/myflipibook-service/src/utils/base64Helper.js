@@ -76,7 +76,7 @@ const processAndCopyGalleryAssets = ({
       fs.copyFileSync(srcFile, destPath);
       const fileSize = fs.statSync(destPath).size;
 
-      const relativePath = `./assets/${subfolder}/${assetFileName}`;
+      const relativePath = `../assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
         flipbook_v_id: flipbook_v_id,
@@ -106,29 +106,32 @@ const processAndCopyGalleryAssets = ({
 };
 
 /**
- * Normalizes all absolute and full storage flipbook asset URLs to relative paths (./assets/<subfolder>/<filename>)
+ * Normalizes all absolute and full storage flipbook asset URLs to relative paths (../assets/<subfolder>/<filename>)
  * Handles production domains (e.g. https://testing.flipibook.com/...), localhost, /storage/..., /uploads/...,
- * and JSON-escaped URLs.
+ * ./assets/..., and JSON-escaped URLs.
  */
 const normalizeToRelativeAssetPaths = (html) => {
   if (!html || typeof html !== 'string') return html;
 
-  // 1. Matches any absolute or root-relative URL pointing to a flipbook asset, but NOT already relative ./assets/
+  // 1. Matches any absolute or root-relative URL pointing to a flipbook asset
   const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
-  let res = html.replace(assetRegex, './assets/$1/$2');
+  let res = html.replace(assetRegex, '../assets/$1/$2');
 
   // 2. Also handle JSON-escaped backslash versions (e.g. https:\/\/testing.flipibook.com\/...)
   const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
-  res = res.replace(escapedAssetRegex, './assets/$1/$2');
+  res = res.replace(escapedAssetRegex, '../assets/$1/$2');
 
-  // 3. Ensure any /assets/... without leading dot becomes ./assets/...
-  res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+  // 3. Ensure any /assets/... without leading dot becomes ../assets/...
+  res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
 
-  // 4. Ensure any bare assets/... becomes ./assets/...
-  res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
+  // 4. Ensure any bare assets/... becomes ../assets/...
+  res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
 
-  // 5. Clean up any accidental double-dot-slashes (././assets/ -> ./assets/)
-  res = res.replace(/(?:\.\/)+assets\//g, './assets/');
+  // 5. Convert legacy ./assets/ to ../assets/
+  res = res.replace(/(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+
+  // 6. Clean up any accidental double-dot-slashes (../../assets/ or ././assets/ -> ../assets/)
+  res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, '../assets/');
 
   return res;
 };
@@ -237,7 +240,7 @@ const processAndSaveBase64Assets = ({
 
     const contentHash = crypto.createHash('md5').update(base64Data).digest('hex').slice(0, 16);
     const assetFileName = `asset_${contentHash}.${normalizedExt}`;
-    const relativePath = `./assets/${subfolder}/${assetFileName}`;
+    const relativePath = `../assets/${subfolder}/${assetFileName}`;
 
     try {
       const buffer = Buffer.from(base64Data, 'base64');

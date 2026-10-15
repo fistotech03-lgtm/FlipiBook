@@ -10,6 +10,21 @@ import { getSupabaseBaseUrl, resolveUploadsPath } from '../../../utils/assetUtil
 import { validateInteractions } from './interactionValidation';
 import { useAuth } from '../../../context/AuthContext';
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
+const resolvePhysicalFolder = (folderInput) => {
+  if (Array.isArray(folderInput)) {
+    const real = folderInput.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
+    return real ? String(real).trim() : 'My_Flipbooks';
+  }
+  if (folderInput && typeof folderInput === 'string') {
+    const clean = folderInput.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean || 'My_Flipbooks';
+  }
+  return 'My_Flipbooks';
+};
+
 export const useSaveEngine = ({
   pages,
   setPages,
@@ -79,10 +94,7 @@ export const useSaveEngine = ({
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
-      const folderNameArr = Array.isArray(currentBook?.folderName)
-        ? currentBook.folderName
-        : [currentBook?.folderName || location.state?.folderName || 'Recent Book'];
-      const fNameFor3D = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
+      const fNameFor3D = resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName);
       const bNameFor3D = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
       const userFolderForAsset = currentBook?.userID || currentBook?.userId || sanitizedEmail;
       const projectBaseUrl = getSupabaseBaseUrl(userFolderForAsset, fNameFor3D, bNameFor3D);
@@ -90,14 +102,15 @@ export const useSaveEngine = ({
       const normalizePageAssetUrls = (htmlStr) => {
         if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
         const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
-        let res = htmlStr.replace(assetRegex, './assets/$1/$2');
+        let res = htmlStr.replace(assetRegex, '../assets/$1/$2');
         const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
-        res = res.replace(escapedAssetRegex, './assets/$1/$2');
-        res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
-        res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1./assets/$2/$3');
-        res = res.replace(/(?:\.\/)+assets\//g, './assets/');
+        res = res.replace(escapedAssetRegex, '../assets/$1/$2');
+        res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+        res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, '../assets/');
         if (projectBaseUrl && res.includes(projectBaseUrl)) {
-          res = res.split(projectBaseUrl).join('./');
+          res = res.split(projectBaseUrl).join('../');
         }
         return res;
       };
@@ -358,7 +371,7 @@ export const useSaveEngine = ({
                       if (uploadRes.data && uploadRes.data.url) {
                         const finalUrl = uploadRes.data.url;
                         const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-                        const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('./') ? finalUrl : `./${finalUrl}`);
+                        const relativeUrl = assetPathMatch ? `../${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('../') ? finalUrl : `../${finalUrl.replace(/^(\.\/|\/)/, '')}`);
 
                         hasChanges = true;
                         return {
@@ -454,7 +467,7 @@ export const useSaveEngine = ({
 
           if (uploadRes.data && (uploadRes.data.url || uploadRes.data.filename)) {
             const filename = uploadRes.data.filename;
-            const relativeUrl = uploadRes.data.flipbookPath || (uploadRes.data.url?.startsWith('./') ? uploadRes.data.url : `./assets/${subFolder}/${filename}`);
+            const relativeUrl = uploadRes.data.flipbookPath || (uploadRes.data.url?.startsWith('../') ? uploadRes.data.url : `../assets/${subFolder}/${filename}`);
             const absoluteUrl = `${projectBaseUrl}assets/${subFolder}/${filename}`;
 
             // Replace blobUrl with clean relativeUrl in page SVG
@@ -596,10 +609,10 @@ export const useSaveEngine = ({
           if (uploadRes.data && uploadRes.data.url) {
             const finalUrl = uploadRes.data.url;
             const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
-            const relativeUrl = assetPathMatch ? `./${assetPathMatch[0]}` : uploadRes.data.relativeUrl || finalUrl;
-            const sanitizedEmail = (user?.emailId || user?.email)?.replace(/[@.]/g, "_");
+            const relativeUrl = assetPathMatch ? `../${assetPathMatch[0]}` : uploadRes.data.flipbookPath || (finalUrl.startsWith('../') ? finalUrl : `../${finalUrl.replace(/^(\.\/|\/)/, '')}`);
+            const userFolder = currentBook?.userID || currentBook?.userId || sanitizedEmail;
             const absoluteUrl = assetPathMatch
-              ? `${getSupabaseBaseUrl(sanitizedEmail, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
+              ? `${getSupabaseBaseUrl(userFolder, fNameFor3D, bNameFor3D)}${assetPathMatch[0]}`
               : finalUrl;
 
             // Replace the data URI directly in the raw HTML with clean relative path
@@ -692,7 +705,7 @@ export const useSaveEngine = ({
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -757,7 +770,7 @@ export const useSaveEngine = ({
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
           flipbookName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folderName: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folderName: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -802,14 +815,14 @@ export const useSaveEngine = ({
         window.dispatchEvent(new CustomEvent('flipbook-saved'));
         triggerSaveSuccess({
           name: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folder: Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book'),
+          folder: resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName),
           isManual
         });
         console.log("Flipbook saved successfully:", lastRes.data);
 
         // Transition to project URL if we don't have a v_id yet
         if (!v_id) {
-          const folderName = Array.isArray(currentBook?.folderName) ? currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'Recent Book');
+          const folderName = resolvePhysicalFolder(currentBook?.folderName || location.state?.folderName);
           const newUrl = `/editor/${encodeURIComponent(folderName)}/${lastRes.data.v_id}`;
           navigate(newUrl, { replace: true, state: location.state });
         }

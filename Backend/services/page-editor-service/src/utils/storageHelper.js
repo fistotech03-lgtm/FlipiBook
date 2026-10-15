@@ -53,19 +53,21 @@ const sanitizeName = (name, fallback = 'Untitled') => {
   return clean || fallback;
 };
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
 /**
  * Resolve real physical folder from flipbook document or input
  */
 const resolveFolder = (folderName) => {
   if (Array.isArray(folderName)) {
     const realFolders = folderName.filter(
-      (f) => f && f !== 'Recent Book' && f !== 'Recent book'
+      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
-    return realFolders.length > 0 ? realFolders[0] : 'My_Flipbooks';
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
   }
   if (typeof folderName === 'string' && folderName.trim()) {
     const clean = folderName.trim();
-    if (clean === 'Recent Book' || clean === 'Recent book') return 'My_Flipbooks';
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
     return clean;
   }
   return 'My_Flipbooks';

@@ -54,10 +54,6 @@ const flipbookSchema = new mongoose.Schema(
       unique: true,
       index: true
     },
-    firstPageHtml: {
-      type: String,
-      default: ''
-    },
     isPublished: {
       type: Boolean,
       default: false

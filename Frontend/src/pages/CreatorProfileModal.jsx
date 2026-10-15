@@ -111,13 +111,26 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                 </div>
             )}
 
-            {html ? (
-                <iframe
-                    title={`Preview of ${title}`}
-                    className="w-full h-full border-none pointer-events-none object-fill"
-                    srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${iframeBaseUrl}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:white;}svg{width:100%;height:100%;max-width:100%;max-height:100%;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${html.content.replace(/<svg/, '<svg preserveAspectRatio="none"')}</body></html>`}
-                />
-            ) : loaded && imageUrl ? (
+            {html ? (() => {
+                let processedContent = html.content || '';
+                const cleanBaseUrl = (iframeBaseUrl || '').trim();
+                let effectiveBaseHref = cleanBaseUrl;
+                if (cleanBaseUrl) {
+                    const bookBaseUrl = cleanBaseUrl.endsWith('/') ? cleanBaseUrl : `${cleanBaseUrl}/`;
+                    effectiveBaseHref = `${bookBaseUrl}pages/`;
+                    const assetsBaseUrl = `${bookBaseUrl}assets/`;
+                    processedContent = processedContent
+                        .replace(/(?:href|xlink:href)=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `href="${assetsBaseUrl}$1" xlink:href="${assetsBaseUrl}$1"`)
+                        .replace(/src=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `src="${assetsBaseUrl}$1"`);
+                }
+                return (
+                    <iframe
+                        title={`Preview of ${title}`}
+                        className="w-full h-full border-none pointer-events-none object-fill"
+                        srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${effectiveBaseHref}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:white;}svg{width:100%;height:100%;max-width:100%;max-height:100%;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${processedContent.replace(/<svg/, '<svg preserveAspectRatio="none"')}</body></html>`}
+                    />
+                );
+            })() : loaded && imageUrl ? (
                 <img src={resolveUploadsPath(imageUrl)} alt={title} className="w-full h-full object-fill bg-white" />
             ) : loaded && !html ? (
                 <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full bg-white border border-[#d5d2c9]">

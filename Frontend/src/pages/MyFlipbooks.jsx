@@ -1705,8 +1705,9 @@ export default function MyFlipbooks() {
                                 if (physicalBook) actualFolder = physicalBook.folder;
                             }
 
+                            const userFolder = book.userID || book.userId || emailId?.replace(/[@.]/g, "_");
                             const iframeBaseUrl = getAssetBaseUrl(
-                                book.userID || emailId?.replace(/[@.]/g, "_"),
+                                userFolder,
                                 actualFolder,
                                 book.realName
                             );

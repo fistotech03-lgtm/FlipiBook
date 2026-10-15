@@ -4,6 +4,21 @@ import { useAuth } from '../../../../context/AuthContext';
 import { getSupabaseBaseUrl } from '../../../../utils/assetUtils';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
+const resolvePhysicalFolder = (folderInput) => {
+  if (Array.isArray(folderInput)) {
+    const real = folderInput.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
+    return real ? String(real).trim() : 'My_Flipbooks';
+  }
+  if (folderInput && typeof folderInput === 'string') {
+    const clean = folderInput.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean || 'My_Flipbooks';
+  }
+  return 'My_Flipbooks';
+};
+
 /**
  * Hook managing insertion of external media and assets:
  * - Images, GIFs, Video uploads, Iframe embeds (YouTube, Vimeo, Drive, Loom, Wistia)
@@ -110,9 +125,8 @@ export const useCanvasAssetInsertion = ({
           if (!emailId) return;
 
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-          const folderArr = Array.isArray(folderName) ? folderName : [folderName || 'Recent Book'];
-          const resolvedFolder = folderArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderArr[0] || 'Recent Book';
-          const resolvedBook = flipbookName || 'Untitled Flipbook';
+          const resolvedFolder = resolvePhysicalFolder(folderName);
+          const resolvedBook = flipbookName || 'Untitled_Document';
           const subFolder = dataType === 'gif' ? 'gif' : 'Image';
 
           const formData = new FormData();
@@ -128,7 +142,7 @@ export const useCanvasAssetInsertion = ({
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data && (res.data.url || res.data.filename)) {
             const filename = res.data.filename;
-            const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/${subFolder}/${filename}`;
+            const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/${subFolder}/${filename}`);
 
             imgNode.setAttribute('href', relativePath);
             try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch {}
@@ -757,9 +771,8 @@ export const useCanvasAssetInsertion = ({
             if (!emailId) return;
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const folderArr = Array.isArray(folderName) ? folderName : [folderName || 'Recent Book'];
-            const resolvedFolder = folderArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderArr[0] || 'Recent Book';
-            const resolvedBook = flipbookName || 'Untitled Flipbook';
+            const resolvedFolder = resolvePhysicalFolder(folderName);
+            const resolvedBook = flipbookName || 'Untitled_Document';
 
             const formData = new FormData();
             formData.append('emailId', emailId);
@@ -774,7 +787,7 @@ export const useCanvasAssetInsertion = ({
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
             if (res.data && (res.data.url || res.data.filename)) {
               const filename = res.data.filename;
-              const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/video/${filename}`;
+              const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${filename}`);
 
               fo.setAttribute('data-video-src', relativePath);
               fo.setAttribute('data-relative-src', relativePath);

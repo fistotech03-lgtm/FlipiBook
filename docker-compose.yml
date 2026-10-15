@@ -19,6 +19,10 @@ services:
 
   backend:
     build: ./Backend
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    volumes:
+      - ${HOST_STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
     expose:
       - "8000"
       - "5001"

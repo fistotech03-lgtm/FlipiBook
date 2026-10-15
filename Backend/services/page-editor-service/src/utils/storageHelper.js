@@ -179,7 +179,7 @@ const initFlipbookStorage = (bookDir) => {
     }
 
     const assetsDir = path.join(bookDir, 'assets');
-    const assetSubdirs = ['audio', 'download', 'gif', 'Image', 'video'];
+    const assetSubdirs = ['audio', 'download', 'gif', 'Image', 'video', '3D_Model'];
     assetSubdirs.forEach((sub) => {
       const p = path.join(assetsDir, sub);
       if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -197,6 +197,72 @@ const initFlipbookStorage = (bookDir) => {
   }
 };
 
+const WORKSPACE_FOLDERS = [
+  '3D_Models',
+  '3D_Screenshot',
+  'Company_logo',
+  'gifs',
+  'Images',
+  'My_Flipbooks',
+  'Profile',
+  'Texture',
+  'Videos'
+];
+
+const ensureDirPerms = (p) => {
+  if (!fs.existsSync(p)) {
+    try { fs.mkdirSync(p, { recursive: true, mode: 0o777 }); } catch (e) {}
+  }
+  try { fs.chmodSync(p, 0o777); } catch (e) {}
+};
+
+/**
+ * Ensure user's physical workspace folders exist on disk for both customUserId and email
+ */
+const ensureUserWorkspace = (userId, emailId, folderName = null) => {
+  try {
+    const storageRoot = getStorageRoot();
+    ensureDirPerms(storageRoot);
+
+    const targetDirs = [userId ? String(userId) : null];
+    if (emailId) {
+      const emailDir = emailId.trim().toLowerCase().replace(/[@.]/g, '_');
+      if (emailDir && !targetDirs.includes(emailDir)) {
+        targetDirs.push(emailDir);
+      }
+    }
+
+    const validDirs = targetDirs.filter(Boolean);
+    if (validDirs.length === 0) return null;
+
+    let primaryUserDir = null;
+    for (const dirName of validDirs) {
+      const userDir = path.join(storageRoot, dirName);
+      ensureDirPerms(userDir);
+
+      for (const wf of WORKSPACE_FOLDERS) {
+        const fp = path.join(userDir, wf);
+        ensureDirPerms(fp);
+      }
+
+      const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
+      ensureDirPerms(defaultFolder);
+
+      if (folderName) {
+        const customF = path.join(userDir, 'My_Flipbooks', folderName);
+        ensureDirPerms(customF);
+      }
+
+      if (!primaryUserDir) primaryUserDir = userDir;
+    }
+
+    return primaryUserDir;
+  } catch (err) {
+    console.error('[Storage Helper] Error ensuring user workspace:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   generateId,
   getStorageRoot,
@@ -205,5 +271,7 @@ module.exports = {
   sanitizeName,
   resolveFolder,
   resolveFlipbookPaths,
-  initFlipbookStorage
+  initFlipbookStorage,
+  ensureUserWorkspace,
+  WORKSPACE_FOLDERS
 };

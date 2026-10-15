@@ -3,7 +3,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const UserFolder = require('../models/UserFolder');
 const Flipbook = require('../models/Flipbook');
-const { deleteFolderStorage, getStorageRoot } = require('../utils/storageHelper');
+const { deleteFolderStorage, getStorageRoot, ensureUserWorkspace } = require('../utils/storageHelper');
 const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
 
 /**
@@ -113,6 +113,11 @@ exports.getFolders = async (req, res) => {
       }).catch(() => {});
     }
 
+    // Ensure physical user workspace and default folders exist on disk
+    try {
+      ensureUserWorkspace(customUserId || objectId, emailId);
+    } catch (e) {}
+
     res.status(200).json({ success: true, folders: orderedFolders });
   } catch (error) {
     console.error('[Folder Controller] Error fetching folders:', error);
@@ -168,6 +173,11 @@ exports.createFolder = async (req, res) => {
         folders: [{ _id: newId, name: safeFolderName }]
       });
     }
+
+    // Ensure physical custom folder is created on disk as well
+    try {
+      ensureUserWorkspace(customUserId || objectId, emailId, safeFolderName);
+    } catch (e) {}
 
     res.status(201).json({
       success: true,

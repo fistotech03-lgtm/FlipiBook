@@ -25,11 +25,20 @@ const ImageEditor = ({
   flipbookName,
   flipbookVId,
   currentPageVId,
-  onDeleteLayer
+  onDeleteLayer,
+  projectBaseUrl
 }) => {
   const fileInputRef = useRef(null);
   const { user } = useAuth();
 
+  const resolvePreviewUrl = useCallback((src) => {
+    if (!src || typeof src !== 'string') return src;
+    if (src.startsWith('blob:') || src.startsWith('data:')) return src;
+    if (projectBaseUrl && (src.startsWith('../assets/') || src.startsWith('./assets/') || src.startsWith('assets/'))) {
+      return src.replace(/^(\.\.\/|\.\/)?assets\//, `${projectBaseUrl}assets/`);
+    }
+    return resolveUploadsPath(src);
+  }, [projectBaseUrl]);
 
   const stateRef = useRef({
     imageType: 'Fit',
@@ -60,7 +69,11 @@ const ImageEditor = ({
   const [previewSrc, setPreviewSrc] = useState(() => {
     if (!selectedElement) return '';
     const imgEl = getSvgImageEl(selectedElement);
-    return imgEl?.getAttribute?.('href') || imgEl?.getAttribute?.('xlink:href') || imgEl?.src || '';
+    const raw = imgEl?.getAttribute?.('href') || imgEl?.getAttribute?.('xlink:href') || imgEl?.src || '';
+    if (projectBaseUrl && (raw.startsWith('../assets/') || raw.startsWith('./assets/') || raw.startsWith('assets/'))) {
+      return raw.replace(/^(\.\.\/|\.\/)?assets\//, `${projectBaseUrl}assets/`);
+    }
+    return resolveUploadsPath(raw);
   });
 
   const displayImageName = useMemo(() => {
@@ -467,9 +480,10 @@ const ImageEditor = ({
     const currentSrc = isSvgEl
       ? (svgImageEl?.getAttribute('href') || svgImageEl?.getAttribute('xlink:href') || '')
       : (selectedElement.src || '');
-    if (currentSrc !== currentState.previewSrc) {
-      currentState.previewSrc = currentSrc;
-      setPreviewSrc(currentSrc);
+    const resolvedCurrentSrc = resolvePreviewUrl(currentSrc);
+    if (resolvedCurrentSrc !== currentState.previewSrc) {
+      currentState.previewSrc = resolvedCurrentSrc;
+      setPreviewSrc(resolvedCurrentSrc);
     }
 
     // 5. Sync Active Effects & Settings

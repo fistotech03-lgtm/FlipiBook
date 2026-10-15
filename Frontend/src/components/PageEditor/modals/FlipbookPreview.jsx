@@ -5,7 +5,7 @@ import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/Layout';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { getFromDB } from '../../../utils/dbUtils';
+import { getFromDB, CUSTOMIZED_EDITOR_KEY } from '../../../utils/dbUtils';
 import useDeviceDetection from '../hooks/useDeviceDetection';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -194,30 +194,27 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
         // Try getting local unsaved state ONLY if NOT in published preview mode
         if (!isPublishedPreview) {
           try {
-            const appearance = await getFromDB(`customized_editor_appearance_${v_id || 'default'}`);
-            if (appearance) {
-              if (appearance.background) finalSettings.background = appearance.background;
-              if (appearance.appearance) finalSettings.appearance = appearance.appearance;
-              if (appearance.layout) finalSettings.layout = appearance.layout;
-              if (appearance.layoutColors) finalSettings.layoutColors = appearance.layoutColors;
-            }
-            const branding = await getFromDB(`customized_editor_branding_${v_id || 'default'}`);
-            if (branding) {
-              if (branding.logoSettings) finalSettings.logo = branding.logoSettings;
-              if (branding.watermarkSettings) finalSettings.watermark = branding.watermarkSettings;
-              if (branding.preloaderSettings) finalSettings.preloader = branding.preloaderSettings;
-            }
-            const setup = await getFromDB(`customized_editor_setup_${v_id || 'default'}`);
-            if (setup) {
-              const localMB = setup.MenuBar || setup.menuBar;
-              if (localMB) {
-                finalSettings.menubar = localMB;
-                finalSettings.menuBar = localMB;
-                finalSettings.menuBarSettings = localMB;
+            const customized = await getFromDB(CUSTOMIZED_EDITOR_KEY);
+            if (customized && (!customized.v_id || customized.v_id === v_id)) {
+              if (customized.Background) finalSettings.background = customized.Background;
+              if (customized.BookAppearance) finalSettings.appearance = customized.BookAppearance;
+              if (customized.Layouts) {
+                if (customized.Layouts.layoutStyle !== undefined) finalSettings.layout = customized.Layouts.layoutStyle;
+                if (customized.Layouts.layoutColors) finalSettings.layoutColors = customized.Layouts.layoutColors;
               }
-              if (setup.otherSetup) finalSettings.othersetup = setup.otherSetup;
-              if (setup.leadForm) finalSettings.leadform = setup.leadForm;
-              if (setup.visibility) finalSettings.visibility = setup.visibility;
+              if (customized.Branding) {
+                if (customized.Branding.logoSettings) finalSettings.logo = customized.Branding.logoSettings;
+                if (customized.Branding.watermarkSettings) finalSettings.watermark = customized.Branding.watermarkSettings;
+                if (customized.Branding.preloaderSettings) finalSettings.preloader = customized.Branding.preloaderSettings;
+              }
+              if (customized.MenuBar) {
+                finalSettings.menubar = customized.MenuBar;
+                finalSettings.menuBar = customized.MenuBar;
+                finalSettings.menuBarSettings = customized.MenuBar;
+              }
+              if (customized.otherSetup) finalSettings.othersetup = customized.otherSetup;
+              if (customized.leadForm) finalSettings.leadform = customized.leadForm;
+              if (customized.Visibility) finalSettings.visibility = customized.Visibility;
             }
           } catch (e) {
             console.error("Failed to load local DB settings", e);

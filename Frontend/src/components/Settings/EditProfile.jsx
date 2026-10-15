@@ -102,22 +102,15 @@ const EditProfile = ({ user, setUser }) => {
         if (setUser) setUser(merged);
 
         try {
-          localStorage.setItem('user_profile', JSON.stringify(merged));
-          const stored = localStorage.getItem('user');
-          const parsed = stored ? JSON.parse(stored) : {};
-          localStorage.setItem('user', JSON.stringify({
-            ...parsed,
-            name: merged.name,
-            emailId: merged.emailId,
-            picture: merged.picture,
-            avatarBgColor: merged.avatarBgColor
-          }));
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_profile');
           window.dispatchEvent(new CustomEvent('profileUpdate', { detail: merged }));
         } catch (e) {}
       } else {
         if (setUser) setUser(editedUser);
         try {
-          localStorage.setItem('user_profile', JSON.stringify(editedUser));
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_profile');
           window.dispatchEvent(new CustomEvent('profileUpdate', { detail: editedUser }));
         } catch (e) {}
       }

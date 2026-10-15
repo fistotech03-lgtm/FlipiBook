@@ -1190,15 +1190,38 @@ exports.updateSettings = async (req, res) => {
     }
 
     const currentSettings = book.Customized_Settings || {};
+    const rawCustomized = Customized_Settings || {};
+    const rawSettings = settings || {};
     const newSettings = {
       ...currentSettings,
-      ...(Customized_Settings || {}),
-      ...(settings || {})
+      ...rawCustomized
     };
-    if (share) newSettings.share = share;
-    if (width) newSettings.width = width;
-    if (height) newSettings.height = height;
-    if (orientation) newSettings.orientation = orientation;
+    if (rawSettings.background && !newSettings.Background) newSettings.Background = rawSettings.background;
+    if (rawSettings.appearance && !newSettings.BookAppearance) newSettings.BookAppearance = rawSettings.appearance;
+    if (rawSettings.menuBar && !newSettings.MenuBar) newSettings.MenuBar = rawSettings.menuBar;
+    if (rawSettings.visibility && !newSettings.Visibility) newSettings.Visibility = rawSettings.visibility;
+    if (rawSettings.leadForm && !newSettings.leadForm) newSettings.leadForm = rawSettings.leadForm;
+
+    if (width) {
+      newSettings.FlipbookInfo = { ...(newSettings.FlipbookInfo || {}), width };
+    }
+    if (height) {
+      newSettings.FlipbookInfo = { ...(newSettings.FlipbookInfo || {}), height };
+    }
+    if (orientation) {
+      newSettings.FlipbookInfo = { ...(newSettings.FlipbookInfo || {}), orientation };
+    }
+
+    // Purge duplicate legacy keys
+    delete newSettings.appearance;
+    delete newSettings.background;
+    delete newSettings.menuBar;
+    delete newSettings.visibility;
+    delete newSettings.layout;
+    delete newSettings.layoutColors;
+    delete newSettings.share;
+    delete newSettings.settings;
+    delete newSettings.leadform;
 
     book.Customized_Settings = newSettings;
     book.lastUpdated = new Date();

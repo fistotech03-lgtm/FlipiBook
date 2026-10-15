@@ -273,7 +273,8 @@ const EditorLayout = () => {
 
   const [activeDevice, setActiveDevice] = useState('Desktop');
 
-  // Restore State from IndexedDB on Mount
+  // Restore State from IndexedDB on Mount (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const loadState = async () => {
       try {
@@ -307,8 +308,10 @@ const EditorLayout = () => {
     
     loadState();
   }, []);
+  */
 
-  // Save State to IndexedDB on Change
+  // Save State to IndexedDB on Change (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const saveTimer = setTimeout(() => {
       const stateToSave = {
@@ -326,6 +329,7 @@ const EditorLayout = () => {
 
     return () => clearTimeout(saveTimer);
   }, [threedState]);
+  */
 
   // Cleanup 3D Model URL on unmount
   useEffect(() => {

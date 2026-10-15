@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom';
 import { X, ChevronDown, Plus, Info, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './CustomToast';
+import { useAuth } from '../context/AuthContext';
 
 const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
   const toast = useToast();
+  const { user } = useAuth();
 
   const [bookName, setBookName] = useState('');
   const [quotes, setQuotes] = useState('');
@@ -85,8 +87,6 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
     setErrors({});
     setIsPublishing(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const v_id = currentBook?.v_id || currentBook?.realName;
       const userEmail = user?.emailId || currentBook?.userEmail;

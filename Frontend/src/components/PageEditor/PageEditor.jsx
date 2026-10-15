@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { saveToDB } from '../../utils/dbUtils';
+import { savePageEditorState, getPageEditorState, clearEditorState, ensureCleanBook } from '../../utils/dbUtils';
+import { useAuth } from '../../context/AuthContext';
 import Layer from './panels/Layer';
 import MainEditor from './MainEditor';
 import RightSidebar from './panels/RightSidebar';
@@ -17,7 +18,6 @@ import PasswordProtectModal from './modals/PasswordProtectModal';
 import pageCacheManager from './utils/PageCacheManager';
 import { useToast } from '../CustomToast';
 import { getSupabaseBaseUrl, resolveUploadsPath } from '../../utils/assetUtils';
-import { useAuth } from '../../context/AuthContext';
 
 import {
   parseLayersFromSVG,
@@ -87,6 +87,13 @@ const PageEditor = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [selectedLayerId, setSelectedLayerIdRaw] = useState(null);
+
+  // Clear previous book from IndexedDB when opening a new book
+  useEffect(() => {
+    if (v_id) {
+      ensureCleanBook(v_id);
+    }
+  }, [v_id]);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
   const [clipboard, setClipboard] = useState(null);
   const [currentFrameId, setCurrentFrameId] = useState(null);
@@ -549,7 +556,7 @@ const PageEditor = () => {
 
     if (pages && pages.length > 0) {
       try {
-        await saveToDB('editor_autosave', {
+        await savePageEditorState({
           v_id: v_id,
           pages: popupEditContext ? popupEditContext.backup.pages : pages,
           activePageIndex: popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex,
@@ -615,7 +622,7 @@ const PageEditor = () => {
   // Sync state to IndexedDB for Preview / Customized Editor
   useEffect(() => {
     if (pages.length > 0 && !isLoading) {
-      saveToDB('editor_autosave', {
+      savePageEditorState({
         v_id: v_id,
         pages: popupEditContext ? popupEditContext.backup.pages : pages,
         activePageIndex: popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex,

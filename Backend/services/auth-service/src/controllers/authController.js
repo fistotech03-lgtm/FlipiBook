@@ -671,6 +671,13 @@ const login = async (req, res) => {
 
     setAuthCookies(res, token, refreshToken, req);
 
+    // Ensure physical user workspace directory exists on disk
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Login Workspace Creation Warning]:", wsErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -1228,6 +1235,13 @@ const verifySession = async (req, res) => {
         user: null,
         message: "User no longer exists",
       });
+    }
+
+    // Ensure physical user workspace directory exists on disk
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Verify Session Workspace Creation Warning]:", wsErr.message);
     }
 
     return res.status(200).json({

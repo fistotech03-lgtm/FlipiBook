@@ -12,6 +12,7 @@ const {
   resolveFolder,
   resolveFlipbookPaths,
   initFlipbookStorage,
+  ensureUserWorkspace,
 } = require("../utils/storageHelper");
 
 /**
@@ -72,6 +73,12 @@ const resolveUserFolder = async (emailId, dbDoc = null) => {
   const candidateDirs = Array.from(
     new Set([resolvedUserId, userFolder, sanitizedEmail].filter(Boolean)),
   );
+
+  // Auto-heal physical user workspace folders on disk
+  try {
+    ensureUserWorkspace(resolvedUserId || userFolder, emailId);
+  } catch (e) {}
+
   return { userFolder, resolvedUserId, sanitizedEmail, candidateDirs };
 };
 

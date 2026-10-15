@@ -41,6 +41,17 @@ const WORKSPACE_FOLDERS = [
   "Videos",
 ];
 
+const ensureDir = (p) => {
+  if (!fs.existsSync(p)) {
+    try {
+      fs.mkdirSync(p, { recursive: true, mode: 0o777 });
+    } catch (e) {}
+  }
+  try {
+    fs.chmodSync(p, 0o777);
+  } catch (e) {}
+};
+
 /**
  * Initialize a user's workspace directory and subfolders in storage
  * @param {Object} user - User object containing userID, _id, emailId
@@ -49,45 +60,47 @@ const createUserWorkspace = (user) => {
   try {
     if (!user) return null;
     const storageRoot = getStorageRoot();
-    if (!fs.existsSync(storageRoot)) {
-      fs.mkdirSync(storageRoot, { recursive: true });
-    }
+    ensureDir(storageRoot);
 
-    // Use user ID as the single root workspace folder name
-    const userId =
-      user.userID ||
-      (user._id
-        ? String(user._id)
-        : user.id
-          ? String(user.id)
-          : user.emailId
-            ? user.emailId.replace(/[@.]/g, "_")
-            : null);
-    if (!userId) return null;
+    // Resolve target directories: both custom FLIPIxxxx and sanitized email
+    const customUserId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : null));
+    const targetDirs = [];
+    if (customUserId) targetDirs.push(customUserId);
 
-    const userDir = path.join(storageRoot, userId);
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-
-    // Create all required top-level folders
-    for (const folder of WORKSPACE_FOLDERS) {
-      const folderPath = path.join(userDir, folder);
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
+    if (user.emailId) {
+      const emailDir = user.emailId.trim().toLowerCase().replace(/[@.]/g, "_");
+      if (emailDir && !targetDirs.includes(emailDir)) {
+        targetDirs.push(emailDir);
       }
     }
 
-    // Inside My_Flipbooks, create the default "My_Flipbooks" folder
-    const defaultFolder = path.join(userDir, "My_Flipbooks", "My_Flipbooks");
-    if (!fs.existsSync(defaultFolder)) {
-      fs.mkdirSync(defaultFolder, { recursive: true });
+    if (targetDirs.length === 0) {
+      console.warn("[Workspace Helper] No valid userId or emailId to create workspace");
+      return null;
+    }
+
+    let primaryDir = null;
+    for (const dirName of targetDirs) {
+      const userDir = path.join(storageRoot, dirName);
+      ensureDir(userDir);
+
+      // Create all required top-level folders
+      for (const folder of WORKSPACE_FOLDERS) {
+        const folderPath = path.join(userDir, folder);
+        ensureDir(folderPath);
+      }
+
+      // Inside My_Flipbooks, create the default "My_Flipbooks" folder
+      const defaultFolder = path.join(userDir, "My_Flipbooks", "My_Flipbooks");
+      ensureDir(defaultFolder);
+
+      if (!primaryDir) primaryDir = userDir;
     }
 
     console.log(
-      `[Workspace Helper] Successfully created workspace for user: ${userId}`,
+      `[Workspace Helper] Successfully created workspace for: ${targetDirs.join(", ")} at ${storageRoot}`,
     );
-    return userDir;
+    return primaryDir;
   } catch (err) {
     console.error(
       "[Workspace Helper] Error initializing workspace:",

@@ -23,7 +23,7 @@ services:
     ports:
       - "${GATEWAY_PORT:-8000}:8000"
     volumes:
-      - ${STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
+      - ${HOST_STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
     environment:
       - MONGO_URI=${MONGO_URI}
       - EMAIL_USER=${EMAIL_USER}

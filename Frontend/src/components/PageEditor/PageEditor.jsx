@@ -27,7 +27,11 @@ import Model3DPreviewModal from "./modals/Interaction3DPreview";
 import PasswordProtectModal from "./modals/PasswordProtectModal";
 import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
-import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
+import {
+  getSupabaseBaseUrl,
+  resolveUploadsPath,
+  setGlobalProjectBaseUrl,
+} from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
 
 import {
@@ -112,6 +116,32 @@ const PageEditor = () => {
   const [currentFrameId, setCurrentFrameId] = useState(null);
   const [activeMainTool, setActiveMainTool] = useState("select");
   const [activeTopTool, setActiveTopTool] = useState("editor");
+
+  const sanitizedEmail = (user?.emailId || user?.email || "").replace(/[@.]/g, "_");
+  const actualFolderName = resolvePhysicalFolder(
+    currentBook?.folderName || folder || location.state?.folderName,
+  );
+  const bookName =
+    currentBook?.flipbookName ||
+    location.state?.flipbookName ||
+    "Untitled Flipbook";
+  const userFolder =
+    currentBook?.userID ||
+    user?.user_id ||
+    user?.userID ||
+    sanitizedEmail ||
+    "FLIPI0002";
+
+  const projectBaseUrl = useMemo(
+    () => getSupabaseBaseUrl(userFolder, actualFolderName, bookName),
+    [userFolder, actualFolderName, bookName],
+  );
+
+  useEffect(() => {
+    if (projectBaseUrl) {
+      setGlobalProjectBaseUrl(projectBaseUrl);
+    }
+  }, [projectBaseUrl]);
 
   const [pdfProcessing, setPdfProcessing] = useState(null);
   const [alertState, setAlertState] = useState({
@@ -1538,6 +1568,7 @@ const PageEditor = () => {
                 ? popupEditContext.dimensions || { width: 800, height: 600 }
                 : getFlipbookDimensions()
             }
+            projectBaseUrl={projectBaseUrl}
           />
 
           {(activeTopTool === "interaction" ||
@@ -1683,6 +1714,7 @@ const PageEditor = () => {
             location.state?.flipbookName ||
             "Untitled Flipbook"
           }
+          projectBaseUrl={projectBaseUrl}
         />
 
         {showTemplateModal && (

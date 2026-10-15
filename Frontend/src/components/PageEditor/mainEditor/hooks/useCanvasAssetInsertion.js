@@ -177,7 +177,7 @@ export const useCanvasAssetInsertion = ({
             if (!emailId) return;
 
             const backendUrl =
-              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+              (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
             const resolvedFolder = resolvePhysicalFolder(folderName);
             const resolvedBook = flipbookName || "Untitled_Document";
             const subFolder = dataType === "gif" ? "gif" : "Image";
@@ -208,16 +208,30 @@ export const useCanvasAssetInsertion = ({
                   ? res.data.url
                   : `../assets/${subFolder}/${filename}`);
 
-              imgNode.setAttribute("href", relativePath);
+              const userFolder =
+                user?.user_id ||
+                user?.userID ||
+                (emailId ? emailId.replace(/[@.]/g, "_") : "FLIPI0002");
+              const storagePath =
+                res.data.storageUrl ||
+                `/storage/${userFolder}/My_Flipbooks/${resolvedFolder}/${resolvedBook}/assets/${subFolder}/${filename}`;
+              const cleanBackendUrl = (backendUrl || "").trim().replace(/\/+$/, "");
+              const displayUrl = cleanBackendUrl
+                ? `${cleanBackendUrl}${storagePath.startsWith("/") ? storagePath : `/${storagePath}`}`
+                : (storagePath.startsWith("/") ? storagePath : `/${storagePath}`);
+
+              imgNode.setAttribute("href", displayUrl);
               try {
                 imgNode.setAttributeNS(
                   "http://www.w3.org/1999/xlink",
                   "xlink:href",
-                  relativePath,
+                  displayUrl,
                 );
               } catch {}
+              imgNode.setAttribute("data-relative-src", relativePath);
               if (res.data.file_v_id) {
                 imgNode.dataset.fileVid = res.data.file_v_id;
+                imgNode.setAttribute("data-file-vid", res.data.file_v_id);
                 if (groupNode) {
                   groupNode.dataset.fileVid = res.data.file_v_id;
                   groupNode.setAttribute("data-file-vid", res.data.file_v_id);
@@ -230,7 +244,7 @@ export const useCanvasAssetInsertion = ({
                 updatePageHtml(pageIdx, svg.outerHTML);
               }
               console.log(
-                `[CanvasAssetInsertion] Background asset uploaded: ${relativePath}`,
+                `[CanvasAssetInsertion] Background asset uploaded: ${relativePath} -> ${displayUrl}`,
               );
             }
           } catch (err) {
@@ -1009,7 +1023,7 @@ export const useCanvasAssetInsertion = ({
             if (!emailId) return;
 
             const backendUrl =
-              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+              (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
             const resolvedFolder = resolvePhysicalFolder(folderName);
             const resolvedBook = flipbookName || "Untitled_Document";
 

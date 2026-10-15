@@ -86,6 +86,7 @@ const MainEditor = ({
   flipbookVId,
   folderName,
   flipbookName,
+  projectBaseUrl,
 }) => {
   usePreventBrowserZoom();
   const { width: baseWidth, height: baseHeight } = flipbookDimensions || {
@@ -483,6 +484,7 @@ const MainEditor = ({
     flipbookVId,
     folderName,
     flipbookName,
+    projectBaseUrl,
   });
 
   // ── Marquee Selection State ───────────────────────────────────────────────
@@ -1694,6 +1696,9 @@ const MainEditor = ({
             updateElementAttribute={updateElementAttribute}
             onOpenTemplateModal={onOpenTemplateModal}
             setShowHotspotPopup={setShowHotspotPopup}
+            projectBaseUrl={projectBaseUrl}
+            folderName={folderName}
+            flipbookName={flipbookName}
           />
           {/* Page Navigation Controls Widget */}
           <PageNavigationControls

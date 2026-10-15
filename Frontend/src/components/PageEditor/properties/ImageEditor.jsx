@@ -30,6 +30,7 @@ const ImageEditor = ({
   flipbookVId,
   currentPageVId,
   onDeleteLayer,
+  projectBaseUrl,
 }) => {
   const fileInputRef = useRef(null);
   const { user } = useAuth();
@@ -38,12 +39,14 @@ const ImageEditor = ({
     imageType: "Fit",
     opacity: 100,
     radius: { tl: 0, tr: 0, br: 0, bl: 0 },
-    previewSrc:
+    previewSrc: resolveUploadsPath(
       selectedElement?.src ||
-      (selectedElement instanceof SVGElement
-        ? selectedElement.getAttribute("href") ||
-          selectedElement.getAttribute("xlink:href")
-        : ""),
+        (selectedElement instanceof SVGElement
+          ? selectedElement.getAttribute("href") ||
+            selectedElement.getAttribute("xlink:href")
+          : ""),
+      projectBaseUrl,
+    ),
     filters: {
       exposure: 0,
       contrast: 0,
@@ -76,12 +79,12 @@ const ImageEditor = ({
   const [previewSrc, setPreviewSrc] = useState(() => {
     if (!selectedElement) return "";
     const imgEl = getSvgImageEl(selectedElement);
-    return (
+    const rawSrc =
       imgEl?.getAttribute?.("href") ||
       imgEl?.getAttribute?.("xlink:href") ||
       imgEl?.src ||
-      ""
-    );
+      "";
+    return resolveUploadsPath(rawSrc, projectBaseUrl);
   });
 
   const displayImageName = useMemo(() => {
@@ -445,33 +448,46 @@ const ImageEditor = ({
 
           try {
             const backendUrl =
-              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+              (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
             const res = await axios.post(
               `${backendUrl}/api/flipbook/upload-asset`,
               formData,
             );
             if (res.data.url) {
-              const serverUrl = resolveUploadsPath(res.data.url);
               const relativePath =
                 res.data.flipbookPath ||
                 (res.data.url?.startsWith("../")
                   ? res.data.url
                   : `../assets/Image/${res.data.filename}`);
+              const userFolder =
+                user?.user_id ||
+                user?.userID ||
+                (user?.emailId || user?.email || "").replace(/[@.]/g, "_") ||
+                "FLIPI0002";
+              const storagePath =
+                res.data.storageUrl ||
+                `/storage/${userFolder}/My_Flipbooks/${folderName || "My_Flipbooks"}/${flipbookName || "Untitled"}/assets/Image/${res.data.filename}`;
+              const cleanBackendUrl = (backendUrl || "").trim().replace(/\/+$/, "");
+              const displayUrl = cleanBackendUrl
+                ? `${cleanBackendUrl}${storagePath.startsWith("/") ? storagePath : `/${storagePath}`}`
+                : (storagePath.startsWith("/") ? storagePath : `/${storagePath}`);
+
               const svgImgSrv = getSvgImageEl(selectedElement);
               if (svgImgSrv) {
-                svgImgSrv.setAttribute("href", relativePath);
+                svgImgSrv.setAttribute("href", displayUrl);
                 try {
                   svgImgSrv.setAttributeNS(
                     "http://www.w3.org/1999/xlink",
                     "xlink:href",
-                    relativePath,
+                    displayUrl,
                   );
                 } catch {}
+                svgImgSrv.setAttribute("data-relative-src", relativePath);
               } else {
-                selectedElement.src = relativePath;
+                selectedElement.src = displayUrl;
               }
               selectedElement.dataset.fileVid = res.data.file_v_id;
-              setPreviewSrc(serverUrl);
+              setPreviewSrc(displayUrl);
               if (onUpdate) onUpdate({ shouldRefresh: true });
             }
           } catch (err) {
@@ -690,9 +706,10 @@ const ImageEditor = ({
           svgImageEl?.getAttribute("xlink:href") ||
           ""
         : selectedElement.src || "";
-      if (currentSrc !== currentState.previewSrc) {
-        currentState.previewSrc = currentSrc;
-        setPreviewSrc(currentSrc);
+      const resolvedSrc = resolveUploadsPath(currentSrc, projectBaseUrl);
+      if (resolvedSrc !== currentState.previewSrc) {
+        currentState.previewSrc = resolvedSrc;
+        setPreviewSrc(resolvedSrc);
       }
 
       // 5. Sync Active Effects & Settings
@@ -5711,7 +5728,7 @@ const ImageEditor = ({
                 <div className="relative w-[8.5vw] h-[6vw] rounded-[0.4vw] mt-[-1vw] overflow-hidden bg-gray-100 flex-shrink-0">
                   {previewSrc ? (
                     <img
-                      src={previewSrc}
+                      src={resolveUploadsPath(previewSrc, projectBaseUrl)}
                       alt="Thumbnail"
                       className="w-full h-full object-cover"
                     />

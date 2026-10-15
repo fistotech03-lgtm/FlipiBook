@@ -5,6 +5,11 @@ import toast from "react-hot-toast";
 const SelectionTooltip = () => null;
 import { checkIsAnimatedWebp } from "../../utils/editorUtils";
 import { syncDOM } from "../utils/geometryUtils";
+import { useAuth } from "../../../../context/AuthContext";
+import {
+  getSupabaseBaseUrl,
+  getGlobalProjectBaseUrl,
+} from "../../../../utils/assetUtils";
 import {
   PENCIL_CURSOR,
   PEN_CURSOR,
@@ -43,8 +48,23 @@ export const CanvasViewport = ({
   updateElementAttribute,
   onOpenTemplateModal,
   setShowHotspotPopup,
+  projectBaseUrl,
+  folderName,
+  flipbookName,
 }) => {
+  const { user } = useAuth();
   const lastRenderedHtmlRef = useRef({});
+
+  const userFolder =
+    user?.user_id ||
+    user?.userID ||
+    (user?.emailId || user?.email || "").replace(/[@.]/g, "_");
+  const effectiveBaseUrl =
+    projectBaseUrl ||
+    getGlobalProjectBaseUrl() ||
+    (userFolder && folderName && flipbookName
+      ? getSupabaseBaseUrl(userFolder, folderName, flipbookName)
+      : "");
 
   const getHtmlToRender = (index, currentHtml) => {
     let clean = currentHtml || "";
@@ -61,6 +81,25 @@ export const CanvasViewport = ({
       /&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,
       "&amp;",
     );
+
+    // Resolve relative asset paths (../assets/, ./assets/, assets/) to accessible URLs for canvas rendering
+    const resolvedBase = effectiveBaseUrl
+      ? effectiveBaseUrl.endsWith("/")
+        ? effectiveBaseUrl
+        : `${effectiveBaseUrl}/`
+      : "";
+    if (resolvedBase) {
+      if (clean.includes("../assets/")) {
+        clean = clean.split("../assets/").join(`${resolvedBase}assets/`);
+      }
+      if (clean.includes("./assets/")) {
+        clean = clean.split("./assets/").join(`${resolvedBase}assets/`);
+      }
+      clean = clean.replace(
+        /(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\//gi,
+        `$1${resolvedBase}assets/$2/`,
+      );
+    }
 
     // Ensure invisible Document Shield exists above PDF Background in converted document pages
     if (

@@ -663,6 +663,7 @@ const RightSidebar = ({
               dataUrl: finalUrl,
               pageIndex: activePageIndex,
               dataType: isSvg ? "svg" : isGif ? "gif" : "image",
+              file: file,
             },
           }),
         );

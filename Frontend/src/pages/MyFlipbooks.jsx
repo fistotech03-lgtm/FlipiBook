@@ -8,8 +8,8 @@ import AlertModal from '../components/AlertModal';
 import CreateBookLayout from '../Layouts/CreateBookLayout';
 import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
-import ShareModal from '../components/ShareModal';
-import ExportModal from '../components/ExportModal';
+const ShareModal = React.lazy(() => import('../components/ShareModal'));
+const ExportModal = React.lazy(() => import('../components/ExportModal'));
 import {
     FlipbooksSidebar,
     FlipbooksBanner,
@@ -23,8 +23,11 @@ import {
     FavoritesScreen,
     TrashScreen,
     MyShelf,
-    CustomScrollbar
+    CustomScrollbar,
+    FlipbookSkeletonList
 } from '../components/MyFlipbooks';
+import { useQuery } from '@tanstack/react-query';
+import { fetchFlipbookFolders, fetchFlipbookBooks, queryClient } from '../queryClient';
 import { useAuth } from '../context/AuthContext';
 import flipbookApi from '../api/flipbookApi';
 import useUserStorage from '../hooks/useUserStorage';
@@ -167,66 +170,61 @@ export default function MyFlipbooks() {
     const [folders, setFolders] = useState([]);
     const [books, setBooks] = useState([]);
 
-    // Data Fetching
-    const fetchData = async () => {
+    // React Query: Cached Folders
+    const {
+        data: queriedFolders,
+        isLoading: isFoldersQueryLoading,
+        refetch: refetchFolders
+    } = useQuery({
+        queryKey: ['flipbook-folders', emailId],
+        queryFn: () => fetchFlipbookFolders(emailId),
+        enabled: !!emailId,
+        staleTime: 1000 * 60 * 3,
+    });
+
+    // React Query: Cached Books
+    const {
+        data: queriedBooks,
+        isLoading: isBooksQueryLoading,
+        refetch: refetchBooks
+    } = useQuery({
+        queryKey: ['flipbook-books', emailId],
+        queryFn: () => fetchFlipbookBooks(emailId),
+        enabled: !!emailId,
+        staleTime: 1000 * 60 * 3,
+    });
+
+    // Synchronize local state with React Query cache
+    useEffect(() => {
+        if (queriedFolders) {
+            setFolders(queriedFolders);
+        }
+    }, [queriedFolders]);
+
+    useEffect(() => {
+        if (queriedBooks) {
+            setBooks(queriedBooks);
+        }
+    }, [queriedBooks]);
+
+    // Data is truly loading only when cache is completely empty and query is in progress
+    const isInitialDataLoading =
+        (isFoldersQueryLoading || isBooksQueryLoading) &&
+        folders.length === 0 &&
+        books.length === 0;
+
+    // Data Refreshing
+    const fetchData = useCallback(async () => {
         if (!emailId) return;
         setIsLoading(true);
         try {
-            // Fetch Folders (already ordered with id and name according to UserFolder MongoDB schema)
-            const folderRes = await flipbookApi.getFolders(emailId);
-            // Filter out Quick Access / System Folders and map properly with persistent id
-            let fetchedFolders = (folderRes.data.folders || []).filter(f => {
-                const name = typeof f === 'string' ? f : f?.name;
-                const lower = String(name || '').toLowerCase().trim();
-                return (
-                    lower !== 'public book' &&
-                    lower !== 'recent book' &&
-                    lower !== 'recent' &&
-                    lower !== 'all flipbook' &&
-                    lower !== 'all flipbooks' &&
-                    lower !== 'favorites' &&
-                    lower !== 'trash'
-                );
-            }).map(f => {
-                if (typeof f === 'string') return { id: f, name: f };
-                return { id: f.id || f.name, name: f.name };
-            });
-
-            // Ensure the default folder 'My_Flipbooks' is always present
-            const hasDefaultFolder = fetchedFolders.some(f => f.name.toLowerCase() === 'my_flipbooks');
-            if (!hasDefaultFolder) {
-                fetchedFolders.unshift({ id: 'default_my_flipbooks', name: 'My_Flipbooks' });
-            }
-
-            setFolders(fetchedFolders);
-
-            // Fetch Books
-            const booksRes = await flipbookApi.getBooks(emailId);
-            const rawBooks = booksRes.data.books || [];
-            const sanitizedBooks = rawBooks.map(b => {
-                const f = b.folder || b.folderName;
-                const pageCount = Array.isArray(b.pages)
-                    ? b.pages.length
-                    : (typeof b.pages === 'number' ? b.pages : (parseInt(b.pagesCount, 10) || 1));
-                return {
-                    ...b,
-                    folder: (!f || f === 'All Flipbook' || f === 'All Flipbooks') ? 'My_Flipbooks' : f,
-                    pages: pageCount,
-                    pagesCount: pageCount,
-                    pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || [])
-                };
-            });
-            setBooks(sanitizedBooks);
+            await Promise.all([refetchFolders(), refetchBooks()]);
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("Error refreshing data:", error);
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [emailId]);
+    }, [emailId, refetchFolders, refetchBooks]);
 
     useEffect(() => {
         setSelectedBooks([]);
@@ -1576,6 +1574,7 @@ export default function MyFlipbooks() {
                     creatingFolderName={creatingFolderName}
                     storage={storage}
                     isLoadingStorage={isLoadingStorage}
+                    isLoadingFolders={isInitialDataLoading || (isLoading && folders.length === 0)}
                     isUpgradeCardClosed={isUpgradeCardClosed}
                     setIsUpgradeCardClosed={setIsUpgradeCardClosed}
                     dashboardMode={dashboardMode}
@@ -1680,12 +1679,9 @@ export default function MyFlipbooks() {
                     handleSelectAll={handleSelectAll}
                 />
 
-                {/* Content Area */}
-                {isLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-[5vw]">
-                        <div className="animate-spin rounded-full h-[3vw] w-[3vw] border-[0.25vw] border-orange-200 border-t-[#ea543a]"></div>
-                        <p className="text-gray-500 mt-[1vw] font-medium text-[0.875vw]">Loading Flipbooks...</p>
-                    </div>
+                {/* Content Area with Skeleton Loader */}
+                {isInitialDataLoading || (isLoading && books.length === 0) ? (
+                    <FlipbookSkeletonList count={5} />
                 ) : filteredBooks.length > 0 ? (
                     <CustomScrollbar
                         color="#d1d5db"
@@ -1845,23 +1841,7 @@ export default function MyFlipbooks() {
             {/* PDF Processing Overlay */}
             <PdfProcessingLoader progress={processingProgress} onCancel={handleCancelUploadPDF} />
 
-            {/* General Loading Overlay (without specific progress) */}
-            <AnimatePresence>
-                {isLoading && !processingProgress && (
-                    <motion.div
-                        key="myflipbooks-loader"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="fixed top-[7vh] left-0 right-0 bottom-0 z-40 flex flex-col items-center justify-center bg-white gap-3"
-                    >
-                        <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
-                        <span className="text-[0.85vw] font-semibold text-gray-600 tracking-wide">Loading Flipbooks...</span>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Generic Alert Modal */}
+            {/* Alert Modal */}
             <AlertModal
                 isOpen={alertState.isOpen}
                 onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
@@ -1881,20 +1861,28 @@ export default function MyFlipbooks() {
             />
 
             {/* Share Modal */}
-            <ShareModal
-                isOpen={isShareModalOpen}
-                onClose={() => setIsShareModalOpen(false)}
-                currentBook={selectedFlipbook}
-                flipbookThumbnail={selectedFlipbook?.image ? resolveUploadsPath(selectedFlipbook.image) : null}
-            />
+            {isShareModalOpen && (
+                <React.Suspense fallback={null}>
+                    <ShareModal
+                        isOpen={isShareModalOpen}
+                        onClose={() => setIsShareModalOpen(false)}
+                        currentBook={selectedFlipbook}
+                        flipbookThumbnail={selectedFlipbook?.image ? resolveUploadsPath(selectedFlipbook.image) : null}
+                    />
+                </React.Suspense>
+            )}
 
             {/* Export Modal */}
-            <ExportModal
-                isOpen={isExportModalOpen}
-                onClose={() => setIsExportModalOpen(false)}
-                currentBook={selectedFlipbook}
-                isFromMyFlipbooks={true}
-            />
+            {isExportModalOpen && (
+                <React.Suspense fallback={null}>
+                    <ExportModal
+                        isOpen={isExportModalOpen}
+                        onClose={() => setIsExportModalOpen(false)}
+                        currentBook={selectedFlipbook}
+                        isFromMyFlipbooks={true}
+                    />
+                </React.Suspense>
+            )}
         </div>
         </CreateBookLayout>
     );

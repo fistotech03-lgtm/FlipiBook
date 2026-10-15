@@ -21,24 +21,71 @@ import ProfileModal from "../Settings/ProfileModal";
 import ShareModal from "../ShareModal";
 import EditorSettingsModal from "../PageEditor/modals/EditorSettingsModal";
 
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, useActiveBook, useUIModals } from "../../store/hooks";
 
 const EditorNavbar = ({
-  onExport,
-  onSave,
-  onPreview,
-  onPublish,
+  onExport: onExportProp,
+  onSave: onSaveProp,
+  onPreview: onPreviewProp,
+  onPublish: onPublishProp,
   onClearFlipbook,
   onDeleteFlipbook,
-  hasUnsavedChanges,
-  saveSuccessInfo,
-  isAutoSaveEnabled,
-  onToggleAutoSave,
-  isSaving,
-  activeDevice = "Desktop",
-  setActiveDevice,
-  currentBook,
+  hasUnsavedChanges: hasUnsavedChangesProp,
+  saveSuccessInfo: saveSuccessInfoProp,
+  isAutoSaveEnabled: isAutoSaveEnabledProp,
+  onToggleAutoSave: onToggleAutoSaveProp,
+  isSaving: isSavingProp,
+  activeDevice: activeDeviceProp,
+  setActiveDevice: setActiveDeviceProp,
+  currentBook: currentBookProp,
 }) => {
+  const {
+    currentBook: currentBookRedux,
+    hasUnsavedChanges: hasUnsavedChangesRedux,
+    isSaving: isSavingRedux,
+    isAutoSaveEnabled: isAutoSaveEnabledRedux,
+    toggleAutoSave: toggleAutoSaveRedux,
+    activeDevice: activeDeviceRedux,
+    setActiveDevice: setActiveDeviceRedux,
+    saveSuccessInfo: saveSuccessInfoRedux,
+    triggerSave,
+    triggerExport,
+    triggerPreview,
+  } = useActiveBook();
+
+  const { openModal, setModalOpen } = useUIModals();
+
+  const currentBook = currentBookProp ?? currentBookRedux;
+  const hasUnsavedChanges = hasUnsavedChangesProp ?? hasUnsavedChangesRedux;
+  const isSaving = isSavingProp ?? isSavingRedux;
+  const isAutoSaveEnabled = isAutoSaveEnabledProp ?? isAutoSaveEnabledRedux;
+  const activeDevice = activeDeviceProp ?? activeDeviceRedux ?? "Desktop";
+  const setActiveDevice = setActiveDeviceProp ?? setActiveDeviceRedux;
+  const saveSuccessInfo = saveSuccessInfoProp ?? saveSuccessInfoRedux;
+
+  const onSave = onSaveProp || triggerSave;
+  const onExport = onExportProp || (() => {
+    setModalOpen('isExportModalOpen', true);
+    triggerExport();
+  });
+  const onPreview = onPreviewProp || triggerPreview;
+  const onPublish = onPublishProp || (() => {
+    const isBookPublished = Boolean(
+      currentBook?.isPublished || 
+      currentBook?.published || 
+      currentBook?.is_published || 
+      currentBook?.status === 'publish' ||
+      currentBook?.status === 'published' ||
+      currentBook?.meta?.isPublished
+    );
+    if (isBookPublished) {
+      setModalOpen('isUnpublishWarningOpen', true);
+    } else {
+      setModalOpen('isPublishModalOpen', true);
+    }
+  });
+  const onToggleAutoSave = onToggleAutoSaveProp || toggleAutoSaveRedux;
+
   const [secondsSinceSave, setSecondsSinceSave] = useState(0);
   const { user } = useAuth();
   const userProfile = {

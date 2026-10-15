@@ -6,13 +6,13 @@
 
 The primary goal of this project is to build an application that is:
 
-* Efficient
-* Performant
-* Scalable
-* Maintainable
-* Secure
-* Lightweight
-* Easy to understand and extend
+- Efficient
+- Performant
+- Scalable
+- Maintainable
+- Secure
+- Lightweight
+- Easy to understand and extend
 
 **Performance and simplicity should be considered before adding new code, dependencies, or architecture.**
 
@@ -26,16 +26,16 @@ Always prioritize application performance.
 
 Before implementing any feature, consider:
 
-* Initial page load
-* JavaScript bundle size
-* API response size
-* Database query performance
-* Number of API requests
-* Rendering performance
-* Repeated requests
-* Unnecessary state updates
-* Memory usage
-* Network usage
+- Initial page load
+- JavaScript bundle size
+- API response size
+- Database query performance
+- Number of API requests
+- Rendering performance
+- Repeated requests
+- Unnecessary state updates
+- Memory usage
+- Network usage
 
 Do not introduce unnecessary abstractions, libraries, API calls, or state.
 
@@ -49,14 +49,14 @@ Use **React Query / TanStack Query** for server-side data.
 
 React Query should handle:
 
-* API requests
-* Caching
-* Refetching
-* Request deduplication
-* Loading states
-* Error states
-* Cache invalidation
-* Background updates
+- API requests
+- Caching
+- Refetching
+- Request deduplication
+- Loading states
+- Error states
+- Cache invalidation
+- Background updates
 
 Do not unnecessarily store API/server data in Redux.
 
@@ -74,11 +74,11 @@ React Components
 
 Use appropriate:
 
-* `staleTime`
-* `gcTime`
-* query keys
-* mutations
-* invalidation
+- `staleTime`
+- `gcTime`
+- query keys
+- mutations
+- invalidation
 
 Avoid refetching data that is already available and valid in the cache.
 
@@ -90,15 +90,15 @@ Use lazy loading wherever it improves the application's loading performance.
 
 Consider lazy loading for:
 
-* Routes
-* Large components
-* Heavy libraries
-* Modals
-* Charts
-* Editors
-* Large feature modules
-* Images
-* Non-critical UI
+- Routes
+- Large components
+- Heavy libraries
+- Modals
+- Charts
+- Editors
+- Large feature modules
+- Images
+- Non-critical UI
 
 Do not load large resources during the initial page load if they are not immediately required.
 
@@ -154,11 +154,11 @@ Every backend request should send the minimum data required to perform the opera
 
 Avoid:
 
-* Sending unused fields
-* Sending duplicate data
-* Sending complete objects when only an ID/reference is required
-* Sending unnecessary nested objects
-* Returning unused fields from APIs
+- Sending unused fields
+- Sending duplicate data
+- Sending complete objects when only an ID/reference is required
+- Sending unnecessary nested objects
+- Returning unused fields from APIs
 
 Prefer:
 
@@ -236,9 +236,7 @@ inside another loop when a lookup structure can be created.
 Prefer:
 
 ```js
-const userMap = new Map(
-  users.map(user => [user.id, user])
-);
+const userMap = new Map(users.map((user) => [user.id, user]));
 ```
 
 Then:
@@ -335,15 +333,15 @@ Browser
 
 Access token:
 
-* Short-lived
-* Used for authenticated API requests
+- Short-lived
+- Used for authenticated API requests
 
 Refresh token:
 
-* Longer-lived
-* Used to obtain a new access token
-* Must be securely stored
-* Should support rotation/revocation where appropriate
+- Longer-lived
+- Used to obtain a new access token
+- Must be securely stored
+- Should support rotation/revocation where appropriate
 
 Cookies should use appropriate security attributes such as:
 
@@ -372,23 +370,23 @@ Avoid unnecessary boilerplate.
 
 Prefer:
 
-* Reusable utilities
-* Shared components
-* Reusable hooks
-* Redux Toolkit
-* React Query
-* Common API clients
-* Shared validation
-* Common middleware
+- Reusable utilities
+- Shared components
+- Reusable hooks
+- Redux Toolkit
+- React Query
+- Common API clients
+- Shared validation
+- Common middleware
 
 Do not create abstractions just because code can technically be abstracted.
 
 Use abstraction when it improves:
 
-* Reusability
-* Maintainability
-* Consistency
-* Testability
+- Reusability
+- Maintainability
+- Consistency
+- Testability
 
 Avoid excessive abstraction.
 
@@ -495,10 +493,10 @@ dvh     → mobile viewport height
 
 The UI must remain responsive across:
 
-* Desktop
-* Laptop
-* Tablet
-* Mobile
+- Desktop
+- Laptop
+- Tablet
+- Mobile
 
 Avoid hard-coded dimensions that cause overflow or poor responsive behavior.
 
@@ -510,23 +508,20 @@ Database access must also follow the performance-first approach.
 
 Before adding a query:
 
-* Check whether an index is required.
-* Return only required fields.
-* Avoid unnecessary population/joins.
-* Avoid N+1 queries.
-* Avoid fetching entire collections when pagination/filtering is possible.
-* Use pagination for large datasets.
-* Use projections/selectors to reduce payload size.
+- Check whether an index is required.
+- Return only required fields.
+- Avoid unnecessary population/joins.
+- Avoid N+1 queries.
+- Avoid fetching entire collections when pagination/filtering is possible.
+- Use pagination for large datasets.
+- Use projections/selectors to reduce payload size.
 
 Example:
 
 Prefer:
 
 ```js
-User.find(
-  { status: "active" },
-  { name: 1, email: 1 }
-);
+User.find({ status: "active" }, { name: 1, email: 1 });
 ```
 
 over fetching unnecessary fields.
@@ -537,10 +532,10 @@ over fetching unnecessary fields.
 
 Before creating an API request, check whether the required data already exists in:
 
-* React Query cache
-* Redux state
-* Component state
-* Server-provided data
+- React Query cache
+- Redux state
+- Component state
+- Server-provided data
 
 Do not make multiple identical requests unnecessarily.
 
@@ -580,24 +575,24 @@ Do not use React Query as a replacement for every type of client state.
 
 Code should be:
 
-* Simple
-* Readable
-* Reusable
-* Efficient
-* Testable
-* Consistent
+- Simple
+- Readable
+- Reusable
+- Efficient
+- Testable
+- Consistent
 
 Avoid:
 
-* Dead code
-* Duplicate code
-* Unused imports
-* Unused variables
-* Unnecessary dependencies
-* Deeply nested logic
-* Extremely large components
-* Extremely large functions
-* Magic values without explanation
+- Dead code
+- Duplicate code
+- Unused imports
+- Unused variables
+- Unnecessary dependencies
+- Deeply nested logic
+- Extremely large components
+- Extremely large functions
+- Magic values without explanation
 
 Prefer small, focused functions and components.
 
@@ -645,16 +640,16 @@ Enterprise standard does **not** mean adding complexity unnecessarily.
 
 Every architectural decision should have a clear reason and should support one or more of:
 
-* Scalability
-* Security
-* Reliability
-* Maintainability
-* Independent deployment
-* Performance
-* Fault isolation
-* Observability
-* Team ownership
-* Future extensibility
+- Scalability
+- Security
+- Reliability
+- Maintainability
+- Independent deployment
+- Performance
+- Fault isolation
+- Observability
+- Team ownership
+- Future extensibility
 
 ---
 
@@ -678,14 +673,14 @@ For example:
 
 A service should ideally:
 
-* Have a clearly defined responsibility.
-* Own its business logic.
-* Minimize coupling with other services.
-* Be independently deployable.
-* Communicate through well-defined APIs/events.
-* Avoid directly accessing another service's database.
-* Have appropriate authentication and authorization.
-* Have independent logging and monitoring.
+- Have a clearly defined responsibility.
+- Own its business logic.
+- Minimize coupling with other services.
+- Be independently deployable.
+- Communicate through well-defined APIs/events.
+- Avoid directly accessing another service's database.
+- Have appropriate authentication and authorization.
+- Have independent logging and monitoring.
 
 Do not split every small feature into a separate service.
 
@@ -731,15 +726,15 @@ For multiple backend services, prefer a centralized API entry point.
 
 The gateway can handle common concerns such as:
 
-* Authentication
-* Authorization
-* Rate limiting
-* Request validation
-* Routing
-* CORS
-* Request logging
-* Correlation IDs
-* Response handling
+- Authentication
+- Authorization
+- Rate limiting
+- Request validation
+- Routing
+- CORS
+- Request logging
+- Correlation IDs
+- Response handling
 
 Do not duplicate gateway responsibilities unnecessarily inside every service.
 
@@ -828,10 +823,10 @@ Order Service
 
 Possible technologies can include:
 
-* RabbitMQ
-* Kafka
-* Redis Streams
-* Cloud messaging services
+- RabbitMQ
+- Kafka
+- Redis Streams
+- Cloud messaging services
 
 Do not introduce a message broker simply because the architecture is called "enterprise."
 
@@ -868,13 +863,13 @@ console.log("something happened");
 
 Monitor important metrics such as:
 
-* API response time
-* Error rate
-* Request count
-* Database latency
-* CPU usage
-* Memory usage
-* Queue length
+- API response time
+- Error rate
+- Request count
+- Database latency
+- CPU usage
+- Memory usage
+- Queue length
 
 ### Distributed Tracing
 
@@ -915,11 +910,11 @@ Example:
 
 Do not expose:
 
-* Stack traces
-* Database errors
-* Internal service details
-* Secrets
-* Private implementation details
+- Stack traces
+- Database errors
+- Internal service details
+- Secrets
+- Private implementation details
 
 to the frontend in production.
 
@@ -955,19 +950,19 @@ Security should be part of the architecture rather than added later.
 
 Follow:
 
-* HTTPS
-* Secure HttpOnly cookies
-* Appropriate SameSite policy
-* Access/refresh token separation
-* RS256 where appropriate
-* Input validation
-* Authorization checks
-* Rate limiting
-* Secure headers
-* Secret management
-* Password hashing
-* Least-privilege access
-* Database access controls
+- HTTPS
+- Secure HttpOnly cookies
+- Appropriate SameSite policy
+- Access/refresh token separation
+- RS256 where appropriate
+- Input validation
+- Authorization checks
+- Rate limiting
+- Secure headers
+- Secret management
+- Password hashing
+- Least-privilege access
+- Database access controls
 
 Never trust values coming from the client.
 
@@ -1068,7 +1063,6 @@ Choose architecture based on actual requirements.
 **Use microservices when they provide a real architectural benefit. Do not use microservices merely to appear enterprise-grade.**
 
 Every additional service, dependency, abstraction, database, queue, or architectural layer introduces operational cost and should therefore have a clear justification.
-
 
 # 20. General Rule
 

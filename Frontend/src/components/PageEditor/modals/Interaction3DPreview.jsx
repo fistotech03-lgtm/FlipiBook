@@ -412,26 +412,39 @@ const GlbModelViewer = React.memo(({
   );
 });
 
-const Model3DPreviewModal = ({ 
-  isOpen, 
-  dataUrl, 
-  shadowStrength = 35,
-  shadowSoftness = 35,
-  autoRotate = true, 
-  autoRotateSpeed = 1.5, 
-  lockMaxZoom = true,
-  maxZoom = 4.5,
-  bgType = 'Solid', 
-  bgColor: initialBgColor = '#ffffff',
-  customBg = true,
-  enableAR = true,
-  setBgColor: externalSetBgColor,
-  qrText = 'Scan Me', qrColor = '#000000', qrBgType = 'Solid', qrBgColor = '#ffffff', qrLevel = 'M', qrDotType = 'square', qrCornerSquareType = 'square', qrCornerDotType = 'square', qrLogo,
-  topText, bottomText: initialBottomText, vId,
-  hotspots: initialHotspots = [],
-  activeHotspotId: externalActiveHotspotId = null,
-  onHotspotClick: externalOnHotspotClick
-}) => {
+import { usePageEditorState } from '../../../store/hooks';
+
+const Model3DPreviewModal = (props) => { 
+  const redux = usePageEditorState();
+
+  const isOpen = props.isOpen !== undefined ? props.isOpen : redux.is3DModalOpen;
+  const dataUrl = props.dataUrl !== undefined ? props.dataUrl : redux.preview3DDataUrl;
+  const shadowStrength = props.shadowStrength !== undefined ? props.shadowStrength : redux.shadowStrength;
+  const shadowSoftness = props.shadowSoftness !== undefined ? props.shadowSoftness : redux.shadowSoftness;
+  const autoRotate = props.autoRotate !== undefined ? props.autoRotate : redux.autoRotate;
+  const autoRotateSpeed = props.autoRotateSpeed !== undefined ? props.autoRotateSpeed : redux.autoRotateSpeed;
+  const lockMaxZoom = props.lockMaxZoom !== undefined ? props.lockMaxZoom : redux.lockMaxZoom;
+  const maxZoom = props.maxZoom !== undefined ? props.maxZoom : redux.maxZoom;
+  const bgType = props.bgType !== undefined ? props.bgType : redux.bgType;
+  const initialBgColor = props.bgColor !== undefined ? props.bgColor : (redux.bgColor || '#ffffff');
+  const customBg = props.customBg !== undefined ? props.customBg : redux.customBg;
+  const enableAR = props.enableAR !== undefined ? props.enableAR : redux.enableAR;
+  const externalSetBgColor = props.setBgColor || ((val) => redux.set3DInspectorField('bgColor', val));
+  const qrText = props.qrText !== undefined ? props.qrText : redux.qrText;
+  const qrColor = props.qrColor !== undefined ? props.qrColor : redux.qrColor;
+  const qrBgType = props.qrBgType !== undefined ? props.qrBgType : redux.qrBgType;
+  const qrBgColor = props.qrBgColor !== undefined ? props.qrBgColor : redux.qrBgColor;
+  const qrLevel = props.qrLevel !== undefined ? props.qrLevel : redux.qrLevel;
+  const qrDotType = props.qrDotType !== undefined ? props.qrDotType : redux.qrDotType;
+  const qrCornerSquareType = props.qrCornerSquareType !== undefined ? props.qrCornerSquareType : redux.qrCornerSquareType;
+  const qrCornerDotType = props.qrCornerDotType !== undefined ? props.qrCornerDotType : redux.qrCornerDotType;
+  const qrLogo = props.qrLogo !== undefined ? props.qrLogo : redux.qrLogo;
+  const topText = props.topText !== undefined ? props.topText : redux.topText;
+  const initialBottomText = props.bottomText !== undefined ? props.bottomText : redux.bottomText;
+  const vId = props.vId !== undefined ? props.vId : redux.current3DVId;
+  const initialHotspots = props.hotspots !== undefined ? props.hotspots : redux.current3DHotspots;
+  const externalActiveHotspotId = props.activeHotspotId !== undefined ? props.activeHotspotId : redux.active3DHotspotId;
+  const externalOnHotspotClick = props.onHotspotClick || ((hs) => redux.setActive3DHotspotId(hs?.id || null));
   const [localBgColor, setLocalBgColor] = useState(initialBgColor);
   const [showBgColorPicker, setShowBgColorPicker] = useState(false);
   const [bottomText, setBottomText] = useState(initialBottomText);

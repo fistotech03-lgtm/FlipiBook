@@ -182,25 +182,59 @@ export const CustomQRCode = React.forwardRef(({
     );
 });
 
-const Model3DEditor = ({
-  onClose,
-  shadowStrength, setShadowStrength,
-  shadowSoftness, setShadowSoftness,
-  autoRotate, setAutoRotate,
-  autoRotateSpeed, setAutoRotateSpeed,
-  lockMaxZoom, setLockMaxZoom,
-  maxZoom, setMaxZoom,
-  bgType, setBgType,
-  bgColor, setBgColor,
-  customBg, setCustomBg,
-  enableAR, setEnableAR,
-  qrText, setQrText, qrColor, setQrColor, qrBgType, setQrBgType, qrBgColor, setQrBgColor, qrLevel, setQrLevel, qrDotType, setQrDotType, qrCornerSquareType, setQrCornerSquareType, qrCornerDotType, setQrCornerDotType, qrLogo, setQrLogo,
-  topText, setTopText, bottomText, setBottomText,
-  dataUrl, vId,
-  hotspots = [],
-  activeHotspotId = null,
-  onHotspotClick
-}) => {
+import { usePageEditorState } from '../../../store/hooks';
+
+const Model3DEditor = (props) => {
+  const redux = usePageEditorState();
+
+  const onClose = props.onClose;
+  const shadowStrength = props.shadowStrength !== undefined ? props.shadowStrength : redux.shadowStrength;
+  const setShadowStrength = props.setShadowStrength || ((val) => redux.set3DInspectorField('shadowStrength', val));
+  const shadowSoftness = props.shadowSoftness !== undefined ? props.shadowSoftness : redux.shadowSoftness;
+  const setShadowSoftness = props.setShadowSoftness || ((val) => redux.set3DInspectorField('shadowSoftness', val));
+  const autoRotate = props.autoRotate !== undefined ? props.autoRotate : redux.autoRotate;
+  const setAutoRotate = props.setAutoRotate || ((val) => redux.set3DInspectorField('autoRotate', val));
+  const autoRotateSpeed = props.autoRotateSpeed !== undefined ? props.autoRotateSpeed : redux.autoRotateSpeed;
+  const setAutoRotateSpeed = props.setAutoRotateSpeed || ((val) => redux.set3DInspectorField('autoRotateSpeed', val));
+  const lockMaxZoom = props.lockMaxZoom !== undefined ? props.lockMaxZoom : redux.lockMaxZoom;
+  const setLockMaxZoom = props.setLockMaxZoom || ((val) => redux.set3DInspectorField('lockMaxZoom', val));
+  const maxZoom = props.maxZoom !== undefined ? props.maxZoom : redux.maxZoom;
+  const setMaxZoom = props.setMaxZoom || ((val) => redux.set3DInspectorField('maxZoom', val));
+  const bgType = props.bgType !== undefined ? props.bgType : redux.bgType;
+  const setBgType = props.setBgType || ((val) => redux.set3DInspectorField('bgType', val));
+  const bgColor = props.bgColor !== undefined ? props.bgColor : redux.bgColor;
+  const setBgColor = props.setBgColor || ((val) => redux.set3DInspectorField('bgColor', val));
+  const customBg = props.customBg !== undefined ? props.customBg : redux.customBg;
+  const setCustomBg = props.setCustomBg || ((val) => redux.set3DInspectorField('customBg', val));
+  const enableAR = props.enableAR !== undefined ? props.enableAR : redux.enableAR;
+  const setEnableAR = props.setEnableAR || ((val) => redux.set3DInspectorField('enableAR', val));
+  const qrText = props.qrText !== undefined ? props.qrText : redux.qrText;
+  const setQrText = props.setQrText || ((val) => redux.set3DInspectorField('qrText', val));
+  const qrColor = props.qrColor !== undefined ? props.qrColor : redux.qrColor;
+  const setQrColor = props.setQrColor || ((val) => redux.set3DInspectorField('qrColor', val));
+  const qrBgType = props.qrBgType !== undefined ? props.qrBgType : redux.qrBgType;
+  const setQrBgType = props.setQrBgType || ((val) => redux.set3DInspectorField('qrBgType', val));
+  const qrBgColor = props.qrBgColor !== undefined ? props.qrBgColor : redux.qrBgColor;
+  const setQrBgColor = props.setQrBgColor || ((val) => redux.set3DInspectorField('qrBgColor', val));
+  const qrLevel = props.qrLevel !== undefined ? props.qrLevel : redux.qrLevel;
+  const setQrLevel = props.setQrLevel || ((val) => redux.set3DInspectorField('qrLevel', val));
+  const qrDotType = props.qrDotType !== undefined ? props.qrDotType : redux.qrDotType;
+  const setQrDotType = props.setQrDotType || ((val) => redux.set3DInspectorField('qrDotType', val));
+  const qrCornerSquareType = props.qrCornerSquareType !== undefined ? props.qrCornerSquareType : redux.qrCornerSquareType;
+  const setQrCornerSquareType = props.setQrCornerSquareType || ((val) => redux.set3DInspectorField('qrCornerSquareType', val));
+  const qrCornerDotType = props.qrCornerDotType !== undefined ? props.qrCornerDotType : redux.qrCornerDotType;
+  const setQrCornerDotType = props.setQrCornerDotType || ((val) => redux.set3DInspectorField('qrCornerDotType', val));
+  const qrLogo = props.qrLogo !== undefined ? props.qrLogo : redux.qrLogo;
+  const setQrLogo = props.setQrLogo || ((val) => redux.set3DInspectorField('qrLogo', val));
+  const topText = props.topText !== undefined ? props.topText : redux.topText;
+  const setTopText = props.setTopText || ((val) => redux.set3DInspectorField('topText', val));
+  const bottomText = props.bottomText !== undefined ? props.bottomText : redux.bottomText;
+  const setBottomText = props.setBottomText || ((val) => redux.set3DInspectorField('bottomText', val));
+  const dataUrl = props.dataUrl !== undefined ? props.dataUrl : redux.preview3DDataUrl;
+  const vId = props.vId !== undefined ? props.vId : redux.current3DVId;
+  const hotspots = props.hotspots !== undefined ? props.hotspots : redux.current3DHotspots;
+  const activeHotspotId = props.activeHotspotId !== undefined ? props.activeHotspotId : redux.active3DHotspotId;
+  const onHotspotClick = props.onHotspotClick || ((hs) => redux.setActive3DHotspotId(hs?.id || null));
   const [localHotspots, setLocalHotspots] = useState(hotspots || []);
 
   useEffect(() => {

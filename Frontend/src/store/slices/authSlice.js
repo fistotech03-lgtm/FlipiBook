@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { verifyToken, clearSession } from "../../utils/authUtils";
+import { prefetchMyFlipbooks } from "../../queryClient";
 
 export const checkAuth = createAsyncThunk(
   "auth/checkAuth",
@@ -13,6 +14,10 @@ export const checkAuth = createAsyncThunk(
       });
 
       if (res.data?.success && res.data?.isAuthenticated) {
+        const targetEmail = res.data.user?.emailId || res.data.user?.email;
+        if (targetEmail) {
+          prefetchMyFlipbooks(targetEmail);
+        }
         return { isAuthenticated: true, user: res.data.user || null };
       }
 

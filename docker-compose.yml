@@ -1,34 +1,36 @@
+# Docker Compose configuration for MAIN / PRODUCTION (https://flipibook.com)
 services:
   frontend:
     build:
       context: ./Frontend
       args:
-        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://testing.flipibook.com}
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://flipibook.com}
         - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     expose:
       - "80"
-    ports:
-      - "${FRONTEND_PORT:-3002}:80"
     environment:
-      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://testing.flipibook.com}
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://flipibook.com}
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     depends_on:
       - backend
     networks:
-      - testing-internal
+      - main-internal
       - dokploy-network
 
   backend:
     build: ./Backend
-    ports:
-      - "${GATEWAY_PORT:-8000}:8000"
+    expose:
+      - "8000"
+      - "5001"
     volumes:
-      - ${STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
+      - ${HOST_STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
+    deploy:
+      replicas: 3
     environment:
       - MONGO_URI=${MONGO_URI}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
-      - CLIENT_URL=${CLIENT_URL:-https://testing.flipibook.com}
+      - CLIENT_URL=${CLIENT_URL:-https://flipibook.com}
       - GATEWAY_PORT=${GATEWAY_PORT:-8000}
       - AUTH_PORT=${AUTH_PORT:-5001}
       - AUTH_SERVICE_PORT=${AUTH_SERVICE_PORT:-5001}
@@ -42,17 +44,19 @@ services:
       - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
+      - INKSCAPE_PATH=/usr/bin/inkscape
+      - LIBREOFFICE_PATH=/usr/bin/soffice
     env_file:
       - path: ./Backend/.env
         required: false
       - path: ./.env
         required: false
     networks:
-      - testing-internal
+      - main-internal
       - dokploy-network
 
 networks:
-  testing-internal:
+  main-internal:
     driver: bridge
   dokploy-network:
     name: dokploy-network

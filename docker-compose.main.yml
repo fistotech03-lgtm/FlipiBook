@@ -42,14 +42,21 @@ services:
       - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
+      - INKSCAPE_PATH=/usr/bin/inkscape
+      - LIBREOFFICE_PATH=/usr/bin/soffice
     env_file:
       - path: ./Backend/.env
         required: false
       - path: ./.env
         required: false
     networks:
-      - main-internal
-      - dokploy-network
+      main-internal:
+        aliases:
+          - backend-gateway
+          - backend
+      dokploy-network:
+        aliases:
+          - main-backend-gateway
 
 networks:
   main-internal:

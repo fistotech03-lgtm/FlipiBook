@@ -1158,9 +1158,12 @@ const CustomizedEditor = () => {
   const handlePreviewRef = useRef(handlePreview);
   handlePreviewRef.current = handlePreview;
   const stablePreviewHandler = useCallback(() => handlePreviewRef.current?.(), []);
+  const currentBookRef = useRef(currentBook);
+  useEffect(() => { currentBookRef.current = currentBook; }, [currentBook]);
+
   const handleClearAllPages = useCallback(() => {
-    const defaultW = currentBook?.width || 210;
-    const defaultH = currentBook?.height || 297;
+    const defaultW = currentBookRef.current?.width || 210;
+    const defaultH = currentBookRef.current?.height || 297;
     setPages(prevPages => 
       prevPages.map((p, i) => {
         const blankSvg = createDefaultPageData(p.name || `Page ${i + 1}`, defaultW, defaultH);
@@ -1172,7 +1175,7 @@ const CustomizedEditor = () => {
       })
     );
     if (setHasUnsavedChanges) setHasUnsavedChanges(true);
-  }, [currentBook, setHasUnsavedChanges]);
+  }, [setHasUnsavedChanges]);
 
   // Export/Save Handlers for Context (Registration)
   useEffect(() => {
@@ -1194,7 +1197,7 @@ const CustomizedEditor = () => {
 
   // Sync Current Book to Navbar and ShareModal in real-time
   useEffect(() => {
-    if (setCurrentBook) {
+    if (setCurrentBook && bookName && v_id) {
       const currentAccess = visibilitySettings?.type || visibilitySettings?.access || 'Public';
       const effectiveShareId = 
         shareSettings?.shareId || 
@@ -1204,6 +1207,16 @@ const CustomizedEditor = () => {
 
       setCurrentBook(prev => {
         const sId = effectiveShareId || prev?.shareId || prev?.share?.shareId || prev?.Customized_Settings?.Visibility?.shareId || v_id;
+        if (
+          prev?.folder === folder &&
+          prev?.flipbookName === bookName &&
+          prev?.v_id === v_id &&
+          prev?.shareId === sId &&
+          prev?.access === currentAccess
+        ) {
+          return prev;
+        }
+
         return {
           ...(prev || {}),
           folder: folder,
@@ -1243,7 +1256,7 @@ const CustomizedEditor = () => {
         };
       });
     }
-  }, [setCurrentBook, folder, v_id, bookName, shareSettings, pages, visibilitySettings]);
+  }, [setCurrentBook, folder, v_id, bookName, shareSettings?.shareId, visibilitySettings?.access, visibilitySettings?.type, visibilitySettings?.shareId]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(false);

@@ -1,23 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import EditorNavbar from '../components/NavBar/EditorNav';
-import ExportModal from '../components/ExportModal';
-import PublishModal from '../components/PublishModal';
 import AlertModal from '../components/AlertModal';
+const ExportModal = React.lazy(() => import('../components/ExportModal'));
+const PublishModal = React.lazy(() => import('../components/PublishModal'));
 import axios from 'axios';
 import { getFromDB, saveToDB } from '../utils/dbUtils';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useActiveBook, useUIModals } from '../store/hooks';
 
 const STATE_KEY = 'threed_editor_state';
 
 const EditorLayout = () => {
   const { user } = useAuth();
-  // Auto Save Preferences
-  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(() => {
-    const stored = localStorage.getItem('isAutoSaveEnabled');
-    if (stored !== null) return JSON.parse(stored);
-    return true;
-  });
+  const {
+    currentBook,
+    setCurrentBook,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    isSaving,
+    setIsSaving,
+    isAutoSaveEnabled,
+    toggleAutoSave: dispatchToggleAutoSave,
+    activeDevice,
+    setActiveDevice,
+    saveSuccessInfo,
+    setSaveSuccessInfo,
+    exportContext,
+    setExportContext,
+    triggerSave,
+    triggerExport,
+    triggerClear,
+    triggerPreview,
+  } = useActiveBook();
+
+  const {
+    isExportModalOpen,
+    isPublishModalOpen,
+    isUnpublishWarningOpen,
+    isClearWarningOpen,
+    isDeleteWarningOpen,
+    setModalOpen,
+  } = useUIModals();
 
   // Sync state with backend on mount
   useEffect(() => {
@@ -33,8 +56,7 @@ const EditorLayout = () => {
             const editorSettings = res.data.editorSettings;
             const autoSaveVal = editorSettings?.isAutoSaveEnabled ?? res.data.isAutoSaveEnabled;
             if (autoSaveVal !== undefined) {
-              setIsAutoSaveEnabled(autoSaveVal);
-              localStorage.setItem('isAutoSaveEnabled', JSON.stringify(autoSaveVal));
+              dispatchToggleAutoSave(autoSaveVal);
             }
             if (editorSettings) {
               if (editorSettings.isTrimViewEnabled !== undefined) {
@@ -53,11 +75,10 @@ const EditorLayout = () => {
       }
     };
     fetchSettings();
-  }, []);
+  }, [user]);
 
   const toggleAutoSave = async (value) => {
-    setIsAutoSaveEnabled(value);
-    localStorage.setItem('isAutoSaveEnabled', JSON.stringify(value));
+    dispatchToggleAutoSave(value);
     
     try {
       if (user) {
@@ -74,14 +95,24 @@ const EditorLayout = () => {
   };
 
   const navigate = useNavigate();
-  const [exportHandler, setExportHandler] = useState(null);
-  const [saveHandler, setSaveHandler] = useState(null);
-  const [previewHandler, setPreviewHandler] = useState(null);
-  const [clearHandler, setClearHandler] = useState(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const exportHandlerRef = useRef(null);
+  const saveHandlerRef = useRef(null);
+  const previewHandlerRef = useRef(null);
+  const clearHandlerRef = useRef(null);
+
+  const setExportHandler = useCallback((fn) => {
+    exportHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setSaveHandler = useCallback((fn) => {
+    saveHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setPreviewHandler = useCallback((fn) => {
+    previewHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setClearHandler = useCallback((fn) => {
+    clearHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
   const [canSave, setCanSave] = useState(true);
-  const [currentBook, setCurrentBook] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Prevent closing the tab if there are unsaved changes
   useEffect(() => {
@@ -98,11 +129,6 @@ const EditorLayout = () => {
     };
   }, [hasUnsavedChanges]);
 
-  // Save Success State for Toast
-  const [saveSuccessInfo, setSaveSuccessInfo] = useState(null);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [exportContext, setExportContext] = useState({ pages: [], activePageIndex: 0 });
-
   const handleSaveSuccess = (info) => {
     setSaveSuccessInfo(info);
     setTimeout(() => {
@@ -111,30 +137,27 @@ const EditorLayout = () => {
   };
 
   const handleExport = () => {
-    setIsExportModalOpen(true);
-    if (exportHandler) {
-      exportHandler();
+    setModalOpen('isExportModalOpen', true);
+    triggerExport();
+    if (exportHandlerRef.current) {
+      exportHandlerRef.current();
     }
   };
 
   const handleSave = () => {
-    if (saveHandler) {
-      saveHandler();
-    } else {
-      console.warn("Save handler is not attached.");
+    triggerSave();
+    if (saveHandlerRef.current) {
+      saveHandlerRef.current();
     }
   };
 
   const handlePreview = () => {
-    if (previewHandler) {
-      previewHandler();
-    } else {
-      console.warn("Preview handler is not attached.");
+    triggerPreview();
+    if (previewHandlerRef.current) {
+      previewHandlerRef.current();
     }
   };
 
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [isUnpublishWarningOpen, setIsUnpublishWarningOpen] = useState(false);
   const [isUnpublishing, setIsUnpublishing] = useState(false);
 
   const handlePublish = () => {
@@ -148,9 +171,9 @@ const EditorLayout = () => {
     );
 
     if (isBookPublished) {
-      setIsUnpublishWarningOpen(true);
+      setModalOpen('isUnpublishWarningOpen', true);
     } else {
-      setIsPublishModalOpen(true);
+      setModalOpen('isPublishModalOpen', true);
     }
   };
 
@@ -181,22 +204,21 @@ const EditorLayout = () => {
       console.error("Failed to unpublish flipbook:", err);
     } finally {
       setIsUnpublishing(false);
-      setIsUnpublishWarningOpen(false);
+      setModalOpen('isUnpublishWarningOpen', false);
     }
   };
 
-  const [isClearWarningOpen, setIsClearWarningOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
   const handleClearFlipbook = () => {
-    setIsClearWarningOpen(true);
+    setModalOpen('isClearWarningOpen', true);
   };
 
   const confirmClear = async () => {
     setIsClearing(true);
     try {
-      if (clearHandler) {
-        clearHandler();
+      if (clearHandlerRef.current) {
+        clearHandlerRef.current();
       } else {
         window.dispatchEvent(new CustomEvent('trigger-clear-flipbook'));
       }
@@ -204,15 +226,14 @@ const EditorLayout = () => {
       console.error("Failed to clear flipbook:", err);
     } finally {
       setIsClearing(false);
-      setIsClearWarningOpen(false);
+      setModalOpen('isClearWarningOpen', false);
     }
   };
 
-  const [isDeleteWarningOpen, setIsDeleteWarningOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteFlipbook = () => {
-    setIsDeleteWarningOpen(true);
+    setModalOpen('isDeleteWarningOpen', true);
   };
 
   const confirmDelete = async () => {
@@ -239,7 +260,7 @@ const EditorLayout = () => {
       console.error("Failed to delete flipbook:", err);
     } finally {
       setIsDeleting(false);
-      setIsDeleteWarningOpen(false);
+      setModalOpen('isDeleteWarningOpen', false);
     }
   };
 
@@ -270,8 +291,6 @@ const EditorLayout = () => {
     modelName: "",
     materialList: [],
   });
-
-  const [activeDevice, setActiveDevice] = useState('Desktop');
 
   // Restore State from IndexedDB on Mount (Commented out: focus only on page_editor and customized_editor)
   /*
@@ -393,32 +412,40 @@ const EditorLayout = () => {
       </div>
       
       {/* Export Modal */}
-      <ExportModal 
-        isOpen={isExportModalOpen} 
-        onClose={() => setIsExportModalOpen(false)}
-        currentBook={currentBook}
-        pages={exportContext.pages}
-        currentPageIndex={exportContext.activePageIndex}
-      />
+      {isExportModalOpen && (
+        <React.Suspense fallback={null}>
+          <ExportModal 
+            isOpen={isExportModalOpen} 
+            onClose={() => setModalOpen('isExportModalOpen', false)}
+            currentBook={currentBook}
+            pages={exportContext.pages}
+            currentPageIndex={exportContext.activePageIndex}
+          />
+        </React.Suspense>
+      )}
 
       {/* Publish Modal */}
-      <PublishModal 
-        isOpen={isPublishModalOpen}
-        onClose={() => setIsPublishModalOpen(false)}
-        currentBook={currentBook}
-        onPublishSuccess={(data) => {
-          setCurrentBook(prev => ({
-            ...(prev || {}),
-            ...(data || {}),
-            isPublished: true
-          }));
-        }}
-      />
+      {isPublishModalOpen && (
+        <React.Suspense fallback={null}>
+          <PublishModal 
+            isOpen={isPublishModalOpen}
+            onClose={() => setModalOpen('isPublishModalOpen', false)}
+            currentBook={currentBook}
+            onPublishSuccess={(data) => {
+              setCurrentBook({
+                ...(currentBook || {}),
+                ...(data || {}),
+                isPublished: true
+              });
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {/* Unpublish Warning Modal */}
       <AlertModal 
         isOpen={isUnpublishWarningOpen}
-        onClose={() => setIsUnpublishWarningOpen(false)}
+        onClose={() => setModalOpen('isUnpublishWarningOpen', false)}
         onConfirm={confirmUnpublish}
         type="warning"
         title="Unpublish Flipbook"
@@ -432,7 +459,7 @@ const EditorLayout = () => {
       {/* Clear Warning Modal */}
       <AlertModal 
         isOpen={isClearWarningOpen}
-        onClose={() => setIsClearWarningOpen(false)}
+        onClose={() => setModalOpen('isClearWarningOpen', false)}
         onConfirm={confirmClear}
         type="warning"
         title="Clear Flipbook"
@@ -446,7 +473,7 @@ const EditorLayout = () => {
       {/* Delete Warning Modal */}
       <AlertModal 
         isOpen={isDeleteWarningOpen}
-        onClose={() => setIsDeleteWarningOpen(false)}
+        onClose={() => setModalOpen('isDeleteWarningOpen', false)}
         onConfirm={confirmDelete}
         type="error"
         title="Delete Flipbook"

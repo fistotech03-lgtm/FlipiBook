@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, ChromaticAberrationEffect } from 'postprocessing';
 import * as THREE from 'three';
-import * as faceapi from 'face-api.js';
+
+let faceapiModule = null;
+const getFaceApi = async () => {
+  if (!faceapiModule) {
+    faceapiModule = await import('face-api.js');
+  }
+  return faceapiModule;
+};
 
 const vert = `
 varying vec2 vUv;
@@ -667,7 +674,9 @@ export const GridScan = ({
   useEffect(() => {
     let canceled = false;
     const load = async () => {
+      if (!enableWebcam) return;
       try {
+        const faceapi = await getFaceApi();
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath),
           faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelsPath)
@@ -681,7 +690,7 @@ export const GridScan = ({
     return () => {
       canceled = true;
     };
-  }, [modelsPath]);
+  }, [modelsPath, enableWebcam]);
 
   useEffect(() => {
     let stop = false;
@@ -703,7 +712,8 @@ export const GridScan = ({
         return;
       }
 
-      const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+        const faceapi = await getFaceApi();
+        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
       const detect = async ts => {
         if (stop) return;

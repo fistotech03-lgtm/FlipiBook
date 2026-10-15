@@ -20,25 +20,26 @@ import {
   InteractionSlideshowModal,
   DeviceLayoutRenderer
 } from './previewAreaModules';
+import { useCustomizerState, useActiveBook, useUIModals } from '../../store/hooks';
 
 const PreviewArea = React.memo(({
     pages = [],
-    bookName,
+    bookName: bookNameProp,
     targetPage = 0,
-    backgroundSettings,
-    bookAppearanceSettings: incomingBookAppearanceSettings,
-    logoSettings: incomingLogoSettings,
-    watermarkSettings,
-    leadFormSettings: incomingLeadFormSettings,
+    backgroundSettings: backgroundSettingsProp,
+    bookAppearanceSettings: incomingBookAppearanceSettingsProp,
+    logoSettings: incomingLogoSettingsProp,
+    watermarkSettings: watermarkSettingsProp,
+    leadFormSettings: incomingLeadFormSettingsProp,
     settings: incomingSettings,
-    profileSettings,
+    profileSettings: profileSettingsProp,
     zoom = 1.0,
-    menuBarSettings,
-    otherSetupSettings: incomingOtherSetupSettings,
+    menuBarSettings: menuBarSettingsProp,
+    otherSetupSettings: incomingOtherSetupSettingsProp,
     onUpdateOtherSetup,
     hideHeader = false,
-    activeLayout,
-    layoutColors,
+    activeLayout: activeLayoutProp,
+    layoutColors: layoutColorsProp,
     onClose,
     isSidebarOpen,
     activeDevice: activeDeviceProp = 'Desktop',
@@ -56,9 +57,26 @@ const PreviewArea = React.memo(({
     v_id: incomingVId,
     vId: incomingVIdProp,
     shareId: incomingShareId,
-    currentBook,
+    currentBook: currentBookProp,
     baseUrl,
 }) => {
+    const customizerRedux = useCustomizerState();
+    const activeBookRedux = useActiveBook();
+    const uiModalRedux = useUIModals();
+
+    const bookName = bookNameProp || activeBookRedux.bookName;
+    const currentBook = currentBookProp || activeBookRedux.currentBook;
+    const incomingLogoSettings = incomingLogoSettingsProp || customizerRedux.logoSettings;
+    const incomingBookAppearanceSettings = incomingBookAppearanceSettingsProp || customizerRedux.bookAppearanceSettings;
+    const incomingLeadFormSettings = incomingLeadFormSettingsProp || customizerRedux.leadFormSettings;
+    const incomingOtherSetupSettings = incomingOtherSetupSettingsProp || customizerRedux.otherSetupSettings;
+    const activeLayout = activeLayoutProp || customizerRedux.layoutSettings;
+    const layoutColors = layoutColorsProp || customizerRedux.layoutColors;
+    const backgroundSettings = backgroundSettingsProp || customizerRedux.backgroundSettings;
+    const menuBarSettings = menuBarSettingsProp || customizerRedux.menuBarSettings;
+    const profileSettings = profileSettingsProp || customizerRedux.profileSettings;
+    const watermarkSettings = watermarkSettingsProp || customizerRedux.watermarkSettings;
+
     const [processedLogoSrc, setProcessedLogoSrc] = useState(incomingLogoSettings?.src || '');
 
     useEffect(() => {

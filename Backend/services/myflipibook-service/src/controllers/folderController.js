@@ -1,7 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const UserFolder = require('../models/UserFolder');
 const Flipbook = require('../models/Flipbook');
-const { deleteFolderStorage } = require('../utils/storageHelper');
+const { deleteFolderStorage, getStorageRoot, ensureUserWorkspace } = require('../utils/storageHelper');
 const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
 
 /**
@@ -111,6 +113,11 @@ exports.getFolders = async (req, res) => {
       }).catch(() => {});
     }
 
+    // Ensure physical user workspace and default folders exist on disk
+    try {
+      ensureUserWorkspace(customUserId || objectId, emailId);
+    } catch (e) {}
+
     res.status(200).json({ success: true, folders: orderedFolders });
   } catch (error) {
     console.error('[Folder Controller] Error fetching folders:', error);
@@ -166,6 +173,11 @@ exports.createFolder = async (req, res) => {
         folders: [{ _id: newId, name: safeFolderName }]
       });
     }
+
+    // Ensure physical custom folder is created on disk as well
+    try {
+      ensureUserWorkspace(customUserId || objectId, emailId, safeFolderName);
+    } catch (e) {}
 
     res.status(201).json({
       success: true,
@@ -396,6 +408,20 @@ exports.duplicateFolder = async (req, res) => {
         clone.folderName = [newFolderName];
         clone.flipbookName = `${clone.flipbookName} Copy`;
         await Flipbook.create(clone);
+      }
+
+      // Copy physical storage assets from source folder to new duplicated folder
+      try {
+        const storageRoot = getStorageRoot();
+        const userFolder = customUserId || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
+        const srcFolderDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folderName);
+        const destFolderDir = path.join(storageRoot, userFolder, 'My_Flipbooks', newFolderName);
+        if (fs.existsSync(srcFolderDir)) {
+          fs.cpSync(srcFolderDir, destFolderDir, { recursive: true });
+          console.log(`[Folder Controller] Copied physical storage from "${srcFolderDir}" to "${destFolderDir}"`);
+        }
+      } catch (cpErr) {
+        console.error('[Folder Controller] Error copying physical folder assets:', cpErr.message);
       }
     }
 

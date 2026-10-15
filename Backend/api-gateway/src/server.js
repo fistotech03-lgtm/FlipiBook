@@ -100,11 +100,6 @@ const storageStaticMiddleware = async (req, res, next) => {
   next();
 };
 
-app.use('/storage', storageStaticMiddleware);
-app.use('/storage', express.static(storageRoot));
-app.use('/uploads', storageStaticMiddleware);
-app.use('/uploads', express.static(storageRoot));
-
 // Global Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -132,6 +127,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
+app.use('/storage', storageStaticMiddleware);
+app.use('/storage', express.static(storageRoot));
+app.use('/uploads', storageStaticMiddleware);
+app.use('/uploads', express.static(storageRoot));
 
 // Health Check
 app.get('/health', (req, res) => {

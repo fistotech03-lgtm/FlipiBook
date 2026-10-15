@@ -34,6 +34,21 @@ import {
 
 export { parseLayersFromSVG };
 
+const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+
+const resolvePhysicalFolder = (folderInput) => {
+  if (Array.isArray(folderInput)) {
+    const real = folderInput.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
+    return real ? String(real).trim() : 'My_Flipbooks';
+  }
+  if (folderInput && typeof folderInput === 'string') {
+    const clean = folderInput.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean || 'My_Flipbooks';
+  }
+  return 'My_Flipbooks';
+};
+
 const PageEditor = () => {
   const { user } = useAuth();
   const { folder, v_id } = useParams();
@@ -717,10 +732,9 @@ const PageEditor = () => {
             const parser = new DOMParser();
             const userEmail = user?.emailId || user?.email;
             const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
-            const folderNameArr = Array.isArray(res.data.meta.folderName) ? res.data.meta.folderName : [res.data.meta.folderName || 'Recent Book'];
-            const actualFolderName = folderNameArr.find(f => f !== 'Recent Book' && f !== 'All Books') || folderNameArr[0] || 'Recent Book';
-            const bookName = res.data.meta.flipbookName || 'Untitled Flipbook';
-            const userFolder = res.data.meta.userID || sanitizedEmail;
+            const actualFolderName = resolvePhysicalFolder(res.data.meta?.folderName || folder || location.state?.folderName);
+            const bookName = res.data.meta?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
+            const userFolder = res.data.meta?.userID || sanitizedEmail;
             const projectBaseUrl = getSupabaseBaseUrl(userFolder, actualFolderName, bookName);
 
             const fetchedMeta = res.data.meta || {};
@@ -731,9 +745,10 @@ const PageEditor = () => {
             const targetOrientation = fetchedMeta.orientation || fetchedSettings.orientation || location.state?.orientation;
 
             setCurrentBook(prev => ({
-              ...(fetchedMeta || {}),
               ...(prev || {}),
-              flipbookName: fetchedMeta.flipbookName || prev?.flipbookName || 'Untitled Flipbook',
+              ...(fetchedMeta || {}),
+              folderName: actualFolderName,
+              flipbookName: fetchedMeta.flipbookName || prev?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
               width: targetWidth,
               height: targetHeight,
               templateId: targetTemplateId,
@@ -774,6 +789,9 @@ const PageEditor = () => {
               }
 
               let updatedHtml = pageHtml;
+              if (updatedHtml.includes('../assets/')) {
+                updatedHtml = updatedHtml.split('../assets/').join(`${projectBaseUrl}assets/`);
+              }
               if (updatedHtml.includes('./assets/')) {
                 updatedHtml = updatedHtml.split('./assets/').join(`${projectBaseUrl}assets/`);
               }
@@ -951,12 +969,12 @@ const PageEditor = () => {
         }
         setCurrentBook(prev => ({
           ...(prev || {}),
-          flipbookName: prev?.flipbookName || location.state.flipbookName || 'Untitled Flipbook',
-          folderName: prev?.folderName || location.state.folderName || 'Recent Book',
-          templateId: location.state.templateId,
-          orientation: location.state.orientation,
-          width: location.state.width,
-          height: location.state.height
+          flipbookName: prev?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
+          folderName: resolvePhysicalFolder(prev?.folderName || location.state?.folderName),
+          templateId: location.state?.templateId,
+          orientation: location.state?.orientation,
+          width: location.state?.width,
+          height: location.state?.height
         }));
       }
       else {
@@ -981,7 +999,7 @@ const PageEditor = () => {
         setCurrentBook(prev => ({
           ...(prev || {}),
           flipbookName: prev?.flipbookName || 'Untitled Flipbook',
-          folderName: prev?.folderName || 'Recent Book'
+          folderName: resolvePhysicalFolder(prev?.folderName)
         }));
       }
     } finally {
@@ -1164,6 +1182,10 @@ const PageEditor = () => {
                 setActiveMainTool('select');
               }
             }}
+            v_id={v_id || currentBook?.v_id}
+            flipbookVId={v_id || currentBook?.v_id}
+            folderName={resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName)}
+            flipbookName={currentBook?.flipbookName || location.state?.flipbookName || ''}
             isPopupEditor={!!popupEditContext}
             flipbookDimensions={popupEditContext ? (popupEditContext.dimensions || { width: 800, height: 600 }) : getFlipbookDimensions()}
           />
@@ -1265,7 +1287,7 @@ const PageEditor = () => {
           onHotspotClick={(hs) => setActive3DHotspotId(hs?.id || null)}
           v_id={v_id || currentBook?.v_id}
           flipbookVId={v_id || currentBook?.v_id}
-          folderName={Array.isArray(currentBook?.folderName) ? currentBook.folderName.find(f => f !== 'Recent Book' && f !== 'All Books') || currentBook.folderName[0] : (currentBook?.folderName || location.state?.folderName || 'My_Flipbooks')}
+          folderName={resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName)}
           flipbookName={currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook'}
         />
 

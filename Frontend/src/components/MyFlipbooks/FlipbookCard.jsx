@@ -146,19 +146,23 @@ export default function FlipbookCard({
     const isBookEditing = editingBookId === book.id || editingBookId === bookKey;
 
     // Resolve Physical Folder for Recent books
+    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
     let actualFolder = book.folder || activeFolder;
-    if (actualFolder === 'Recent Book' || actualFolder === 'Recent') {
+    if (!actualFolder || VIRTUAL_FOLDERS.has(String(actualFolder).trim().toLowerCase())) {
         const physical = books?.find(
-            (b) => b.realName === book.realName && b.folder !== 'Recent Book' && b.folder !== 'Recent'
+            (b) => b.realName === book.realName && b.folder && !VIRTUAL_FOLDERS.has(String(b.folder).trim().toLowerCase())
         );
-        if (physical) actualFolder = physical.folder;
+        actualFolder = (physical && physical.folder && !VIRTUAL_FOLDERS.has(String(physical.folder).trim().toLowerCase()))
+            ? physical.folder
+            : 'My_Flipbooks';
     }
 
     // Resolve Base URL for LazyPreview
+    const userFolder = book.userID || book.userId || emailId?.replace(/[@.]/g, '_');
     const resolvedIframeBaseUrl =
         iframeBaseUrl ||
         getAssetBaseUrl(
-            emailId?.replace(/[@.]/g, '_'),
+            userFolder,
             actualFolder || 'My_Flipbooks',
             book.realName || book.title
         );

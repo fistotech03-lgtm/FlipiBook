@@ -331,7 +331,7 @@ const ImageEditor = ({
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
             if (res.data.url) {
               const serverUrl = resolveUploadsPath(res.data.url);
-              const relativePath = res.data.flipbookPath || res.data.relativeUrl || `./assets/Image/${res.data.filename}`;
+              const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/Image/${res.data.filename}`);
               const svgImgSrv = getSvgImageEl(selectedElement);
               if (svgImgSrv) {
                 svgImgSrv.setAttribute('href', relativePath);

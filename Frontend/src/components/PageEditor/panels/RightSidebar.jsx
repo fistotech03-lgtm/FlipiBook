@@ -83,7 +83,20 @@ const RightSidebar = ({
   const location = useLocation();
 
   const effectiveVId = v_idProp || flipbookVIdProp || paramVId || location.state?.v_id || location.state?.flipbook_v_id;
-  const effectiveFolder = folderNameProp || folderProp || paramFolder || location.state?.folderName || 'My_Flipbooks';
+  const rawFolder = folderNameProp || folderProp || paramFolder || location.state?.folderName;
+  const effectiveFolder = (() => {
+    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+    if (Array.isArray(rawFolder)) {
+      const real = rawFolder.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
+      return real ? String(real).trim() : 'My_Flipbooks';
+    }
+    if (rawFolder && typeof rawFolder === 'string') {
+      const clean = rawFolder.trim();
+      if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+      return clean || 'My_Flipbooks';
+    }
+    return 'My_Flipbooks';
+  })();
   const effectiveBook = flipbookNameProp || location.state?.flipbookName || 'Untitled Flipbook';
 
   const isPdfProject = pages.some(p => p.html && (

@@ -976,12 +976,10 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
     
     // Resolve relative asset paths to absolute ones using projectBaseUrl
     if (projectBaseUrl) {
-      processed = processed.replace(/href="\.\/assets\//g, `href="${projectBaseUrl}assets/`);
-      processed = processed.replace(/href="assets\//g, `href="${projectBaseUrl}assets/`);
-      processed = processed.replace(/href='\.\/assets\//g, `href='${projectBaseUrl}assets/`);
-      processed = processed.replace(/href='assets\//g, `href='${projectBaseUrl}assets/`);
-      processed = processed.replace(/src="\.\/assets\//g, `src="${projectBaseUrl}assets/`);
-      processed = processed.replace(/src="assets\//g, `src="${projectBaseUrl}assets/`);
+      processed = processed.replace(/href="(?:\.\.\/|\.\/)?assets\//g, `href="${projectBaseUrl}assets/`);
+      processed = processed.replace(/href='(?:\.\.\/|\.\/)?assets\//g, `href='${projectBaseUrl}assets/`);
+      processed = processed.replace(/src="(?:\.\.\/|\.\/)?assets\//g, `src="${projectBaseUrl}assets/`);
+      processed = processed.replace(/src='(?:\.\.\/|\.\/)?assets\//g, `src='${projectBaseUrl}assets/`);
     }
 
     // Find the opening <svg> tag to normalize sizes
@@ -1168,10 +1166,8 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
 
     // Resolve relative asset paths
     if (projectBaseUrl) {
-      svg = svg.replace(/href="\.\/assets\//g, `href="${projectBaseUrl}assets/`);
-      svg = svg.replace(/href="assets\//g,      `href="${projectBaseUrl}assets/`);
-      svg = svg.replace(/href='\.\/assets\//g, `href='${projectBaseUrl}assets/`);
-      svg = svg.replace(/href='assets\//g,      `href='${projectBaseUrl}assets/`);
+      svg = svg.replace(/href="(?:\.\.\/|\.\/)?assets\//g, `href="${projectBaseUrl}assets/`);
+      svg = svg.replace(/href='(?:\.\.\/|\.\/)?assets\//g, `href='${projectBaseUrl}assets/`);
     }
 
     // 1. Physically remove editor-only overlay and interaction layers from export:
@@ -1303,10 +1299,8 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
 
     // Resolve relative asset paths to absolute ones using projectBaseUrl first
     if (projectBaseUrl) {
-      processed = processed.replace(/href="\.\/assets\//g, `href="${projectBaseUrl}assets/`);
-      processed = processed.replace(/href="assets\//g,      `href="${projectBaseUrl}assets/`);
-      processed = processed.replace(/href='\.\/assets\//g, `href='${projectBaseUrl}assets/`);
-      processed = processed.replace(/href='assets\//g,      `href='${projectBaseUrl}assets/`);
+      processed = processed.replace(/href="(?:\.\.\/|\.\/)?assets\//g, `href="${projectBaseUrl}assets/`);
+      processed = processed.replace(/href='(?:\.\.\/|\.\/)?assets\//g, `href='${projectBaseUrl}assets/`);
     }
 
     // Match all href or xlink:href attributes inside <image> tags

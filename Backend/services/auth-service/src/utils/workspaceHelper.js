@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Resolve root storage directory
@@ -8,7 +8,7 @@ const getStorageRoot = () => {
   if (process.env.STORAGE_PATH) {
     return path.resolve(process.env.STORAGE_PATH);
   }
-  const localDefault = path.resolve(__dirname, "../../../../storage");
+  const localDefault = path.resolve(__dirname, '../../../../storage');
   if (!fs.existsSync(localDefault)) {
     try {
       fs.mkdirSync(localDefault, { recursive: true });
@@ -30,27 +30,16 @@ const getStorageRoot = () => {
  * - Videos
  */
 const WORKSPACE_FOLDERS = [
-  "3D_Models",
-  "3D_Screenshot",
-  "Company_logo",
-  "gifs",
-  "Images",
-  "My_Flipbooks",
-  "Profile",
-  "Texture",
-  "Videos",
+  '3D_Models',
+  '3D_Screenshot',
+  'Company_logo',
+  'gifs',
+  'Images',
+  'My_Flipbooks',
+  'Profile',
+  'Texture',
+  'Videos'
 ];
-
-const ensureDir = (p) => {
-  if (!fs.existsSync(p)) {
-    try {
-      fs.mkdirSync(p, { recursive: true, mode: 0o777 });
-    } catch (e) {}
-  }
-  try {
-    fs.chmodSync(p, 0o777);
-  } catch (e) {}
-};
 
 /**
  * Initialize a user's workspace directory and subfolders in storage
@@ -60,52 +49,37 @@ const createUserWorkspace = (user) => {
   try {
     if (!user) return null;
     const storageRoot = getStorageRoot();
-    ensureDir(storageRoot);
+    if (!fs.existsSync(storageRoot)) {
+      fs.mkdirSync(storageRoot, { recursive: true });
+    }
 
-    // Resolve target directories: both custom FLIPIxxxx and sanitized email
-    const customUserId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : null));
-    const targetDirs = [];
-    if (customUserId) targetDirs.push(customUserId);
+    // Use user ID as the single root workspace folder name
+    const userId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : (user.emailId ? user.emailId.replace(/[@.]/g, '_') : null)));
+    if (!userId) return null;
 
-    if (user.emailId) {
-      const emailDir = user.emailId.trim().toLowerCase().replace(/[@.]/g, "_");
-      if (emailDir && !targetDirs.includes(emailDir)) {
-        targetDirs.push(emailDir);
+    const userDir = path.join(storageRoot, userId);
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+
+    // Create all required top-level folders
+    for (const folder of WORKSPACE_FOLDERS) {
+      const folderPath = path.join(userDir, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
       }
     }
 
-    if (targetDirs.length === 0) {
-      console.warn("[Workspace Helper] No valid userId or emailId to create workspace");
-      return null;
+    // Inside My_Flipbooks, create the default "My_Flipbooks" folder
+    const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
+    if (!fs.existsSync(defaultFolder)) {
+      fs.mkdirSync(defaultFolder, { recursive: true });
     }
 
-    let primaryDir = null;
-    for (const dirName of targetDirs) {
-      const userDir = path.join(storageRoot, dirName);
-      ensureDir(userDir);
-
-      // Create all required top-level folders
-      for (const folder of WORKSPACE_FOLDERS) {
-        const folderPath = path.join(userDir, folder);
-        ensureDir(folderPath);
-      }
-
-      // Inside My_Flipbooks, create the default "My_Flipbooks" folder
-      const defaultFolder = path.join(userDir, "My_Flipbooks", "My_Flipbooks");
-      ensureDir(defaultFolder);
-
-      if (!primaryDir) primaryDir = userDir;
-    }
-
-    console.log(
-      `[Workspace Helper] Successfully created workspace for: ${targetDirs.join(", ")} at ${storageRoot}`,
-    );
-    return primaryDir;
+    console.log(`[Workspace Helper] Successfully created workspace for user: ${userId}`);
+    return userDir;
   } catch (err) {
-    console.error(
-      "[Workspace Helper] Error initializing workspace:",
-      err.message,
-    );
+    console.error('[Workspace Helper] Error initializing workspace:', err.message);
     return false;
   }
 };
@@ -113,5 +87,5 @@ const createUserWorkspace = (user) => {
 module.exports = {
   getStorageRoot,
   WORKSPACE_FOLDERS,
-  createUserWorkspace,
+  createUserWorkspace
 };

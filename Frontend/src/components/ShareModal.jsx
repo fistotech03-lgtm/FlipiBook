@@ -6,6 +6,7 @@ import QRCodeStyling from 'qr-code-styling';
 import html2canvas from 'html2canvas';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
 import { getAssetBaseUrl, getSupabaseBaseUrl, rewriteHtmlUploadsToSupabase } from '../utils/assetUtils';
+import { useAuth } from '../context/AuthContext';
 
 
 // Lazy-load preview iframe: only fetches HTML when card is visible in viewport
@@ -269,12 +270,11 @@ const CustomQRCode = React.forwardRef(({
 
 
 const ShareModal = ({ isOpen, onClose, flipbookUrl, flipbookThumbnail, currentBook, activeLayout, isTabletLayout = false, isMobileLayout = false, isAbsolutePosition = false }) => {
+    const { user } = useAuth();
     const [addCover, setAddCover] = useState(false);
 
     const getResolvedFirstPageHtml = () => {
         if (!currentBook?.firstPageHtml) return '';
-        const storedUser = localStorage.getItem('user');
-        const user = storedUser ? JSON.parse(storedUser) : null;
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const emailFolder = user?.emailId ? user.emailId.replace(/[@.]/g, "_") : '';
         const folderName = currentBook?.folder || currentBook?.folderName || '';
@@ -1150,9 +1150,7 @@ const ShareModal = ({ isOpen, onClose, flipbookUrl, flipbookThumbnail, currentBo
                         <div className="flex-[0.8] flex flex-col w-full">
                             <div className="relative rounded-[1.2cqw] overflow-hidden shadow-lg aspect-[3/4] md:aspect-square bg-gray-100 w-full">
                                 {(() => {
-                                    const storedUser = localStorage.getItem('user');
-                                    const user = storedUser ? JSON.parse(storedUser) : null;
-                                    const emailId = user?.emailId || '';
+                                    const emailId = user?.emailId || user?.email || '';
                                     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                                     const emailFolder = emailId ? emailId.replace(/[@.]/g, "_") : '';
                                     const actualFolder = currentBook?.folder || currentBook?.folderName || '';
@@ -1438,9 +1436,7 @@ const ShareModal = ({ isOpen, onClose, flipbookUrl, flipbookThumbnail, currentBo
                                 <div className="flex-[1.1] flex flex-col">
                                     <div className="relative rounded-[1vw] overflow-hidden shadow-lg aspect-square bg-gray-100">
                                         {(() => {
-                                            const storedUser = localStorage.getItem('user');
-                                            const user = storedUser ? JSON.parse(storedUser) : null;
-                                            const emailId = user?.emailId || '';
+                                            const emailId = user?.emailId || user?.email || '';
                                             const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                                             const emailFolder = emailId ? emailId.replace(/[@.]/g, "_") : '';
                                             const actualFolder = currentBook?.folder || currentBook?.folderName || '';

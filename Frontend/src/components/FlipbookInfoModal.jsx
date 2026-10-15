@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, ChevronDown, Info, Check, Plus, Upload, Edit2, Sliders, MoreVertical, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './CustomToast';
+import { useAuth } from '../context/AuthContext';
 import { Icon } from '@iconify/react';
 import PremiumDropdown from './CustomizedEditor/PremiumDropdown';
 import { ImageCropOverlay } from './CustomizedEditor/AppearanceShared';
@@ -973,6 +974,7 @@ const CoverPicturePopupWithStyles = (props) => (
 );
 
 const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
+  const { user } = useAuth();
   const toast = useToast();
 
   const [bookName, setBookName] = useState('');
@@ -1014,12 +1016,11 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
   const thumbnailUrl = currentBook?.thumbnail || currentBook?.coverImage || null;
 
   const uploadFile = async (file) => {
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) return null;
+    const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
+    if (!userEmail) return null;
 
-    const user = JSON.parse(storedUser);
     const formData = new FormData();
-    formData.append('emailId', user.emailId || currentBook?.userEmail);
+    formData.append('emailId', userEmail);
     formData.append('folderName', currentBook?.folder || 'My_Flipbooks');
     formData.append('flipbookName', currentBook?.flipbookName || currentBook?.realName || bookName || 'Untitled Document');
     formData.append('type', 'image');
@@ -1063,11 +1064,9 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
     setErrors({});
     setIsSaving(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const v_id = currentBook?.v_id || currentBook?.realName;
-      const userEmail = user?.emailId || currentBook?.userEmail;
+      const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 
       if (userEmail && v_id) {
         await axios.post(`${backendUrl}/api/flipbook/update-settings`, {

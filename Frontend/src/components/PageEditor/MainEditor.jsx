@@ -1,58 +1,50 @@
-import { useState, useEffect, useRef } from "react";
-import { Icon } from "@iconify/react";
-import { motion as Motion, AnimatePresence } from "framer-motion";
-import usePreventBrowserZoom from "./hooks/usePreventBrowserZoom";
+import { useState, useEffect, useRef } from 'react';
+import { Icon } from '@iconify/react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import usePreventBrowserZoom from './hooks/usePreventBrowserZoom';
 
-import paper from "paper";
+import paper from 'paper';
 import {
   makeNode,
   makePath,
   loadDIntoVectraSession,
-  usePenNodeEngine,
-} from "./penTool";
+  usePenNodeEngine
+} from './penTool';
 
-import { CropController } from "./properties/Crop";
+import { CropController } from './properties/Crop';
 
-import CanvasRuler from "./toolbar/CanvasRuler";
-import GuidesOverlay from "./toolbar/GuidesOverlay";
-import TopToolbar from "./toolbar/TopToolbar";
+
+import CanvasRuler from './toolbar/CanvasRuler';
+import GuidesOverlay from './toolbar/GuidesOverlay';
+import TopToolbar from './toolbar/TopToolbar';
 import {
   getVisualBBox,
   getCanvasBounds,
-  clearOverlayType,
-} from "./mainEditor/utils/geometryUtils";
-import {
-  isElementHidden,
-  purgeElementOverlays,
-} from "./mainEditor/selectionOverlays/overlayDomUtils";
-import { useSlideshowManager } from "./mainEditor/hooks/useSlideshowManager";
-import { useVideoControls } from "./mainEditor/hooks/useVideoControls";
-import { useSelectionOverlays } from "./mainEditor/hooks/useSelectionOverlays";
-import { useInteractEngine } from "./mainEditor/hooks/useInteractEngine";
-import { convertTextToForeignObject } from "./mainEditor/utils/textConversionUtils";
+  clearOverlayType
+} from './mainEditor/utils/geometryUtils';
+import { isElementHidden, purgeElementOverlays } from './mainEditor/selectionOverlays/overlayDomUtils';
+import { useSlideshowManager } from './mainEditor/hooks/useSlideshowManager';
+import { useVideoControls } from './mainEditor/hooks/useVideoControls';
+import { useSelectionOverlays } from './mainEditor/hooks/useSelectionOverlays';
+import { useInteractEngine } from './mainEditor/hooks/useInteractEngine';
+import { convertTextToForeignObject } from './mainEditor/utils/textConversionUtils';
 // Encapsulated in useCanvasPointerEvents
-import { useCanvasZoomPan } from "./mainEditor/hooks/useCanvasZoomPan";
-import { alignSelectedElements } from "./mainEditor/utils/alignmentUtils";
-import { useCanvasTransforms } from "./mainEditor/hooks/useCanvasTransforms";
-import { useCanvasAssetInsertion } from "./mainEditor/hooks/useCanvasAssetInsertion";
-import { useCanvasKeyboardShortcuts } from "./mainEditor/hooks/useCanvasKeyboardShortcuts";
-import { useCanvasDOMOverlays } from "./mainEditor/hooks/useCanvasDOMOverlays";
-import { useCanvasContextMenuAndBadges } from "./mainEditor/hooks/useCanvasContextMenuAndBadges";
-import { useCanvasPointerEvents } from "./mainEditor/hooks/useCanvasPointerEvents";
-import { CanvasViewport } from "./mainEditor/components/CanvasViewport";
-import { FloatingToolbars } from "./mainEditor/components/FloatingToolbars";
-import {
-  getTopLevelFrames,
-  hitTest as hitTestExt,
-} from "./mainEditor/utils/frameHierarchyUtils";
-import { PageNavigationControls } from "./mainEditor/components/PageNavigationControls";
-import {
-  applyTrimViewToSvg,
-  cleanTrimViewFromHtml,
-  isElementCompletelyOutside,
-} from "./mainEditor/utils/trimViewUtils";
+import { useCanvasZoomPan } from './mainEditor/hooks/useCanvasZoomPan';
+import { alignSelectedElements } from './mainEditor/utils/alignmentUtils';
+import { useCanvasTransforms } from './mainEditor/hooks/useCanvasTransforms';
+import { useCanvasAssetInsertion } from './mainEditor/hooks/useCanvasAssetInsertion';
+import { useCanvasKeyboardShortcuts } from './mainEditor/hooks/useCanvasKeyboardShortcuts';
+import { useCanvasDOMOverlays } from './mainEditor/hooks/useCanvasDOMOverlays';
+import { useCanvasContextMenuAndBadges } from './mainEditor/hooks/useCanvasContextMenuAndBadges';
+import { useCanvasPointerEvents } from './mainEditor/hooks/useCanvasPointerEvents';
+import { CanvasViewport } from './mainEditor/components/CanvasViewport';
+import { FloatingToolbars } from './mainEditor/components/FloatingToolbars';
+import { getTopLevelFrames, hitTest as hitTestExt } from './mainEditor/utils/frameHierarchyUtils';
+import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
+import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
 
 // Re-export geometry utilities for backward compatibility with external components
+
 
 const MainEditor = ({
   isPdfProject,
@@ -85,16 +77,10 @@ const MainEditor = ({
   v_id,
   flipbookVId,
   folderName,
-  flipbookName,
-  projectBaseUrl,
+  flipbookName
 }) => {
-  usePreventBrowserZoom();
-  const { width: baseWidth, height: baseHeight } = flipbookDimensions || {
-    width: 210,
-    height: 297,
-  };
-  const canvasAspectRatio =
-    baseWidth && baseHeight ? `${baseWidth} / ${baseHeight}` : "210 / 297";
+  usePreventBrowserZoom();const { width: baseWidth, height: baseHeight } = flipbookDimensions || { width: 210, height: 297 };
+  const canvasAspectRatio = baseWidth && baseHeight ? `${baseWidth} / ${baseHeight}` : '210 / 297';
 
   const [showSelectOptions, setShowSelectOptions] = useState(false);
   const [showPenOptions, setShowPenOptions] = useState(false);
@@ -110,81 +96,57 @@ const MainEditor = ({
       if (e.detail !== undefined) {
         setLocalTrimView(e.detail);
       } else {
-        setLocalTrimView((prev) => !prev);
+        setLocalTrimView(prev => !prev);
       }
     };
-    window.addEventListener("editor_toggleTrimView", handleToggleTrim);
-    return () =>
-      window.removeEventListener("editor_toggleTrimView", handleToggleTrim);
+    window.addEventListener('editor_toggleTrimView', handleToggleTrim);
+    return () => window.removeEventListener('editor_toggleTrimView', handleToggleTrim);
   }, []);
 
   // Robustly ensure multi-selection dotted outlines are removed when selection is no longer multiple
   useEffect(() => {
     if (multiSelectedIds && multiSelectedIds.size <= 1) {
-      document
-        .querySelectorAll(".overlay-type-multi-child-selected")
-        .forEach((el) => el.remove());
+      document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
     }
   }, [multiSelectedIds]);
   // isEditingText is now managed via isEditingTextRef to prevent React re-renders from destroying the edit box
 
-  const [selectedSelectTool, setSelectedSelectTool] = useState("select"); // 'select' or 'direct'
-  const [selectedPenTool, setSelectedPenTool] = useState("pen"); // 'pen', 'curve', 'pencil'
+  const [selectedSelectTool, setSelectedSelectTool] = useState('select'); // 'select' or 'direct'
+  const [selectedPenTool, setSelectedPenTool] = useState('pen'); // 'pen', 'curve', 'pencil'
   const [showHotspotPopup, setShowHotspotPopup] = useState(false);
-  const [selectedShapeTool, setSelectedShapeTool] = useState("rectangle"); // 'rectangle', 'circle', 'polygon', 'line', 'star'
+  const [selectedShapeTool, setSelectedShapeTool] = useState('rectangle'); // 'rectangle', 'circle', 'polygon', 'line', 'star'
   const [zoom, setZoom] = useState(90);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isSpaceDown, setIsSpaceDown] = useState(false);
   const [openMenuIndex, setOpenMenuIndex] = useState(null); // Track which page's menu is open
 
-  const isConvertedFlipbook = Boolean(
-    isPdfProject ||
-    (pages &&
-      pages.some(
-        (p) =>
-          p.html &&
-          (p.html.includes("PDF Background") ||
-            p.html.includes("pdf-vector-layer") ||
-            p.html.includes("Document Shield")),
-      )),
-  );
+
+  const isConvertedFlipbook = Boolean(isPdfProject || (pages && pages.some(p => p.html && (p.html.includes('PDF Background') || p.html.includes('pdf-vector-layer') || p.html.includes('Document Shield')))));
 
   const pdfDefaultsSetRef = useRef(false);
   useEffect(() => {
     if (isConvertedFlipbook) {
       if (!pdfDefaultsSetRef.current) {
-        if (setActiveTopTool) setActiveTopTool("interaction");
+        if (setActiveTopTool) setActiveTopTool('interaction');
         pdfDefaultsSetRef.current = true;
       }
       if (marqueeOverlayRef1.current) {
-        marqueeOverlayRef1.current.style.display = "none";
-        const rect = marqueeOverlayRef1.current.querySelector?.("rect");
+        marqueeOverlayRef1.current.style.display = 'none';
+        const rect = marqueeOverlayRef1.current.querySelector?.('rect');
         if (rect) {
-          rect.setAttribute("x", "0");
-          rect.setAttribute("y", "0");
-          rect.setAttribute("width", "0");
-          rect.setAttribute("height", "0");
+          rect.setAttribute('x', '0');
+          rect.setAttribute('y', '0');
+          rect.setAttribute('width', '0');
+          rect.setAttribute('height', '0');
         }
       }
-      if (marqueeOverlayRef2.current)
-        marqueeOverlayRef2.current.style.display = "none";
-      {
-        const sb = document.getElementById("marquee-screen-box");
-        if (sb) sb.style.display = "none";
-      }
-      if (
-        multiSelectedIds &&
-        multiSelectedIds.size > 0 &&
-        setMultiSelectedIds
-      ) {
+      if (marqueeOverlayRef2.current) marqueeOverlayRef2.current.style.display = 'none';
+      { const sb = document.getElementById('marquee-screen-box'); if (sb) sb.style.display = 'none'; }
+      if (multiSelectedIds && multiSelectedIds.size > 0 && setMultiSelectedIds) {
         setMultiSelectedIds(new Set());
       }
-      document
-        .querySelectorAll(".overlay-type-multi-child-selected")
-        .forEach((el) => el.remove());
-      const boundsPoly = document.getElementById(
-        "overlay-poly-selected-multi-selection-bounds",
-      );
+      document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
+      const boundsPoly = document.getElementById('overlay-poly-selected-multi-selection-bounds');
       if (boundsPoly) boundsPoly.remove();
     }
   }, [isConvertedFlipbook, setActiveTopTool]);
@@ -201,7 +163,7 @@ const MainEditor = ({
   const selectedLayerIdRef = useRef(null);
   const dragStateRef = useRef(null);
   const suppressClickRef = useRef(false);
-  const lastWheelTimeRef = useRef(0); // ← tracks last Ctrl+scroll time to suppress spurious clicks
+  const lastWheelTimeRef = useRef(0);       // ← tracks last Ctrl+scroll time to suppress spurious clicks
   const wasRecentlyPanningRef = useRef(false); // ← tracks recent Space pan to suppress spurious clicks
   const isAltPressedRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0, target: null });
@@ -225,64 +187,51 @@ const MainEditor = ({
   const editorContainerRef = useRef(null);
   const isEditingTextRef = useRef(false);
   const drawOverlayHighlightRef = useRef(null); // Stable ref, populated after useSelectionOverlays
-  const nodeEditModeRef = useRef(false); // Stable early ref, also returned by usePenNodeEngine
+  const nodeEditModeRef = useRef(false);    // Stable early ref, also returned by usePenNodeEngine
   const clearMeasurementOverlayRef = useRef(null); // Stable ref, populated after useSelectionOverlays
+
+
+
 
   useEffect(() => {
     activeTopToolRef.current = activeTopTool;
-    if (activeTopTool === "interaction" || activeTopTool === "animation") {
+    if (activeTopTool === 'interaction' || activeTopTool === 'animation') {
       if (marqueeOverlayRef1.current) {
-        marqueeOverlayRef1.current.style.display = "none";
-        const rect = marqueeOverlayRef1.current.querySelector?.("rect");
+        marqueeOverlayRef1.current.style.display = 'none';
+        const rect = marqueeOverlayRef1.current.querySelector?.('rect');
         if (rect) {
-          rect.setAttribute("x", "0");
-          rect.setAttribute("y", "0");
-          rect.setAttribute("width", "0");
-          rect.setAttribute("height", "0");
+          rect.setAttribute('x', '0');
+          rect.setAttribute('y', '0');
+          rect.setAttribute('width', '0');
+          rect.setAttribute('height', '0');
         }
       }
-      if (marqueeOverlayRef2.current)
-        marqueeOverlayRef2.current.style.display = "none";
-      {
-        const sb = document.getElementById("marquee-screen-box");
-        if (sb) sb.style.display = "none";
-      }
+      if (marqueeOverlayRef2.current) marqueeOverlayRef2.current.style.display = 'none';
+      { const sb = document.getElementById('marquee-screen-box'); if (sb) sb.style.display = 'none'; }
       if (marqueeDataRef.current) marqueeDataRef.current = null;
       marqueeRef.current = null;
       setMarquee(null);
-      if (
-        multiSelectedIds &&
-        multiSelectedIds.size > 1 &&
-        setMultiSelectedIds
-      ) {
+      if (multiSelectedIds && multiSelectedIds.size > 1 && setMultiSelectedIds) {
         setMultiSelectedIds(new Set(selectedLayerId ? [selectedLayerId] : []));
       }
-      document
-        .querySelectorAll(".overlay-type-multi-child-selected")
-        .forEach((el) => el.remove());
-      const boundsPoly = document.getElementById(
-        "overlay-poly-selected-multi-selection-bounds",
-      );
+      document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
+      const boundsPoly = document.getElementById('overlay-poly-selected-multi-selection-bounds');
       if (boundsPoly) boundsPoly.remove();
     } else {
       // In normal edit mode: deselect any Free Frame immediately
       if (selectedLayerId) {
         const selEl = document.getElementById(selectedLayerId);
-        const isFreeFrame = selEl
-          ? selEl.getAttribute("data-name") === "Free Frame" ||
-            selEl.getAttribute("data-type") === "free-frame" ||
-            (selEl.id && selEl.id.startsWith("free-frame"))
-          : selectedLayerId.startsWith("free-frame");
+        const isFreeFrame = selEl ? (
+          selEl.getAttribute('data-name') === 'Free Frame' ||
+          selEl.getAttribute('data-type') === 'free-frame' ||
+          (selEl.id && selEl.id.startsWith('free-frame'))
+        ) : selectedLayerId.startsWith('free-frame');
         if (isFreeFrame) {
           if (setSelectedLayerId) setSelectedLayerId(null);
           selectedLayerIdRef.current = null;
           if (setMultiSelectedIds) setMultiSelectedIds(new Set());
           multiSelectedIdsRef.current = new Set();
-          document
-            .querySelectorAll(
-              ".selection-overlay-layer polygon, .selection-overlay-layer g, .selection-overlay-layer circle",
-            )
-            .forEach((el) => el.remove());
+          document.querySelectorAll('.selection-overlay-layer polygon, .selection-overlay-layer g, .selection-overlay-layer circle').forEach(el => el.remove());
         }
       }
     }
@@ -290,44 +239,31 @@ const MainEditor = ({
 
   useEffect(() => {
     paperScopeRef.current = new paper.PaperScope();
-    paperScopeRef.current.setup(document.createElement("canvas"));
+    paperScopeRef.current.setup(document.createElement('canvas'));
 
     const handleKeyDown = (e) => {
       // 1. Skip shortcuts if user is typing
-      if (
-        document.activeElement.tagName === "INPUT" ||
-        document.activeElement.tagName === "TEXTAREA" ||
+      if (document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA' ||
         isEditingTextRef.current ||
-        document.activeElement.isContentEditable
-      )
-        return;
+        document.activeElement.isContentEditable) return;
 
       const key = e.key.toLowerCase();
 
       // ── Restrict shortcuts in non-editor modes ─────────────────
-      if (activeTopTool !== "editor") {
-        const isSelectionKey = key === "v" || key === "a" || key === " ";
+      if (activeTopTool !== 'editor') {
+        const isSelectionKey = key === 'v' || key === 'a' || key === ' ';
         if (!isSelectionKey) return;
       }
 
       // ── Spacebar Pan ─────────────
-      if (key === " " && !isSpaceDownRef.current) {
-        if (
-          document.activeElement.tagName === "INPUT" ||
-          document.activeElement.tagName === "TEXTAREA" ||
-          isEditingTextRef.current ||
-          document.activeElement.isContentEditable
-        )
-          return;
+      if (key === ' ' && !isSpaceDownRef.current) {
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || isEditingTextRef.current || document.activeElement.isContentEditable) return;
         e.preventDefault();
         // Blur any focused interactive element (buttons, etc.) so Space doesn't
         // re-trigger their click action on keyup.
         const active = document.activeElement;
-        if (
-          active &&
-          active !== document.body &&
-          typeof active.blur === "function"
-        ) {
+        if (active && active !== document.body && typeof active.blur === 'function') {
           active.blur();
         }
         isSpaceDownRef.current = true;
@@ -336,52 +272,46 @@ const MainEditor = ({
 
       // ── Tool Shortcuts ─────────────
       // V for selection
-      if (key === "v" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        setActiveMainTool("select");
-        setSelectedSelectTool("select");
+      if (key === 'v' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        setActiveMainTool('select');
+        setSelectedSelectTool('select');
         closeAllDropdowns();
       }
 
       // A for direct tool
-      if (key === "a" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        setActiveMainTool("select");
-        setSelectedSelectTool("direct");
+      if (key === 'a' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        setActiveMainTool('select');
+        setSelectedSelectTool('direct');
         closeAllDropdowns();
       }
 
       // P or Shift+P for pen tool
-      if (key === "p" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        setActiveMainTool("pen");
+      if (key === 'p' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        setActiveMainTool('pen');
         if (e.shiftKey) {
-          setSelectedPenTool("pencil");
+          setSelectedPenTool('pencil');
         } else {
-          setSelectedPenTool("pen");
+          setSelectedPenTool('pen');
         }
         closeAllDropdowns();
       }
 
       // ── Ctrl detection ──
-      if (e.key === "Control" && !isCtrlPressedRef.current) {
+      if (e.key === 'Control' && !isCtrlPressedRef.current) {
         isCtrlPressedRef.current = true;
       }
 
-      if (e.key === "Alt") {
+      if (e.key === 'Alt') {
         e.preventDefault();
         if (!isAltPressedRef.current) {
           isAltPressedRef.current = true;
-          document
-            .querySelectorAll(".overlay-type-hover, .overlay-type-child-hover")
-            .forEach((el) => el.remove());
+          document.querySelectorAll('.overlay-type-hover, .overlay-type-child-hover').forEach(el => el.remove());
           if (lastMousePosRef.current && drawMeasurementOverlayRef.current) {
             let currentTarget = lastMousePosRef.current.target;
             // If the SVG re-rendered, the old target might be detached from the DOM.
             // Get the fresh element currently at the mouse coordinates.
             if (currentTarget && !document.contains(currentTarget)) {
-              currentTarget =
-                document.elementFromPoint(
-                  lastMousePosRef.current.x,
-                  lastMousePosRef.current.y,
-                ) || currentTarget;
+              currentTarget = document.elementFromPoint(lastMousePosRef.current.x, lastMousePosRef.current.y) || currentTarget;
               lastMousePosRef.current.target = currentTarget;
             }
             drawMeasurementOverlayRef.current(currentTarget);
@@ -390,74 +320,62 @@ const MainEditor = ({
       }
     };
     const handleKeyUp = (e) => {
-      if (e.key === " ") {
+      if (e.key === ' ') {
         isSpaceDownRef.current = false;
         setIsSpaceDown(false);
         isPanningRef.current = false;
       }
-      if (e.key === "Control") {
+      if (e.key === 'Control') {
         isCtrlPressedRef.current = false;
       }
-      if (e.key === "Alt") {
+      if (e.key === 'Alt') {
         e.preventDefault();
         isAltPressedRef.current = false;
-        document
-          .querySelectorAll(".measurement-overlay-group")
-          .forEach((el) => el.remove());
+        document.querySelectorAll('.measurement-overlay-group').forEach(el => el.remove());
       }
     };
 
     const handleWindowBlur = () => {
       isAltPressedRef.current = false;
-      document
-        .querySelectorAll(".measurement-overlay-group")
-        .forEach((el) => el.remove());
+      document.querySelectorAll('.measurement-overlay-group').forEach(el => el.remove());
     };
 
     // Use capture phase so our Space handler fires BEFORE the focused button's
     // native Space-activates-button handler — ensuring preventDefault() works.
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
     // Cleanup to prevent leaks
     return () => {
-      window.removeEventListener("keydown", handleKeyDown, { capture: true });
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
     };
   }, [activeTopTool]);
 
   const saveModifiedPageHtml = (targetPageIndex, targetSvg) => {
     if (!updatePageHtmlRef.current) return;
     window.__skipCanvasUpdateForPage = targetPageIndex;
-    const tempDiv = document.createElement("div");
+    const tempDiv = document.createElement('div');
     tempDiv.innerHTML = targetSvg.outerHTML;
-    tempDiv
-      .querySelectorAll(".slideshow-transition-clone")
-      .forEach((el) => el.remove());
-    tempDiv
-      .querySelectorAll(".custom-video-overlay")
-      .forEach((el) => el.remove());
+    tempDiv.querySelectorAll('.slideshow-transition-clone').forEach(el => el.remove());
+    tempDiv.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
     cleanTrimViewFromHtml(tempDiv);
     let finalHtml = tempDiv.innerHTML;
     finalHtml = finalHtml
-      .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, "<br/>")
-      .replace(/<\/\s*br\s*>/gi, "");
+      .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
+      .replace(/<\/\s*br\s*>/gi, '');
     if (updatePageHtmlRef.current) {
       updatePageHtmlRef.current(targetPageIndex, finalHtml);
-    } else if (typeof updatePageHtml === "function") {
+    } else if (typeof updatePageHtml === 'function') {
       updatePageHtml(targetPageIndex, finalHtml);
     }
   };
 
   // ── Modular Hook Calls: Slideshow & Custom Video Controls ──
   useSlideshowManager();
-  useVideoControls({
-    setSelectedLayerId,
-    selectedLayerId,
-    activePageIndex,
-    updateElementAttribute,
-  });
+  useVideoControls({ setSelectedLayerId, selectedLayerId, activePageIndex, updateElementAttribute });
+
 
   // ── Modular Hook Call: Canvas DOM Overlays & Visual Observers ──
   useCanvasDOMOverlays({ activePageIndex });
@@ -474,8 +392,7 @@ const MainEditor = ({
     setMultiSelectedIds,
     setActiveMainTool,
     setActiveTopTool,
-    drawOverlayHighlight: (...args) =>
-      drawOverlayHighlightRef.current?.(...args),
+    drawOverlayHighlight: (...args) => drawOverlayHighlightRef.current?.(...args),
     currentFrameIdRef,
     setCurrentFrameId,
     selectedLayerIdRef,
@@ -483,16 +400,13 @@ const MainEditor = ({
     v_id,
     flipbookVId,
     folderName,
-    flipbookName,
-    projectBaseUrl,
+    flipbookName
   });
 
   // ── Marquee Selection State ───────────────────────────────────────────────
   const [marquee, setMarquee] = useState(null); // { pageIndex }
 
-  useEffect(() => {
-    marqueeRef.current = marquee;
-  }, [marquee]);
+  useEffect(() => { marqueeRef.current = marquee; }, [marquee]);
 
   const handleRotateRef = useRef(null);
 
@@ -501,7 +415,7 @@ const MainEditor = ({
     syncMultiSelectionBox,
     drawMultiSelectionHighlight,
     drawOverlayHighlight,
-    clearMeasurementOverlay,
+    clearMeasurementOverlay
   } = useSelectionOverlays({
     zoom,
     activePageIndex,
@@ -516,7 +430,7 @@ const MainEditor = ({
     drawMeasurementOverlayRef,
     setActiveTopTool,
     updateElementAttribute,
-    handleRotateRef,
+    handleRotateRef
   });
 
   // Populate stable refs so hooks initialized before useSelectionOverlays can call them via wrappers
@@ -524,17 +438,22 @@ const MainEditor = ({
   clearMeasurementOverlayRef.current = clearMeasurementOverlay;
 
   // ── Modular Hook Call: Canvas Element Transformations (Rotate & Flip) ──
-  const { rotation, handleRotate, handleFlip } = useCanvasTransforms({
+  const {
+    rotation,
+    handleRotate,
+    handleFlip
+  } = useCanvasTransforms({
     selectedLayerId,
     multiSelectedIds,
     activePageIndex,
     currentFrameId,
     updatePageHtml,
     drawOverlayHighlight,
-    drawMultiSelectionHighlight,
+    drawMultiSelectionHighlight
   });
 
   handleRotateRef.current = handleRotate;
+
 
   // ── Modular Hook Call: Canvas Context Menu & Interaction Badges ──
   const { handleSvgContextMenu } = useCanvasContextMenuAndBadges({
@@ -549,36 +468,22 @@ const MainEditor = ({
     drawOverlayHighlight,
     setActiveMainTool,
     setSelectedShapeTool,
-    selectedShapeTool,
+    selectedShapeTool
   });
   // ── Sync refs with props ──────────────────────────────────────────────────
-  useEffect(() => {
-    activeMainToolRef.current = activeMainTool;
-  }, [activeMainTool]);
-  useEffect(() => {
-    selectedSelectToolRef.current = selectedSelectTool;
-  }, [selectedSelectTool]);
-  useEffect(() => {
-    selectedPenToolRef.current = selectedPenTool;
-  }, [selectedPenTool]);
-  useEffect(() => {
-    selectedLayerIdRef.current = selectedLayerId;
-  }, [selectedLayerId]);
-  useEffect(() => {
-    multiSelectedIdsRef.current = multiSelectedIds;
-  }, [multiSelectedIds]);
-  useEffect(() => {
-    updatePageHtmlRef.current = updatePageHtml;
-  }, [updatePageHtml]);
-  useEffect(() => {
-    currentFrameIdRef.current = currentFrameId;
-  }, [currentFrameId]);
+  useEffect(() => { activeMainToolRef.current = activeMainTool; }, [activeMainTool]);
+  useEffect(() => { selectedSelectToolRef.current = selectedSelectTool; }, [selectedSelectTool]);
+  useEffect(() => { selectedPenToolRef.current = selectedPenTool; }, [selectedPenTool]);
+  useEffect(() => { selectedLayerIdRef.current = selectedLayerId; }, [selectedLayerId]);
+  useEffect(() => { multiSelectedIdsRef.current = multiSelectedIds; }, [multiSelectedIds]);
+  useEffect(() => { updatePageHtmlRef.current = updatePageHtml; }, [updatePageHtml]);
+  useEffect(() => { currentFrameIdRef.current = currentFrameId; }, [currentFrameId]);
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = () => setOpenMenuIndex(null);
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
   // ── Modular Hook Call: Pen Tool & Interactive Node Edit Engine ──
@@ -630,15 +535,13 @@ const MainEditor = ({
     activeMainTool,
     activeTopTool,
     saveModifiedPageHtml,
-    drawOverlayHighlight: (...args) =>
-      drawOverlayHighlightRef.current?.(...args),
+    drawOverlayHighlight: (...args) => drawOverlayHighlightRef.current?.(...args),
     clearOverlayType,
-    clearMeasurementOverlay: (...args) =>
-      clearMeasurementOverlayRef.current?.(...args),
+    clearMeasurementOverlay: (...args) => clearMeasurementOverlayRef.current?.(...args),
     nodeEditModeRef,
     skipClearSelectionRef,
     selectedLayerIdRef,
-    multiSelectedIdsRef,
+    multiSelectedIdsRef
   });
 
   // ── Modular Hook Call: Canvas Keyboard Shortcuts Engine ──
@@ -678,16 +581,16 @@ const MainEditor = ({
     drawMultiSelectionHighlight,
     isAltPressedRef,
     drawMeasurementOverlayRef,
-    lastMousePosRef,
+    lastMousePosRef
   });
 
   useEffect(() => {
     return () => {
       dragStateRef.current = null;
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-      document.body.classList.remove("resizing-active");
-      document.body.classList.remove("dragging-active");
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      document.body.classList.remove('resizing-active');
+      document.body.classList.remove('dragging-active');
     };
   }, []);
 
@@ -714,30 +617,23 @@ const MainEditor = ({
     }
 
     // When switching to pen tool, check if an existing vector path is being edited or selected
-    if (activeMainTool === "pen") {
+    if (activeMainTool === 'pen') {
       // Clear node edit contour overlay so blue outline does not cover existing path stroke while drawing
-      document
-        .querySelectorAll('[id^="highlight-overlay-"]')
-        .forEach((overlay) => {
-          const nodeGroup = overlay.querySelector("#node-edit-overlay-group");
-          if (nodeGroup) nodeGroup.remove();
-        });
+      document.querySelectorAll('[id^="highlight-overlay-"]').forEach(overlay => {
+        const nodeGroup = overlay.querySelector('#node-edit-overlay-group');
+        if (nodeGroup) nodeGroup.remove();
+      });
 
-      let existingTarget = nodeEditModeRef.current
-        ? nodeEditPathRef.current
-        : null;
+      let existingTarget = nodeEditModeRef.current ? nodeEditPathRef.current : null;
 
-      if (existingTarget && existingTarget.getAttribute("d")) {
+      if (existingTarget && existingTarget.getAttribute('d')) {
         drawingPathRef.current = existingTarget;
         nodeEditPathRef.current = existingTarget;
         nodeEditModeRef.current = true;
-        drawingPageIndexRef.current =
-          nodeEditPageIndexRef.current !== null
-            ? nodeEditPageIndexRef.current
-            : activePageIndex;
-        const activeContainer = existingTarget.closest(".page-svg-container");
+        drawingPageIndexRef.current = nodeEditPageIndexRef.current !== null ? nodeEditPageIndexRef.current : activePageIndex;
+        const activeContainer = existingTarget.closest('.page-svg-container');
         if (activeContainer) {
-          const svg = activeContainer.querySelector("svg");
+          const svg = activeContainer.querySelector('svg');
           drawingSvgRef.current = svg;
         }
 
@@ -747,17 +643,9 @@ const MainEditor = ({
         }
 
         const vSession = vectraPenSessionRef.current;
-        loadDIntoVectraSession(
-          existingTarget.getAttribute("d"),
-          vSession,
-          paperScopeRef.current,
-        );
+        loadDIntoVectraSession(existingTarget.getAttribute('d'), vSession, paperScopeRef.current);
         if (existingTarget.parentElement) {
-          renderVectraOverlay(
-            drawingPageIndexRef.current,
-            existingTarget.parentElement,
-            vSession,
-          );
+          renderVectraOverlay(drawingPageIndexRef.current, existingTarget.parentElement, vSession);
         }
         return;
       }
@@ -771,36 +659,23 @@ const MainEditor = ({
       }
       setMarquee(null);
       // Force immediate visual cleanup of active selections
-      clearOverlayType("selected");
-      clearOverlayType("child-selected");
+      clearOverlayType('selected');
+      clearOverlayType('child-selected');
       // Clear pen tool nodes and Vectra overlay on tool switch
-      document.querySelectorAll(".pen-tool-node").forEach((n) => n.remove());
-      if (activeMainTool !== "pen" || selectedPenTool !== "pen") {
+      document.querySelectorAll('.pen-tool-node').forEach(n => n.remove());
+      if (activeMainTool !== 'pen' || selectedPenTool !== 'pen') {
         vectraPenSessionRef.current.reset();
         clearVectraOverlay(activePageIndex);
-        document
-          .querySelectorAll('[id^="highlight-overlay-"]')
-          .forEach((overlay) => {
-            const g = overlay.querySelector("#vectra-overlay-group");
-            if (g) g.innerHTML = "";
-          });
+        document.querySelectorAll('[id^="highlight-overlay-"]').forEach(overlay => {
+          const g = overlay.querySelector('#vectra-overlay-group');
+          if (g) g.innerHTML = '';
+        });
       }
 
-      document
-        .querySelectorAll('[data-selected="true"]')
-        .forEach((el) => el.removeAttribute("data-selected"));
-      document
-        .querySelectorAll('[data-child-selected="true"]')
-        .forEach((el) => el.removeAttribute("data-child-selected"));
+      document.querySelectorAll('[data-selected="true"]').forEach(el => el.removeAttribute('data-selected'));
+      document.querySelectorAll('[data-child-selected="true"]').forEach(el => el.removeAttribute('data-child-selected'));
     }
-  }, [
-    activeMainTool,
-    selectedSelectTool,
-    selectedPenTool,
-    selectedShapeTool,
-    setSelectedLayerId,
-    setMultiSelectedIds,
-  ]);
+  }, [activeMainTool, selectedSelectTool, selectedPenTool, selectedShapeTool, setSelectedLayerId, setMultiSelectedIds]);
 
   // ── Sync multi-selection ref with prop ────────────────────────────────────────
   useEffect(() => {
@@ -810,7 +685,11 @@ const MainEditor = ({
   }, [multiSelectedIds]);
 
   // ── Modular Hook Call: Canvas Zoom & Pan Gestures Engine ──
-  const { handleZoomIn, handleZoomOut, handleResetZoom } = useCanvasZoomPan({
+  const {
+    handleZoomIn,
+    handleZoomOut,
+    handleResetZoom
+  } = useCanvasZoomPan({
     zoom,
     setZoom,
     pan,
@@ -825,12 +704,15 @@ const MainEditor = ({
     currentPanRef,
     wheelRafRef,
     lastWheelTimeRef,
-    suppressClickRef,
+    suppressClickRef
   });
+
+
+
 
   // ── Sync refs and perform page-level DOM highlights ──────────────────────────
   useEffect(() => {
-    if (activeTopTool === "interaction" || activeTopTool === "animation") {
+    if (activeTopTool === 'interaction' || activeTopTool === 'animation') {
       if (nodeEditModeRef.current) {
         exitNodeEditMode();
       }
@@ -838,39 +720,30 @@ const MainEditor = ({
 
     // Suppress regular selection box and resize handles when in Path Node Edit Mode
     if (nodeEditModeRef.current) {
-      clearOverlayType("selected");
-      clearOverlayType("entered");
-      clearOverlayType("child-selected");
-      document
-        .querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle')
-        .forEach((h) => h.remove());
+      clearOverlayType('selected');
+      clearOverlayType('entered');
+      clearOverlayType('child-selected');
+      document.querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle').forEach(h => h.remove());
       if (nodeEditPathRef.current && nodeEditPaperPathRef.current) {
-        drawNodeEditOverlay(
-          nodeEditPathRef.current,
-          nodeEditPaperPathRef.current,
-          nodeEditPageIndexRef.current,
-        );
+        drawNodeEditOverlay(nodeEditPathRef.current, nodeEditPaperPathRef.current, nodeEditPageIndexRef.current);
       }
       return;
     }
 
     // Force immediate visual cleanup of all overlays before redraw
-    clearOverlayType("selected");
-    clearOverlayType("entered");
-    clearOverlayType("child-selected");
+    clearOverlayType('selected');
+    clearOverlayType('entered');
+    clearOverlayType('child-selected');
 
     // Clean up HTML-based UI elements (interaction badges)
-    document.querySelectorAll('[id^="interaction-badge-"]').forEach((badge) => {
-      if (activeTopTool !== "interaction") {
+    document.querySelectorAll('[id^="interaction-badge-"]').forEach(badge => {
+      if (activeTopTool !== 'interaction') {
         badge.remove();
       } else {
-        const id = badge.id.replace("interaction-badge-", "");
-        const idsToHighlight =
-          multiSelectedIds.size > 0
-            ? multiSelectedIds
-            : selectedLayerId
-              ? new Set([selectedLayerId])
-              : new Set();
+        const id = badge.id.replace('interaction-badge-', '');
+        const idsToHighlight = multiSelectedIds.size > 0
+          ? multiSelectedIds
+          : (selectedLayerId ? new Set([selectedLayerId]) : new Set());
         if (!idsToHighlight.has(id)) {
           badge.remove();
         }
@@ -879,78 +752,58 @@ const MainEditor = ({
 
     if (multiSelectedIds.size > 1) {
       if (localTrimView) {
-        multiSelectedIds.forEach((id) => {
-          document.querySelectorAll(`[id="${id}"]`).forEach((el) => {
-            const svg = el.closest("svg");
+        multiSelectedIds.forEach(id => {
+          document.querySelectorAll(`[id="${id}"]`).forEach(el => {
+            const svg = el.closest('svg');
             if (svg && isElementCompletelyOutside(el, svg)) {
-              el.setAttribute("data-trim-outside", "true");
+              el.setAttribute('data-trim-outside', 'true');
             } else if (el) {
-              el.removeAttribute("data-trim-outside");
+              el.removeAttribute('data-trim-outside');
             }
           });
         });
       }
-      drawMultiSelectionHighlight(multiSelectedIds, "selected");
+      drawMultiSelectionHighlight(multiSelectedIds, 'selected');
     } else {
-      const idsToHighlight =
-        multiSelectedIds.size > 0
-          ? multiSelectedIds
-          : selectedLayerId
-            ? new Set([selectedLayerId])
-            : new Set();
+      const idsToHighlight = multiSelectedIds.size > 0
+        ? multiSelectedIds
+        : (selectedLayerId ? new Set([selectedLayerId]) : new Set());
 
-      idsToHighlight.forEach((id) => {
+      idsToHighlight.forEach(id => {
         const elements = document.querySelectorAll(`[id="${id}"]`);
         if (elements.length === 0) {
           purgeElementOverlays(id);
           return;
         }
 
-        elements.forEach((el) => {
+        elements.forEach(el => {
           if (isElementHidden(el)) {
             purgeElementOverlays(el);
             return;
           }
 
-          const isFreeFrame =
-            el.getAttribute("data-name") === "Free Frame" ||
-            el.getAttribute("data-type") === "free-frame" ||
-            (el.id && el.id.startsWith("free-frame"));
-          if (
-            isFreeFrame &&
-            activeTopTool !== "interaction" &&
-            activeTopTool !== "animation"
-          )
-            return;
+          const isFreeFrame = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame' || (el.id && el.id.startsWith('free-frame'));
+          if (isFreeFrame && activeTopTool !== 'interaction' && activeTopTool !== 'animation') return;
 
           if (localTrimView) {
-            const svg = el.closest("svg");
+            const svg = el.closest('svg');
             if (svg && isElementCompletelyOutside(el, svg)) {
-              el.setAttribute("data-trim-outside", "true");
+              el.setAttribute('data-trim-outside', 'true');
             } else if (el) {
-              el.removeAttribute("data-trim-outside");
+              el.removeAttribute('data-trim-outside');
             }
           }
 
           // Highlights across multiple pages are drawn in their respective containers
-          const type =
-            currentFrameId && id !== currentFrameId
-              ? "child-selected"
-              : "selected";
-          el.setAttribute(`data-${type}`, "true");
+          const type = (currentFrameId && id !== currentFrameId) ? 'child-selected' : 'selected';
+          el.setAttribute(`data-${type}`, 'true');
           drawOverlayHighlight(el, type);
 
           // If this selected element is inside a parent group, highlight the parent group with a dotted line!
-          const parentGroup = el.parentElement?.closest("g");
-          if (
-            parentGroup &&
-            parentGroup.id &&
-            parentGroup.id !== id &&
-            parentGroup.getAttribute("data-type") !== "frame" &&
-            parentGroup.getAttribute("data-name") !== "Overlay"
-          ) {
+          const parentGroup = el.parentElement?.closest('g');
+          if (parentGroup && parentGroup.id && parentGroup.id !== id && parentGroup.getAttribute('data-type') !== 'frame' && parentGroup.getAttribute('data-name') !== 'Overlay') {
             if (!isElementHidden(parentGroup)) {
-              drawOverlayHighlight(parentGroup, "entered");
+              drawOverlayHighlight(parentGroup, 'entered');
             }
           }
         });
@@ -958,39 +811,24 @@ const MainEditor = ({
     }
 
     if (currentFrameId) {
-      document.querySelectorAll(`[id="${currentFrameId}"]`).forEach((el) => {
-        if (el.getAttribute("data-type") === "frame") {
-          el.setAttribute("data-frame-entered", "true");
-          drawOverlayHighlight(el, "entered");
+      document.querySelectorAll(`[id="${currentFrameId}"]`).forEach(el => {
+        if (el.getAttribute('data-type') === 'frame') {
+          el.setAttribute('data-frame-entered', 'true');
+          drawOverlayHighlight(el, 'entered');
         }
       });
     }
 
     if (isEditingTextRef.current) {
-      document
-        .querySelectorAll(".selection-overlay-layer .resize-handle")
-        .forEach((h) => h.remove());
-      document
-        .querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle')
-        .forEach((h) => h.remove());
+      document.querySelectorAll('.selection-overlay-layer .resize-handle').forEach(h => h.remove());
+      document.querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle').forEach(h => h.remove());
     }
-  }, [
-    selectedLayerId,
-    currentFrameId,
-    multiSelectedIds,
-    pages,
-    activePageIndex,
-    zoom,
-    activeTopTool,
-    localTrimView,
-  ]);
+  }, [selectedLayerId, currentFrameId, multiSelectedIds, pages, activePageIndex, zoom, activeTopTool, localTrimView]);
 
   // Synchronize Trim View mask and outside status across all visible page SVGs
   useEffect(() => {
-    const svgs = document.querySelectorAll(
-      '.page-svg-container svg:not([id^="highlight-overlay-"])',
-    );
-    svgs.forEach((svg) => {
+    const svgs = document.querySelectorAll('.page-svg-container svg:not([id^="highlight-overlay-"])');
+    svgs.forEach(svg => {
       applyTrimViewToSvg(svg, localTrimView, baseWidth, baseHeight);
     });
   }, [localTrimView, activePageIndex, pages, baseWidth, baseHeight]);
@@ -1001,52 +839,30 @@ const MainEditor = ({
   }, [currentFrameId]);
 
   const hitTest = (el, clientX, clientY, buffer = 0) =>
-    hitTestExt(
-      el,
-      clientX,
-      clientY,
-      buffer,
-      selectedLayerIdRef.current,
-      multiSelectedIdsRef.current,
-    );
+    hitTestExt(el, clientX, clientY, buffer, selectedLayerIdRef.current, multiSelectedIdsRef.current);
+
+
+
+
 
   // Sync refs with props/state
-  useEffect(() => {
-    selectedLayerIdRef.current = selectedLayerId;
-  }, [selectedLayerId]);
-  useEffect(() => {
-    activeMainToolRef.current = activeMainTool;
-  }, [activeMainTool]);
-  useEffect(() => {
-    selectedSelectToolRef.current = selectedSelectTool;
-  }, [selectedSelectTool]);
-  useEffect(() => {
-    multiSelectedIdsRef.current = multiSelectedIds;
-  }, [multiSelectedIds]);
-  useEffect(() => {
-    selectedPenToolRef.current = selectedPenTool;
-  }, [selectedPenTool]);
+  useEffect(() => { selectedLayerIdRef.current = selectedLayerId; }, [selectedLayerId]);
+  useEffect(() => { activeMainToolRef.current = activeMainTool; }, [activeMainTool]);
+  useEffect(() => { selectedSelectToolRef.current = selectedSelectTool; }, [selectedSelectTool]);
+  useEffect(() => { multiSelectedIdsRef.current = multiSelectedIds; }, [multiSelectedIds]);
+  useEffect(() => { selectedPenToolRef.current = selectedPenTool; }, [selectedPenTool]);
 
-  const getDraggableElement = (target, canvasRoot) => {
-    if (
-      !target ||
-      !canvasRoot ||
-      !canvasRoot.contains ||
-      !canvasRoot.contains(target)
-    )
-      return null;
+const getDraggableElement = (target, canvasRoot) => {
+    if (!target || !canvasRoot || !canvasRoot.contains || !canvasRoot.contains(target)) return null;
     let current = target;
 
     // If clicking on a tspan, promote to parent text element first
-    if (current && current.tagName?.toLowerCase() === "tspan") {
+    if (current && current.tagName?.toLowerCase() === 'tspan') {
       current = current.parentElement || current.parentNode;
     }
 
     // Hotspots are single compound elements; if clicking anywhere inside a hotspot group, drag the whole hotspot!
-    const hotspotGroup =
-      current && typeof current.closest === "function"
-        ? current.closest('[data-is-hotspot="true"], [data-type="hotspot"]')
-        : null;
+    const hotspotGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-hotspot="true"], [data-type="hotspot"]') : null;
     if (hotspotGroup) {
       if (!hotspotGroup.id) {
         hotspotGroup.id = `hotspot-${Date.now()}`;
@@ -1055,10 +871,7 @@ const MainEditor = ({
     }
 
     // Video groups are single compound elements; always drag the whole video group
-    const videoGroup =
-      current && typeof current.closest === "function"
-        ? current.closest('[data-is-video-group="true"]')
-        : null;
+    const videoGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-video-group="true"]') : null;
     if (videoGroup) {
       return videoGroup;
     }
@@ -1068,35 +881,27 @@ const MainEditor = ({
     while (current && current !== canvasRoot && current.tagName) {
       const tagName = current.tagName.toLowerCase();
 
-      if (tagName === "svg") {
+      if (tagName === 'svg') {
         return deepestElementWithId;
       }
 
       // In normal edit mode (non-interaction & non-animation), Free Frames must never be draggable or selectable
-      const isFreeFrame =
-        current.getAttribute &&
-        (current.getAttribute("data-name") === "Free Frame" ||
-          current.getAttribute("data-type") === "free-frame" ||
-          (current.id && current.id.startsWith("free-frame")));
-      if (
-        isFreeFrame &&
-        activeTopToolRef.current !== "interaction" &&
-        activeTopToolRef.current !== "animation"
-      ) {
+      const isFreeFrame = (
+        current.getAttribute && (
+          current.getAttribute('data-name') === 'Free Frame' ||
+          current.getAttribute('data-type') === 'free-frame' ||
+          (current.id && current.id.startsWith('free-frame'))
+        )
+      );
+      if (isFreeFrame && activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation') {
         current = current.parentElement || current.parentNode;
         continue;
       }
 
       // In Trim View, elements completely outside cannot be targeted directly from canvas unless already selected
-      if (
-        current.getAttribute &&
-        current.getAttribute("data-trim-outside") === "true"
-      ) {
-        const isSel =
-          (current.id && current.id === selectedLayerIdRef.current) ||
-          (multiSelectedIdsRef.current &&
-            current.id &&
-            multiSelectedIdsRef.current.has(current.id));
+      if (current.getAttribute && current.getAttribute('data-trim-outside') === 'true') {
+        const isSel = (current.id && current.id === selectedLayerIdRef.current) ||
+          (multiSelectedIdsRef.current && current.id && multiSelectedIdsRef.current.has(current.id));
         if (!isSel) {
           current = current.parentElement || current.parentNode;
           continue;
@@ -1107,22 +912,12 @@ const MainEditor = ({
       // become selectable. This matches how the type tool creates new text.
       if (
         !current.id &&
-        current.getAttribute("data-hidden") !== "true" &&
-        current.getAttribute("data-locked") !== "true" &&
-        current.getAttribute("data-name") !== "Overlay" &&
-        current.getAttribute("data-name") !== "Document Shield" &&
-        current.getAttribute("data-type") !== "shield" &&
-        ![
-          "svg",
-          "defs",
-          "clippath",
-          "lineargradient",
-          "radialgradient",
-          "pattern",
-          "filter",
-          "style",
-          "metadata",
-        ].includes(tagName)
+        current.getAttribute('data-hidden') !== 'true' &&
+        current.getAttribute('data-locked') !== 'true' &&
+        current.getAttribute('data-name') !== 'Overlay' &&
+        current.getAttribute('data-name') !== 'Document Shield' &&
+        current.getAttribute('data-type') !== 'shield' &&
+        !['svg', 'defs', 'clippath', 'lineargradient', 'radialgradient', 'pattern', 'filter', 'style', 'metadata'].includes(tagName)
       ) {
         current.id = `${tagName}-${Math.random().toString(36).substr(2, 9)}`;
         if (!deepestElementWithId) deepestElementWithId = current;
@@ -1130,41 +925,25 @@ const MainEditor = ({
 
       if (
         current.id &&
-        current.getAttribute("data-hidden") !== "true" &&
-        current.getAttribute("data-locked") !== "true" &&
-        current.getAttribute("data-name") !== "Overlay" &&
-        current.getAttribute("data-name") !== "Document Shield" &&
-        current.getAttribute("data-type") !== "shield" &&
-        (!isConvertedFlipbook ||
-          current.getAttribute("data-is-hotspot") === "true" ||
-          current.getAttribute("data-type") === "hotspot" ||
-          ((current.getAttribute("data-name") === "Free Frame" ||
-            current.getAttribute("data-type") === "free-frame" ||
-            current.id?.startsWith("free-frame")) &&
-            (activeTopToolRef.current === "interaction" ||
-              activeTopToolRef.current === "animation")) ||
-          (current.getAttribute("data-type") === "shape" &&
-            current.getAttribute("data-name") !== "Free Frame" &&
-            current.getAttribute("data-type") !== "free-frame" &&
-            !current.id?.startsWith("free-frame")) ||
-          current.getAttribute("data-type") === "icon")
+        current.getAttribute('data-hidden') !== 'true' &&
+        current.getAttribute('data-locked') !== 'true' &&
+        current.getAttribute('data-name') !== 'Overlay' &&
+        current.getAttribute('data-name') !== 'Document Shield' &&
+        current.getAttribute('data-type') !== 'shield' &&
+        (!isConvertedFlipbook || (
+          current.getAttribute('data-is-hotspot') === 'true' ||
+          current.getAttribute('data-type') === 'hotspot' ||
+          ((current.getAttribute('data-name') === 'Free Frame' || current.getAttribute('data-type') === 'free-frame' || current.id?.startsWith('free-frame')) && (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation')) ||
+          (current.getAttribute('data-type') === 'shape' && current.getAttribute('data-name') !== 'Free Frame' && current.getAttribute('data-type') !== 'free-frame' && !current.id?.startsWith('free-frame')) ||
+          current.getAttribute('data-type') === 'icon'
+        ))
       ) {
         // Prevent targeting inner image of an image group directly, or inner elements of video/gif groups
-        if (
-          tagName === "image" &&
-          current.parentElement?.getAttribute("data-is-image-group") === "true"
-        ) {
+        if (tagName === 'image' && current.parentElement?.getAttribute('data-is-image-group') === 'true') {
           // Skip the inner image and let it traverse to the parent group
-        } else if (
-          (tagName === "foreignobject" ||
-            tagName === "video" ||
-            tagName === "iframe") &&
-          current.parentElement?.getAttribute("data-is-video-group") === "true"
-        ) {
+        } else if ((tagName === 'foreignobject' || tagName === 'video' || tagName === 'iframe') && current.parentElement?.getAttribute('data-is-video-group') === 'true') {
           // Skip inner foreignobject/video/iframe and let it traverse to the parent video group
-        } else if (
-          current.parentElement?.getAttribute("data-is-gif-group") === "true"
-        ) {
+        } else if (current.parentElement?.getAttribute('data-is-gif-group') === 'true') {
           // Skip inner gif elements and let it traverse to parent gif group
         } else {
           if (!deepestElementWithId) deepestElementWithId = current;
@@ -1172,16 +951,13 @@ const MainEditor = ({
       }
 
       // Check if current is a User Group (<g data-type="group"> or <g data-name="Group"> or id starting with "group-")
-      const isUserGroup =
-        current.id &&
-        (current.getAttribute("data-type") === "group" ||
-          (current.getAttribute("data-name") || "").toLowerCase() === "group" ||
-          current.id.startsWith("group-")) &&
-        current.getAttribute("data-is-image-group") !== "true" &&
-        current.getAttribute("data-is-video-group") !== "true" &&
-        current.getAttribute("data-is-gif-group") !== "true";
+      const isUserGroup = current.id && (
+        current.getAttribute('data-type') === 'group' ||
+        (current.getAttribute('data-name') || '').toLowerCase() === 'group' ||
+        current.id.startsWith('group-')
+      ) && current.getAttribute('data-is-image-group') !== 'true' && current.getAttribute('data-is-video-group') !== 'true' && current.getAttribute('data-is-gif-group') !== 'true';
 
-      if (isUserGroup && selectedSelectToolRef.current !== "direct") {
+      if (isUserGroup && selectedSelectToolRef.current !== 'direct') {
         const frameId = currentFrameIdRef.current;
         // If this group is not the currently entered frame/context, return the User Group!
         if (frameId !== current.id) {
@@ -1221,8 +997,9 @@ const MainEditor = ({
     drawMeasurementOverlayRef,
     updatePageHtml,
     updatePageHtmlRef,
-    localTrimView,
+    localTrimView
   });
+
 
   // ── Modular Hook Call: Canvas Pointer Events Engine ────────────────────────
   const {
@@ -1231,7 +1008,7 @@ const MainEditor = ({
     handleSvgMouseUp,
     handleSvgMouseLeave,
     handleSvgClick,
-  } = useCanvasPointerEvents({
+} = useCanvasPointerEvents({
     zoom,
     activePageIndex,
     setActivePageIndex,
@@ -1308,16 +1085,16 @@ const MainEditor = ({
     exitNodeEditMode,
     commitAndExitPenDrawing,
     convertTextToForeignObject,
-    getDraggableElement,
+    getDraggableElement
   });
 
   const handlePrevPage = () => {
-    setActivePageIndex((prev) => Math.max(0, prev - 1));
+    setActivePageIndex(prev => Math.max(0, prev - 1));
   };
 
   const handleNextPage = () => {
     if (activePageIndex + 1 < pages.length) {
-      setActivePageIndex((prev) => prev + 1);
+      setActivePageIndex(prev => prev + 1);
     }
   };
 
@@ -1328,6 +1105,7 @@ const MainEditor = ({
     if (setOpenMenuIndex) setOpenMenuIndex(null);
   };
 
+
   const handleAlign = (type) => {
     alignSelectedElements(type, {
       activePageIndex,
@@ -1337,13 +1115,14 @@ const MainEditor = ({
       saveModifiedPageHtml,
       drawMultiSelectionHighlight,
       drawOverlayHighlight,
-      multiSelectedIdsRef,
+      multiSelectedIdsRef
     });
   };
 
+
   return (
     <div
-      className={`flex-1 flex flex-col overflow-hidden h-full ${isPopupEditor ? "bg-[#E5E7EB]" : "bg-white"}`}
+      className={`flex-1 flex flex-col overflow-hidden h-full ${isPopupEditor ? 'bg-[#E5E7EB]' : 'bg-white'}`}
       onClick={closeAllDropdowns}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -1365,73 +1144,50 @@ const MainEditor = ({
         canRedo={canRedo}
         rotation={rotation}
         onRotate={handleRotate}
-        onFlipH={() => handleFlip("h")}
-        onFlipV={() => handleFlip("v")}
+        onFlipH={() => handleFlip('h')}
+        onFlipV={() => handleFlip('v')}
         onAlign={handleAlign}
         hideTools={isPdfProject}
+
         hasSelection={(() => {
-          const ids =
-            multiSelectedIds.size > 0
-              ? Array.from(multiSelectedIds)
-              : selectedLayerId
-                ? [selectedLayerId]
-                : [];
+          const ids = multiSelectedIds.size > 0 ? Array.from(multiSelectedIds) : (selectedLayerId ? [selectedLayerId] : []);
           if (ids.length === 0) return false;
 
           // Collect all "Base" (Root Frame or Background Overlay) IDs across all visible containers
           // (Handles both single and double-page spread selections)
           const baseIds = new Set();
-          document
-            .querySelectorAll(".page-svg-container svg")
-            .forEach((svg) => {
-              const topLevelFrames = getTopLevelFrames(svg);
-              topLevelFrames.forEach((frame) => {
-                baseIds.add(frame.id);
-                const overlay = frame.querySelector('[data-name="Overlay"]');
-                if (overlay) baseIds.add(overlay.id);
-              });
+          document.querySelectorAll('.page-svg-container svg').forEach(svg => {
+            const topLevelFrames = getTopLevelFrames(svg);
+            topLevelFrames.forEach(frame => {
+              baseIds.add(frame.id);
+              const overlay = frame.querySelector('[data-name="Overlay"]');
+              if (overlay) baseIds.add(overlay.id);
             });
+          });
 
           // Enable tools ONLY if at least one selected ID is NOT a base/root frame
-          return ids.some((id) => id && !baseIds.has(id));
+          return ids.some(id => id && !baseIds.has(id));
         })()}
       />
       <div
         ref={editorContainerRef}
-        className={`flex-1 relative flex items-center justify-center  overflow-hidden ${isPopupEditor ? "bg-transparent" : "bg-[#e6e7e7]"}`}
-        style={{
-          cursor: isSpaceDown
-            ? isPanningRef.current
-              ? "grabbing"
-              : "grab"
-            : "default",
-        }}
+        className={`flex-1 relative flex items-center justify-center  overflow-hidden ${isPopupEditor ? 'bg-transparent' : 'bg-[#e6e7e7]'}`}
+        style={{ cursor: isSpaceDown ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
         onContextMenu={(e) => {
           e.preventDefault();
-          window.dispatchEvent(
-            new CustomEvent("show-layer-context-menu", {
-              detail: {
-                e,
-                layerId: "outside-background",
-                pageIndex: activePageIndex,
-                isOverlay: true,
-              },
-            }),
-          );
+          window.dispatchEvent(new CustomEvent('show-layer-context-menu', {
+            detail: { e, layerId: 'outside-background', pageIndex: activePageIndex, isOverlay: true }
+          }));
         }}
         onMouseDown={(e) => {
-          if (
-            isSpaceDownRef.current ||
-            e.button === 1 ||
-            activeMainTool === "hand"
-          ) {
+          if (isSpaceDownRef.current || e.button === 1 || activeMainTool === 'hand') {
             e.preventDefault();
             e.stopPropagation();
             isPanningRef.current = true;
             lastPanPointRef.current = { x: e.clientX, y: e.clientY };
             setIsSpaceDown(true);
             if (zoomContainerRef.current) {
-              zoomContainerRef.current.style.transition = "none";
+              zoomContainerRef.current.style.transition = 'none';
             }
             return;
           }
@@ -1459,10 +1215,8 @@ const MainEditor = ({
             const bounds = getCanvasBounds(null, baseWidth, baseHeight);
             const canvasWidthMM = bounds.canvasWidthMM || 1600;
 
-            const scaledCanvasW =
-              baseVhHeight * (canvasWidthMM / baseHeight) * currentScale;
-            const scaledCanvasH =
-              baseVhHeight * (1000 / baseHeight) * currentScale;
+            const scaledCanvasW = (baseVhHeight * (canvasWidthMM / baseHeight)) * currentScale;
+            const scaledCanvasH = (baseVhHeight * (1000 / baseHeight)) * currentScale;
 
             const maxPanX = Math.max(containerWidth * 1.5, scaledCanvasW);
             const maxPanY = Math.max(containerHeight * 1.5, scaledCanvasH);
@@ -1473,14 +1227,10 @@ const MainEditor = ({
             currentPanRef.current = { x: boundedX, y: boundedY };
 
             if (zoomContainerRef.current) {
-              zoomContainerRef.current.style.transition = "none";
+              zoomContainerRef.current.style.transition = 'none';
               zoomContainerRef.current.style.transform = `translate(${boundedX}px, ${boundedY}px) scale(${currentScale})`;
             }
-            window.dispatchEvent(
-              new CustomEvent("editor-pan-update", {
-                detail: { x: boundedX, y: boundedY },
-              }),
-            );
+            window.dispatchEvent(new CustomEvent('editor-pan-update', { detail: { x: boundedX, y: boundedY } }));
           } else if (marqueeDataRef?.current && (e.buttons & 1) !== 0) {
             if (handleSvgMouseMove) {
               handleSvgMouseMove(activePageIndex, e);
@@ -1493,9 +1243,7 @@ const MainEditor = ({
             // Mark that we just finished panning so the immediately-following
             // onClick does not accidentally select/deselect canvas elements.
             wasRecentlyPanningRef.current = true;
-            setTimeout(() => {
-              wasRecentlyPanningRef.current = false;
-            }, 150);
+            setTimeout(() => { wasRecentlyPanningRef.current = false; }, 150);
             setIsSpaceDown(isSpaceDownRef.current);
             setPan(currentPanRef.current);
           }
@@ -1507,30 +1255,21 @@ const MainEditor = ({
           if (isPanningRef.current) {
             isPanningRef.current = false;
             wasRecentlyPanningRef.current = true;
-            setTimeout(() => {
-              wasRecentlyPanningRef.current = false;
-            }, 150);
+            setTimeout(() => { wasRecentlyPanningRef.current = false; }, 150);
             setIsSpaceDown(isSpaceDownRef.current);
             setPan(currentPanRef.current);
           }
         }}
         onClick={(e) => {
           // Suppress clicks that happen right after Ctrl+scroll zoom or Space panning
-          if (
-            isPanningRef.current ||
-            isSpaceDownRef.current ||
-            suppressClickRef.current ||
-            wasRecentlyPanningRef.current
-          ) {
+          if (isPanningRef.current || isSpaceDownRef.current || suppressClickRef.current || wasRecentlyPanningRef.current) {
             e.preventDefault();
             e.stopPropagation();
             return;
           }
           // ── Background Click: Select active page root folder instead of clearing selection ─────────────────
-          const container = e.target.closest(".page-svg-container");
-          const pageIdx = container
-            ? parseInt(container.getAttribute("data-page-index"))
-            : activePageIndex;
+          const container = e.target.closest('.page-svg-container');
+          const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
 
           if (setActivePageIndex && activePageIndex !== pageIdx) {
             setActivePageIndex(pageIdx);
@@ -1545,16 +1284,9 @@ const MainEditor = ({
             return;
           }
 
-          const pageSvg =
-            container?.querySelector("svg") ||
-            document.querySelector(
-              `.page-svg-container[data-page-index="${pageIdx}"] svg`,
-            );
+          const pageSvg = container?.querySelector('svg') || document.querySelector(`.page-svg-container[data-page-index="${pageIdx}"] svg`);
           const topFrames = pageSvg ? getTopLevelFrames(pageSvg) : [];
-          const rootId =
-            topFrames && topFrames.length > 0
-              ? topFrames[0].id
-              : pages[pageIdx]?.layers?.[0]?.id;
+          const rootId = (topFrames && topFrames.length > 0 ? topFrames[0].id : pages[pageIdx]?.layers?.[0]?.id);
 
           if (rootId) {
             if (setSelectedLayerId) setSelectedLayerId(rootId);
@@ -1568,13 +1300,11 @@ const MainEditor = ({
             currentFrameIdRef.current = null;
           }
         }}
+
       >
         {/* Invisible Overlay for Panning */}
         {isSpaceDown && (
-          <div
-            className="absolute inset-0 z-[9999]"
-            style={{ cursor: isPanningRef.current ? "grabbing" : "grab" }}
-          />
+          <div className="absolute inset-0 z-[9999]" style={{ cursor: isPanningRef.current ? 'grabbing' : 'grab' }} />
         )}
 
         {/* Canvas Ruler */}
@@ -1584,9 +1314,7 @@ const MainEditor = ({
             pan={currentPanRef.current}
             baseLogicalWidth={baseWidth}
             baseLogicalHeight={baseHeight}
-            baseCanvasWidth={
-              window.innerHeight * 0.78 * (baseWidth / baseHeight)
-            }
+            baseCanvasWidth={window.innerHeight * 0.78 * (baseWidth / baseHeight)}
             baseCanvasHeight={window.innerHeight * 0.78}
             selectedLayerId={selectedLayerId}
             multiSelectedIds={multiSelectedIds}
@@ -1600,9 +1328,7 @@ const MainEditor = ({
             pan={currentPanRef.current}
             baseLogicalWidth={baseWidth}
             baseLogicalHeight={baseHeight}
-            baseCanvasWidth={
-              window.innerHeight * 0.78 * (baseWidth / baseHeight)
-            }
+            baseCanvasWidth={window.innerHeight * 0.78 * (baseWidth / baseHeight)}
             baseCanvasHeight={window.innerHeight * 0.78}
           />
         )}
@@ -1641,24 +1367,12 @@ const MainEditor = ({
         {/* Canvas Area container */}
         <div
           ref={editorContainerRef}
-          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? "bg-transparent overflow-visible" : "overflow-hidden bg-[#e6e7e7]"}`}
+          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'bg-transparent overflow-visible' : 'overflow-hidden bg-[#e6e7e7]'}`}
           onMouseDown={(e) => {
-            if (
-              e.target === e.currentTarget &&
-              activeMainTool === "grid" &&
-              typeof setActiveMainTool === "function"
-            ) {
-              setActiveMainTool("select");
+            if (e.target === e.currentTarget && activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {
+              setActiveMainTool('select');
             }
-            if (
-              e.button === 0 &&
-              !isSpaceDownRef.current &&
-              activeMainTool !== "hand" &&
-              !e.target.closest('[id^="canvas-content-"]') &&
-              !e.target.closest(".resize-handle") &&
-              !e.target.closest("button") &&
-              !e.target.closest("input")
-            ) {
+            if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
               if (handleSvgMouseDown) {
                 handleSvgMouseDown(activePageIndex, e);
               }
@@ -1696,9 +1410,6 @@ const MainEditor = ({
             updateElementAttribute={updateElementAttribute}
             onOpenTemplateModal={onOpenTemplateModal}
             setShowHotspotPopup={setShowHotspotPopup}
-            projectBaseUrl={projectBaseUrl}
-            folderName={folderName}
-            flipbookName={flipbookName}
           />
           {/* Page Navigation Controls Widget */}
           <PageNavigationControls
@@ -1716,4 +1427,8 @@ const MainEditor = ({
   );
 };
 
+
+
+
 export default MainEditor;
+

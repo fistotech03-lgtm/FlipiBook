@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import PremiumDropdown from './PremiumDropdown';
 import ColorPicker from './ColorPallet';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import {
   ChevronDown,
   ChevronLeft,
@@ -173,6 +174,7 @@ const AccordionItem = ({ title, isOpen, onToggle, children }) => (
 const MAX_GALLERY_IMAGES = 12;
 
 const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pages = [], targetAccordion, inlineMode }) => {
+  const { user } = useAuth();
   const [openAccordion, setOpenAccordion] = useState(targetAccordion || 'layout');
   const [bookAppearance, setBookAppearance] = useState({});
 
@@ -328,17 +330,14 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
   };
 
   const uploadFile = async (file, replacingVideoId = null) => {
-    let emailId = 'guest@fisto.tech';
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        emailId = user.emailId || user.email || emailId;
-      } catch (e) {}
-    }
+    const emailId = user?.emailId || user?.email || '';
+    const userId = user?.userId || user?._id || user?.id || '';
+    const customUserId = user?.userID || '';
 
     const formData = new FormData();
-    formData.append('emailId', emailId);
+    if (emailId) formData.append('emailId', emailId);
+    if (userId) formData.append('userId', userId);
+    if (customUserId) formData.append('customUserId', customUserId);
     formData.append('folderName', folderName || 'My_Flipbooks');
     formData.append('flipbookName', bookName || 'Untitled Document');
     formData.append('type', 'gallery_image');
@@ -350,8 +349,11 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     formData.append('file', file);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const res = await axios.post(`${backendUrl}/api/flipbook/upload-customized-asset`, formData);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await axios.post(`${backendUrl}/api/flipbook/upload-customized-asset`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
       if (res.data.url) {
         return {
           url: res.data.url,
@@ -444,17 +446,14 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
   };
 
   const uploadAudioFile = async (file) => {
-    let emailId = 'guest@fisto.tech';
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        emailId = user.emailId || user.email || emailId;
-      } catch (e) {}
-    }
+    const emailId = user?.emailId || user?.email || '';
+    const userId = user?.userId || user?._id || user?.id || '';
+    const customUserId = user?.userID || '';
 
     const formData = new FormData();
-    formData.append('emailId', emailId);
+    if (emailId) formData.append('emailId', emailId);
+    if (userId) formData.append('userId', userId);
+    if (customUserId) formData.append('customUserId', customUserId);
     formData.append('folderName', folderName || 'My_Flipbooks');
     formData.append('flipbookName', bookName || 'Untitled Document');
     if (v_id) formData.append('v_id', v_id);
@@ -463,8 +462,11 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     formData.append('file', file);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const res = await axios.post(`${backendUrl}/api/flipbook/upload-customized-asset`, formData);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await axios.post(`${backendUrl}/api/flipbook/upload-customized-asset`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
       if (res.data.url) {
         return {
           url: res.data.url,

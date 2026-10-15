@@ -8,7 +8,11 @@ const connectDB = async () => {
       return;
     }
 
-    const conn = await mongoose.connect(mongoURI);
+    const conn = await mongoose.connect(mongoURI, {
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 50
+    });
     console.log(`[MyFlipibook Service] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`[MyFlipibook Service] Database connection error: ${error.message}`);

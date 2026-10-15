@@ -1,23 +1,34 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useParams, useOutletContext, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { saveToDB } from '../../utils/dbUtils';
-import Layer from './panels/Layer';
-import MainEditor from './MainEditor';
-import RightSidebar from './panels/RightSidebar';
-import TooltipCustomization from './modals/TooltipCustomization';
-import TemplateModal from './modals/TemplateModal';
-const FlipbookPreview = React.lazy(() => import('./modals/FlipbookPreview'));
-import AlertModal from '../AlertModal';
-import PdfProcessingLoader from '../PdfProcessingLoader';
-import PopupTemplateSelection from './modals/PopupTemplateSelection';
-import Model3DPreviewModal from './modals/Interaction3DPreview';
-import PasswordProtectModal from './modals/PasswordProtectModal';
-import pageCacheManager from './utils/PageCacheManager';
-import { useToast } from '../CustomToast';
-import { getSupabaseBaseUrl, resolveUploadsPath } from '../../utils/assetUtils';
-import { useAuth } from '../../context/AuthContext';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
+import {
+  useLocation,
+  useParams,
+  useOutletContext,
+  useNavigate,
+} from "react-router-dom";
+import axios from "axios";
+import { saveToDB } from "../../utils/dbUtils";
+import Layer from "./panels/Layer";
+import MainEditor from "./MainEditor";
+import RightSidebar from "./panels/RightSidebar";
+import TooltipCustomization from "./modals/TooltipCustomization";
+import TemplateModal from "./modals/TemplateModal";
+const FlipbookPreview = React.lazy(() => import("./modals/FlipbookPreview"));
+import AlertModal from "../AlertModal";
+import PdfProcessingLoader from "../PdfProcessingLoader";
+import PopupTemplateSelection from "./modals/PopupTemplateSelection";
+import Model3DPreviewModal from "./modals/Interaction3DPreview";
+import PasswordProtectModal from "./modals/PasswordProtectModal";
+import pageCacheManager from "./utils/PageCacheManager";
+import { useToast } from "../CustomToast";
+import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   parseLayersFromSVG,
@@ -29,24 +40,33 @@ import {
   usePopupAndTemplateManager,
   useSaveEngine,
   use3DPreviewManager,
-  useKeyboardShortcuts
-} from './PageEditorModule';
+  useKeyboardShortcuts,
+} from "./PageEditorModule";
 
 export { parseLayersFromSVG };
 
-const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
+const VIRTUAL_FOLDERS = new Set([
+  "recent book",
+  "recent",
+  "all books",
+  "all flipbooks",
+  "favorites",
+  "trash",
+]);
 
 const resolvePhysicalFolder = (folderInput) => {
   if (Array.isArray(folderInput)) {
-    const real = folderInput.find(f => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()));
-    return real ? String(real).trim() : 'My_Flipbooks';
+    const real = folderInput.find(
+      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()),
+    );
+    return real ? String(real).trim() : "My_Flipbooks";
   }
-  if (folderInput && typeof folderInput === 'string') {
+  if (folderInput && typeof folderInput === "string") {
     const clean = folderInput.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
-    return clean || 'My_Flipbooks';
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return "My_Flipbooks";
+    return clean || "My_Flipbooks";
   }
-  return 'My_Flipbooks';
+  return "My_Flipbooks";
 };
 
 const PageEditor = () => {
@@ -69,7 +89,7 @@ const PageEditor = () => {
     currentBook,
     setCurrentBook,
     isExportModalOpen,
-    setExportContext
+    setExportContext,
   } = useOutletContext();
 
   // ── Core States ────────────────────────────────────────────────────────────
@@ -78,11 +98,11 @@ const PageEditor = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDoublePage, setIsDoublePage] = useState(false);
   const [isRulerEnabled, setIsRulerEnabled] = useState(() => {
-    const saved = localStorage.getItem('isRulerEnabled');
+    const saved = localStorage.getItem("isRulerEnabled");
     return saved !== null ? JSON.parse(saved) : true;
   });
   const [isTrimView, setIsTrimView] = useState(() => {
-    const saved = localStorage.getItem('isTrimViewEnabled');
+    const saved = localStorage.getItem("isTrimViewEnabled");
     return saved !== null ? JSON.parse(saved) : false;
   });
   const [showPreview, setShowPreview] = useState(false);
@@ -90,15 +110,15 @@ const PageEditor = () => {
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
   const [clipboard, setClipboard] = useState(null);
   const [currentFrameId, setCurrentFrameId] = useState(null);
-  const [activeMainTool, setActiveMainTool] = useState('select');
-  const [activeTopTool, setActiveTopTool] = useState('editor');
+  const [activeMainTool, setActiveMainTool] = useState("select");
+  const [activeTopTool, setActiveTopTool] = useState("editor");
 
   const [pdfProcessing, setPdfProcessing] = useState(null);
   const [alertState, setAlertState] = useState({
     isOpen: false,
-    title: '',
-    message: '',
-    type: 'error'
+    title: "",
+    message: "",
+    type: "error",
   });
 
   // ── Refs ───────────────────────────────────────────────────────────────────
@@ -116,15 +136,20 @@ const PageEditor = () => {
   const replacePdfInputRef = useRef(null);
   const replacePageIndexRef = useRef(null);
 
-  useEffect(() => { pagesRef.current = pages; }, [pages]);
-  useEffect(() => { activePageIndexRef.current = activePageIndex; }, [activePageIndex]);
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
+  useEffect(() => {
+    activePageIndexRef.current = activePageIndex;
+  }, [activePageIndex]);
 
   // Guard: Never allow selectedLayerId to become null — always fall back to active page root folder
   const setSelectedLayerId = useCallback((idOrFn) => {
-    setSelectedLayerIdRaw(prev => {
-      const next = typeof idOrFn === 'function' ? idOrFn(prev) : idOrFn;
+    setSelectedLayerIdRaw((prev) => {
+      const next = typeof idOrFn === "function" ? idOrFn(prev) : idOrFn;
       if (next === null || next === undefined) {
-        const rootId = pagesRef.current[activePageIndexRef.current]?.layers?.[0]?.id;
+        const rootId =
+          pagesRef.current[activePageIndexRef.current]?.layers?.[0]?.id;
         return rootId || prev;
       }
       return next;
@@ -140,18 +165,32 @@ const PageEditor = () => {
 
   // Ensure active page layers are loaded immediately if switched before background queue reached it
   useEffect(() => {
-    if (pages.length === 0 || activePageIndex < 0 || activePageIndex >= pages.length) return;
+    if (
+      pages.length === 0 ||
+      activePageIndex < 0 ||
+      activePageIndex >= pages.length
+    )
+      return;
     const curPage = pages[activePageIndex];
-    if (curPage && curPage.html && (!curPage.layers || curPage.layers.length === 0)) {
+    if (
+      curPage &&
+      curPage.html &&
+      (!curPage.layers || curPage.layers.length === 0)
+    ) {
       pageCacheManager.prioritizePage(activePageIndex);
       const parser = new DOMParser();
-      const doc = parser.parseFromString(curPage.html, 'image/svg+xml');
-      const svgEl = doc.querySelector('svg');
+      const doc = parser.parseFromString(curPage.html, "image/svg+xml");
+      const svgEl = doc.querySelector("svg");
       const layers = svgEl ? parseLayersFromSVG(svgEl) : [];
       pageCacheManager.setCachedLayers(curPage.id, curPage.html, layers);
 
-      setPages(prev => {
-        if (!prev[activePageIndex] || (prev[activePageIndex].layers && prev[activePageIndex].layers.length > 0)) return prev;
+      setPages((prev) => {
+        if (
+          !prev[activePageIndex] ||
+          (prev[activePageIndex].layers &&
+            prev[activePageIndex].layers.length > 0)
+        )
+          return prev;
         const next = [...prev];
         next[activePageIndex] = { ...next[activePageIndex], layers };
         return next;
@@ -162,47 +201,63 @@ const PageEditor = () => {
   // Global Settings Sync
   useEffect(() => {
     const handleToggleRuler = (e) => {
-      setIsRulerEnabled(prev => e.detail !== undefined ? e.detail : !prev);
+      setIsRulerEnabled((prev) => (e.detail !== undefined ? e.detail : !prev));
     };
     const handleToggleTrimView = (e) => {
-      setIsTrimView(prev => e.detail !== undefined ? e.detail : !prev);
+      setIsTrimView((prev) => (e.detail !== undefined ? e.detail : !prev));
     };
 
-    window.addEventListener('editor_toggleRuler', handleToggleRuler);
-    window.addEventListener('editor_toggleTrimView', handleToggleTrimView);
+    window.addEventListener("editor_toggleRuler", handleToggleRuler);
+    window.addEventListener("editor_toggleTrimView", handleToggleTrimView);
 
     return () => {
-      window.removeEventListener('editor_toggleRuler', handleToggleRuler);
-      window.removeEventListener('editor_toggleTrimView', handleToggleTrimView);
+      window.removeEventListener("editor_toggleRuler", handleToggleRuler);
+      window.removeEventListener("editor_toggleTrimView", handleToggleTrimView);
     };
   }, []);
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('editor_settings_changed', {
-      detail: { isRulerEnabled, isTrimView }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("editor_settings_changed", {
+        detail: { isRulerEnabled, isTrimView },
+      }),
+    );
   }, [isRulerEnabled, isTrimView]);
 
   // Automatically switch to Properties panel when an element is selected while Uploads is active
   useEffect(() => {
     if (selectedLayerId) {
-      setActiveMainTool((prev) => prev === 'upload' ? 'select' : prev);
+      setActiveMainTool((prev) => (prev === "upload" ? "select" : prev));
     }
   }, [selectedLayerId]);
 
   // ── Dimensions & Default Page Data ─────────────────────────────────────────
   const getFlipbookDimensions = useCallback(() => {
     for (const p of pages) {
-      const htmlStr = p.html || p.content || '';
+      const htmlStr = p.html || p.content || "";
       if (htmlStr) {
-        const match = htmlStr.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i);
+        const match = htmlStr.match(
+          /viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i,
+        );
         if (match && parseFloat(match[3]) > 0 && parseFloat(match[4]) > 0) {
           return { width: parseFloat(match[3]), height: parseFloat(match[4]) };
         }
-        const wMatch = htmlStr.match(/<svg[^>]*\bwidth=["']([0-9.]+)(?:px|mm)?["']/i);
-        const hMatch = htmlStr.match(/<svg[^>]*\bheight=["']([0-9.]+)(?:px|mm)?["']/i);
-        if (wMatch && hMatch && parseFloat(wMatch[1]) > 0 && parseFloat(hMatch[1]) > 0) {
-          return { width: parseFloat(wMatch[1]), height: parseFloat(hMatch[1]) };
+        const wMatch = htmlStr.match(
+          /<svg[^>]*\bwidth=["']([0-9.]+)(?:px|mm)?["']/i,
+        );
+        const hMatch = htmlStr.match(
+          /<svg[^>]*\bheight=["']([0-9.]+)(?:px|mm)?["']/i,
+        );
+        if (
+          wMatch &&
+          hMatch &&
+          parseFloat(wMatch[1]) > 0 &&
+          parseFloat(hMatch[1]) > 0
+        ) {
+          return {
+            width: parseFloat(wMatch[1]),
+            height: parseFloat(hMatch[1]),
+          };
         }
       }
     }
@@ -216,61 +271,90 @@ const PageEditor = () => {
       return { width: parseFloat(w), height: parseFloat(h) };
     }
 
-    const templateId = (book.templateId || book.meta?.templateId || state.templateId || '').toLowerCase();
-    const orientation = (book.orientation || book.meta?.orientation || state.orientation || '').toLowerCase();
+    const templateId = (
+      book.templateId ||
+      book.meta?.templateId ||
+      state.templateId ||
+      ""
+    ).toLowerCase();
+    const orientation = (
+      book.orientation ||
+      book.meta?.orientation ||
+      state.orientation ||
+      ""
+    ).toLowerCase();
 
     if (templateId) {
-      let baseW = 210, baseH = 297;
-      if (templateId === 'corporate' || templateId === 'a4') { baseW = 210; baseH = 297; }
-      else if (templateId === 'large_catalogue' || templateId === 'a3') { baseW = 297; baseH = 420; }
-      else if (templateId === 'mini' || templateId === 'a5') { baseW = 148; baseH = 210; }
-      else if (templateId === 'letter') { baseW = 216; baseH = 279; }
-      else if (templateId === 'legal') { baseW = 216; baseH = 356; }
-      else if (templateId === 'dl') { baseW = 99; baseH = 210; }
-      else if (templateId === 'square') { baseW = 210; baseH = 210; }
+      let baseW = 210,
+        baseH = 297;
+      if (templateId === "corporate" || templateId === "a4") {
+        baseW = 210;
+        baseH = 297;
+      } else if (templateId === "large_catalogue" || templateId === "a3") {
+        baseW = 297;
+        baseH = 420;
+      } else if (templateId === "mini" || templateId === "a5") {
+        baseW = 148;
+        baseH = 210;
+      } else if (templateId === "letter") {
+        baseW = 216;
+        baseH = 279;
+      } else if (templateId === "legal") {
+        baseW = 216;
+        baseH = 356;
+      } else if (templateId === "dl") {
+        baseW = 99;
+        baseH = 210;
+      } else if (templateId === "square") {
+        baseW = 210;
+        baseH = 210;
+      }
 
-      if (templateId !== 'square' && orientation === 'landscape') {
+      if (templateId !== "square" && orientation === "landscape") {
         return { width: baseH, height: baseW };
       }
       return { width: baseW, height: baseH };
     }
 
-    if (orientation === 'square') {
+    if (orientation === "square") {
       return { width: 210, height: 210 };
     }
 
     return { width: 210, height: 297 };
   }, [pages, location.state, currentBook]);
 
-  const createDefaultPageData = useCallback((name, customW, customH) => {
-    let baseWidth = customW;
-    let baseHeight = customH;
-    if (!baseWidth || !baseHeight) {
-      const dims = getFlipbookDimensions();
-      baseWidth = dims.width;
-      baseHeight = dims.height;
-    }
-    const rootId = `g-${Math.random().toString(36).substr(2, 9)}`;
-    const overlayId = `rect-${Math.random().toString(36).substr(2, 9)}`;
-    const html = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
+  const createDefaultPageData = useCallback(
+    (name, customW, customH) => {
+      let baseWidth = customW;
+      let baseHeight = customH;
+      if (!baseWidth || !baseHeight) {
+        const dims = getFlipbookDimensions();
+        baseWidth = dims.width;
+        baseHeight = dims.height;
+      }
+      const rootId = `g-${Math.random().toString(36).substr(2, 9)}`;
+      const overlayId = `rect-${Math.random().toString(36).substr(2, 9)}`;
+      const html = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
   <g id="${rootId}" data-name="${name}" data-type="frame">
     <rect id="${overlayId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
   </g>
 </svg>`;
 
-    const layers = [
-      {
-        id: rootId,
-        name: name,
-        type: 'g',
-        visible: true,
-        locked: false,
-        children: []
-      }
-    ];
+      const layers = [
+        {
+          id: rootId,
+          name: name,
+          type: "g",
+          visible: true,
+          locked: false,
+          children: [],
+        },
+      ];
 
-    return { html, layers };
-  }, [getFlipbookDimensions]);
+      return { html, layers };
+    },
+    [getFlipbookDimensions],
+  );
 
   const createDefaultPageDataRef = useRef(createDefaultPageData);
   useEffect(() => {
@@ -298,7 +382,7 @@ const PageEditor = () => {
     movePageToFirst,
     movePageToLast,
     movePage,
-    handleClearAllPages
+    handleClearAllPages,
   } = usePageManager({
     pages,
     setPages,
@@ -315,20 +399,18 @@ const PageEditor = () => {
     prevMultiSelectedIdsRef,
     setAlertState,
     currentBook,
-    v_id
+    v_id,
   });
 
   // ── Hook 2: Element Attribute & Background Sync ────────────────────────────
-  const {
-    updateElementAttribute,
-    updatePageBackground
-  } = useElementAttributeSync({
-    pages,
-    setPages,
-    activePageIndex,
-    saveToHistory,
-    setHasUnsavedChanges
-  });
+  const { updateElementAttribute, updatePageBackground } =
+    useElementAttributeSync({
+      pages,
+      setPages,
+      activePageIndex,
+      saveToHistory,
+      setHasUnsavedChanges,
+    });
 
   // ── Hook 3: Layer Operations ───────────────────────────────────────────────
   const {
@@ -344,7 +426,7 @@ const PageEditor = () => {
     copyLayer,
     cutLayer,
     pasteLayer,
-    duplicateLayer
+    duplicateLayer,
   } = useLayerOperations({
     pages,
     setPages,
@@ -358,7 +440,7 @@ const PageEditor = () => {
     setCurrentFrameId,
     v_id,
     currentBook,
-    skipPasteResetRef
+    skipPasteResetRef,
   });
 
   // ── Hook 4: Document Import (PDF, Word, PPT) ───────────────────────────────
@@ -366,7 +448,7 @@ const PageEditor = () => {
     handleAddFileClick,
     handleReplaceFileClick,
     handleReplaceFileSelect,
-    handlePdfFileSelect
+    handlePdfFileSelect,
   } = useDocumentImport({
     pages,
     setPages,
@@ -380,7 +462,7 @@ const PageEditor = () => {
     pdfInsertIndexRef,
     replacePageIndexRef,
     v_id,
-    activePageIndex
+    activePageIndex,
   });
 
   // ── Hook 5: Popup & Template Manager ───────────────────────────────────────
@@ -396,7 +478,7 @@ const PageEditor = () => {
     handleCancelPopupChanges,
     loadTemplate,
     handleAddTemplatePages,
-    handleOpenTemplateModal
+    handleOpenTemplateModal,
   } = usePopupAndTemplateManager({
     pages,
     setPages,
@@ -419,32 +501,28 @@ const PageEditor = () => {
     setRedoStack,
     activeTopTool,
     setActiveTopTool,
-    createDefaultPageData
+    createDefaultPageData,
   });
 
   // ── Hook 6: Save Engine ────────────────────────────────────────────────────
-  const {
-    saveFlipbook,
-    autoSaveTimerRef,
-    justSavedRef,
-    lastSavedHtmlsRef
-  } = useSaveEngine({
-    pages,
-    setPages,
-    currentBook,
-    v_id,
-    setHasUnsavedChanges,
-    isSaving,
-    setIsSaving,
-    triggerSaveSuccess,
-    getFlipbookDimensions,
-    setActivePageIndex,
-    toast,
-    location,
-    navigate,
-    setActiveTopTool,
-    setSelectedLayerId
-  });
+  const { saveFlipbook, autoSaveTimerRef, justSavedRef, lastSavedHtmlsRef } =
+    useSaveEngine({
+      pages,
+      setPages,
+      currentBook,
+      v_id,
+      setHasUnsavedChanges,
+      isSaving,
+      setIsSaving,
+      triggerSaveSuccess,
+      getFlipbookDimensions,
+      setActivePageIndex,
+      toast,
+      location,
+      navigate,
+      setActiveTopTool,
+      setSelectedLayerId,
+    });
 
   // ── Hook 7: 3D Preview Manager ─────────────────────────────────────────────
   const {
@@ -497,10 +575,10 @@ const PageEditor = () => {
     current3DHotspots,
     active3DHotspotId,
     setActive3DHotspotId,
-    current3DVId
+    current3DVId,
   } = use3DPreviewManager({
     setPages,
-    activePageIndex
+    activePageIndex,
   });
 
   // ── Hook 8: Keyboard Shortcuts & Native Paste ──────────────────────────────
@@ -519,13 +597,19 @@ const PageEditor = () => {
     redo,
     pages,
     activeTopTool,
-    updateElementAttribute
+    updateElementAttribute,
   });
 
   // ── Navbar Bridge Handlers ────────────────────────────────────────────────
   useEffect(() => {
     if (setSaveHandler) {
-      setSaveHandler(() => () => saveFlipbook(true, popupEditContext ? popupEditContext.backup.pages : pages));
+      setSaveHandler(
+        () => () =>
+          saveFlipbook(
+            true,
+            popupEditContext ? popupEditContext.backup.pages : pages,
+          ),
+      );
     }
     return () => {
       if (setSaveHandler) setSaveHandler(null);
@@ -541,29 +625,25 @@ const PageEditor = () => {
     };
   }, [setClearHandler, handleClearAllPages]);
 
-  const projectBaseUrl = useMemo(() => {
-    const userEmail = user?.emailId || user?.email;
-    const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
-    const actualFolderName = resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName);
-    const bookName = currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
-    const userFolder = currentBook?.userID || sanitizedEmail;
-    return getSupabaseBaseUrl(userFolder, actualFolderName, bookName);
-  }, [user, currentBook, folder, location.state]);
-
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
     }
-    window.dispatchEvent(new CustomEvent('trigger-manual-save'));
+    window.dispatchEvent(new CustomEvent("trigger-manual-save"));
 
     if (pages && pages.length > 0) {
       try {
-        await saveToDB('editor_autosave', {
+        await saveToDB("editor_autosave", {
           v_id: v_id,
           pages: popupEditContext ? popupEditContext.backup.pages : pages,
-          activePageIndex: popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex,
-          pageName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          timestamp: Date.now()
+          activePageIndex: popupEditContext
+            ? popupEditContext.backup.activePageIndex
+            : activePageIndex,
+          pageName:
+            currentBook?.flipbookName ||
+            location.state?.flipbookName ||
+            "Untitled Flipbook",
+          timestamp: Date.now(),
         });
       } catch (err) {
         console.error("Failed to save preview state to IndexedDB:", err);
@@ -573,12 +653,19 @@ const PageEditor = () => {
     setTimeout(() => {
       const shareId = currentBook?.shareId || currentBook?.share?.shareId;
       if (shareId) {
-        window.open(`/preview?shareId=${shareId}`, '_blank');
+        window.open(`/preview?shareId=${shareId}`, "_blank");
       } else {
-        window.open('/preview', '_blank');
+        window.open("/preview", "_blank");
       }
     }, 400);
-  }, [currentBook, pages, popupEditContext, activePageIndex, v_id, location.state]);
+  }, [
+    currentBook,
+    pages,
+    popupEditContext,
+    activePageIndex,
+    v_id,
+    location.state,
+  ]);
 
   useEffect(() => {
     if (setPreviewHandler) {
@@ -606,79 +693,136 @@ const PageEditor = () => {
 
   // Auto-Save Mechanism
   useEffect(() => {
-    if (isAutoSaveEnabled && hasUnsavedChanges && pages.length > 0 && !isLoading && !isSaving && !isFirstLoadRef.current) {
+    if (
+      isAutoSaveEnabled &&
+      hasUnsavedChanges &&
+      pages.length > 0 &&
+      !isLoading &&
+      !isSaving &&
+      !isFirstLoadRef.current
+    ) {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
-        const isUserInteracting = !!document.querySelector('[data-dragging="true"]') || document.body.classList.contains('resizing-active');
+        const isUserInteracting =
+          !!document.querySelector('[data-dragging="true"]') ||
+          document.body.classList.contains("resizing-active");
         if (isUserInteracting) {
           return;
         }
-        saveFlipbook(false, popupEditContext ? popupEditContext.backup.pages : pages);
+        saveFlipbook(
+          false,
+          popupEditContext ? popupEditContext.backup.pages : pages,
+        );
       }, 2500);
     }
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [pages, isAutoSaveEnabled, hasUnsavedChanges, isLoading, isSaving, popupEditContext, saveFlipbook, autoSaveTimerRef]);
+  }, [
+    pages,
+    isAutoSaveEnabled,
+    hasUnsavedChanges,
+    isLoading,
+    isSaving,
+    popupEditContext,
+    saveFlipbook,
+    autoSaveTimerRef,
+  ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor
   useEffect(() => {
     if (pages.length > 0 && !isLoading) {
-      saveToDB('editor_autosave', {
+      saveToDB("editor_autosave", {
         v_id: v_id,
         pages: popupEditContext ? popupEditContext.backup.pages : pages,
-        activePageIndex: popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex,
-        pageName: currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-        timestamp: Date.now()
+        activePageIndex: popupEditContext
+          ? popupEditContext.backup.activePageIndex
+          : activePageIndex,
+        pageName:
+          currentBook?.flipbookName ||
+          location.state?.flipbookName ||
+          "Untitled Flipbook",
+        timestamp: Date.now(),
       });
     }
-  }, [pages, activePageIndex, v_id, currentBook, location.state, isLoading, popupEditContext]);
+  }, [
+    pages,
+    activePageIndex,
+    v_id,
+    currentBook,
+    location.state,
+    isLoading,
+    popupEditContext,
+  ]);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {
     const handleUpdateSrc = (e) => {
       const { oldSrc, newSrc } = e.detail;
       if (!oldSrc || !newSrc) return;
-      setPages(prev => prev.map(page => {
-        if (page.html && page.html.includes(oldSrc)) {
-          return { ...page, html: page.html.split(oldSrc).join(newSrc) };
-        }
-        return page;
-      }));
-      const els = document.querySelectorAll(`[src="${oldSrc}"], [href="${oldSrc}"]`);
-      els.forEach(el => {
-        if (el.hasAttribute('src')) el.setAttribute('src', newSrc);
-        if (el.hasAttribute('href')) el.setAttribute('href', newSrc);
-        if (el.hasAttribute('xlink:href')) el.setAttributeNS('http://www.w3.org/1999/xlink', 'href', newSrc);
+      setPages((prev) =>
+        prev.map((page) => {
+          if (page.html && page.html.includes(oldSrc)) {
+            return { ...page, html: page.html.split(oldSrc).join(newSrc) };
+          }
+          return page;
+        }),
+      );
+      const els = document.querySelectorAll(
+        `[src="${oldSrc}"], [href="${oldSrc}"]`,
+      );
+      els.forEach((el) => {
+        if (el.hasAttribute("src")) el.setAttribute("src", newSrc);
+        if (el.hasAttribute("href")) el.setAttribute("href", newSrc);
+        if (el.hasAttribute("xlink:href"))
+          el.setAttributeNS("http://www.w3.org/1999/xlink", "href", newSrc);
       });
     };
-    window.addEventListener('update-video-src', handleUpdateSrc);
-    window.addEventListener('update-image-src', handleUpdateSrc);
+    window.addEventListener("update-video-src", handleUpdateSrc);
+    window.addEventListener("update-image-src", handleUpdateSrc);
     return () => {
-      window.removeEventListener('update-video-src', handleUpdateSrc);
-      window.removeEventListener('update-image-src', handleUpdateSrc);
+      window.removeEventListener("update-video-src", handleUpdateSrc);
+      window.removeEventListener("update-image-src", handleUpdateSrc);
     };
   }, []);
 
   // ── FIGMA-STYLE: Unified Page Selection & Frame Sync ──────────────────────
   useEffect(() => {
-    if (pages.length === 0 || activePageIndex < 0 || activePageIndex >= pages.length) return;
+    if (
+      pages.length === 0 ||
+      activePageIndex < 0 ||
+      activePageIndex >= pages.length
+    )
+      return;
 
-    const lastSpreadStart = (lastPageIndexRef.current > 0) ? (lastPageIndexRef.current % 2 === 1 ? lastPageIndexRef.current : lastPageIndexRef.current - 1) : 0;
-    const currentSpreadStart = (activePageIndex > 0) ? (activePageIndex % 2 === 1 ? activePageIndex : activePageIndex - 1) : 0;
+    const lastSpreadStart =
+      lastPageIndexRef.current > 0
+        ? lastPageIndexRef.current % 2 === 1
+          ? lastPageIndexRef.current
+          : lastPageIndexRef.current - 1
+        : 0;
+    const currentSpreadStart =
+      activePageIndex > 0
+        ? activePageIndex % 2 === 1
+          ? activePageIndex
+          : activePageIndex - 1
+        : 0;
 
     const hasSwitchedPage = lastPageIndexRef.current !== activePageIndex;
     const hasSwitchedSpread = lastSpreadStart !== currentSpreadStart;
     lastPageIndexRef.current = activePageIndex;
 
-    const isSpread = isDoublePage && activePageIndex > 0 && (
-      (activePageIndex % 2 === 1 && activePageIndex + 1 < pages.length) ||
-      (activePageIndex % 2 === 0 && activePageIndex - 1 > 0)
-    );
+    const isSpread =
+      isDoublePage &&
+      activePageIndex > 0 &&
+      ((activePageIndex % 2 === 1 && activePageIndex + 1 < pages.length) ||
+        (activePageIndex % 2 === 0 && activePageIndex - 1 > 0));
 
     if (isSpread) {
-      const leftIdx = activePageIndex % 2 === 1 ? activePageIndex : activePageIndex - 1;
-      const rightIdx = activePageIndex % 2 === 1 ? activePageIndex + 1 : activePageIndex;
+      const leftIdx =
+        activePageIndex % 2 === 1 ? activePageIndex : activePageIndex - 1;
+      const rightIdx =
+        activePageIndex % 2 === 1 ? activePageIndex + 1 : activePageIndex;
 
       const page1 = pages[leftIdx];
       const page2 = pages[rightIdx];
@@ -709,7 +853,11 @@ const PageEditor = () => {
 
   // Fallback to active page root folder if selection becomes null
   useEffect(() => {
-    if (!selectedLayerId && pages.length > 0 && pages[activePageIndex]?.layers?.[0]?.id) {
+    if (
+      !selectedLayerId &&
+      pages.length > 0 &&
+      pages[activePageIndex]?.layers?.[0]?.id
+    ) {
       const rootId = pages[activePageIndex].layers[0].id;
       setSelectedLayerIdRaw(rootId);
       setMultiSelectedIds(new Set([rootId]));
@@ -730,291 +878,446 @@ const PageEditor = () => {
       setIsLoading(true);
       try {
         if (v_id) {
-        try {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          try {
+            const backendUrl =
+              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-          const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
-            params: { emailId: user?.emailId || user?.email, v_id, folderName: folder || location.state?.folderName, bookName: decodeURIComponent(v_id) }
-          });
-
-          if (res.data && res.data.pages) {
-            const parser = new DOMParser();
-            const userEmail = user?.emailId || user?.email;
-            const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
-            const actualFolderName = resolvePhysicalFolder(res.data.meta?.folderName || folder || location.state?.folderName);
-            const bookName = res.data.meta?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
-            const userFolder = res.data.meta?.userID || sanitizedEmail;
-            const projectBaseUrl = getSupabaseBaseUrl(userFolder, actualFolderName, bookName);
-
-            const fetchedMeta = res.data.meta || {};
-            const fetchedSettings = res.data.settings || {};
-            const targetWidth = fetchedMeta.width || fetchedSettings.width || location.state?.width;
-            const targetHeight = fetchedMeta.height || fetchedSettings.height || location.state?.height;
-            const targetTemplateId = fetchedMeta.templateId || fetchedSettings.templateId || location.state?.templateId;
-            const targetOrientation = fetchedMeta.orientation || fetchedSettings.orientation || location.state?.orientation;
-
-            setCurrentBook(prev => ({
-              ...(prev || {}),
-              ...(fetchedMeta || {}),
-              folderName: actualFolderName,
-              flipbookName: fetchedMeta.flipbookName || prev?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-              width: targetWidth,
-              height: targetHeight,
-              templateId: targetTemplateId,
-              orientation: targetOrientation
-            }));
-
-            const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;
-
-            const processPageItem = (p, i) => {
-              const name = p.name || `Page ${i + 1}`;
-              let pageHtml = p.html || p.content;
-
-              const pageUniqueId = (p.id && p.id !== bookVId)
-                ? p.id
-                : (p.v_id && p.v_id !== bookVId)
-                  ? p.v_id
-                  : `page_${p.pageNumber || i + 1}_${bookVId || 'book'}`;
-
-              if ((!pageHtml || typeof pageHtml !== 'string' || pageHtml.trim() === '') && location.state?.templatePages?.[i]) {
-                pageHtml = location.state.templatePages[i];
-              } else if (i === 0 && (!pageHtml || typeof pageHtml !== 'string' || pageHtml.trim() === '') && location.state?.initialTemplateSvg) {
-                pageHtml = location.state.initialTemplateSvg;
-              }
-
-              if (!pageHtml || typeof pageHtml !== 'string' || pageHtml.trim() === '') {
-                const { html, layers } = createDefaultPageDataRef.current(name, targetWidth, targetHeight);
-                return {
-                  id: pageUniqueId,
-                  v_id: pageUniqueId,
-                  name: name,
-                  fileName: p.fileName || (name ? (name.endsWith('.svg') ? name : `${name}.svg`) : `${p.pageNumber || i + 1}.svg`),
-                  pageNumber: p.pageNumber || (i + 1),
-                  isHidden: p.hide == 1 || String(p.hide) === '1',
-                  html: html,
-                  layers: layers,
-                  isLazy: false
-                };
-              }
-
-              let updatedHtml = pageHtml;
-              if (updatedHtml.includes('../assets/')) {
-                updatedHtml = updatedHtml.split('../assets/').join(`${projectBaseUrl}assets/`);
-              }
-              if (updatedHtml.includes('./assets/')) {
-                updatedHtml = updatedHtml.split('./assets/').join(`${projectBaseUrl}assets/`);
-              }
-
-              if (updatedHtml.includes('parsererror') || updatedHtml.includes('id="custom-ctrl-')) {
-                updatedHtml = updatedHtml.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, '');
-                updatedHtml = updatedHtml.replace(/<[^>]*id="custom-ctrl-[^>]*>.*?<\/[^>]*>/gi, '');
-              }
-              updatedHtml = updatedHtml.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
-
-              const cachedLayers = pageCacheManager.getCachedLayers(pageUniqueId, updatedHtml);
-              if (cachedLayers && cachedLayers.length > 0) {
-                pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
-                return {
-                  id: pageUniqueId,
-                  v_id: pageUniqueId,
-                  name: name,
-                  isHidden: p.hide == 1 || String(p.hide) === '1',
-                  html: updatedHtml,
-                  layers: cachedLayers,
-                  isLazy: false
-                };
-              }
-
-              const doc = parser.parseFromString(updatedHtml, 'image/svg+xml');
-              const allEls = doc.querySelectorAll('*');
-              allEls.forEach(el => {
-                const hasDropShadow = el.getAttribute('data-effect-drop-shadow') === 'true';
-                const hasInnerShadow = el.getAttribute('data-effect-inner-shadow') === 'true';
-                const hasBlur = el.getAttribute('data-effect-blur') === 'true';
-                const hasBackgroundBlur = el.getAttribute('data-effect-background-blur') === 'true';
-                if (hasDropShadow || hasInnerShadow || hasBlur || hasBackgroundBlur) {
-                  syncFilters(doc, el);
-                }
-
-                const shapeType = el.getAttribute('data-shape-type') || (el.tagName === 'rect' ? 'rectangle' : null);
-                if (shapeType === 'rectangle' && (el.getAttribute('data-tl') || el.getAttribute('data-tr') || el.getAttribute('data-bl') || el.getAttribute('data-br') || el.getAttribute('rx'))) {
-                  const x = parseFloat(el.getAttribute('x') || 0);
-                  const y = parseFloat(el.getAttribute('y') || 0);
-                  const w = parseFloat(el.getAttribute('width') || 0);
-                  const h = parseFloat(el.getAttribute('height') || 0);
-                  const defR = parseFloat(el.getAttribute('rx') || 0);
-                  const maxR = Math.min(w / 2, h / 2);
-                  const parseR = (v, d) => (v !== null && v !== '') ? (isNaN(parseFloat(v)) ? 0 : parseFloat(v)) : d;
-                  const tl = Math.min(parseR(el.getAttribute('data-tl'), defR), maxR);
-                  const tr = Math.min(parseR(el.getAttribute('data-tr'), defR), maxR);
-                  const bl = Math.min(parseR(el.getAttribute('data-bl'), defR), maxR);
-                  const br = Math.min(parseR(el.getAttribute('data-br'), defR), maxR);
-
-                  const d = `M ${x + tl},${y} L ${x + w - tr},${y} A ${tr},${tr} 0 0 1 ${x + w},${y + tr} L ${x + w},${y + h - br} A ${br},${br} 0 0 1 ${x + w - br},${y + h} L ${x + bl},${y + h} A ${bl},${bl} 0 0 1 ${x},${y + h - bl} L ${x},${y + tl} A ${tl},${tl} 0 0 1 ${x + tl},${y} Z`.replace(/\s+/g, ' ').trim();
-
-                  if (el.tagName === 'rect') {
-                    const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    Array.from(el.attributes).forEach(a => path.setAttribute(a.name, a.value));
-                    path.setAttribute('d', d);
-                    path.setAttribute('data-shape-type', 'rectangle');
-                    if (el.parentNode) el.parentNode.replaceChild(path, el);
-                  } else {
-                    el.setAttribute('d', d);
-                  }
-                }
-              });
-
-              updatedHtml = new XMLSerializer().serializeToString(doc);
-
-              const svgEl = doc.querySelector('svg');
-              const filterLayers = (layers) => {
-                if (!layers) return layers;
-                return layers
-                  .filter(l => l.type !== 'parsererror')
-                  .map(l => ({
-                    ...l,
-                    children: l.children ? filterLayers(l.children) : undefined
-                  }));
-              };
-
-              let layers = filterLayers(p.layers);
-              if (!layers || layers.length === 0) {
-                layers = svgEl ? parseLayersFromSVG(svgEl) : [];
-              }
-
-              pageCacheManager.setCachedLayers(pageUniqueId, updatedHtml, layers);
-              pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
-
-              return {
-                id: pageUniqueId,
-                v_id: pageUniqueId,
-                name: name,
-                fileName: p.fileName || (name ? (name.endsWith('.svg') ? name : `${name}.svg`) : `${p.pageNumber || i + 1}.svg`),
-                pageNumber: p.pageNumber || (i + 1),
-                isHidden: p.hide == 1 || String(p.hide) === '1',
-                html: updatedHtml,
-                layers: layers,
-                isLazy: false
-              };
-            };
-
-            const mappedPages = res.data.pages.map((p, idx) => processPageItem(p, idx));
-
-            setPages(mappedPages);
-            setIsLoading(false);
-
-            const firstRootId = mappedPages[0]?.layers?.[0]?.id;
-            if (firstRootId) {
-              setSelectedLayerIdRaw(firstRootId);
-              setMultiSelectedIds(new Set([firstRootId]));
-              setCurrentFrameId(firstRootId);
-            }
-
-            mappedPages.forEach((p) => {
-              const pid = p.v_id || p.id;
-              lastSavedHtmlsRef.current[pid] = p.html;
+            const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
+              params: {
+                emailId: user?.emailId || user?.email,
+                v_id,
+                folderName: folder || location.state?.folderName,
+                bookName: decodeURIComponent(v_id),
+              },
             });
 
-            let shareData = res.data.share;
-            if (!shareData || !shareData.shareId) {
-              const newShareId = Math.random().toString(36).substring(2, 14);
-              shareData = { shareId: newShareId, access: 'public' };
-              axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-                emailId: user?.emailId || user?.email,
-                v_id: v_id,
-                share: shareData
-              }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
+            if (res.data && res.data.pages) {
+              const parser = new DOMParser();
+              const userEmail = user?.emailId || user?.email;
+              const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
+              const actualFolderName = resolvePhysicalFolder(
+                res.data.meta?.folderName ||
+                  folder ||
+                  location.state?.folderName,
+              );
+              const bookName =
+                res.data.meta?.flipbookName ||
+                location.state?.flipbookName ||
+                "Untitled Flipbook";
+              const userFolder = res.data.meta?.userID || sanitizedEmail;
+              const projectBaseUrl = getSupabaseBaseUrl(
+                userFolder,
+                actualFolderName,
+                bookName,
+              );
+
+              const fetchedMeta = res.data.meta || {};
+              const fetchedSettings = res.data.settings || {};
+              const targetWidth =
+                fetchedMeta.width ||
+                fetchedSettings.width ||
+                location.state?.width;
+              const targetHeight =
+                fetchedMeta.height ||
+                fetchedSettings.height ||
+                location.state?.height;
+              const targetTemplateId =
+                fetchedMeta.templateId ||
+                fetchedSettings.templateId ||
+                location.state?.templateId;
+              const targetOrientation =
+                fetchedMeta.orientation ||
+                fetchedSettings.orientation ||
+                location.state?.orientation;
+
+              setCurrentBook((prev) => ({
+                ...(prev || {}),
+                ...(fetchedMeta || {}),
+                folderName: actualFolderName,
+                flipbookName:
+                  fetchedMeta.flipbookName ||
+                  prev?.flipbookName ||
+                  location.state?.flipbookName ||
+                  "Untitled Flipbook",
+                width: targetWidth,
+                height: targetHeight,
+                templateId: targetTemplateId,
+                orientation: targetOrientation,
+              }));
+
+              const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;
+
+              const processPageItem = (p, i) => {
+                const name = p.name || `Page ${i + 1}`;
+                let pageHtml = p.html || p.content;
+
+                const pageUniqueId =
+                  p.id && p.id !== bookVId
+                    ? p.id
+                    : p.v_id && p.v_id !== bookVId
+                      ? p.v_id
+                      : `page_${p.pageNumber || i + 1}_${bookVId || "book"}`;
+
+                if (
+                  (!pageHtml ||
+                    typeof pageHtml !== "string" ||
+                    pageHtml.trim() === "") &&
+                  location.state?.templatePages?.[i]
+                ) {
+                  pageHtml = location.state.templatePages[i];
+                } else if (
+                  i === 0 &&
+                  (!pageHtml ||
+                    typeof pageHtml !== "string" ||
+                    pageHtml.trim() === "") &&
+                  location.state?.initialTemplateSvg
+                ) {
+                  pageHtml = location.state.initialTemplateSvg;
+                }
+
+                if (
+                  !pageHtml ||
+                  typeof pageHtml !== "string" ||
+                  pageHtml.trim() === ""
+                ) {
+                  const { html, layers } = createDefaultPageDataRef.current(
+                    name,
+                    targetWidth,
+                    targetHeight,
+                  );
+                  return {
+                    id: pageUniqueId,
+                    v_id: pageUniqueId,
+                    name: name,
+                    fileName:
+                      p.fileName ||
+                      (name
+                        ? name.endsWith(".svg")
+                          ? name
+                          : `${name}.svg`
+                        : `${p.pageNumber || i + 1}.svg`),
+                    pageNumber: p.pageNumber || i + 1,
+                    isHidden: p.hide == 1 || String(p.hide) === "1",
+                    html: html,
+                    layers: layers,
+                    isLazy: false,
+                  };
+                }
+
+                let updatedHtml = pageHtml;
+                if (updatedHtml.includes("../assets/")) {
+                  updatedHtml = updatedHtml
+                    .split("../assets/")
+                    .join(`${projectBaseUrl}assets/`);
+                }
+                if (updatedHtml.includes("./assets/")) {
+                  updatedHtml = updatedHtml
+                    .split("./assets/")
+                    .join(`${projectBaseUrl}assets/`);
+                }
+
+                if (
+                  updatedHtml.includes("parsererror") ||
+                  updatedHtml.includes('id="custom-ctrl-')
+                ) {
+                  updatedHtml = updatedHtml.replace(
+                    /<parsererror[\s\S]*?<\/parsererror>/gi,
+                    "",
+                  );
+                  updatedHtml = updatedHtml.replace(
+                    /<[^>]*id="custom-ctrl-[^>]*>.*?<\/[^>]*>/gi,
+                    "",
+                  );
+                }
+                updatedHtml = updatedHtml.replace(
+                  /&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,
+                  "&amp;",
+                );
+
+                const cachedLayers = pageCacheManager.getCachedLayers(
+                  pageUniqueId,
+                  updatedHtml,
+                );
+                if (cachedLayers && cachedLayers.length > 0) {
+                  pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
+                  return {
+                    id: pageUniqueId,
+                    v_id: pageUniqueId,
+                    name: name,
+                    isHidden: p.hide == 1 || String(p.hide) === "1",
+                    html: updatedHtml,
+                    layers: cachedLayers,
+                    isLazy: false,
+                  };
+                }
+
+                const doc = parser.parseFromString(
+                  updatedHtml,
+                  "image/svg+xml",
+                );
+                const allEls = doc.querySelectorAll("*");
+                allEls.forEach((el) => {
+                  const hasDropShadow =
+                    el.getAttribute("data-effect-drop-shadow") === "true";
+                  const hasInnerShadow =
+                    el.getAttribute("data-effect-inner-shadow") === "true";
+                  const hasBlur =
+                    el.getAttribute("data-effect-blur") === "true";
+                  const hasBackgroundBlur =
+                    el.getAttribute("data-effect-background-blur") === "true";
+                  if (
+                    hasDropShadow ||
+                    hasInnerShadow ||
+                    hasBlur ||
+                    hasBackgroundBlur
+                  ) {
+                    syncFilters(doc, el);
+                  }
+
+                  const shapeType =
+                    el.getAttribute("data-shape-type") ||
+                    (el.tagName === "rect" ? "rectangle" : null);
+                  if (
+                    shapeType === "rectangle" &&
+                    (el.getAttribute("data-tl") ||
+                      el.getAttribute("data-tr") ||
+                      el.getAttribute("data-bl") ||
+                      el.getAttribute("data-br") ||
+                      el.getAttribute("rx"))
+                  ) {
+                    const x = parseFloat(el.getAttribute("x") || 0);
+                    const y = parseFloat(el.getAttribute("y") || 0);
+                    const w = parseFloat(el.getAttribute("width") || 0);
+                    const h = parseFloat(el.getAttribute("height") || 0);
+                    const defR = parseFloat(el.getAttribute("rx") || 0);
+                    const maxR = Math.min(w / 2, h / 2);
+                    const parseR = (v, d) =>
+                      v !== null && v !== ""
+                        ? isNaN(parseFloat(v))
+                          ? 0
+                          : parseFloat(v)
+                        : d;
+                    const tl = Math.min(
+                      parseR(el.getAttribute("data-tl"), defR),
+                      maxR,
+                    );
+                    const tr = Math.min(
+                      parseR(el.getAttribute("data-tr"), defR),
+                      maxR,
+                    );
+                    const bl = Math.min(
+                      parseR(el.getAttribute("data-bl"), defR),
+                      maxR,
+                    );
+                    const br = Math.min(
+                      parseR(el.getAttribute("data-br"), defR),
+                      maxR,
+                    );
+
+                    const d =
+                      `M ${x + tl},${y} L ${x + w - tr},${y} A ${tr},${tr} 0 0 1 ${x + w},${y + tr} L ${x + w},${y + h - br} A ${br},${br} 0 0 1 ${x + w - br},${y + h} L ${x + bl},${y + h} A ${bl},${bl} 0 0 1 ${x},${y + h - bl} L ${x},${y + tl} A ${tl},${tl} 0 0 1 ${x + tl},${y} Z`
+                        .replace(/\s+/g, " ")
+                        .trim();
+
+                    if (el.tagName === "rect") {
+                      const path = doc.createElementNS(
+                        "http://www.w3.org/2000/svg",
+                        "path",
+                      );
+                      Array.from(el.attributes).forEach((a) =>
+                        path.setAttribute(a.name, a.value),
+                      );
+                      path.setAttribute("d", d);
+                      path.setAttribute("data-shape-type", "rectangle");
+                      if (el.parentNode) el.parentNode.replaceChild(path, el);
+                    } else {
+                      el.setAttribute("d", d);
+                    }
+                  }
+                });
+
+                updatedHtml = new XMLSerializer().serializeToString(doc);
+
+                const svgEl = doc.querySelector("svg");
+                const filterLayers = (layers) => {
+                  if (!layers) return layers;
+                  return layers
+                    .filter((l) => l.type !== "parsererror")
+                    .map((l) => ({
+                      ...l,
+                      children: l.children
+                        ? filterLayers(l.children)
+                        : undefined,
+                    }));
+                };
+
+                let layers = filterLayers(p.layers);
+                if (!layers || layers.length === 0) {
+                  layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+                }
+
+                pageCacheManager.setCachedLayers(
+                  pageUniqueId,
+                  updatedHtml,
+                  layers,
+                );
+                pageCacheManager.getThumbnail(pageUniqueId, updatedHtml);
+
+                return {
+                  id: pageUniqueId,
+                  v_id: pageUniqueId,
+                  name: name,
+                  fileName:
+                    p.fileName ||
+                    (name
+                      ? name.endsWith(".svg")
+                        ? name
+                        : `${name}.svg`
+                      : `${p.pageNumber || i + 1}.svg`),
+                  pageNumber: p.pageNumber || i + 1,
+                  isHidden: p.hide == 1 || String(p.hide) === "1",
+                  html: updatedHtml,
+                  layers: layers,
+                  isLazy: false,
+                };
+              };
+
+              const mappedPages = res.data.pages.map((p, idx) =>
+                processPageItem(p, idx),
+              );
+
+              setPages(mappedPages);
+              setIsLoading(false);
+
+              const firstRootId = mappedPages[0]?.layers?.[0]?.id;
+              if (firstRootId) {
+                setSelectedLayerIdRaw(firstRootId);
+                setMultiSelectedIds(new Set([firstRootId]));
+                setCurrentFrameId(firstRootId);
+              }
+
+              mappedPages.forEach((p) => {
+                const pid = p.v_id || p.id;
+                lastSavedHtmlsRef.current[pid] = p.html;
+              });
+
+              let shareData = res.data.share;
+              if (!shareData || !shareData.shareId) {
+                const newShareId = Math.random().toString(36).substring(2, 14);
+                shareData = { shareId: newShareId, access: "public" };
+                axios
+                  .post(`${backendUrl}/api/flipbook/update-settings`, {
+                    emailId: user?.emailId || user?.email,
+                    v_id: v_id,
+                    share: shareData,
+                  })
+                  .catch((err) =>
+                    console.error(
+                      "Frontend shareId auto-heal save failed:",
+                      err,
+                    ),
+                  );
+              }
+
+              setCurrentBook((prev) => ({
+                ...res.data.meta,
+                ...(prev || {}),
+                flipbookName:
+                  res.data.meta?.flipbookName ||
+                  prev?.flipbookName ||
+                  "Untitled Flipbook",
+                share: shareData,
+              }));
+              setHasUnsavedChanges(false);
             }
-
-            setCurrentBook(prev => ({
-              ...res.data.meta,
-              ...(prev || {}),
-              flipbookName: res.data.meta?.flipbookName || prev?.flipbookName || 'Untitled Flipbook',
-              share: shareData
-            }));
-            setHasUnsavedChanges(false);
+          } catch (err) {
+            console.error("Failed to fetch flipbook:", err);
+            navigate("/not-found", { replace: true });
           }
-        } catch (err) {
-          console.error("Failed to fetch flipbook:", err);
-          navigate('/not-found', { replace: true });
-        }
-      }
-      else if (location.state && location.state.pageCount) {
-        const count = location.state.pageCount;
-        const newPages = Array.from({ length: count }, (_item, i) => {
-          const name = `Page ${i + 1}`;
-          let html, layers;
-          if (location.state?.templatePages?.[i]) {
-            html = location.state.templatePages[i];
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
-            layers = svgEl ? parseLayersFromSVG(svgEl) : [];
-          } else if (i === 0 && location.state?.initialTemplateSvg) {
-            html = location.state.initialTemplateSvg;
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
-            layers = svgEl ? parseLayersFromSVG(svgEl) : [];
-          } else {
-            const def = createDefaultPageDataRef.current(name, location.state.width, location.state.height);
-            html = def.html;
-            layers = def.layers;
+        } else if (location.state && location.state.pageCount) {
+          const count = location.state.pageCount;
+          const newPages = Array.from({ length: count }, (_item, i) => {
+            const name = `Page ${i + 1}`;
+            let html, layers;
+            if (location.state?.templatePages?.[i]) {
+              html = location.state.templatePages[i];
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, "image/svg+xml");
+              const svgEl = doc.querySelector("svg");
+              layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+            } else if (i === 0 && location.state?.initialTemplateSvg) {
+              html = location.state.initialTemplateSvg;
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, "image/svg+xml");
+              const svgEl = doc.querySelector("svg");
+              layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+            } else {
+              const def = createDefaultPageDataRef.current(
+                name,
+                location.state.width,
+                location.state.height,
+              );
+              html = def.html;
+              layers = def.layers;
+            }
+            return {
+              id: i + 1,
+              name,
+              html,
+              layers,
+            };
+          });
+          setPages(newPages);
+
+          const newFirstRootId = newPages[0]?.layers?.[0]?.id;
+          if (newFirstRootId) {
+            setSelectedLayerIdRaw(newFirstRootId);
+            setMultiSelectedIds(new Set([newFirstRootId]));
+            setCurrentFrameId(newFirstRootId);
           }
-          return {
-            id: i + 1,
-            name,
-            html,
-            layers
-          };
-        });
-        setPages(newPages);
+          setCurrentBook((prev) => ({
+            ...(prev || {}),
+            flipbookName:
+              prev?.flipbookName ||
+              location.state?.flipbookName ||
+              "Untitled Flipbook",
+            folderName: resolvePhysicalFolder(
+              prev?.folderName || location.state?.folderName,
+            ),
+            templateId: location.state?.templateId,
+            orientation: location.state?.orientation,
+            width: location.state?.width,
+            height: location.state?.height,
+          }));
+        } else {
+          const fallbackPages = Array.from({ length: 12 }, (_item, i) => {
+            const name = `Page ${i + 1}`;
+            const { html, layers } = createDefaultPageDataRef.current(name);
+            return {
+              id: i + 1,
+              name,
+              html,
+              layers,
+            };
+          });
+          setPages(fallbackPages);
 
-        const newFirstRootId = newPages[0]?.layers?.[0]?.id;
-        if (newFirstRootId) {
-          setSelectedLayerIdRaw(newFirstRootId);
-          setMultiSelectedIds(new Set([newFirstRootId]));
-          setCurrentFrameId(newFirstRootId);
+          const fallbackFirstRootId = fallbackPages[0]?.layers?.[0]?.id;
+          if (fallbackFirstRootId) {
+            setSelectedLayerIdRaw(fallbackFirstRootId);
+            setMultiSelectedIds(new Set([fallbackFirstRootId]));
+            setCurrentFrameId(fallbackFirstRootId);
+          }
+          setCurrentBook((prev) => ({
+            ...(prev || {}),
+            flipbookName: prev?.flipbookName || "Untitled Flipbook",
+            folderName: resolvePhysicalFolder(prev?.folderName),
+          }));
         }
-        setCurrentBook(prev => ({
-          ...(prev || {}),
-          flipbookName: prev?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook',
-          folderName: resolvePhysicalFolder(prev?.folderName || location.state?.folderName),
-          templateId: location.state?.templateId,
-          orientation: location.state?.orientation,
-          width: location.state?.width,
-          height: location.state?.height
-        }));
+      } finally {
+        setIsLoading(false);
       }
-      else {
-        const fallbackPages = Array.from({ length: 12 }, (_item, i) => {
-          const name = `Page ${i + 1}`;
-          const { html, layers } = createDefaultPageDataRef.current(name);
-          return {
-            id: i + 1,
-            name,
-            html,
-            layers
-          };
-        });
-        setPages(fallbackPages);
-
-        const fallbackFirstRootId = fallbackPages[0]?.layers?.[0]?.id;
-        if (fallbackFirstRootId) {
-          setSelectedLayerIdRaw(fallbackFirstRootId);
-          setMultiSelectedIds(new Set([fallbackFirstRootId]));
-          setCurrentFrameId(fallbackFirstRootId);
-        }
-        setCurrentBook(prev => ({
-          ...(prev || {}),
-          flipbookName: prev?.flipbookName || 'Untitled Flipbook',
-          folderName: resolvePhysicalFolder(prev?.folderName)
-        }));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
     initializeEditor();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1024,15 +1327,23 @@ const PageEditor = () => {
   const preview3DDataUrl = useMemo(() => {
     if (!current3DItem) return null;
     try {
-      const doc = new DOMParser().parseFromString(pages[activePageIndex]?.html || '', 'image/svg+xml');
+      const doc = new DOMParser().parseFromString(
+        pages[activePageIndex]?.html || "",
+        "image/svg+xml",
+      );
       const el = doc.getElementById(current3DItem.id);
-      const val = el ? el.getAttribute('data-interaction-value') : current3DItem.value;
+      const val = el
+        ? el.getAttribute("data-interaction-value")
+        : current3DItem.value;
       if (!val) return null;
       let finalVal = val;
-      if (val.startsWith('{')) {
+      if (val.startsWith("{")) {
         finalVal = JSON.parse(val).data || JSON.parse(val).url || val;
       }
-      if (typeof finalVal === 'string' && (finalVal.startsWith('/storage/') || finalVal.startsWith('/uploads/'))) {
+      if (
+        typeof finalVal === "string" &&
+        (finalVal.startsWith("/storage/") || finalVal.startsWith("/uploads/"))
+      ) {
         finalVal = resolveUploadsPath(finalVal);
       }
       return finalVal;
@@ -1042,42 +1353,57 @@ const PageEditor = () => {
   }, [current3DItem, pages, activePageIndex]);
 
   const [isUnlocked, setIsUnlocked] = useState(() => {
-    return v_id ? sessionStorage.getItem(`unlocked_${v_id}`) === 'true' : false;
+    return v_id ? sessionStorage.getItem(`unlocked_${v_id}`) === "true" : false;
   });
 
   const accessMode = (
-    currentBook?.share?.access || 
-    currentBook?.share?.type || 
-    currentBook?.settings?.Visibility?.access || 
-    currentBook?.settings?.Visibility?.type || 
-    ''
-  ).toLowerCase().trim();
+    currentBook?.share?.access ||
+    currentBook?.share?.type ||
+    currentBook?.settings?.Visibility?.access ||
+    currentBook?.settings?.Visibility?.type ||
+    ""
+  )
+    .toLowerCase()
+    .trim();
 
-  const isPasswordProtected = accessMode.includes('password');
+  const isPasswordProtected = accessMode.includes("password");
 
   useEffect(() => {
     if (!isPasswordProtected && v_id) {
       sessionStorage.removeItem(`unlocked_${v_id}`);
-      if (currentBook?.share?.shareId) sessionStorage.removeItem(`unlocked_${currentBook.share.shareId}`);
+      if (currentBook?.share?.shareId)
+        sessionStorage.removeItem(`unlocked_${currentBook.share.shareId}`);
       setIsUnlocked(false);
     }
   }, [isPasswordProtected, v_id, currentBook?.share?.shareId]);
 
-  const isPdfProject = pages.some(p => p.html && (p.html.includes('data-name="PDF Background"') || p.html.includes('data-type="pdf-vector-layer"') || p.html.includes('Document Shield')));
+  const isPdfProject = pages.some(
+    (p) =>
+      p.html &&
+      (p.html.includes('data-name="PDF Background"') ||
+        p.html.includes('data-type="pdf-vector-layer"') ||
+        p.html.includes("Document Shield")),
+  );
 
   const selectedElementInteraction = useMemo(() => {
-    if (!selectedLayerId || pages.length === 0 || activePageIndex < 0 || activePageIndex >= pages.length) return null;
+    if (
+      !selectedLayerId ||
+      pages.length === 0 ||
+      activePageIndex < 0 ||
+      activePageIndex >= pages.length
+    )
+      return null;
     const page = pages[activePageIndex];
     if (page && page.html) {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(page.html, 'image/svg+xml');
+      const doc = parser.parseFromString(page.html, "image/svg+xml");
       const el = doc.getElementById(selectedLayerId);
       if (el) {
         return {
           id: selectedLayerId,
           tagName: el.tagName,
-          'data-interaction': el.getAttribute('data-interaction'),
-          'data-tooltip-settings': el.getAttribute('data-tooltip-settings')
+          "data-interaction": el.getAttribute("data-interaction"),
+          "data-tooltip-settings": el.getAttribute("data-tooltip-settings"),
         };
       }
     }
@@ -1086,7 +1412,10 @@ const PageEditor = () => {
 
   // ── JSX Render ─────────────────────────────────────────────────────────────
   return (
-    <div onContextMenu={(e) => e.preventDefault()} className="flex h-[93vh] w-full bg-white overflow-hidden relative">
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="flex h-[93vh] w-full bg-white overflow-hidden relative"
+    >
       {!isLoading && isPasswordProtected && !isUnlocked && (
         <PasswordProtectModal
           v_id={v_id}
@@ -1104,7 +1433,9 @@ const PageEditor = () => {
             className="absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-white h-full w-full gap-3"
           >
             <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
-            <span className="text-[0.85vw] font-semibold text-gray-600 tracking-wide">Loading Editor...</span>
+            <span className="text-[0.85vw] font-semibold text-gray-600 tracking-wide">
+              Loading Editor...
+            </span>
           </Motion.div>
         )}
       </AnimatePresence>
@@ -1115,7 +1446,9 @@ const PageEditor = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="flex h-full w-full overflow-hidden relative"
       >
-        <div className={`flex flex-1 min-w-0 overflow-hidden transition-all duration-300 ${is3DModalOpen ? 'blur-md pointer-events-none' : ''}`}>
+        <div
+          className={`flex flex-1 min-w-0 overflow-hidden transition-all duration-300 ${is3DModalOpen ? "blur-md pointer-events-none" : ""}`}
+        >
           <Layer
             pages={pages}
             activePageIndex={activePageIndex}
@@ -1187,27 +1520,38 @@ const PageEditor = () => {
             activeTopTool={activeTopTool}
             setActiveTopTool={(tool) => {
               setActiveTopTool(tool);
-              if (tool !== 'editor') {
-                setActiveMainTool('select');
+              if (tool !== "editor") {
+                setActiveMainTool("select");
               }
             }}
             v_id={v_id || currentBook?.v_id}
             flipbookVId={v_id || currentBook?.v_id}
-            folderName={resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName)}
-            flipbookName={currentBook?.flipbookName || location.state?.flipbookName || ''}
+            folderName={resolvePhysicalFolder(
+              currentBook?.folderName || folder || location.state?.folderName,
+            )}
+            flipbookName={
+              currentBook?.flipbookName || location.state?.flipbookName || ""
+            }
             isPopupEditor={!!popupEditContext}
-            flipbookDimensions={popupEditContext ? (popupEditContext.dimensions || { width: 800, height: 600 }) : getFlipbookDimensions()}
-            projectBaseUrl={projectBaseUrl}
+            flipbookDimensions={
+              popupEditContext
+                ? popupEditContext.dimensions || { width: 800, height: 600 }
+                : getFlipbookDimensions()
+            }
           />
 
-          {(activeTopTool === 'interaction' || (isPdfProject && activeTopTool === 'editor' && activeMainTool !== 'upload')) && selectedElementInteraction?.['data-interaction'] === 'tooltip' && (
-            <TooltipCustomization
-              selectedElementProps={selectedElementInteraction}
-              activePageIndex={activePageIndex}
-              selectedLayerId={selectedLayerId}
-              updateElementAttribute={updateElementAttribute}
-            />
-          )}
+          {(activeTopTool === "interaction" ||
+            (isPdfProject &&
+              activeTopTool === "editor" &&
+              activeMainTool !== "upload")) &&
+            selectedElementInteraction?.["data-interaction"] === "tooltip" && (
+              <TooltipCustomization
+                selectedElementProps={selectedElementInteraction}
+                activePageIndex={activePageIndex}
+                selectedLayerId={selectedLayerId}
+                updateElementAttribute={updateElementAttribute}
+              />
+            )}
         </div>
 
         {/* Dark Overlay for 3D Preview Modal */}
@@ -1232,11 +1576,25 @@ const PageEditor = () => {
               customBg={customBg}
               enableAR={enableAR}
               setBgColor={setBgColor}
-              qrText={qrText} qrColor={qrColor} qrBgType={qrBgType} qrBgColor={qrBgColor} qrLevel={qrLevel} qrDotType={qrDotType} qrCornerSquareType={qrCornerSquareType} qrCornerDotType={qrCornerDotType} qrLogo={qrLogo}
-              topText={topText} bottomText={bottomText} vId={current3DVId}
+              qrText={qrText}
+              qrColor={qrColor}
+              qrBgType={qrBgType}
+              qrBgColor={qrBgColor}
+              qrLevel={qrLevel}
+              qrDotType={qrDotType}
+              qrCornerSquareType={qrCornerSquareType}
+              qrCornerDotType={qrCornerDotType}
+              qrLogo={qrLogo}
+              topText={topText}
+              bottomText={bottomText}
+              vId={current3DVId}
               hotspots={current3DHotspots}
               activeHotspotId={active3DHotspotId}
-              onHotspotClick={(hs) => setActive3DHotspotId(prev => prev === hs?.id ? null : (hs?.id || null))}
+              onHotspotClick={(hs) =>
+                setActive3DHotspotId((prev) =>
+                  prev === hs?.id ? null : hs?.id || null,
+                )
+              }
             />
           </div>
         )}
@@ -1289,24 +1647,55 @@ const PageEditor = () => {
           setCustomBg={setCustomBg}
           enableAR={enableAR}
           setEnableAR={setEnableAR}
-          qrText={qrText} setQrText={setQrText} qrColor={qrColor} setQrColor={setQrColor} qrBgType={qrBgType} setQrBgType={setQrBgType} qrBgColor={qrBgColor} setQrBgColor={setQrBgColor} qrLevel={qrLevel} setQrLevel={setQrLevel} qrDotType={qrDotType} setQrDotType={setQrDotType} qrCornerSquareType={qrCornerSquareType} setQrCornerSquareType={setQrCornerSquareType} qrCornerDotType={qrCornerDotType} setQrCornerDotType={setQrCornerDotType} qrLogo={qrLogo} setQrLogo={setQrLogo}
-          topText={topText} setTopText={setTopText} bottomText={bottomText} setBottomText={setBottomText}
+          qrText={qrText}
+          setQrText={setQrText}
+          qrColor={qrColor}
+          setQrColor={setQrColor}
+          qrBgType={qrBgType}
+          setQrBgType={setQrBgType}
+          qrBgColor={qrBgColor}
+          setQrBgColor={setQrBgColor}
+          qrLevel={qrLevel}
+          setQrLevel={setQrLevel}
+          qrDotType={qrDotType}
+          setQrDotType={setQrDotType}
+          qrCornerSquareType={qrCornerSquareType}
+          setQrCornerSquareType={setQrCornerSquareType}
+          qrCornerDotType={qrCornerDotType}
+          setQrCornerDotType={setQrCornerDotType}
+          qrLogo={qrLogo}
+          setQrLogo={setQrLogo}
+          topText={topText}
+          setTopText={setTopText}
+          bottomText={bottomText}
+          setBottomText={setBottomText}
           current3DVId={current3DVId}
           hotspots={current3DHotspots}
           activeHotspotId={active3DHotspotId}
           onHotspotClick={(hs) => setActive3DHotspotId(hs?.id || null)}
           v_id={v_id || currentBook?.v_id}
           flipbookVId={v_id || currentBook?.v_id}
-          folderName={resolvePhysicalFolder(currentBook?.folderName || folder || location.state?.folderName)}
-          flipbookName={currentBook?.flipbookName || location.state?.flipbookName || 'Untitled Flipbook'}
-          projectBaseUrl={projectBaseUrl}
+          folderName={resolvePhysicalFolder(
+            currentBook?.folderName || folder || location.state?.folderName,
+          )}
+          flipbookName={
+            currentBook?.flipbookName ||
+            location.state?.flipbookName ||
+            "Untitled Flipbook"
+          }
         />
 
         {showTemplateModal && (
           <TemplateModal
             showTemplateModal={showTemplateModal}
             setShowTemplateModal={setShowTemplateModal}
-            clearCanvas={() => clearPage(templateTargetIndex !== null ? templateTargetIndex : activePageIndex)}
+            clearCanvas={() =>
+              clearPage(
+                templateTargetIndex !== null
+                  ? templateTargetIndex
+                  : activePageIndex,
+              )
+            }
             loadTemplate={loadTemplate}
             pages={pages}
             activePageIndex={activePageIndex}
@@ -1320,8 +1709,10 @@ const PageEditor = () => {
         {showPreview && (
           <React.Suspense fallback={null}>
             <FlipbookPreview
-              pages={pages.filter(p => !p.isHidden).map(p => ({ ...p, content: p.html || '' }))}
-              pageName={currentBook?.flipbookName || 'Preview'}
+              pages={pages
+                .filter((p) => !p.isHidden)
+                .map((p) => ({ ...p, content: p.html || "" }))}
+              pageName={currentBook?.flipbookName || "Preview"}
               onClose={() => setShowPreview(false)}
               isMobile={false}
               isDoublePage={isDoublePage}
@@ -1335,7 +1726,7 @@ const PageEditor = () => {
         <input
           type="file"
           ref={pdfInputRef}
-          style={{ display: 'none' }}
+          style={{ display: "none" }}
           accept=".pdf,.ppt,.pptx,.doc,.docx"
           onChange={handlePdfFileSelect}
         />
@@ -1344,20 +1735,25 @@ const PageEditor = () => {
         <input
           type="file"
           ref={replacePdfInputRef}
-          style={{ display: 'none' }}
+          style={{ display: "none" }}
           accept=".pdf,.ppt,.pptx,.doc,.docx"
           onChange={handleReplaceFileSelect}
         />
 
         {/* PDF Processing Loader */}
-        <PdfProcessingLoader progress={pdfProcessing} onCancel={() => setPdfProcessing(null)} />
+        <PdfProcessingLoader
+          progress={pdfProcessing}
+          onCancel={() => setPdfProcessing(null)}
+        />
 
         <AlertModal
           isOpen={alertState.isOpen}
           title={alertState.title}
           message={alertState.message}
           type={alertState.type}
-          onConfirm={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={() =>
+            setAlertState((prev) => ({ ...prev, isOpen: false }))
+          }
         />
 
         {/* Change Popup Template Modal */}
@@ -1366,17 +1762,24 @@ const PageEditor = () => {
             isOpen={showPopupTemplateChange}
             onClose={() => setShowPopupTemplateChange(false)}
             onSelect={(templateId) => {
-              onCustomizePopup(templateId, popupEditContext.elementId, popupEditContext.pageIndex);
+              onCustomizePopup(
+                templateId,
+                popupEditContext.elementId,
+                popupEditContext.pageIndex,
+              );
               setShowPopupTemplateChange(false);
             }}
             onCustomize={(templateId) => {
-              onCustomizePopup(templateId, popupEditContext.elementId, popupEditContext.pageIndex);
+              onCustomizePopup(
+                templateId,
+                popupEditContext.elementId,
+                popupEditContext.pageIndex,
+              );
               setShowPopupTemplateChange(false);
             }}
             selectedTemplateId={popupEditContext.templateId}
           />
         )}
-
       </Motion.div>
     </div>
   );

@@ -72,17 +72,34 @@ const flipbookSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
-    Customized_Settings: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {}
+    viewers: {
+      type: [String],
+      default: []
     },
-    collectedLeads: {
+    viewsCount: {
+      type: Number,
+      default: 0
+    },
+    bookRating: {
       type: [mongoose.Schema.Types.Mixed],
       default: []
+    },
+    averageRating: {
+      type: Number,
+      default: 0
+    },
+    totalRatings: {
+      type: Number,
+      default: 0
+    },
+    addedToShelfCount: {
+      type: Number,
+      default: 0
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    strict: false
   }
 );
 

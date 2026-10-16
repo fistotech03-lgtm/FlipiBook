@@ -122,7 +122,7 @@ const DeviceLayoutRenderer = ({
   const getScreenWrapperStyle = () => {
     if (customGetScreenWrapperStyle) return customGetScreenWrapperStyle();
     if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
-    if (activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) return {
+    if (activeDevice === 'Tablet' && !isPhysicalTablet) return {
       position: 'absolute',
       top: '9.38%',
       bottom: '7.7%',
@@ -176,9 +176,9 @@ const DeviceLayoutRenderer = ({
                     );
                 })()
       ) : (
-                    <div style={{ ...((activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
+                    <div style={{ ...((activeDevice === 'Tablet' && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
                         {/* Floor shadow effect for Tablet bottom (using the style of the SVG) */}
-                        {activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet && (
+                        {activeDevice === 'Tablet' && !isPhysicalTablet && (
                             <svg
                                 viewBox="0 0 1000 100"
                                 preserveAspectRatio="none"

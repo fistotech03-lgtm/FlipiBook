@@ -2,7 +2,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { AnimatePresence } from 'framer-motion';
 import backgroundComponents from './Backgrounds';
 import animationComponents from './Animations';
-import * as BookAppearanceHelpers from './bookAppearanceHelpers';
+import * as BookAppearanceHelpers from './utils/bookAppearanceHelpers';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 
 import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
@@ -15,6 +15,7 @@ import {
   InteractionSlideshowModal,
   DeviceLayoutRenderer
 } from './previewAreaModules';
+import tabFrameSvg from '../../assets/cover/Tab 1.svg';
 import { useCustomizerState, useActiveBook } from '../../store/hooks';
 
 const PreviewArea = React.memo(({
@@ -158,18 +159,28 @@ const PreviewArea = React.memo(({
     }, [incomingVId, incomingVIdProp, currentBook, incomingSettings]);
 
     const resolvedShareId = React.useMemo(() => {
-        if (incomingShareId) return incomingShareId;
-        if (currentBook?.shareId) return currentBook.shareId;
-        if (currentBook?.share?.shareId) return currentBook.share.shareId;
-        if (incomingSettings?.shareId) return incomingSettings.shareId;
-        if (incomingSettings?.Visibility?.shareId) return incomingSettings.Visibility.shareId;
-        if (incomingSettings?.share?.shareId) return incomingSettings.share.shareId;
+        const visShareId =
+            incomingSettings?.Visibility?.shareId ||
+            currentBook?.Customized_Settings?.Visibility?.shareId ||
+            currentBook?.Visibility?.shareId ||
+            incomingSettings?.Customized_Settings?.Visibility?.shareId ||
+            incomingSettings?.share?.shareId ||
+            currentBook?.share?.shareId;
+        if (visShareId && visShareId !== resolvedVId) return visShareId;
+
         if (typeof window !== 'undefined') {
-            const match = window.location.pathname.match(/\/share=[^/]+\/([^/?#]+)/);
-            if (match && match[1]) return match[1];
+            const queryShareId = new URLSearchParams(window.location.search).get('shareId');
+            if (queryShareId && queryShareId !== resolvedVId) return queryShareId;
+            const match = window.location.pathname.match(/\/share(=[^/]+)?\/([^/?#]+)/);
+            if (match && match[2] && match[2] !== resolvedVId) return match[2];
         }
-        return '';
-    }, [incomingShareId, currentBook, incomingSettings]);
+
+        if (incomingShareId && incomingShareId !== resolvedVId) return incomingShareId;
+        if (currentBook?.shareId && currentBook.shareId !== resolvedVId) return currentBook.shareId;
+        if (incomingSettings?.shareId && incomingSettings.shareId !== resolvedVId) return incomingSettings.shareId;
+
+        return visShareId || incomingShareId || '';
+    }, [incomingShareId, currentBook, incomingSettings, resolvedVId]);
 
     const resolvedBookName = React.useMemo(() => {
         return bookName || currentBook?.flipbookName || currentBook?.title || incomingSettings?.flipbookName || incomingSettings?.FlipbookInfo?.flipbookName || 'Flipbook';
@@ -973,8 +984,8 @@ const PreviewArea = React.memo(({
             borderRadius: '0',
             margin: 'auto',
             position: 'relative',
-            backgroundImage: 'url("/src/assets/cover/Tab 1.svg")',
-            backgroundSize: '95% 95%',
+            backgroundImage: `url("${tabFrameSvg}")`,
+            backgroundSize: '100% 100%',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundColor: 'transparent',
@@ -985,7 +996,7 @@ const PreviewArea = React.memo(({
 
     const getScreenWrapperStyle = () => {
         if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
-        if (activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) return {
+        if (activeDevice === 'Tablet' && !isPhysicalTablet) return {
             position: 'absolute',
             top: '9.38%',
             bottom: '7.7%',
@@ -2476,7 +2487,7 @@ const PreviewArea = React.memo(({
             }}
         >
 
-            {(!['Tablet', 'Mobile'].includes(activeDevice) || isPublishedPreview || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
+            {(!['Tablet', 'Mobile'].includes(activeDevice) || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
 
             <DeviceLayoutRenderer
                 activeDevice={activeDevice}

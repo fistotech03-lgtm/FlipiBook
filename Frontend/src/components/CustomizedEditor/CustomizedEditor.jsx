@@ -1046,8 +1046,17 @@ const CustomizedEditor = () => {
     // Close profile popup if it's open
     window.dispatchEvent(new Event('close-profile-preview'));
 
-    const shareId = shareSettings?.shareId || currentBook?.shareId || v_id;
-    const previewUrl = shareId ? `/preview?shareId=${shareId}` : (v_id ? `/preview?v_id=${v_id}` : '/preview');
+    const candidateShareId =
+      visibilitySettings?.shareId ||
+      visibilitySettings?.Visibility?.shareId ||
+      currentBook?.Customized_Settings?.Visibility?.shareId ||
+      currentBook?.Visibility?.shareId ||
+      (shareSettings?.shareId && shareSettings.shareId !== v_id ? shareSettings.shareId : null) ||
+      (currentBook?.share?.shareId && currentBook.share.shareId !== v_id ? currentBook.share.shareId : null);
+
+    const visibilityShareId = (candidateShareId && candidateShareId !== v_id) ? candidateShareId : null;
+
+    const previewUrl = visibilityShareId ? `/preview?shareId=${visibilityShareId}` : '/preview';
     
     // 1. Open preview immediately in new tab for instant response
     window.open(previewUrl, '_blank');
@@ -1637,29 +1646,32 @@ const CustomizedEditor = () => {
               if (res.data.settings?.bookmarks) setBookmarks(res.data.settings.bookmarks);
               if (res.data.settings?.notes) setNotes(res.data.settings.notes);
             let shareData = res.data.share;
-            if (!shareData || !shareData.shareId) {
-              const newShareId = Math.random().toString(36).substring(2, 14);
-              shareData = { shareId: newShareId, access: 'public' };
-              // Try to save the newly generated shareId to the backend
+            let candidateShare = loadedVisibility?.shareId || (shareData?.shareId !== v_id ? shareData?.shareId : null);
+            if (!candidateShare || candidateShare === v_id) {
+              candidateShare = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
+              shareData = { ...(shareData || {}), shareId: candidateShare, access: shareData?.access || 'public' };
               axios.post(`${backendUrl}/api/flipbook/update-settings`, {
                 userID: user?.userID,
                 emailId: userEmail,
                 v_id: v_id,
-                Visibility: shareData
+                Visibility: { ...(loadedVisibility || {}), shareId: candidateShare }
               }, { withCredentials: true }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
+            } else if (!shareData) {
+              shareData = { shareId: candidateShare, access: 'public' };
             }
             setShareSettings(shareData);
 
-            if (shareData) {
-              setVisibilitySettings(prev => ({
-                ...prev,
-                type: shareData.access || prev.type || 'Public',
-                password: shareData.password || prev.password || '',
-                accessKey: shareData.accessKey || prev.accessKey || '',
-                isPasswordSaved: shareData.isPasswordSaved !== undefined ? shareData.isPasswordSaved : prev.isPasswordSaved,
-                inviteOnly: shareData.inviteOnly || prev.inviteOnly || {}
-              }));
-            }
+            const effectiveShareId = candidateShare;
+            setVisibilitySettings(prev => ({
+              ...prev,
+              ...(loadedVisibility || {}),
+              shareId: effectiveShareId || prev.shareId,
+              type: shareData?.access || loadedVisibility?.access || prev.type || 'Public',
+              password: shareData?.password || prev.password || '',
+              accessKey: shareData?.accessKey || prev.accessKey || '',
+              isPasswordSaved: shareData?.isPasswordSaved !== undefined ? shareData.isPasswordSaved : prev.isPasswordSaved,
+              inviteOnly: shareData?.inviteOnly || prev.inviteOnly || {}
+            }));
 
             if (setCurrentBook) {
               setCurrentBook(prev => ({

@@ -42,8 +42,9 @@ const VIRTUAL_FOLDERS = new Set([
 
 const resolveFolder = (folderName) => {
   if (Array.isArray(folderName)) {
-    const realFolders = folderName.filter(
-      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()),
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === "string" && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()),
     );
     return realFolders.length > 0
       ? String(realFolders[0]).trim()
@@ -58,10 +59,39 @@ const resolveFolder = (folderName) => {
 };
 
 /**
+ * Helper to enforce maximum 10 recent books per user (FIFO)
+ */
+const enforceRecentLimit = async (userQuery) => {
+  try {
+    if (!userQuery) return;
+    const recentBooks = await Flipbook.find({
+      ...userQuery,
+      trash: { $ne: true },
+      folderName: { $in: ["Recent Book", "Recent", "Recent book"] },
+    }).sort({ lastUpdated: -1, updatedAt: -1, createdAt: -1 });
+
+    if (recentBooks.length > 10) {
+      const toRemove = recentBooks.slice(10);
+      await Flipbook.updateMany(
+        { _id: { $in: toRemove.map((b) => b._id) } },
+        {
+          $pull: {
+            folderName: { $in: ["Recent Book", "Recent", "Recent book"] },
+          },
+        },
+      );
+    }
+  } catch (err) {
+    console.warn("[Book Controller] Error enforcing Recent Book limit:", err);
+  }
+};
+
+/**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
 const formatBook = (doc) => {
   const primaryFolder = resolveFolder(doc.folderName);
+  const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
 
   return {
     id: doc._id.toString(),
@@ -74,6 +104,8 @@ const formatBook = (doc) => {
     flipbookName: doc.flipbookName,
     folder: primaryFolder,
     folderName: primaryFolder,
+    actualFolder: primaryFolder,
+    originalFolder: primaryFolder,
     pages: Array.isArray(doc.pages)
       ? doc.pages.length
       : typeof doc.pages === "number"
@@ -91,7 +123,10 @@ const formatBook = (doc) => {
     isFavorite: Boolean(doc.isFavorite),
     isPublished: Boolean(doc.isPublished),
     createdAt: doc.createdAt,
-    lastUpdated: doc.lastUpdated || doc.updatedAt,
+    lastUpdated: mtime,
+    updatedAt: doc.updatedAt || mtime,
+    mtime: mtime,
+    allFolders: Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName],
     width: doc.Customized_Settings?.width || null,
     height: doc.Customized_Settings?.height || null,
     orientation: doc.Customized_Settings?.orientation || null,
@@ -152,11 +187,50 @@ exports.getBooks = async (req, res) => {
         new Date(b.updatedAt || b.lastUpdated || b.createdAt) -
         new Date(a.updatedAt || a.lastUpdated || a.createdAt),
     );
-    const formattedBooks = rawBooks.map(formatBook);
+    const physicalBooks = rawBooks.map(formatBook);
+
+    const hasRecentTag = (doc) => {
+      if (doc.trash) return false;
+      if (Array.isArray(doc.folderName)) {
+        return doc.folderName.some((f) => {
+          const s = String(f).trim().toLowerCase();
+          return s === "recent book" || s === "recent";
+        });
+      }
+      if (typeof doc.folderName === "string") {
+        const s = doc.folderName.trim().toLowerCase();
+        return s === "recent book" || s === "recent";
+      }
+      return false;
+    };
+
+    const recentDocs = rawBooks.filter(hasRecentTag);
+
+    recentDocs.sort(
+      (a, b) =>
+        new Date(b.lastUpdated || b.updatedAt || b.createdAt) -
+        new Date(a.lastUpdated || a.updatedAt || a.createdAt),
+    );
+
+    const recentBooks = recentDocs.map((doc) => {
+      const base = formatBook(doc);
+      return {
+        ...base,
+        id: `Recent_${doc.v_id || doc._id.toString()}`,
+        folder: "Recent Book",
+        folderName: "Recent Book",
+        actualFolder: base.folder,
+        originalFolder: base.folder,
+        isRecent: true,
+        mtime: doc.lastUpdated || doc.updatedAt || doc.createdAt,
+      };
+    });
+
+    const allBooks = [...physicalBooks, ...recentBooks];
 
     res.status(200).json({
       success: true,
-      books: formattedBooks,
+      books: allBooks,
     });
   } catch (err) {
     console.error("[Book Controller] Error fetching books:", err);
@@ -234,12 +308,18 @@ exports.trashBook = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
+    const cleanVId = v_id ? String(v_id).replace(/^Recent_/, "") : null;
     const query = { ...userQuery };
-    if (v_id) {
-      query.v_id = v_id;
+    if (cleanVId) {
+      query.v_id = cleanVId;
     } else {
       query.flipbookName = bookName;
-      if (folderName && folderName !== "Trash") {
+      if (
+        folderName &&
+        folderName !== "Trash" &&
+        folderName !== "Recent Book" &&
+        folderName !== "Recent"
+      ) {
         query.folderName = folderName;
       }
     }
@@ -292,16 +372,20 @@ exports.restoreBook = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
+    const cleanVId = v_id ? String(v_id).replace(/^Recent_/, "") : null;
     const query = { ...userQuery };
-    if (v_id) {
-      query.v_id = v_id;
+    if (cleanVId) {
+      query.v_id = cleanVId;
     } else {
       query.flipbookName = bookName;
     }
 
     const updated = await Flipbook.findOneAndUpdate(
       query,
-      { $set: { trash: false, trashedAt: null } },
+      {
+        $set: { trash: false, trashedAt: null, lastUpdated: new Date() },
+        $addToSet: { folderName: "Recent Book" },
+      },
       { returnDocument: "after" },
     );
 
@@ -310,6 +394,8 @@ exports.restoreBook = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Flipbook not found" });
     }
+
+    if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
 
     res.status(200).json({
       success: true,
@@ -343,9 +429,7 @@ exports.emptyTrash = async (req, res) => {
 
     // Clean up local disk files for trashed books
     for (const b of trashedBooks) {
-      const folder = Array.isArray(b.folderName)
-        ? b.folderName[0]
-        : b.folderName;
+      const folder = resolveFolder(b.folderName);
       deleteBookStorage(
         rawId || customUserId,
         emailId,
@@ -360,6 +444,21 @@ exports.emptyTrash = async (req, res) => {
       try {
         await FlipbookAsset.deleteMany({ flipbook_v_id: { $in: trashedVIds } });
       } catch (e) {}
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          await mongoose.connection.db
+            .collection("customizedsettings")
+            .deleteMany({ v_id: { $in: trashedVIds } });
+          await mongoose.connection.db
+            .collection("leads")
+            .deleteMany({ v_id: { $in: trashedVIds } });
+        }
+      } catch (e) {
+        console.warn(
+          "[Book Controller] Failed to remove customizedsettings on empty trash:",
+          e.message
+        );
+      }
     }
 
     const deleteResult = await Flipbook.deleteMany({
@@ -420,9 +519,7 @@ exports.renameBook = async (req, res) => {
           existing.userId ? String(existing.userId) : null,
           existing.userEmail ? existing.userEmail.replace(/[@.]/g, "_") : null,
         ].filter(Boolean);
-        const folder = Array.isArray(existing.folderName)
-          ? existing.folderName[0]
-          : existing.folderName || "My_Flipbooks";
+        const folder = resolveFolder(existing.folderName);
 
         for (const uf of userFolders) {
           const candidateOldDirs = [
@@ -509,7 +606,15 @@ exports.duplicateBook = async (req, res) => {
     cloneData.trashedAt = null;
     cloneData.isPublished = false;
 
+    const cloneFolders = Array.isArray(existing.folderName)
+      ? existing.folderName.filter((f) => f && f !== "Trash")
+      : [existing.folderName || "My_Flipbooks"];
+    if (!cloneFolders.includes("Recent Book")) cloneFolders.push("Recent Book");
+    cloneData.folderName = cloneFolders;
+    cloneData.lastUpdated = new Date();
+
     const duplicated = await Flipbook.create(cloneData);
+    if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -563,9 +668,7 @@ exports.deleteBookPermanently = async (req, res) => {
         .json({ success: false, message: "Flipbook not found" });
     }
 
-    const folder = Array.isArray(book.folderName)
-      ? book.folderName[0]
-      : book.folderName;
+    const folder = resolveFolder(book.folderName);
     deleteBookStorage(
       rawId || customUserId,
       emailId,
@@ -578,6 +681,23 @@ exports.deleteBookPermanently = async (req, res) => {
     try {
       await FlipbookAsset.deleteMany({ flipbook_v_id: book.v_id });
     } catch (e) {}
+
+    // Check flipbook v_id in customizedsettings and remove that db data
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        await mongoose.connection.db
+          .collection("customizedsettings")
+          .deleteMany({ v_id: book.v_id });
+        await mongoose.connection.db
+          .collection("leads")
+          .deleteMany({ v_id: book.v_id });
+      }
+    } catch (e) {
+      console.warn(
+        `[Book Controller] Failed to remove customizedsettings for v_id ${book.v_id}:`,
+        e.message
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -605,20 +725,133 @@ exports.removeRecent = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    const query = { ...userQuery };
-    if (v_id) query.v_id = v_id;
-    else query.flipbookName = bookName;
+    const cleanVId = v_id ? String(v_id).replace(/^Recent_/, "").trim() : null;
+    const cleanBookName =
+      bookName && typeof bookName === "string" ? bookName.trim() : null;
 
-    await Flipbook.updateOne(query, {
+    const bookConds = [];
+    if (cleanVId) bookConds.push({ v_id: cleanVId });
+    if (cleanBookName) bookConds.push({ flipbookName: cleanBookName });
+
+    if (bookConds.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing book identifier" });
+    }
+
+    // Build compound query: user owns the book, and book matches v_id or name
+    const query = {
+      $and: [
+        userQuery,
+        bookConds.length === 1 ? bookConds[0] : { $or: bookConds },
+      ],
+    };
+
+    const updateResult = await Flipbook.updateMany(query, {
       $pull: { folderName: { $in: ["Recent Book", "Recent", "Recent book"] } },
     });
 
-    res.status(200).json({ success: true, message: "Removed from Recent" });
+    console.log(
+      `[Book Controller] removeRecent: matched ${updateResult.matchedCount}, modified ${updateResult.modifiedCount} for v_id: ${cleanVId || "N/A"}, name: ${cleanBookName || "N/A"}`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Removed from Recent",
+      modifiedCount: updateResult.modifiedCount,
+    });
   } catch (err) {
     console.error("[Book Controller] Error removing recent:", err);
     res
       .status(500)
       .json({ success: false, message: "Server error removing recent" });
+  }
+};
+
+/**
+ * POST /api/flipbook/publish
+ * Publish flipbook with metadata (category, language, tags, quotes, about)
+ */
+exports.publishBook = async (req, res) => {
+  try {
+    const userQuery = getFlipbookUserQuery(req);
+    const { v_id, bookName, category, language, tags, quotes, about, meta } = req.body;
+    if (!v_id && !bookName) {
+      return res.status(400).json({ success: false, message: "Missing book identifier" });
+    }
+
+    const query = userQuery ? { ...userQuery } : {};
+    if (v_id) query.v_id = v_id;
+    else if (bookName) query.flipbookName = bookName;
+
+    let book = await Flipbook.findOne(query);
+    if (!book && v_id) {
+      book = await Flipbook.findOne({ v_id });
+    }
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Flipbook not found" });
+    }
+
+    const cleanCategory = typeof category === 'string' ? category.trim() : (meta?.category || '');
+    const cleanLanguage = typeof language === 'string' ? language.trim() : (meta?.language || 'English');
+    const cleanQuotes = typeof quotes === 'string' ? quotes.trim() : (meta?.quotes || '');
+    const cleanAbout = typeof about === 'string' ? about.trim() : (meta?.about || '');
+    const cleanTags = Array.isArray(tags) ? tags : (Array.isArray(meta?.tags) ? meta.tags : []);
+
+    const existingCustomized = book.Customized_Settings || {};
+    const existingFlipbookInfo = existingCustomized.FlipbookInfo || {};
+
+    const updatedFlipbookInfo = {
+      ...existingFlipbookInfo,
+      ...(meta || {}),
+      category: cleanCategory || existingFlipbookInfo.category || 'General',
+      language: cleanLanguage || existingFlipbookInfo.language || 'English',
+      tags: cleanTags.length > 0 ? cleanTags : (existingFlipbookInfo.tags || []),
+      quotes: cleanQuotes || existingFlipbookInfo.quotes || '',
+      about: cleanAbout || existingFlipbookInfo.about || '',
+      publishedAt: new Date()
+    };
+
+    book.isPublished = true;
+    book.publishedAt = new Date();
+    book.Customized_Settings = {
+      ...existingCustomized,
+      FlipbookInfo: updatedFlipbookInfo,
+      category: cleanCategory,
+      language: cleanLanguage,
+      tags: cleanTags,
+      quotes: cleanQuotes,
+      about: cleanAbout
+    };
+    book.lastUpdated = new Date();
+    await book.save();
+
+    try {
+      const mongoose = require('mongoose');
+      if (mongoose.connection && mongoose.connection.db) {
+        await mongoose.connection.db.collection('customizedsettings').updateOne(
+          { v_id: book.v_id },
+          {
+            $set: {
+              'FlipbookInfo': updatedFlipbookInfo,
+              'FlipbookInfo.publishedAt': new Date()
+            }
+          }
+        );
+      }
+    } catch (e) {
+      console.warn('[Book Controller] Sync published info to customizedsettings failed:', e.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Flipbook published successfully",
+      book: formatBook(book)
+    });
+  } catch (err) {
+    console.error("[Book Controller] Error publishing book:", err);
+    return res.status(500).json({ success: false, message: "Server error publishing book", error: err.message });
   }
 };
 
@@ -835,9 +1068,16 @@ exports.saveBook = async (req, res) => {
       hide: p.hide,
     }));
 
+    const physicalFolder = targetFolder || "My_Flipbooks";
     if (book) {
       book.flipbookName = safeName;
-      book.folderName = targetFolder;
+      const existingFolders = Array.isArray(book.folderName)
+        ? book.folderName.filter((f) => f && f !== "Trash")
+        : [book.folderName || physicalFolder];
+      if (!existingFolders.includes(physicalFolder)) existingFolders.unshift(physicalFolder);
+      if (!existingFolders.includes("Recent Book")) existingFolders.push("Recent Book");
+      book.folderName = [...new Set(existingFolders)];
+
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
       if (meta)
@@ -854,12 +1094,16 @@ exports.saveBook = async (req, res) => {
         userEmail: emailId,
         v_id: resolvedVId,
         flipbookName: finalFlipbookName,
-        folderName: targetFolder,
+        folderName: [physicalFolder, "Recent Book"],
         pages: mongoPages,
         fileSize: fileSize || 0,
         Customized_Settings: meta || {},
         lastUpdated: new Date(),
       });
+    }
+
+    if (userQuery) {
+      enforceRecentLimit(userQuery).catch(() => {});
     }
 
     // Persist full pages and complete workspace structure to local disk storage
@@ -1425,6 +1669,21 @@ exports.getBook = async (req, res) => {
         .json({ success: false, message: "Flipbook not found" });
     }
 
+    // Mark as recent book and update lastUpdated when opened (if not trashed)
+    if (!book.trash) {
+      Flipbook.updateOne(
+        { _id: book._id },
+        {
+          $addToSet: { folderName: "Recent Book" },
+          $set: { lastUpdated: new Date() },
+        },
+      )
+        .then(() => {
+          if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
+        })
+        .catch(() => {});
+    }
+
     // Disk storage root
     const storageRoot = getStorageRoot();
     const userFolders = [
@@ -1432,10 +1691,15 @@ exports.getBook = async (req, res) => {
       book.userId ? String(book.userId) : null,
       book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
     ].filter(Boolean);
-    const folders = [
-      Array.isArray(book.folderName) ? book.folderName[0] : book.folderName,
-      "My_Flipbooks",
-    ].filter(Boolean);
+    const folders = Array.from(
+      new Set(
+        [
+          resolveFolder(book.folderName),
+          ...(Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName]),
+          "My_Flipbooks",
+        ].filter((f) => f && typeof f === "string" && f.trim())
+      )
+    );
 
     // Build all possible candidate directories on disk
     const candidateDirs = [];
@@ -1517,14 +1781,61 @@ exports.getBook = async (req, res) => {
 
     const formattedMeta = formatBook(book);
 
+    let customizedDoc = null;
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        customizedDoc = await mongoose.connection.db
+          .collection("customizedsettings")
+          .findOne({ v_id: book.v_id });
+      }
+    } catch (e) {}
+
+    let resolvedShareId =
+      customizedDoc?.Visibility?.shareId ||
+      formattedMeta.Customized_Settings?.Visibility?.shareId ||
+      formattedMeta.Visibility?.shareId ||
+      (formattedMeta.Customized_Settings?.share?.shareId && formattedMeta.Customized_Settings?.share?.shareId !== book.v_id
+        ? formattedMeta.Customized_Settings?.share?.shareId
+        : null);
+
+    if (!resolvedShareId || resolvedShareId === book.v_id) {
+      resolvedShareId = crypto.randomBytes(8).toString('hex');
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          await mongoose.connection.db
+            .collection("customizedsettings")
+            .updateOne(
+              { v_id: book.v_id },
+              { $set: { "Visibility.shareId": resolvedShareId } },
+              { upsert: false }
+            );
+        }
+      } catch (e) {}
+    }
+
+    if (customizedDoc) {
+      formattedMeta.Customized_Settings = {
+        ...(formattedMeta.Customized_Settings || {}),
+        ...customizedDoc,
+        Visibility: {
+          ...(customizedDoc.Visibility || {}),
+          shareId: resolvedShareId,
+        },
+      };
+    } else {
+      if (!formattedMeta.Customized_Settings) formattedMeta.Customized_Settings = {};
+      if (!formattedMeta.Customized_Settings.Visibility) formattedMeta.Customized_Settings.Visibility = {};
+      formattedMeta.Customized_Settings.Visibility.shareId = resolvedShareId;
+    }
+
     res.status(200).json({
       success: true,
       meta: formattedMeta,
       settings: formattedMeta.Customized_Settings || {},
       pages: populatedPages,
-      share: formattedMeta.Customized_Settings?.share || {
-        shareId: book.v_id,
-        access: "public",
+      share: {
+        shareId: resolvedShareId,
+        access: formattedMeta.Customized_Settings?.Visibility?.access || formattedMeta.Customized_Settings?.share?.access || "public",
       },
     });
   } catch (err) {
@@ -1656,11 +1967,16 @@ exports.previewBook = async (req, res) => {
         ),
       );
 
-      const primaryFolder = Array.isArray(book.folderName)
-        ? book.folderName[0]
-        : book.folderName;
+      const primaryFolder = resolveFolder(book.folderName);
+      const rawFolders = Array.isArray(book.folderName)
+        ? book.folderName.flat(Infinity)
+        : [book.folderName];
       const folders = Array.from(
-        new Set([primaryFolder, "My_Flipbooks"].filter(Boolean)),
+        new Set(
+          [primaryFolder, ...rawFolders, "My_Flipbooks"]
+            .filter((f) => f && typeof f === "string" && f.trim())
+            .map((f) => String(f).trim()),
+        ),
       );
 
       const bookNames = Array.from(
@@ -1669,15 +1985,21 @@ exports.previewBook = async (req, res) => {
             book.flipbookName,
             book.v_id,
             `${book.flipbookName}_${book.v_id}`,
-          ].filter(Boolean),
+          ]
+            .flat(Infinity)
+            .filter((bn) => bn && typeof bn === "string" && bn.trim())
+            .map((bn) => String(bn).trim()),
         ),
       );
 
       // 1. Build all candidate directories
       const candidateDirs = [];
       for (const uf of userFolders) {
+        if (!uf || typeof uf !== "string") continue;
         for (const f of folders) {
+          if (!f || typeof f !== "string") continue;
           for (const bn of bookNames) {
+            if (!bn || typeof bn !== "string") continue;
             candidateDirs.push(
               path.join(storageRoot, uf, "My_Flipbooks", f, bn),
               path.join(storageRoot, uf, f, bn),
@@ -2376,9 +2698,7 @@ exports.renamePage = async (req, res) => {
       book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
     ].filter(Boolean);
 
-    const folder = Array.isArray(book.folderName)
-      ? book.folderName[0]
-      : book.folderName || "My_Flipbooks";
+    const folder = resolveFolder(book.folderName);
 
     // Find real existing bookDir on disk
     let wsBookDir = path.join(
@@ -2600,9 +2920,7 @@ exports.deletePage = async (req, res) => {
       book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
     ].filter(Boolean);
 
-    const folder = Array.isArray(book.folderName)
-      ? book.folderName[0]
-      : book.folderName || "My_Flipbooks";
+    const folder = resolveFolder(book.folderName);
 
     // Find real existing bookDir on disk
     const dirVariants = [
@@ -2726,3 +3044,4 @@ exports.deletePage = async (req, res) => {
     });
   }
 };
+

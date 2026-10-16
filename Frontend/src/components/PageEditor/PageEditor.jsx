@@ -679,9 +679,13 @@ const PageEditor = () => {
     }
 
     setTimeout(() => {
-      const shareId = currentBook?.shareId || currentBook?.share?.shareId;
-      if (shareId) {
-        window.open(`/preview?shareId=${shareId}`, "_blank");
+      const candidateShareId =
+        currentBook?.Customized_Settings?.Visibility?.shareId ||
+        currentBook?.Visibility?.shareId ||
+        (currentBook?.shareId && currentBook.shareId !== v_id ? currentBook.shareId : null) ||
+        (currentBook?.share?.shareId && currentBook.share.shareId !== v_id ? currentBook.share.shareId : null);
+      if (candidateShareId && candidateShareId !== v_id) {
+        window.open(`/preview?shareId=${candidateShareId}`, "_blank");
       } else {
         window.open("/preview", "_blank");
       }

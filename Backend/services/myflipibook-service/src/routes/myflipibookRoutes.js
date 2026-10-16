@@ -4,9 +4,10 @@ const { authenticateUser, optionalAuth } = require('../middlewares/authMiddlewar
 const folderController = require('../controllers/folderController');
 const bookController = require('../controllers/bookController');
 
-// Public / Optional-auth routes (accessible for preview, direct get, and gallery)
+// Public / Optional-auth routes (accessible for preview, direct get, share view, and gallery)
 router.get('/preview/:v_id', optionalAuth, bookController.previewBook);
 router.get('/get', optionalAuth, bookController.getBook);
+router.post('/publish', optionalAuth, bookController.publishBook);
 router.get('/get-gallery-assets', optionalAuth, bookController.getGalleryAssets);
 router.post('/use-gallery-asset', optionalAuth, bookController.useGalleryAsset);
 

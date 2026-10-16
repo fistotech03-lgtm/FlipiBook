@@ -638,14 +638,19 @@ const PageEditor = () => {
     };
   }, [setSaveHandler, saveFlipbook, popupEditContext, pages]);
 
+  const handleClearEditorWithDB = useCallback(async () => {
+    handleClearAllPages();
+    await clearEditorState();
+  }, [handleClearAllPages]);
+
   useEffect(() => {
     if (setClearHandler) {
-      setClearHandler(() => handleClearAllPages);
+      setClearHandler(() => handleClearEditorWithDB);
     }
     return () => {
       if (setClearHandler) setClearHandler(null);
     };
-  }, [setClearHandler, handleClearAllPages]);
+  }, [setClearHandler, handleClearEditorWithDB]);
 
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
@@ -653,10 +658,11 @@ const PageEditor = () => {
     }
     window.dispatchEvent(new CustomEvent("trigger-manual-save"));
 
-    if (pages && pages.length > 0) {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    if (pages && pages.length > 0 && activeVId) {
       try {
         await savePageEditorState({
-          v_id: v_id,
+          v_id: activeVId,
           pages: popupEditContext ? popupEditContext.backup.pages : pages,
           activePageIndex: popupEditContext
             ? popupEditContext.backup.activePageIndex
@@ -753,9 +759,10 @@ const PageEditor = () => {
 
   // Sync state to IndexedDB for Preview / Customized Editor
   useEffect(() => {
-    if (pages.length > 0 && !isLoading) {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    if (pages.length > 0 && !isLoading && activeVId) {
       savePageEditorState({
-        v_id: v_id,
+        v_id: activeVId,
         pages: popupEditContext ? popupEditContext.backup.pages : pages,
         activePageIndex: popupEditContext
           ? popupEditContext.backup.activePageIndex
@@ -898,8 +905,43 @@ const PageEditor = () => {
   useEffect(() => {
     const initializeEditor = async () => {
       setIsLoading(true);
+      const activeVId = v_id || location.state?.v_id;
       try {
-        if (v_id) {
+        if (activeVId) {
+          // 1. Quick-load cached state from IndexedDB for instant UI render
+          try {
+            await ensureCleanBook(activeVId);
+            const cachedState = await getPageEditorState();
+            if (
+              cachedState &&
+              cachedState.v_id === activeVId &&
+              Array.isArray(cachedState.pages) &&
+              cachedState.pages.length > 0
+            ) {
+              console.log("[PageEditor] Quick-load cache hit from IndexedDB for", activeVId);
+              setPages(cachedState.pages);
+              if (
+                typeof cachedState.activePageIndex === "number" &&
+                cachedState.activePageIndex >= 0
+              ) {
+                setActivePageIndex(cachedState.activePageIndex);
+              }
+              if (cachedState.bookName || cachedState.pageName) {
+                setCurrentBook((prev) => ({
+                  ...(prev || {}),
+                  flipbookName:
+                    cachedState.pageName ||
+                    cachedState.bookName ||
+                    prev?.flipbookName ||
+                    "Untitled Flipbook",
+                }));
+              }
+              setIsLoading(false);
+            }
+          } catch (cacheErr) {
+            console.warn("[PageEditor] IndexedDB quick-load warning:", cacheErr);
+          }
+
           try {
             const backendUrl =
               import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
@@ -907,9 +949,9 @@ const PageEditor = () => {
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: {
                 emailId: user?.emailId || user?.email,
-                v_id,
+                v_id: activeVId,
                 folderName: folder || location.state?.folderName,
-                bookName: decodeURIComponent(v_id),
+                bookName: decodeURIComponent(activeVId),
               },
             });
 
@@ -1254,6 +1296,23 @@ const PageEditor = () => {
             }
           } catch (err) {
             console.error("Failed to fetch flipbook:", err);
+            // Fallback to IndexedDB offline cache if available
+            try {
+              const offlineCached = await getPageEditorState();
+              if (
+                offlineCached &&
+                offlineCached.v_id === activeVId &&
+                Array.isArray(offlineCached.pages) &&
+                offlineCached.pages.length > 0
+              ) {
+                console.log("[PageEditor] Loaded flipbook from IndexedDB offline storage.");
+                toast?.error?.("Network error: Loaded offline version from local storage.");
+                setIsLoading(false);
+                return;
+              }
+            } catch (offlineErr) {
+              console.warn("[PageEditor] IndexedDB offline fallback check error:", offlineErr);
+            }
             navigate("/not-found", { replace: true });
           }
         } else if (location.state && location.state.pageCount) {

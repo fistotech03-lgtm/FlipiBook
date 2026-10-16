@@ -62,45 +62,35 @@ const createUserWorkspace = (user) => {
     const storageRoot = getStorageRoot();
     ensureDir(storageRoot);
 
-    // Resolve target directories: both custom FLIPIxxxx and sanitized email
+    // Resolve target directory: prioritize custom FLIPIxxxx, fallback to sanitized email only if no userId exists
     const customUserId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : null));
-    const targetDirs = [];
-    if (customUserId) targetDirs.push(customUserId);
-
-    if (user.emailId) {
-      const emailDir = user.emailId.trim().toLowerCase().replace(/[@.]/g, "_");
-      if (emailDir && !targetDirs.includes(emailDir)) {
-        targetDirs.push(emailDir);
-      }
+    let dirName = customUserId;
+    if (!dirName && user.emailId) {
+      dirName = user.emailId.trim().toLowerCase().replace(/[@.]/g, "_");
     }
 
-    if (targetDirs.length === 0) {
+    if (!dirName) {
       console.warn("[Workspace Helper] No valid userId or emailId to create workspace");
       return null;
     }
 
-    let primaryDir = null;
-    for (const dirName of targetDirs) {
-      const userDir = path.join(storageRoot, dirName);
-      ensureDir(userDir);
+    const userDir = path.join(storageRoot, dirName);
+    ensureDir(userDir);
 
-      // Create all required top-level folders
-      for (const folder of WORKSPACE_FOLDERS) {
-        const folderPath = path.join(userDir, folder);
-        ensureDir(folderPath);
-      }
-
-      // Inside My_Flipbooks, create the default "My_Flipbooks" folder
-      const defaultFolder = path.join(userDir, "My_Flipbooks", "My_Flipbooks");
-      ensureDir(defaultFolder);
-
-      if (!primaryDir) primaryDir = userDir;
+    // Create all required top-level folders
+    for (const folder of WORKSPACE_FOLDERS) {
+      const folderPath = path.join(userDir, folder);
+      ensureDir(folderPath);
     }
 
+    // Inside My_Flipbooks, create the default "My_Flipbooks" folder
+    const defaultFolder = path.join(userDir, "My_Flipbooks", "My_Flipbooks");
+    ensureDir(defaultFolder);
+
     console.log(
-      `[Workspace Helper] Successfully created workspace for: ${targetDirs.join(", ")} at ${storageRoot}`,
+      `[Workspace Helper] Successfully created workspace for: ${dirName} at ${storageRoot}`,
     );
-    return primaryDir;
+    return userDir;
   } catch (err) {
     console.error(
       "[Workspace Helper] Error initializing workspace:",

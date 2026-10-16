@@ -1,35 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
-import { Plus, Trash2 } from 'lucide-react';
-import PremiumDropdown from './PremiumDropdown';
-import ColorPallet from './ColorPallet';
+import { Plus } from 'lucide-react';
+import PremiumDropdown from '../components/PremiumDropdown';
+import ColorPallet from '../../ColorPallet';
+import Switch from '../components/Switch';
+import { fontFamilies } from '../utils/fontConstants';
 
-import Template1Icon from '../../assets/quick template/Frame 1171276601 (1).svg';
-import Template2Icon from '../../assets/quick template/Frame 1171276601 (2).svg';
-import Template3Icon from '../../assets/quick template/Frame 1171276601 (3).svg';
-import Template4Icon from '../../assets/quick template/Frame 1171276601 (4).svg';
-import Template5Icon from '../../assets/quick template/Frame 1171276601 (5).svg';
-
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather'
-];
-
-const Switch = ({ enabled, onChange }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange(!enabled);
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
+import Template1Icon from '../../../assets/quick template/Frame 1171276601 (1).svg';
+import Template2Icon from '../../../assets/quick template/Frame 1171276601 (2).svg';
+import Template3Icon from '../../../assets/quick template/Frame 1171276601 (3).svg';
+import Template4Icon from '../../../assets/quick template/Frame 1171276601 (4).svg';
+import Template5Icon from '../../../assets/quick template/Frame 1171276601 (5).svg';
 
 const LeadForm = ({ onBack, settings, onUpdate, pages = [] }) => {
   const [isColorOpen, setIsColorOpen] = useState(true);
@@ -1174,6 +1156,8 @@ const ColorPickerItem = ({ label, color, onChange }) => {
   );
 };
 
-export default LeadForm;
+export const LeadFormPanel = LeadForm;
+export { LeadForm };
+export default LeadFormPanel;
 
 

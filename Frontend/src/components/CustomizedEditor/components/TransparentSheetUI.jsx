@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
 import PremiumDropdown from './PremiumDropdown';
-import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import { useAuth } from '../../context/AuthContext';
+import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import { useAuth } from '../../../context/AuthContext';
 
 const SectionHeader = ({ label }) => (
   <div className="flex items-center gap-[1vw] mb-[0.5vw]">
@@ -120,7 +120,6 @@ const SheetCard = ({ sheet, onUpdate, onDelete, pages = [], folder, flipbookName
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(sheet.isExpanded !== false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
-  const fileInputRef = useRef(null);
   
   const pageOptions = generatePageOptions(pages.length);
 
@@ -168,7 +167,11 @@ const SheetCard = ({ sheet, onUpdate, onDelete, pages = [], folder, flipbookName
     }
   };
 
-  const [localOffset, setLocalOffset] = useState({ x: sheet.offsetX || 0, y: sheet.offsetY || 0 });
+  const offsetRef = useRef({ x: sheet.offsetX || 0, y: sheet.offsetY || 0 });
+  useEffect(() => {
+    offsetRef.current = { x: sheet.offsetX || 0, y: sheet.offsetY || 0 };
+  }, [sheet.offsetX, sheet.offsetY]);
+
   const sheetRef = useRef(sheet);
   useEffect(() => { sheetRef.current = sheet; }, [sheet]);
   
@@ -183,17 +186,15 @@ const SheetCard = ({ sheet, onUpdate, onDelete, pages = [], folder, flipbookName
   };
 
   const handleMove = (dir) => {
-    setLocalOffset(prev => {
-      let dx = 0; let dy = 0;
-      const step = 2;
-      if (dir === 'left') dx = -step;
-      if (dir === 'right') dx = step;
-      if (dir === 'up') dy = -step;
-      if (dir === 'down') dy = step;
-      const newOffset = { x: prev.x + dx, y: prev.y + dy };
-      onUpdateRef.current({ ...sheetRef.current, offsetX: newOffset.x, offsetY: newOffset.y });
-      return newOffset;
-    });
+    let dx = 0; let dy = 0;
+    const step = 2;
+    if (dir === 'left') dx = -step;
+    if (dir === 'right') dx = step;
+    if (dir === 'up') dy = -step;
+    if (dir === 'down') dy = step;
+    const newOffset = { x: offsetRef.current.x + dx, y: offsetRef.current.y + dy };
+    offsetRef.current = newOffset;
+    onUpdateRef.current({ ...sheetRef.current, offsetX: newOffset.x, offsetY: newOffset.y });
   };
 
   const startMove = (dir) => {
@@ -380,3 +381,5 @@ export const TransparentSheetSection = ({
     </div>
   );
 };
+
+export default TransparentSheetSection;

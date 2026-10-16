@@ -1,26 +1,21 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import backgroundComponents from './Backgrounds';
 import animationComponents from './Animations';
 import * as BookAppearanceHelpers from './bookAppearanceHelpers';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 
-
-import { LAYOUT_DEFAULT_COLORS } from './Layout';
+import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
 import LeadFormPopup from './popups/LeadFormPopup';
-
 
 import {
   getIframeContent,
-  TurnJsBookRenderer,
   SharedOverlays,
   InteractionPopupModal,
   InteractionSlideshowModal,
   DeviceLayoutRenderer
 } from './previewAreaModules';
-import { useCustomizerState, useActiveBook, useUIModals } from '../../store/hooks';
+import { useCustomizerState, useActiveBook } from '../../store/hooks';
 
 const PreviewArea = React.memo(({
     pages = [],
@@ -62,7 +57,6 @@ const PreviewArea = React.memo(({
 }) => {
     const customizerRedux = useCustomizerState();
     const activeBookRedux = useActiveBook();
-    const uiModalRedux = useUIModals();
 
     const bookName = bookNameProp || activeBookRedux.bookName;
     const currentBook = currentBookProp || activeBookRedux.currentBook;
@@ -354,8 +348,6 @@ const PreviewArea = React.memo(({
     const containerRef = useRef();
     const screenRef = useRef();
     const isFlippingRef = useRef(false);
-    const lastTapRef = useRef(0);
-    const lastSyncPage = useRef(targetPage);
     const lastPreviewOpen = useRef(otherSetupSettings?.gallery?.previewOpen);
 
     const activeDevice = activeDeviceProp; // Desktop, Tablet, Mobile
@@ -427,7 +419,7 @@ const PreviewArea = React.memo(({
             iframes.forEach(iframe => {
                 try {
                     iframe.contentWindow.postMessage({ type: 'BLINK_INTERACTIONS' }, '*');
-                } catch (err) { }
+                } catch { }
             });
         };
 
@@ -1213,7 +1205,7 @@ const PreviewArea = React.memo(({
                     if (meta.data) {
                         forceDownload(meta.data, meta.name || 'download');
                     }
-                } catch (err) {
+                } catch {
                     forceDownload(e.data.value, 'download');
                 }
             } else if (e.data && e.data.type === 'open-email') {
@@ -1594,7 +1586,7 @@ const PreviewArea = React.memo(({
             containerRef.current.querySelectorAll('iframe').forEach(iframe => {
                 try {
                     iframe.contentWindow?.postMessage({ type: 'PAGE_TURNED', visiblePages }, '*');
-                } catch (err) { /* cross-origin iframe – skip */ }
+                } catch { /* cross-origin iframe – skip */ }
             });
         }
 
@@ -1671,7 +1663,7 @@ const PreviewArea = React.memo(({
                     img.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
                     img.style.filter = filterStr;
                 }
-            } catch (e) { }
+            } catch { }
         });
     }, [watermarkSettings]);
 
@@ -2170,7 +2162,7 @@ const PreviewArea = React.memo(({
                             fsWrapper._bPlaceholder = bPlaceholder;
                             const reqFs = fsWrapper.requestFullscreen || fsWrapper.webkitRequestFullscreen;
                             if (reqFs) {
-                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(err => {
+                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(() => {
                                     if (vPlaceholder.parentNode) vPlaceholder.parentNode.insertBefore(video, vPlaceholder);
                                     if (bPlaceholder.parentNode) bPlaceholder.parentNode.insertBefore(bar, bPlaceholder);
                                     vPlaceholder.remove(); bPlaceholder.remove(); fsWrapper.remove();

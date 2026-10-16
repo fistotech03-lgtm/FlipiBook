@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Icon } from '@iconify/react';
-import { ChevronLeft, ChevronRight, X, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const GalleryPopup = ({ onClose, settings }) => {
     const gallerySettings = settings?.gallery || settings || {};
     const images = gallerySettings.images || [];
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(gallerySettings.autoPlay ?? true);
-    const [progress, setProgress] = useState(0);
     const progressIntervalRef = useRef(null);
 
     // Reset when images change
     useEffect(() => {
         setCurrentIndex(0);
-        setProgress(0);
     }, [images]);
 
     const handleNext = () => {
@@ -23,7 +20,6 @@ const GalleryPopup = ({ onClose, settings }) => {
             setIsPlaying(false);
             return prev;
         });
-        setProgress(0);
     };
 
     const handlePrev = () => {
@@ -32,25 +28,15 @@ const GalleryPopup = ({ onClose, settings }) => {
             if (gallerySettings.infiniteLoop) return images.length - 1;
             return prev;
         });
-        setProgress(0);
     };
 
-    // Progress bar & Auto-play logic
+    // Auto-play logic
     useEffect(() => {
         if (isPlaying && images.length > 1) {
             const speed = (gallerySettings.speed || 2) * 1000;
-            const updateInterval = 50; // Update every 50ms for smoothness
-            const step = 100 / (speed / updateInterval);
-
             progressIntervalRef.current = setInterval(() => {
-                setProgress(prev => {
-                    if (prev >= 100) {
-                        handleNext();
-                        return 0;
-                    }
-                    return prev + step;
-                });
-            }, updateInterval);
+                handleNext();
+            }, speed);
         } else {
             clearInterval(progressIntervalRef.current);
         }

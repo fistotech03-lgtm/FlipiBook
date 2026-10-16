@@ -257,39 +257,26 @@ const ensureUserWorkspace = (userId, emailId, folderName = null) => {
     const storageRoot = getStorageRoot();
     ensureDirPerms(storageRoot);
 
-    const targetDirs = [userId ? String(userId) : null];
-    if (emailId) {
-      const emailDir = emailId.trim().toLowerCase().replace(/[@.]/g, '_');
-      if (emailDir && !targetDirs.includes(emailDir)) {
-        targetDirs.push(emailDir);
-      }
+    const dirName = userId ? String(userId) : (emailId ? emailId.trim().toLowerCase().replace(/[@.]/g, '_') : null);
+    if (!dirName) return null;
+
+    const userDir = path.join(storageRoot, dirName);
+    ensureDirPerms(userDir);
+
+    for (const wf of WORKSPACE_FOLDERS) {
+      const fp = path.join(userDir, wf);
+      ensureDirPerms(fp);
     }
 
-    const validDirs = targetDirs.filter(Boolean);
-    if (validDirs.length === 0) return null;
+    const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
+    ensureDirPerms(defaultFolder);
 
-    let primaryUserDir = null;
-    for (const dirName of validDirs) {
-      const userDir = path.join(storageRoot, dirName);
-      ensureDirPerms(userDir);
-
-      for (const wf of WORKSPACE_FOLDERS) {
-        const fp = path.join(userDir, wf);
-        ensureDirPerms(fp);
-      }
-
-      const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
-      ensureDirPerms(defaultFolder);
-
-      if (folderName) {
-        const customF = path.join(userDir, 'My_Flipbooks', folderName);
-        ensureDirPerms(customF);
-      }
-
-      if (!primaryUserDir) primaryUserDir = userDir;
+    if (folderName) {
+      const customF = path.join(userDir, 'My_Flipbooks', folderName);
+      ensureDirPerms(customF);
     }
 
-    return primaryUserDir;
+    return userDir;
   } catch (err) {
     console.error('[Storage Helper] Error ensuring user workspace:', err.message);
     return null;

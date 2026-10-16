@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PreviewArea from '../../CustomizedEditor/PreviewArea';
-import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/Layout';
+import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/utils/layoutColors';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';

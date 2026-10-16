@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
-import PremiumDropdown from './PremiumDropdown';
-import { useToast } from '../CustomToast';
-import { useAuth } from '../../context/AuthContext';
+import { Switch } from '../components';
+import { useToast } from '../../CustomToast';
+import { useAuth } from '../../../context/AuthContext';
 
 const VISIBILITY_OPTIONS = [
   {
@@ -44,27 +44,6 @@ const VISIBILITY_OPTIONS = [
     )
   }
 ];
-
-const ToggleItem = ({ label, checked, onChange, children }) => (
-  <div className="flex items-center justify-between py-[0.2vw]">
-    <div className="flex items-center gap-[0.5vw] shrink-0">
-      <span className="text-[0.85vw] font-medium text-gray-800 whitespace-nowrap shrink-0">{label}</span>
-      {children}
-    </div>
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex items-center h-[1.2vw] w-[2.4vw] shrink-0 cursor-pointer rounded-full transition-all duration-300 ease-in-out border-[1.5px] ${
-        checked ? 'bg-[#5551FF] border-[#5551FF]' : 'bg-gray-200 border-gray-200'
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-[0.9vw] w-[0.9vw] rounded-full bg-white shadow-md transform transition duration-300 ease-in-out ${
-          checked ? 'translate-x-[1.2vw]' : 'translate-x-[0.15vw]'
-        }`}
-      />
-    </button>
-  </div>
-);
 
 const TimePickerPopover = ({ value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -530,20 +509,17 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
   let toast = null;
   try {
     toast = useToast();
-  } catch (e) {
+  } catch {
     // optional fallback
   }
 
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
 
   const triggerSuccessToast = (msg) => {
-    setSaveSuccessMsg(msg);
     if (toast && typeof toast.success === 'function') {
       toast.success(msg);
     }
-    setTimeout(() => setSaveSuccessMsg(''), 3500);
   };
 
   const triggerErrorToast = (msg) => {
@@ -557,7 +533,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
   const handleSaveVisibility = async () => {
     if (!isDirty) return;
     setIsSaving(true);
-    setSaveSuccessMsg('');
     setSaveErrorMsg('');
     try {
       const emailId = user?.emailId || user?.email;
@@ -610,7 +585,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
         }
       };
 
-      const res = await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, { withCredentials: true });
+      await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, { withCredentials: true });
 
       const mergedFinal = {
         ...settings,
@@ -723,14 +698,8 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
     }
   };
 
-  const handleResendOtp = () => {
-    setResendTimer(23);
-    setOtpValues(['', '', '', '']);
-  };
   const [emailInput, setEmailInput] = useState('');
-  const [domainInput, setDomainInput] = useState('');
   const [emailSearch, setEmailSearch] = useState('');
-  const [domainSearch, setDomainSearch] = useState('');
 
   const csvInputRef = useRef(null);
 
@@ -833,19 +802,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
     updateInvite('emails', newEmails);
   };
 
-  const addDomain = () => {
-    if (!domainInput.trim() || !domainInput.includes('.')) return;
-    const existingDomains = localSettings?.inviteOnly?.domains || settings?.inviteOnly?.domains || [];
-    const newDomains = [...existingDomains, { domain: domainInput.trim(), status: 'valid' }];
-    updateInvite('domains', newDomains);
-    setDomainInput('');
-  };
-
-  const removeDomain = (index) => {
-    const existingDomains = localSettings?.inviteOnly?.domains || settings?.inviteOnly?.domains || [];
-    const newDomains = existingDomains.filter((_, i) => i !== index);
-    updateInvite('domains', newDomains);
-  };
 
   const updateAutoExpire = (field, value) => {
     const prevAuto = localSettings?.inviteOnly?.autoExpire || settings?.inviteOnly?.autoExpire || {};
@@ -1116,29 +1072,10 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
             <div className="bg-white border border-gray-200 rounded-[0.75vw] p-[0.9vw] mt-[1vw] space-y-[0.75vw] shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-[0.85vw] font-semibold text-gray-800">Auto-expire in</span>
-                {(() => {
-                  const isAutoExpireEnabled = localSettings?.inviteOnly?.autoExpire?.enabled ?? settings?.inviteOnly?.autoExpire?.enabled ?? true;
-                  const currentDays = localSettings?.inviteOnly?.autoExpire?.days ?? settings?.inviteOnly?.autoExpire?.days ?? '0 Days';
-                  const currentTime = localSettings?.inviteOnly?.autoExpire?.time ?? settings?.inviteOnly?.autoExpire?.time ?? '5 Mins';
-
-                  return (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => updateAutoExpire('enabled', !isAutoExpireEnabled)}
-                        className={`relative inline-flex items-center h-[1.2vw] w-[2.4vw] shrink-0 cursor-pointer rounded-full transition-all duration-300 ease-in-out border-[1.5px] ${
-                          isAutoExpireEnabled ? 'bg-[#5551FF] border-[#5551FF]' : 'bg-gray-200 border-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-[0.9vw] w-[0.9vw] rounded-full bg-white shadow-md transform transition duration-300 ease-in-out ${
-                            isAutoExpireEnabled ? 'translate-x-[1.2vw]' : 'translate-x-[0.15vw]'
-                          }`}
-                        />
-                      </button>
-                    </>
-                  );
-                })()}
+                <Switch
+                  checked={localSettings?.inviteOnly?.autoExpire?.enabled ?? settings?.inviteOnly?.autoExpire?.enabled ?? true}
+                  onChange={(checked) => updateAutoExpire('enabled', checked)}
+                />
               </div>
 
               {(localSettings?.inviteOnly?.autoExpire?.enabled ?? settings?.inviteOnly?.autoExpire?.enabled ?? true) && (
@@ -1707,7 +1644,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setIsSaving(true);
                     try {
                       const emailId = user?.emailId || user?.email;
-                      const userId = user?.userId || user?._id || user?.id;
                       const customUserId = user?.userID;
                       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -1762,7 +1698,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setIsSaving(true);
                     try {
                       const emailId = user?.emailId || user?.email;
-                      const userId = user?.userId || user?._id || user?.id;
                       const customUserId = user?.userID;
                       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -1831,4 +1766,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
   );
 };
 
-export default Visibility;
+export const VisibilityPrivacyPanel = Visibility;
+export { Visibility };
+export default VisibilityPrivacyPanel;

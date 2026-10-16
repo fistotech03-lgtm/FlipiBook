@@ -1,190 +1,32 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
-import LayoutColorCustomizer from './LayoutColorCustomizer';
-import ColorPicker from './ColorPallet';
-import AlertModal from '../AlertModal';
+import LayoutColorCustomizer from '../LayoutColorCustomizer';
+import ColorPicker from '../../ColorPallet';
+import { LAYOUT_DEFAULT_COLORS } from '../utils/layoutColors';
 
-import layout1 from '../../assets/layout/Layout1.webp';
-import layout2 from '../../assets/layout/Layout2.webp';
-import layout3 from '../../assets/layout/Layout3.webp';
-import layout4 from '../../assets/layout/Layout4.webp';
-import layout5 from '../../assets/layout/Layout5.webp';
-import layout6 from '../../assets/layout/Layout6.webp';
-import layout7 from '../../assets/layout/Layout7.webp'; // Assuming a Layout7.webp exists or this name works
-import layout8 from '../../assets/layout/Layout8.webp';
+import layout1 from '../../../assets/layout/Layout1.webp';
+import layout2 from '../../../assets/layout/Layout2.webp';
+import layout3 from '../../../assets/layout/Layout3.webp';
+import layout4 from '../../../assets/layout/Layout4.webp';
+import layout5 from '../../../assets/layout/Layout5.webp';
+import layout6 from '../../../assets/layout/Layout6.webp';
+import layout7 from '../../../assets/layout/Layout7.webp';
+import layout8 from '../../../assets/layout/Layout8.webp';
 
 const layoutImages = [layout1, layout2, layout3, layout4, layout5, layout6, layout7, layout8];
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Default color definitions per layout (6 swatches each)
-// ─────────────────────────────────────────────────────────────────────────────
-export const LAYOUT_DEFAULT_COLORS = {
-    1: [
-        { id: 'toolbar-bg', label: 'Top bar background color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottom bar background color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Toolbar text color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-icon', label: 'Icon color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v1', label: 'Search bar background color', hex: '#D7D8E8', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar placeholder / text color with its opacity', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Background color', hex: '#555555', opacity: 80, component: 'Dropdown' },
-        { id: 'dropdown-text', label: 'Text color', hex: '#FFFFFF', opacity: 100, component: 'Dropdown' },
-        { id: 'thumbnail-outer-v2', label: 'Outer container color', hex: '#555555', opacity: 80, component: 'Thumbnail' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#BCBEE1', opacity: 100, component: 'Thumbnail' },
-        { id: 'toc-bg', label: 'Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'Overlay layer', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    2: [
-        { id: 'toolbar-bg', label: 'Topbar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottombar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icons color', hex: '#FFFFFF', opacity: 80, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'search-bg-v2', label: 'Search bar BG color', hex: '#DDE0F4', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#dcdef7', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#BCBEE1', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'TOC Overlay', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    3: [
-        { id: 'toolbar-bg', label: 'Top bar background color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottom bar background color', hex: '#3E4491', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Toolbar text color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-icon', label: 'Icon color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v2', label: 'Search bar background color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar placeholder / text color with its opacity', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Background color', hex: '#FFFFFF', opacity: 100, component: 'Dropdown' },
-        { id: 'dropdown-text', label: 'Text color', hex: '#555555', opacity: 100, component: 'Dropdown' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#555555', opacity: 100, component: 'Dropdown' },
-        { id: 'thumbnail-outer-v2', label: 'Outer container color', hex: '#FFFFFF', opacity: 100, component: 'Thumbnail' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#E2E4F0', opacity: 100, component: 'Thumbnail' },
-        { id: 'toc-bg', label: 'Background color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'Text color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'Icon color', hex: '#555555', opacity: 100, component: 'Thumbnail' },
-        { id: 'toc-overlay', label: 'Overlay layer', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    4: [
-        { id: 'toolbar-bg', label: 'Topbar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottombar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Text color', hex: '#FFFFFF', opacity: 80, component: 'Toolbar' },
-        { id: 'toolbar-icon', label: 'Icon color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v2', label: 'Search bar BG color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Dropdown BG color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Dropdown text color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#EBEBEB', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Thumbnail Accent color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-    ],
-    5: [
-        { id: 'toolbar-bg', label: 'Topbar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottombar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icons color', hex: '#FFFFFF', opacity: 80, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'search-bg-v2', label: 'Search bar BG color', hex: '#DDE0F4', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#dcdef7', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#BCBEE1', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'TOC Overlay', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    6: [
-        { id: 'toolbar-bg', label: 'Sidebar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottom bar background color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icons color', hex: '#FFFFFF', opacity: 90, component: 'Toolbar' },
-        { id: 'toolbar-icon', label: 'Toolbar icon color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v2', label: 'Search bar background color', hex: '#DDE0F4', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Dropdown BG color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Dropdown text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#dcdef7', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#BCBEE1', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'TOC Overlay', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    7: [
-        { id: 'toolbar-bg', label: 'Toolbar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icon & Text color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-icon', label: 'Toolbar Icon', hex: '#FFFFFF', opacity: 70, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottom Bar BG', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v2', label: 'Search BG color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search text color', hex: '#2D2D2D', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Dropdown BG color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Dropdown text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background', hex: '#FFFFFF', opacity: 40, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon', hex: '#555555', opacity: 60, component: 'Table Of Content' },
-    ],
-    8: [
-        { id: 'toolbar-bg', label: 'Topbar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottombar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icons color', hex: '#FFFFFF', opacity: 80, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'search-bg-v2', label: 'Search bar BG color', hex: '#DDE0F4', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'reset-bg', label: 'Reset box BG', hex: '#B8BBCE', opacity: 100, component: 'Toolbar' },
-        { id: 'reset-text', label: 'Reset box text', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'page-number-bg', label: 'Page number BG', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'page-number-text', label: 'Page number text', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#dcdef7', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Inner container color', hex: '#BCBEE1', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'TOC Overlay', hex: '#000000', opacity: 100, component: 'Table Of Content' },
-    ],
-    9: [
-        { id: 'toolbar-bg', label: 'Icon BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'toolbar-text-main', label: 'Icons text color', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'bottom-toolbar-bg', label: 'Bottom bar BG color', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'search-bg-v2', label: 'Search bar BG', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'search-text-v1', label: 'Search bar text', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'reset-bg', label: 'Reset box BG', hex: '#B8BBCE', opacity: 100, component: 'Toolbar' },
-        { id: 'reset-text', label: 'Reset box text', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'page-number-bg', label: 'Page number BG', hex: '#555555', opacity: 100, component: 'Toolbar' },
-        { id: 'page-number-text', label: 'Page number text', hex: '#FFFFFF', opacity: 100, component: 'Toolbar' },
-        { id: 'dropdown-bg', label: 'Dropdown BG color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-text', label: 'Dropdown text color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'dropdown-icon', label: 'Dropdown icon color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-outer-v2', label: 'Thumbnail BG color', hex: '#EBEBEB', opacity: 100, component: 'Table Of Content' },
-        { id: 'thumbnail-inner-v2', label: 'Thumbnail Accent color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-bg', label: 'TOC Background color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-text', label: 'TOC Text color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-icon', label: 'TOC Icon color', hex: '#555555', opacity: 100, component: 'Table Of Content' },
-        { id: 'toc-overlay', label: 'Overlay color', hex: '#FFFFFF', opacity: 100, component: 'Table Of Content' },
-    ],
-};
+export { LAYOUT_DEFAULT_COLORS };
 
 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
-const Layout = ({ activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColors, onTocSettingsClick }) => {
+const Layout = ({ onBack, activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColors, onTocSettingsClick }) => {
     const [colorPopup, setColorPopup] = useState(null);
     const [activeTab, setActiveTab] = useState('Layouts');
     const [inlinePickerOpen, setInlinePickerOpen] = useState(null); // { colorId: string }
     const [inlineHexDrafts, setInlineHexDrafts] = useState({});
-    const dropdownRef = useRef(null);
-    const [layoutChangeAlert, setLayoutChangeAlert] = useState({ isOpen: false, index: null });
 
     // ── Helper to format layout colors payload matching backend schema ────
     const formatLayoutColorsPayload = (updated) => {
@@ -496,17 +338,37 @@ const Layout = ({ activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColo
         }
     };
 
-    const openPopup = (layoutIdx) => {
-        setColorPopup({ layoutIndex: layoutIdx });
-    };
-
     const layoutNames = { 1: 'Layout 1', 2: 'Layout 2', 3: 'Layout 3', 4: 'Layout 4', 5: 'Layout 5', 6: 'Layout 6', 7: 'Layout 7', 8: 'Layout 8' };
 
     // ─────────────────────────────────────────────────────────────────────
     return (
-        <div className="relative flex flex-col w-full min-h-full pb-[5vw]">
-            {/* ── Top Tab Buttons ── */}
-            <div className="sticky top-0 z-[50] grid grid-cols-2 gap-[0.8vw] py-[0.8vw] mb-[1vw] bg-white px-[1vw] border-b border-gray-100">
+        <div className="flex flex-col h-full bg-white font-sans relative">
+            <style>{`
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+            `}</style>
+
+            {/* Panel Header */}
+            <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-[0.75vw] text-gray-800">
+                    <Icon icon="lucide:layout-panel-left" className="w-[1.4vw] h-[1.4vw] text-black" />
+                    <h2 className="text-[1vw] font-semibold text-gray-900">Layout Design</h2>
+                </div>
+                {onBack && (
+                    <button 
+                        onClick={onBack} 
+                        className="w-[2vw] h-[2vw] rounded-full flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-all active:scale-90"
+                    >
+                        <Icon icon="ph:arrow-left-bold" className="w-[1.1vw] h-[1.1vw]" />
+                    </button>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-white pb-[2.5vw] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <div className="relative flex flex-col w-full min-h-full pb-[5vw]">
+                    {/* ── Top Tab Buttons ── */}
+                    <div className="sticky top-0 z-[50] grid grid-cols-2 gap-[0.8vw] py-[0.8vw] mb-[1vw] bg-white px-[1vw] border-b border-gray-100">
                 {['Layouts', 'Layout Colors'].map((tab) => {
                     const isActive = activeTab === tab;
                     return (
@@ -520,7 +382,7 @@ const Layout = ({ activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColo
                                     onTocSettingsClick();
                                 }
                             }}
-                            className={`flex-1 py-[0.50vw] text-[0.85vw] font-semibold rounded-[0.5vw] transition-all active:scale-95 border border-transparent ${activeTab === tab
+                            className={`flex-1 py-[0.50vw] text-[0.85vw] font-semibold rounded-[0.5vw] transition-all active:scale-95 border border-transparent ${isActive
                                 ? 'text-black bg-white shadow-[inset_0.2vw_0.2vw_0.4vw_rgba(0,0,0,0.08),inset_-0.2vw_-0.2vw_0.4vw_rgba(255,255,255,0.9)] border-gray-500/20'
                                 : 'text-gray-400 bg-white shadow-[0.2vw_0.2vw_0.5vw_rgba(0,0,0,0.05),-0.1vw_-0.1vw_0.3vw_rgba(255,255,255,1)] hover:shadow-[0.3vw_0.3vw_0.7vw_rgba(0,0,0,0.08)]'
                                 }`}
@@ -540,7 +402,6 @@ const Layout = ({ activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColo
                         const layoutIds = [1, 2, 3, 4, 5, 6, 7, 8];
                         const layoutNum = layoutIds[index];
                         const isActive = activeLayout === layoutNum;
-                        const layoutColorsList = colors[layoutNum] || [];
                         const layoutName = layoutNames[layoutNum] || `Layout ${layoutNum}`;
                         const isSpotlighted = isActive && colorPopup;
 
@@ -770,8 +631,12 @@ const Layout = ({ activeLayout, onUpdateLayout, layoutColors, onUpdateLayoutColo
                 setColors={setColors}
                 onUpdateLayoutColors={onUpdateLayoutColors}
             />
+                </div>
+            </div>
         </div>
     );
 };
 
-export default Layout;
+export const LayoutDesignPanel = Layout;
+export { Layout };
+export default LayoutDesignPanel;

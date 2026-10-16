@@ -1,31 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Icon } from '@iconify/react';
-import PremiumDropdown from './PremiumDropdown';
-import { TransparentSheetSection } from './TransparentSheetUI';
-import * as BookAppearanceHelpers from './bookAppearanceHelpers';
-import {
-  CustomColorPicker,
-  EffectControlRow,
-  DraggableSpan
-} from './AppearanceShared';
-
-const Switch = ({ enabled, onChange, disabled }) => (
-  <button
-    disabled={disabled}
-    onClick={(e) => {
-      if (disabled) return;
-      e.stopPropagation();
-      onChange(!enabled);
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
+import PremiumDropdown from '../components/PremiumDropdown';
+import { TransparentSheetSection } from '../components/TransparentSheetUI';
+import Switch from '../components/Switch';
 
 const BookAppearanceSection = ({
+  onBack,
   bookAppearanceSettings,
   onUpdateBookAppearance,
   pages = [],
@@ -33,28 +13,33 @@ const BookAppearanceSection = ({
   flipbookName,
   v_id
 }) => {
-  const [showShadowColorPicker, setShowShadowColorPicker] = useState(false);
-  const [shadowPickerPos, setShadowPickerPos] = useState({ x: 0, y: 0 });
-
-  const handleColorPick = async () => {
-    if (!window.EyeDropper) return;
-    const eyeDropper = new window.EyeDropper();
-    try {
-      const result = await eyeDropper.open();
-      onUpdateBookAppearance({
-        ...bookAppearanceSettings,
-        dropShadow: {
-          ...(bookAppearanceSettings?.dropShadow || {}),
-          color: result.sRGBHex
-        }
-      });
-    } catch (e) {
-      console.log('EyeDropper cancelled or failed', e);
-    }
-  };
 
   return (
-    <div className="p-[1vw] ">
+    <div className="flex flex-col h-full bg-white font-sans relative">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+
+      {/* Panel Header */}
+      <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-[0.75vw] text-gray-800">
+          <Icon icon="basil:book-open-outline" className="w-[1.4vw] h-[1.4vw] text-black" />
+          <h2 className="text-[1vw] font-semibold text-gray-900">Book Appearance</h2>
+        </div>
+        {onBack && (
+          <button 
+            onClick={onBack} 
+            className="w-[2vw] h-[2vw] rounded-full flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-all active:scale-90"
+          >
+            <Icon icon="ph:arrow-left-bold" className="w-[1.1vw] h-[1.1vw]" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-white pb-[2.5vw] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="p-[1vw] ">
 
       {/* Hard Cover Settings - Designed From Image */}
       <div className="space-y-[0.5vw] pt-[0.5vw]">
@@ -308,7 +293,11 @@ const BookAppearanceSection = ({
         </div>
       </div>
     </div>
+      </div>
+    </div>
   );
 };
 
-export default BookAppearanceSection;
+export const BookAppearancePanel = BookAppearanceSection;
+export { BookAppearanceSection };
+export default BookAppearancePanel;

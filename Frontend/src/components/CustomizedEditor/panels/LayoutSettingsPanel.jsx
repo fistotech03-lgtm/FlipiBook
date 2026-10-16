@@ -1,32 +1,12 @@
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import PremiumDropdown from './PremiumDropdown';
-import { Plus, Trash2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
-import BookmarkStylesPopup, { getBookmarkClipPath, getBookmarkBorderRadius } from './BookmarkStylesPopup';
-import AdvancedSettings from './AdvancedSettings';
-import ColorPicker from './ColorPallet';
-
-
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather'
-];
-
-const Switch = ({ enabled, onChange, variant = 'primary' }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange(!enabled);
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
+import PremiumDropdown from '../components/PremiumDropdown';
+import { Trash2, Edit2 } from 'lucide-react';
+import OtherSetup from '../components/OtherSetup';
+import BookmarkStylesPopup from '../components/BookmarkStylesPopup';
+import Switch from '../components/Switch';
+import { fontFamilies } from '../utils/fontConstants';
 
 // Reusable Section Header
 const SectionHeader = ({ title }) => (
@@ -314,16 +294,13 @@ const TocItem = ({ item, index, isEditing, onUpdate, onDelete, activeTOCItem, se
 };
 
 
-const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pages = [], folderName, bookName, activeLayout, onNavigateToOtherSetup, onTocSettingsClick }) => {
+const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pages = [], folderName, bookName, onTocSettingsClick }) => {
   const [expandedSection, setExpandedSection] = useState(null);
-  const [showStylesPopup, setShowStylesPopup] = useState(false);
   const [activeTOCItem, setActiveTOCItem] = useState(null); // { type: 'head'|'sub', index, sIdx }
   
   const isPdfProject = pages?.some(p => p.html && p.html.includes('data-name="PDF Background"'));
   const activeTocSettings = settings?.tocSettings || settings?.navigation?.tocSettings || {};
   const [editingTOCIndex, setEditingTOCIndex] = useState((activeTocSettings.content?.length || 0) > 0 ? 0 : null);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [pickerPos, setPickerPos] = useState({ x: 0, y: 0 });
 
   const toggleSection = (section) => {
     const willOpen = expandedSection !== section;
@@ -792,7 +769,7 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pag
                   className="bg-gray-50/50 rounded-b-[0.8vw] relative z-10 !overflow-visible"
                 >
                   <div className="border-t border-gray-50">
-                    <AdvancedSettings 
+                    <OtherSetup 
                       inlineMode="gallery" 
                       settings={otherSettings} 
                       onUpdate={onUpdateOther} 
@@ -884,7 +861,7 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pag
                   className="bg-gray-50/50 rounded-b-[0.8vw] relative z-10 !overflow-visible"
                 >
                   <div className="border-t border-gray-50">
-                    <AdvancedSettings 
+                    <OtherSetup 
                       inlineMode="sound" 
                       settings={otherSettings} 
                       onUpdate={onUpdateOther} 
@@ -931,18 +908,10 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, pag
       </div>
       {/* Extra padding to allow dropdown menus to scroll into view */}
       <div className="h-[0.1vw] shrink-0 pointer-events-none" />
-      {showColorPicker && (
-        <ColorPicker
-          color={settings.navigation?.bookmarkSettings?.color || '#C45A5A'}
-          onChange={(color) => updateNestedSetting('navigation', 'bookmarkSettings', 'color', color)}
-          onClose={() => setShowColorPicker(false)}
-          style={{ position: 'fixed', top: pickerPos.y, left: pickerPos.x, zIndex: 1000 }}
-          opacity={100}
-          onOpacityChange={() => { }} // Not used for bookmark yet
-        />
-      )}
     </div>
   );
 };
 
-export default MenuBar;
+export const LayoutSettingsPanel = MenuBar;
+export { MenuBar };
+export default LayoutSettingsPanel;

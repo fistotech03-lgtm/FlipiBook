@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useId } from "react";
 import { Icon } from "@iconify/react";
 import { ArrowLeftRight, Minus, X } from "lucide-react";
-import PremiumDropdown from "./CustomizedEditor/PremiumDropdown";
+import PremiumDropdown from "./CustomizedEditor/components/PremiumDropdown";
 
 // Helper functions for color conversion
 export const rgbToHex = (r, g, b) => {

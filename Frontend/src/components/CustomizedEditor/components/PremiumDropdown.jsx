@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '@iconify/react';
-import { ChevronDown } from 'lucide-react';
 
 const PremiumDropdown = ({ 
   options, 

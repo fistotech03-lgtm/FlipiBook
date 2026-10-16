@@ -13,10 +13,6 @@ export const store = configureStore({
     pageEditor: pageEditorReducer,
     customizedEditor: customizedEditorReducer,
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: false,
-    }),
   devTools: import.meta.env.DEV,
 });
 

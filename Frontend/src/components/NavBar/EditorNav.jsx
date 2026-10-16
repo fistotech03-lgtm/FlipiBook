@@ -368,31 +368,16 @@ const EditorNavbar = ({
 
           {/* Save & Toast Container */}
           {location.pathname.includes("customized_editor") ? (
-            <div className="relative group/tooltip flex items-center ml-[0.2vw]">
+            <div className="relative flex items-center ml-[0.2vw]">
               <button
-                onClick={onSave}
-                disabled={isSaving}
-                className="transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 cursor-pointer hover:bg-gray-50 flex-shrink-0"
+                disabled
+                className="transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 cursor-default flex-shrink-0"
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 size="1.2vw" className="animate-spin text-yellow-500" />
-                    <span className="font-medium text-[0.85vw]">Saving</span>
-                  </>
-                ) : hasUnsavedChanges ? (
-                  <>
-                    <Save size="1.2vw" className="text-yellow-500" />
-                    <span className="font-medium text-[0.85vw]">Save</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      icon="reicon:tick-circle-filled"
-                      className="w-[1.2vw] h-[1.2vw] text-[#22c55e]"
-                    />
-                    <span className="font-medium text-[0.85vw]">Saved</span>
-                  </>
-                )}
+                <Icon
+                  icon="reicon:tick-circle-filled"
+                  className="w-[1.2vw] h-[1.2vw] text-[#22c55e]"
+                />
+                <span className="font-medium text-[0.85vw]">Saved</span>
               </button>
             </div>
           ) : (

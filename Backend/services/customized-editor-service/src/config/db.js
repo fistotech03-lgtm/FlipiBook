@@ -1,4 +1,3 @@
-const dns = require('dns');
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
@@ -13,13 +12,7 @@ const connectDB = async () => {
     console.log(`[Customized Editor Service] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`[Customized Editor Service] Database connection error: ${error.message}`);
-    setTimeout(connectDB, 5000);
   }
 };
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('[Customized Editor Service] MongoDB disconnected. Reconnecting in 3s...');
-  setTimeout(connectDB, 3000);
-});
 
 module.exports = connectDB;

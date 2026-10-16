@@ -100,11 +100,6 @@ const storageStaticMiddleware = async (req, res, next) => {
   next();
 };
 
-app.use('/storage', storageStaticMiddleware);
-app.use('/storage', express.static(storageRoot));
-app.use('/uploads', storageStaticMiddleware);
-app.use('/uploads', express.static(storageRoot));
-
 // Global Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -132,6 +127,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
+app.use('/storage', storageStaticMiddleware);
+app.use('/storage', express.static(storageRoot));
+app.use('/uploads', storageStaticMiddleware);
+app.use('/uploads', express.static(storageRoot));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -267,55 +267,12 @@ const pageEditorProxy = createProxyMiddleware({
   }
 });
 
-// Proxy Customized Editor routes to Customized Editor Service (port 5005)
-const isCustomizedEditorRoute = (pathname) => {
-  return /^\/api\/flipbook\/(update-settings|reset-settings|branding|background|book-appearance|appearance|transparent-sheet|upload-customized-asset|delete-customized-asset|background-assets|copy-theme-asset|submit-lead|get-leads|leads|verify-credential|send-visibility-otp|verify-visibility-otp|customized-settings|customized_settings)(\/|$|\?)/i.test(pathname);
-};
-
-const customizedEditorProxy = createProxyMiddleware({
-  target: CUSTOMIZED_EDITOR_SERVICE_URL,
-  changeOrigin: true,
-  xfwd: true,
-  timeout: 300000,
-  proxyTimeout: 300000,
-  cookieDomainRewrite: '',
-  cookiePathRewrite: '/',
-  pathRewrite: (path) => path.replace(/^\/api\/flipbook/, '/api/customized-editor'),
-  on: {
-    proxyReq: (proxyReq, req) => {
-      const clientIp =
-        req.headers['cf-connecting-ip'] ||
-        req.headers['x-real-ip'] ||
-        (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
-        req.socket?.remoteAddress ||
-        req.ip;
-
-      if (clientIp) {
-        proxyReq.setHeader('x-client-ip', clientIp);
-        proxyReq.setHeader('x-real-ip', clientIp);
-      }
-    },
-    error: (err, req, res) => {
-      console.error(`[API Gateway] Proxy error to customized-editor-service for ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({
-          success: false,
-          message: 'Customized Editor Service unavailable. Please ensure customized-editor-service is running.'
-        });
-      }
-    }
-  }
-});
-
 app.use((req, res, next) => {
   if (isPdfConversionRoute(req.path) || isPdfConversionRoute(req.originalUrl)) {
     return pdfConversionProxy(req, res, next);
   }
   if (isPageEditorRoute(req.path) || isPageEditorRoute(req.originalUrl)) {
     return pageEditorProxy(req, res, next);
-  }
-  if (isCustomizedEditorRoute(req.path) || isCustomizedEditorRoute(req.originalUrl)) {
-    return customizedEditorProxy(req, res, next);
   }
   next();
 });
@@ -549,6 +506,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/usersetting -> ${MYFLIPIBOOK_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/page-editor -> ${PAGE_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/pdf-editor -> ${PDF_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
+});
+
+
+module.exports = app;
   console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
 });
 

@@ -58,7 +58,6 @@ const PreviewArea = React.memo(({
     vId: incomingVIdProp,
     shareId: incomingShareId,
     currentBook: currentBookProp,
-    baseUrl,
 }) => {
     const customizerRedux = useCustomizerState();
     const activeBookRedux = useActiveBook();
@@ -1678,8 +1677,8 @@ const PreviewArea = React.memo(({
     const watermarkSrc = watermarkSettings?.src;
 
     const memoizedBuildPageDoc = useCallback((html, pageNum) => {
-        return getIframeContent(html, pageNum, watermarkSettingsRef.current, pages.length, isSinglePage, baseUrl);
-    }, [watermarkSrc, pages.length, isSinglePage, baseUrl]);
+        return getIframeContent(html, pageNum, watermarkSettingsRef.current, pages.length, isSinglePage);
+    }, [watermarkSrc, pages.length, isSinglePage]);
 
     const bookRendererProps = {
         augmentedPages,

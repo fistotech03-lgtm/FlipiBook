@@ -11,21 +11,9 @@ import AdvancedSettings from './AdvancedSettings';
 import LeadForm from './LeadForm';
 import Visibility from './Visibility';
 import Statistic from './Statistic';
-import FlipbookPreview from '../PageEditor/modals/FlipbookPreview.jsx';
-import {
-  getFromDB,
-  saveToDB,
-  saveCustomizedEditorState,
-  getCustomizedEditorState,
-  getPageEditorState,
-  cleanupLegacyEditorKeys,
-  clearEditorState,
-  ensureCleanBook
-} from '../../utils/dbUtils';
+import { getFromDB, saveToDB } from '../../utils/dbUtils';
 import { getDominantColors, REACT_BITS_THEMES_COLORS } from '../../utils/colorExtractor';
-import { getSupabaseBaseUrl, rewriteHtmlUploads } from '../../utils/assetUtils';
-import { useAuth } from '../../context/AuthContext';
-import customizedEditorApi from '../../api/customizedEditorApi';
+import { getSupabaseBaseUrl } from '../../utils/assetUtils';
 
 
 // Helper functions for color synchronization (matching Layout.jsx logic)
@@ -86,8 +74,6 @@ const CustomizedEditor = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, setHasUnsavedChanges, hasUnsavedChanges, triggerSaveSuccess, isAutoSaveEnabled, currentBook, setCurrentBook, activeDevice, setActiveDevice } = useOutletContext() || {};
-  const { user } = useAuth();
-
   const [bookName, setBookName] = useState(() => currentBook?.flipbookName || 'Name of the Book');
   const [activeSubView, setActiveSubView] = useState(null);
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
@@ -111,13 +97,6 @@ const CustomizedEditor = () => {
   useEffect(() => {
     setIsPanelCollapsed(false);
   }, [activeSubView]);
-
-  // Clear previous book from IndexedDB when opening a new book in Customized Editor
-  useEffect(() => {
-    if (v_id) {
-      ensureCleanBook(v_id);
-    }
-  }, [v_id]);
 
   const profilePreviewForcedRef = useRef(false);
 
@@ -301,20 +280,29 @@ const CustomizedEditor = () => {
           delete updated.toolbarColor;
           delete updated.popupColor;
           if (v_id) {
-            const userEmail = user?.emailId || user?.email;
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-            axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-              userID: user?.userID,
-              emailId: userEmail,
-              v_id: v_id,
-              folderName: folder || 'Recent Book',
-              bookName: bookNameRef.current || bookName,
-              Background: backgroundSettings,
-              Layouts: {
-                layoutStyle: layoutSettings,
-                layoutColors: updated
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              try {
+                const user = JSON.parse(storedUser);
+                const userEmail = user?.emailId || user?.email;
+                if (userEmail) {
+                  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                  axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+                    emailId: userEmail,
+                    v_id: v_id,
+                    folderName: folder || 'Recent Book',
+                    bookName: bookNameRef.current || bookName,
+                    Background: backgroundSettings,
+                    Layouts: {
+                      layoutStyle: layoutSettings,
+                      layoutColors: updated
+                    }
+                  }).catch(err => console.warn("Reset layout colors DB save warning:", err));
+                }
+              } catch (e) {
+                console.error("Error saving reset layout colors to DB", e);
               }
-            }, { withCredentials: true }).catch(err => console.warn("Reset layout colors DB save warning:", err));
+            }
           }
           return updated;
         });
@@ -382,20 +370,29 @@ const CustomizedEditor = () => {
             };
 
             if (v_id) {
-              const userEmail = user?.emailId || user?.email;
-              const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-              axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-                userID: user?.userID,
-                emailId: userEmail,
-                v_id: v_id,
-                folderName: folder || 'Recent Book',
-                bookName: bookNameRef.current || bookName,
-                Background: backgroundSettings,
-                Layouts: {
-                  layoutStyle: layoutSettings,
-                  layoutColors: updated
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const userEmail = user?.emailId || user?.email;
+                  if (userEmail) {
+                    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                    axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+                      emailId: userEmail,
+                      v_id: v_id,
+                      folderName: folder || 'Recent Book',
+                      bookName: bookNameRef.current || bookName,
+                      Background: backgroundSettings,
+                      Layouts: {
+                        layoutStyle: layoutSettings,
+                        layoutColors: updated
+                      }
+                    }).catch(err => console.warn("Extracted layout colors DB save warning:", err));
+                  }
+                } catch (e) {
+                  console.error("Error saving extracted layout colors to DB", e);
                 }
-              }, { withCredentials: true }).catch(err => console.warn("Extracted layout colors DB save warning:", err));
+              }
             }
 
             return updated;
@@ -632,34 +629,44 @@ const CustomizedEditor = () => {
     if (!v_id || !isDataLoaded) return;
 
     const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      
-      axios.post(`${backendUrl}/api/flipbook/background`, {
-        action: 'save',
-        userId,
-        customUserId: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookName,
-        backgroundSettings
-      }, { withCredentials: true }).catch(err => console.warn("Background API auto-save warning:", err));
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          const userEmail = user?.emailId || user?.email;
+          if (!userEmail) return;
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          
+          axios.post(`${backendUrl}/api/flipbook/background`, {
+            action: 'save',
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'Recent Book',
+            bookName: bookName,
+            backgroundSettings
+          }).catch(err => console.warn("Background API auto-save warning:", err));
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookName,
-        Background: backgroundSettings,
-        BookAppearance: bookAppearanceSettings,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
+          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'Recent Book',
+            bookName: bookName,
+            Background: backgroundSettings,
+            Layouts: {
+              layoutStyle: layoutSettings,
+              layoutColors: layoutColors
+            },
+            settings: {
+              background: backgroundSettings,
+              appearance: bookAppearanceSettings,
+              layout: layoutSettings,
+              layoutColors: layoutColors
+            }
+          }).catch(err => console.warn("Appearance/Background auto-save warning:", err));
+        } catch (e) {
+          console.error("User parse error in background auto-save", e);
         }
-      }, { withCredentials: true }).catch(err => console.warn("Appearance/Background auto-save warning:", err));
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -673,37 +680,49 @@ const CustomizedEditor = () => {
     if (!v_id || !isDataLoaded) return;
 
     const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      const updatedShare = {
-        ...(shareSettings || {}),
-        access: visibilitySettings?.type || 'Public',
-        password: visibilitySettings?.password || '',
-        accessKey: visibilitySettings?.accessKey || '',
-        isPasswordSaved: Boolean(visibilitySettings?.isPasswordSaved),
-        inviteOnly: visibilitySettings?.inviteOnly || {}
-      };
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: v_id,
-        newName: bookNameRef.current || currentBook?.flipbookName,
-        MenuBar: menuBarSettings,
-        otherSetup: otherSetupSettings,
-        leadForm: leadFormSettings,
-        Visibility: updatedShare
-      }, { withCredentials: true }).then((res) => {
-        if (res.data?.share || res.data?.settings?.Visibility) {
-          const vis = res.data.share || res.data.settings.Visibility;
-          setShareSettings(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(vis)) return prev;
-            return vis;
-          });
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          const userEmail = user?.emailId || user?.email;
+          if (!userEmail) return;
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const updatedShare = {
+            ...(shareSettings || {}),
+            access: visibilitySettings?.type || 'Public',
+            password: visibilitySettings?.password || '',
+            accessKey: visibilitySettings?.accessKey || '',
+            isPasswordSaved: Boolean(visibilitySettings?.isPasswordSaved),
+            inviteOnly: visibilitySettings?.inviteOnly || {}
+          };
+          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'Recent Book',
+            bookName: v_id,
+            newName: bookNameRef.current || currentBook?.flipbookName,
+            share: updatedShare,
+            MenuBar: menuBarSettings,
+            otherSetup: otherSetupSettings,
+            leadForm: leadFormSettings,
+            settings: {
+              menuBar: menuBarSettings,
+              otherSetup: otherSetupSettings,
+              visibility: visibilitySettings,
+              leadForm: leadFormSettings
+            }
+          }).then((res) => {
+            if (res.data?.share) {
+              setShareSettings(prev => {
+                if (JSON.stringify(prev) === JSON.stringify(res.data.share)) return prev;
+                return res.data.share;
+              });
+            }
+          }).catch(err => console.error("Visibility auto-save failed:", err));
+        } catch (e) {
+          console.error("User parse error in visibility auto-save", e);
         }
-      }).catch(err => console.error("Visibility auto-save failed:", err));
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -714,27 +733,35 @@ const CustomizedEditor = () => {
     if (!v_id || !isDataLoaded) return;
 
     const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          const userEmail = user?.emailId || user?.email;
+          if (!userEmail) return;
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookNameRef.current || bookName,
-        newName: bookNameRef.current || bookName,
-        Branding: {
-          logoSettings,
-          watermarkSettings,
-          preloaderSettings
+          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'Recent Book',
+            bookName: bookNameRef.current || bookName,
+            newName: bookNameRef.current || bookName,
+            Branding: {
+              logoSettings,
+              watermarkSettings,
+              preloaderSettings,
+              profileSettings
+            }
+          }).catch(err => console.warn("Branding auto-save warning:", err));
+        } catch (e) {
+          console.error("User parse error in branding auto-save", e);
         }
-      }, { withCredentials: true }).catch(err => console.warn("Branding auto-save warning:", err));
+      }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [logoSettings, watermarkSettings, preloaderSettings, v_id, isDataLoaded, folder]);
+  }, [logoSettings, watermarkSettings, preloaderSettings, profileSettings, v_id, isDataLoaded, folder]);
 
   // Auto-save & Real-time preview sync for otherSetupSettings (Gallery, Slide Effect, Popup Customization, Controls, etc.)
   useEffect(() => {
@@ -776,33 +803,39 @@ const CustomizedEditor = () => {
     // Debounced Auto-save to MongoDB
     const timer = setTimeout(() => {
       if (!v_id) return;
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return;
+      try {
+        const user = JSON.parse(storedUser);
+        const userEmail = user?.emailId || user?.email;
+        if (!userEmail) return;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      const mergedGallery = {
-        ...(menuBarSettings?.interaction?.gallerySettings || {}),
-        ...(otherSetupSettings?.gallery || {})
-      };
+        const mergedGallery = {
+          ...(menuBarSettings?.interaction?.gallerySettings || {}),
+          ...(otherSetupSettings?.gallery || {})
+        };
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookNameRef.current || bookName,
-        otherSetup: {
-          ...otherSetupSettings,
-          gallery: mergedGallery
-        },
-        MenuBar: {
-          ...menuBarSettings,
-          interaction: {
-            ...menuBarSettings?.interaction,
-            gallerySettings: mergedGallery
+        axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+          emailId: userEmail,
+          v_id: v_id,
+          folderName: folder || 'Recent Book',
+          bookName: bookNameRef.current || bookName,
+          otherSetup: {
+            ...otherSetupSettings,
+            gallery: mergedGallery
+          },
+          MenuBar: {
+            ...menuBarSettings,
+            interaction: {
+              ...menuBarSettings?.interaction,
+              gallerySettings: mergedGallery
+            }
           }
-        }
-      }, { withCredentials: true }).catch(err => console.warn("otherSetup auto-save warning:", err));
+        }).catch(err => console.warn("otherSetup auto-save warning:", err));
+      } catch (e) {
+        console.error("Auto-save error for otherSetup", e);
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -813,82 +846,39 @@ const CustomizedEditor = () => {
     if (!isDataLoaded || !v_id || !layoutColors) return;
 
     const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return;
+      try {
+        const user = JSON.parse(storedUser);
+        const userEmail = user?.emailId || user?.email;
+        if (!userEmail) return;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookNameRef.current || bookName,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
-        }
-      }, { withCredentials: true }).catch(err => console.warn("Layouts auto-save warning:", err));
+        axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+          emailId: userEmail,
+          v_id: v_id,
+          folderName: folder || 'Recent Book',
+          bookName: bookNameRef.current || bookName,
+          Layouts: {
+            layoutStyle: layoutSettings,
+            layoutColors: layoutColors
+          }
+        }).catch(err => console.warn("Layouts auto-save warning:", err));
+      } catch (e) {
+        console.error("User parse error in Layouts auto-save", e);
+      }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [layoutSettings, layoutColors, isDataLoaded, v_id, folder, bookName]);
 
-  // Cache customized editor state to IndexedDB under 'customized_editor' (maintains ONLY the last used book)
+  // Save Bookmarks and Notes Logic
   useEffect(() => {
-    if (!isDataLoaded || !v_id) return;
-
-    const timer = setTimeout(() => {
-      saveCustomizedEditorState({
-        v_id,
-        bookName: bookNameRef.current || bookName,
-        folderName: folder || 'Recent Book',
-        pages: pages && pages.length > 0 ? pages : [],
-        targetPage: targetPage || 0,
-        Background: backgroundSettings,
-        BookAppearance: bookAppearanceSettings,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
-        },
-        MenuBar: menuBarSettings,
-        Branding: {
-          logoSettings,
-          watermarkSettings,
-          preloaderSettings
-        },
-        Visibility: visibilitySettings,
-        shareSettings: shareSettings,
-        otherSetup: otherSetupSettings,
-        leadForm: leadFormSettings,
-        bookmarks,
-        notes,
-        timestamp: Date.now()
-      });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [
-    v_id,
-    bookName,
-    folder,
-    pages,
-    targetPage,
-    backgroundSettings,
-    bookAppearanceSettings,
-    layoutSettings,
-    layoutColors,
-    menuBarSettings,
-    logoSettings,
-    watermarkSettings,
-    preloaderSettings,
-    visibilitySettings,
-    shareSettings,
-    otherSetupSettings,
-    leadFormSettings,
-    bookmarks,
-    notes,
-    isDataLoaded
-  ]);
+    if (isDataLoaded) {
+      saveToDB(`customized_editor_bookmarks_${v_id || 'default'}`, bookmarks);
+      saveToDB(`customized_editor_notes_${v_id || 'default'}`, notes);
+    }
+  }, [bookmarks, notes, isDataLoaded]);
 
   // Logic for saving and exporting
   const handleExport = useCallback(() => {
@@ -899,11 +889,13 @@ const CustomizedEditor = () => {
 
   const handleSave = useCallback(async () => {
     try {
-      const userEmail = user?.emailId || user?.email || user?.userEmail;
-      const userId = user?.userId || user?._id || user?.id;
-      const customUserId = user?.userID;
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return;
+      const user = JSON.parse(storedUser);
+      const userEmail = user?.emailId || user?.email;
+      if (!userEmail) return;
 
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       const prevBookName = lastLoadedBookNameRef.current || currentBook?.flipbookName;
       const validBookName = bookName || currentBook?.flipbookName || currentBook?.title || (v_id ? decodeURIComponent(v_id) : 'Untitled Document');
@@ -961,13 +953,19 @@ const CustomizedEditor = () => {
       // 2. Save customization settings
       const payload = {
         emailId: userEmail,
-        userID: customUserId,
         folderName: folder || 'Recent Book',
         v_id: v_id,
-        bookName: validBookName,
-        flipbookName: validBookName,
+        bookName: v_id,
         oldName: prevBookName,
         newName: validBookName,
+        share: {
+          ...(shareSettings || {}),
+          access: visibilitySettings?.type || 'Public',
+          password: visibilitySettings?.password || '',
+          accessKey: visibilitySettings?.accessKey || '',
+          isPasswordSaved: Boolean(visibilitySettings?.isPasswordSaved),
+          inviteOnly: visibilitySettings?.inviteOnly || {}
+        },
         Customized_Settings: {
           FlipbookInfo: {
             category: currentBook?.category || 'Product Based',
@@ -979,7 +977,8 @@ const CustomizedEditor = () => {
           Branding: {
             logoSettings,
             watermarkSettings,
-            preloaderSettings
+            preloaderSettings,
+            profileSettings
           },
           Background: backgroundSettings,
           MenuBar: syncedMenuBarSettings,
@@ -990,35 +989,21 @@ const CustomizedEditor = () => {
           BookAppearance: bookAppearanceSettings,
           otherSetup: syncedOtherSetupSettings,
           leadForm: leadFormSettings,
-          Visibility: {
-            ...(shareSettings || {}),
-            access: visibilitySettings?.type || 'Public',
-            password: visibilitySettings?.password || '',
-            accessKey: visibilitySettings?.accessKey || '',
-            isPasswordSaved: Boolean(visibilitySettings?.isPasswordSaved),
-            inviteOnly: visibilitySettings?.inviteOnly || {}
-          }
+          Visibility: visibilitySettings
         }
       };
 
       await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload);
       setShareSettings(payload.share);
-      if (triggerSaveSuccess) {
-        triggerSaveSuccess({ name: validBookName, isManual: true });
-      }
-      if (setHasUnsavedChanges) {
-        setHasUnsavedChanges(false);
-      }
 
       let updatedPagesList = pages;
       if (isRenamed) {
-        const sanitizedEmail = (userEmail || 'default_user').replace(/[@.]/g, "_");
-        const userFolder = customUserId || currentBook?.userID || user?.userID || sanitizedEmail;
+        const sanitizedEmail = user.emailId.replace(/[@.]/g, "_");
         const realFolder = (currentBook?.folderName && Array.isArray(currentBook.folderName))
           ? (currentBook.folderName.find(f => f !== 'Recent Book' && f !== 'Recent book') || 'My_Flipbooks')
           : (folder && folder !== 'Recent Book' ? folder : 'My_Flipbooks');
 
-        const newPBaseUrl = getSupabaseBaseUrl(userFolder, realFolder, newBookName);
+        const newPBaseUrl = getSupabaseBaseUrl(sanitizedEmail, realFolder, newBookName);
         setProjectBaseUrl(newPBaseUrl);
 
         const escapedOld = prevBookName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "(?: |%20)");
@@ -1042,31 +1027,14 @@ const CustomizedEditor = () => {
         lastLoadedBookNameRef.current = newBookName;
       }
 
-      await saveCustomizedEditorState({
+      saveToDB('editor_autosave', {
         v_id: v_id,
-        bookName: newBookName,
-        folderName: folder || 'Recent Book',
         pages: updatedPagesList,
         activePageIndex: targetPage || 0,
-        Background: backgroundSettings,
-        BookAppearance: bookAppearanceSettings,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
-        },
-        MenuBar: syncedMenuBarSettings,
-        Branding: {
-          logoSettings,
-          watermarkSettings,
-          preloaderSettings
-        },
-        Visibility: visibilitySettings,
-        shareSettings: shareSettings,
-        otherSetup: syncedOtherSetupSettings,
-        leadForm: leadFormSettings,
-        bookmarks: bookmarks,
-        notes: notes,
-        timestamp: Date.now()
+        pageName: newBookName,
+        timestamp: Date.now(),
+        isDoublePage: false,
+        settings: payload.settings
       });
 
       if (setCurrentBook) {
@@ -1114,37 +1082,33 @@ const CustomizedEditor = () => {
     // 1. Open preview immediately in new tab for instant response
     window.open(previewUrl, '_blank');
 
-    // 2. Cache editor state to IndexedDB under 'customized_editor'
+    // 2. Cache editor state to IndexedDB
     try {
-      saveCustomizedEditorState({
+      saveToDB('editor_autosave', {
         v_id: v_id,
-        bookName: bookName,
-        folderName: folder || 'Recent Book',
         pages: pages,
         activePageIndex: targetPage || 0,
+        pageName: bookName,
+        timestamp: Date.now(),
+        isDoublePage: false,
         projectBaseUrl: projectBaseUrl,
-        Background: backgroundSettings,
-        BookAppearance: bookAppearanceSettings,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
-        },
-        MenuBar: menuBarSettings,
-        Branding: {
-          logoSettings,
-          watermarkSettings,
-          preloaderSettings
-        },
-        Visibility: visibilitySettings,
-        shareSettings: shareSettings,
-        otherSetup: otherSetupSettings,
-        leadForm: leadFormSettings,
-        bookmarks: bookmarks,
-        notes: notes,
-        timestamp: Date.now()
+        settings: {
+          logo: logoSettings,
+          watermark: watermarkSettings,
+          preloader: preloaderSettings,
+          profile: profileSettings,
+          background: backgroundSettings,
+          appearance: bookAppearanceSettings,
+          layout: layoutSettings,
+          layoutColors: layoutColors,
+          menubar: menuBarSettings,
+          othersetup: otherSetupSettings,
+          leadform: leadFormSettings,
+          visibility: visibilitySettings
+        }
       });
     } catch (e) {
-      console.warn("Failed to cache customized preview state to IndexedDB:", e);
+      console.warn("Failed to autosave preview to IndexedDB:", e);
     }
 
     // 3. Trigger backend save asynchronously in the background without blocking the UI
@@ -1158,12 +1122,9 @@ const CustomizedEditor = () => {
   const handlePreviewRef = useRef(handlePreview);
   handlePreviewRef.current = handlePreview;
   const stablePreviewHandler = useCallback(() => handlePreviewRef.current?.(), []);
-  const currentBookRef = useRef(currentBook);
-  useEffect(() => { currentBookRef.current = currentBook; }, [currentBook]);
-
   const handleClearAllPages = useCallback(() => {
-    const defaultW = currentBookRef.current?.width || 210;
-    const defaultH = currentBookRef.current?.height || 297;
+    const defaultW = currentBook?.width || 210;
+    const defaultH = currentBook?.height || 297;
     setPages(prevPages => 
       prevPages.map((p, i) => {
         const blankSvg = createDefaultPageData(p.name || `Page ${i + 1}`, defaultW, defaultH);
@@ -1175,7 +1136,7 @@ const CustomizedEditor = () => {
       })
     );
     if (setHasUnsavedChanges) setHasUnsavedChanges(true);
-  }, [setHasUnsavedChanges]);
+  }, [currentBook, setHasUnsavedChanges]);
 
   // Export/Save Handlers for Context (Registration)
   useEffect(() => {
@@ -1197,7 +1158,7 @@ const CustomizedEditor = () => {
 
   // Sync Current Book to Navbar and ShareModal in real-time
   useEffect(() => {
-    if (setCurrentBook && bookName && v_id) {
+    if (setCurrentBook) {
       const currentAccess = visibilitySettings?.type || visibilitySettings?.access || 'Public';
       const effectiveShareId = 
         shareSettings?.shareId || 
@@ -1207,16 +1168,6 @@ const CustomizedEditor = () => {
 
       setCurrentBook(prev => {
         const sId = effectiveShareId || prev?.shareId || prev?.share?.shareId || prev?.Customized_Settings?.Visibility?.shareId || v_id;
-        if (
-          prev?.folder === folder &&
-          prev?.flipbookName === bookName &&
-          prev?.v_id === v_id &&
-          prev?.shareId === sId &&
-          prev?.access === currentAccess
-        ) {
-          return prev;
-        }
-
         return {
           ...(prev || {}),
           folder: folder,
@@ -1256,7 +1207,7 @@ const CustomizedEditor = () => {
         };
       });
     }
-  }, [setCurrentBook, folder, v_id, bookName, shareSettings?.shareId, visibilitySettings?.access, visibilitySettings?.type, visibilitySettings?.shareId]);
+  }, [setCurrentBook, folder, v_id, bookName, shareSettings, pages, visibilitySettings]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(false);
@@ -1348,130 +1299,91 @@ const CustomizedEditor = () => {
   useEffect(() => {
     const fetchBook = async () => {
       let isAutosaveLoaded = false;
-      const userEmail = user?.emailId || user?.email;
+      // Check for recent autosave first (sync from PageEditor)
+      const autosave = await getFromDB('editor_autosave');
+      if (autosave && autosave.v_id === v_id && autosave.pages && autosave.pages.length > 0) {
+        // Check if pages are corrupted from previous bug (e.g., html is an object, undefined, or empty string)
+        const isCorrupted = autosave.pages.some(p => 
+          typeof p.html === 'object' || 
+          typeof p.content === 'object' || 
+          !p.html || p.html.trim() === ''
+        );
 
-      // 1. Instant Quick-Load Cache from IndexedDB for the last used book
-      try {
-        const cached = await getCustomizedEditorState();
-        if (cached && (!v_id || cached.v_id === v_id)) {
-          console.log('[CustomizedEditor] Quick-load cache hit from IndexedDB for', v_id);
-          if (cached.Background) setBackgroundSettings(cached.Background);
-          if (cached.BookAppearance) setBookAppearanceSettings(cached.BookAppearance);
-          if (cached.Layouts) {
-            if (cached.Layouts.layoutStyle !== undefined) setLayoutSettings(cached.Layouts.layoutStyle);
-            if (cached.Layouts.layoutColors) setLayoutColors(cached.Layouts.layoutColors);
-          }
-          if (cached.MenuBar) setMenuBarSettings(cached.MenuBar);
-          if (cached.Branding) {
-            if (cached.Branding.logoSettings) setLogoSettings(cached.Branding.logoSettings);
-            if (cached.Branding.watermarkSettings) setWatermarkSettings(cached.Branding.watermarkSettings);
-            if (cached.Branding.preloaderSettings) setPreloaderSettings(cached.Branding.preloaderSettings);
-          }
-          if (cached.Visibility) setVisibilitySettings(cached.Visibility);
-          if (cached.shareSettings) setShareSettings(cached.shareSettings);
-          if (cached.otherSetup) setOtherSetupSettings(cached.otherSetup);
-          if (cached.leadForm) setLeadFormSettings(cached.leadForm);
-          if (cached.bookmarks) setBookmarks(cached.bookmarks);
-          if (cached.notes) setNotes(cached.notes);
-          if (cached.bookName && (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book')) {
-            setBookName(cached.bookName);
-          }
-          if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
-            setPages(cached.pages);
-            isAutosaveLoaded = true;
-          }
-          setIsDataLoaded(true);
-        }
-      } catch (cacheErr) {
-        console.warn('[CustomizedEditor] Quick-load cache read warning:', cacheErr);
-      }
-
-      // 2. Check if page_editor has newer pages for this flipbook
-      try {
-        const pageEditorData = await getPageEditorState();
-        if (pageEditorData && (!v_id || pageEditorData.v_id === v_id) && Array.isArray(pageEditorData.pages) && pageEditorData.pages.length > 0) {
-          const isCorrupted = pageEditorData.pages.some(p => 
-            typeof p.html === 'object' || 
-            typeof p.content === 'object' || 
-            !p.html || p.html.trim() === ''
-          );
-
-          if (!isCorrupted) {
-            console.log('[CustomizedEditor] Syncing pages from page_editor state');
-            isAutosaveLoaded = true;
-            const data = pageEditorData;
-            const sanitizedEmail = (userEmail || 'user').replace(/[@.]/g, "_");
-            const userFolder = user?.userID || sanitizedEmail;
-            const actualFolder = (folder && folder !== 'Recent Book') ? folder : 'My_Flipbooks';
-            const autoBaseUrl = getSupabaseBaseUrl(userFolder, actualFolder, data.pageName || bookName);
-
-            setPages(data.pages.map((p, i) => {
-              let rawHTML = p.html || p.content || '';
-              if (autoBaseUrl) {
-                if (rawHTML.includes('../assets/')) {
-                  rawHTML = rawHTML.split('../assets/').join(`${autoBaseUrl}assets/`);
-                }
-                if (rawHTML.includes('./assets/')) {
-                  rawHTML = rawHTML.split('./assets/').join(`${autoBaseUrl}assets/`);
-                }
-                if (rawHTML.includes('nullassets/')) {
-                  rawHTML = rawHTML.split('nullassets/').join(`${autoBaseUrl}assets/`);
-                }
-                rawHTML = rawHTML.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${autoBaseUrl}assets/`);
-              }
-              rawHTML = rewriteHtmlUploads(rawHTML);
-
-              return {
-                id: p.id || i,
-                name: p.name || `Page ${i + 1}`,
-                html: rawHTML,
-                content: rawHTML,
-                isHidden: p.isHidden || p.hide === 1
-              };
-            }));
+        if (!isCorrupted) {
+          console.log('CustomizedEditor: Loading from autosave');
+          isAutosaveLoaded = true;
+          try {
+            const data = autosave;
+            setPages(data.pages.map((p, i) => ({
+              id: p.id || i,
+              name: p.name || `Page ${i + 1}`,
+              html: p.html || p.content || '',
+              content: p.html || p.content || '',
+              isHidden: p.isHidden || p.hide === 1
+            })));
             if (data.pageName && (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book')) {
               setBookName(data.pageName);
             }
+            // Start from the first page on initial load if no page specified in URL
             if (!page) setTargetPage(0);
+          } catch (e) {
+            console.error("CustomizedEditor: Failed to load autosave", e);
+            isAutosaveLoaded = false;
           }
+        } else {
+          console.warn('CustomizedEditor: Autosave is corrupted. Ignoring and clearing it.');
+          // We don't await this to avoid blocking the fetch
+          saveToDB('editor_autosave', null);
         }
-      } catch (e) {
-        console.error('[CustomizedEditor] Failed to load from page_editor state:', e);
       }
 
-      // Cleanup any legacy keys from IndexedDB so ONLY last-used book remains
-      cleanupLegacyEditorKeys();
+      // Only load from local IndexedDB if there is NO v_id (new unsaved draft)
+      if (!v_id) {
+        const appearance = await getFromDB(`customized_editor_appearance_default`);
+        if (appearance) {
+          if (appearance.background) setBackgroundSettings(appearance.background);
+          if (appearance.appearance) setBookAppearanceSettings(appearance.appearance);
+          if (appearance.layout) setLayoutSettings(appearance.layout);
+          if (appearance.layoutColors) setLayoutColors(appearance.layoutColors);
+        }
+
+        const branding = await getFromDB(`customized_editor_branding_default`);
+        if (branding) {
+          if (branding.logo) setLogoSettings(branding.logo);
+          if (branding.watermark) setWatermarkSettings(branding.watermark);
+          if (branding.profile) setProfileSettings(branding.profile);
+        }
+
+        const setup = await getFromDB(`customized_editor_setup_default`);
+        if (setup) {
+          if (setup.menuBar) setMenuBarSettings(setup.menuBar);
+          if (setup.otherSetup) setOtherSetupSettings(setup.otherSetup);
+          if (setup.leadForm) setLeadFormSettings(setup.leadForm);
+          if (setup.visibility) setVisibilitySettings(setup.visibility);
+        }
+      }
 
       if (v_id) {
         console.log('CustomizedEditor: Fetching flipbook with folder:', folder, 'v_id:', v_id);
         try {
-          const userEmail = user?.emailId || user?.email;
-          const userId = user?.userId || user?._id || user?.id;
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+          const storedUser = localStorage.getItem('user');
+          if (!storedUser) return;
+          const user = JSON.parse(storedUser);
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
           const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
-            params: {
-              ...(userId ? { userId } : {}),
-              ...(user?.userID ? { customUserId: user.userID } : {}),
-              ...(userEmail ? { emailId: userEmail } : {}),
-              v_id,
-              folderName: folder,
-              bookName: decodeURIComponent(v_id)
-            },
-            withCredentials: true
+            params: { emailId: user.emailId, v_id, folderName: folder, bookName: decodeURIComponent(v_id) }
           });
 
           if (res.data) {
             let pBaseUrl = null;
             if (res.data.meta) {
-              const sanitizedEmail = (userEmail || 'user').replace(/[@.]/g, "_");
-              const userFolder = res.data.meta?.userID || user?.userID || sanitizedEmail;
-              const actualFolder = (res.data.meta?.folderName && Array.isArray(res.data.meta.folderName))
-                ? (res.data.meta.folderName[0] || 'My_Flipbooks')
-                : (res.data.meta?.folderName || folder || 'My_Flipbooks');
-              pBaseUrl = getSupabaseBaseUrl(userFolder, actualFolder, res.data.meta.flipbookName);
+              const sanitizedEmail = user?.emailId?.replace(/[@.]/g, "_");
+              pBaseUrl = getSupabaseBaseUrl(sanitizedEmail, res.data.meta.folderName, res.data.meta.flipbookName);
               setProjectBaseUrl(pBaseUrl);
             }
+
+
 
             // ONLY overwrite pages if we DON'T have an autosave
             const fetchedName = res.data.meta?.flipbookName || res.data.name || location.state?.flipbookName || decodeURIComponent(v_id);
@@ -1490,22 +1402,15 @@ const CustomizedEditor = () => {
                     rawHTML = defaultData;
                   }
 
-                  // Heal relative asset paths: ../assets/, ./assets/, nullassets/, or assets/
-                  if (pBaseUrl) {
-                    if (rawHTML.includes('../assets/')) {
-                      rawHTML = rawHTML.split('../assets/').join(`${pBaseUrl}assets/`);
-                    }
-                    if (rawHTML.includes('./assets/')) {
-                      rawHTML = rawHTML.split('./assets/').join(`${pBaseUrl}assets/`);
-                    }
-                    if (rawHTML.includes('nullassets/')) {
-                      rawHTML = rawHTML.split('nullassets/').join(`${pBaseUrl}assets/`);
-                    }
-                    rawHTML = rawHTML.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${pBaseUrl}assets/`);
+                  // Heal broken paths from previous sessions if needed
+                  if (rawHTML.includes('nullassets/') && pBaseUrl) {
+                    rawHTML = rawHTML.split('nullassets/').join(`${pBaseUrl}assets/`);
                   }
 
-                  // Rewrite any local /storage/ or /uploads/ paths to absolute backend URL
-                  rawHTML = rewriteHtmlUploads(rawHTML);
+                  // Fix relative image paths generated by PDF uploads
+                  if (rawHTML.includes('./assets/') && pBaseUrl) {
+                    rawHTML = rawHTML.split('./assets/').join(`${pBaseUrl}assets/`);
+                  }
 
                   return {
                     id: p.id || i,
@@ -1707,11 +1612,10 @@ const CustomizedEditor = () => {
               shareData = { shareId: newShareId, access: 'public' };
               // Try to save the newly generated shareId to the backend
               axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-                userID: user?.userID,
-                emailId: userEmail,
+                emailId: user.emailId,
                 v_id: v_id,
-                Visibility: shareData
-              }, { withCredentials: true }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
+                share: shareData
+              }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
             }
             setShareSettings(shareData);
 
@@ -1778,7 +1682,7 @@ const CustomizedEditor = () => {
       }
     };
     fetchBook();
-  }, [v_id, folder, user]);
+  }, [v_id, folder]);
 
 
 

@@ -23,7 +23,13 @@ export function useUserStorage(emailId) {
     });
 
     const fetchLiveStorageSettings = useCallback(async () => {
-        const targetEmail = emailId;
+        let targetEmail = emailId;
+        if (!targetEmail) {
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('user_profile'));
+                targetEmail = u?.emailId || u?.email;
+            } catch (e) {}
+        }
         if (!targetEmail || targetEmail === 'No Email' || targetEmail === 'guest@example.com') return;
 
         setIsLoadingStorage(true);

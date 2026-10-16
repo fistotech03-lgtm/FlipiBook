@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '@iconify/react';
-import axios from 'axios';
 import PremiumDropdown from './PremiumDropdown';
 import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import { useAuth } from '../../context/AuthContext';
 
 const SectionHeader = ({ label }) => (
   <div className="flex items-center gap-[1vw] mb-[0.5vw]">
@@ -116,55 +114,17 @@ const generatePageOptions = (total) => {
   return options;
 };
 
-const SheetCard = ({ sheet, onUpdate, onDelete, pages = [], folder, flipbookName, v_id }) => {
-  const { user } = useAuth();
+const SheetCard = ({ sheet, onUpdate, onDelete, pages = [] }) => {
   const [isExpanded, setIsExpanded] = useState(sheet.isExpanded !== false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const fileInputRef = useRef(null);
   
   const pageOptions = generatePageOptions(pages.length);
 
-  const handleImageSelect = async (file) => {
-    if (!file) return;
-    const tempUrl = URL.createObjectURL(file);
-    const sizeStr = (file.size / (1024 * 1024)).toFixed(1) + 'MB';
-
-    // 1. Instant local preview
-    onUpdate({
-      ...sheet,
-      image: tempUrl,
-      imageName: file.name,
-      imageSize: sizeStr
-    });
-
-    // 2. Upload to persistent backend storage
-    try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      const formData = new FormData();
-      formData.append('action', 'upload');
-      formData.append('file', file);
-      if (user?.emailId || user?.email) formData.append('emailId', user.emailId || user.email);
-      if (user?.userID) formData.append('customUserId', user.userID);
-      formData.append('assetType', 'Transparent_Sheet');
-      formData.append('folderName', folder || 'My_Flipbooks');
-      formData.append('flipbookName', flipbookName || v_id || 'Untitled Document');
-      if (v_id) formData.append('v_id', v_id);
-
-      const res = await axios.post(`${backendUrl}/api/flipbook/upload-customized-asset`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true
-      });
-
-      if (res.data?.url) {
-        onUpdate({
-          ...sheet,
-          image: res.data.url,
-          imageName: file.name,
-          imageSize: sizeStr
-        });
-      }
-    } catch (err) {
-      console.warn('[TransparentSheetUI] Upload warning:', err);
+  const handleImageSelect = (file) => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      onUpdate({ ...sheet, image: url, imageName: file.name, imageSize: (file.size / (1024 * 1024)).toFixed(1) + 'MB' });
     }
   };
 
@@ -323,14 +283,7 @@ const SheetCard = ({ sheet, onUpdate, onDelete, pages = [], folder, flipbookName
   );
 };
 
-export const TransparentSheetSection = ({
-  bookAppearanceSettings,
-  onUpdateBookAppearance,
-  pages = [],
-  folder,
-  flipbookName,
-  v_id
-}) => {
+export const TransparentSheetSection = ({ bookAppearanceSettings, onUpdateBookAppearance, pages = [] }) => {
   const sheets = bookAppearanceSettings?.transparentSheets || [];
 
   const addSheet = () => {
@@ -363,9 +316,6 @@ export const TransparentSheetSection = ({
             onUpdate={updateSheet} 
             onDelete={() => deleteSheet(sheet.id)} 
             pages={pages}
-            folder={folder}
-            flipbookName={flipbookName}
-            v_id={v_id}
           />
         ))}
       </div>

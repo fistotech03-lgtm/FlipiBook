@@ -17,7 +17,6 @@ import {
   ImageCropOverlay
 } from './AppearanceShared';
 import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import { useAuth } from '../../context/AuthContext';
 
 const themeStaticCache = {};
 
@@ -308,7 +307,6 @@ const BackgroundSection = ({
   flipbookName,
   v_id
 }) => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Background');
   const [deferredTab, setDeferredTab] = useState('Background');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -414,17 +412,17 @@ const BackgroundSection = ({
 
   const uploadCustomizedAsset = async (file, assetType = 'image') => {
     try {
-      if (file) {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser && file) {
+        const user = JSON.parse(storedUser);
         const userEmail = user?.emailId || user?.email;
-        const userId = user?.userId || user?._id || user?.id;
-        const customUserId = user?.userID;
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+        if (!userEmail) return null;
+
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const formData = new FormData();
         formData.append('action', 'upload');
         formData.append('file', file);
-        if (userEmail) formData.append('emailId', userEmail);
-        if (userId) formData.append('userId', userId);
-        if (customUserId) formData.append('customUserId', customUserId);
+        formData.append('emailId', userEmail);
         formData.append('assetType', assetType);
         formData.append('folderName', folder || 'My_Flipbooks');
         formData.append('flipbookName', flipbookName || v_id || 'Untitled Document');
@@ -432,8 +430,7 @@ const BackgroundSection = ({
         if (backgroundSettings?.image) formData.append('oldSrc', backgroundSettings.image);
 
         const res = await axios.post(`${backendUrl}/api/flipbook/branding`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          withCredentials: true
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.data?.url) {
           return res.data.url;
@@ -464,29 +461,31 @@ const BackgroundSection = ({
 
       if (v_id) {
         try {
-          const userEmail = user?.emailId || user?.email;
-          const userId = user?.userId || user?._id || user?.id;
-          const customUserId = user?.userID;
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-          axios.post(`${backendUrl}/api/flipbook/background`, {
-            action: 'save',
-            userId,
-            customUserId,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            backgroundSettings: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const user = JSON.parse(storedUser);
+            const userEmail = user?.emailId || user?.email;
+            if (userEmail) {
+              const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+              axios.post(`${backendUrl}/api/flipbook/background`, {
+                action: 'save',
+                emailId: userEmail,
+                v_id: v_id,
+                folderName: folder || 'My_Flipbooks',
+                bookName: flipbookName || v_id || 'Untitled Document',
+                backgroundSettings: newBgSettings
+              }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
 
-          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-            userID: customUserId || user?.userID,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            Background: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+              axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+                emailId: userEmail,
+                v_id: v_id,
+                folderName: folder || 'My_Flipbooks',
+                bookName: flipbookName || v_id || 'Untitled Document',
+                Background: newBgSettings,
+                settings: { background: newBgSettings }
+              }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+            }
+          }
         } catch (e) {
           console.error('[BackgroundSection] Error auto-saving to DB:', e);
         }
@@ -571,29 +570,31 @@ const BackgroundSection = ({
 
       if (v_id) {
         try {
-          const userEmail = user?.emailId || user?.email;
-          const userId = user?.userId || user?._id || user?.id;
-          const customUserId = user?.userID;
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-          axios.post(`${backendUrl}/api/flipbook/background`, {
-            action: 'save',
-            userId,
-            customUserId,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            backgroundSettings: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg video save warning:', err));
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const user = JSON.parse(storedUser);
+            const userEmail = user?.emailId || user?.email;
+            if (userEmail) {
+              const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+              axios.post(`${backendUrl}/api/flipbook/background`, {
+                action: 'save',
+                emailId: userEmail,
+                v_id: v_id,
+                folderName: folder || 'My_Flipbooks',
+                bookName: flipbookName || v_id || 'Untitled Document',
+                backgroundSettings: newBgSettings
+              }).catch(err => console.warn('[BackgroundSection] Immediate bg video save warning:', err));
 
-          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-            userID: customUserId || user?.userID,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            Background: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+              axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+                emailId: userEmail,
+                v_id: v_id,
+                folderName: folder || 'My_Flipbooks',
+                bookName: flipbookName || v_id || 'Untitled Document',
+                Background: newBgSettings,
+                settings: { background: newBgSettings }
+              }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+            }
+          }
         } catch (e) {
           console.error('[BackgroundSection] Error auto-saving video to DB:', e);
         }
@@ -617,29 +618,31 @@ const BackgroundSection = ({
   const saveBackgroundToDB = useCallback(async (newBgSettings) => {
     if (!v_id || !newBgSettings) return;
     try {
-      const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const customUserId = user?.userID;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      axios.post(`${backendUrl}/api/flipbook/background`, {
-        action: 'save',
-        userId,
-        customUserId,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'My_Flipbooks',
-        bookName: flipbookName || v_id || 'Untitled Document',
-        backgroundSettings: newBgSettings
-      }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        const userEmail = user?.emailId || user?.email;
+        if (userEmail) {
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          axios.post(`${backendUrl}/api/flipbook/background`, {
+            action: 'save',
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'My_Flipbooks',
+            bookName: flipbookName || v_id || 'Untitled Document',
+            backgroundSettings: newBgSettings
+          }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: customUserId || user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'My_Flipbooks',
-        bookName: flipbookName || v_id || 'Untitled Document',
-        Background: newBgSettings
-      }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'My_Flipbooks',
+            bookName: flipbookName || v_id || 'Untitled Document',
+            Background: newBgSettings,
+            settings: { background: newBgSettings }
+          }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+        }
+      }
     } catch (e) {
       console.error('[BackgroundSection] Error auto-saving to DB:', e);
     }
@@ -878,23 +881,23 @@ const BackgroundSection = ({
     let finalVideoUrl = vdo;
 
     try {
-      if (vdo) {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser && vdo) {
+        const user = JSON.parse(storedUser);
         const userEmail = user?.emailId || user?.email;
-        const userId = user?.userId || user?._id || user?.id;
-        const customUserId = user?.userID;
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-        const res = await axios.post(`${backendUrl}/api/flipbook/copy-theme-asset`, {
-          userId,
-          customUserId,
-          emailId: userEmail,
-          v_id: v_id,
-          folderName: folder || 'My_Flipbooks',
-          flipbookName: flipbookName || v_id || 'Untitled Document',
-          imageUrl: vdo
-        }, { withCredentials: true });
+        if (userEmail) {
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const res = await axios.post(`${backendUrl}/api/flipbook/copy-theme-asset`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'My_Flipbooks',
+            flipbookName: flipbookName || v_id || 'Untitled Document',
+            imageUrl: vdo
+          });
 
-        if (res.data?.url) {
-          finalVideoUrl = res.data.url;
+          if (res.data?.url) {
+            finalVideoUrl = res.data.url;
+          }
         }
       }
     } catch (err) {
@@ -918,23 +921,23 @@ const BackgroundSection = ({
     let finalImageUrl = img;
 
     try {
-      if (img) {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser && img) {
+        const user = JSON.parse(storedUser);
         const userEmail = user?.emailId || user?.email;
-        const userId = user?.userId || user?._id || user?.id;
-        const customUserId = user?.userID;
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-        const res = await axios.post(`${backendUrl}/api/flipbook/copy-theme-asset`, {
-          userId,
-          customUserId,
-          emailId: userEmail,
-          v_id: v_id,
-          folderName: folder || 'My_Flipbooks',
-          flipbookName: flipbookName || v_id || 'Untitled Document',
-          imageUrl: img
-        }, { withCredentials: true });
+        if (userEmail) {
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const res = await axios.post(`${backendUrl}/api/flipbook/copy-theme-asset`, {
+            emailId: userEmail,
+            v_id: v_id,
+            folderName: folder || 'My_Flipbooks',
+            flipbookName: flipbookName || v_id || 'Untitled Document',
+            imageUrl: img
+          });
 
-        if (res.data?.url) {
-          finalImageUrl = res.data.url;
+          if (res.data?.url) {
+            finalImageUrl = res.data.url;
+          }
         }
       }
     } catch (err) {
@@ -952,29 +955,31 @@ const BackgroundSection = ({
 
     if (v_id) {
       try {
-        const userEmail = user?.emailId || user?.email;
-        const userId = user?.userId || user?._id || user?.id;
-        const customUserId = user?.userID;
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-        axios.post(`${backendUrl}/api/flipbook/background`, {
-          action: 'save',
-          userId,
-          customUserId,
-          emailId: userEmail,
-          v_id: v_id,
-          folderName: folder || 'My_Flipbooks',
-          bookName: flipbookName || v_id || 'Untitled Document',
-          backgroundSettings: newBgSettings
-        }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          const userEmail = user?.emailId || user?.email;
+          if (userEmail) {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            axios.post(`${backendUrl}/api/flipbook/background`, {
+              action: 'save',
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              backgroundSettings: newBgSettings
+            }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
 
-        axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-          userID: customUserId || user?.userID,
-          emailId: userEmail,
-          v_id: v_id,
-          folderName: folder || 'My_Flipbooks',
-          bookName: flipbookName || v_id || 'Untitled Document',
-          Background: newBgSettings
-        }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+            axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              Background: newBgSettings,
+              settings: { background: newBgSettings }
+            }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+          }
+        }
       } catch (e) {
         console.error('[BackgroundSection] Error auto-saving to DB:', e);
       }
@@ -1684,43 +1689,41 @@ const BackgroundSection = ({
 
                                 if (currentImage) {
                                   try {
-                                    const userEmail = user?.emailId || user?.email;
-                                    const userId = user?.userId || user?._id || user?.id;
-                                    const customUserId = user?.userID;
-                                    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                                    const storedUser = localStorage.getItem('user');
+                                    if (storedUser) {
+                                      const user = JSON.parse(storedUser);
+                                      const userEmail = user?.emailId || user?.email;
+                                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-                                    await axios.post(`${backendUrl}/api/flipbook/branding`, {
-                                      action: 'delete',
-                                      userId,
-                                      customUserId,
-                                      emailId: userEmail,
-                                      v_id: v_id,
-                                      assetType: 'image',
-                                      src: currentImage,
-                                      folderName: folder || 'My_Flipbooks',
-                                      flipbookName: flipbookName || v_id || 'Untitled Document'
-                                    }, { withCredentials: true });
-
-                                    if (v_id) {
-                                      await axios.post(`${backendUrl}/api/flipbook/background`, {
-                                        action: 'save',
-                                        userId,
-                                        customUserId,
+                                      await axios.post(`${backendUrl}/api/flipbook/branding`, {
+                                        action: 'delete',
                                         emailId: userEmail,
                                         v_id: v_id,
+                                        assetType: 'image',
+                                        src: currentImage,
                                         folderName: folder || 'My_Flipbooks',
-                                        bookName: flipbookName || v_id || 'Untitled Document',
-                                        backgroundSettings: newBgSettings
-                                      }, { withCredentials: true });
+                                        flipbookName: flipbookName || v_id || 'Untitled Document'
+                                      });
 
-                                      await axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-                                        userID: customUserId || user?.userID,
-                                        emailId: userEmail,
-                                        v_id: v_id,
-                                        folderName: folder || 'My_Flipbooks',
-                                        bookName: flipbookName || v_id || 'Untitled Document',
-                                        Background: newBgSettings
-                                      }, { withCredentials: true });
+                                      if (v_id) {
+                                        await axios.post(`${backendUrl}/api/flipbook/background`, {
+                                          action: 'save',
+                                          emailId: userEmail,
+                                          v_id: v_id,
+                                          folderName: folder || 'My_Flipbooks',
+                                          bookName: flipbookName || v_id || 'Untitled Document',
+                                          backgroundSettings: newBgSettings
+                                        });
+
+                                        await axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+                                          emailId: userEmail,
+                                          v_id: v_id,
+                                          folderName: folder || 'My_Flipbooks',
+                                          bookName: flipbookName || v_id || 'Untitled Document',
+                                          Background: newBgSettings,
+                                          settings: { background: newBgSettings }
+                                        });
+                                      }
                                     }
                                   } catch (err) {
                                     console.warn('[BackgroundSection] Image delete asset warning:', err);
@@ -1838,22 +1841,22 @@ const BackgroundSection = ({
 
                                 if (currentVideo) {
                                   try {
-                                    const userEmail = user?.emailId || user?.email;
-                                    const userId = user?.userId || user?._id || user?.id;
-                                    const customUserId = user?.userID;
-                                    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                                    const storedUser = localStorage.getItem('user');
+                                    if (storedUser) {
+                                      const user = JSON.parse(storedUser);
+                                      const userEmail = user?.emailId || user?.email;
+                                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-                                    await axios.post(`${backendUrl}/api/flipbook/branding`, {
-                                      action: 'delete',
-                                      userId,
-                                      customUserId,
-                                      emailId: userEmail,
-                                      v_id: v_id,
-                                      assetType: 'video',
-                                      src: currentVideo,
-                                      folderName: folder || 'My_Flipbooks',
-                                      flipbookName: flipbookName || v_id || 'Untitled Document'
-                                    }, { withCredentials: true });
+                                      await axios.post(`${backendUrl}/api/flipbook/branding`, {
+                                        action: 'delete',
+                                        emailId: userEmail,
+                                        v_id: v_id,
+                                        assetType: 'video',
+                                        src: currentVideo,
+                                        folderName: folder || 'My_Flipbooks',
+                                        flipbookName: flipbookName || v_id || 'Untitled Document'
+                                      });
+                                    }
                                   } catch (err) {
                                     console.warn('[BackgroundSection] Video delete asset warning:', err);
                                   }

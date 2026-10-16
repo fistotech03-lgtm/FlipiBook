@@ -35,7 +35,6 @@ import { process3DDropEvent } from "./utils/modelDropHandler";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
 import { useToast } from "../../components/CustomToast";
-import { useAuth } from "../../context/AuthContext";
 
 // Safe GLTFExporter patch to guarantee options.animations is always a valid Array and never undefined
 if (GLTFExporter && GLTFExporter.prototype && !GLTFExporter.prototype._isSafeExporterPatched) {
@@ -228,7 +227,6 @@ function DirectionalSunLight({ position, specular = 50, softness = 50 }) {
 }
 
 export default function ThreedEditor() {
-  const { user } = useAuth();
   const { modelId: urlModelId } = useParams();
   const navigate = useNavigate();
 
@@ -1434,7 +1432,9 @@ export default function ThreedEditor() {
     const initializeEditor = async () => {
       setIsSyncing(true);
       try {
-        if (!user) return;
+        const storedUser = localStorage.getItem('user');
+        if (!storedUser) return;
+        const user = JSON.parse(storedUser);
         const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
 
@@ -1628,11 +1628,13 @@ export default function ThreedEditor() {
       }
 
       setIsSaving(true);
-      if (!user) {
-        console.error("User not authenticated");
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+        console.error("User not found in localStorage");
         return;
       }
       
+      const user = JSON.parse(storedUser);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       const nextModels = [...models];
@@ -2505,7 +2507,9 @@ export default function ThreedEditor() {
   const convertModelViaBackend = async (file, ext, baseName) => {
     const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
     const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
-    const emailId = user?.emailId || user?.email || 'guest_user';
+    const storedUser = localStorage.getItem('user');
+    const user = storedUser ? JSON.parse(storedUser) : { emailId: 'guest_user' };
+    const emailId = user.emailId || 'guest_user';
 
     const isCad = ['step', 'stp', 'iges', 'igs', 'stl'].includes(ext);
     const engineName = isCad ? "OpenCASCADE" : "Assimp";
@@ -3668,7 +3672,9 @@ export default function ThreedEditor() {
     setModelName(newName);
 
     try {
-      if (!user) return;
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return;
+      const user = JSON.parse(storedUser);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       // Update local model list name immediately (for UI consistency)
@@ -4419,7 +4425,9 @@ export default function ThreedEditor() {
 
     // Also clear from server session to make it persistent across refreshes
     try {
-        if (user) {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
             await axios.post(`${backendUrl}/api/3d-models/save-session`, {
                 emailId: user.emailId,

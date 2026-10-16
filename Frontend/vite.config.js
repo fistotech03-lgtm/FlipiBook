@@ -5,12 +5,12 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendTarget =
-    env.VITE_BACKEND_URL || "http://localhost:8000";
+    env.BACKEND_URL || env.VITE_BACKEND_URL || process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000";
 
   return {
     plugins: [react(), tailwindcss()],
     optimizeDeps: {
-      include: ["gifuct-js", "ogl", "@tanstack/react-query"],
+      include: ["gifuct-js", "ogl"],
     },
     build: {
       chunkSizeWarningLimit: 1200,

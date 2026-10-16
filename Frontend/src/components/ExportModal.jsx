@@ -9,7 +9,6 @@ import html2canvas from 'html2canvas';
 import domtoimage from 'dom-to-image-more';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
 import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
-import { useAuth } from '../context/AuthContext';
 
 
 const SCRIBBLE_ICONS = {
@@ -594,7 +593,6 @@ const SQUARE_BLACK_INK_ICONS = {
 };
 
 const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageIndex = 0, isFromMyFlipbooks = false, isAbsolutePosition = false }) => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('flipbook');
   const [exportType, setExportType] = useState('entire'); // 'entire' or 'selected'
   const [quality, setQuality] = useState('Medium');
@@ -804,6 +802,8 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
       return;
     }
 
+    const storedUser = localStorage.getItem('user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
     const emailId = currentBook?.userEmail || currentBook?.emailId || user?.emailId || user?.email;
 
     let pBaseUrl = '';

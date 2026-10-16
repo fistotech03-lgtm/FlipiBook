@@ -4,7 +4,6 @@ import { Icon } from '@iconify/react';
 import axios from 'axios';
 import PremiumDropdown from './PremiumDropdown';
 import { useToast } from '../CustomToast';
-import { useAuth } from '../../context/AuthContext';
 
 const VISIBILITY_OPTIONS = [
   {
@@ -500,7 +499,6 @@ const DayPickerPopover = ({ value, onChange }) => {
 };
 
 const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
-  const { user } = useAuth();
   const [activeAccordion, setActiveAccordion] = useState('email'); // 'email' or 'domain'
   const [createPassword, setCreatePassword] = useState(settings?.password || '');
   const [confirmPassword, setConfirmPassword] = useState(settings?.password || '');
@@ -560,10 +558,10 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
     setSaveSuccessMsg('');
     setSaveErrorMsg('');
     try {
+      const storedUser = localStorage.getItem('user');
+      const user = storedUser ? JSON.parse(storedUser) : null;
       const emailId = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
-      const customUserId = user?.userID;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
       const currentFolder = folder || localSettings?.folderName || settings?.folderName || 'Recent Book';
@@ -597,8 +595,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
       };
 
       const payload = {
-        userId,
-        customUserId,
         emailId: emailId,
         v_id: currentVid,
         bookName: currentVid,
@@ -610,7 +606,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
         }
       };
 
-      const res = await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, { withCredentials: true });
+      const res = await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload);
 
       const mergedFinal = {
         ...settings,
@@ -646,7 +642,20 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
   };
 
   const getUserEmail = () => {
-    return user?.emailId || user?.email || user?.userEmail || '';
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return '';
+      if (typeof storedUser === 'string') {
+        if (storedUser.startsWith('{') || storedUser.startsWith('[')) {
+          const userObj = JSON.parse(storedUser);
+          return userObj?.emailId || userObj?.email || userObj?.userEmail || '';
+        }
+        return storedUser;
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
   };
 
   const handleSendOtp = async () => {
@@ -1706,10 +1715,10 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setNewFormError('');
                     setIsSaving(true);
                     try {
+                      const storedUser = localStorage.getItem('user');
+                      const user = storedUser ? JSON.parse(storedUser) : null;
                       const emailId = user?.emailId || user?.email;
-                      const userId = user?.userId || user?._id || user?.id;
-                      const customUserId = user?.userID;
-                      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
                       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
                       const currentFolder = folder || localSettings?.folderName || settings?.folderName || 'Recent Book';
@@ -1723,7 +1732,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                       };
 
                       const payload = {
-                        userID: customUserId || user?.userID,
                         emailId: emailId,
                         v_id: currentVid,
                         bookName: currentVid,
@@ -1735,7 +1743,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                         }
                       };
 
-                      await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, { withCredentials: true });
+                      await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload);
 
                       setCreatePassword(newPasswordInput.trim());
                       setConfirmPassword(newPasswordInput.trim());
@@ -1761,10 +1769,10 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setNewFormError('');
                     setIsSaving(true);
                     try {
+                      const storedUser = localStorage.getItem('user');
+                      const user = storedUser ? JSON.parse(storedUser) : null;
                       const emailId = user?.emailId || user?.email;
-                      const userId = user?.userId || user?._id || user?.id;
-                      const customUserId = user?.userID;
-                      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
                       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
                       const currentFolder = folder || localSettings?.folderName || settings?.folderName || 'Recent Book';
@@ -1778,7 +1786,6 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                       };
 
                       const payload = {
-                        userID: customUserId || user?.userID,
                         emailId: emailId,
                         v_id: currentVid,
                         bookName: currentVid,
@@ -1790,7 +1797,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                         }
                       };
 
-                      await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, { withCredentials: true });
+                      await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload);
 
                       setAccessKey(newAccessKeyInput.trim());
                       setIsPasswordSaved(true);

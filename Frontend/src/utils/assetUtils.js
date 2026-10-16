@@ -34,13 +34,26 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
 // Alias for seamless backward compatibility across migrated modules
 export const getSupabaseBaseUrl = getAssetBaseUrl;
 
+let globalProjectBaseUrl = '';
+
+export function setGlobalProjectBaseUrl(url) {
+  if (url && typeof url === 'string') {
+    globalProjectBaseUrl = url.replace(/\\/g, '/');
+  }
+}
+
+export function getGlobalProjectBaseUrl() {
+  return globalProjectBaseUrl;
+}
+
 /**
  * Resolve an upload path to an accessible URL.
  *
- * @param {string} path - relative or absolute asset path
- * @returns {string}    - fully resolved URL
+ * @param {string} path           - relative or absolute asset path
+ * @param {string} [customBaseUrl] - optional custom project base URL
+ * @returns {string}              - fully resolved URL
  */
-export function resolveUploadsPath(path) {
+export function resolveUploadsPath(path, customBaseUrl = null) {
   if (!path || typeof path !== 'string') return path;
   if (path.startsWith('blob:') || path.startsWith('data:')) return path;
 
@@ -64,6 +77,19 @@ export function resolveUploadsPath(path) {
   // Already a full external URL
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
+  }
+
+  // Resolve relative flipbook assets: ../assets/..., ./assets/..., assets/...
+  const baseUrl = (customBaseUrl || globalProjectBaseUrl || '').trim();
+  if (
+    cleanPath.startsWith('../assets/') ||
+    cleanPath.startsWith('./assets/') ||
+    cleanPath.startsWith('assets/')
+  ) {
+    if (baseUrl) {
+      const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+      return cleanPath.replace(/^(?:\.\.\/|\.\/)?assets\//, `${normalizedBase}assets/`);
+    }
   }
 
   // Route /temp_uploads to backend server

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
 import SidebarItem from './SidebarItem';
 import Appearance from './Appearance';
 import MenuBar from './MenuBar';
@@ -62,7 +61,6 @@ const SubNavItem = ({ label, icon, isActive, onClick }) => (
 );
 
 const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPanelCollapsed, setIsPanelCollapsed, pageCount, visibilitySettings, onUpdateVisibility, canUndo, canRedo, onUndo, onRedo, onPreview, onSave, currentBook, setCurrentBook, isLoading = false }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { folder, v_id } = useParams();
   const [openSection, setOpenSection] = useState(null);
@@ -96,25 +94,22 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
   // Fetch all user books for title uniqueness validation (matching main editor behavior)
   useEffect(() => {
     const fetchBooks = async () => {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      try {
-        const res = await axios.get(`${backendUrl}/api/flipbook/list`, {
-          params: {
-            ...(user?.userId || user?._id || user?.id ? { userId: user?.userId || user?._id || user?.id } : {}),
-            ...(user?.userID ? { customUserId: user?.userID } : {}),
-            ...(user?.emailId || user?.email ? { emailId: user?.emailId || user?.email } : {})
-          },
-          withCredentials: true
-        });
-        if (res.data && res.data.books) {
-          setAllBooks(res.data.books);
+      const storedUser = localStorage.getItem('user');
+      const user = storedUser ? JSON.parse(storedUser) : null;
+      if (user?.emailId) {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        try {
+          const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId: user.emailId } });
+          if (res.data && res.data.books) {
+            setAllBooks(res.data.books);
+          }
+        } catch (err) {
+          console.error("Error fetching books for validation:", err);
         }
-      } catch (err) {
-        console.error("Error fetching books for validation:", err);
       }
     };
     fetchBooks();
-  }, [user]);
+  }, []);
 
   const checkDuplicate = (name) => {
     if (!name || !name.trim()) return false;

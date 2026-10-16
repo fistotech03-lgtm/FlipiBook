@@ -1,25 +1,11 @@
 import sanitizeHtmlForPreview from './sanitizeHtml';
-import { rewriteHtmlUploads } from '../../../../utils/assetUtils';
 import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
 import getVideoControlsScript from './videoControlsScript';
 
-export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false, baseUrl = null) => {
-    let rawCleanHtml = sanitizeHtmlForPreview(html);
-    if (baseUrl) {
-        if (rawCleanHtml.includes('../assets/')) {
-            rawCleanHtml = rawCleanHtml.split('../assets/').join(`${baseUrl}assets/`);
-        }
-        if (rawCleanHtml.includes('./assets/')) {
-            rawCleanHtml = rawCleanHtml.split('./assets/').join(`${baseUrl}assets/`);
-        }
-        if (rawCleanHtml.includes('nullassets/')) {
-            rawCleanHtml = rawCleanHtml.split('nullassets/').join(`${baseUrl}assets/`);
-        }
-        rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${baseUrl}assets/`);
-    }
-    const cleanHtml = rewriteHtmlUploads(rawCleanHtml);
+export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false) => {
+    const cleanHtml = sanitizeHtmlForPreview(html);
     // Extract and dynamically load Google Fonts found in the SVG
     const fontsToLoad = new Set();
     if (cleanHtml) {

@@ -3,7 +3,6 @@ import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveUploadsPath, getSupabaseBaseUrl } from '../utils/assetUtils';
-import { useAuth } from '../context/AuthContext';
 import p1 from '../assets/Explore/p1.png';
 import cover1 from '../assets/Explore/c-bg1.png';
 import cover2 from '../assets/Explore/c-bg2.png';
@@ -324,8 +323,21 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     const [openMenuId, setOpenMenuId] = useState(null);
     const [hoveredInfoId, setHoveredInfoId] = useState(null);
 
-    const { user } = useAuth();
-    const currentUserEmail = (user?.emailId || user?.email || '').toLowerCase();
+    const currentUserEmail = (() => {
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const u = JSON.parse(storedUser);
+                if (u?.emailId || u?.email) return (u.emailId || u.email).toLowerCase();
+            }
+            const storedProfile = localStorage.getItem('user_profile');
+            if (storedProfile) {
+                const p = JSON.parse(storedProfile);
+                if (p?.emailId || p?.email) return (p.emailId || p.email).toLowerCase();
+            }
+        } catch (e) { }
+        return '';
+    })();
     const [scrollProgress, setScrollProgress] = useState(0);
     const [isScrolling, setIsScrolling] = useState(false);
     const scrollTimeout = useRef(null);

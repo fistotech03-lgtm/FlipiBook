@@ -73,8 +73,16 @@ const templates = [
 export default function MyFlipbooks() {
     const navigate = useNavigate();
 
-    // User Data from Redux Auth
-    const { user } = useAuth();
+    // User Data from Redux Auth (with fallback to localStorage for backward compatibility)
+    const { user: authUser } = useAuth();
+    const user = authUser || (() => {
+        try {
+            const storedUser = localStorage.getItem('user');
+            return storedUser ? JSON.parse(storedUser) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
     const emailId = user?.emailId || user?.email;
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 

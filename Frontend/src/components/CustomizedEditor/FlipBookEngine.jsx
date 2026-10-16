@@ -17,7 +17,6 @@ import React, {
 } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { initGifRunner } from '../PageEditor/utils/AnimationRunner';
-import { rewriteHtmlUploads } from '../../utils/assetUtils';
 
 /* ─────────────────────────────── helpers ─────────────────────────────── */
 
@@ -215,7 +214,7 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
   }
 </style>
 </head>
-<body>${rewriteHtmlUploads(sanitizePageHtmlForPreview(rawHtml || ''))}</body>
+<body>${sanitizePageHtmlForPreview(rawHtml || '')}</body>
 </html>`;
 
 const scriptPromises = {};

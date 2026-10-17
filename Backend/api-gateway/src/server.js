@@ -16,6 +16,7 @@ const MYFLIPIBOOK_SERVICE_URL = process.env.MYFLIPIBOOK_SERVICE_URL || 'http://1
 const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://127.0.0.1:5003';
 const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127.0.0.1:5004';
 const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
+const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
 
 const storageRoot = process.env.STORAGE_PATH
   ? path.resolve(process.env.STORAGE_PATH)
@@ -541,6 +542,144 @@ app.use(
   })
 );
 
+// Proxy /api/3d-models requests to 3D Editor Service
+app.use(
+  '/api/3d-models',
+  createProxyMiddleware({
+    target: `${THREED_EDITOR_SERVICE_URL}/api/3d-models`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to threed-editor-service for 3d-models:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: '3D Editor Service unavailable. Please ensure threed-editor-service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/textures requests to 3D Editor Service
+app.use(
+  '/api/textures',
+  createProxyMiddleware({
+    target: `${THREED_EDITOR_SERVICE_URL}/api/textures`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to threed-editor-service for textures:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: '3D Editor Service unavailable. Please ensure threed-editor-service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/presets requests to 3D Editor Service
+app.use(
+  '/api/presets',
+  createProxyMiddleware({
+    target: `${THREED_EDITOR_SERVICE_URL}/api/presets`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to threed-editor-service for presets:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: '3D Editor Service unavailable. Please ensure threed-editor-service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /hdri static requests to 3D Editor Service
+app.use(
+  '/hdri',
+  createProxyMiddleware({
+    target: `${THREED_EDITOR_SERVICE_URL}/hdri`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/'
+  })
+);
+
+// Proxy /textures static requests to 3D Editor Service
+app.use(
+  '/textures',
+  createProxyMiddleware({
+    target: `${THREED_EDITOR_SERVICE_URL}/textures`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/'
+  })
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
@@ -550,6 +689,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/page-editor -> ${PAGE_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/pdf-editor -> ${PDF_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/customized-editor -> ${CUSTOMIZED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/3d-models -> ${THREED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/textures -> ${THREED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/presets -> ${THREED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /hdri -> ${THREED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /textures -> ${THREED_EDITOR_SERVICE_URL}`);
 });
 
 module.exports = app;

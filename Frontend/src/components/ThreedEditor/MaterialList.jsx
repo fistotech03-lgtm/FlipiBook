@@ -28,11 +28,13 @@ const cleanDisplayName = (name) => {
 
 // --- Object & Mesh Hierarchy Builder ---
 // Normalizes and structures 3D models so Objects/Groups are Folders, and Meshes are nested inside
-const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
+const buildObjectTree = (rawMaterials, fallbackModelName = "Model", fallbackModelId = null) => {
     if (!rawMaterials || !Array.isArray(rawMaterials) || rawMaterials.length === 0) return [];
 
     const formatNode = (node, parentGroup = "") => {
         if (!node) return null;
+
+        const nodeModelId = node.modelId || fallbackModelId;
 
         // String primitive (legacy fallback)
         if (typeof node === "string") {
@@ -45,7 +47,8 @@ const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
                 isGroup: false,
                 material: str,
                 materials: [str],
-                parentGroup: toSafeString(parentGroup, fallbackModelName)
+                parentGroup: toSafeString(parentGroup, fallbackModelName),
+                modelId: nodeModelId
             };
         }
 
@@ -93,7 +96,8 @@ const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
                 meshNames: Array.from(descendantMeshNames),
                 uuids: Array.from(descendantUuids),
                 children: formattedChildren,
-                parentGroup: toSafeString(parentGroup, fallbackModelName)
+                parentGroup: toSafeString(parentGroup, fallbackModelName),
+                modelId: nodeModelId
             };
         }
 
@@ -113,13 +117,15 @@ const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
             isGroup: false,
             material: primaryMat || nodeName,
             materials: Array.isArray(node.materials) ? node.materials.map(m => toSafeString(m)).filter(Boolean) : (primaryMat ? [primaryMat] : []),
-            parentGroup: toSafeString(parentGroup, fallbackModelName)
+            parentGroup: toSafeString(parentGroup, fallbackModelName),
+            modelId: nodeModelId
         };
     };
 
     const formatted = rawMaterials.map(item => {
         if (item && typeof item === "object" && Array.isArray(item.tree)) {
             const modelTitle = toSafeString(item.group || item.name, fallbackModelName);
+            const itemModelId = item.id || fallbackModelId;
 
             // Unwrap single generic wrapper nodes (e.g. RootNode -> meshes) if redundant
             let treeToProcess = item.tree;
@@ -156,7 +162,8 @@ const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
                 materials: Array.from(descendantMats),
                 meshNames: Array.from(descendantMeshNames),
                 children: children,
-                parentGroup: fallbackModelName
+                parentGroup: fallbackModelName,
+                modelId: itemModelId
             };
         }
         return formatNode(item, fallbackModelName);
@@ -182,7 +189,8 @@ const buildObjectTree = (rawMaterials, fallbackModelName = "Model") => {
             materials: Array.from(descendantMats),
             meshNames: Array.from(descendantMeshNames),
             children: formatted,
-            parentGroup: rootTitle
+            parentGroup: rootTitle,
+            modelId: fallbackModelId
         }];
     }
 
@@ -229,76 +237,6 @@ const filterTree = (nodes, query) => {
     return nodes.map(matchNode).filter(Boolean);
 };
 
-// --- Context Menu Portal ---
-const ItemContextMenu = ({ isOpen, onClose, anchorRef, onRename, onDelete, itemName }) => {
-    const [pos, setPos] = useState({ top: 0, left: 0 });
-
-    useEffect(() => {
-        if (!isOpen || !anchorRef.current) return;
-        const rect = anchorRef.current.getBoundingClientRect();
-        setPos({
-            top: rect.top + rect.height / 2,
-            left: rect.right + 8
-        });
-
-        const handleScroll = () => onClose();
-        window.addEventListener("scroll", handleScroll, true);
-        window.addEventListener("resize", handleScroll);
-        return () => {
-            window.removeEventListener("scroll", handleScroll, true);
-            window.removeEventListener("resize", handleScroll);
-        };
-    }, [isOpen, anchorRef, onClose]);
-
-    if (!isOpen || typeof document === "undefined") return null;
-
-    return createPortal(
-        <>
-            <div
-                className="fixed inset-0 z-[99998]"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                }}
-            />
-            <div
-                style={{ top: pos.top, left: pos.left, transform: "translateY(-50%)" }}
-                className="fixed z-[99999] bg-white rounded-[0.55vw] shadow-[0_12px_32px_rgba(0,0,0,0.18)] border border-gray-200/90 py-[0.3vw] px-[0.25vw] min-w-[8.5vw] animate-in fade-in zoom-in-95 duration-150 backdrop-blur-sm"
-            >
-                <div className="flex flex-col gap-[0.1vw]">
-                    {onRename && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onClose();
-                                onRename();
-                            }}
-                            className="w-full flex items-center gap-[0.45vw] px-[0.55vw] py-[0.32vw] hover:bg-indigo-50 cursor-pointer rounded-[0.35vw] text-gray-700 hover:text-indigo-600 transition-colors group text-left"
-                        >
-                            <Icon icon="mdi:edit-outline" className="w-[0.88vw] h-[0.88vw] text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" />
-                            <span className="text-[0.68vw] font-medium">Rename</span>
-                        </button>
-                    )}
-                    {onDelete && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onClose();
-                                onDelete();
-                            }}
-                            className="w-full flex items-center gap-[0.45vw] px-[0.55vw] py-[0.32vw] hover:bg-red-50 cursor-pointer rounded-[0.35vw] text-red-600 transition-colors group text-left"
-                        >
-                            <Icon icon="solar:trash-bin-trash-linear" className="w-[0.88vw] h-[0.88vw] text-red-400 group-hover:text-red-600 transition-colors shrink-0" />
-                            <span className="text-[0.68vw] font-medium">Delete</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-        </>,
-        document.body
-    );
-};
-
 // --- Recursive Tree Item (Object Folders & Nested Meshes) ---
 const TreeItem = ({
     node,
@@ -306,17 +244,18 @@ const TreeItem = ({
     selectedMaterial,
     onSelect,
     hiddenMaterials,
+    xrayMaterials,
     onToggleVisibility,
+    onToggleXray,
     onDelete,
     onRename,
     searchTerm = "",
     forceExpand = null,
-    modelName = "Model"
+    modelName = "Model",
+    modelId = null
 }) => {
     const [isOpen, setIsOpen] = useState(true);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const btnRef = useRef(null);
 
     const displayName = toSafeString(node.name, node.isGroup ? "Object" : "Mesh");
     const visualTitle = cleanDisplayName(displayName);
@@ -363,9 +302,31 @@ const TreeItem = ({
     const isSelected = useMemo(() => {
         if (!selectedMaterial) return false;
 
+        // If Select All is active across all models, select this node
+        if (selectedMaterial.isAll) {
+            return true;
+        }
+
+        // Check model ID if both selection and node have it
+        const selModelId = selectedMaterial.modelId || selectedMaterial.id;
+        const currentModelId = node.modelId || modelId;
+        if (selModelId && currentModelId && selModelId !== currentModelId) {
+            return false;
+        }
+
+        // Verify model affiliation if parentGroup or modelName is specified
+        if (selectedMaterial.parentGroup && node.parentGroup && !selModelId) {
+            if (selectedMaterial.parentGroup !== node.parentGroup && selectedMaterial.parentGroup !== modelName) {
+                return false;
+            }
+        }
+
         // Group / Object Folder Selection
         if (selectedMaterial.isGroup) {
             if (node.isGroup) {
+                if (selectedMaterial.parentGroup && node.parentGroup && selectedMaterial.parentGroup !== node.parentGroup) {
+                    return false;
+                }
                 return selectedMaterial.name === node.name;
             }
             // Multi-selection (explicit)
@@ -409,7 +370,7 @@ const TreeItem = ({
             return selName === node.name;
         }
         return false;
-    }, [selectedMaterial, node]);
+    }, [selectedMaterial, node, modelName]);
 
     // Visibility Check
     const isVisible = useMemo(() => {
@@ -442,6 +403,39 @@ const TreeItem = ({
         return true;
     }, [node, hiddenMaterials]);
 
+    // X-Ray Check
+    const isXray = useMemo(() => {
+        if (!xrayMaterials || !(xrayMaterials instanceof Set)) return false;
+
+        if (node.isMesh) {
+            if (node.meshUuid && xrayMaterials.has(node.meshUuid)) return true;
+            if (node.name && xrayMaterials.has(node.name)) return true;
+            if (!node.meshUuid && !node.name && node.material && xrayMaterials.has(node.material)) return true;
+            return false;
+        }
+
+        if (node.isGroup) {
+            // Active if all child meshes are in X-Ray (or at least one when inspecting)
+            let total = 0;
+            let xrayCount = 0;
+            const check = (n) => {
+                if (!n) return;
+                if (n.isMesh) {
+                    total++;
+                    const hasXray = (n.meshUuid && xrayMaterials.has(n.meshUuid)) ||
+                                    (n.name && xrayMaterials.has(n.name)) ||
+                                    (!n.meshUuid && !n.name && n.material && xrayMaterials.has(n.material));
+                    if (hasXray) xrayCount++;
+                }
+                if (Array.isArray(n.children)) n.children.forEach(check);
+            };
+            check(node);
+            return total > 0 && xrayCount === total;
+        }
+
+        return false;
+    }, [node, xrayMaterials]);
+
     // Count leaf meshes under this folder
     const childMeshCount = useMemo(() => {
         if (!node.isGroup) return 0;
@@ -470,6 +464,8 @@ const TreeItem = ({
                             meshNames: node.meshNames || [],
                             uuids: node.uuids || [],
                             parentGroup: node.parentGroup || modelName,
+                            modelId: node.modelId || modelId,
+                            modelName: modelName,
                             isShift: e.shiftKey
                         });
                     }}
@@ -486,29 +482,29 @@ const TreeItem = ({
                     )}
 
                     {/* Left: Chevron + Folder Icon + Object Badge + Name + Mesh Count */}
-                    <div className="flex items-center gap-[0.35vw] min-w-0 flex-1 pr-[0.25vw]">
+                    <div className="flex items-center gap-[0.3vw] min-w-0 flex-1 pr-[0.2vw]">
                         <button
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setIsOpen(!isOpen);
                             }}
-                            className="w-[1.1vw] h-[1.1vw] flex items-center justify-center rounded-[0.22vw] text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors shrink-0 cursor-pointer"
+                            className="w-[1vw] h-[1vw] flex items-center justify-center rounded-[0.22vw] text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors shrink-0 cursor-pointer"
                             title={isOpen ? "Collapse folder" : "Expand folder"}
                         >
                             <Icon
                                 icon="heroicons:chevron-down-20-solid"
-                                width="0.78vw"
-                                height="0.78vw"
+                                width="0.75vw"
+                                height="0.75vw"
                                 className={`transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
                             />
                         </button>
 
-                        <div className="w-[1.3vw] h-[1.3vw] rounded-[0.3vw] flex items-center justify-center shrink-0">
+                        <div className="w-[1.2vw] h-[1.2vw] rounded-[0.28vw] flex items-center justify-center shrink-0">
                             <Icon
                                 icon={isOpen ? "solar:folder-open-bold-duotone" : "solar:folder-bold-duotone"}
-                                width="1.05vw"
-                                height="1.05vw"
+                                width="1vw"
+                                height="1vw"
                                 className={`transition-colors ${
                                     isSelected
                                         ? "text-[#5d5efc]"
@@ -532,60 +528,16 @@ const TreeItem = ({
                             />
                         ) : (
                             <span 
-                                className="truncate font-semibold text-[0.7vw] text-gray-800 tracking-tight flex-1 min-w-0"
+                                className="truncate font-semibold text-[0.7vw] text-gray-800 tracking-tight flex-1 min-w-0 leading-tight"
                                 title={displayName}
                             >
                                 {visualTitle}
                             </span>
                         )}
 
-                        <span className="text-[0.52vw] font-medium px-[0.3vw] py-[0.05vw] rounded-[0.22vw] bg-gray-100 text-gray-400 shrink-0 ml-auto mr-[0.15vw]">
+                        <span className="text-[0.52vw] font-medium px-[0.28vw] py-[0.04vw] rounded-[0.22vw] bg-gray-100 text-gray-400 shrink-0 ml-auto mr-[0.1vw]">
                             {childMeshCount}
                         </span>
-                    </div>
-
-                    {/* Right: Visibility Eye & 3-Dots Menu */}
-                    <div
-                        className={`flex items-center gap-[0.12vw] shrink-0 ml-[0.15vw] ${
-                            isMenuOpen || isSelected || !isVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        } transition-opacity duration-150`}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleVisibility && onToggleVisibility(node, isVisible);
-                            }}
-                            className={`p-[0.2vw] rounded-[0.25vw] transition-colors cursor-pointer ${
-                                !isVisible
-                                    ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50"
-                                    : "text-gray-400 hover:text-gray-700 hover:bg-gray-200/70"
-                            }`}
-                            title={isVisible ? "Hide object" : "Show object"}
-                        >
-                            <Icon icon={isVisible ? "ph:eye-bold" : "ph:eye-closed-bold"} width="0.75vw" height="0.75vw" />
-                        </button>
-
-                        <button
-                            ref={btnRef}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsMenuOpen(!isMenuOpen);
-                            }}
-                            className="p-[0.2vw] rounded-[0.25vw] hover:bg-gray-200/70 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                            title="Object options"
-                        >
-                            <Icon icon="ph:dots-three-bold" width="0.75vw" height="0.75vw" />
-                        </button>
-
-                        <ItemContextMenu
-                            isOpen={isMenuOpen}
-                            onClose={() => setIsMenuOpen(false)}
-                            anchorRef={btnRef}
-                            itemName={visualTitle}
-                            onRename={() => setIsEditing(true)}
-                            onDelete={onDelete ? () => onDelete(node) : null}
-                        />
                     </div>
                 </div>
 
@@ -600,12 +552,15 @@ const TreeItem = ({
                                 selectedMaterial={selectedMaterial}
                                 onSelect={onSelect}
                                 hiddenMaterials={hiddenMaterials}
+                                xrayMaterials={xrayMaterials}
                                 onToggleVisibility={onToggleVisibility}
+                                onToggleXray={onToggleXray}
                                 onDelete={onDelete}
                                 onRename={onRename}
                                 searchTerm={searchTerm}
                                 forceExpand={forceExpand}
                                 modelName={modelName}
+                                modelId={node.modelId || modelId}
                             />
                         ))}
                     </div>
@@ -626,6 +581,8 @@ const TreeItem = ({
                     meshUuid: toSafeString(node.meshUuid || node.id, displayName),
                     material: toSafeString(node.material, displayName),
                     parentGroup: toSafeString(node.parentGroup, modelName),
+                    modelId: node.modelId || modelId,
+                    modelName: modelName,
                     isMesh: true,
                     isShift: e.shiftKey
                 });
@@ -648,16 +605,16 @@ const TreeItem = ({
                 <div className="absolute left-0 top-[18%] bottom-[18%] w-[3px] bg-[#5d5efc] rounded-r-full" />
             )}
 
-            {/* Left: 3D Box Icon + Mesh Name (NO text label badge) */}
-            <div className="flex items-center gap-[0.4vw] min-w-0 flex-1 pr-[0.25vw]">
+            {/* Left: 3D Box Icon + Mesh Name */}
+            <div className="flex items-center gap-[0.35vw] min-w-0 flex-1 pr-[0.2vw]">
                 <div
-                    className={`w-[1.2vw] h-[1.2vw] rounded-[0.28vw] flex items-center justify-center shrink-0 transition-colors ${
+                    className={`w-[1.15vw] h-[1.15vw] rounded-[0.26vw] flex items-center justify-center shrink-0 transition-colors ${
                         isSelected
                             ? "bg-indigo-100 text-[#5d5efc]"
                             : "bg-gray-100/90 text-gray-400 group-hover:text-[#5d5efc] group-hover:bg-indigo-50/80"
                     }`}
                 >
-                    <Icon icon="solar:box-minimalistic-bold-duotone" width="0.82vw" height="0.82vw" />
+                    <Icon icon="solar:box-minimalistic-bold-duotone" width="0.78vw" height="0.78vw" />
                 </div>
 
                 {isEditing ? (
@@ -673,56 +630,12 @@ const TreeItem = ({
                     />
                 ) : (
                     <span 
-                        className="truncate font-medium text-[0.68vw] text-gray-700 group-hover:text-gray-900 tracking-tight flex-1 min-w-0"
+                        className="truncate font-medium text-[0.68vw] text-gray-700 group-hover:text-gray-900 tracking-tight flex-1 min-w-0 leading-tight"
                         title={displayName}
                     >
                         {visualTitle}
                     </span>
                 )}
-            </div>
-
-            {/* Right: Visibility Toggle & Options Menu */}
-            <div
-                className={`flex items-center gap-[0.12vw] shrink-0 ml-[0.15vw] ${
-                    isMenuOpen || isSelected || !isVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                } transition-opacity duration-150`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleVisibility && onToggleVisibility(node, isVisible);
-                    }}
-                    className={`p-[0.18vw] rounded-[0.22vw] transition-colors cursor-pointer ${
-                        !isVisible
-                            ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50"
-                            : "text-gray-400 hover:text-gray-700 hover:bg-gray-200/70"
-                    }`}
-                    title={isVisible ? "Hide mesh" : "Show mesh"}
-                >
-                    <Icon icon={isVisible ? "ph:eye-bold" : "ph:eye-closed-bold"} width="0.72vw" height="0.72vw" />
-                </button>
-
-                <button
-                    ref={btnRef}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(!isMenuOpen);
-                    }}
-                    className="p-[0.18vw] rounded-[0.22vw] hover:bg-gray-200/70 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                    title="Mesh options"
-                >
-                    <Icon icon="ph:dots-three-bold" width="0.72vw" height="0.72vw" />
-                </button>
-
-                <ItemContextMenu
-                    isOpen={isMenuOpen}
-                    onClose={() => setIsMenuOpen(false)}
-                    anchorRef={btnRef}
-                    itemName={visualTitle}
-                    onRename={() => setIsEditing(true)}
-                    onDelete={onDelete ? () => onDelete(node) : null}
-                />
             </div>
         </div>
     );
@@ -737,11 +650,15 @@ export default function MaterialList({
     selectedMaterial,
     onSelect,
     modelName,
+    modelId = null,
     onToggleVisibility,
+    onToggleXray,
     onDeleteMaterial,
     onRenameMaterial,
     onDeleteModel,
-    hiddenMaterials = new Set()
+    hiddenMaterials = new Set(),
+    xrayMaterials = new Set(),
+    variant = "dropdown"
 }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [forceExpand, setForceExpand] = useState(null);
@@ -749,8 +666,8 @@ export default function MaterialList({
 
     // Build structured Object -> Mesh folder hierarchy
     const objectTree = useMemo(() => {
-        return buildObjectTree(materials, safeModelName);
-    }, [materials, safeModelName]);
+        return buildObjectTree(materials, safeModelName, modelId);
+    }, [materials, safeModelName, modelId]);
 
     // Filter tree according to search term
     const filteredTree = useMemo(() => {
@@ -761,71 +678,6 @@ export default function MaterialList({
     const { objectCount, meshCount } = useMemo(() => {
         return countStats(objectTree);
     }, [objectTree]);
-
-    // Check if all meshes are hidden
-    const allMeshesHidden = useMemo(() => {
-        if (meshCount === 0) return false;
-        let anyVisible = false;
-        const checkVis = (n) => {
-            if (!n) return;
-            if (n.isMesh) {
-                const isHidden = (n.meshUuid && hiddenMaterials?.has(n.meshUuid)) ||
-                                 (n.name && hiddenMaterials?.has(n.name)) ||
-                                 (!n.meshUuid && !n.name && n.material && hiddenMaterials?.has(n.material));
-                if (!isHidden) anyVisible = true;
-            }
-            if (Array.isArray(n.children)) n.children.forEach(checkVis);
-        };
-        objectTree.forEach(checkVis);
-        return !anyVisible;
-    }, [objectTree, hiddenMaterials, meshCount]);
-
-    // Toggle node visibility (handles single mesh or entire folder/object atomically)
-    const handleToggleVisibility = (node, isCurrentlyVisible) => {
-        if (!onToggleVisibility) return;
-        const targetState = !isCurrentlyVisible;
-
-        if (node.isMesh) {
-            const keys = [node.meshUuid, node.name].filter(Boolean);
-            if (keys.length === 0 && node.material) keys.push(node.material);
-            onToggleVisibility(keys, targetState);
-        } else if (node.isGroup) {
-            const meshKeys = new Set();
-            const collectRecursive = (item) => {
-                if (!item) return;
-                if (item.isMesh) {
-                    if (item.meshUuid) meshKeys.add(item.meshUuid);
-                    if (item.name) meshKeys.add(item.name);
-                    if (!item.meshUuid && !item.name && item.material) meshKeys.add(item.material);
-                }
-                if (Array.isArray(item.children)) item.children.forEach(collectRecursive);
-            };
-            collectRecursive(node);
-            if (meshKeys.size > 0) {
-                onToggleVisibility(Array.from(meshKeys), targetState);
-            }
-        }
-    };
-
-    // Toggle all meshes in scene atomically
-    const handleToggleAllVisibility = () => {
-        if (!onToggleVisibility) return;
-        const targetState = allMeshesHidden;
-        const allKeys = new Set();
-        const collectAll = (n) => {
-            if (!n) return;
-            if (n.isMesh) {
-                if (n.meshUuid) allKeys.add(n.meshUuid);
-                if (n.name) allKeys.add(n.name);
-                if (!n.meshUuid && !n.name && n.material) allKeys.add(n.material);
-            }
-            if (Array.isArray(n.children)) n.children.forEach(collectAll);
-        };
-        objectTree.forEach(collectAll);
-        if (allKeys.size > 0) {
-            onToggleVisibility(Array.from(allKeys), targetState);
-        }
-    };
 
     // Delete node (mesh or model)
     const handleDeleteNode = (node) => {
@@ -857,10 +709,77 @@ export default function MaterialList({
         return () => clearTimeout(timer);
     }, [selectedMaterial, safeModelName]);
 
+    if (variant === "panel") {
+        return (
+            <div className="w-full h-full flex flex-col select-none font-sans bg-transparent overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                        {/* Search Bar */}
+                        <div className="px-[0.75vw] pt-[0.6vw] pb-[0.35vw] w-full shrink-0">
+                            <div className="relative group w-full flex items-center bg-gray-50/90 border border-gray-200/80 rounded-[0.5vw] px-[0.6vw] py-[0.35vw] focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100/70 transition-all shadow-2xs">
+                                <Icon icon="heroicons:magnifying-glass-20-solid" width="0.8vw" height="0.8vw" className="text-gray-400 group-focus-within:text-[#5d5efc] transition-colors shrink-0 mr-[0.4vw]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search objects or meshes..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full text-[0.72vw] font-medium text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm("")}
+                                        className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer shrink-0 ml-[0.3vw]"
+                                        title="Clear search"
+                                    >
+                                        <Icon icon="heroicons:x-mark-20-solid" width="0.8vw" height="0.8vw" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Scrollable Tree */}
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden px-[0.6vw] pb-[0.6vw] mt-[0.2vw] w-full [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
+                            <div className="space-y-[0.05vw] w-full min-w-0">
+                                {filteredTree.length === 0 && (
+                                    <div className="text-center py-[2vw] px-[0.5vw]">
+                                        <Icon
+                                            icon="solar:box-linear"
+                                            className="w-[1.8vw] h-[1.8vw] text-gray-300 mx-auto mb-[0.3vw]"
+                                        />
+                                        <p className="text-[0.72vw] text-gray-500 font-medium">
+                                            {searchTerm ? `No items matching "${searchTerm}"` : "No 3D objects loaded"}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {filteredTree.map((itemNode, idx) => (
+                                    <TreeItem
+                                        key={itemNode.id || `tree_root_${idx}`}
+                                        node={itemNode}
+                                        depth={0}
+                                        selectedMaterial={selectedMaterial}
+                                        onSelect={onSelect}
+                                        hiddenMaterials={hiddenMaterials}
+                                        xrayMaterials={xrayMaterials}
+                                        onToggleVisibility={onToggleVisibility}
+                                        onToggleXray={onToggleXray}
+                                        onDelete={handleDeleteNode}
+                                        onRename={onRenameMaterial}
+                                        searchTerm={searchTerm}
+                                        forceExpand={forceExpand}
+                                        modelName={safeModelName}
+                                        modelId={modelId}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="relative z-40 flex flex-col w-[16.5vw] min-w-[240px] max-w-[285px] select-none font-sans">
+        <div className="relative z-40 flex flex-col w-[20vw] min-w-[290px] max-w-[360px] select-none font-sans">
             {/* --- STATIC FLOATING HEADER PILL --- */}
-            {/* Matches Undo/Redo button height and radius */}
             <div
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={`flex items-center justify-between gap-[0.55vw] bg-white px-[0.65vw] h-[2.5vw] border border-gray-200 pointer-events-auto transition-all duration-200 cursor-pointer shadow-sm ${
@@ -936,51 +855,6 @@ export default function MaterialList({
                             </div>
                         </div>
 
-                        {/* --- SUBHEADER TOOLBAR (EXPAND/COLLAPSE + COUNTS + VISIBILITY) --- */}
-                        <div className="px-[0.5vw] py-[0.16vw] flex items-center justify-between text-gray-500 w-full whitespace-nowrap text-[0.54vw] border-b border-gray-100/90 shrink-0">
-                            <div className="flex items-center gap-[0.2vw] shrink-0">
-                                <button
-                                    onClick={() => setForceExpand(true)}
-                                    className="px-[0.32vw] py-[0.12vw] rounded-[0.22vw] bg-gray-50 hover:bg-indigo-50 border border-gray-200/80 text-gray-600 hover:text-[#5d5efc] text-[0.52vw] font-medium flex items-center gap-[0.18vw] transition-colors cursor-pointer shrink-0"
-                                    title="Expand all folders"
-                                >
-                                    <Icon icon="solar:maximize-square-minimalistic-bold-duotone" width="0.62vw" height="0.62vw" />
-                                    <span>Expand</span>
-                                </button>
-                                <button
-                                    onClick={() => setForceExpand(false)}
-                                    className="px-[0.32vw] py-[0.12vw] rounded-[0.22vw] bg-gray-50 hover:bg-indigo-50 border border-gray-200/80 text-gray-600 hover:text-[#5d5efc] text-[0.52vw] font-medium flex items-center gap-[0.18vw] transition-colors cursor-pointer shrink-0"
-                                    title="Collapse all folders"
-                                >
-                                    <Icon icon="solar:minimize-square-minimalistic-bold-duotone" width="0.62vw" height="0.62vw" />
-                                    <span>Collapse</span>
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-[0.25vw] shrink-0">
-                                <span className="text-[0.52vw] text-gray-400 font-medium whitespace-nowrap shrink-0">
-                                    {meshCount} {meshCount === 1 ? "mesh" : "meshes"}
-                                </span>
-
-                                <button
-                                    onClick={handleToggleAllVisibility}
-                                    className={`px-[0.32vw] py-[0.12vw] rounded-[0.22vw] border text-[0.52vw] font-medium flex items-center gap-[0.18vw] transition-colors cursor-pointer shrink-0 ${
-                                        allMeshesHidden
-                                            ? "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100"
-                                            : "border-gray-200/80 bg-gray-50 text-gray-600 hover:bg-indigo-50 hover:text-[#5d5efc] hover:border-indigo-200"
-                                    }`}
-                                    title={allMeshesHidden ? "Show all meshes" : "Hide all meshes"}
-                                >
-                                    <Icon
-                                        icon={allMeshesHidden ? "ph:eye-closed-bold" : "ph:eye-bold"}
-                                        width="0.64vw"
-                                        height="0.64vw"
-                                    />
-                                    <span>{allMeshesHidden ? "Show All" : "Hide All"}</span>
-                                </button>
-                            </div>
-                        </div>
-
                         {/* --- SCROLLABLE HIERARCHY TREE (OBJECT FOLDERS WITH MESHES INSIDE) --- */}
                         <div className="flex-1 overflow-y-auto overflow-x-hidden px-[0.45vw] pb-[0.2vw] mt-[0.1vw] w-full [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
                             <div className="space-y-[0.03vw] w-full min-w-0">
@@ -1012,12 +886,15 @@ export default function MaterialList({
                                         selectedMaterial={selectedMaterial}
                                         onSelect={onSelect}
                                         hiddenMaterials={hiddenMaterials}
-                                        onToggleVisibility={handleToggleVisibility}
+                                        xrayMaterials={xrayMaterials}
+                                        onToggleVisibility={onToggleVisibility}
+                                        onToggleXray={onToggleXray}
                                         onDelete={handleDeleteNode}
                                         onRename={onRenameMaterial}
                                         searchTerm={searchTerm}
                                         forceExpand={forceExpand}
                                         modelName={safeModelName}
+                                        modelId={modelId}
                                     />
                                 ))}
                             </div>

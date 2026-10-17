@@ -14,6 +14,8 @@ import {
 } from '../../../utils/pdfUtils';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import { useAuth } from '../../../context/AuthContext';
+import { validateStorageBeforeUpload, formatStorageMB } from '../../../utils/storageValidation';
+import { checkIsLegacyOfficeDocument, getLegacyConverterUrl } from './extractor/officeExtractor';
 
 export const useDocumentImport = ({
   pages,
@@ -65,6 +67,25 @@ export const useDocumentImport = ({
       return;
     }
 
+    // Check for legacy binary 97-2003 Office formats (.doc, .ppt)
+    const legacyCheck = await checkIsLegacyOfficeDocument(file);
+    if (legacyCheck.isLegacy) {
+      setAlertState({
+        isOpen: true,
+        title: 'Legacy Document Format',
+        message: `"${file.name}" is in the older Word/PowerPoint 97-2003 binary format (${legacyCheck.ext}).\n\nFor maximum layout fidelity and security, please convert it to modern ${legacyCheck.type === 'ppt' ? '.pptx' : '.docx'} format using a free online converter, then try again.`,
+        type: 'warning',
+        confirmText: `Convert to ${legacyCheck.type === 'ppt' ? 'PPTX' : 'DOCX'} Online`,
+        showCancel: true,
+        cancelText: 'Close',
+        onConfirm: () => {
+          setAlertState(prev => ({ ...prev, isOpen: false }));
+          window.open(getLegacyConverterUrl(legacyCheck.type), '_blank', 'noopener,noreferrer');
+        }
+      });
+      return;
+    }
+
     e.target.value = '';
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -73,6 +94,29 @@ export const useDocumentImport = ({
     const emailId = user?.emailId || user?.email;
 
     if (!emailId || !v_id) return;
+
+    // Validate actual storage space occupied by user before starting conversion
+    const validation = await validateStorageBeforeUpload(emailId, file.size);
+    if (validation.exceeds) {
+      setAlertState({
+        isOpen: true,
+        title: 'Storage Space Exceeded',
+        message: `Uploading this document requires ${formatStorageMB(file.size)}, but your account only has ${formatStorageMB(validation.available)} storage remaining (${formatStorageMB(validation.used)} of ${formatStorageMB(validation.total)} used).\n\nNo more space is available. Please upgrade your plan to increase your storage quota.`,
+        type: 'error',
+        confirmText: 'Upgrade Plan',
+        showCancel: true,
+        cancelText: 'Cancel',
+        onConfirm: () => {
+          setAlertState(prev => ({ ...prev, isOpen: false }));
+          try {
+            localStorage.removeItem('hide_upgrade_card');
+            sessionStorage.removeItem('hide_upgrade_card');
+          } catch (e) {}
+          window.location.href = '/settings/profile';
+        }
+      });
+      return;
+    }
 
     const docType = getOfficeDocType(file.name);
     const docLabel = docType === 'powerpoint' ? 'PowerPoint presentation' : (docType === 'word' ? 'Word document' : 'PDF');
@@ -245,6 +289,25 @@ export const useDocumentImport = ({
       return;
     }
 
+    // Check for legacy binary 97-2003 Office formats (.doc, .ppt)
+    const legacyCheck = await checkIsLegacyOfficeDocument(file);
+    if (legacyCheck.isLegacy) {
+      setAlertState({
+        isOpen: true,
+        title: 'Legacy Document Format',
+        message: `"${file.name}" is in the older Word/PowerPoint 97-2003 binary format (${legacyCheck.ext}).\n\nFor maximum layout fidelity and security, please convert it to modern ${legacyCheck.type === 'ppt' ? '.pptx' : '.docx'} format using a free online converter, then try again.`,
+        type: 'warning',
+        confirmText: `Convert to ${legacyCheck.type === 'ppt' ? 'PPTX' : 'DOCX'} Online`,
+        showCancel: true,
+        cancelText: 'Close',
+        onConfirm: () => {
+          setAlertState(prev => ({ ...prev, isOpen: false }));
+          window.open(getLegacyConverterUrl(legacyCheck.type), '_blank', 'noopener,noreferrer');
+        }
+      });
+      return;
+    }
+
     // Reset input
     e.target.value = '';
 
@@ -335,7 +398,16 @@ export const useDocumentImport = ({
 
     try {
       const remainingSlots = Infinity;
-      const images = await convertPdfWithInkscape(file, remainingSlots);
+      const images = await convertPdfWithInkscape(file, remainingSlots, null, (curr, total, pct) => {
+        setPdfProcessing(prev => ({
+          ...(prev || {}),
+          current: curr,
+          total: total,
+          pageCount: total,
+          percent: pct,
+          message: `Extracting page ${curr} of ${total} (${pct}%)...`
+        }));
+      });
       if (!images || images.length === 0) return;
 
       // Double-check internal uniformity of the rendered images
@@ -386,7 +458,14 @@ export const useDocumentImport = ({
         });
 
         completed++;
-        setPdfProcessing({ current: completed, total: images.length, message: `Processing ${unitName} ${completed} of ${images.length}...`, fileName: file.name });
+        setPdfProcessing({
+          current: completed,
+          total: images.length,
+          percent: Math.round((completed / images.length) * 100),
+          message: `Importing ${unitName} ${completed} of ${images.length}...`,
+          fileName: file.name,
+          stage: completed === images.length ? 'done' : 'saving'
+        });
 
         const existingNames = pages.map(p => p.name || "");
         const pdfNums = existingNames

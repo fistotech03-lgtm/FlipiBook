@@ -62,6 +62,14 @@ exports.convertOfficeToPdfHandler = async (req, res) => {
   );
 
   try {
+    const officeStatus = await checkLibreOfficeStatus();
+    if (!officeStatus.available) {
+      return res.status(400).json({
+        success: false,
+        message: 'Server-side LibreOffice has been decommissioned. Modern Word (.docx) and PowerPoint (.pptx) documents are converted directly in the browser via client-side canvas engine.'
+      });
+    }
+
     await convertOfficeToPdf(tempDocPath, tempPdfPath);
 
     if (!fs.existsSync(tempPdfPath) || fs.statSync(tempPdfPath).size === 0) {
@@ -281,6 +289,10 @@ exports.inspectDocumentHandler = async (req, res) => {
 /**
  * POST /api/flipbook/convert-pdf-inkscape
  * POST /api/pdf-editor/convert-pdf-inkscape
+ * Legacy endpoint maintained for backwards-compatibility:
+ * Office docs (.doc, .docx, .ppt, .pptx) are converted via LibreOffice.
+ * PDF page counts & dimensions are extracted using pdf-lib.
+ * Actual vector rendering is handled by MuPDF in the client.
  */
 exports.convertPdfInkscapeHandler = async (req, res) => {
   let files = req.files || (req.file ? [req.file] : []);
@@ -288,7 +300,7 @@ exports.convertPdfInkscapeHandler = async (req, res) => {
     return res.status(400).json({ success: false, message: 'No PDF or document file uploaded' });
   }
 
-  // Deduplicate in case client sent the same file under multiple field names (e.g. 'pdf' and 'pdfs')
+  // Deduplicate files
   const seenFiles = new Set();
   files = files.filter((f) => {
     const key = `${f.originalname}_${f.size}`;
@@ -306,9 +318,7 @@ exports.convertPdfInkscapeHandler = async (req, res) => {
   const intermediatePdfs = [];
 
   try {
-    const maxPages = req.body.maxPages ? parseInt(req.body.maxPages, 10) : Infinity;
-
-    // If any file is a Word or PowerPoint document, convert it to PDF first
+    // If any file is a Word or PowerPoint document, convert it to PDF via LibreOffice
     const processedPdfPaths = [];
     for (const p of tempFilePaths) {
       if (isOfficeDocument(p)) {
@@ -321,18 +331,32 @@ exports.convertPdfInkscapeHandler = async (req, res) => {
       }
     }
 
-    const result = await convertPdfWithInkscape(processedPdfPaths, { maxPages });
+    const maxPages = req.body.maxPages ? parseInt(req.body.maxPages, 10) : Infinity;
 
-    return res.json({
-      success: true,
-      pages: result.pages,
-      width: result.width,
-      height: result.height,
-      isUniform: result.isUniform,
-      totalPages: result.totalPages
+    // If Inkscape CLI is available on the machine (e.g., Docker container or installed locally), use it
+    const inkscapeStatus = await checkInkscapeVersion();
+    if (inkscapeStatus.available) {
+      console.log('[PDF Editor Service] Executing Inkscape CLI vector conversion...');
+      const result = await convertPdfWithInkscape(processedPdfPaths, { maxPages });
+      return res.json({
+        success: true,
+        engine: 'inkscape',
+        pages: result.pages,
+        width: result.width,
+        height: result.height,
+        isUniform: result.isUniform,
+        totalPages: result.totalPages
+      });
+    }
+
+    console.log('[PDF Editor Service] Inkscape CLI not present on host; intimating client to use pure vector MuPDF engine.');
+    return res.status(503).json({
+      success: false,
+      engine: 'none',
+      message: 'Inkscape CLI not present on host; client-side vector extraction will be used.'
     });
   } catch (conversionErr) {
-    console.error('[PDF Editor Service] Inkscape / Document conversion error:', conversionErr);
+    console.error('[PDF Editor Service] Document conversion error:', conversionErr);
     const rawMsg = conversionErr.message || '';
     const isCorrupt = /corrupt|cannot be read|not be loaded|damaged|password|format error|failed to parse|invalid pdf|syntax error|unexpected end|end-of-file|could not be opened|command failed/i.test(rawMsg);
     const firstFileName = files[0]?.originalname ? ` "${files[0].originalname}"` : '';
@@ -341,7 +365,7 @@ exports.convertPdfInkscapeHandler = async (req, res) => {
       isCorrupted: isCorrupt,
       message: isCorrupt
         ? (rawMsg.includes('is corrupted') ? rawMsg : `Your file${firstFileName} is corrupted, unreadable, or password-protected. Please check your document and try again.`)
-        : (rawMsg || 'Failed to convert document with Inkscape')
+        : (rawMsg || 'Failed to process document')
     });
   } finally {
     tempFilePaths.forEach((p) => {
@@ -366,6 +390,14 @@ exports.exportVectorPdfHandler = async (req, res) => {
     const { pages, bookName } = req.body;
     if (!pages || !Array.isArray(pages) || pages.length === 0) {
       return res.status(400).json({ success: false, message: 'No SVG pages provided for PDF export' });
+    }
+
+    const inkscapeStatus = await checkInkscapeVersion();
+    if (!inkscapeStatus.available) {
+      return res.status(501).json({
+        success: false,
+        message: 'Inkscape is not available on the host. Please use client-side PDF export.'
+      });
     }
 
     const sanitizedBookName = (bookName || 'flipbook').replace(/[^a-zA-Z0-9_-]/g, '_');

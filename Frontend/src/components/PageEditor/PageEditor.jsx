@@ -1,23 +1,34 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useParams, useOutletContext, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { savePageEditorState, getPageEditorState, clearEditorState, ensureCleanBook } from '../../utils/dbUtils';
-import { useAuth } from '../../context/AuthContext';
-import Layer from './panels/Layer';
-import MainEditor from './MainEditor';
-import RightSidebar from './panels/RightSidebar';
-import TooltipCustomization from './modals/TooltipCustomization';
-import TemplateModal from './modals/TemplateModal';
-import FlipbookPreview from './modals/FlipbookPreview';
-import AlertModal from '../AlertModal';
-import PdfProcessingLoader from '../PdfProcessingLoader';
-import PopupTemplateSelection from './modals/PopupTemplateSelection';
-import Model3DPreviewModal from './modals/Interaction3DPreview';
-import PasswordProtectModal from './modals/PasswordProtectModal';
-import pageCacheManager from './utils/PageCacheManager';
-import { useToast } from '../CustomToast';
-import { getSupabaseBaseUrl, resolveUploadsPath, setGlobalProjectBaseUrl } from '../../utils/assetUtils';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
+import {
+  useLocation,
+  useParams,
+  useOutletContext,
+  useNavigate,
+} from "react-router-dom";
+import axios from "axios";
+import { saveToDB, ensureCleanBook } from "../../utils/dbUtils";
+import Layer from "./panels/Layer";
+import MainEditor from "./MainEditor";
+import RightSidebar from "./panels/RightSidebar";
+import TooltipCustomization from "./modals/TooltipCustomization";
+import TemplateModal from "./modals/TemplateModal";
+const FlipbookPreview = React.lazy(() => import("./modals/FlipbookPreview"));
+import AlertModal from "../AlertModal";
+import PdfProcessingLoader from "../PdfProcessingLoader";
+import PopupTemplateSelection from "./modals/PopupTemplateSelection";
+import Model3DPreviewModal from "./modals/Interaction3DPreview";
+import PasswordProtectModal from "./modals/PasswordProtectModal";
+import pageCacheManager from "./utils/PageCacheManager";
+import { useToast } from "../CustomToast";
+import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   parseLayersFromSVG,
@@ -108,32 +119,6 @@ const PageEditor = () => {
   const [currentFrameId, setCurrentFrameId] = useState(null);
   const [activeMainTool, setActiveMainTool] = useState("select");
   const [activeTopTool, setActiveTopTool] = useState("editor");
-
-  const sanitizedEmail = (user?.emailId || user?.email || "").replace(/[@.]/g, "_");
-  const actualFolderName = resolvePhysicalFolder(
-    currentBook?.folderName || folder || location.state?.folderName,
-  );
-  const bookName =
-    currentBook?.flipbookName ||
-    location.state?.flipbookName ||
-    "Untitled Flipbook";
-  const userFolder =
-    currentBook?.userID ||
-    user?.user_id ||
-    user?.userID ||
-    sanitizedEmail ||
-    "FLIPI0002";
-
-  const projectBaseUrl = useMemo(
-    () => getSupabaseBaseUrl(userFolder, actualFolderName, bookName),
-    [userFolder, actualFolderName, bookName],
-  );
-
-  useEffect(() => {
-    if (projectBaseUrl) {
-      setGlobalProjectBaseUrl(projectBaseUrl);
-    }
-  }, [projectBaseUrl]);
 
   const [pdfProcessing, setPdfProcessing] = useState(null);
   const [alertState, setAlertState] = useState({
@@ -655,7 +640,7 @@ const PageEditor = () => {
 
     if (pages && pages.length > 0) {
       try {
-        await savePageEditorState({
+        await saveToDB("editor_autosave", {
           v_id: v_id,
           pages: popupEditContext ? popupEditContext.backup.pages : pages,
           activePageIndex: popupEditContext
@@ -754,7 +739,7 @@ const PageEditor = () => {
   // Sync state to IndexedDB for Preview / Customized Editor
   useEffect(() => {
     if (pages.length > 0 && !isLoading) {
-      savePageEditorState({
+      saveToDB("editor_autosave", {
         v_id: v_id,
         pages: popupEditContext ? popupEditContext.backup.pages : pages,
         activePageIndex: popupEditContext
@@ -1560,7 +1545,6 @@ const PageEditor = () => {
                 ? popupEditContext.dimensions || { width: 800, height: 600 }
                 : getFlipbookDimensions()
             }
-            projectBaseUrl={projectBaseUrl}
           />
 
           {(activeTopTool === "interaction" ||
@@ -1706,7 +1690,6 @@ const PageEditor = () => {
             location.state?.flipbookName ||
             "Untitled Flipbook"
           }
-          projectBaseUrl={projectBaseUrl}
         />
 
         {showTemplateModal && (

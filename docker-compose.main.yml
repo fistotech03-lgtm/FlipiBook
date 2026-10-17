@@ -43,7 +43,6 @@ services:
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
       - INKSCAPE_PATH=/usr/bin/inkscape
-      - LIBREOFFICE_PATH=/usr/bin/soffice
     env_file:
       - path: ./Backend/.env
         required: false

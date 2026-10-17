@@ -1,6 +1,11 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import { verifyToken, clearSession } from "../../utils/authUtils";
+import {
+  verifyToken,
+  getInitialUser,
+  setClientUserCookie,
+  clearSession,
+} from "../../utils/authUtils";
 import { prefetchMyFlipbooks } from "../../queryClient";
 
 export const checkAuth = createAsyncThunk(
@@ -27,12 +32,15 @@ export const checkAuth = createAsyncThunk(
       }
       return { isAuthenticated: false, user: null };
     } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
+      const isAuthFailure =
+        err.response?.status === 401 || err.response?.status === 403;
+      if (isAuthFailure) {
         clearSession();
       }
-      return rejectWithValue(
-        err.response?.data?.message || "Verification failed",
-      );
+      return rejectWithValue({
+        message: err.response?.data?.message || "Verification failed",
+        isAuthFailure,
+      });
     }
   },
 );
@@ -53,10 +61,14 @@ export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
   return null;
 });
 
+const initialUser = getInitialUser();
+const initialIsAuth = verifyToken();
+
 const initialState = {
-  isAuthenticated: verifyToken(),
-  user: null,
-  isLoading: true,
+  isAuthenticated: initialIsAuth,
+  user: initialUser,
+  // If user profile is already present from cookie, isLoading is false immediately (0ms wait)
+  isLoading: initialIsAuth && !initialUser,
   isAuthModalOpen: false,
   authModalMode: "signin",
   authRedirectPath: null,
@@ -69,6 +81,11 @@ const authSlice = createSlice({
     setUser: (state, action) => {
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
+      if (action.payload) {
+        setClientUserCookie(action.payload);
+      } else {
+        clearSession();
+      }
     },
     setIsAuthenticated: (state, action) => {
       state.isAuthenticated = action.payload;
@@ -90,22 +107,33 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthModalOpen = false;
       state.authRedirectPath = null;
+      clearSession();
     },
   },
   extraReducers: (builder) => {
     builder
       // checkAuth
       .addCase(checkAuth.pending, (state) => {
-        state.isLoading = true;
+        // If user already loaded from cookie, perform re-verification invisibly in background
+        if (!state.user) {
+          state.isLoading = true;
+        }
       })
       .addCase(checkAuth.fulfilled, (state, action) => {
         state.isAuthenticated = action.payload.isAuthenticated;
         state.user = action.payload.user;
         state.isLoading = false;
+        if (action.payload.user) {
+          setClientUserCookie(action.payload.user);
+        }
       })
-      .addCase(checkAuth.rejected, (state) => {
-        state.isAuthenticated = false;
-        state.user = null;
+      .addCase(checkAuth.rejected, (state, action) => {
+        // Only invalidate if the backend explicitly rejected authentication (e.g. 401/403)
+        // Never wipe session on temporary server lags or 500 startup buffering errors
+        if (action.payload?.isAuthFailure) {
+          state.isAuthenticated = false;
+          state.user = null;
+        }
         state.isLoading = false;
       })
       // logoutUser

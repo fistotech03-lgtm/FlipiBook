@@ -88,11 +88,22 @@ const CustomizedEditor = () => {
   const { setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, setHasUnsavedChanges, hasUnsavedChanges, triggerSaveSuccess, isAutoSaveEnabled, currentBook, setCurrentBook, activeDevice, setActiveDevice } = useOutletContext() || {};
   const { user } = useAuth();
 
-  const [bookName, setBookName] = useState(() => currentBook?.flipbookName || 'Name of the Book');
+  const [bookName, setBookName] = useState(() => location.state?.flipbookName || currentBook?.flipbookName || 'Name of the Book');
   const [activeSubView, setActiveSubView] = useState(null);
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [pages, setPages] = useState([]);
+  const [pages, setPages] = useState(() => {
+    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
+      return location.state.pages.map((p, i) => ({
+        id: p.id !== undefined ? p.id : i,
+        name: p.pageName || p.name || `Page ${i + 1}`,
+        html: p.content || p.html || '',
+        content: p.content || p.html || '',
+        isHidden: Boolean(p.isHidden || p.hide === 1)
+      }));
+    }
+    return [];
+  });
   const [showPreview, setShowPreview] = useState(false);
   const [devicePages, setDevicePages] = useState({ Desktop: 0, Tablet: 0, Mobile: 0 });
   const targetPage = devicePages[activeDevice || 'Desktop'] || 0;
@@ -105,7 +116,9 @@ const CustomizedEditor = () => {
   const [projectBaseUrl, setProjectBaseUrl] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(() => {
+    return Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
+  });
 
   // Reset collapsed state whenever a new sub-view is selected
   useEffect(() => {
@@ -153,8 +166,8 @@ const CustomizedEditor = () => {
 
   // Sync with global flipbook name from context (Template Editor sync)
   useEffect(() => {
-    if (currentBook?.flipbookName && currentBook.flipbookName !== bookName) {
-      setBookName(currentBook.flipbookName || 'Name of the Book');
+    if (currentBook?.flipbookName) {
+      setBookName(prev => (prev === currentBook.flipbookName ? prev : currentBook.flipbookName));
     }
   }, [currentBook?.flipbookName]);
 
@@ -629,7 +642,7 @@ const CustomizedEditor = () => {
 
   // Save Appearance Logic with Debounce
   useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
+    if (!v_id || !isDataLoaded || initialLoadRef.current) return;
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
@@ -670,7 +683,7 @@ const CustomizedEditor = () => {
 
   // Save Setup Logic with Debounce
   useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
+    if (!v_id || !isDataLoaded || initialLoadRef.current) return;
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
@@ -711,7 +724,7 @@ const CustomizedEditor = () => {
 
   // Save Branding Logic with Debounce
   useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
+    if (!v_id || !isDataLoaded || initialLoadRef.current) return;
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
@@ -1258,9 +1271,10 @@ const CustomizedEditor = () => {
     }
   }, [setCurrentBook, folder, v_id, bookName, shareSettings?.shareId, visibilitySettings?.access, visibilitySettings?.type, visibilitySettings?.shareId]);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const hasInstantPages = Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
+  const [isLoading, setIsLoading] = useState(() => !hasInstantPages);
+  const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(() => hasInstantPages);
+  const [loadingProgress, setLoadingProgress] = useState(() => hasInstantPages ? 100 : 0);
 
   useEffect(() => {
     let interval;
@@ -1374,7 +1388,7 @@ const CustomizedEditor = () => {
           if (cached.bookmarks) setBookmarks(cached.bookmarks);
           if (cached.notes) setNotes(cached.notes);
           if (cached.bookName && (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book')) {
-            setBookName(cached.bookName);
+            setBookName(prev => (prev === cached.bookName ? prev : cached.bookName));
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
             setPages(cached.pages);
@@ -1405,7 +1419,7 @@ const CustomizedEditor = () => {
             const actualFolder = (folder && folder !== 'Recent Book') ? folder : 'My_Flipbooks';
             const autoBaseUrl = getSupabaseBaseUrl(userFolder, actualFolder, data.pageName || bookName);
 
-            setPages(data.pages.map((p, i) => {
+            const mappedNewPages = data.pages.map((p, i) => {
               let rawHTML = p.html || p.content || '';
               if (autoBaseUrl) {
                 if (rawHTML.includes('../assets/')) {
@@ -1428,9 +1442,22 @@ const CustomizedEditor = () => {
                 content: rawHTML,
                 isHidden: p.isHidden || p.hide === 1
               };
-            }));
+            });
+
+            setPages(prevPages => {
+              if (prevPages && prevPages.length === mappedNewPages.length) {
+                const isIdentical = prevPages.every((p, idx) => {
+                  const np = mappedNewPages[idx];
+                  return p.id === np.id && (p.html || p.content) === (np.html || np.content) && p.isHidden === np.isHidden;
+                });
+                if (isIdentical) {
+                  return prevPages;
+                }
+              }
+              return mappedNewPages;
+            });
             if (data.pageName && (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book')) {
-              setBookName(data.pageName);
+              setBookName(prev => (prev === data.pageName ? prev : data.pageName));
             }
             if (!page) setTargetPage(0);
           }
@@ -1476,21 +1503,23 @@ const CustomizedEditor = () => {
             // ONLY overwrite pages if we DON'T have an autosave
             const fetchedName = res.data.meta?.flipbookName || res.data.name || location.state?.flipbookName || decodeURIComponent(v_id);
             if (fetchedName && fetchedName !== 'Name of the Book') {
-              setBookName(fetchedName);
+              setBookName(prev => (prev === fetchedName ? prev : fetchedName));
               lastLoadedBookNameRef.current = fetchedName;
             }
-              if (res.data.pages) {
-                const mappedPages = await Promise.all(res.data.pages.map(async (p, i) => {
+            if (res.data.pages) {
+              setPages(prevPages => {
+                if (prevPages && prevPages.length > 0) {
+                  return prevPages;
+                }
+                return res.data.pages.map((p, i) => {
                   let rawHTML = p.html || p.content || '';
 
                   if (!rawHTML || typeof rawHTML !== 'string' || rawHTML.trim() === '') {
                     const metaW = res.data.meta?.width || res.data.settings?.width || location.state?.width || currentBook?.width || 210;
                     const metaH = res.data.meta?.height || res.data.settings?.height || location.state?.height || currentBook?.height || 297;
-                    const defaultData = createDefaultPageData(p.name || `Page ${i + 1}`, metaW, metaH);
-                    rawHTML = defaultData;
+                    rawHTML = createDefaultPageData(p.name || `Page ${i + 1}`, metaW, metaH);
                   }
 
-                  // Heal relative asset paths: ../assets/, ./assets/, nullassets/, or assets/
                   if (pBaseUrl) {
                     if (rawHTML.includes('../assets/')) {
                       rawHTML = rawHTML.split('../assets/').join(`${pBaseUrl}assets/`);
@@ -1504,7 +1533,6 @@ const CustomizedEditor = () => {
                     rawHTML = rawHTML.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${pBaseUrl}assets/`);
                   }
 
-                  // Rewrite any local /storage/ or /uploads/ paths to absolute backend URL
                   rawHTML = rewriteHtmlUploads(rawHTML);
 
                   return {
@@ -1514,9 +1542,9 @@ const CustomizedEditor = () => {
                     html: rawHTML,
                     isHidden: p.hide === 1 || p.isHidden
                   };
-                }));
-                setPages(mappedPages);
-              }
+                });
+              });
+            }
 
             // ALWAYS load settings directly from backend
             const cs = res.data.Customized_Settings || res.data.settings || {};
@@ -1746,7 +1774,8 @@ const CustomizedEditor = () => {
         } catch (err) {
           console.error("CustomizedEditor: Failed to fetch flipbook", err);
           if (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book') {
-            setBookName(location.state?.flipbookName || decodeURIComponent(v_id) || 'Name of the Book');
+            const fallbackName = location.state?.flipbookName || decodeURIComponent(v_id) || 'Name of the Book';
+            setBookName(prev => (prev === fallbackName ? prev : fallbackName));
           }
         } finally {
           setIsDataLoadingComplete(true);
@@ -1992,73 +2021,92 @@ const CustomizedEditor = () => {
 
         {/* Main Preview Area */}
         <div className="flex-1 min-w-0 flex flex-col relative z-0 overflow-hidden">
-          {/* Loading Overlay Covers the Preview Area Fully */}
+          {/* Modern Flipbook Skeleton Loader */}
           {isLoading && (
             <div 
-              className="absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300"
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
               style={{
-                backgroundColor: preloaderSettings?.bgColor || '#2D2F33',
-                color: preloaderSettings?.textColor || '#ffffff'
+                backgroundColor: '#1E1F24',
+                color: '#ffffff'
               }}
             >
-              <div className="flex flex-col items-center gap-4">
-                {preloaderSettings?.layout !== 'spinner' && preloaderSettings?.logo && (
-                  <img src={preloaderSettings.logo} alt="Preloader Logo" className="h-[60px] object-contain" />
-                )}
-                {preloaderSettings?.layout === 'bar' ? (
-                  <div className="flex flex-col items-center gap-2 w-[15vw]">
-                    <div className="w-full bg-gray-200/20 h-[0.5vw] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full animate-pulse rounded-full" 
-                        style={{ 
-                          width: `${loadingProgress}%`, 
-                          backgroundColor: preloaderSettings?.spinnerColor || '#3B3C8A' 
-                        }}
-                      ></div>
+              <style>{`
+                @keyframes skeletonShimmer {
+                  0% { transform: translateX(-100%); }
+                  100% { transform: translateX(100%); }
+                }
+                .skeleton-shimmer {
+                  position: absolute;
+                  inset: 0;
+                  transform: translateX(-100%);
+                  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+                  animation: skeletonShimmer 2s infinite ease-in-out;
+                }
+              `}</style>
+              
+              <div className="w-full max-w-[800px] px-8 flex flex-col items-center justify-center gap-6">
+                {/* Top Status Badge */}
+                <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 shadow-sm backdrop-blur-md">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
+                  <span className="text-[13px] font-medium tracking-wide text-gray-200">
+                    Preparing Flipbook Preview... {loadingProgress > 0 && loadingProgress < 100 ? `${loadingProgress}%` : ''}
+                  </span>
+                </div>
+
+                {/* 2-Page Open Book Skeleton Spread */}
+                <div className="relative w-full aspect-[16/10] max-h-[460px] flex rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#25282F]">
+                  {/* Left Page Skeleton */}
+                  <div className="flex-1 p-8 border-r border-black/40 flex flex-col justify-between bg-gradient-to-br from-white/10 via-white/5 to-transparent relative overflow-hidden">
+                    <div className="skeleton-shimmer" />
+                    <div className="space-y-4">
+                      <div className="h-6 w-3/4 rounded-md bg-white/20" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-5/6 rounded bg-white/10" />
+                      <div className="h-3 w-4/6 rounded bg-white/10" />
                     </div>
-                    {preloaderSettings?.showPercentage && (
-                      <span className="text-[0.85vw] font-semibold">{loadingProgress}%</span>
-                    )}
-                  </div>
-                ) : preloaderSettings?.layout === 'dots' ? (
-                  <div className="flex flex-col items-center gap-[0.4vw] py-[0.5vw]">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-[0.6vw] h-[0.6vw] rounded-full animate-bounce [animation-delay:-0.3s]" style={{ backgroundColor: preloaderSettings?.spinnerColor || '#3B3C8A' }}></div>
-                      <div className="w-[0.6vw] h-[0.6vw] rounded-full animate-bounce [animation-delay:-0.15s]" style={{ backgroundColor: preloaderSettings?.spinnerColor || '#3B3C8A' }}></div>
-                      <div className="w-[0.6vw] h-[0.6vw] rounded-full animate-bounce" style={{ backgroundColor: preloaderSettings?.spinnerColor || '#3B3C8A' }}></div>
+                    <div className="w-full h-28 rounded-lg bg-white/10 border border-white/5 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-white/10" />
                     </div>
-                    {preloaderSettings?.showPercentage && (
-                      <span className="text-[0.85vw] font-semibold">{loadingProgress}%</span>
-                    )}
-                  </div>
-                ) : (
-                  // circular spinner
-                  <div className="relative flex flex-col items-center justify-center">
-                    <div className="relative flex items-center justify-center">
-                      <div 
-                        className={`${preloaderSettings?.logo ? 'w-[80px] h-[80px]' : 'w-[3vw] h-[3vw]'} border-[3px] border-t-transparent rounded-full animate-spin`}
-                        style={{ 
-                          borderColor: `${preloaderSettings?.spinnerColor || '#3B3C8A'} ${preloaderSettings?.spinnerColor || '#3B3C8A'} ${preloaderSettings?.spinnerColor || '#3B3C8A'} transparent` 
-                        }}
-                      ></div>
-                      {preloaderSettings?.logo && (
-                        <img src={preloaderSettings.logo} alt="Preloader Logo" className="absolute h-[45px] max-w-[60px] object-contain" />
-                      )}
-                      {preloaderSettings?.showPercentage && !preloaderSettings?.logo && (
-                        <span className="absolute text-[0.75vw] font-bold">{loadingProgress}%</span>
-                      )}
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-2.5 w-16 rounded bg-white/10" />
+                      <div className="h-3 w-6 rounded bg-white/15" />
                     </div>
-                    {preloaderSettings?.showPercentage && preloaderSettings?.logo && (
-                      <span className="text-[0.75vw] font-bold mt-2">{loadingProgress}%</span>
-                    )}
                   </div>
-                )}
-                <p 
-                  className="font-semibold text-[0.9vw]"
-                  style={{ fontFamily: preloaderSettings?.font || 'Poppins' }}
-                >
-                  {preloaderSettings?.text || 'Loading Modal Please Wait....'}
-                </p>
+
+                  {/* Center Spine Crease */}
+                  <div className="w-[3px] bg-gradient-to-b from-black/50 via-black/80 to-black/50 shadow-inner z-10" />
+
+                  {/* Right Page Skeleton */}
+                  <div className="flex-1 p-8 flex flex-col justify-between bg-gradient-to-bl from-white/10 via-white/5 to-transparent relative overflow-hidden">
+                    <div className="skeleton-shimmer" style={{ animationDelay: '0.4s' }} />
+                    <div className="space-y-3.5">
+                      <div className="h-5 w-1/2 rounded bg-white/15 mb-4" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-3/4 rounded bg-white/10" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-5/6 rounded bg-white/10" />
+                      <div className="h-3 w-4/6 rounded bg-white/10" />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-3 w-6 rounded bg-white/15" />
+                      <div className="h-2.5 w-16 rounded bg-white/10" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Floating Toolbar Skeleton */}
+                <div className="flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow-lg">
+                  <div className="w-6 h-6 rounded-full bg-white/20" />
+                  <div className="w-16 h-4 rounded-full bg-white/15" />
+                  <div className="w-6 h-6 rounded-full bg-white/20" />
+                  <div className="w-[1px] h-4 bg-white/20 mx-1" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                </div>
               </div>
             </div>
           )}

@@ -516,6 +516,9 @@ const PreviewArea = React.memo(({
 
     const isTurnJs = !bookAppearanceSettings?.hardCover;
     const [actualPhysicalZoom, setActualPhysicalZoom] = useState(1);
+    // Page dimensions (A4 ratio) dynamically scaled
+    const [WIDTH, setWIDTH] = useState(400);
+    const [HEIGHT, setHEIGHT] = useState(566);
     const currentZoom = useMemo(() => manualZoom * (activeDevice === 'Desktop' ? 1 : fitScale), [manualZoom, fitScale, activeDevice]);
 
     useEffect(() => {
@@ -632,62 +635,73 @@ const PreviewArea = React.memo(({
             return;
         }
 
+        let rafId = null;
+
         const computeFitScale = () => {
             const screen = screenRef.current;
             if (!screen) return;
 
             const { clientWidth, clientHeight } = screen;
+            if (!clientWidth || !clientHeight) return;
+
             const isCurrentlyFullscreen = (document.fullscreenElement === containerRef.current) || isFullscreen;
 
-            const wFactor = isCurrentlyFullscreen ? 0.70 : 0.70;
-            const hFactor = isCurrentlyFullscreen ? 0.80 : 0.80;
+            const wFactor = 0.70;
+            const hFactor = 0.80;
 
             const availableW = clientWidth * wFactor;
             const availableH = clientHeight * hFactor;
 
-            // Calculate effective zoom (manualZoom only, interactionZoom is handled via CSS transform)
-            // The user wants NO CSS scaling for manual zoom, meaning we apply the scale directly to the physical dimensions
             let baseZoom = manualZoom;
-
-            // In fullscreen we might have a scaling factor applied externally
-            if (isCurrentlyFullscreen) {
-                baseZoom = baseZoom;
-            }
 
             // Use the template editor height and width ratio
             const availablePageW = isSinglePage ? availableW : availableW / 2;
             const availablePageH = availableH;
 
-            const scaleX = availablePageW / baseDimensions.width;
-            const scaleY = availablePageH / baseDimensions.height;
+            const baseW = (baseDimensions && Number.isFinite(baseDimensions.width) && baseDimensions.width > 0) ? baseDimensions.width : 210;
+            const baseH = (baseDimensions && Number.isFinite(baseDimensions.height) && baseDimensions.height > 0) ? baseDimensions.height : 297;
+
+            const scaleX = availablePageW / baseW;
+            const scaleY = availablePageH / baseH;
             const scale = Math.min(scaleX, scaleY);
 
-            const physicalZoom = baseZoom;
+            const physicalZoom = Number.isFinite(baseZoom) && baseZoom > 0 ? baseZoom : 1;
 
-            setWIDTH(Math.round(baseDimensions.width * scale * physicalZoom));
-            setHEIGHT(Math.round(baseDimensions.height * scale * physicalZoom));
-            setActualPhysicalZoom(physicalZoom);
+            if (Number.isFinite(scale) && scale > 0) {
+                const newW = Math.round(baseW * scale * physicalZoom);
+                const newH = Math.round(baseH * scale * physicalZoom);
+                if (newW > 10 && newH > 10) {
+                    setWIDTH(prev => (Math.abs(prev - newW) >= 2 ? newW : prev));
+                    setHEIGHT(prev => (Math.abs(prev - newH) >= 2 ? newH : prev));
+                    setActualPhysicalZoom(prev => (Math.abs(prev - physicalZoom) > 0.01 ? physicalZoom : prev));
+                }
+            }
         };
 
-        const observer = new ResizeObserver(computeFitScale);
+        const scheduleCompute = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(computeFitScale);
+        };
+
+        const observer = new ResizeObserver(scheduleCompute);
         observer.observe(screenRef.current);
 
-        // Re-run immediately on fullscreen change (before the ResizeObserver fires)
+        // Re-run immediately on fullscreen change
         const onFSChange = () => {
-            // Use rAF to let the browser finish reflow after fullscreen transition
-            requestAnimationFrame(computeFitScale);
+            scheduleCompute();
         };
         document.addEventListener('fullscreenchange', onFSChange);
         document.addEventListener('webkitfullscreenchange', onFSChange);
 
-        computeFitScale();
+        scheduleCompute();
 
         return () => {
+            if (rafId) cancelAnimationFrame(rafId);
             observer.disconnect();
             document.removeEventListener('fullscreenchange', onFSChange);
             document.removeEventListener('webkitfullscreenchange', onFSChange);
         };
-    }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions, isTurnJs]);
+    }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions?.width, baseDimensions?.height, isTurnJs]);
 
     const setCurrentZoom = useCallback((val) => {
         if (typeof val === 'function') {
@@ -701,10 +715,6 @@ const PreviewArea = React.memo(({
     const [showNotesMenu, setShowNotesMenu] = useState(false);
     const [isAutoFlipping, setIsAutoFlipping] = useState(false);
     const [countdown, setCountdown] = useState(null);
-
-    // Page dimensions (A4 ratio) dynamically scaled
-    const [WIDTH, setWIDTH] = useState(400);
-    const [HEIGHT, setHEIGHT] = useState(566);
 
     const [currentPage, setCurrentPage] = useState(targetPage);
     const [offset, setOffset] = useState(() => {

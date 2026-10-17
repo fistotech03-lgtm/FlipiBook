@@ -23,6 +23,49 @@ export const verifyToken = () => {
 };
 
 /**
+ * Synchronously read non-sensitive user profile from client cookie.
+ * Enables 0ms immediate UI hydration on page load without localStorage or IndexedDB.
+ */
+export const getInitialUser = () => {
+  try {
+    const cookies = document.cookie.split(";");
+    for (const cookie of cookies) {
+      const trimmed = cookie.trim();
+      if (trimmed.startsWith("flipibook_user=")) {
+        const raw = trimmed.substring("flipibook_user=".length);
+        if (!raw) return null;
+        return JSON.parse(decodeURIComponent(raw));
+      }
+    }
+  } catch (err) {
+    console.warn("Error reading flipibook_user cookie:", err);
+  }
+  return null;
+};
+
+/**
+ * Persist client user display info in non-sensitive cookie (7 days maxAge).
+ * Zero tokens, zero credentials stored.
+ */
+export const setClientUserCookie = (user) => {
+  try {
+    if (!user) return;
+    const safeData = {
+      name: user.name || "",
+      emailId: user.emailId || user.email || "",
+      email: user.emailId || user.email || "",
+      picture: user.picture || "",
+    };
+    const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
+    document.cookie = `flipibook_user=${encodeURIComponent(
+      JSON.stringify(safeData)
+    )}; Path=/; Max-Age=${SEVEN_DAYS_SECONDS}; SameSite=Lax;`;
+  } catch (err) {
+    console.warn("Error setting flipibook_user cookie:", err);
+  }
+};
+
+/**
  * Safe no-op functions for components migrating away from localStorage tokens.
  * All tokens are stored exclusively in HttpOnly cookies.
  */
@@ -34,9 +77,11 @@ export const getSessionToken = () => null;
  */
 export const clearSession = () => {
   try {
-    // Clear the client-readable cookie indicator
+    // Clear client-readable cookies
     document.cookie =
       "flipibook_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;";
+    document.cookie =
+      "flipibook_user=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;";
     localStorage.removeItem('user');
     localStorage.removeItem('user_profile');
   } catch (err) {

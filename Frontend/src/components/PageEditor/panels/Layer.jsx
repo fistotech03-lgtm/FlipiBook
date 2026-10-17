@@ -1396,6 +1396,7 @@ const Layer = ({
                         <div
                           key={pageKey}
                           className="flex flex-col relative"
+                          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragLeave={handleDragLeave}
                           onDragEnd={handleDragEnd}

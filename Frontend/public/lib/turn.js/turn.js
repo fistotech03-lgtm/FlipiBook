@@ -1297,7 +1297,9 @@ flipMethods = {
 
 	_foldingPage: function(corner) {
 
-		var opts = this.data().f.opts;
+		var d = this.data();
+		if (!d || !d.f || !d.f.opts) return null;
+		var opts = d.f.opts;
 		
 		if (opts.folding) return opts.folding;
 		else if(opts.turn) {
@@ -1626,7 +1628,10 @@ flipMethods = {
 
 		var folding = flipMethods._foldingPage.call(this),
 			dd = this.data(),
-			data = dd.f;
+			data = dd ? dd.f : null;
+
+		if (!data || !data.opts) return false;
+		if (!folding) return false;
 
 		if (!data.point || data.point.corner!=c.corner) {
 			var event = $.Event('start');
@@ -1635,7 +1640,6 @@ flipMethods = {
 			if (event.isDefaultPrevented())
 				return false;
 		}
-
 
 		if (folding) {
 
@@ -1900,21 +1904,31 @@ $.extend($.fn, {
 				fps = point.fps || 30,
 				time = - fps,
 				f = function() {
+					if (!that[0] || !document.body.contains(that[0]) || !that.data() || !that.data().f) {
+						if (data && data.effect && data.effect.handle) clearInterval(data.effect.handle);
+						if (data) delete data["effect"];
+						return;
+					}
 					var j, v = [];
 					time = Math.min(point.duration, time + fps);
 	
 					for (j = 0; j < len; j++)
 						v.push(point.easing(1, time, point.from[j], diff[j], point.duration));
 
-					point.frame((len==1) ? v[0] : v);
+					try {
+						point.frame((len==1) ? v[0] : v);
 
-					if (time==point.duration) {
-						clearInterval(data.effect.handle);
-						delete data['effect'];
-						that.data(data);
-						if (point.complete)
-							point.complete();
+						if (time==point.duration) {
+							clearInterval(data.effect.handle);
+							delete data['effect'];
+							that.data(data);
+							if (point.complete)
+								point.complete();
 						}
+					} catch (err) {
+						if (data && data.effect && data.effect.handle) clearInterval(data.effect.handle);
+						if (data) delete data['effect'];
+					}
 					};
 
 			for (j = 0; j < len; j++)

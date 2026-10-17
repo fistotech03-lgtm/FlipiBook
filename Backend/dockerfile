@@ -1,9 +1,8 @@
 FROM node:22-alpine
 
-# Install Inkscape, LibreOffice (headless), and fonts for PDF/document rendering
+# Install Inkscape and fonts for PDF rendering
 RUN apk add --no-cache \
     inkscape \
-    libreoffice \
     ttf-dejavu \
     font-noto
 

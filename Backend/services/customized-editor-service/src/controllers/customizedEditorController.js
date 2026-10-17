@@ -20,6 +20,31 @@ const {
 } = require('../utils/storageHelper');
 const { getDefaultSettings } = require('../utils/defaultSettings');
 
+const VIRTUAL_FOLDERS = new Set([
+  'recent book',
+  'recent',
+  'all books',
+  'all flipbooks',
+  'favorites',
+  'trash',
+]);
+
+const resolveFolder = (folderName) => {
+  if (Array.isArray(folderName)) {
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    );
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+  }
+  if (typeof folderName === 'string' && folderName.trim()) {
+    const clean = folderName.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean;
+  }
+  return 'My_Flipbooks';
+};
+
 /**
  * GET /status
  */
@@ -112,7 +137,7 @@ const getSettings = async (req, res) => {
           userEmail: authUser.emailId || flipbookDoc.userEmail || '',
           v_id: flipbookDoc.v_id,
           flipbookName: flipbookDoc.flipbookName,
-          folderName: Array.isArray(flipbookDoc.folderName) ? flipbookDoc.folderName[0] : (flipbookDoc.folderName || 'My_Flipbooks'),
+          folderName: resolveFolder(flipbookDoc.folderName),
           FlipbookInfo: initialSettings.FlipbookInfo || defaults.FlipbookInfo,
           Branding: initialSettings.Branding || defaults.Branding,
           Background: initialSettings.Background || defaults.Background,
@@ -1509,29 +1534,67 @@ const getPublicBook = async (req, res) => {
 
     // Populate page content from disk storage or MongoDB
     const storageRoot = getStorageRoot();
-    const userFolders = [
-      book.userID,
-      book.userId ? String(book.userId) : null,
-      book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
-    ].filter(Boolean);
-    const folders = [
-      Array.isArray(book.folderName) ? book.folderName[0] : book.folderName,
-      "My_Flipbooks",
-    ].filter(Boolean);
+    const userFolders = Array.from(
+      new Set(
+        [
+          book.userID,
+          book.userId ? String(book.userId) : null,
+          book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
+        ].filter(Boolean)
+      )
+    );
+
+    const primaryFolder = resolveFolder(book.folderName);
+    const rawFolders = Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName];
+    const folders = Array.from(
+      new Set(
+        [primaryFolder, ...rawFolders, 'My_Flipbooks']
+          .filter((f) => f && typeof f === 'string' && f.trim())
+          .map((f) => String(f).trim())
+      )
+    );
+
+    const bookNames = Array.from(
+      new Set(
+        [book.flipbookName, book.v_id, `${book.flipbookName}_${book.v_id}`]
+          .flat(Infinity)
+          .filter((bn) => bn && typeof bn === 'string' && bn.trim())
+          .map((bn) => String(bn).trim())
+      )
+    );
 
     const candidateDirs = [];
     for (const uf of userFolders) {
+      if (!uf || typeof uf !== 'string') continue;
       for (const f of folders) {
-        candidateDirs.push(
-          path.join(storageRoot, uf, "My_Flipbooks", f, book.flipbookName),
-          path.join(storageRoot, uf, "My_Flipbooks", f, book.v_id),
-          path.join(storageRoot, uf, f, book.flipbookName),
-          path.join(storageRoot, uf, f, book.v_id),
-          path.join(storageRoot, "flipbooks", uf, f, book.flipbookName),
-          path.join(storageRoot, "flipbooks", uf, f, book.v_id)
-        );
+        if (!f || typeof f !== 'string') continue;
+        for (const bn of bookNames) {
+          if (!bn || typeof bn !== 'string') continue;
+          candidateDirs.push(
+            path.join(storageRoot, uf, "My_Flipbooks", f, bn),
+            path.join(storageRoot, uf, f, bn),
+            path.join(storageRoot, uf, "My_Flipbooks", bn),
+            path.join(storageRoot, uf, bn),
+            path.join(storageRoot, "flipbooks", uf, f, bn),
+            path.join(storageRoot, "flipbooks", uf, bn)
+          );
+        }
       }
     }
+
+    const sanitizedEmail = (book.userEmail || '').replace(/[@.]/g, '_');
+    let effectiveUserFolder = book.userID || sanitizedEmail;
+    for (const uf of userFolders) {
+      if (fs.existsSync(path.join(storageRoot, uf, 'My_Flipbooks', primaryFolder, book.flipbookName))) {
+        effectiveUserFolder = uf;
+        break;
+      }
+      if (fs.existsSync(path.join(storageRoot, uf, primaryFolder, book.flipbookName))) {
+        effectiveUserFolder = uf;
+        break;
+      }
+    }
+    const resolvedBaseUrl = `/storage/${effectiveUserFolder}/My_Flipbooks/${primaryFolder}/${book.flipbookName}/`;
 
     const populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
@@ -1564,6 +1627,10 @@ const getPublicBook = async (req, res) => {
         pageContent = pageObj.content || pageObj.html || "";
       }
 
+      if (pageContent && resolvedBaseUrl) {
+        pageContent = pageContent.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${resolvedBaseUrl}assets/`);
+      }
+
       const cleanName = String(pageObj.name || "").replace(/[\\/:*?"<>|]/g, "").trim();
       const resolvedFileName = pageObj.fileName || (cleanName ? (cleanName.endsWith(".svg") ? cleanName : `${cleanName}.svg`) : `${pageObj.pageNumber}.svg`);
 
@@ -1584,9 +1651,6 @@ const getPublicBook = async (req, res) => {
       ? Number((ratings.reduce((sum, r) => sum + (r.ratingValue || 0), 0) / totalRatings).toFixed(1))
       : 0;
 
-    const sanitizedEmail = (book.userEmail || '').replace(/[@.]/g, '_');
-    const primaryFolder = Array.isArray(book.folderName) ? book.folderName[0] : (book.folderName || 'My_Flipbooks');
-
     const accurateViews = (Array.isArray(book.viewers) && book.viewers.length > 0)
       ? book.viewers.length
       : (typeof book.viewsCount === 'number' ? book.viewsCount : 0);
@@ -1598,7 +1662,7 @@ const getPublicBook = async (req, res) => {
       flipbookName: book.flipbookName,
       folderName: primaryFolder,
       v_id: book.v_id,
-      baseUrl: `/storage/${sanitizedEmail}/My_Flipbooks/${primaryFolder}/${book.flipbookName}/`,
+      baseUrl: resolvedBaseUrl,
       publisher: publisherName,
       category: docFlipbookInfo.category || 'General',
       language: docFlipbookInfo.language || 'English',

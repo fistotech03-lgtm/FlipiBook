@@ -60,8 +60,9 @@ const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flip
  */
 const resolveFolder = (folderName) => {
   if (Array.isArray(folderName)) {
-    const realFolders = folderName.filter(
-      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
     return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
   }

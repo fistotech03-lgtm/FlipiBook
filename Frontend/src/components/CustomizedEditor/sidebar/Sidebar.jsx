@@ -3,15 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import SidebarItem from './SidebarItem';
-import Appearance from './Appearance';
-import MenuBar from './MenuBar';
-import AdvancedSettings from './AdvancedSettings';
-import LeadForm from './LeadForm';
-import Visibility from './Visibility';
-import Statistic from './Statistic';
-import FlipbookInfoModal from '../FlipbookInfoModal';
+import FlipbookInfoModal from '../../FlipbookInfoModal';
 
 const AttachedCurve = ({ position }) => {
   const isTop = position.includes('top');
@@ -45,23 +39,7 @@ const AttachedCurve = ({ position }) => {
   );
 };
 
-const SubNavItem = ({ label, icon, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`w-full flex items-center gap-[0.75vw] px-[1vw] py-[0.6vw] rounded-[0.6vw] transition-all text-[0.75vw] font-semibold text-left ${isActive
-      ? 'bg-[#DBDBEA] text-[#3E4491] active-sub-nav'
-      : 'hover:bg-[#DBDBEA] text-[#3E4491]'
-      }`}
-  >
-    <Icon
-      icon={icon}
-      className={`w-[1vw] h-[1vw] ${isActive ? 'text-[#3E4491]' : 'text-gray-700'}`}
-    />
-    <span className={`flex-1 ${isActive ? 'text-[#3E4491]' : 'text-gray-600'}`}>{label}</span>
-  </button>
-);
-
-const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPanelCollapsed, setIsPanelCollapsed, pageCount, visibilitySettings, onUpdateVisibility, canUndo, canRedo, onUndo, onRedo, onPreview, onSave, currentBook, setCurrentBook, isLoading = false }) => {
+const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPanelCollapsed, setIsPanelCollapsed, pageCount, onSave, currentBook, setCurrentBook, isLoading = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { folder, v_id } = useParams();
@@ -181,10 +159,6 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
       clearTimeout(timer);
     };
   }, [activeSubView, openSection, isDragging, parentSection]);
-
-  const toggleSection = (section) => {
-    setOpenSection(openSection === section ? null : section);
-  };
 
   const tabConfigs = {
     'logo': { icon: 'fluent-mdl2:verified-brand', top: 154 },

@@ -35,6 +35,10 @@ const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 
+// Preview & Share Pages
+const PreviewPage = lazy(() => import("./pages/PreviewPage"));
+const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
+
 // Editor Components
 const EditorLayout = lazy(() => import("./Layouts/EditorLayout"));
 const PageEditor = lazy(() => import("./components/PageEditor/PageEditor"));
@@ -52,16 +56,13 @@ const SettingsLayout = lazy(
 const Profile = lazy(() => import("./components/Settings/Profile"));
 const Account = lazy(() => import("./components/Settings/Account"));
 const Notifications = lazy(() => import("./components/Settings/Notifications"));
-const MyShelf = lazy(() => import("./components/MyFlipbooks/MyShelf"));
 
 function SettingsIndexRedirect() {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return null;
   }
-
-  const email = user?.emailId || user?.email || "";
 
   return <Navigate to="profile" replace />;
 }
@@ -90,6 +91,60 @@ export default function App() {
               <Route
                 path="/forgot-password"
                 element={<AuthRouteRedirect mode="forgot-password" />}
+              />
+
+              {/* Public Share & View Routes */}
+              <Route
+                path="/share=public/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=private/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=password/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=invite/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+
+              {/* Protected Owner Preview Route */}
+              <Route
+                path="/preview"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={null}>
+                      <PreviewPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
               />
 
               {/* Main Layout routes — accessible without login initially */}

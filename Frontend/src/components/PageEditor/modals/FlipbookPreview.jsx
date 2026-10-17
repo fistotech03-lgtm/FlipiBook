@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PreviewArea from '../../CustomizedEditor/PreviewArea';
-import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/Layout';
+import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/utils/layoutColors';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -88,10 +88,20 @@ const parseInitialSettings = (inputSettings, v_id, isPublishedPreview) => {
   };
 };
 
-const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobileProp, isDoublePage, settings, targetPage, v_id: propVId, isPublishedPreview, isLoadingParent = false, currentBook }) => {
+const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobileProp, isDoublePage, settings, targetPage, v_id: propVId, shareId: propShareId, isPublishedPreview, isLoadingParent = false, currentBook }) => {
   const { user } = useAuth();
   const params = useParams();
-  const v_id = propVId || params.v_id || params.shareId || settings?.shareId || settings?.v_id;
+  const v_id = propVId || params.v_id || settings?.v_id || currentBook?.v_id;
+  const effectiveShareId =
+    propShareId ||
+    currentBook?.Customized_Settings?.Visibility?.shareId ||
+    currentBook?.Visibility?.shareId ||
+    settings?.Visibility?.shareId ||
+    (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('shareId') : null) ||
+    params?.shareId ||
+    (currentBook?.share?.shareId && currentBook.share.shareId !== v_id ? currentBook.share.shareId : null) ||
+    (settings?.shareId && settings.shareId !== v_id ? settings.shareId : null) ||
+    '';
   const [localSettings, setLocalSettings] = useState(() => parseInitialSettings(settings, v_id, isPublishedPreview));
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -564,10 +574,10 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
         isDoublePage={isDoublePage}
         useNativeFullscreen={true}
         disableAutoGallery={true}
-        isPublishedPreview={true}
+        isPublishedPreview={Boolean(isPublishedPreview)}
         currentBook={currentBook || settings}
         v_id={v_id}
-        shareId={propVId || v_id || params?.shareId || settings?.shareId}
+        shareId={effectiveShareId}
       />
 
       {/* Draggable Device Settings - Tablet/Mobile: outside device frame */}

@@ -166,7 +166,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook }) => {
         if (onOpenBook) {
             onOpenBook(book);
         } else {
-            const targetShareId = book.shareId || book.v_id;
+            const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
             const rawAcc = String(book.access || 'public').toLowerCase();
             if (targetShareId) {
                 window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
@@ -456,7 +456,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
                         return {
                             rawBook: b,
                             v_id: b.v_id,
-                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || b.v_id,
+                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || (b.share?.shareId && b.share.shareId !== b.v_id ? b.share.shareId : null) || (b.shareId && b.shareId !== b.v_id ? b.shareId : null) || '',
                             access: b.Customized_Settings?.Visibility?.access || b.Visibility?.access || 'public',
                             title: b.flipbookName || b.title || `Flipbook ${idx + 1}`,
                             cover: b.image || covers[idx % covers.length],
@@ -529,7 +529,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     };
 
     const handleOpenBook = (book) => {
-        const targetShareId = book.shareId || book.v_id;
+        const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
         const rawAcc = String(book.access || 'public').toLowerCase();
         if (targetShareId) {
             window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');

@@ -3,101 +3,27 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import PremiumDropdown from './PremiumDropdown';
-import ColorPicker from './ColorPallet';
+import ColorPicker from '../../ColorPallet';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Image as ImageIcon,
-  ArrowRightLeft,
   MoreVertical,
-  Replace,
   Upload,
   Trash2,
-  X,
-  Check,
-  LayoutGrid,
-  ArrowLeftRight,
   Edit2
 } from 'lucide-react';
-import NavIconStylesPopup, { NavIconRenderer } from './popups/NavIconStylesPopup';
-import { EffectControlRow, ImageCropOverlay } from './AppearanceShared';
-import { CoverPicturePopup } from '../FlipbookInfoModal';
+import NavIconStylesPopup, { NavIconRenderer } from '../popups/NavIconStylesPopup';
+import { ImageCropOverlay } from '../AppearanceShared';
+import { CoverPicturePopup } from '../../FlipbookInfoModal';
 import BookmarkStylesPopup from './BookmarkStylesPopup';
-import AlertModal from '../AlertModal';
-import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import cover1 from '../../assets/cover/cover1.svg';
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather'
-];
-
-const DraggableSpan = ({ label, value, onChange, min = 0, max = 100, className }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const startXRef = useRef(0);
-  const startValRef = useRef(0);
-
-  React.useEffect(() => {
-    if (!isDragging) return;
-    const handleMove = (e) => {
-      const dx = e.clientX - startXRef.current;
-      const newVal = Math.max(min, Math.min(max, startValRef.current + Math.round(dx)));
-      onChange(newVal);
-    };
-    const handleUp = () => { setIsDragging(false); document.body.style.cursor = ''; };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    document.body.style.cursor = 'ew-resize';
-    return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); document.body.style.cursor = ''; };
-  }, [isDragging, onChange, min, max]);
-
-  const onMouseDown = (e) => {
-    e.preventDefault(); setIsDragging(true);
-    startXRef.current = e.clientX; startValRef.current = Number(value);
-  };
-
-  return (
-    <span className={`${className} cursor-ew-resize select-none`} onMouseDown={onMouseDown}>{label}</span>
-  );
-};
-
-const Switch = ({ enabled, onChange }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange(!enabled);
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
-
-
-const RadioGroup = ({ options, value, onChange }) => (
-  <div className="space-y-[0.75vw]">
-    {options.map((opt) => (
-      <label key={opt.id} className="text-[0.75vw] font-semibold text-gray-700">
-        <div className="relative flex items-center justify-center">
-          <input
-            type="radio"
-            name="radio-group"
-            checked={value === opt.id}
-            onChange={() => onChange(opt.id)}
-            className="peer appearance-none w-[1vw] h-[1vw] border-2 border-gray-300 rounded-full checked:border-[#4A3AFF] transition-all bg-white"
-          />
-          <div className="absolute w-[0.3vw] h-[0.3vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
-        </div>
-        <span className={`text-[0.85vw] font-medium ${value === opt.id ? 'text-gray-900' : 'text-gray-500'}`}>{opt.label}</span>
-      </label>
-    ))}
-  </div>
-);
+import AlertModal from '../../AlertModal';
+import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import cover1 from '../../../assets/cover/cover1.svg';
+import Switch from './Switch';
+import { fontFamilies } from '../utils/fontConstants';
 
 const SectionHeader = ({ title, toggle, onToggle }) => (
   <div className="flex items-center gap-[0.5vw] mb-[0.5vw] mt-[0.8vw]">
@@ -111,7 +37,7 @@ const SectionHeader = ({ title, toggle, onToggle }) => (
   </div>
 );
 
-const ColorPickerItem = ({ label, color, opacity = 100, onChange, onOpacityChange, onClick }) => (
+const ColorPickerItem = ({ label, color, opacity = 100, onChange, onClick }) => (
   <div className="flex items-center justify-between mb-[0.6vw] gap-[0.5vw] px-[0.5vw]">
     <div className="flex items-center justify-between w-[4vw] shrink-0">
       <span className="text-[0.75vw] font-medium text-gray-700">{label}</span>
@@ -192,7 +118,7 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
       try {
         const parsed = JSON.parse(saved);
         if (parsed.appearance) setBookAppearance(parsed.appearance);
-      } catch (e) { }
+      } catch { }
     }
   }, []);
 
@@ -202,8 +128,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
   // Gallery Logic State
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [showFitDropdown, setShowFitDropdown] = useState(false);
-  const [showModeDropdown, setShowModeDropdown] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   // showGalleryPreview: triggers the inline gallery popup in preview (passed up via gallery.previewOpen)
@@ -213,14 +137,7 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
   const bgSoundInputRef = useRef(null);
   const [replaceTargetIndex, setReplaceTargetIndex] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [localLibrarySelected, setLocalLibrarySelected] = useState(null);
-  const galleryInputRef = useRef(null);
   const [libraryTargetIndex, setLibraryTargetIndex] = useState(null);
-  const [showDotColorPicker, setShowDotColorPicker] = useState(false);
-  const [dotPickerPos, setDotPickerPos] = useState({ x: 0, y: 0 });
-  const [showNavColorPicker, setShowNavColorPicker] = useState(false);
-  const [navPickerPos, setNavPickerPos] = useState({ x: 0, y: 0 });
   const [showNavStylesPopup, setShowNavStylesPopup] = useState(false);
   const [activePopupPicker, setActivePopupPicker] = useState(null);
   const [popupPickerPos, setPopupPickerPos] = useState({ x: 0, y: 0 });
@@ -238,7 +155,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     setActivePopupPicker(type);
   };
   const [showCoverPopup, setShowCoverPopup] = useState(false);
-  const [showBookmarkPopup, setShowBookmarkPopup] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [cropTargetIndex, setCropTargetIndex] = useState(null);
   const originalCoverRef = useRef(null);
@@ -290,17 +206,9 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     }));
   };
 
-  // Safe access helper for nested settings
-  const getNestedValue = (section, field, fallback = {}) => {
-    return settings?.[section]?.[field] ?? fallback;
-  };
-
   // Gallery Helpers
   const gallery = settings.gallery || {};
   const slideshowImages = gallery.images || [];
-
-  // Visible count: show uploaded images + 1 next empty slot (max 12)
-  const visibleSlotCount = Math.min(MAX_GALLERY_IMAGES, slideshowImages.length + 1);
 
   const updateGallery = (field, value) => {
     onUpdate(prev => {
@@ -526,24 +434,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     e.target.value = '';
   };
 
-  const deleteImage = async (index) => {
-    const img = slideshowImages[index];
-    if (!img) return;
-
-    // Optimistic remove
-    updateGallery('images', current => (current || []).filter((_, idx) => idx !== index));
-    setOpenContextMenu(null);
-
-    // Backend delete
-    if (img.file_v_id || img.url) {
-      try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-        await axios.post(`${backendUrl}/api/flipbook/delete-customized-asset`, { url: img.url });
-      } catch (error) {
-        console.error("Failed to delete asset from backend:", error);
-      }
-    }
-  };
 
   const handleDeleteCustomSound = (id) => {
     onUpdate(prev => {
@@ -575,45 +465,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
     });
   };
 
-  const handleLibraryFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const newImageData = { id: Date.now(), url: event.target.result };
-      setUploadedImages((prev) => [newImageData, ...prev]);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handlePlaceFromLibrary = () => {
-    if (!localLibrarySelected) return;
-
-    // If we have a specific target (from context menu)
-    if (libraryTargetIndex !== null) {
-      updateGallery('images', current => {
-        const updated = [...(current || [])];
-        if (updated[libraryTargetIndex]) {
-          updated[libraryTargetIndex] = { ...updated[libraryTargetIndex], url: localLibrarySelected.url, name: localLibrarySelected.name || 'Library Image' };
-        } else {
-          // If the slot was empty, we need to push
-          updated.push({ id: Date.now(), url: localLibrarySelected.url, name: localLibrarySelected.name || 'Library Image' });
-        }
-        return updated;
-      });
-    } else {
-      // General "Add" - find first empty slot or push if not full
-      if (slideshowImages.length < MAX_GALLERY_IMAGES) {
-        updateGallery('images', current => [...(current || []), { id: Date.now(), url: localLibrarySelected.url, name: localLibrarySelected.name || 'Library Image' }]);
-      }
-    }
-
-    setShowLibrary(false);
-    setLocalLibrarySelected(null);
-    setLibraryTargetIndex(null);
-    updateGallery('previewOpen', Date.now());
-  };
 
   if (inlineMode === 'sound') {
     return (
@@ -1137,29 +988,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
           document.body
         )}
 
-        {showDotColorPicker && createPortal(
-          <ColorPicker
-            color={settings.gallery?.dotColor || '#4F46E5'}
-            onChange={(color) => updateGallery('dotColor', color)}
-            onClose={() => setShowDotColorPicker(false)}
-            style={{ position: 'fixed', top: dotPickerPos.y, left: dotPickerPos.x, zIndex: 1100, transform: 'none' }}
-            opacity={100}
-            onOpacityChange={() => { }}
-          />,
-          document.body
-        )}
-
-        {showNavColorPicker && createPortal(
-          <ColorPicker
-            color={settings.gallery?.navIconColor || '#000000'}
-            onChange={(color) => updateGallery('navIconColor', color)}
-            onClose={() => setShowNavColorPicker(false)}
-            style={{ position: 'fixed', top: navPickerPos.y, left: navPickerPos.x, zIndex: 1100, transform: 'none' }}
-            opacity={100}
-            onOpacityChange={() => { }}
-          />,
-          document.body
-        )}
 
         {showNavStylesPopup && (
           <NavIconStylesPopup
@@ -1927,29 +1755,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
           document.body
         )}
 
-        {showDotColorPicker && createPortal(
-          <ColorPicker
-            color={settings.gallery?.dotColor || '#4F46E5'}
-            onChange={(color) => updateGallery('dotColor', color)}
-            onClose={() => setShowDotColorPicker(false)}
-            style={{ position: 'fixed', top: dotPickerPos.y, left: dotPickerPos.x, zIndex: 1100, transform: 'none' }}
-            opacity={100}
-            onOpacityChange={() => { }}
-          />,
-          document.body
-        )}
-
-        {showNavColorPicker && createPortal(
-          <ColorPicker
-            color={settings.gallery?.navIconColor || '#000000'}
-            onChange={(color) => updateGallery('navIconColor', color)}
-            onClose={() => setShowNavColorPicker(false)}
-            style={{ position: 'fixed', top: navPickerPos.y, left: navPickerPos.x, zIndex: 1100, transform: 'none' }}
-            opacity={100}
-            onOpacityChange={() => { }}
-          />,
-          document.body
-        )}
 
         {showNavStylesPopup && (
           <NavIconStylesPopup
@@ -2087,4 +1892,6 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
   );
 };
 
-export default AdvancedSettings;
+export const OtherSetup = AdvancedSettings;
+export { AdvancedSettings };
+export default OtherSetup;

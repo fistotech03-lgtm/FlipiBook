@@ -1,24 +1,44 @@
 import CustomizedEditor from './CustomizedEditor';
-import Sidebar from './Sidebar';
-import SidebarItem from './SidebarItem';
-import Branding from './Branding';
-import Appearance from './Appearance';
-import MenuBar from './MenuBar';
-import AdvancedSettings from './AdvancedSettings';
-import LeadForm from './LeadForm';
-import Visibility from './Visibility';
-import Statistic from './Statistic';
+import Sidebar from './sidebar/Sidebar';
+import SidebarItem from './sidebar/SidebarItem';
+
+// The 8 sidebar panels (1:1 with sidebar navigation)
+import {
+  BackgroundPanel,
+  LayoutDesignPanel,
+  LayoutSettingsPanel,
+  BookAppearancePanel,
+  LeadFormPanel,
+  VisibilityPrivacyPanel,
+  AnalyticsPanel,
+  BrandingPanel,
+} from './panels';
+
+// Supporting components
+import OtherSetup from './components/OtherSetup';
 
 export {
   CustomizedEditor,
   Sidebar,
   SidebarItem,
-  Branding,
-  Appearance,
-  MenuBar,
-  AdvancedSettings,
-  AdvancedSettings as OtherSetup,
-  LeadForm,
-  Visibility,
-  Statistic
+  // The 8 sidebar panels
+  BackgroundPanel,
+  LayoutDesignPanel,
+  LayoutSettingsPanel,
+  BookAppearancePanel,
+  LeadFormPanel,
+  VisibilityPrivacyPanel,
+  AnalyticsPanel,
+  BrandingPanel,
+  // Supporting components
+  OtherSetup,
+  OtherSetup as AdvancedSettings,
+  // Backward compatibility aliases
+  BrandingPanel as Branding,
+  LayoutSettingsPanel as MenuBar,
+  LeadFormPanel as LeadForm,
+  VisibilityPrivacyPanel as Visibility,
+  AnalyticsPanel as Statistic,
 };
+
+export default CustomizedEditor;

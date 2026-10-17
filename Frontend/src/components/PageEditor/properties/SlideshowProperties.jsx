@@ -20,7 +20,7 @@ import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
   const el = document.getElementById(id);
   if (el) el.remove();
 });
-import PremiumDropdown from '../../CustomizedEditor/PremiumDropdown';
+import PremiumDropdown from '../../CustomizedEditor/components/PremiumDropdown';
 import NavIconStylesPopup, { NavIconRenderer } from '../../CustomizedEditor/popups/NavIconStylesPopup';
 import DotStylesPopup, { DotRenderer } from '../../CustomizedEditor/popups/DotStylesPopup';
 import axios from 'axios';

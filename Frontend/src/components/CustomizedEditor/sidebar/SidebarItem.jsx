@@ -1,6 +1,10 @@
 import React from "react";
 import { Icon } from "@iconify/react";
 
+/**
+ * SidebarItem
+ * Nav button item used in CustomizedEditor Sidebar
+ */
 const SidebarItem = ({
   id,
   icon,

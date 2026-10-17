@@ -987,18 +987,34 @@ export default function MyFlipbooks() {
 
     const handleRemoveFromRecent = async (book) => {
         setActiveBookMenu(null);
-        setIsLoading(true);
+        
+        // Optimistically remove book from Recent in local state immediately
+        setBooks(prev => prev.filter(b => {
+            const isRecent = b.folder === 'Recent Book' || b.folder === 'Recent' || String(b.id).startsWith('Recent_');
+            if (isRecent) {
+                if (b.id === book.id) return false;
+                if (book.v_id && b.v_id === book.v_id) return false;
+                if (book.realName && (b.realName === book.realName || b.title === book.realName)) return false;
+            }
+            return true;
+        }));
+        setSelectedBooks(prev => prev.filter(id => id !== book.id && id !== book.v_id && id !== `Recent_${book.v_id}`));
+
         try {
             await flipbookApi.removeRecent({
                 emailId,
-                bookName: book.realName
+                bookName: book.realName || book.title || book.flipbookName,
+                v_id: book.v_id
             });
-            await fetchData();
+            await queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+            const res = await refetchBooks();
+            if (res?.data) {
+                setBooks(res.data);
+            }
         } catch (err) {
-            console.error(err);
-            showAlert('Remove Failed', err.message);
-        } finally {
-            setIsLoading(false);
+            console.error("Remove from recent failed:", err);
+            showAlert('Remove Failed', err.response?.data?.message || err.message);
+            await fetchData();
         }
     };
 
@@ -1204,7 +1220,7 @@ export default function MyFlipbooks() {
         try {
             await Promise.all(removedBooks.map(book => {
                 if (isRecent) {
-                    return flipbookApi.removeRecent({ emailId, bookName: book.realName });
+                    return flipbookApi.removeRecent({ emailId, bookName: book.realName, v_id: book.v_id });
                 } else {
                     return flipbookApi.deleteBookPermanently({
                         emailId,
@@ -1214,7 +1230,13 @@ export default function MyFlipbooks() {
                     });
                 }
             }));
-            if (!isRecent) {
+            if (isRecent) {
+                await queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+                const res = await refetchBooks();
+                if (res?.data) {
+                    setBooks(res.data);
+                }
+            } else {
                 await fetchLiveStorageSettings();
             }
         } catch (err) {
@@ -1493,8 +1515,8 @@ export default function MyFlipbooks() {
         };
 
         if (sortOption === 'Recently Created') {
-            if (activeFolder === 'Recent Book') {
-                return parseDate(b.mtime || b.created) - parseDate(a.mtime || a.created);
+            if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
+                return parseDate(b.mtime || b.lastUpdated || b.updatedAt || b.created) - parseDate(a.mtime || a.lastUpdated || a.updatedAt || a.created);
             }
             return parseDate(b.createdAt || b.created) - parseDate(a.createdAt || a.created);
         }
@@ -1854,7 +1876,7 @@ export default function MyFlipbooks() {
                         ? (deleteBookConfirmation.isPublished
                             ? (deleteBookConfirmation.bookId === 'BULK' ? "Unpublish & Move to Trash" : "Unpublish & Move to Trash")
                             : (deleteBookConfirmation.bookId === 'BULK' ? "Move Selected Flipbooks to Trash" : "Move Flipbook to Trash"))
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? (deleteBookConfirmation.bookId === 'BULK' ? "Remove Selected Flipbooks" : "Remove Flipbook from Recent")
                         : (deleteBookConfirmation.bookId === 'BULK' ? "Permanently Delete Flipbooks" : "Permanently Delete Flipbook")
                 }
@@ -1869,7 +1891,7 @@ export default function MyFlipbooks() {
                             : (deleteBookConfirmation.bookId === 'BULK'
                                 ? `Are you sure you want to move ${deleteBookConfirmation.bookTitle} to Trash? You can restore them anytime.`
                                 : `Are you sure you want to move "${deleteBookConfirmation.bookTitle}" to Trash? You can restore it anytime from the Trash folder.`))
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? `Are you sure you want to remove "${deleteBookConfirmation.bookTitle}" from Recent Books?`
                         : `Are you sure you want to permanently delete "${deleteBookConfirmation.bookTitle}"? This action cannot be undone.`
                 }
@@ -1879,7 +1901,7 @@ export default function MyFlipbooks() {
                         ? "Empty Trash"
                         : deleteBookConfirmation.isTrash
                         ? (deleteBookConfirmation.isPublished ? "Unpublish & Move" : "Move to trash")
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? "Remove"
                         : "Delete Permanently"
                 }

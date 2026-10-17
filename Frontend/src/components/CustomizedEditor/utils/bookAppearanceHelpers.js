@@ -1,14 +1,6 @@
 export const processBookAppearanceSettings = (settings) => {
   if (!settings) return {};
 
-  const hexToRgba = (hex, opacity = 100) => {
-    if (!hex) return '#6B6868';
-    let c = hex.substring(1).split('');
-    if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-    const val = parseInt(c.join(''), 16);
-    return `rgba(${(val >> 16) & 255}, ${(val >> 8) & 255}, ${val & 255}, ${opacity / 100})`;
-  };
-
   const shadow = settings.dropShadow || {};
 
   const positionMap = {

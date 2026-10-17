@@ -246,6 +246,8 @@ const DEFAULT_FLIPBOOK_INFO = {
   orientation: 'horizontal'
 };
 
+const crypto = require('crypto');
+
 const getDefaultSettings = () => ({
   FlipbookInfo: { ...DEFAULT_FLIPBOOK_INFO },
   Branding: JSON.parse(JSON.stringify(DEFAULT_BRANDING)),
@@ -254,7 +256,10 @@ const getDefaultSettings = () => ({
   Layouts: JSON.parse(JSON.stringify(DEFAULT_LAYOUTS)),
   BookAppearance: JSON.parse(JSON.stringify(DEFAULT_BOOK_APPEARANCE)),
   leadForm: JSON.parse(JSON.stringify(DEFAULT_LEAD_FORM)),
-  Visibility: JSON.parse(JSON.stringify(DEFAULT_VISIBILITY)),
+  Visibility: {
+    ...JSON.parse(JSON.stringify(DEFAULT_VISIBILITY)),
+    shareId: crypto.randomBytes(8).toString('hex')
+  },
   otherSetup: {}
 });
 

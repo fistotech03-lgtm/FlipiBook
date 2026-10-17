@@ -51,6 +51,11 @@ router.get('/settings', authenticateUser, controller.getSettings);
 router.get(['/customized-settings', '/customized_settings'], optionalAuth, controller.getSettings);
 router.get('/public/settings/:v_id', optionalAuth, controller.getPublicSettings);
 router.get('/public/settings', optionalAuth, controller.getPublicSettings);
+router.get('/public/get/:shareId', optionalAuth, controller.getPublicBook);
+router.post('/public/view/:shareId', optionalAuth, controller.recordPublicView);
+router.post('/public/rate/:shareId', optionalAuth, controller.submitPublicRating);
+router.put('/public/rate/:shareId/:ratingId', optionalAuth, controller.updatePublicRating);
+router.delete('/public/rate/:shareId/:ratingId', optionalAuth, controller.deletePublicRating);
 router.post('/update-settings', authenticateUser, controller.updateSettings);
 router.post('/reset-settings', authenticateUser, controller.resetSettings);
 

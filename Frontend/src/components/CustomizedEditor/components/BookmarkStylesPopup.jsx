@@ -69,7 +69,7 @@ const BookmarkShape = ({ styleId, color, width, height, textClass, vertical = fa
     </div>
 );
 
-const BookmarkStylesPopup = ({ onClose, settings = {}, onUpdate, pages = [] }) => {
+const BookmarkStylesPopup = ({ _onClose, settings = {}, onUpdate, pages = [] }) => {
     const updateSectionField = (section, subSection, field, value) => {
         if (!onUpdate) return;
         onUpdate(prev => ({

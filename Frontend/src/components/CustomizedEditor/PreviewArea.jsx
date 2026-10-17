@@ -1,26 +1,22 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import backgroundComponents from './Backgrounds';
 import animationComponents from './Animations';
-import * as BookAppearanceHelpers from './bookAppearanceHelpers';
+import * as BookAppearanceHelpers from './utils/bookAppearanceHelpers';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 
-
-import { LAYOUT_DEFAULT_COLORS } from './Layout';
+import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
 import LeadFormPopup from './popups/LeadFormPopup';
-
 
 import {
   getIframeContent,
-  TurnJsBookRenderer,
   SharedOverlays,
   InteractionPopupModal,
   InteractionSlideshowModal,
   DeviceLayoutRenderer
 } from './previewAreaModules';
-import { useCustomizerState, useActiveBook, useUIModals } from '../../store/hooks';
+import tabFrameSvg from '../../assets/cover/Tab 1.svg';
+import { useCustomizerState, useActiveBook } from '../../store/hooks';
 
 const PreviewArea = React.memo(({
     pages = [],
@@ -62,7 +58,6 @@ const PreviewArea = React.memo(({
 }) => {
     const customizerRedux = useCustomizerState();
     const activeBookRedux = useActiveBook();
-    const uiModalRedux = useUIModals();
 
     const bookName = bookNameProp || activeBookRedux.bookName;
     const currentBook = currentBookProp || activeBookRedux.currentBook;
@@ -164,18 +159,28 @@ const PreviewArea = React.memo(({
     }, [incomingVId, incomingVIdProp, currentBook, incomingSettings]);
 
     const resolvedShareId = React.useMemo(() => {
-        if (incomingShareId) return incomingShareId;
-        if (currentBook?.shareId) return currentBook.shareId;
-        if (currentBook?.share?.shareId) return currentBook.share.shareId;
-        if (incomingSettings?.shareId) return incomingSettings.shareId;
-        if (incomingSettings?.Visibility?.shareId) return incomingSettings.Visibility.shareId;
-        if (incomingSettings?.share?.shareId) return incomingSettings.share.shareId;
+        const visShareId =
+            incomingSettings?.Visibility?.shareId ||
+            currentBook?.Customized_Settings?.Visibility?.shareId ||
+            currentBook?.Visibility?.shareId ||
+            incomingSettings?.Customized_Settings?.Visibility?.shareId ||
+            incomingSettings?.share?.shareId ||
+            currentBook?.share?.shareId;
+        if (visShareId && visShareId !== resolvedVId) return visShareId;
+
         if (typeof window !== 'undefined') {
-            const match = window.location.pathname.match(/\/share=[^/]+\/([^/?#]+)/);
-            if (match && match[1]) return match[1];
+            const queryShareId = new URLSearchParams(window.location.search).get('shareId');
+            if (queryShareId && queryShareId !== resolvedVId) return queryShareId;
+            const match = window.location.pathname.match(/\/share(=[^/]+)?\/([^/?#]+)/);
+            if (match && match[2] && match[2] !== resolvedVId) return match[2];
         }
-        return '';
-    }, [incomingShareId, currentBook, incomingSettings]);
+
+        if (incomingShareId && incomingShareId !== resolvedVId) return incomingShareId;
+        if (currentBook?.shareId && currentBook.shareId !== resolvedVId) return currentBook.shareId;
+        if (incomingSettings?.shareId && incomingSettings.shareId !== resolvedVId) return incomingSettings.shareId;
+
+        return visShareId || incomingShareId || '';
+    }, [incomingShareId, currentBook, incomingSettings, resolvedVId]);
 
     const resolvedBookName = React.useMemo(() => {
         return bookName || currentBook?.flipbookName || currentBook?.title || incomingSettings?.flipbookName || incomingSettings?.FlipbookInfo?.flipbookName || 'Flipbook';
@@ -354,8 +359,6 @@ const PreviewArea = React.memo(({
     const containerRef = useRef();
     const screenRef = useRef();
     const isFlippingRef = useRef(false);
-    const lastTapRef = useRef(0);
-    const lastSyncPage = useRef(targetPage);
     const lastPreviewOpen = useRef(otherSetupSettings?.gallery?.previewOpen);
 
     const activeDevice = activeDeviceProp; // Desktop, Tablet, Mobile
@@ -427,7 +430,7 @@ const PreviewArea = React.memo(({
             iframes.forEach(iframe => {
                 try {
                     iframe.contentWindow.postMessage({ type: 'BLINK_INTERACTIONS' }, '*');
-                } catch (err) { }
+                } catch { }
             });
         };
 
@@ -991,8 +994,8 @@ const PreviewArea = React.memo(({
             borderRadius: '0',
             margin: 'auto',
             position: 'relative',
-            backgroundImage: 'url("/src/assets/cover/Tab 1.svg")',
-            backgroundSize: '95% 95%',
+            backgroundImage: `url("${tabFrameSvg}")`,
+            backgroundSize: '100% 100%',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundColor: 'transparent',
@@ -1003,7 +1006,7 @@ const PreviewArea = React.memo(({
 
     const getScreenWrapperStyle = () => {
         if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
-        if (activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) return {
+        if (activeDevice === 'Tablet' && !isPhysicalTablet) return {
             position: 'absolute',
             top: '9.38%',
             bottom: '7.7%',
@@ -1223,7 +1226,7 @@ const PreviewArea = React.memo(({
                     if (meta.data) {
                         forceDownload(meta.data, meta.name || 'download');
                     }
-                } catch (err) {
+                } catch {
                     forceDownload(e.data.value, 'download');
                 }
             } else if (e.data && e.data.type === 'open-email') {
@@ -1604,7 +1607,7 @@ const PreviewArea = React.memo(({
             containerRef.current.querySelectorAll('iframe').forEach(iframe => {
                 try {
                     iframe.contentWindow?.postMessage({ type: 'PAGE_TURNED', visiblePages }, '*');
-                } catch (err) { /* cross-origin iframe – skip */ }
+                } catch { /* cross-origin iframe – skip */ }
             });
         }
 
@@ -1681,7 +1684,7 @@ const PreviewArea = React.memo(({
                     img.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
                     img.style.filter = filterStr;
                 }
-            } catch (e) { }
+            } catch { }
         });
     }, [watermarkSettings]);
 
@@ -2180,7 +2183,7 @@ const PreviewArea = React.memo(({
                             fsWrapper._bPlaceholder = bPlaceholder;
                             const reqFs = fsWrapper.requestFullscreen || fsWrapper.webkitRequestFullscreen;
                             if (reqFs) {
-                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(err => {
+                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(() => {
                                     if (vPlaceholder.parentNode) vPlaceholder.parentNode.insertBefore(video, vPlaceholder);
                                     if (bPlaceholder.parentNode) bPlaceholder.parentNode.insertBefore(bar, bPlaceholder);
                                     vPlaceholder.remove(); bPlaceholder.remove(); fsWrapper.remove();
@@ -2494,7 +2497,7 @@ const PreviewArea = React.memo(({
             }}
         >
 
-            {(!['Tablet', 'Mobile'].includes(activeDevice) || isPublishedPreview || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
+            {(!['Tablet', 'Mobile'].includes(activeDevice) || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
 
             <DeviceLayoutRenderer
                 activeDevice={activeDevice}

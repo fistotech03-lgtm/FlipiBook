@@ -53,11 +53,19 @@ const createUserWorkspace = (user) => {
       fs.mkdirSync(storageRoot, { recursive: true });
     }
 
-    // Use user ID as the single root workspace folder name
-    const userId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : (user.emailId ? user.emailId.replace(/[@.]/g, '_') : null)));
-    if (!userId) return null;
+    // Resolve target directory: prioritize custom FLIPIxxxx, fallback to user ID or sanitized email
+    const userId = user.userID || (user._id ? String(user._id) : (user.id ? String(user.id) : null));
+    let dirName = userId;
+    if (!dirName && user.emailId) {
+      dirName = user.emailId.trim().toLowerCase().replace(/[@.]/g, "_");
+    }
 
-    const userDir = path.join(storageRoot, userId);
+    if (!dirName) {
+      console.warn("[Workspace Helper] No valid userId or emailId to create workspace");
+      return null;
+    }
+
+    const userDir = path.join(storageRoot, dirName);
     if (!fs.existsSync(userDir)) {
       fs.mkdirSync(userDir, { recursive: true });
     }
@@ -76,7 +84,7 @@ const createUserWorkspace = (user) => {
       fs.mkdirSync(defaultFolder, { recursive: true });
     }
 
-    console.log(`[Workspace Helper] Successfully created workspace for user: ${userId}`);
+    console.log(`[Workspace Helper] Successfully created workspace for: ${dirName} at ${storageRoot}`);
     return userDir;
   } catch (err) {
     console.error('[Workspace Helper] Error initializing workspace:', err.message);

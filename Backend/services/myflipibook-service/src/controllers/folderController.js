@@ -339,11 +339,32 @@ exports.deleteFolder = async (req, res) => {
 
     // 2. Cascade delete all books in this folder
     if (folderName && flipQuery) {
+      const folderBooks = await Flipbook.find({
+        ...flipQuery,
+        $or: [{ folderName }, { folderName: { $in: [folderName] } }]
+      }).select('v_id').lean();
+      const folderVIds = folderBooks.map(b => b.v_id).filter(Boolean);
+
       await Flipbook.deleteMany({
         ...flipQuery,
         $or: [{ folderName }, { folderName: { $in: [folderName] } }]
       });
       deleteFolderStorage(rawId || customUserId, emailId, folderName);
+
+      if (folderVIds.length > 0) {
+        try {
+          if (mongoose.connection && mongoose.connection.db) {
+            await mongoose.connection.db
+              .collection('customizedsettings')
+              .deleteMany({ v_id: { $in: folderVIds } });
+            await mongoose.connection.db
+              .collection('leads')
+              .deleteMany({ v_id: { $in: folderVIds } });
+          }
+        } catch (e) {
+          console.warn('[Folder Controller] Failed to remove customizedsettings on folder delete:', e.message);
+        }
+      }
     }
 
     res.status(200).json({ success: true, message: 'Folder deleted successfully' });

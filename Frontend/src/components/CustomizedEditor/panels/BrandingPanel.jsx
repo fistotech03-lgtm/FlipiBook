@@ -1,23 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
-import { Trash2, Plus, ChevronDown, RefreshCw, Upload, Image as ImageIcon, ChevronRight, ArrowLeftRight, Link } from 'lucide-react';
+import { Trash2, ChevronDown } from 'lucide-react';
 import axios from 'axios';
-import PremiumDropdown from './PremiumDropdown';
-import AlertModal from '../AlertModal';
-import { AdjustmentSlider, SectionLabel, ImageCropOverlay, CustomColorPicker } from './AppearanceShared';
-import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import MediaGalleryPopup from '../PageEditor/properties/MediaGalleryPopup';
-import { useAuth } from '../../context/AuthContext';
-
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather'
-];
+import PremiumDropdown from '../components/PremiumDropdown';
+import AlertModal from '../../AlertModal';
+import { AdjustmentSlider, ImageCropOverlay, CustomColorPicker } from '../AppearanceShared';
+import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import { useAuth } from '../../../context/AuthContext';
+import { fontFamilies } from '../utils/fontConstants';
 
 const Branding = ({
-  type = 'logo',
   logoSettings,
   onUpdateLogo,
   watermarkSettings,
@@ -25,7 +18,6 @@ const Branding = ({
   preloaderSettings,
   onUpdatePreloader,
   onBack,
-  onPreviewPreloader,
   folder,
   flipbookName,
   v_id
@@ -38,17 +30,13 @@ const Branding = ({
   const [showPreloaderTextColorPicker, setShowPreloaderTextColorPicker] = useState(false);
   const [showPreloaderSpinnerColorPicker, setShowPreloaderSpinnerColorPicker] = useState(false);
   const galleryInputRef = useRef(null);
-  const [showAdjustments, setShowAdjustments] = useState(false);
   const [galleryTarget, setGalleryTarget] = useState(null); // 'logo', 'watermark', or null
-  const [showLogoUrlInput, setShowLogoUrlInput] = useState(false);
-  const [showWatermarkUrlInput, setShowWatermarkUrlInput] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [showCropOverlay, setShowCropOverlay] = useState(false);
   const [showWatermarkCropOverlay, setShowWatermarkCropOverlay] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [replaceTarget, setReplaceTarget] = useState(null); // 'logo' | 'watermark' | null
   const [showLogoAdjustments, setShowLogoAdjustments] = useState(false);
-  const [showWatermarkAdjustments, setShowWatermarkAdjustments] = useState(false);
   const [showPreloaderModal, setShowPreloaderModal] = useState(false);
   const [tempPreloaderSettings, setTempPreloaderSettings] = useState({});
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -321,16 +309,6 @@ const Branding = ({
     reader.readAsDataURL(file);
   };
 
-  const handleWatermarkAdjustmentChange = (key, value) => {
-    onUpdateWatermark({
-      ...watermarkSettings,
-      adjustments: {
-        ...(watermarkSettings?.adjustments || {}),
-        [key]: value
-      }
-    });
-  };
-
   // Logo Handlers
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -372,14 +350,6 @@ const Branding = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleUrlChange = (e) => {
-    onUpdateLogo({ ...logoSettings, src: e.target.value, url: e.target.value });
-  };
-
-  const handleLogoTypeChange = (e) => {
-    onUpdateLogo({ ...logoSettings, type: e.target.value });
   };
 
   const confirmRemoveLogo = () => {
@@ -457,9 +427,6 @@ const Branding = ({
     });
   };
 
-  const resetAdjustment = (key) => {
-    handleAdjustmentChange(key, 0);
-  };
 
   const getLogoFilterStr = () => {
     const adj = logoSettings?.adjustments || {};
@@ -485,20 +452,6 @@ const Branding = ({
     return `brightness(${100 + exposure}%) contrast(${100 + contrast}%) saturate(${100 + saturation}%) hue-rotate(${tint}deg) sepia(${temperature > 0 ? temperature : 0}%) brightness(${100 + highlights}%) contrast(${100 + shadows}%)`;
   };
 
-  const resetAllAdjustments = () => {
-    onUpdateLogo({
-      ...logoSettings,
-      adjustments: {
-        exposure: 0,
-        contrast: 0,
-        saturation: 0,
-        temperature: 0,
-        tint: 0,
-        highlights: 0,
-        shadows: 0
-      }
-    });
-  };
 
   const handleModalFileUpload = (e) => {
     const file = e.target.files[0];
@@ -1520,4 +1473,6 @@ const Branding = ({
   );
 };
 
-export default Branding;
+export const BrandingPanel = Branding;
+export { Branding };
+export default BrandingPanel;

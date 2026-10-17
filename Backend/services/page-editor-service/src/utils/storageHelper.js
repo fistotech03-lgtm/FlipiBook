@@ -60,8 +60,9 @@ const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flip
  */
 const resolveFolder = (folderName) => {
   if (Array.isArray(folderName)) {
-    const realFolders = folderName.filter(
-      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
     return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
   }
@@ -197,6 +198,59 @@ const initFlipbookStorage = (bookDir) => {
   }
 };
 
+const WORKSPACE_FOLDERS = [
+  '3D_Models',
+  '3D_Screenshot',
+  'Company_logo',
+  'gifs',
+  'Images',
+  'My_Flipbooks',
+  'Profile',
+  'Texture',
+  'Videos'
+];
+
+const ensureDirPerms = (p) => {
+  if (!fs.existsSync(p)) {
+    try { fs.mkdirSync(p, { recursive: true, mode: 0o777 }); } catch (e) {}
+  }
+  try { fs.chmodSync(p, 0o777); } catch (e) {}
+};
+
+/**
+ * Ensure user's physical workspace folders exist on disk for both customUserId and email
+ */
+const ensureUserWorkspace = (userId, emailId, folderName = null) => {
+  try {
+    const storageRoot = getStorageRoot();
+    ensureDirPerms(storageRoot);
+
+    const dirName = userId ? String(userId) : (emailId ? emailId.trim().toLowerCase().replace(/[@.]/g, '_') : null);
+    if (!dirName) return null;
+
+    const userDir = path.join(storageRoot, dirName);
+    ensureDirPerms(userDir);
+
+    for (const wf of WORKSPACE_FOLDERS) {
+      const fp = path.join(userDir, wf);
+      ensureDirPerms(fp);
+    }
+
+    const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
+    ensureDirPerms(defaultFolder);
+
+    if (folderName) {
+      const customF = path.join(userDir, 'My_Flipbooks', folderName);
+      ensureDirPerms(customF);
+    }
+
+    return userDir;
+  } catch (err) {
+    console.error('[Storage Helper] Error ensuring user workspace:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   generateId,
   getStorageRoot,
@@ -205,5 +259,6 @@ module.exports = {
   sanitizeName,
   resolveFolder,
   resolveFlipbookPaths,
-  initFlipbookStorage
+  initFlipbookStorage,
+  ensureUserWorkspace
 };

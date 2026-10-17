@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Icon } from '@iconify/react';
-import { ArrowLeftRight, Minus, RefreshCw, ChevronDown, X, Check, Upload, Image as ImageIcon, ChevronRight, Link } from 'lucide-react';
-import backgroundComponents from './Backgrounds';
-import animationComponents from './Animations';
-import PremiumDropdown from './PremiumDropdown';
+import { ArrowLeftRight, Minus, ChevronDown, X, Check } from 'lucide-react';
+import backgroundComponents from '../Backgrounds';
+import animationComponents from '../Animations';
+import PremiumDropdown from '../components/PremiumDropdown';
+import { Switch } from '../components';
 import {
   solidPalette,
   hexToRgb,
@@ -12,12 +13,11 @@ import {
   getColorAtOffset,
   CustomColorPicker,
   AdjustmentSlider,
-  SectionLabel,
   DraggableSpan,
   ImageCropOverlay
-} from './AppearanceShared';
-import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
-import { useAuth } from '../../context/AuthContext';
+} from '../AppearanceShared';
+import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import { useAuth } from '../../../context/AuthContext';
 
 const themeStaticCache = {};
 
@@ -302,6 +302,7 @@ const AnimationThemeItem = React.memo(({ name, isSelected, onSelect }) => {
 });
 
 const BackgroundSection = ({
+  onBack,
   backgroundSettings,
   onUpdateBackground,
   folder,
@@ -344,7 +345,7 @@ const BackgroundSection = ({
   useEffect(() => {
     try {
       sessionStorage.removeItem('fisto_bg_assets_cache');
-    } catch (e) {}
+    } catch {}
 
     const fetchAssets = async () => {
       try {
@@ -806,24 +807,6 @@ const BackgroundSection = ({
     setEditingGradientStopIndex(index);
   };
 
-  const setBgStyle = (style) => {
-    if (style === 'Gradient' && backgroundSettings.gradientStops) {
-      const gradient = generateGradientString(
-        backgroundSettings.gradientType || 'Linear',
-        backgroundSettings.gradientStops,
-        backgroundSettings.gradientAngle || 0,
-        backgroundSettings.gradientRadius || 100
-      );
-      onUpdateBackground({ ...backgroundSettings, style, gradient });
-    } else if (style === 'Solid' && backgroundSettings.savedSolidColor) {
-      onUpdateBackground({ ...backgroundSettings, style, color: backgroundSettings.savedSolidColor });
-    } else if (style === 'Media') {
-      const targetStyle = mediaSubTab === 'Video' ? 'Video' : 'Image';
-      onUpdateBackground({ ...backgroundSettings, style: targetStyle });
-    } else {
-      onUpdateBackground({ ...backgroundSettings, style });
-    }
-  };
 
   const handleColorSelect = (color) => {
     onUpdateBackground({ ...backgroundSettings, style: 'Solid', color });
@@ -1057,23 +1040,33 @@ const BackgroundSection = ({
     ));
   }, [backgroundSettings.animation, handleAnimationSelect, deferredTab]);
 
-  const resetAllAdjustments = () => {
-    onUpdateBackground({
-      ...backgroundSettings,
-      adjustments: {
-        exposure: 0,
-        contrast: 0,
-        saturation: 0,
-        temperature: 0,
-        tint: 0,
-        highlights: 0,
-        shadows: 0
-      }
-    });
-  };
 
   return (
-    <div className="px-[1vw] flex flex-col relative">
+    <div className="flex flex-col h-full bg-white font-sans relative">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+
+      {/* Panel Header */}
+      <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-[0.75vw] text-gray-800">
+          <Icon icon="andrsrxn:background" className="w-[1.4vw] h-[1.4vw] text-black" />
+          <h2 className="text-[1vw] font-semibold text-gray-900">Background</h2>
+        </div>
+        {onBack && (
+          <button 
+            onClick={onBack} 
+            className="w-[2vw] h-[2vw] rounded-full flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-all active:scale-90"
+          >
+            <Icon icon="ph:arrow-left-bold" className="w-[1.1vw] h-[1.1vw]" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-white pb-[2.5vw] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="px-[1vw] flex flex-col relative">
       <div className="sticky top-0 z-[50] bg-white mb-[0.5vw] -mx-[1vw] px-[1.5vw] border-b-[0.15vw] border-gray-200">
         <div className="flex items-center justify-center">
           {['Background', 'Themes', 'Animations'].map((tab) => (
@@ -1934,21 +1927,10 @@ const BackgroundSection = ({
                   Automatically match layout colors to the selected theme.
                 </span>
                 <div className="flex-shrink-0 flex justify-end">
-                  <div
-                    onClick={() => {
-                      const currentVal = backgroundSettings.applyDynamicColor ?? true;
-                      onUpdateBackground({ ...backgroundSettings, applyDynamicColor: !currentVal });
-                    }}
-                    className={`w-[2.2vw] h-[1.2vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors duration-300 ${
-                      (backgroundSettings.applyDynamicColor ?? true) ? 'bg-[#4D47FF]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-[1vw] h-[1vw] rounded-full shadow-md transform transition-transform duration-300 ${
-                        (backgroundSettings.applyDynamicColor ?? true) ? 'translate-x-[1vw]' : 'translate-x-0'
-                      }`}
-                    />
-                  </div>
+                  <Switch
+                    checked={backgroundSettings.applyDynamicColor ?? true}
+                    onChange={(val) => onUpdateBackground({ ...backgroundSettings, applyDynamicColor: val })}
+                  />
                 </div>
               </div>
 
@@ -2052,21 +2034,10 @@ const BackgroundSection = ({
                 Automatically match layout colors to the selected theme.
               </span>
               <div className="flex-shrink-0 flex justify-end">
-                <div
-                  onClick={() => {
-                    const currentVal = backgroundSettings.applyDynamicColor ?? true;
-                    onUpdateBackground({ ...backgroundSettings, applyDynamicColor: !currentVal });
-                  }}
-                  className={`w-[2.2vw] h-[1.2vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors duration-300 ${
-                    (backgroundSettings.applyDynamicColor ?? true) ? 'bg-[#4D47FF]' : 'bg-gray-300'
-                  }`}
-                >
-                  <div
-                    className={`bg-white w-[1vw] h-[1vw] rounded-full shadow-md transform transition-transform duration-300 ${
-                      (backgroundSettings.applyDynamicColor ?? true) ? 'translate-x-[1vw]' : 'translate-x-0'
-                    }`}
-                  />
-                </div>
+                <Switch
+                  checked={backgroundSettings.applyDynamicColor ?? true}
+                  onChange={(val) => onUpdateBackground({ ...backgroundSettings, applyDynamicColor: val })}
+                />
               </div>
             </div>
 
@@ -2285,10 +2256,14 @@ const BackgroundSection = ({
         />
       )}
     </div>
+      </div>
+    </div>
   );
 };
 
-export default BackgroundSection;
+export const BackgroundPanel = BackgroundSection;
+export { BackgroundSection };
+export default BackgroundPanel;
 
 
 

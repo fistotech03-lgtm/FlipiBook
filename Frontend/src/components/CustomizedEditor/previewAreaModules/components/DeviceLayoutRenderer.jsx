@@ -176,9 +176,9 @@ const DeviceLayoutRenderer = ({
                     );
                 })()
       ) : (
-                    <div style={{ ...((activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
+                    <div style={{ ...((activeDevice === 'Tablet' && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
                         {/* Floor shadow effect for Tablet bottom (using the style of the SVG) */}
-                        {activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet && (
+                        {activeDevice === 'Tablet' && !isPhysicalTablet && (
                             <svg
                                 viewBox="0 0 1000 100"
                                 preserveAspectRatio="none"

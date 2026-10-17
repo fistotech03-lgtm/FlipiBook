@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useToast } from './CustomToast';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '@iconify/react';
-import PremiumDropdown from './CustomizedEditor/PremiumDropdown';
+import PremiumDropdown from './CustomizedEditor/components/PremiumDropdown';
 import { ImageCropOverlay } from './CustomizedEditor/AppearanceShared';
 import ColorPicker from './ThreedEditor/ColorPicker';
 import cover1 from '../assets/cover/cover1.svg';

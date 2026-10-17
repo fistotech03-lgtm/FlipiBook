@@ -1,91 +1,39 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { LAYOUT_DEFAULT_COLORS } from './Layout';
 import { useParams, useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import Sidebar from './Sidebar';
+import Sidebar from './sidebar/Sidebar';
 import PreviewArea from './PreviewArea';
-import Branding from './Branding';
-import Appearance from './Appearance';
-import MenuBar from './MenuBar';
-import AdvancedSettings from './AdvancedSettings';
-import LeadForm from './LeadForm';
-import Visibility from './Visibility';
-import Statistic from './Statistic';
-import FlipbookPreview from '../PageEditor/modals/FlipbookPreview.jsx';
 import {
-  getFromDB,
-  saveToDB,
+  BackgroundPanel,
+  LayoutDesignPanel,
+  LayoutSettingsPanel,
+  BookAppearancePanel,
+  LeadFormPanel,
+  VisibilityPrivacyPanel,
+  AnalyticsPanel,
+  BrandingPanel,
+} from './panels';
+import OtherSetup from './components/OtherSetup';
+import {
   saveCustomizedEditorState,
   getCustomizedEditorState,
   getPageEditorState,
   cleanupLegacyEditorKeys,
-  clearEditorState,
-  ensureCleanBook
+  ensureCleanBook,
 } from '../../utils/dbUtils';
 import { getDominantColors, REACT_BITS_THEMES_COLORS } from '../../utils/colorExtractor';
 import { getSupabaseBaseUrl, rewriteHtmlUploads } from '../../utils/assetUtils';
 import { useAuth } from '../../context/AuthContext';
-import customizedEditorApi from '../../api/customizedEditorApi';
-
-
-// Helper functions for color synchronization (matching Layout.jsx logic)
-const getTint = (hex, weight = 0.8) => {
-  let r = parseInt(hex.slice(1, 3), 16); let g = parseInt(hex.slice(3, 5), 16); let b = parseInt(hex.slice(5, 7), 16);
-  r = Math.round(r + (255 - r) * weight); g = Math.round(g + (255 - g) * weight); b = Math.round(b + (255 - b) * weight);
-  const toHex = x => x.toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-};
-
-const getShade = (hex, weight = 0.6) => {
-  if (!hex || hex === 'transparent') return hex;
-  let c = hex.substring(1).toUpperCase();
-  if (c.length === 3) c = c.split('').map(x => x + x).join('');
-  if (c.length !== 6) return hex;
-  let r = parseInt(c.slice(0, 2), 16); let g = parseInt(c.slice(2, 4), 16); let b = parseInt(c.slice(4, 6), 16);
-  r = Math.round(r * (1 - weight)); g = Math.round(g * (1 - weight)); b = Math.round(b * (1 - weight));
-  const toHex = x => x.toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-};
-
-const isLightColor = (hex) => {
-  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return false;
-  let c = hex.substring(1).toUpperCase();
-  if (c.length === 3) c = c.split('').map(x => x + x).join('');
-  if (c.length !== 6) return false;
-  const r = parseInt(c.substring(0, 2), 16); const g = parseInt(c.substring(2, 4), 16); const b = parseInt(c.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.7;
-};
-
-const ensureDarkText = (hex) => {
-  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
-  let c = hex.substring(1).toUpperCase();
-  if (c.length === 3) c = c.split('').map(x => x + x).join('');
-  if (c.length !== 6) return hex;
-  const r = parseInt(c.substring(0, 2), 16); const g = parseInt(c.substring(2, 4), 16); const b = parseInt(c.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  if (luminance > 0.45) return getShade(hex, 0.5);
-  return hex;
-};
-// Navbar removed
-
-const createDefaultPageData = (name, w = 210, h = 297) => {
-  const baseWidth = w;
-  const baseHeight = h;
-  const rootId = `g-${Math.random().toString(36).substr(2, 9)}`;
-  const overlayId = `rect-${Math.random().toString(36).substr(2, 9)}`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
-  <g id="${rootId}" data-name="${name}" data-type="frame">
-    <rect id="${overlayId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
-  </g>
-</svg>`;
-};
+import { useLayoutColorVars } from './hooks/useLayoutColorVars';
+import { createDefaultPageData } from './utils/defaultPageData';
+import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
+import { getTint, isLightColor, ensureDarkText } from './utils/colorHelpers';
 
 const CustomizedEditor = () => {
   const { folder, v_id, page } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, setHasUnsavedChanges, hasUnsavedChanges, triggerSaveSuccess, isAutoSaveEnabled, currentBook, setCurrentBook, activeDevice, setActiveDevice } = useOutletContext() || {};
+  const { setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, setHasUnsavedChanges, hasUnsavedChanges, triggerSaveSuccess, isAutoSaveEnabled, currentBook, setCurrentBook, activeDevice } = useOutletContext() || {};
   const { user } = useAuth();
 
   const [bookName, setBookName] = useState(() => location.state?.flipbookName || currentBook?.flipbookName || 'Name of the Book');
@@ -104,7 +52,6 @@ const CustomizedEditor = () => {
     }
     return [];
   });
-  const [showPreview, setShowPreview] = useState(false);
   const [devicePages, setDevicePages] = useState({ Desktop: 0, Tablet: 0, Mobile: 0 });
   const targetPage = devicePages[activeDevice || 'Desktop'] || 0;
   const setTargetPage = useCallback((pageNum) => {
@@ -171,8 +118,6 @@ const CustomizedEditor = () => {
     }
   }, [currentBook?.flipbookName]);
 
-  // Navbar States handled by context
-  const [saveSuccessInfo, setSaveSuccessInfo] = useState(null);
 
   // Customization States
   // Customization States (Loaded from currentBook/location.state synchronously, then updated via DB API)
@@ -687,7 +632,6 @@ const CustomizedEditor = () => {
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const updatedShare = {
         ...(shareSettings || {}),
@@ -728,7 +672,6 @@ const CustomizedEditor = () => {
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       axios.post(`${backendUrl}/api/flipbook/update-settings`, {
@@ -790,7 +733,6 @@ const CustomizedEditor = () => {
     const timer = setTimeout(() => {
       if (!v_id) return;
       const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       const mergedGallery = {
@@ -827,7 +769,6 @@ const CustomizedEditor = () => {
 
     const timer = setTimeout(() => {
       const userEmail = user?.emailId || user?.email;
-      const userId = user?.userId || user?._id || user?.id;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       axios.post(`${backendUrl}/api/flipbook/update-settings`, {
@@ -913,7 +854,6 @@ const CustomizedEditor = () => {
   const handleSave = useCallback(async () => {
     try {
       const userEmail = user?.emailId || user?.email || user?.userEmail;
-      const userId = user?.userId || user?._id || user?.id;
       const customUserId = user?.userID;
 
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -1100,8 +1040,6 @@ const CustomizedEditor = () => {
         notifiedUnsavedRef.current = false; // Reset the notification flag after save
       }
       if (triggerSaveSuccess) triggerSaveSuccess({ name: newBookName, folder: 'Customized' });
-      setSaveSuccessInfo({ name: newBookName, folder: 'Customized' });
-      setTimeout(() => setSaveSuccessInfo(null), 3000);
     } catch (error) {
       console.error("Save failed", error);
     }
@@ -1121,8 +1059,17 @@ const CustomizedEditor = () => {
     // Close profile popup if it's open
     window.dispatchEvent(new Event('close-profile-preview'));
 
-    const shareId = shareSettings?.shareId || currentBook?.shareId || v_id;
-    const previewUrl = shareId ? `/preview?shareId=${shareId}` : (v_id ? `/preview?v_id=${v_id}` : '/preview');
+    const candidateShareId =
+      visibilitySettings?.shareId ||
+      visibilitySettings?.Visibility?.shareId ||
+      currentBook?.Customized_Settings?.Visibility?.shareId ||
+      currentBook?.Visibility?.shareId ||
+      (shareSettings?.shareId && shareSettings.shareId !== v_id ? shareSettings.shareId : null) ||
+      (currentBook?.share?.shareId && currentBook.share.shareId !== v_id ? currentBook.share.shareId : null);
+
+    const visibilityShareId = (candidateShareId && candidateShareId !== v_id) ? candidateShareId : null;
+
+    const previewUrl = visibilityShareId ? `/preview?shareId=${visibilityShareId}` : '/preview';
     
     // 1. Open preview immediately in new tab for instant response
     window.open(previewUrl, '_blank');
@@ -1361,7 +1308,6 @@ const CustomizedEditor = () => {
   // Load Flipbook Data
   useEffect(() => {
     const fetchBook = async () => {
-      let isAutosaveLoaded = false;
       const userEmail = user?.emailId || user?.email;
 
       // 1. Instant Quick-Load Cache from IndexedDB for the last used book
@@ -1392,7 +1338,6 @@ const CustomizedEditor = () => {
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
             setPages(cached.pages);
-            isAutosaveLoaded = true;
           }
           setIsDataLoaded(true);
         }
@@ -1412,7 +1357,6 @@ const CustomizedEditor = () => {
 
           if (!isCorrupted) {
             console.log('[CustomizedEditor] Syncing pages from page_editor state');
-            isAutosaveLoaded = true;
             const data = pageEditorData;
             const sanitizedEmail = (userEmail || 'user').replace(/[@.]/g, "_");
             const userFolder = user?.userID || sanitizedEmail;
@@ -1730,29 +1674,32 @@ const CustomizedEditor = () => {
               if (res.data.settings?.bookmarks) setBookmarks(res.data.settings.bookmarks);
               if (res.data.settings?.notes) setNotes(res.data.settings.notes);
             let shareData = res.data.share;
-            if (!shareData || !shareData.shareId) {
-              const newShareId = Math.random().toString(36).substring(2, 14);
-              shareData = { shareId: newShareId, access: 'public' };
-              // Try to save the newly generated shareId to the backend
+            let candidateShare = loadedVisibility?.shareId || (shareData?.shareId !== v_id ? shareData?.shareId : null);
+            if (!candidateShare || candidateShare === v_id) {
+              candidateShare = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
+              shareData = { ...(shareData || {}), shareId: candidateShare, access: shareData?.access || 'public' };
               axios.post(`${backendUrl}/api/flipbook/update-settings`, {
                 userID: user?.userID,
                 emailId: userEmail,
                 v_id: v_id,
-                Visibility: shareData
+                Visibility: { ...(loadedVisibility || {}), shareId: candidateShare }
               }, { withCredentials: true }).catch(err => console.error('Frontend shareId auto-heal save failed:', err));
+            } else if (!shareData) {
+              shareData = { shareId: candidateShare, access: 'public' };
             }
             setShareSettings(shareData);
 
-            if (shareData) {
-              setVisibilitySettings(prev => ({
-                ...prev,
-                type: shareData.access || prev.type || 'Public',
-                password: shareData.password || prev.password || '',
-                accessKey: shareData.accessKey || prev.accessKey || '',
-                isPasswordSaved: shareData.isPasswordSaved !== undefined ? shareData.isPasswordSaved : prev.isPasswordSaved,
-                inviteOnly: shareData.inviteOnly || prev.inviteOnly || {}
-              }));
-            }
+            const effectiveShareId = candidateShare;
+            setVisibilitySettings(prev => ({
+              ...prev,
+              ...(loadedVisibility || {}),
+              shareId: effectiveShareId || prev.shareId,
+              type: shareData?.access || loadedVisibility?.access || prev.type || 'Public',
+              password: shareData?.password || prev.password || '',
+              accessKey: shareData?.accessKey || prev.accessKey || '',
+              isPasswordSaved: shareData?.isPasswordSaved !== undefined ? shareData.isPasswordSaved : prev.isPasswordSaved,
+              inviteOnly: shareData?.inviteOnly || prev.inviteOnly || {}
+            }));
 
             if (setCurrentBook) {
               setCurrentBook(prev => ({
@@ -1818,7 +1765,7 @@ const CustomizedEditor = () => {
     switch (activeSubView) {
       case 'logo':
         return (
-          <Branding
+          <BrandingPanel
             type={activeSubView}
             onBack={handleBack}
             logoSettings={logoSettings}
@@ -1839,21 +1786,33 @@ const CustomizedEditor = () => {
           />
         );
       case 'background':
-      case 'layout':
-      case 'bookappearance':
         return (
-          <Appearance
-            activeSub={activeSubView}
+          <BackgroundPanel
             onBack={handleBack}
             backgroundSettings={backgroundSettings}
             onUpdateBackground={setBackgroundSettings}
-            bookAppearanceSettings={bookAppearanceSettings}
-            onUpdateBookAppearance={setBookAppearanceSettings}
-            layoutSettings={layoutSettings}
+            folder={folder}
+            flipbookName={bookName}
+            v_id={v_id}
+          />
+        );
+      case 'layout':
+        return (
+          <LayoutDesignPanel
+            onBack={handleBack}
+            activeLayout={layoutSettings}
             onUpdateLayout={setLayoutSettings}
             layoutColors={layoutColors}
             onUpdateLayoutColors={setLayoutColors}
             onTocSettingsClick={() => setTocOpenTrigger(prev => prev + 1)}
+          />
+        );
+      case 'bookappearance':
+        return (
+          <BookAppearancePanel
+            onBack={handleBack}
+            bookAppearanceSettings={bookAppearanceSettings}
+            onUpdateBookAppearance={setBookAppearanceSettings}
             pages={pages}
             folder={folder}
             flipbookName={bookName}
@@ -1862,7 +1821,7 @@ const CustomizedEditor = () => {
         );
       case 'menubar':
         return (
-          <MenuBar
+          <LayoutSettingsPanel
             onBack={handleBack}
             settings={menuBarSettings}
             onUpdate={setMenuBarSettings}
@@ -1881,7 +1840,7 @@ const CustomizedEditor = () => {
         );
       case 'othersetup':
         return (
-          <AdvancedSettings
+          <OtherSetup
             onBack={handleBack}
             settings={otherSetupSettings}
             onUpdate={setOtherSetupSettings}
@@ -1893,7 +1852,7 @@ const CustomizedEditor = () => {
         );
       case 'leadform':
         return (
-          <LeadForm
+          <LeadFormPanel
             onBack={handleBack}
             settings={leadFormSettings}
             onUpdate={setLeadFormSettings}
@@ -1902,7 +1861,7 @@ const CustomizedEditor = () => {
         );
       case 'visibility':
         return (
-          <Visibility
+          <VisibilityPrivacyPanel
             onBack={handleBack}
             settings={visibilitySettings}
             onUpdate={setVisibilitySettings}
@@ -1912,50 +1871,14 @@ const CustomizedEditor = () => {
           />
         );
       case 'statistic':
-        return <Statistic onBack={handleBack} />;
+        return <AnalyticsPanel onBack={handleBack} />;
       default:
         return null;
     }
   };
 
   // Build CSS variables for active layout colors
-  const layoutColorVars = useMemo(() => {
-    const activeIdx = layoutSettings || 1;
-    const defaults = LAYOUT_DEFAULT_COLORS[activeIdx] || [];
-    const saved = layoutColors[activeIdx] || [];
-
-    const mergedColors = defaults.map((c) => {
-      const savedItem = saved.find(s => s && s.id === c.id);
-      return {
-        ...c,
-        ...(savedItem ? savedItem : {})
-      };
-    });
-
-    const vars = mergedColors.map((c, i) => {
-      const hex = c.hex || '#ffffff';
-      const op = 0.4 + (Math.max(0, Math.min(1, (c.opacity ?? 100) / 100)) * 0.6);
-      const r = parseInt(hex.slice(1, 3), 16) || 0;
-      const g = parseInt(hex.slice(3, 5), 16) || 0;
-      const b = parseInt(hex.slice(5, 7), 16) || 0;
-
-      const varName = c.id || `layout-color-${i}`;
-      return `--${varName}: ${hex}; --${varName}-opacity: ${op}; --${varName}-rgb: ${r},${g},${b};`;
-    }).join(' ');
-
-    // Derive --dropdown-icon from --dropdown-text at 70% opacity IF not already present
-    const hasExplicitIcon = mergedColors.some(c => c.id === 'dropdown-icon');
-    const textColor = mergedColors.find(c => c.id === 'dropdown-text');
-    if (!hasExplicitIcon && textColor) {
-      const hex = textColor.hex || '#ffffff';
-      const r = parseInt(hex.slice(1, 3), 16) || 0;
-      const g = parseInt(hex.slice(3, 5), 16) || 0;
-      const b = parseInt(hex.slice(5, 7), 16) || 0;
-      return vars + ` --dropdown-icon: ${hex}; --dropdown-icon-opacity: 0.7; --dropdown-icon-rgb: ${r},${g},${b};`;
-    }
-
-    return vars;
-  }, [layoutSettings, layoutColors]);
+  const layoutColorVars = useLayoutColorVars(layoutSettings, layoutColors);
 
   const visiblePages = useMemo(() => pages.filter(p => !p.isHidden), [pages]);
 
@@ -1982,9 +1905,6 @@ const CustomizedEditor = () => {
             isPanelCollapsed={isPanelCollapsed}
             setIsPanelCollapsed={setIsPanelCollapsed}
             pageCount={pages.filter(p => !p.isHidden).length}
-            visibilitySettings={visibilitySettings}
-            onUpdateVisibility={setVisibilitySettings}
-            onPreview={stablePreviewHandler}
             onSave={stableSaveHandler}
             currentBook={currentBook}
             setCurrentBook={setCurrentBook}

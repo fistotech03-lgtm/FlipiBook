@@ -293,7 +293,7 @@ const pageEditorProxy = createProxyMiddleware({
 
 // Proxy Customized Editor routes to Customized Editor Service (port 5005)
 const isCustomizedEditorRoute = (pathname) => {
-  return /^\/api\/flipbook\/(update-settings|reset-settings|branding|background|book-appearance|appearance|transparent-sheet|upload-customized-asset|delete-customized-asset|background-assets|copy-theme-asset|submit-lead|get-leads|leads|verify-credential|send-visibility-otp|verify-visibility-otp|customized-settings|customized_settings)(\/|$|\?)/i.test(pathname);
+  return /^\/api\/flipbook\/(public|update-settings|reset-settings|branding|background|book-appearance|appearance|transparent-sheet|upload-customized-asset|delete-customized-asset|background-assets|copy-theme-asset|submit-lead|get-leads|leads|verify-credential|send-visibility-otp|verify-visibility-otp|customized-settings|customized_settings)(\/|$|\?)/i.test(pathname);
 };
 
 const customizedEditorProxy = createProxyMiddleware({

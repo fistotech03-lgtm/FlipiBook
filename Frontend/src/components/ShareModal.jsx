@@ -1025,11 +1025,10 @@ const ShareModal = ({ isOpen, onClose, flipbookUrl, flipbookThumbnail, currentBo
             : 'share=public';
 
     const shareIdVal = 
-        currentBook?.shareId || 
-        currentBook?.share?.shareId || 
         currentBook?.Customized_Settings?.Visibility?.shareId || 
         currentBook?.Visibility?.shareId || 
-        currentBook?.v_id || 
+        (currentBook?.share?.shareId && currentBook.share.shareId !== currentBook?.v_id ? currentBook.share.shareId : null) || 
+        (currentBook?.shareId && currentBook.shareId !== currentBook?.v_id ? currentBook.shareId : null) || 
         '';
 
     let publicUrl = `${window.location.origin}/${accessPrefix}/${shareIdVal}`;

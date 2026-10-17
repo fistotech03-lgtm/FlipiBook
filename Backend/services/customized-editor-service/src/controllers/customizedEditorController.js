@@ -20,6 +20,31 @@ const {
 } = require('../utils/storageHelper');
 const { getDefaultSettings } = require('../utils/defaultSettings');
 
+const VIRTUAL_FOLDERS = new Set([
+  'recent book',
+  'recent',
+  'all books',
+  'all flipbooks',
+  'favorites',
+  'trash',
+]);
+
+const resolveFolder = (folderName) => {
+  if (Array.isArray(folderName)) {
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    );
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+  }
+  if (typeof folderName === 'string' && folderName.trim()) {
+    const clean = folderName.trim();
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    return clean;
+  }
+  return 'My_Flipbooks';
+};
+
 /**
  * GET /status
  */
@@ -101,14 +126,18 @@ const getSettings = async (req, res) => {
           ...(flipbookDoc.Customized_Settings || {})
         };
 
-        // Create initial CustomizedSettings document strictly using canonical schema
+        if (!initialSettings.Visibility?.shareId || initialSettings.Visibility?.shareId === flipbookDoc.v_id) {
+          if (!initialSettings.Visibility) initialSettings.Visibility = {};
+          initialSettings.Visibility.shareId = crypto.randomBytes(8).toString('hex');
+        }
+
         try {
           settingsDoc = await CustomizedSettings.create({
             userID: authUser.customUserId || flipbookDoc.userID || 'default_user',
             userEmail: authUser.emailId || flipbookDoc.userEmail || '',
             v_id: flipbookDoc.v_id,
             flipbookName: flipbookDoc.flipbookName,
-            folderName: Array.isArray(flipbookDoc.folderName) ? flipbookDoc.folderName[0] : (flipbookDoc.folderName || 'My_Flipbooks'),
+            folderName: resolveFolder(flipbookDoc.folderName),
             FlipbookInfo: initialSettings.FlipbookInfo || defaults.FlipbookInfo,
             Branding: initialSettings.Branding || defaults.Branding,
             Background: initialSettings.Background || defaults.Background,
@@ -131,6 +160,16 @@ const getSettings = async (req, res) => {
 
     if (!settingsDoc) {
       return res.status(404).json({ success: false, message: 'Customized settings not found for this flipbook' });
+    }
+
+    if (settingsDoc && (!settingsDoc.Visibility?.shareId || settingsDoc.Visibility?.shareId === settingsDoc.v_id)) {
+      const distinctShareId = crypto.randomBytes(8).toString('hex');
+      settingsDoc.Visibility = {
+        ...(settingsDoc.Visibility?.toObject ? settingsDoc.Visibility.toObject() : (settingsDoc.Visibility || {})),
+        shareId: distinctShareId
+      };
+      await CustomizedSettings.updateOne({ _id: settingsDoc._id }, { $set: { 'Visibility.shareId': distinctShareId } });
+      await Flipbook.updateOne({ v_id: settingsDoc.v_id }, { $set: { 'Customized_Settings.Visibility.shareId': distinctShareId } }).catch(() => {});
     }
 
     return res.status(200).json({
@@ -412,6 +451,26 @@ const updateSettings = async (req, res) => {
     if (cleanSettings.Branding) {
       delete cleanSettings.Branding.profileSettings;
     }
+    const existingShareId =
+      existing?.Visibility?.shareId ||
+      existingSettings?.Visibility?.shareId ||
+      flipbook?.Customized_Settings?.Visibility?.shareId ||
+      flipbook?.share?.shareId ||
+      flipbook?.Visibility?.shareId;
+
+    const incomingShareId =
+      incVisibility?.shareId ||
+      req.body?.shareId ||
+      req.body?.share?.shareId;
+
+    let finalShareId = existingShareId;
+    if (!finalShareId || finalShareId === resolvedVId) {
+      finalShareId = (incomingShareId && incomingShareId !== resolvedVId)
+        ? incomingShareId
+        : crypto.randomBytes(8).toString('hex');
+    }
+
+    cleanSettings.Visibility.shareId = finalShareId;
 
     // 4. Update CustomizedSettings: Set ONLY canonical fields and explicitly purge userId + lowercase duplicates + profileSettings
     const updatePayload = {
@@ -498,7 +557,7 @@ const resetSettings = async (req, res) => {
     }
 
     const defaults = getDefaultSettings();
-    defaults.Visibility.shareId = crypto.randomBytes(6).toString('hex');
+    defaults.Visibility.shareId = crypto.randomBytes(8).toString('hex');
 
     const updated = await CustomizedSettings.findOneAndUpdate(
       { ...userQuery, v_id },
@@ -1320,6 +1379,485 @@ const deleteTransparentSheet = async (req, res) => {
   }
 };
 
+/**
+ * Helper to resolve flipbook by Visibility.shareId across collections
+ */
+const findBookByShareId = async (shareId) => {
+  if (!shareId) return null;
+
+  // 1. Primary: search CustomizedSettings collection by Visibility.shareId
+  let customizedDoc = await CustomizedSettings.findOne({ 'Visibility.shareId': shareId });
+  let book = null;
+
+  if (customizedDoc) {
+    book = await Flipbook.findOne({ v_id: customizedDoc.v_id });
+  }
+
+  // 2. Search Flipbook model by Customized_Settings.Visibility.shareId or legacy fields
+  if (!book) {
+    book = await Flipbook.findOne({
+      $or: [
+        { 'Customized_Settings.Visibility.shareId': shareId },
+        { 'Visibility.shareId': shareId },
+        { 'share.shareId': shareId },
+        { 'settings.Visibility.shareId': shareId },
+        { 'settings.shareId': shareId }
+      ]
+    });
+  }
+
+  // 3. Fallback by v_id only if no shareId matched
+  if (!book) {
+    book = await Flipbook.findOne({ v_id: shareId });
+  }
+
+  if (book && !customizedDoc) {
+    customizedDoc = await CustomizedSettings.findOne({ v_id: book.v_id });
+  }
+
+  if (book && customizedDoc) {
+    const custObj = customizedDoc.toObject ? customizedDoc.toObject() : customizedDoc;
+    book.Customized_Settings = {
+      ...(book.Customized_Settings || {}),
+      ...custObj,
+      Visibility: custObj.Visibility || book.Customized_Settings?.Visibility
+    };
+  }
+
+  // Ensure shareId is distinct from v_id
+  if (book) {
+    if (!book.Customized_Settings) book.Customized_Settings = {};
+    if (!book.Customized_Settings.Visibility) book.Customized_Settings.Visibility = {};
+    if (!book.Customized_Settings.Visibility.shareId || book.Customized_Settings.Visibility.shareId === book.v_id) {
+      const distinctShareId = crypto.randomBytes(8).toString('hex');
+      book.Customized_Settings.Visibility.shareId = distinctShareId;
+      CustomizedSettings.updateOne({ v_id: book.v_id }, { $set: { 'Visibility.shareId': distinctShareId } }).catch(() => {});
+      Flipbook.updateOne({ v_id: book.v_id }, { $set: { 'Customized_Settings.Visibility.shareId': distinctShareId } }).catch(() => {});
+    }
+  }
+
+  return book;
+};
+
+/**
+ * GET /api/flipbook/public/get/:shareId
+ * Fetch specific flipbook content publicly for sharing or owner preview
+ */
+const getPublicBook = async (req, res) => {
+  try {
+    const { shareId } = req.params;
+    if (!shareId) return res.status(400).json({ success: false, message: "Missing shareId" });
+
+    const book = await findBookByShareId(shareId);
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Flipbook not found" });
+    }
+
+    const vis = book.Customized_Settings?.Visibility || book.share || {};
+    const reqEmail = (req.query.emailId || req.user?.email || req.user?.emailId || '').trim().toLowerCase();
+    const reqUserID = (req.query.userID || req.user?.userID || '').trim();
+    const reqUserId = (req.query.userId || req.user?.userId || req.user?.id || req.user?._id || '').toString().trim();
+
+    const ownerEmail = (book.userEmail || '').trim().toLowerCase();
+    const ownerUserID = (book.userID || '').trim();
+    const ownerUserId = (book.userId ? String(book.userId) : '').trim();
+
+    let isOwner = false;
+    if (reqEmail && ownerEmail && reqEmail === ownerEmail) isOwner = true;
+    if (reqUserID && ownerUserID && reqUserID === ownerUserID) isOwner = true;
+    if (reqUserId && ownerUserId && reqUserId === ownerUserId) isOwner = true;
+    const accessMode = String(vis.access || vis.type || 'public').toLowerCase();
+
+    // Publication check (Owner can preview unpublished, public readers cannot)
+    if (!isOwner && (book.isPublished === false || !book.isPublished)) {
+      return res.status(403).json({
+        success: false,
+        message: "This Flipbook not Yet Published",
+        isUnpublished: true
+      });
+    }
+
+    // Pre-build preview page structures for background blur preview
+    const previewPages = (book.pages || []).map(p => ({
+      id: p.pageNumber,
+      name: p.name,
+      fileName: p.fileName,
+      html: "",
+      v_id: p.v_id,
+      hide: p.hide || 0
+    }));
+
+    // 1. Private access check
+    if (accessMode.includes('private') && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "This flipbook is private. It cannot be viewed via public link.",
+        isPrivate: true,
+        accessMode: 'private'
+      });
+    }
+
+    // 2. Password Protect access check
+    if (accessMode.includes('password') && !isOwner) {
+      const inputKey = (req.query.accessKey || req.query.password || '').trim();
+      const storedKey = String(vis.accessKey || vis.password || '').trim();
+      let keyMatches = false;
+      if (storedKey && inputKey) {
+        if (storedKey.startsWith('$2a$') || storedKey.startsWith('$2b$')) {
+          try {
+            keyMatches = await bcrypt.compare(inputKey, storedKey);
+          } catch (e) {
+            keyMatches = inputKey === storedKey;
+          }
+        } else {
+          keyMatches = inputKey === storedKey;
+        }
+      }
+
+      if (!keyMatches) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid Access Key",
+          isPasswordProtected: true,
+          bookName: book.flipbookName,
+          accessMode: 'password',
+          pages: previewPages,
+          FlipbookInfo: book.Customized_Settings?.FlipbookInfo || {},
+          meta: book.Customized_Settings?.FlipbookInfo || {},
+          Customized_Settings: book.Customized_Settings || {}
+        });
+      }
+    }
+
+    // 3. Invite Only Access check
+    if (accessMode.includes('invite') && !isOwner) {
+      const allowedEmails = (vis.inviteOnly?.emails || []).map(e => (typeof e === 'string' ? e : e?.email || '').toLowerCase());
+      const allowedDomains = (vis.inviteOnly?.domains || []).map(d => (typeof d === 'string' ? d : d?.domain || '').toLowerCase());
+
+      const userEmailLower = (reqEmail || '').toLowerCase();
+      const userDomainLower = userEmailLower.includes('@') ? userEmailLower.split('@')[1] : '';
+
+      const isEmailAllowed = allowedEmails.includes(userEmailLower);
+      const isDomainAllowed = allowedDomains.some(dom => userDomainLower === dom || userDomainLower.endsWith('.' + dom));
+
+      if (!userEmailLower || (!isEmailAllowed && !isDomainAllowed)) {
+        return res.status(403).json({
+          success: false,
+          message: "Invite only access required",
+          isInviteOnly: true,
+          accessMode: 'invite',
+          pages: previewPages,
+          FlipbookInfo: book.Customized_Settings?.FlipbookInfo || {},
+          meta: book.Customized_Settings?.FlipbookInfo || {},
+          Customized_Settings: book.Customized_Settings || {}
+        });
+      }
+
+      // Check Auto Expire timer
+      const autoExpire = vis.inviteOnly?.autoExpire;
+      if (autoExpire && autoExpire.enabled) {
+        const rawGranted = autoExpire.grantedAt || autoExpire.createdAt || book.updatedAt || book.createdAt;
+        if (rawGranted) {
+          const grantedAt = new Date(rawGranted).getTime();
+          const daysStr = String(autoExpire.days || '0');
+          const daysMatch = daysStr.match(/(\d+)/);
+          const daysNum = daysMatch ? parseInt(daysMatch[1], 10) : 0;
+          const timeStr = String(autoExpire.time || '0');
+          const timeMatch = timeStr.match(/(\d+)/);
+          const timeNum = timeMatch ? parseInt(timeMatch[1], 10) : 0;
+          let timeInMs = timeStr.toLowerCase().includes('hour') ? timeNum * 3600000 : timeNum * 60000;
+          const totalAllowedMs = (daysNum * 86400000) + timeInMs;
+          if (totalAllowedMs > 0 && (Date.now() - grantedAt) > totalAllowedMs) {
+            return res.status(403).json({
+              success: false,
+              message: "Time Expired! The access time granted for this flipbook has expired.",
+              isExpired: true,
+              isInviteOnly: true,
+              accessMode: 'invite',
+              pages: previewPages,
+              FlipbookInfo: book.Customized_Settings?.FlipbookInfo || {},
+              meta: book.Customized_Settings?.FlipbookInfo || {},
+              Customized_Settings: book.Customized_Settings || {}
+            });
+          }
+        }
+      }
+    }
+
+    // Populate page content from disk storage or MongoDB
+    const storageRoot = getStorageRoot();
+    const userFolders = Array.from(
+      new Set(
+        [
+          book.userID,
+          book.userId ? String(book.userId) : null,
+          book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
+        ].filter(Boolean)
+      )
+    );
+
+    const primaryFolder = resolveFolder(book.folderName);
+    const rawFolders = Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName];
+    const folders = Array.from(
+      new Set(
+        [primaryFolder, ...rawFolders, 'My_Flipbooks']
+          .filter((f) => f && typeof f === 'string' && f.trim())
+          .map((f) => String(f).trim())
+      )
+    );
+
+    const bookNames = Array.from(
+      new Set(
+        [book.flipbookName, book.v_id, `${book.flipbookName}_${book.v_id}`]
+          .flat(Infinity)
+          .filter((bn) => bn && typeof bn === 'string' && bn.trim())
+          .map((bn) => String(bn).trim())
+      )
+    );
+
+    const candidateDirs = [];
+    for (const uf of userFolders) {
+      if (!uf || typeof uf !== 'string') continue;
+      for (const f of folders) {
+        if (!f || typeof f !== 'string') continue;
+        for (const bn of bookNames) {
+          if (!bn || typeof bn !== 'string') continue;
+          candidateDirs.push(
+            path.join(storageRoot, uf, "My_Flipbooks", f, bn),
+            path.join(storageRoot, uf, f, bn),
+            path.join(storageRoot, uf, "My_Flipbooks", bn),
+            path.join(storageRoot, uf, bn),
+            path.join(storageRoot, "flipbooks", uf, f, bn),
+            path.join(storageRoot, "flipbooks", uf, bn)
+          );
+        }
+      }
+    }
+
+    const sanitizedEmail = (book.userEmail || '').replace(/[@.]/g, '_');
+    let effectiveUserFolder = book.userID || sanitizedEmail;
+    for (const uf of userFolders) {
+      if (fs.existsSync(path.join(storageRoot, uf, 'My_Flipbooks', primaryFolder, book.flipbookName))) {
+        effectiveUserFolder = uf;
+        break;
+      }
+      if (fs.existsSync(path.join(storageRoot, uf, primaryFolder, book.flipbookName))) {
+        effectiveUserFolder = uf;
+        break;
+      }
+    }
+    const resolvedBaseUrl = `/storage/${effectiveUserFolder}/My_Flipbooks/${primaryFolder}/${book.flipbookName}/`;
+
+    const populatedPages = (book.pages || []).map((p) => {
+      const pageObj = p.toObject ? p.toObject() : { ...p };
+      let pageContent = "";
+
+      for (const candDir of candidateDirs) {
+        const candidateFiles = [
+          pageObj.fileName ? path.join(candDir, "pages", pageObj.fileName) : null,
+          pageObj.name ? path.join(candDir, "pages", `${pageObj.name}.svg`) : null,
+          path.join(candDir, "pages", `${pageObj.pageNumber}.svg`),
+          path.join(candDir, "pages", `Page ${pageObj.pageNumber}.svg`),
+          path.join(candDir, `Page ${pageObj.pageNumber}.html`),
+        ].filter(Boolean);
+
+        for (const fPath of candidateFiles) {
+          if (fs.existsSync(fPath)) {
+            try {
+              const str = fs.readFileSync(fPath, "utf8");
+              if (str && str.trim()) {
+                pageContent = str;
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+        if (pageContent) break;
+      }
+
+      if (!pageContent) {
+        pageContent = pageObj.content || pageObj.html || "";
+      }
+
+      if (pageContent && resolvedBaseUrl) {
+        pageContent = pageContent.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${resolvedBaseUrl}assets/`);
+      }
+
+      const cleanName = String(pageObj.name || "").replace(/[\\/:*?"<>|]/g, "").trim();
+      const resolvedFileName = pageObj.fileName || (cleanName ? (cleanName.endsWith(".svg") ? cleanName : `${cleanName}.svg`) : `${pageObj.pageNumber}.svg`);
+
+      return {
+        id: pageObj.pageNumber,
+        ...pageObj,
+        fileName: resolvedFileName,
+        content: pageContent,
+        html: pageContent,
+      };
+    });
+
+    const docFlipbookInfo = book.Customized_Settings?.FlipbookInfo || {};
+    const docSettings = { ...(book.Customized_Settings || {}) };
+    const ratings = Array.isArray(book.bookRating) ? book.bookRating : [];
+    const totalRatings = ratings.length;
+    const avgRating = totalRatings > 0
+      ? Number((ratings.reduce((sum, r) => sum + (r.ratingValue || 0), 0) / totalRatings).toFixed(1))
+      : 0;
+
+    const accurateViews = (Array.isArray(book.viewers) && book.viewers.length > 0)
+      ? book.viewers.length
+      : (typeof book.viewsCount === 'number' ? book.viewsCount : 0);
+
+    const publisherName = docFlipbookInfo.publisher || (book.userEmail ? book.userEmail.split('@')[0] : 'FlipiBook');
+
+    const flipbookInfoObj = {
+      ...docFlipbookInfo,
+      flipbookName: book.flipbookName,
+      folderName: primaryFolder,
+      v_id: book.v_id,
+      baseUrl: resolvedBaseUrl,
+      publisher: publisherName,
+      category: docFlipbookInfo.category || 'General',
+      language: docFlipbookInfo.language || 'English',
+      quotes: docFlipbookInfo.quotes || '',
+      about: docFlipbookInfo.about || '',
+      viewsCount: accurateViews,
+      addedToShelfCount: book.addedToShelfCount || 0,
+      createdAt: book.createdAt,
+      publishedAt: docFlipbookInfo.publishedAt || book.updatedAt || book.createdAt
+    };
+
+    res.status(200).json({
+      success: true,
+      v_id: book.v_id,
+      flipbookName: book.flipbookName,
+      folderName: primaryFolder,
+      userEmail: book.userEmail,
+      isOwner,
+      pages: populatedPages,
+      Customized_Settings: docSettings,
+      settings: docSettings,
+      Visibility: vis,
+      share: vis,
+      isPublished: Boolean(book.isPublished),
+      FlipbookInfo: flipbookInfoObj,
+      meta: flipbookInfoObj,
+      viewsCount: accurateViews,
+      addedToShelfCount: book.addedToShelfCount || 0,
+      bookRating: ratings,
+      averageRating: avgRating,
+      totalRatings: totalRatings,
+      publisher: publisherName,
+      createdAt: book.createdAt,
+      publishedAt: docFlipbookInfo.publishedAt || book.updatedAt || book.createdAt
+    });
+  } catch (err) {
+    console.error("[Customized Editor] Error in getPublicBook:", err);
+    res.status(500).json({ success: false, message: "Server error fetching public flipbook" });
+  }
+};
+
+/**
+ * POST /public/view/:shareId
+ * Record unique view count for flipbook
+ */
+const recordPublicView = async (req, res) => {
+  try {
+    const { shareId } = req.params;
+    const { viewerId, userEmail } = req.body;
+    const book = await findBookByShareId(shareId);
+    if (!book) return res.status(404).json({ success: false, message: "Book not found" });
+
+    if (!Array.isArray(book.viewers)) book.viewers = [];
+    const identifier = viewerId || userEmail;
+    if (identifier && !book.viewers.includes(identifier)) {
+      book.viewers.push(identifier);
+    }
+    book.viewsCount = Math.max((book.viewsCount || 0) + 1, book.viewers.length);
+    await book.save();
+    res.json({ success: true, viewsCount: book.viewsCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * POST /public/rate/:shareId
+ * Submit or update a public rating and review
+ */
+const submitPublicRating = async (req, res) => {
+  try {
+    const { shareId } = req.params;
+    const { ratingId, name, ratingValue, review, userEmail, profileImgUrl } = req.body;
+    const book = await findBookByShareId(shareId);
+    if (!book) return res.status(404).json({ success: false, message: "Book not found" });
+
+    if (!Array.isArray(book.bookRating)) book.bookRating = [];
+    if (ratingId) {
+      const existing = book.bookRating.find(r => String(r._id) === String(ratingId));
+      if (existing) {
+        existing.name = name;
+        existing.ratingValue = Number(ratingValue);
+        existing.review = review;
+        if (userEmail) existing.userEmail = userEmail;
+        if (profileImgUrl) existing.profileImgUrl = profileImgUrl;
+      }
+    } else {
+      book.bookRating.push({
+        name,
+        ratingValue: Number(ratingValue),
+        review: review || '',
+        userEmail,
+        profileImgUrl,
+        createdAt: new Date()
+      });
+    }
+
+    const total = book.bookRating.length;
+    const avg = total > 0 ? Number((book.bookRating.reduce((sum, r) => sum + (r.ratingValue || 0), 0) / total).toFixed(1)) : 0;
+    book.averageRating = avg;
+    book.totalRatings = total;
+    book.markModified && book.markModified('bookRating');
+    await book.save();
+
+    res.json({ success: true, bookRating: book.bookRating, averageRating: avg, totalRatings: total });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * PUT /public/rate/:shareId/:ratingId
+ */
+const updatePublicRating = async (req, res) => {
+  return submitPublicRating(req, res);
+};
+
+/**
+ * DELETE /public/rate/:shareId/:ratingId
+ */
+const deletePublicRating = async (req, res) => {
+  try {
+    const { shareId, ratingId } = req.params;
+    const book = await findBookByShareId(shareId);
+    if (!book) return res.status(404).json({ success: false, message: "Book not found" });
+
+    if (Array.isArray(book.bookRating)) {
+      book.bookRating = book.bookRating.filter(r => String(r._id) !== String(ratingId));
+      const total = book.bookRating.length;
+      const avg = total > 0 ? Number((book.bookRating.reduce((sum, r) => sum + (r.ratingValue || 0), 0) / total).toFixed(1)) : 0;
+      book.averageRating = avg;
+      book.totalRatings = total;
+      book.markModified && book.markModified('bookRating');
+      await book.save();
+      return res.json({ success: true, bookRating: book.bookRating, averageRating: avg, totalRatings: total });
+    }
+    res.json({ success: true, bookRating: [], averageRating: 0, totalRatings: 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getStatus,
   checkAuth,
@@ -1342,5 +1880,11 @@ module.exports = {
   saveUserPreset,
   updateBookAppearance,
   saveTransparentSheet,
-  deleteTransparentSheet
+  deleteTransparentSheet,
+  findBookByShareId,
+  getPublicBook,
+  recordPublicView,
+  submitPublicRating,
+  updatePublicRating,
+  deletePublicRating
 };

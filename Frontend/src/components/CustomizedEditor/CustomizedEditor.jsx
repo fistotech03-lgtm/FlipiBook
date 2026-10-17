@@ -29,6 +29,43 @@ import { createDefaultPageData } from './utils/defaultPageData';
 import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
 import { getTint, isLightColor, ensureDarkText } from './utils/colorHelpers';
 
+const normalizeSvgMarkup = (htmlStr) => {
+  if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
+  try {
+    return htmlStr.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+      let newAttrs = attrs;
+      const widthMatch = attrs.match(/\bwidth=["']([^"']*)["']/i);
+      const heightMatch = attrs.match(/\bheight=["']([^"']*)["']/i);
+      const viewBoxMatch = attrs.match(/\bviewBox=["']([^"']*)["']/i);
+      
+      const wVal = widthMatch ? widthMatch[1] : null;
+      const hVal = heightMatch ? heightMatch[1] : null;
+      
+      if (!viewBoxMatch && wVal && hVal && !wVal.includes('%') && !hVal.includes('%')) {
+        const numW = parseFloat(wVal);
+        const numH = parseFloat(hVal);
+        if (!isNaN(numW) && !isNaN(numH)) {
+          newAttrs += ` viewBox="0 0 ${numW} ${numH}"`;
+        }
+      }
+      
+      if (/\bwidth=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bwidth=["'][^"']*["']/i, 'width="100%"');
+      } else {
+        newAttrs += ' width="100%"';
+      }
+      if (/\bheight=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bheight=["'][^"']*["']/i, 'height="100%"');
+      } else {
+        newAttrs += ' height="100%"';
+      }
+      return `<svg${newAttrs}>`;
+    });
+  } catch (e) {
+    return htmlStr;
+  }
+};
+
 const CustomizedEditor = () => {
   const { folder, v_id, page } = useParams();
   const navigate = useNavigate();
@@ -42,23 +79,35 @@ const CustomizedEditor = () => {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [pages, setPages] = useState(() => {
     if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
-      return location.state.pages.map((p, i) => ({
-        id: p.id !== undefined ? p.id : i,
-        name: p.pageName || p.name || `Page ${i + 1}`,
-        html: p.content || p.html || '',
-        content: p.content || p.html || '',
-        isHidden: Boolean(p.isHidden || p.hide === 1)
-      }));
+      return location.state.pages.map((p, i) => {
+        const normalized = normalizeSvgMarkup(p.content || p.html || '');
+        return {
+          id: p.id !== undefined ? p.id : i,
+          name: p.pageName || p.name || `Page ${i + 1}`,
+          html: normalized,
+          content: normalized,
+          isHidden: Boolean(p.isHidden || p.hide === 1)
+        };
+      });
     }
     return [];
   });
+  const [metaDimensions, setMetaDimensions] = useState(() => ({
+    width: location.state?.width || currentBook?.width || null,
+    height: location.state?.height || currentBook?.height || null,
+    orientation: location.state?.orientation || currentBook?.orientation || null
+  }));
   const [devicePages, setDevicePages] = useState({ Desktop: 0, Tablet: 0, Mobile: 0 });
   const targetPage = devicePages[activeDevice || 'Desktop'] || 0;
   const setTargetPage = useCallback((pageNum) => {
-    setDevicePages(prev => ({
-      ...prev,
-      [activeDevice || 'Desktop']: pageNum
-    }));
+    setDevicePages(prev => {
+      const dev = activeDevice || 'Desktop';
+      if (prev[dev] === pageNum) return prev;
+      return {
+        ...prev,
+        [dev]: pageNum
+      };
+    });
   }, [activeDevice]);
   const [projectBaseUrl, setProjectBaseUrl] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
@@ -72,14 +121,24 @@ const CustomizedEditor = () => {
     setIsPanelCollapsed(false);
   }, [activeSubView]);
 
-  // Clear previous book from IndexedDB when opening a new book in Customized Editor
+  // Clear previous book from IndexedDB and reset stale Redux book when opening a new book in Customized Editor
   useEffect(() => {
     if (v_id) {
       ensureCleanBook(v_id);
+      if (setCurrentBook && currentBook?.v_id && currentBook.v_id !== v_id) {
+        setCurrentBook(prev => ({
+          ...(prev || {}),
+          v_id: v_id,
+          flipbookName: bookName,
+          folder: folder || 'My_Flipbooks',
+          pages: pages && pages.length > 0 ? pages : []
+        }));
+      }
     }
   }, [v_id]);
 
   const profilePreviewForcedRef = useRef(false);
+  const hasFetchedRef = useRef(null);
 
   useEffect(() => {
     const shouldBeOpen = activeSubView === 'profile' && !isPanelCollapsed;
@@ -95,28 +154,33 @@ const CustomizedEditor = () => {
 
   // Handle initial page from URL
   useEffect(() => {
-    if (page) {
-      const pageNum = parseInt(page);
+    if (page !== undefined && page !== null && page !== '') {
+      const pageNum = parseInt(page, 10);
       if (!isNaN(pageNum)) {
         setTargetPage(pageNum);
       }
     }
-  }, [page]);
+  }, [page, setTargetPage]);
 
   // Update URL when page changes to maintain state on refresh
   useEffect(() => {
     if (folder && v_id) {
-      // Use replace: true to avoid cluttering history with every page turn
-      navigate(`/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`, { replace: true });
+      const targetPath = targetPage > 0
+        ? `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`
+        : `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}`;
+
+      if (location.pathname !== targetPath) {
+        navigate(targetPath, { replace: true, state: location.state });
+      }
     }
-  }, [targetPage, folder, v_id, navigate]);
+  }, [targetPage, folder, v_id, navigate, location.pathname, location.state]);
 
   // Sync with global flipbook name from context (Template Editor sync)
   useEffect(() => {
-    if (currentBook?.flipbookName) {
+    if (currentBook?.flipbookName && currentBook?.v_id === v_id) {
       setBookName(prev => (prev === currentBook.flipbookName ? prev : currentBook.flipbookName));
     }
-  }, [currentBook?.flipbookName]);
+  }, [currentBook?.flipbookName, currentBook?.v_id, v_id]);
 
 
   // Customization States
@@ -798,6 +862,9 @@ const CustomizedEditor = () => {
         folderName: folder || 'Recent Book',
         pages: pages && pages.length > 0 ? pages : [],
         targetPage: targetPage || 0,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -1001,6 +1068,9 @@ const CustomizedEditor = () => {
         folderName: folder || 'Recent Book',
         pages: updatedPagesList,
         activePageIndex: targetPage || 0,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -1083,6 +1153,9 @@ const CustomizedEditor = () => {
         pages: pages,
         activePageIndex: targetPage || 0,
         projectBaseUrl: projectBaseUrl,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -1172,7 +1245,7 @@ const CustomizedEditor = () => {
           prev?.flipbookName === bookName &&
           prev?.v_id === v_id &&
           prev?.shareId === sId &&
-          prev?.access === currentAccess
+          (prev?.access || '').toLowerCase() === (currentAccess || '').toLowerCase()
         ) {
           return prev;
         }
@@ -1307,6 +1380,10 @@ const CustomizedEditor = () => {
 
   // Load Flipbook Data
   useEffect(() => {
+    if (!v_id) return;
+    if (hasFetchedRef.current === v_id) return;
+    hasFetchedRef.current = v_id;
+
     const fetchBook = async () => {
       const userEmail = user?.emailId || user?.email;
 
@@ -1337,7 +1414,21 @@ const CustomizedEditor = () => {
             setBookName(prev => (prev === cached.bookName ? prev : cached.bookName));
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
-            setPages(cached.pages);
+            setPages(cached.pages.map((p, i) => {
+              const normalized = normalizeSvgMarkup(p.content || p.html || '');
+              return {
+                ...p,
+                html: normalized,
+                content: normalized
+              };
+            }));
+          }
+          if (cached.width && cached.height) {
+            setMetaDimensions({
+              width: cached.width,
+              height: cached.height,
+              orientation: cached.orientation || (cached.width > cached.height ? 'landscape' : 'portrait')
+            });
           }
           setIsDataLoaded(true);
         }
@@ -1378,6 +1469,7 @@ const CustomizedEditor = () => {
                 rawHTML = rawHTML.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${autoBaseUrl}assets/`);
               }
               rawHTML = rewriteHtmlUploads(rawHTML);
+              rawHTML = normalizeSvgMarkup(rawHTML);
 
               return {
                 id: p.id || i,
@@ -1478,6 +1570,7 @@ const CustomizedEditor = () => {
                   }
 
                   rawHTML = rewriteHtmlUploads(rawHTML);
+                  rawHTML = normalizeSvgMarkup(rawHTML);
 
                   return {
                     id: p.id || i,
@@ -1487,6 +1580,13 @@ const CustomizedEditor = () => {
                     isHidden: p.hide === 1 || p.isHidden
                   };
                 });
+              });
+            }
+            if (res.data.meta?.width && res.data.meta?.height) {
+              setMetaDimensions({
+                width: res.data.meta.width,
+                height: res.data.meta.height,
+                orientation: res.data.meta.orientation || (res.data.meta.width > res.data.meta.height ? 'landscape' : 'portrait')
               });
             }
 
@@ -1754,7 +1854,7 @@ const CustomizedEditor = () => {
       }
     };
     fetchBook();
-  }, [v_id, folder, user]);
+  }, [v_id, folder, user?.emailId || user?.email]);
 
 
 

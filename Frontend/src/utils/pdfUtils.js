@@ -991,41 +991,7 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
     }));
   }
 
-  // 2. PRIMARY: Backend Inkscape CLI conversion for pure vectorized SVG pages (with text-to-path curves)
-  try {
-    const formData = new FormData();
-    formData.append('pdf', targetFile);
-    if (maxPages && isFinite(maxPages)) {
-      formData.append('maxPages', maxPages.toString());
-    }
-
-    const response = await fetch(`${resolvedBackendUrl}/api/flipbook/convert-pdf-inkscape`, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const firstPage = data.pages?.[0];
-      if (data.success && Array.isArray(data.pages) && data.pages.length > 0 && firstPage && firstPage.content && firstPage.content.includes('<svg')) {
-        return data.pages.map((p) => ({
-          pageNumber: p.pageNumber,
-          pageName: p.pageName || `Page ${p.pageNumber}`,
-          content: p.content,
-          svgString: p.content,
-          width: p.width,
-          height: p.height,
-          dataUrl: svgToDataUrl(p.content),
-          isVector: true
-        }));
-      }
-    }
-  } catch (backendErr) {
-    console.warn('[PDF/Doc] Backend Inkscape conversion unavailable, falling back to client-side MuPDF:', backendErr);
-  }
-
-  // 3. Fallback: client-side MuPDF WebAssembly engine
+  // 2. Client-side MuPDF WebAssembly engine (100% server-free, 0 RAM / 0 server CPU)
   try {
     const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress);
     return images.map((img, idx) => ({

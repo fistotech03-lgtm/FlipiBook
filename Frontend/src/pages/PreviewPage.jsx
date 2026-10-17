@@ -16,16 +16,13 @@ const PreviewPage = () => {
 
     const loadData = async () => {
       const searchParams = new URLSearchParams(location.search);
-      const shareId = searchParams.get('shareId') || searchParams.get('v_id');
+      const shareId = searchParams.get('shareId');
+      const v_id = searchParams.get('v_id');
+      const targetIdentifier = shareId || v_id;
 
       const currentUserEmail = user?.emailId || user?.email;
       const currentUserID = user?.userID;
       const currentUserId = user?.userId || user?._id || user?.id;
-
-      if (!shareId) {
-        setData({ error: true, errorMessage: "No flipbook ID specified for preview." });
-        return;
-      }
 
       try {
         const getBackendUrl = () => {
@@ -43,28 +40,81 @@ const PreviewPage = () => {
         if (currentUserEmail) params.emailId = currentUserEmail;
         if (currentUserID) params.userID = currentUserID;
         if (currentUserId) params.userId = currentUserId;
+        if (v_id) params.v_id = v_id;
 
         let res;
-        try {
-          res = await axios.get(`${backendUrl}/api/flipbook/public/get/${shareId}`, {
+        if (targetIdentifier) {
+          try {
+            res = await axios.get(`${backendUrl}/api/flipbook/public/get/${targetIdentifier}`, {
+              params,
+              withCredentials: true
+            });
+          } catch (pubErr) {
+            // Fallback to /api/flipbook/get if public get endpoint is unavailable or returns 404
+            if (pubErr.response?.status === 404 || pubErr.response?.status === 502) {
+              const fallbackVId = v_id || targetIdentifier;
+              try {
+                res = await axios.get(`${backendUrl}/api/flipbook/get`, {
+                  params: { v_id: fallbackVId, ...params },
+                  withCredentials: true
+                });
+                if (res.data?.success && res.data?.meta) {
+                  res.data.isOwner = true;
+                  res.data.v_id = res.data.meta.v_id || res.data.v_id || fallbackVId;
+                  res.data.flipbookName = res.data.meta.flipbookName;
+                  res.data.Customized_Settings = res.data.Customized_Settings || res.data.settings || res.data.meta.Customized_Settings || {};
+                }
+              } catch (privErr) {
+                // If specific lookup failed and user is logged in, attempt to load user's primary flipbook
+                const listRes = await axios.get(`${backendUrl}/api/flipbook/list`, {
+                  params,
+                  withCredentials: true
+                }).catch(() => null);
+
+                const userBooks = listRes?.data?.books || listRes?.data?.flipbooks || (Array.isArray(listRes?.data) ? listRes.data : []);
+                if (userBooks && userBooks.length > 0) {
+                  const primaryBook = userBooks[0];
+                  res = await axios.get(`${backendUrl}/api/flipbook/get`, {
+                    params: { v_id: primaryBook.v_id, ...params },
+                    withCredentials: true
+                  });
+                  if (res.data?.success && res.data?.meta) {
+                    res.data.isOwner = true;
+                    res.data.v_id = res.data.meta.v_id || primaryBook.v_id;
+                    res.data.flipbookName = res.data.meta.flipbookName || primaryBook.flipbookName;
+                    res.data.Customized_Settings = res.data.Customized_Settings || res.data.settings || res.data.meta.Customized_Settings || {};
+                  }
+                } else {
+                  throw privErr;
+                }
+              }
+            } else {
+              throw pubErr;
+            }
+          }
+        } else {
+          // No shareId or v_id specified, load user's primary book if available
+          const listRes = await axios.get(`${backendUrl}/api/flipbook/list`, {
             params,
             withCredentials: true
-          });
-        } catch (pubErr) {
-          // Fallback to /api/flipbook/get if public get endpoint is unavailable or returns 404
-          if (pubErr.response?.status === 404 || pubErr.response?.status === 502) {
+          }).catch(() => null);
+
+          const userBooks = listRes?.data?.books || listRes?.data?.flipbooks || (Array.isArray(listRes?.data) ? listRes.data : []);
+          if (userBooks && userBooks.length > 0) {
+            const primaryBook = userBooks[0];
             res = await axios.get(`${backendUrl}/api/flipbook/get`, {
-              params: { v_id: shareId, ...params },
+              params: { v_id: primaryBook.v_id, ...params },
               withCredentials: true
             });
             if (res.data?.success && res.data?.meta) {
               res.data.isOwner = true;
-              res.data.v_id = res.data.meta.v_id || res.data.v_id || shareId;
-              res.data.flipbookName = res.data.meta.flipbookName;
-              res.data.Customized_Settings = res.data.settings || res.data.meta.Customized_Settings || {};
+              res.data.v_id = res.data.meta.v_id || primaryBook.v_id;
+              res.data.flipbookName = res.data.meta.flipbookName || primaryBook.flipbookName;
+              res.data.Customized_Settings = res.data.Customized_Settings || res.data.settings || res.data.meta.Customized_Settings || {};
             }
           } else {
-            throw pubErr;
+            setData({ error: true, errorMessage: "No flipbook ID specified for preview." });
+            return;
           }
         }
 
@@ -75,6 +125,21 @@ const PreviewPage = () => {
 
         if (res.data) {
           let processedData = res.data;
+
+          // Seamlessly update browser URL if an invalid/stale shareId was resolved to the real book
+          const actualShareId =
+            processedData.Visibility?.shareId ||
+            processedData.Customized_Settings?.Visibility?.shareId ||
+            processedData.settings?.Visibility?.shareId ||
+            processedData.share?.shareId;
+          const actualVId = processedData.v_id || processedData.meta?.v_id;
+
+          if (actualShareId && (shareId !== actualShareId || !v_id)) {
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.set('shareId', actualShareId);
+            if (actualVId) currentParams.set('v_id', actualVId);
+            window.history.replaceState(null, '', `${window.location.pathname}?${currentParams.toString()}`);
+          }
 
           const bUrl = processedData.meta?.baseUrl ? resolveUploadsPath(processedData.meta.baseUrl) : '';
 

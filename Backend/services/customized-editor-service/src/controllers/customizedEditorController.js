@@ -162,7 +162,6 @@ const getSettings = async (req, res) => {
         shareId: distinctShareId
       };
       await CustomizedSettings.updateOne({ _id: settingsDoc._id }, { $set: { 'Visibility.shareId': distinctShareId } });
-      await Flipbook.updateOne({ v_id: settingsDoc.v_id }, { $set: { 'Customized_Settings.Visibility.shareId': distinctShareId } }).catch(() => {});
     }
 
     return res.status(200).json({
@@ -195,14 +194,6 @@ const getPublicSettings = async (req, res) => {
     }
     if (!settingsDoc && shareId) {
       settingsDoc = await CustomizedSettings.findOne({ 'Visibility.shareId': shareId });
-    }
-
-    // Fallback: check Flipbook collection
-    if (!settingsDoc) {
-      const fb = await Flipbook.findOne(v_id ? { v_id } : { 'Customized_Settings.Visibility.shareId': shareId });
-      if (fb && fb.Customized_Settings) {
-        settingsDoc = fb.Customized_Settings;
-      }
     }
 
     if (!settingsDoc) {
@@ -447,7 +438,6 @@ const updateSettings = async (req, res) => {
     const existingShareId =
       existing?.Visibility?.shareId ||
       existingSettings?.Visibility?.shareId ||
-      flipbook?.Customized_Settings?.Visibility?.shareId ||
       flipbook?.share?.shareId ||
       flipbook?.Visibility?.shareId;
 
@@ -495,13 +485,12 @@ const updateSettings = async (req, res) => {
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
-    // 5. Synchronize with Flipbook.Customized_Settings
+    // 5. Synchronize with Flipbook model (lastUpdated, userID)
     await Flipbook.updateOne(
       { $or: [{ v_id: resolvedVId }, ...(flipbook?._id ? [{ _id: flipbook._id }] : [])] },
       {
         $set: {
           userID: targetUserID,
-          Customized_Settings: cleanSettings,
           lastUpdated: new Date()
         }
       }
@@ -541,8 +530,6 @@ const resetSettings = async (req, res) => {
       { $set: defaults },
       { returnDocument: 'after' }
     );
-
-    await Flipbook.updateOne({ ...userQuery, v_id }, { $set: { Customized_Settings: defaults } }).catch(() => {});
 
     return res.status(200).json({
       success: true,
@@ -806,21 +793,26 @@ const submitLead = async (req, res) => {
 
     // Find flipbook to identify the owner
     let flipbook = null;
-    if (v_id && v_id !== 'preview') {
+    let settingsDoc = null;
+    if (shareId) {
+      settingsDoc = await CustomizedSettings.findOne({ 'Visibility.shareId': shareId });
+      if (settingsDoc) {
+        flipbook = await Flipbook.findOne({ v_id: settingsDoc.v_id });
+      }
+    }
+    if (!flipbook && v_id && v_id !== 'preview') {
       flipbook = await Flipbook.findOne({ v_id });
     }
     if (!flipbook && shareId) {
-      flipbook = await Flipbook.findOne({
-        $or: [
-          { 'Customized_Settings.Visibility.shareId': shareId },
-          { v_id: shareId }
-        ]
-      });
+      flipbook = await Flipbook.findOne({ v_id: shareId });
+    }
+    if (!settingsDoc && flipbook?.v_id) {
+      settingsDoc = await CustomizedSettings.findOne({ v_id: flipbook.v_id });
     }
 
     const ownerUserId = flipbook?.userId || (flipbook?.userID ? null : undefined);
     const effectiveVId = flipbook?.v_id || v_id || 'preview';
-    const effectiveShareId = shareId || flipbook?.Customized_Settings?.Visibility?.shareId || '';
+    const effectiveShareId = shareId || settingsDoc?.Visibility?.shareId || '';
     const effectiveBookName = flipbook?.flipbookName || flipbookName || 'Flipbook';
     const effectiveUserEmail = flipbook?.userEmail || userEmail || '';
 
@@ -952,10 +944,6 @@ const verifyCredential = async (req, res) => {
     let settings = null;
     if (v_id) {
       settings = await CustomizedSettings.findOne({ v_id });
-      if (!settings) {
-        const fb = await Flipbook.findOne({ v_id });
-        settings = fb?.Customized_Settings;
-      }
     }
 
     if (!settings || !settings.Visibility) {
@@ -1010,7 +998,6 @@ const sendVisibilityOtp = async (req, res) => {
 
     if (v_id) {
       await CustomizedSettings.updateOne({ v_id }, { $set: { 'Visibility.otp': hashedOtp } });
-      await Flipbook.updateOne({ v_id }, { $set: { 'Customized_Settings.Visibility.otp': hashedOtp } });
     }
 
     // In local dev/testing, return success
@@ -1048,7 +1035,6 @@ const verifyVisibilityOtp = async (req, res) => {
 
     // Clear OTP after successful verification
     await CustomizedSettings.updateOne({ v_id }, { $unset: { 'Visibility.otp': 1 } });
-    await Flipbook.updateOne({ v_id }, { $unset: { 'Customized_Settings.Visibility.otp': 1 } });
 
     return res.status(200).json({
       success: true,
@@ -1169,14 +1155,6 @@ const updateBookAppearance = async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    await Flipbook.updateOne(
-      { v_id },
-      {
-        $set: { 'Customized_Settings.BookAppearance': mergedApp },
-        $unset: { 'Customized_Settings.appearance': 1, 'Customized_Settings.userId': 1 }
-      }
-    );
-
     return res.status(200).json({
       success: true,
       message: 'Book appearance updated successfully',
@@ -1244,14 +1222,6 @@ const saveTransparentSheet = async (req, res) => {
       { new: true, upsert: true }
     );
 
-    await Flipbook.updateOne(
-      { v_id },
-      {
-        $set: { 'Customized_Settings.BookAppearance.transparentSheets': sheets },
-        $unset: { 'Customized_Settings.appearance': 1, 'Customized_Settings.userId': 1 }
-      }
-    );
-
     return res.status(200).json({
       success: true,
       message: 'Transparent sheet saved successfully',
@@ -1307,14 +1277,6 @@ const deleteTransparentSheet = async (req, res) => {
       }
     );
 
-    await Flipbook.updateOne(
-      { v_id },
-      {
-        $set: { 'Customized_Settings.BookAppearance.transparentSheets': filteredSheets },
-        $unset: { 'Customized_Settings.appearance': 1, 'Customized_Settings.userId': 1 }
-      }
-    );
-
     return res.status(200).json({
       success: true,
       message: 'Transparent sheet deleted successfully',
@@ -1340,11 +1302,10 @@ const findBookByShareId = async (shareId) => {
     book = await Flipbook.findOne({ v_id: customizedDoc.v_id });
   }
 
-  // 2. Search Flipbook model by Customized_Settings.Visibility.shareId or legacy fields
+  // 2. Search Flipbook model by legacy fields
   if (!book) {
     book = await Flipbook.findOne({
       $or: [
-        { 'Customized_Settings.Visibility.shareId': shareId },
         { 'Visibility.shareId': shareId },
         { 'share.shareId': shareId },
         { 'settings.Visibility.shareId': shareId },
@@ -1379,7 +1340,6 @@ const findBookByShareId = async (shareId) => {
       const distinctShareId = crypto.randomBytes(8).toString('hex');
       book.Customized_Settings.Visibility.shareId = distinctShareId;
       CustomizedSettings.updateOne({ v_id: book.v_id }, { $set: { 'Visibility.shareId': distinctShareId } }).catch(() => {});
-      Flipbook.updateOne({ v_id: book.v_id }, { $set: { 'Customized_Settings.Visibility.shareId': distinctShareId } }).catch(() => {});
     }
   }
 
@@ -1395,16 +1355,41 @@ const getPublicBook = async (req, res) => {
     const { shareId } = req.params;
     if (!shareId) return res.status(400).json({ success: false, message: "Missing shareId" });
 
-    const book = await findBookByShareId(shareId);
+    let book = await findBookByShareId(shareId);
+
+    const reqEmail = (req.query.emailId || req.user?.email || req.user?.emailId || '').trim().toLowerCase();
+    const reqUserID = (req.query.userID || req.user?.userID || '').trim();
+    const reqUserId = (req.query.userId || req.user?.userId || req.user?.id || req.user?._id || '').toString().trim();
+
+    // 1. Fallback by req.query.v_id if provided
+    if (!book && req.query.v_id) {
+      book = await findBookByShareId(req.query.v_id);
+    }
+
+    // 2. Fallback: if caller is authenticated/provided user params and user has exactly one flipbook
+    if (!book && (reqEmail || reqUserID || reqUserId)) {
+      const userConditions = [];
+      if (reqEmail) userConditions.push({ userEmail: reqEmail });
+      if (reqUserID) userConditions.push({ userID: reqUserID });
+      if (reqUserId) userConditions.push({ userId: reqUserId });
+
+      if (userConditions.length > 0) {
+        const userBooks = await Flipbook.find({
+          $or: userConditions,
+          trash: { $ne: true }
+        }).limit(2);
+
+        if (userBooks && userBooks.length === 1) {
+          book = await findBookByShareId(userBooks[0].v_id);
+        }
+      }
+    }
 
     if (!book) {
       return res.status(404).json({ success: false, message: "Flipbook not found" });
     }
 
     const vis = book.Customized_Settings?.Visibility || book.share || {};
-    const reqEmail = (req.query.emailId || req.user?.email || req.user?.emailId || '').trim().toLowerCase();
-    const reqUserID = (req.query.userID || req.user?.userID || '').trim();
-    const reqUserId = (req.query.userId || req.user?.userId || req.user?.id || req.user?._id || '').toString().trim();
 
     const ownerEmail = (book.userEmail || '').trim().toLowerCase();
     const ownerUserID = (book.userID || '').trim();

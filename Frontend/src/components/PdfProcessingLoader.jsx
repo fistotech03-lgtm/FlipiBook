@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Check, Lightbulb, Bell, ChevronDown, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -189,6 +189,24 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         ? 100 
         : Math.min(99, Math.max(0, Math.round(fluidPercent)));
 
+    // Smooth physics-based spring interpolation for percentage & circle stroke
+    const progressMotion = useMotionValue(displayPercent);
+    const smoothProgress = useSpring(progressMotion, { stiffness: 45, damping: 15, mass: 0.7 });
+    const strokeDashoffset = useTransform(smoothProgress, [0, 100], [276.46, 0]);
+
+    const [animatedDisplayPercent, setAnimatedDisplayPercent] = useState(displayPercent);
+
+    useEffect(() => {
+        progressMotion.set(displayPercent);
+    }, [displayPercent, progressMotion]);
+
+    useEffect(() => {
+        const unsubscribe = smoothProgress.on('change', (latest) => {
+            setAnimatedDisplayPercent(Math.min(isDone ? 100 : 99, Math.max(0, Math.round(latest))));
+        });
+        return () => unsubscribe();
+    }, [smoothProgress, isDone]);
+
     // Derive active step (1: Uploading, 2: Extracting, 3: Processing, 4: Complete, 5: All Finished)
     const activeStep = useMemo(() => {
         if (isDone) return 5; // All 4 steps completed with checkmarks!
@@ -224,17 +242,25 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         <AnimatePresence>
             <motion.div
                 className="fixed inset-0 z-[99999] bg-[#F8FAFC] flex flex-col justify-between overflow-x-hidden overflow-y-auto select-none w-screen h-screen"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                initial={{ opacity: 0, scale: 0.995 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.995 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-                {/* Ambient Decorative Background Glows */}
+                {/* Ambient Decorative Background Glows with breathing animation */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                     {/* Top-Right Soft Lavender Glow */}
-                    <div className="absolute -top-[10vw] -right-[10vw] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-indigo-100/60 to-purple-100/40 blur-[7vw]" />
+                    <motion.div 
+                        className="absolute -top-[10vw] -right-[10vw] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-indigo-100/60 to-purple-100/40 blur-[7vw]"
+                        animate={{ scale: [1, 1.08, 1], opacity: [0.75, 1, 0.75] }}
+                        transition={{ repeat: Infinity, duration: 8, ease: 'easeInOut' }}
+                    />
                     {/* Bottom-Left Soft Blue Glow */}
-                    <div className="absolute -bottom-[10vw] -left-[10vw] w-[35vw] h-[35vw] rounded-full bg-gradient-to-tr from-blue-100/50 to-indigo-100/30 blur-[6.5vw]" />
+                    <motion.div 
+                        className="absolute -bottom-[10vw] -left-[10vw] w-[35vw] h-[35vw] rounded-full bg-gradient-to-tr from-blue-100/50 to-indigo-100/30 blur-[6.5vw]"
+                        animate={{ scale: [1.06, 0.96, 1.06], opacity: [0.65, 0.9, 0.65] }}
+                        transition={{ repeat: Infinity, duration: 9, ease: 'easeInOut' }}
+                    />
                 </div>
 
                 {/* Top Navigation Bar */}
@@ -280,7 +306,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                         
                         {/* Shining Silver Circular Disc */}
                         <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white via-[#F8FAFC] to-[#E2E8F0] shadow-[0_0.7vw_1.8vw_rgba(148,163,184,0.18),inset_0_0.08vw_0.2vw_rgba(255,255,255,0.95)] overflow-hidden pointer-events-none">
-                            {/* Radiant Pure Silver Specular Beam (Left to Right Infinite - Pure Light, Zero Dark Pixels) */}
+                            {/* Radiant Pure Silver Specular Beam */}
                             <motion.div
                                 className="absolute -inset-y-[1.5vw] -left-1/2 w-[200%] h-[150%] pointer-events-none"
                                 style={{
@@ -301,7 +327,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                             />
                         </div>
 
-                        {/* Clean Single Gray Border & Inside Percentage Progress Bar */}
+                        {/* Clean Single Gray Border & Inside Percentage Progress Bar with Spring Motion */}
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
                             <defs>
                                 <linearGradient id="circleProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -309,6 +335,9 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                     <stop offset="50%" stopColor="#6366F1" />
                                     <stop offset="100%" stopColor="#8B5CF6" />
                                 </linearGradient>
+                                <filter id="circleGlow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#6366F1" floodOpacity="0.4" />
+                                </filter>
                             </defs>
 
                             {/* Single Clean Gray Border Track */}
@@ -321,35 +350,33 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                 strokeWidth="2.5"
                             />
 
-                            {/* Inside Percentage Progress Bar (starts at 12 o'clock, fills clockwise) */}
+                            {/* Inside Percentage Progress Bar (smooth continuous spring stroke fill) */}
                             <motion.circle
                                 cx="50"
                                 cy="50"
                                 r="44"
                                 fill="none"
                                 stroke="url(#circleProgressGradient)"
-                                strokeWidth="2.5"
+                                strokeWidth="2.8"
                                 strokeLinecap="round"
                                 strokeDasharray={276.46}
-                                initial={{ strokeDashoffset: 276.46 }}
-                                animate={{
-                                    strokeDashoffset: 276.46 - (Math.max(0, Math.min(100, displayPercent)) / 100) * 276.46
-                                }}
-                                transition={{ duration: 0.45, ease: 'easeOut' }}
                                 style={{
+                                    strokeDashoffset,
                                     transformOrigin: '50% 50%',
-                                    transform: 'rotate(-90deg)'
+                                    transform: 'rotate(-90deg)',
+                                    filter: 'url(#circleGlow)'
                                 }}
                             />
                         </svg>
 
-                        {/* Levitating Realistic Document Card (Compact Height, Not Empty at Bottom) */}
+                        {/* Levitating Realistic Document Card */}
                         <motion.div
                             className="relative z-10 w-[4.2vw] h-[4.8vw] -mt-[1.5vw] bg-white rounded-[0.7vw] shadow-[0_0.4vw_1.2vw_rgba(0,0,0,0.06)] border border-slate-100 flex flex-col items-center pt-[0.55vw] px-[0.4vw] overflow-hidden"
                             animate={{
-                                y: [-2, 2, -2]
+                                y: [-3, 3, -3],
+                                rotate: [-0.6, 0.6, -0.6]
                             }}
-                            transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                            transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
                         >
                             {/* Folded Top-Right Corner */}
                             <div className="absolute top-0 right-0 w-[1vw] h-[1vw]">
@@ -357,7 +384,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                 <div className="absolute top-0 right-0 w-0 h-0 border-t-[1vw] border-t-white border-l-[1vw] border-l-transparent" />
                             </div>
 
-                            {/* Red / Colored Document Badge with Scanning Sheen */}
+                            {/* Document Badge with Scanning Sheen */}
                             <div className={`relative overflow-hidden mt-[0.1vw] px-[0.45vw] py-[0.12vw] rounded-[0.25vw] ${docBadgeColor} text-white font-extrabold text-[0.6vw] tracking-wider shadow-xs`}>
                                 <span className="relative z-10">{docBadgeText}</span>
                                 <motion.div
@@ -387,18 +414,19 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                         {/* Soft Ground Shadow right below Document Card */}
                         <motion.div
                             className="absolute bottom-[4.3vw] w-[2.8vw] h-[0.35vw] bg-indigo-950/10 rounded-full blur-[0.15vw] pointer-events-none"
-                            animate={{ scale: [0.9, 1.12, 0.9], opacity: [0.2, 0.45, 0.2] }}
-                            transition={{ repeat: Infinity, duration: 3.4, ease: 'easeInOut' }}
+                            animate={{ scale: [0.92, 1.08, 0.92], opacity: [0.18, 0.38, 0.18] }}
+                            transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
                         />
 
-                        {/* Percentage text inside circle at bottom without background */}
+                        {/* Percentage text inside circle at bottom in fluid sync with circular bar */}
                         <motion.div
                             className="absolute bottom-[2.3vw] z-20 flex items-center justify-center pointer-events-none"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         >
-                            <span className="text-[0.9vw] font-black tracking-tight text-[#4F46E5] select-none">
-                                {displayPercent}%
+                            <span className="text-[0.9vw] font-black tracking-tight text-[#4F46E5] select-none tabular-nums">
+                                {animatedDisplayPercent}%
                             </span>
                         </motion.div>
                     </div>
@@ -408,7 +436,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                         <p>{displaySubtitle}</p>
                     </div>
 
-                    {/* 4-Stage Stepper: Lines strictly bounded between circles (no left overflow on step 1, no right overflow on step 4) */}
+                    {/* 4-Stage Stepper: Fluid connection lines & smooth step state transitions */}
                     <div className="w-full max-w-[38vw] grid grid-cols-4 relative px-[0.5vw]">
                         {steps.map((step, idx) => {
                             const isCompleted = isDone ? true : step.id < activeStep;
@@ -416,22 +444,25 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
                             return (
                                 <div key={step.id} className="flex flex-col items-center text-center relative px-[0.25vw]">
-                                    {/* Connecting Line to next step: strictly starts after circle and ends before next circle */}
+                                    {/* Connecting Line to next step: smooth expanding gradient fill */}
                                     {idx < steps.length - 1 && (
                                         <div 
-                                            className="absolute top-[1.15vw] left-[calc(50%+1.3vw)] w-[calc(100%-2.6vw)] h-[0.14vw] -translate-y-1/2 z-0 overflow-hidden"
+                                            className="absolute top-[1.15vw] left-[calc(50%+1.3vw)] w-[calc(100%-2.6vw)] h-[0.16vw] -translate-y-1/2 z-0 rounded-full bg-[#E2E8F0] overflow-hidden"
                                         >
-                                            <div 
-                                                className={`w-full h-full rounded-full transition-colors duration-400 ${
-                                                    isDone || activeStep > step.id ? 'bg-[#3B82F6]' : 'bg-[#E2E8F0]'
-                                                }`} 
+                                            <motion.div 
+                                                className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] via-[#6366F1] to-[#8B5CF6]"
+                                                initial={false}
+                                                animate={{ width: isDone || activeStep > step.id ? '100%' : '0%' }}
+                                                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                                             />
                                         </div>
                                     )}
 
                                     {/* Step Circle Badge */}
-                                    <div
-                                        className={`w-[2.3vw] h-[2.3vw] rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0.2vw_0.6vw_rgba(0,0,0,0.04)] relative z-10 ${
+                                    <motion.div
+                                        animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                                        transition={isActive ? { repeat: Infinity, duration: 2.2, ease: 'easeInOut' } : { duration: 0.35 }}
+                                        className={`w-[2.3vw] h-[2.3vw] rounded-full flex items-center justify-center transition-colors duration-400 shadow-[0_0.2vw_0.6vw_rgba(0,0,0,0.04)] relative z-10 ${
                                             isCompleted
                                                 ? 'bg-[#3B82F6] text-white shadow-blue-200'
                                                 : isActive
@@ -439,25 +470,52 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                                 : 'bg-[#F1F5F9] border border-[#E2E8F0] text-[#94A3B8]'
                                         }`}
                                     >
-                                        {isCompleted ? (
-                                            <Check className="w-[1vw] h-[1vw] stroke-[3]" />
-                                        ) : isActive ? (
-                                            <Loader2 className="w-[1vw] h-[1vw] text-[#4F46E5] animate-spin" />
-                                        ) : (
-                                            <span className="text-[0.78vw] font-semibold">{step.id}</span>
-                                        )}
-                                    </div>
+                                        <AnimatePresence mode="wait">
+                                            {isCompleted ? (
+                                                <motion.div
+                                                    key="completed"
+                                                    initial={{ scale: 0, rotate: -40, opacity: 0 }}
+                                                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                                                    exit={{ scale: 0, opacity: 0 }}
+                                                    transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+                                                >
+                                                    <Check className="w-[1vw] h-[1vw] stroke-[3]" />
+                                                </motion.div>
+                                            ) : isActive ? (
+                                                <motion.div
+                                                    key="active"
+                                                    initial={{ scale: 0.6, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    exit={{ scale: 0.6, opacity: 0 }}
+                                                    transition={{ duration: 0.2 }}
+                                                >
+                                                    <Loader2 className="w-[1vw] h-[1vw] text-[#4F46E5] animate-spin" />
+                                                </motion.div>
+                                            ) : (
+                                                <motion.span
+                                                    key="pending"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="text-[0.78vw] font-semibold"
+                                                >
+                                                    {step.id}
+                                                </motion.span>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
 
                                     {/* Step Title with Extract Count beside Point 2 */}
                                     <div className="mt-[0.5vw] flex items-center justify-center gap-[0.35vw] flex-wrap">
-                                        <span className={`text-[0.85vw] font-bold tracking-tight transition-colors ${
+                                        <span className={`text-[0.85vw] font-bold tracking-tight transition-colors duration-300 ${
                                             isActive || isCompleted ? 'text-[#0F172A]' : 'text-[#64748B]'
                                         }`}>
                                             {step.label}
                                         </span>
                                         {step.id === 2 && totalPagesCount > 0 && (
-                                            <span
-                                                className={`inline-flex items-center gap-[0.25vw] px-[0.4vw] py-[0.12vw] rounded-full text-[0.65vw] font-extrabold tracking-tight shadow-2xs transition-all ${
+                                            <motion.span
+                                                layout
+                                                className={`inline-flex items-center gap-[0.25vw] px-[0.4vw] py-[0.12vw] rounded-full text-[0.65vw] font-extrabold tracking-tight shadow-2xs transition-all duration-300 ${
                                                     isActive
                                                         ? 'bg-indigo-50 text-indigo-600 border border-indigo-200/90'
                                                         : isCompleted
@@ -469,11 +527,11 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                                     <span className="w-[0.35vw] h-[0.35vw] rounded-full bg-[#4F46E5] animate-pulse" />
                                                 )}
                                                 <span>{extractedPagesCount}/{totalPagesCount}</span>
-                                            </span>
+                                            </motion.span>
                                         )}
                                     </div>
 
-                                    {/* Step Sublabel: Clear & full text without truncation */}
+                                    {/* Step Sublabel */}
                                     <div className="text-[0.72vw] text-[#64748B] mt-[0.15vw] leading-snug whitespace-nowrap">
                                         {step.sublabel}
                                     </div>
@@ -485,9 +543,9 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                     {/* Bottom Tip Pill Banner */}
                     <motion.div
                         className="mt-[2.8vw] inline-flex items-center gap-[0.5vw] px-[1.2vw] py-[0.5vw] rounded-full bg-[#EEF2FF]/80 border border-[#E0E7FF] text-[#475569] text-[0.78vw] shadow-[0_0.2vw_0.6vw_rgba(0,0,0,0.03)]"
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
+                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
                     >
                         <Lightbulb className="w-[0.9vw] h-[0.9vw] text-[#6366F1] flex-shrink-0" />
                         <span>{displayTip}</span>
@@ -495,14 +553,16 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
                     {/* Optional Cancel Upload Action */}
                     {onCancel && (
-                        <button
+                        <motion.button
                             type="button"
                             onClick={onCancel}
-                            className="mt-[1vw] text-[0.72vw] font-medium text-gray-400 hover:text-red-500 hover:underline transition-colors flex items-center gap-[0.25vw] cursor-pointer"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="mt-[1vw] text-[0.72vw] font-medium text-gray-400 hover:text-red-500 transition-colors flex items-center gap-[0.25vw] cursor-pointer"
                         >
                             <X className="w-[0.75vw] h-[0.75vw]" />
                             <span>Cancel upload</span>
-                        </button>
+                        </motion.button>
                     )}
                 </main>
 

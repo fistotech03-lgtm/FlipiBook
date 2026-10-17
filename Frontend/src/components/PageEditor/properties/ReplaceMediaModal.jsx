@@ -321,9 +321,13 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                 <div className="flex-1 flex flex-col min-h-0 w-[95%] mx-auto mt-[0.5vw]">
                   <div className="w-full aspect-video relative overflow-hidden bg-gray-100 group flex items-center justify-center shrink-0">
                     {mediaType === 'video' ? (
-                      <video src={filePreviewUrl} className="w-full h-full object-contain" controls />
+                      filePreviewUrl ? (
+                        <video src={filePreviewUrl} className="w-full h-full object-contain" controls />
+                      ) : null
                     ) : (
-                      <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                      filePreviewUrl ? (
+                        <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                      ) : null
                     )}
                     <span className="absolute top-[0.5vw] left-[0.5vw] text-white text-[0.75vw] font-medium drop-shadow-md">Preview</span>
                     <button onClick={() => setReplaceModalFile(null)} className="absolute top-[0.5vw] right-[0.5vw] text-white p-[0.3vw] rounded-[0.3vw] transition-colors drop-shadow-md hover:bg-black/20">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import LayoutColorCustomizer from '../LayoutColorCustomizer';
 import ColorPicker from '../../ColorPallet';

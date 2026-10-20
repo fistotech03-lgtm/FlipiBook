@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import RenderModel from "./ModelLoaders";
 import ColorPicker from "../ColorPicker";
 import axios from "axios";
+import { useAuth } from "../../../context/AuthContext";
 export default function CameraModal({ 
     isOpen, 
     onClose, 
@@ -19,6 +20,7 @@ export default function CameraModal({
     selectedMaterial,
     selectedTexture
 }) {
+    const { user } = useAuth();
     const [isCapturing, setIsCapturing] = useState(false);
     const [showTakenShot, setShowTakenShot] = useState(null);
     const [bgColor, setBgColor] = useState('transparent');
@@ -220,14 +222,11 @@ export default function CameraModal({
     const handleAddToGallery = async () => {
         if (!showTakenShot || isSavingToGallery) return;
         
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
+        const emailId = user?.emailId || user?.email;
+        if (!emailId) {
             alert("Please login to save images to gallery.");
             return;
         }
-        
-        const user = JSON.parse(storedUser);
-        const emailId = user.emailId;
         
         setIsSavingToGallery(true);
         

@@ -1,9 +1,20 @@
+<<<<<<< HEAD
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const Flipbook = require('../models/Flipbook');
 const FlipbookAsset = require('../models/FlipbookAsset');
 const { getAuthUser } = require('../utils/userHelper');
+=======
+const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
+const Flipbook = require("../models/Flipbook");
+const FlipbookAsset = require("../models/FlipbookAsset");
+const ThreedModel = require("../models/ThreedModel");
+const InteractionThreedModel = require("../models/InteractionThreedModel");
+const { getAuthUser } = require("../utils/userHelper");
+>>>>>>> origin/praveen
 const {
   generateId,
   getStorageRoot,
@@ -320,8 +331,25 @@ const deleteAsset = async (req, res) => {
 
     if (asset) {
       await FlipbookAsset.deleteOne({ _id: asset._id });
+      if (asset.assetType === '3D_Model' || (asset.fileName && asset.fileName.toLowerCase().endsWith('.glb'))) {
+        await InteractionThreedModel.deleteMany({
+          $or: [
+            { fileName: asset.fileName },
+            { v_id: asset.file_v_id },
+            { url: asset.url }
+          ]
+        }).catch(() => {});
+      }
     } else if (fileVId) {
       await FlipbookAsset.deleteOne({ file_v_id: fileVId });
+      await InteractionThreedModel.deleteMany({
+        $or: [
+          { v_id: fileVId },
+          { fileName: fileName }
+        ]
+      }).catch(() => {});
+    } else if (fileName) {
+      await InteractionThreedModel.deleteMany({ fileName }).catch(() => {});
     }
 
     return res.status(200).json({ success: true, message: 'Asset deleted successfully' });
@@ -717,8 +745,189 @@ const useGalleryAsset = async (req, res) => {
   }
 };
 
+/**
+ * Upload a 3D model file into the flipbook's assets/3D_Model folder
+ * AND if skipGlobalGallery !== 'true', also copy to user's workspace 3D_Models folder (storage/<userWorkspace>/3D_Models)
+ * @route POST /api/flipbook/upload-3d-model
+ */
+const upload3DModel = async (req, res) => {
+  const file = req.file;
+  try {
+    const { emailId: authEmail } = getAuthUser(req);
+    const emailId = authEmail || req.body.emailId || req.body.userEmail;
+    let { folderName, flipbookName } = req.body;
+    const v_id = req.body.flipbook_v_id || req.body.v_id || req.body.flipbookVId;
+
+    if (!file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    if (!emailId) {
+      if (file && fs.existsSync(file.path)) {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(400).json({ success: false, message: "Missing required field: emailId" });
+    }
+
+    let dbDoc = null;
+    if (v_id) {
+      dbDoc = await Flipbook.findOne({ v_id });
+    } else if (emailId && folderName && flipbookName) {
+      dbDoc = await Flipbook.findOne({
+        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, 'i'),
+        folderName,
+        flipbookName
+      });
+    }
+
+    if (dbDoc) {
+      flipbookName = dbDoc.flipbookName || flipbookName;
+      folderName = resolveFolder(dbDoc.folderName);
+    } else {
+      folderName = resolveFolder(folderName);
+    }
+
+    const safeFolderName = sanitizeName(resolveFolder(folderName), "My_Flipbooks");
+    const safeFlipbookName = sanitizeName(flipbookName, "Untitled_Document");
+    const { userFolder } = await resolveUserFolder(req.body.userID || emailId, dbDoc);
+    const storageRoot = getStorageRoot();
+
+    // 1. Destination in flipbook assets/3D_Model
+    const { bookDir } = await resolveFlipbookPaths({
+      v_id: dbDoc?.v_id || v_id,
+      emailId,
+      folderName: safeFolderName,
+      flipbookName: safeFlipbookName
+    });
+
+    const flipbook3DDir = path.join(bookDir, 'assets', '3D_Model');
+    if (!fs.existsSync(flipbook3DDir)) {
+      fs.mkdirSync(flipbook3DDir, { recursive: true });
+    }
+
+    // Determine filename - keep original filename or sanitize cleanly
+    const ext = path.extname(file.originalname || file.filename || '.glb').toLowerCase() || '.glb';
+    const rawBaseName = path.basename(file.originalname || 'model.glb', ext).replace(/[^a-zA-Z0-9_-]/g, '_') || 'model';
+    const targetFilename = `${rawBaseName}_${generateId(8)}${ext}`;
+    const flipbookAssetPath = path.join(flipbook3DDir, targetFilename);
+
+    // Copy uploaded file to flipbook assets
+    fs.copyFileSync(file.path, flipbookAssetPath);
+
+    const relativeUrl = `./assets/3D_Model/${targetFilename}`;
+    const sizeStr = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+    const type = ext.replace(/^\./, '') || 'glb';
+
+    // Parse hotspots
+    let hotspots = [];
+    if (req.body.hotspots) {
+      try {
+        hotspots = typeof req.body.hotspots === 'string' ? JSON.parse(req.body.hotspots) : req.body.hotspots;
+      } catch (e) {}
+    } else if (req.body.sourceModelId) {
+      try {
+        const src = await ThreedModel.findOne({ modelId: req.body.sourceModelId }) ||
+                    await InteractionThreedModel.findOne({ v_id: req.body.sourceModelId });
+        if (src && src.hotspots) hotspots = src.hotspots;
+      } catch (e) {}
+    }
+
+    // Create InteractionThreedModel
+    const interactionModelId = generateId(20);
+    const newInteractionModel = await InteractionThreedModel.create({
+      v_id: interactionModelId,
+      flipbook_v_id: dbDoc?.v_id || v_id || null,
+      userEmail: emailId,
+      flipbookName: safeFlipbookName,
+      folderName: safeFolderName,
+      fileName: targetFilename,
+      displayName: req.body.displayName || rawBaseName,
+      url: relativeUrl,
+      size: sizeStr,
+      type: type,
+      hotspots: Array.isArray(hotspots) ? hotspots : []
+    });
+
+    // Create FlipbookAsset record for flipbook tracking
+    try {
+      await FlipbookAsset.create({
+        flipbook_v_id: dbDoc?.v_id || v_id || null,
+        file_v_id: generateId(20),
+        assetType: '3D_Model',
+        fileName: targetFilename,
+        originalName: file.originalname || targetFilename,
+        userEmail: emailId.toLowerCase(),
+        isGallery: false,
+        page_v_id: req.body.page_v_id || 'global',
+        flipbookName: safeFlipbookName,
+        folderName: safeFolderName,
+        url: relativeUrl,
+        size: file.size
+      });
+    } catch (assetErr) {
+      console.warn('[3D Asset] FlipbookAsset creation notice:', assetErr.message);
+    }
+
+    // 2. Also copy to user's workspace 3D_Models folder (storage/<userWorkspace>/3D_Models) if skipGlobalGallery !== 'true'
+    let globalUrl = null;
+    const isDirectUpload = req.body.skipGlobalGallery !== 'true';
+    if (isDirectUpload) {
+      const global3DDir = path.join(storageRoot, userFolder, '3D_Models');
+      if (!fs.existsSync(global3DDir)) {
+        fs.mkdirSync(global3DDir, { recursive: true });
+      }
+
+      const globalFilePath = path.join(global3DDir, targetFilename);
+      fs.copyFileSync(file.path, globalFilePath);
+
+      globalUrl = `/storage/${userFolder}/3D_Models/${targetFilename}`;
+
+      const existingModel = await ThreedModel.findOne({
+        $or: [{ userEmail: emailId }, { emailId: emailId }],
+        name: targetFilename
+      });
+
+      if (!existingModel) {
+        await ThreedModel.create({
+          modelId: 'model_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          userEmail: emailId,
+          emailId: emailId,
+          name: targetFilename,
+          displayName: req.body.displayName || rawBaseName,
+          url: globalUrl,
+          type: type,
+          size: sizeStr,
+          hotspots: Array.isArray(hotspots) ? hotspots : []
+        });
+      }
+    }
+
+    // Cleanup temp uploaded file
+    if (file && fs.existsSync(file.path)) {
+      try { fs.unlinkSync(file.path); } catch (e) {}
+    }
+
+    return res.status(200).json({
+      message: "3D model uploaded successfully",
+      url: relativeUrl,
+      globalUrl: globalUrl,
+      filename: targetFilename,
+      v_id: newInteractionModel.v_id,
+      displayName: newInteractionModel.displayName,
+      hotspots: newInteractionModel.hotspots || []
+    });
+  } catch (error) {
+    if (file && fs.existsSync(file.path)) {
+      try { fs.unlinkSync(file.path); } catch (e) {}
+    }
+    console.error('[Upload 3D Model] Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
 module.exports = {
   uploadAsset,
+  upload3DModel,
   deleteAsset,
   getGalleryAssets,
   renameGalleryAsset,

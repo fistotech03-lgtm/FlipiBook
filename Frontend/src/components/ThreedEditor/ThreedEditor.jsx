@@ -40,11 +40,13 @@ import { useThreedMaterialTree } from "./hooks/useThreedMaterialTree";
 import { useThreedMaterialSettings } from "./hooks/useThreedMaterialSettings";
 import { useThreedModelLoader } from "./hooks/useThreedModelLoader";
 import { CAMERA_FRAME_OPTIONS } from "./panels/CameraTab/CameraPanel";
+import { useAuth } from "../../context/AuthContext";
 
 export default function ThreedEditor() {
   // ==========================================================================
   // SECTION 1: ROUTER & GLOBAL CONTEXT BINDINGS
   // ==========================================================================
+  const { user } = useAuth();
   const { modelId: urlModelId } = useParams();
   const navigate = useNavigate();
 
@@ -1298,13 +1300,16 @@ export default function ThreedEditor() {
   // ==========================================================================
   // SECTION 9: SERVER SYNC & INITIALIZATION
   // ==========================================================================
+  const initializedModelRef = useRef(null);
   useEffect(() => {
+    if (!user) return;
+    const currentInitKey = `${user?.emailId || user?.email || ''}_${urlModelId || 'default'}`;
+    if (initializedModelRef.current === currentInitKey) return;
+    initializedModelRef.current = currentInitKey;
+
     const initializeEditor = async () => {
       setIsSyncing(true);
       try {
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) return;
-        const user = JSON.parse(storedUser);
         const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
 
@@ -1348,7 +1353,7 @@ export default function ThreedEditor() {
                   if (idx === 0) return { ...m, ...newModel };
                   let candidateUrl = m.url;
                   if (typeof candidateUrl === 'string' && candidateUrl.startsWith('blob:')) {
-                    const sanitizedEmail = (user.emailId || '').replace(/[@.]/g, '_');
+                    const sanitizedEmail = (user.emailId || user.email || '').replace(/[@.]/g, '_');
                     const targetFile = m.fileName || `${(m.displayName || m.name || `Model_${idx + 1}`).replace(/\.[^/.]+$/, "")}.glb`;
                     candidateUrl = `/uploads/${sanitizedEmail}/3D_Modals/${targetFile}`;
                   }
@@ -1536,7 +1541,7 @@ export default function ThreedEditor() {
 
     initializeEditor();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, urlModelId]);
 
   // ==========================================================================
   // SECTION 10: SAVE, EXPORT & SNAPSHOT DISPATCHERS
@@ -1551,6 +1556,7 @@ export default function ThreedEditor() {
 
   const handleSave = useCallback(async (options = {}) => {
     return await executeSave3D({
+      user,
       options,
       models,
       modelName,
@@ -1585,7 +1591,7 @@ export default function ThreedEditor() {
       toast,
       navigate
     });
-  }, [models, modelName, setModelName, setIsSaving, setHasUnsavedChanges, triggerSaveSuccess, toast, materialSettings, transformValues, past, urlModelId, navigate, hotspots, modelMaterialLists, modelMaterialDataMap, modelStatsMap, setThreedState, setSafeProgress, setLoadingProgress]);
+  }, [user, models, modelName, setModelName, setIsSaving, setHasUnsavedChanges, triggerSaveSuccess, toast, materialSettings, transformValues, past, urlModelId, navigate, hotspots, modelMaterialLists, modelMaterialDataMap, modelStatsMap, setThreedState, setSafeProgress, setLoadingProgress]);
 
   const handleOpenSaveAs = useCallback(() => {
     const currentName = modelName || models[0]?.displayName || models[0]?.name?.replace(/\.[^/.]+$/, "") || "3D_Model";
@@ -2609,7 +2615,7 @@ export default function ThreedEditor() {
   // ==========================================================================
   return (
     <div
-      className="flex h-[92vh] w-full bg-white overflow-hidden relative"
+      className="flex h-[93vh] w-full bg-white overflow-hidden relative"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >

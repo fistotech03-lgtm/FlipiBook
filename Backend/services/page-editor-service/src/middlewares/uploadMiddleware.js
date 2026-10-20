@@ -28,6 +28,14 @@ const uploadAsset = multer({
   }
 });
 
+const upload3DModel = multer({
+  storage: tempStorage,
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB limit for 3D models
+  }
+});
+
 module.exports = {
-  uploadAsset
+  uploadAsset,
+  upload3DModel
 };

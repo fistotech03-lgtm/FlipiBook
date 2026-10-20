@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "../../../context/AuthContext";
 
 export function useThreedMaterialTree({
   models,
@@ -44,6 +45,7 @@ export function useThreedMaterialTree({
   buildSnapshot,
   setThreedState
 }) {
+  const { user } = useAuth();
 
   const activeMaterialList = useMemo(() => {
     const isNodeDeleted = (n) => {
@@ -358,9 +360,8 @@ export function useThreedMaterialTree({
     setModelName(newName);
 
     try {
-      const storedUser = localStorage.getItem('user');
-      if (!storedUser) return;
-      const user = JSON.parse(storedUser);
+      if (!user) return;
+      const userEmail = user.emailId || user.email;
       const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
 
       const nextModels = models.map(m => {
@@ -380,7 +381,7 @@ export function useThreedMaterialTree({
       if (urlModelId) {
         try {
           await axios.post(`${backendUrl}/api/3d-models/rename-label`, {
-            emailId: user.emailId,
+            emailId: userEmail,
             modelId: urlModelId,
             newName: newName.trim()
           });
@@ -389,7 +390,7 @@ export function useThreedMaterialTree({
         }
 
         await axios.post(`${backendUrl}/api/3d-models/save-session`, {
-          emailId: user.emailId,
+          emailId: userEmail,
           state: nextSnapshot
         });
         return;
@@ -402,7 +403,7 @@ export function useThreedMaterialTree({
           const oldFileName = target.url.split('/').pop();
           try {
             const renameRes = await axios.post(`${backendUrl}/api/3d-models/rename-model`, {
-              emailId: user.emailId,
+              emailId: userEmail,
               oldName: oldFileName,
               newName: newName,
               modelId: target.modelId
@@ -436,14 +437,14 @@ export function useThreedMaterialTree({
       }
 
       await axios.post(`${backendUrl}/api/3d-models/save-session`, {
-        emailId: user.emailId,
+        emailId: userEmail,
         state: nextSnapshot
       });
 
     } catch (error) {
       console.error("Failed to update backend rename:", error);
     }
-  }, [models, modelName, commitHistoryNow, buildSnapshot, setModelUrl, urlModelId, setModelName, setModels]);
+  }, [models, modelName, commitHistoryNow, buildSnapshot, setModelUrl, urlModelId, setModelName, setModels, user]);
 
   const handleRenameMaterial = useCallback((oldName, newName, mName) => {
     const model = models.find(m => m.name === mName || m.originalName === mName);

@@ -3,6 +3,7 @@ import axios from "axios";
 import { checkFbxLegacyVersion, convertModelFileIfNeeded } from "../utils/modelConversionUtils";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
 import { process3DDropEvent } from "../utils/modelDropHandler";
+import { useAuth } from "../../../context/AuthContext";
 
 export function useThreedModelLoader({
   models,
@@ -56,6 +57,7 @@ export function useThreedModelLoader({
   backendUrl,
   toast
 }) {
+  const { user } = useAuth();
 
   const processFile = useCallback(async (file) => {
     if (!file) return;
@@ -417,12 +419,11 @@ export function useThreedModelLoader({
     }
 
     try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      if (user) {
+        const emailId = user.emailId || user.email;
         const activeBackend = backendUrl || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
         await axios.post(`${activeBackend}/api/3d-models/save-session`, {
-          emailId: user.emailId,
+          emailId,
           state: {
             models: [],
             materialSettings: {},
@@ -436,7 +437,7 @@ export function useThreedModelLoader({
     } catch (err) {
       console.error("Error clearing server session:", err);
     }
-  }, [models, clearAllLoadingTimers, setManualLoading, loadingProgressRef, setLoadingProgress, setLoadingText, setLoadingModelInfo, pendingModelIdRef, isCompletingRef, setModels, setModelUrl, setModelFile, setModelType, setMaterialList, setModelMaterialLists, setModelStatsMap, setModelHasAnimationsMap, setIsAnimationPlaying, setSelectedMaterial, setModelName, setSelectedTexture, setIsSidebarCollapsed, modelRefs, modelRef, navigate, setModelStats, setTransformValues, defaultTransform, setHiddenMaterials, setDeletedMaterials, setHotspots, setActiveHotspotId, setEditingHotspot, setShowHotspotModal, setIsPlacingHotspot, isPlacingHotspotRef, setRightPanelMode, setThreedState, resetHistory, lastSavedRef, setHasUnsavedChanges, backendUrl]);
+  }, [models, clearAllLoadingTimers, setManualLoading, loadingProgressRef, setLoadingProgress, setLoadingText, setLoadingModelInfo, pendingModelIdRef, isCompletingRef, setModels, setModelUrl, setModelFile, setModelType, setMaterialList, setModelMaterialLists, setModelStatsMap, setModelHasAnimationsMap, setIsAnimationPlaying, setSelectedMaterial, setModelName, setSelectedTexture, setIsSidebarCollapsed, modelRefs, modelRef, navigate, setModelStats, setTransformValues, defaultTransform, setHiddenMaterials, setDeletedMaterials, setHotspots, setActiveHotspotId, setEditingHotspot, setShowHotspotModal, setIsPlacingHotspot, isPlacingHotspotRef, setRightPanelMode, setThreedState, resetHistory, lastSavedRef, setHasUnsavedChanges, backendUrl, user]);
 
   return {
     processFile,

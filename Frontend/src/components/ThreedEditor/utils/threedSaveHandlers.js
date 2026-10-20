@@ -3,6 +3,7 @@ import { GLTFExporter } from "three-stdlib";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import axios from "axios";
 import { resolveUploadsPath } from "../../../utils/assetUtils.js";
+import { store } from "../../../store";
 
 /**
  * Cleanly exports a single Three.js Object3D / Scene into a binary GLB buffer,
@@ -257,6 +258,7 @@ async function exportSingleModelGlb(liveScene, transformValues, deletedMaterials
  * Exports each model individually without merging distinct models together.
  */
 export async function executeSave3D({
+  user,
   options = {},
   models,
   modelName,
@@ -312,13 +314,13 @@ export async function executeSave3D({
     updateProgress(10, isSaveAs ? "Initializing new 3D model clone..." : "Preparing 3D scene changes...");
     await new Promise((r) => setTimeout(r, 120));
 
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      console.error("User not found in localStorage");
+    const activeUser = user || store.getState()?.auth?.user;
+    if (!activeUser) {
+      console.error("User not found in auth state");
       return;
     }
 
-    const user = JSON.parse(storedUser);
+    const userEmail = activeUser.emailId || activeUser.email;
     const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").trim().replace(/\/+$/, "");
     const nextModels = [...models];
 
@@ -430,7 +432,11 @@ export async function executeSave3D({
         formData.append("totalChunks", totalGlbChunks);
         formData.append("fileName", exportFileName);
         formData.append("displayName", isPrimary ? (customName || defaultBaseName) : currentBaseName);
-        formData.append("emailId", user.emailId);
+        formData.append("emailId", userEmail);
+        const resolvedUserId = activeUser?.userID || activeUser?.userId;
+        if (resolvedUserId) {
+          formData.append("userID", resolvedUserId);
+        }
         // CRITICAL: Only pass modelId for the primary active model if not Save As — NEVER overwrite secondary dashboard models!
         if (isPrimary && !isSaveAs && currentModel.modelId) {
           formData.append("modelId", currentModel.modelId);
@@ -508,7 +514,7 @@ export async function executeSave3D({
 
     try {
       await axios.post(`${backendUrl}/api/3d-models/save-session`, {
-        emailId: user.emailId,
+        emailId: userEmail,
         state: {
           models: updatedModels,
           hotspots: hotspots || [],

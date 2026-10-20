@@ -27,6 +27,43 @@ import {
   createDefaultShareSettings
 } from './utils/defaultSettings';
 
+const normalizeSvgMarkup = (htmlStr) => {
+  if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
+  try {
+    return htmlStr.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+      let newAttrs = attrs;
+      const widthMatch = attrs.match(/\bwidth=["']([^"']*)["']/i);
+      const heightMatch = attrs.match(/\bheight=["']([^"']*)["']/i);
+      const viewBoxMatch = attrs.match(/\bviewBox=["']([^"']*)["']/i);
+      
+      const wVal = widthMatch ? widthMatch[1] : null;
+      const hVal = heightMatch ? heightMatch[1] : null;
+      
+      if (!viewBoxMatch && wVal && hVal && !wVal.includes('%') && !hVal.includes('%')) {
+        const numW = parseFloat(wVal);
+        const numH = parseFloat(hVal);
+        if (!isNaN(numW) && !isNaN(numH)) {
+          newAttrs += ` viewBox="0 0 ${numW} ${numH}"`;
+        }
+      }
+      
+      if (/\bwidth=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bwidth=["'][^"']*["']/i, 'width="100%"');
+      } else {
+        newAttrs += ' width="100%"';
+      }
+      if (/\bheight=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bheight=["'][^"']*["']/i, 'height="100%"');
+      } else {
+        newAttrs += ' height="100%"';
+      }
+      return `<svg${newAttrs}>`;
+    });
+  } catch (e) {
+    return htmlStr;
+  }
+};
+
 const CustomizedEditor = () => {
   const { folder, v_id, page } = useParams();
   const navigate = useNavigate();
@@ -47,24 +84,49 @@ const CustomizedEditor = () => {
   const { user } = useAuth();
 
   // Core Editor States
-  const [bookName, setBookName] = useState(() => currentBook?.flipbookName || 'Name of the Book');
+  const [bookName, setBookName] = useState(() => location.state?.flipbookName || currentBook?.flipbookName || 'Name of the Book');
   const [activeSubView, setActiveSubView] = useState(null);
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [pages, setPages] = useState([]);
+  const [pages, setPages] = useState(() => {
+    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
+      return location.state.pages.map((p, i) => {
+        const normalized = normalizeSvgMarkup(p.content || p.html || '');
+        return {
+          id: p.id !== undefined ? p.id : i,
+          name: p.pageName || p.name || `Page ${i + 1}`,
+          html: normalized,
+          content: normalized,
+          isHidden: Boolean(p.isHidden || p.hide === 1)
+        };
+      });
+    }
+    return [];
+  });
+  const [metaDimensions, setMetaDimensions] = useState(() => ({
+    width: location.state?.width || currentBook?.width || null,
+    height: location.state?.height || currentBook?.height || null,
+    orientation: location.state?.orientation || currentBook?.orientation || null
+  }));
   const [devicePages, setDevicePages] = useState({ Desktop: 0, Tablet: 0, Mobile: 0 });
   const targetPage = devicePages[activeDevice || 'Desktop'] || 0;
   const setTargetPage = useCallback((pageNum) => {
-    setDevicePages(prev => ({
-      ...prev,
-      [activeDevice || 'Desktop']: pageNum
-    }));
+    setDevicePages(prev => {
+      const dev = activeDevice || 'Desktop';
+      if (prev[dev] === pageNum) return prev;
+      return {
+        ...prev,
+        [dev]: pageNum
+      };
+    });
   }, [activeDevice]);
 
   const [projectBaseUrl, setProjectBaseUrl] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(() => {
+    return Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
+  });
   const [tocOpenTrigger, setTocOpenTrigger] = useState(0);
 
   // Customization Settings States
@@ -87,13 +149,25 @@ const CustomizedEditor = () => {
     setIsPanelCollapsed(false);
   }, [activeSubView]);
 
+  // Clear previous book from IndexedDB and reset stale Redux book when opening a new book in Customized Editor
   useEffect(() => {
     if (v_id) {
       ensureCleanBook(v_id);
+      if (setCurrentBook && currentBook?.v_id && currentBook.v_id !== v_id) {
+        setCurrentBook(prev => ({
+          ...(prev || {}),
+          v_id: v_id,
+          flipbookName: bookName,
+          folder: folder || 'My_Flipbooks',
+          pages: pages && pages.length > 0 ? pages : []
+        }));
+      }
     }
   }, [v_id]);
 
   const profilePreviewForcedRef = useRef(false);
+  const hasFetchedRef = useRef(null);
+
   useEffect(() => {
     const shouldBeOpen = activeSubView === 'profile' && !isPanelCollapsed;
     if (shouldBeOpen && !profilePreviewForcedRef.current) {
@@ -107,7 +181,7 @@ const CustomizedEditor = () => {
 
   // Handle page sync with URL
   useEffect(() => {
-    if (page) {
+    if (page !== undefined && page !== null && page !== '') {
       const pageNum = parseInt(page, 10);
       if (!isNaN(pageNum)) {
         setTargetPage(pageNum);
@@ -117,16 +191,22 @@ const CustomizedEditor = () => {
 
   useEffect(() => {
     if (folder && v_id) {
-      navigate(`/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`, { replace: true });
+      const targetPath = targetPage > 0
+        ? `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`
+        : `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}`;
+
+      if (location.pathname !== targetPath) {
+        navigate(targetPath, { replace: true, state: location.state });
+      }
     }
-  }, [targetPage, folder, v_id, navigate]);
+  }, [targetPage, folder, v_id, navigate, location.pathname, location.state]);
 
   // Global flipbook name sync
   useEffect(() => {
-    if (currentBook?.flipbookName && currentBook.flipbookName !== bookName) {
-      setBookName(currentBook.flipbookName || 'Name of the Book');
+    if (currentBook?.flipbookName && currentBook?.v_id === v_id) {
+      setBookName(prev => (prev === currentBook.flipbookName ? prev : currentBook.flipbookName));
     }
-  }, [currentBook?.flipbookName]);
+  }, [currentBook?.flipbookName, currentBook?.v_id, v_id]);
 
   const bookNameRef = useRef(bookName);
   bookNameRef.current = bookName;
@@ -282,7 +362,7 @@ const CustomizedEditor = () => {
           prev?.flipbookName === bookName &&
           prev?.v_id === v_id &&
           prev?.shareId === sId &&
-          prev?.access === currentAccess
+          (prev?.access || '').toLowerCase() === (currentAccess || '').toLowerCase()
         ) {
           return prev;
         }
@@ -426,11 +506,95 @@ const CustomizedEditor = () => {
 
         {/* Main Preview Area */}
         <div className="flex-1 min-w-0 flex flex-col relative z-0 overflow-hidden">
-          <PreloaderOverlay
-            isLoading={isLoading}
-            preloaderSettings={preloaderSettings}
-            loadingProgress={loadingProgress}
-          />
+          {/* Modern Flipbook Skeleton Loader */}
+          {isLoading && (
+            <div 
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
+              style={{
+                backgroundColor: '#1E1F24',
+                color: '#ffffff'
+              }}
+            >
+              <style>{`
+                @keyframes skeletonShimmer {
+                  0% { transform: translateX(-100%); }
+                  100% { transform: translateX(100%); }
+                }
+                .skeleton-shimmer {
+                  position: absolute;
+                  inset: 0;
+                  transform: translateX(-100%);
+                  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+                  animation: skeletonShimmer 2s infinite ease-in-out;
+                }
+              `}</style>
+              
+              <div className="w-full max-w-[800px] px-8 flex flex-col items-center justify-center gap-6">
+                {/* Top Status Badge */}
+                <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 shadow-sm backdrop-blur-md">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
+                  <span className="text-[13px] font-medium tracking-wide text-gray-200">
+                    Preparing Flipbook Preview... {loadingProgress > 0 && loadingProgress < 100 ? `${loadingProgress}%` : ''}
+                  </span>
+                </div>
+
+                {/* 2-Page Open Book Skeleton Spread */}
+                <div className="relative w-full aspect-[16/10] max-h-[460px] flex rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#25282F]">
+                  {/* Left Page Skeleton */}
+                  <div className="flex-1 p-8 border-r border-black/40 flex flex-col justify-between bg-gradient-to-br from-white/10 via-white/5 to-transparent relative overflow-hidden">
+                    <div className="skeleton-shimmer" />
+                    <div className="space-y-4">
+                      <div className="h-6 w-3/4 rounded-md bg-white/20" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-5/6 rounded bg-white/10" />
+                      <div className="h-3 w-4/6 rounded bg-white/10" />
+                    </div>
+                    <div className="w-full h-28 rounded-lg bg-white/10 border border-white/5 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-white/10" />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-2.5 w-16 rounded bg-white/10" />
+                      <div className="h-3 w-6 rounded bg-white/15" />
+                    </div>
+                  </div>
+
+                  {/* Center Spine Crease */}
+                  <div className="w-[3px] bg-gradient-to-b from-black/50 via-black/80 to-black/50 shadow-inner z-10" />
+
+                  {/* Right Page Skeleton */}
+                  <div className="flex-1 p-8 flex flex-col justify-between bg-gradient-to-bl from-white/10 via-white/5 to-transparent relative overflow-hidden">
+                    <div className="skeleton-shimmer" style={{ animationDelay: '0.4s' }} />
+                    <div className="space-y-3.5">
+                      <div className="h-5 w-1/2 rounded bg-white/15 mb-4" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-3/4 rounded bg-white/10" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-3 w-full rounded bg-white/10" />
+                      <div className="h-3 w-5/6 rounded bg-white/10" />
+                      <div className="h-3 w-4/6 rounded bg-white/10" />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-3 w-6 rounded bg-white/15" />
+                      <div className="h-2.5 w-16 rounded bg-white/10" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Floating Toolbar Skeleton */}
+                <div className="flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow-lg">
+                  <div className="w-6 h-6 rounded-full bg-white/20" />
+                  <div className="w-16 h-4 rounded-full bg-white/15" />
+                  <div className="w-6 h-6 rounded-full bg-white/20" />
+                  <div className="w-[1px] h-4 bg-white/20 mx-1" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                  <div className="w-5 h-5 rounded-md bg-white/15" />
+                </div>
+              </div>
+            </div>
+          )}
           <PreviewArea
             bookName={bookName}
             pages={visiblePages}

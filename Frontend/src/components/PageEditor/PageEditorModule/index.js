@@ -13,3 +13,4 @@ export * from './usePopupAndTemplateManager';
 export * from './useSaveEngine';
 export * from './use3DPreviewManager';
 export * from './useKeyboardShortcuts';
+export * from './extractor/officeExtractor';

@@ -5,11 +5,6 @@ const { nanoid } = require('nanoid');
 const { PDFDocument } = require('pdf-lib');
 const AdmZip = require('adm-zip');
 
-const {
-  convertPdfWithInkscape,
-  checkInkscapeVersion,
-  exportSvgsToVectorPdf
-} = require('../utils/inkscapeConverter');
 
 const {
   convertOfficeToPdf,
@@ -23,12 +18,10 @@ const {
  * GET /api/flipbook/check-inkscape
  */
 exports.getInkscapeStatus = async (req, res) => {
-  try {
-    const status = await checkInkscapeVersion();
-    return res.json(status);
-  } catch (err) {
-    return res.status(500).json({ available: false, error: err.message });
-  }
+  return res.json({
+    available: false,
+    message: 'Server-side Inkscape is deprecated and removed. All vector rendering is performed client-side.'
+  });
 };
 
 /**
@@ -62,6 +55,14 @@ exports.convertOfficeToPdfHandler = async (req, res) => {
   );
 
   try {
+    const officeStatus = await checkLibreOfficeStatus();
+    if (!officeStatus.available) {
+      return res.status(400).json({
+        success: false,
+        message: 'Server-side LibreOffice has been decommissioned. Modern Word (.docx) and PowerPoint (.pptx) documents are converted directly in the browser via client-side canvas engine.'
+      });
+    }
+
     await convertOfficeToPdf(tempDocPath, tempPdfPath);
 
     if (!fs.existsSync(tempPdfPath) || fs.statSync(tempPdfPath).size === 0) {
@@ -281,80 +282,17 @@ exports.inspectDocumentHandler = async (req, res) => {
 /**
  * POST /api/flipbook/convert-pdf-inkscape
  * POST /api/pdf-editor/convert-pdf-inkscape
+ * Legacy endpoint maintained for backwards-compatibility:
+ * Office docs (.doc, .docx, .ppt, .pptx) are converted via LibreOffice.
+ * PDF page counts & dimensions are extracted using pdf-lib.
+ * Actual vector rendering is handled by MuPDF in the client.
  */
 exports.convertPdfInkscapeHandler = async (req, res) => {
-  let files = req.files || (req.file ? [req.file] : []);
-  if (!files || files.length === 0) {
-    return res.status(400).json({ success: false, message: 'No PDF or document file uploaded' });
-  }
-
-  // Deduplicate in case client sent the same file under multiple field names (e.g. 'pdf' and 'pdfs')
-  const seenFiles = new Set();
-  files = files.filter((f) => {
-    const key = `${f.originalname}_${f.size}`;
-    if (seenFiles.has(key)) {
-      if (fs.existsSync(f.path)) {
-        try { fs.unlinkSync(f.path); } catch (e) {}
-      }
-      return false;
-    }
-    seenFiles.add(key);
-    return true;
+  return res.status(200).json({
+    success: false,
+    engine: 'none',
+    message: 'Server-side Inkscape is disabled. Client-side MuPDF WebAssembly handles document extraction.'
   });
-
-  const tempFilePaths = files.map((f) => f.path);
-  const intermediatePdfs = [];
-
-  try {
-    const maxPages = req.body.maxPages ? parseInt(req.body.maxPages, 10) : Infinity;
-
-    // If any file is a Word or PowerPoint document, convert it to PDF first
-    const processedPdfPaths = [];
-    for (const p of tempFilePaths) {
-      if (isOfficeDocument(p)) {
-        const outPdf = path.join(path.dirname(p), `doc_to_pdf_${nanoid(8)}.pdf`);
-        await convertOfficeToPdf(p, outPdf);
-        processedPdfPaths.push(outPdf);
-        intermediatePdfs.push(outPdf);
-      } else {
-        processedPdfPaths.push(p);
-      }
-    }
-
-    const result = await convertPdfWithInkscape(processedPdfPaths, { maxPages });
-
-    return res.json({
-      success: true,
-      pages: result.pages,
-      width: result.width,
-      height: result.height,
-      isUniform: result.isUniform,
-      totalPages: result.totalPages
-    });
-  } catch (conversionErr) {
-    console.error('[PDF Editor Service] Inkscape / Document conversion error:', conversionErr);
-    const rawMsg = conversionErr.message || '';
-    const isCorrupt = /corrupt|cannot be read|not be loaded|damaged|password|format error|failed to parse|invalid pdf|syntax error|unexpected end|end-of-file|could not be opened|command failed/i.test(rawMsg);
-    const firstFileName = files[0]?.originalname ? ` "${files[0].originalname}"` : '';
-    return res.status(400).json({
-      success: false,
-      isCorrupted: isCorrupt,
-      message: isCorrupt
-        ? (rawMsg.includes('is corrupted') ? rawMsg : `Your file${firstFileName} is corrupted, unreadable, or password-protected. Please check your document and try again.`)
-        : (rawMsg || 'Failed to convert document with Inkscape')
-    });
-  } finally {
-    tempFilePaths.forEach((p) => {
-      if (fs.existsSync(p)) {
-        try { fs.unlinkSync(p); } catch (e) {}
-      }
-    });
-    intermediatePdfs.forEach((p) => {
-      if (fs.existsSync(p)) {
-        try { fs.unlinkSync(p); } catch (e) {}
-      }
-    });
-  }
 };
 
 /**
@@ -362,23 +300,8 @@ exports.convertPdfInkscapeHandler = async (req, res) => {
  * POST /api/pdf-editor/export-vector-pdf
  */
 exports.exportVectorPdfHandler = async (req, res) => {
-  try {
-    const { pages, bookName } = req.body;
-    if (!pages || !Array.isArray(pages) || pages.length === 0) {
-      return res.status(400).json({ success: false, message: 'No SVG pages provided for PDF export' });
-    }
-
-    const sanitizedBookName = (bookName || 'flipbook').replace(/[^a-zA-Z0-9_-]/g, '_');
-    console.log(`[PDF Editor Service] Generating true vector PDF export for "${sanitizedBookName}" (${pages.length} pages)...`);
-
-    const pdfBuffer = await exportSvgsToVectorPdf(pages, { bookName: sanitizedBookName });
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedBookName}.pdf"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    return res.end(pdfBuffer);
-  } catch (err) {
-    console.error('[PDF Editor Service] Vector PDF export error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Failed to export vector PDF' });
-  }
+  return res.status(501).json({
+    success: false,
+    message: 'Server-side vector export via Inkscape is removed. Vector PDF export is performed directly on the client side.'
+  });
 };

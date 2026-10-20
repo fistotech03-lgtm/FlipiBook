@@ -131,23 +131,30 @@ const getSettings = async (req, res) => {
           initialSettings.Visibility.shareId = crypto.randomBytes(8).toString('hex');
         }
 
-        // Create initial CustomizedSettings document strictly using canonical schema
-        settingsDoc = await CustomizedSettings.create({
-          userID: authUser.customUserId || flipbookDoc.userID || 'default_user',
-          userEmail: authUser.emailId || flipbookDoc.userEmail || '',
-          v_id: flipbookDoc.v_id,
-          flipbookName: flipbookDoc.flipbookName,
-          folderName: resolveFolder(flipbookDoc.folderName),
-          FlipbookInfo: initialSettings.FlipbookInfo || defaults.FlipbookInfo,
-          Branding: initialSettings.Branding || defaults.Branding,
-          Background: initialSettings.Background || defaults.Background,
-          MenuBar: initialSettings.MenuBar || defaults.MenuBar,
-          Layouts: initialSettings.Layouts || defaults.Layouts,
-          BookAppearance: initialSettings.BookAppearance || defaults.BookAppearance,
-          leadForm: initialSettings.leadForm || defaults.leadForm,
-          Visibility: initialSettings.Visibility || defaults.Visibility,
-          otherSetup: initialSettings.otherSetup || {}
-        });
+        try {
+          settingsDoc = await CustomizedSettings.create({
+            userID: authUser.customUserId || flipbookDoc.userID || 'default_user',
+            userEmail: authUser.emailId || flipbookDoc.userEmail || '',
+            v_id: flipbookDoc.v_id,
+            flipbookName: flipbookDoc.flipbookName,
+            folderName: resolveFolder(flipbookDoc.folderName),
+            FlipbookInfo: initialSettings.FlipbookInfo || defaults.FlipbookInfo,
+            Branding: initialSettings.Branding || defaults.Branding,
+            Background: initialSettings.Background || defaults.Background,
+            MenuBar: initialSettings.MenuBar || defaults.MenuBar,
+            Layouts: initialSettings.Layouts || defaults.Layouts,
+            BookAppearance: initialSettings.BookAppearance || defaults.BookAppearance,
+            leadForm: initialSettings.leadForm || defaults.leadForm,
+            Visibility: initialSettings.Visibility || defaults.Visibility,
+            otherSetup: initialSettings.otherSetup || {}
+          });
+        } catch (createErr) {
+          if (createErr.code === 11000) {
+            settingsDoc = await CustomizedSettings.findOne({ v_id: flipbookDoc.v_id });
+          } else {
+            throw createErr;
+          }
+        }
       }
     }
 
@@ -456,34 +463,50 @@ const updateSettings = async (req, res) => {
     cleanSettings.Visibility.shareId = finalShareId;
 
     // 4. Update CustomizedSettings: Set ONLY canonical fields and explicitly purge userId + lowercase duplicates + profileSettings
-    const updatedCustomizedSettings = await CustomizedSettings.findOneAndUpdate(
-      { v_id: resolvedVId },
-      {
-        $set: {
-          userID: targetUserID,
-          userEmail: targetEmail,
-          v_id: resolvedVId,
-          flipbookName: effectiveBookName || flipbook?.flipbookName || existing?.flipbookName,
-          folderName: folderName || existing?.folderName || 'My_Flipbooks',
-          ...cleanSettings
-        },
-        $unset: {
-          userId: 1,
-          appearance: 1,
-          background: 1,
-          menuBar: 1,
-          visibility: 1,
-          layout: 1,
-          layoutColors: 1,
-          share: 1,
-          settings: 1,
-          leadform: 1,
-          'Branding.profileSettings': 1,
-          profileSettings: 1
-        }
+    const updatePayload = {
+      $set: {
+        userID: targetUserID,
+        userEmail: targetEmail,
+        v_id: resolvedVId,
+        flipbookName: effectiveBookName || flipbook?.flipbookName || existing?.flipbookName,
+        folderName: folderName || existing?.folderName || 'My_Flipbooks',
+        ...cleanSettings
       },
-      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-    );
+      $unset: {
+        userId: 1,
+        appearance: 1,
+        background: 1,
+        menuBar: 1,
+        visibility: 1,
+        layout: 1,
+        layoutColors: 1,
+        share: 1,
+        settings: 1,
+        leadform: 1,
+        'Branding.profileSettings': 1,
+        profileSettings: 1
+      }
+    };
+
+    let updatedCustomizedSettings;
+    try {
+      updatedCustomizedSettings = await CustomizedSettings.findOneAndUpdate(
+        { v_id: resolvedVId, ...(targetUserID ? { userID: targetUserID } : {}) },
+        updatePayload,
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+    } catch (upsertErr) {
+      if (upsertErr.code === 11000) {
+        // Handle concurrent race condition: document was created by parallel request; retry as update
+        updatedCustomizedSettings = await CustomizedSettings.findOneAndUpdate(
+          { v_id: resolvedVId },
+          updatePayload,
+          { returnDocument: 'after' }
+        );
+      } else {
+        throw upsertErr;
+      }
+    }
 
     // 5. Synchronize with Flipbook model (lastUpdated, userID)
     await Flipbook.updateOne(
@@ -1142,18 +1165,33 @@ const updateBookAppearance = async (req, res) => {
       mergedApp.transparentSheets = incomingApp.transparentSheets;
     }
 
-    const updated = await CustomizedSettings.findOneAndUpdate(
-      { v_id },
-      {
-        $set: {
-          BookAppearance: mergedApp,
-          ...(authUser.customUserId ? { userID: authUser.customUserId } : {}),
-          ...(authUser.emailId ? { userEmail: authUser.emailId } : {})
-        },
-        $unset: { userId: 1, appearance: 1 }
+    let updated;
+    const appearancePayload = {
+      $set: {
+        BookAppearance: mergedApp,
+        ...(authUser.customUserId ? { userID: authUser.customUserId } : {}),
+        ...(authUser.emailId ? { userEmail: authUser.emailId } : {})
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+      $unset: { userId: 1, appearance: 1 }
+    };
+
+    try {
+      updated = await CustomizedSettings.findOneAndUpdate(
+        { v_id, ...(authUser.customUserId ? { userID: authUser.customUserId } : {}) },
+        appearancePayload,
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+    } catch (upsertErr) {
+      if (upsertErr.code === 11000) {
+        updated = await CustomizedSettings.findOneAndUpdate(
+          { v_id },
+          appearancePayload,
+          { new: true }
+        );
+      } else {
+        throw upsertErr;
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -1209,18 +1247,33 @@ const saveTransparentSheet = async (req, res) => {
 
     currentApp.transparentSheets = sheets;
 
-    const updated = await CustomizedSettings.findOneAndUpdate(
-      { v_id },
-      {
-        $set: {
-          'BookAppearance.transparentSheets': sheets,
-          ...(authUser.customUserId ? { userID: authUser.customUserId } : {}),
-          ...(authUser.emailId ? { userEmail: authUser.emailId } : {})
-        },
-        $unset: { userId: 1, appearance: 1 }
+    let updated;
+    const sheetPayload = {
+      $set: {
+        'BookAppearance.transparentSheets': sheets,
+        ...(authUser.customUserId ? { userID: authUser.customUserId } : {}),
+        ...(authUser.emailId ? { userEmail: authUser.emailId } : {})
       },
-      { new: true, upsert: true }
-    );
+      $unset: { userId: 1, appearance: 1 }
+    };
+
+    try {
+      updated = await CustomizedSettings.findOneAndUpdate(
+        { v_id, ...(authUser.customUserId ? { userID: authUser.customUserId } : {}) },
+        sheetPayload,
+        { new: true, upsert: true }
+      );
+    } catch (upsertErr) {
+      if (upsertErr.code === 11000) {
+        updated = await CustomizedSettings.findOneAndUpdate(
+          { v_id },
+          sheetPayload,
+          { new: true }
+        );
+      } else {
+        throw upsertErr;
+      }
+    }
 
     return res.status(200).json({
       success: true,

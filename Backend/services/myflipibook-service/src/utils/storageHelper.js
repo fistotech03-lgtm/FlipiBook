@@ -283,7 +283,6 @@ const ensureUserWorkspace = (userId, emailId, folderName = null) => {
   }
 };
 
-
 module.exports = {
   getStorageRoot,
   getDirSize,
@@ -291,6 +290,5 @@ module.exports = {
   deleteBookStorage,
   deleteFolderStorage,
   initFlipbookStorage,
-  ensureUserWorkspace,
-  WORKSPACE_FOLDERS
+  ensureUserWorkspace
 };

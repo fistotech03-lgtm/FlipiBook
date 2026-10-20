@@ -365,6 +365,7 @@ export default function App() {
                 element={<Navigate to="/editor/threed_editor" replace />}
               />
 
+
               {/* Catch-all fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

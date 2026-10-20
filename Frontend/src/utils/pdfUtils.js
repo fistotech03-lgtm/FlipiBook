@@ -5,8 +5,12 @@ const getMuPdf = async () => {
   }
   return mupdfModule;
 };
-
 import JSZip from 'jszip';
+import {
+  extractOfficeDocumentToPdf as extractOfficeDocClient,
+  checkIsLegacyOfficeDocument,
+  getLegacyConverterUrl
+} from '../components/PageEditor/PageEditorModule/extractor/officeExtractor';
 
 /**
  * Gets the number of pages in a PDF file.
@@ -298,18 +302,259 @@ const uint8ArrayToBase64 = (bytes) => {
 };
 
 /**
- * Converts a PDF file into an array of high-resolution, lightweight page images.
- * Uses MuPDF's full color management engine (DeviceRGB) so colors are 100% accurate (never negative).
- * Optimizes render scale (target ~2160px, 200-260 DPI) and encodes via high-quality JPEG/PNG
- * so conversion is blazing fast and viewing in the editor is silky smooth with zero hanging,
- * while preserving razor-sharp text clarity even at 200%+ zoom.
+ * Detects whether an SVG string contains embedded JPEG images with a 4-channel CMYK / YCCK color space.
+ * Web browsers (Chrome, Safari, Firefox) do not support CMYK JPEGs inside SVG <image> tags,
+ * causing them to render with inverted colors and black overlays.
+ *
+ * @param {string} svgString
+ * @returns {boolean} True if any embedded JPEG has 4 color components.
+ */
+export const hasCmykJpeg = (svgString) => {
+  if (!svgString || typeof svgString !== 'string' || !svgString.includes('data:image/jp')) {
+    return false;
+  }
+  const imgRegex = /href=["']data:image\/jpe?g;base64,([^"']+)["']/gi;
+  let match;
+  while ((match = imgRegex.exec(svgString)) !== null) {
+    try {
+      // Sample first 1024 base64 characters of the JPEG stream (header containing SOF marker)
+      const b64 = match[1].replace(/\s+/g, '').slice(0, 1024);
+      let bytes;
+      if (typeof atob === 'function') {
+        const binStr = atob(b64);
+        bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          bytes[i] = binStr.charCodeAt(i);
+        }
+      } else if (typeof Buffer !== 'undefined') {
+        bytes = Buffer.from(b64, 'base64');
+      } else {
+        return false;
+      }
+
+      // Parse JPEG markers looking for SOF (Start of Frame: 0xFFC0 to 0xFFCF excluding DHT/DAC)
+      for (let i = 0; i < bytes.length - 9; i++) {
+        if (
+          bytes[i] === 0xFF &&
+          bytes[i + 1] >= 0xC0 &&
+          bytes[i + 1] <= 0xCF &&
+          bytes[i + 1] !== 0xC4 &&
+          bytes[i + 1] !== 0xC8 &&
+          bytes[i + 1] !== 0xCC
+        ) {
+          const components = bytes[i + 9];
+          // 4 components = CMYK or YCCK (incompatible with browser image rendering)
+          if (components === 4) {
+            return true;
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn('[PDF] CMYK detection warning:', e);
+    }
+  }
+  return false;
+};
+
+/**
+ * Converts 4-component CMYK / YCCK embedded JPEGs inside an SVG into standard sRGB JPEGs.
+ * Web browsers cannot display 4-channel CMYK JPEGs inside SVG <image> elements (rendering them with black overlays or inverted colors).
+ * By decoding the CMYK JPEG via MuPDF WASM, inverting Adobe CMYK ink levels (0=100% ink -> 255=white),
+ * and converting to DeviceRGB, we preserve 100% true mathematical vector text and graphics in the SVG
+ * while guaranteeing color-accurate, non-inverted background images.
+ *
+ * @param {string} svgString - The raw SVG string from MuPDF.
+ * @param {object} mupdf - The MuPDF WASM instance.
+ * @returns {string} The SVG string with embedded CMYK JPEGs converted to sRGB JPEGs.
+ */
+export const convertCmykJpegsInSvg = (svgString, mupdf) => {
+  if (!svgString || typeof svgString !== 'string' || !svgString.includes('data:image/jp')) {
+    return svgString;
+  }
+  const imgRegex = /((?:xlink:)?href=["'])(data:image\/jpe?g;base64,([^"']+))(["'])/gi;
+  return svgString.replace(imgRegex, (match, prefix, dataUrl, b64Data, suffix) => {
+    let pix = null;
+    let convertedPix = null;
+    let img = null;
+    let mupdfBuf = null;
+    try {
+      const cleanB64 = b64Data.replace(/\s+/g, '');
+      let headerBytes;
+      if (typeof atob === 'function') {
+        const binStr = atob(cleanB64.slice(0, 4096));
+        headerBytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          headerBytes[i] = binStr.charCodeAt(i);
+        }
+      } else if (typeof Buffer !== 'undefined') {
+        headerBytes = Buffer.from(cleanB64.slice(0, 4096), 'base64');
+      } else {
+        return match;
+      }
+
+      // Check SOF marker for 4 color components (CMYK / YCCK)
+      let is4Component = false;
+      for (let i = 0; i < Math.min(headerBytes.length - 9, 2048); i++) {
+        if (
+          headerBytes[i] === 0xFF &&
+          headerBytes[i + 1] >= 0xC0 &&
+          headerBytes[i + 1] <= 0xCF &&
+          headerBytes[i + 1] !== 0xC4 &&
+          headerBytes[i + 1] !== 0xC8 &&
+          headerBytes[i + 1] !== 0xCC
+        ) {
+          if (headerBytes[i + 9] === 4) {
+            is4Component = true;
+          }
+          break;
+        }
+      }
+
+      if (!is4Component) {
+        return match;
+      }
+
+      // Full base64 decode for the CMYK JPEG
+      let fullBytes;
+      if (typeof atob === 'function') {
+        const binStr = atob(cleanB64);
+        fullBytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          fullBytes[i] = binStr.charCodeAt(i);
+        }
+      } else {
+        fullBytes = new Uint8Array(Buffer.from(cleanB64, 'base64'));
+      }
+
+      mupdfBuf = new mupdf.Buffer(fullBytes);
+      img = new mupdf.Image(mupdfBuf);
+      pix = img.toPixmap();
+
+      convertedPix = pix;
+      if (pix.getNumberOfComponents() === 4) {
+        // True Adobe CMYK ink density inversion:
+        // In Adobe DCTDecode/CMYK JPEGs, ink levels are inverted (0 = 100% ink, 255 = 0% ink).
+        // MuPDF's pix.invert() performs a non-linear complementary/gamma shift that caused colors to appear faded.
+        // Direct linear byte inversion (255 - byte) produces 100% authentic, vibrant colors identical to the original PDF.
+        const px = pix.getPixels();
+        for (let i = 0; i < px.length; i++) {
+          px[i] = 255 - px[i];
+        }
+        convertedPix = pix.convertToColorSpace(mupdf.ColorSpace.DeviceRGB);
+      }
+
+      let rgbBytes = null;
+      let mime = 'image/jpeg';
+      try {
+        if (typeof convertedPix.asJPEG === 'function') {
+          rgbBytes = convertedPix.asJPEG(92, false);
+          mime = 'image/jpeg';
+        }
+      } catch (e) {}
+
+      if (!rgbBytes) {
+        rgbBytes = convertedPix.asPNG();
+        mime = 'image/png';
+      }
+
+      const newB64 = uint8ArrayToBase64(rgbBytes);
+      return `${prefix}data:${mime};base64,${newB64}${suffix}`;
+    } catch (err) {
+      console.warn('[PDF CMYK] Failed to convert CMYK JPEG in SVG, preserving original:', err);
+      return match;
+    } finally {
+      try { if (pix) pix.destroy(); } catch (e) {}
+      if (convertedPix && convertedPix !== pix) {
+        try { convertedPix.destroy(); } catch (e) {}
+      }
+      try { if (img) img.destroy(); } catch (e) {}
+      try { if (mupdfBuf) mupdfBuf.destroy(); } catch (e) {}
+    }
+  });
+};
+
+/**
+ * Formats raw vector SVG generated by MuPDF into a standard FlipiBook page SVG.
+ * Extracts font glyph outlines into <defs>, scopes all IDs to p${pageNumber}_ to prevent cross-page collisions,
+ * normalizes coordinates and mm dimensions, and wraps inside:
+ * <g data-type="frame">
+ *   <rect data-name="Overlay" data-type="background" />
+ *   <g data-name="PDF Background" data-type="pdf-vector-layer">
+ *   <rect data-name="Document Shield" data-type="shield" />
+ * </g>
+ * Every letter is a mathematical vector bezier curve (<path d="...">) that never pixelates under any zoom.
+ */
+export const formatMuPdfSvgForFlipbook = (rawSvg, pageNumber = 1, widthMm = 210, heightMm = 297, widthPt = 595.28, heightPt = 841.89) => {
+  const prefix = `p${pageNumber}_`;
+  const resolvedPageName = `Page ${pageNumber}`;
+
+  // Extract <defs>...</defs>
+  let extractedDefs = '';
+  const defsMatch = rawSvg.match(/<defs\b[^>]*>([\s\S]*?)<\/defs>/i);
+  if (defsMatch) {
+    extractedDefs = defsMatch[1];
+  }
+
+  // Extract inner SVG content (strip outer <svg ...> and </svg> and metadata)
+  let innerBody = rawSvg
+    .replace(/<\?xml[^>]*\?>/gi, '')
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .replace(/<sodipodi:namedview[\s\S]*?<\/sodipodi:namedview>/gi, '')
+    .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
+    .replace(/<defs\b[^>]*>[\s\S]*?<\/defs>/gi, '')
+    .replace(/<svg\b[^>]*>/i, '')
+    .replace(/<\/svg\s*>/i, '')
+    .trim();
+
+  // Scope IDs to prevent cross-page collisions in multi-page flipbooks
+  extractedDefs = extractedDefs.replace(/\bid=(["'])([^"']+)\1/g, `id=$1${prefix}$2$1`);
+  innerBody = innerBody.replace(/\bid=(["'])([^"']+)\1/g, `id=$1${prefix}$2$1`);
+  innerBody = innerBody.replace(/\b(?:xlink:)?href=(["'])#([^"']+)\1/g, `xlink:href=$1#${prefix}$2$1 href=$1#${prefix}$2$1`);
+  innerBody = innerBody.replace(/url\(\s*(['"]|&quot;|&#39;)?\s*#([^'")&\s]+)\s*\1?\s*\)/gi, (m, quote, refId) => {
+    const q = quote || '';
+    return `url(${q}#${prefix}${refId}${q})`;
+  });
+
+  const scaleX = widthMm / widthPt;
+  const scaleY = heightMm / heightPt;
+
+  const rootId = `g-frame-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
+  const bgLayerId = `g-bg-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
+  const rectId = `rect-bg-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
+  const shieldId = `shield-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${widthMm} ${heightMm}" width="100%" height="100%" style="overflow: visible" shape-rendering="geometricPrecision">
+  <defs>
+    ${extractedDefs}
+  </defs>
+  <g id="${rootId}" data-name="${resolvedPageName}" data-type="frame">
+    <rect id="${rectId}" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
+    <g id="${bgLayerId}" data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true">
+      <g transform="scale(${scaleX.toFixed(6)}, ${scaleY.toFixed(6)})">
+        ${innerBody}
+      </g>
+    </g>
+    <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
+  </g>
+</svg>`;
+};
+
+/**
+ * Converts a PDF file into an array of pure vector SVG pages or high-resolution images.
+ * - PRIMARY: Uses MuPDF WebAssembly SVG Device with "text=path" to extract each character and shape
+ *   into pure vector bezier curves (<path d="...">). 100% vector, zero pixelation even at 1000% zoom.
+ * - IN-PLACE CMYK FIX: Automatically converts embedded 4-channel CMYK print images into sRGB JPEGs
+ *   so browsers render background art with accurate colors (no black overlays) while preserving 100% vector text outlines.
+ * - FALLBACK: Color-managed DeviceRGB high-res pixmap (~2160px).
  *
  * @param {File} file - The PDF file to convert.
- * @param {number} scale - Optional base scale factor (defaults to 2.5).
+ * @param {number} scale - Optional base scale factor.
  * @param {number} maxPages - Max pages to convert.
- * @returns {Promise<Array<{blob: Blob, dataUrl: string, svgString: string, width: number, height: number}>>}
+ * @param {Function} onProgress - Optional progress callback.
+ * @returns {Promise<Array<{blob: Blob, dataUrl: string, svgString: string, content: string, width: number, height: number, isVector: boolean}>>}
  */
-export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity) => {
+export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity, onProgress = null) => {
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
   
@@ -322,11 +567,22 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity)
   const ptToMm = 25.4 / 72;
 
   for (let i = 0; i < numPages; i++) {
-    // Yield to the browser main loop between pages so the UI stays 100% responsive
-    await new Promise(resolve => setTimeout(resolve, 0));
+    const pageNum = i + 1;
+    const percent = Math.round((pageNum / numPages) * 100);
+
+    // Notify caller of real-time extraction progress
+    if (typeof onProgress === 'function') {
+      try { onProgress(pageNum, numPages, percent); } catch (e) {}
+    }
+
+    // Yield to browser event loop every 2 pages so the UI stays 60fps responsive without artificial delays
+    if (i % 2 === 0 || i === numPages - 1) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
 
     let page = null;
     let highResPix = null;
+    let svgBuf = null;
     try {
       page = doc.loadPage(i);
       const bounds = page.getBounds(); // [x0, y0, x1, y1]
@@ -334,58 +590,100 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity)
       const widthPt = bounds[2] - bounds[0];
       const heightPt = bounds[3] - bounds[1];
       
-      const widthMm = widthPt * ptToMm;
-      const heightMm = heightPt * ptToMm;
+      const widthMm = Math.round(widthPt * ptToMm * 100) / 100;
+      const heightMm = Math.round(heightPt * ptToMm * 100) / 100;
 
-      // Target ~2000-2200px on the longest edge (200 - 260 DPI)
-      // Provides crystal-clear sharpness under 200%+ zoom while running 4x faster and using 15x less memory
-      const maxPt = Math.max(widthPt, heightPt);
-      let renderScale = 2.5;
-      if (maxPt > 0) {
-        const targetPixels = 2160;
-        const desiredScale = targetPixels / maxPt;
-        // Clamp scale between 2.0 and 4.0, with max dimension capped at 2400px
-        renderScale = Math.max(2.0, Math.min(4.0, desiredScale));
-        if (maxPt * renderScale > 2400) {
-          renderScale = Math.max(1.5, 2400 / maxPt);
-        }
-      }
+      let vectorSvgString = null;
 
-      // 1. Render color-managed pixmap (DeviceRGB converts all CMYK/Separation profiles to standard sRGB)
-      const renderMatrix = mupdf.Matrix.scale(renderScale, renderScale);
-      highResPix = page.toPixmap(renderMatrix, mupdf.ColorSpace.DeviceRGB, false, true);
-
-      // 2. High-speed, lightweight encoding (asJPEG quality 92 produces ~250-400KB per page vs 5MB PNG)
-      let imageBytes = null;
-      let mimeType = 'image/jpeg';
+      // 1. PRIMARY VECTOR PIPELINE: True vector SVG conversion via MuPDF WASM DocumentWriter
+      // Outlines each letter into vector bezier curves (<path d="...">), preserving infinite zoom sharpness without pixelation
       try {
-        if (typeof highResPix.asJPEG === 'function') {
-          imageBytes = highResPix.asJPEG(92, false);
-          mimeType = 'image/jpeg';
+        svgBuf = new mupdf.Buffer();
+        const writer = new mupdf.DocumentWriter(svgBuf, 'svg', 'text=path');
+        const dev = writer.beginPage([0, 0, widthPt, heightPt]);
+        const transMatrix = mupdf.Matrix.translate(-bounds[0], -bounds[1]);
+        page.run(dev, transMatrix);
+        writer.endPage();
+        writer.close();
+
+        let rawSvg = new TextDecoder().decode(svgBuf.asUint8Array());
+        if (rawSvg && rawSvg.includes('<svg')) {
+          if (hasCmykJpeg(rawSvg)) {
+            // Convert embedded CMYK print JPEGs into sRGB inside the SVG.
+            // This preserves 100% of the vector text outlines (<path d="..."> and <use>)
+            // while ensuring embedded background images render with accurate RGB colors and no black overlays!
+            rawSvg = convertCmykJpegsInSvg(rawSvg, mupdf);
+          }
+          vectorSvgString = formatMuPdfSvgForFlipbook(rawSvg, pageNum, widthMm, heightMm, widthPt, heightPt);
         }
-      } catch (e) {
-        // Fallback to asPNG if asJPEG is not available
+      } catch (vecErr) {
+        console.warn(`[MuPDF Vector] Vector extraction for page ${pageNum} encountered warning, using raster fallback:`, vecErr);
+      } finally {
+        if (svgBuf && typeof svgBuf.destroy === 'function') {
+          try { svgBuf.destroy(); } catch (e) {}
+        }
       }
 
-      if (!imageBytes) {
-        imageBytes = highResPix.asPNG();
-        mimeType = 'image/png';
+      // If vector conversion succeeded, emit vector page!
+      if (vectorSvgString) {
+        const isVectorPage = (vectorSvgString.match(/<path\b/g) || []).length > 0 || (vectorSvgString.match(/<use\b/g) || []).length > 0;
+        const dataUrl = svgToDataUrl(vectorSvgString);
+        const blob = new Blob([vectorSvgString], { type: 'image/svg+xml' });
+
+        images.push({
+          blob,
+          dataUrl,
+          svgString: vectorSvgString,
+          content: vectorSvgString,
+          width: widthMm,
+          height: heightMm,
+          isVector: isVectorPage,
+        });
+      } else {
+        // Fallback: high-res raster pixmap
+        const maxPt = Math.max(widthPt, heightPt);
+        let renderScale = 2.5;
+        if (maxPt > 0) {
+          const targetPixels = 2160;
+          const desiredScale = targetPixels / maxPt;
+          renderScale = Math.max(2.0, Math.min(4.0, desiredScale));
+          if (maxPt * renderScale > 2400) {
+            renderScale = Math.max(1.5, 2400 / maxPt);
+          }
+        }
+
+        const renderMatrix = mupdf.Matrix.scale(renderScale, renderScale);
+        highResPix = page.toPixmap(renderMatrix, mupdf.ColorSpace.DeviceRGB, false, true);
+
+        let imageBytes = null;
+        let mimeType = 'image/jpeg';
+        try {
+          if (typeof highResPix.asJPEG === 'function') {
+            imageBytes = highResPix.asJPEG(90, false);
+            mimeType = 'image/jpeg';
+          }
+        } catch (e) {}
+
+        if (!imageBytes) {
+          imageBytes = highResPix.asPNG();
+          mimeType = 'image/png';
+        }
+
+        const pngBase64 = uint8ArrayToBase64(imageBytes);
+        const highResDataUrl = `data:${mimeType};base64,${pngBase64}`;
+        const blob = new Blob([imageBytes], { type: mimeType });
+        const svgString = generatePdfPageSvg(highResDataUrl, `Page ${pageNum}`, widthMm, heightMm, true);
+
+        images.push({
+          blob,
+          dataUrl: highResDataUrl,
+          svgString,
+          content: svgString,
+          width: widthMm,
+          height: heightMm,
+          isVector: false,
+        });
       }
-
-      const pngBase64 = uint8ArrayToBase64(imageBytes);
-      const highResDataUrl = `data:${mimeType};base64,${pngBase64}`;
-      const blob = new Blob([imageBytes], { type: mimeType });
-
-      // Clean SVG wrapper for compatibility
-      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${widthPt}" height="${heightPt}" viewBox="0 0 ${widthPt} ${heightPt}"><image href="${highResDataUrl}" xlink:href="${highResDataUrl}" x="0" y="0" width="${widthPt}" height="${heightPt}" preserveAspectRatio="none" style="image-rendering: -webkit-optimize-contrast; image-rendering: high-quality;" /></svg>`;
-
-      images.push({
-        blob,
-        dataUrl: highResDataUrl,
-        svgString,
-        width: widthMm,
-        height: heightMm,
-      });
     } catch (err) {
       console.error(`Error converting page ${i}:`, err);
     } finally {
@@ -608,6 +906,15 @@ export const getPptSlideCountFromBinary = (uint8Array) => {
  * @returns {Promise<{count: number, width: number, height: number, isUniform: boolean, pages: Array<{pageNumber: number, width: number, height: number}>}>}
  */
 export const getOfficeDocDetails = async (file, backendUrl = null) => {
+  const legacy = await checkIsLegacyOfficeDocument(file);
+  if (legacy.isLegacy) {
+    const error = new Error(`Legacy ${legacy.type === 'ppt' ? 'PowerPoint (.ppt)' : 'Word (.doc)'} format detected. Please convert to modern .${legacy.type === 'ppt' ? 'pptx' : 'docx'} format using a free online converter.`);
+    error.isLegacyFormat = true;
+    error.legacyType = legacy.type;
+    error.converterUrl = getLegacyConverterUrl(legacy.type);
+    throw error;
+  }
+
   const ext = file.name.toLowerCase();
   const isPptx = ext.endsWith('.pptx');
   const isDocx = ext.endsWith('.docx');
@@ -758,19 +1065,15 @@ export const getOfficeDocDetails = async (file, backendUrl = null) => {
     }
   }
 
-  // 4. AUTHORITATIVE BACKEND INSPECTION (via LibreOffice + pdf-lib)
-  // Essential for .ppt, .doc, and single-page docx to get 100% exact page count and dimensions
+  // 4. CLIENT-SIDE EXTRACTION INSPECTION FALLBACK (if ZIP pass could not read pages)
   try {
-    const backendDetails = await inspectDocumentViaBackend(file, backendUrl);
-    if (backendDetails && backendDetails.count > 0) {
-      return backendDetails;
+    const convertedPdf = await extractOfficeDocClient(file);
+    if (convertedPdf) {
+      return await getPdfDetails(convertedPdf);
     }
-  } catch (backendErr) {
-    const isCorrupt = /corrupt|cannot be read|not be loaded|damaged|password|format error|command failed/i.test(backendErr?.message || '');
-    if (isCorrupt) {
-      throw backendErr;
-    }
-    console.warn(`[Office Inspector] Backend document inspection unavailable for ${file.name}, using local fallback:`, backendErr.message);
+  } catch (extractErr) {
+    if (extractErr.isLegacyFormat) throw extractErr;
+    console.warn(`[Office Inspector] In-browser extraction inspection fallback:`, extractErr);
   }
 
   // 5. FINAL FALLBACK
@@ -804,134 +1107,101 @@ export const getDocumentDetails = async (file, backendUrl = null) => {
 };
 
 /**
- * Converts a Word (.doc, .docx) or PowerPoint (.ppt, .pptx) file to a PDF via backend.
+ * Converts a modern Word (.docx) or PowerPoint (.pptx) file to a PDF entirely in-browser.
+ * Zero server CPU, zero memory overhead, 100% client-side isolated sandbox.
  *
  * @param {File} file - Incoming document file.
- * @param {string} [backendUrl] - Optional backend URL.
+ * @param {string} [backendUrl] - Optional backend URL (kept for compatibility).
+ * @param {(progress: { percent: number, stage: string }) => void} [onProgress]
  * @returns {Promise<File>} - Converted PDF File object.
  */
-export const convertOfficeDocumentToPdf = async (file, backendUrl = null) => {
-  const resolvedBackendUrl = backendUrl || import.meta.env.VITE_BACKEND_URL || '';
-  const formData = new FormData();
-  formData.append('document', file);
-
-  const response = await fetch(`${resolvedBackendUrl}/api/flipbook/convert-office-to-pdf`, {
-    method: 'POST',
-    body: formData,
-    credentials: 'include'
-  });
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    const rawMsg = errData?.message || `Failed to convert ${file.name} to PDF`;
-    const isCorrupt = errData?.isCorrupted ||
-                      /corrupt|cannot be read|not be loaded|damaged|password|format error|command failed/i.test(rawMsg);
-    if (isCorrupt) {
-      throw new Error(rawMsg.includes("corrupted") ? rawMsg : `Your file "${file.name}" is corrupted, unreadable, or password-protected. Please check your document in PowerPoint/Word and try again.`);
-    }
-    throw new Error(rawMsg);
+export const convertOfficeDocumentToPdf = async (file, backendUrl = null, onProgress = null) => {
+  const legacy = await checkIsLegacyOfficeDocument(file);
+  if (legacy.isLegacy) {
+    const error = new Error(`Legacy ${legacy.type === 'ppt' ? 'PowerPoint (.ppt)' : 'Word (.doc)'} format detected. Please convert to modern .${legacy.type === 'ppt' ? 'pptx' : 'docx'} format using a free online converter.`);
+    error.isLegacyFormat = true;
+    error.legacyType = legacy.type;
+    error.converterUrl = getLegacyConverterUrl(legacy.type);
+    throw error;
   }
 
-  const blob = await response.blob();
-  const pdfName = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
-  return new File([blob], pdfName, { type: "application/pdf" });
+  return await extractOfficeDocClient(file, (p) => {
+    if (onProgress && typeof onProgress === 'function') {
+      onProgress(p);
+    }
+  });
 };
 
 /**
- * Converts a PDF, Word, or PowerPoint file using Inkscape on the backend
- * to obtain high-fidelity vector pages with text outlined into paths.
- * Automatically converts Office documents (.doc, .docx, .ppt, .pptx) to PDF first.
- * Splits multi-page PDFs into single-page files before sending to ensure 100% Inkscape compatibility.
- * Falls back to client-side MuPDF if backend conversion is unavailable.
+ * Unified Document to Flipbook Pages Converter.
+ * - Always uses client-side MuPDF WebAssembly for instantaneous, sharp PDF page extraction.
+ * - Uses client-side Canvas/SVG extractor for Word (.docx) and PowerPoint (.pptx) entirely in-browser.
+ * - 100% LibreOffice-free and Inkscape-free.
  *
  * @param {File} file - PDF or Office document file to convert.
  * @param {number} [maxPages=Infinity] - Max pages to convert.
  * @param {string} [backendUrl] - Optional backend URL.
- * @returns {Promise<Array<{ pageNumber: number, pageName: string, content: string, width: number, height: number, dataUrl: string, isVector: boolean }>>}
+ * @param {Function} [onProgress] - Progress callback.
+ * @returns {Promise<Array<{ pageNumber: number, pageName: string, content: string, width: number, height: number, dataUrl: string, isVector: boolean, blob: Blob }>>}
  */
-export const convertPdfWithInkscape = async (file, maxPages = Infinity, backendUrl = null) => {
+export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl = null, onProgress = null) => {
   const resolvedBackendUrl = backendUrl || import.meta.env.VITE_BACKEND_URL || '';
 
-  try {
-    // Send file directly to backend convert-pdf-inkscape.
-    // The backend route automatically converts Word (.doc, .docx) and PowerPoint (.ppt, .pptx)
-    // directly on disk using the sequential Office Queue + LibreOffice without slow intermediate HTTP downloads.
-    const formData = new FormData();
-    formData.append('pdf', file);
-    if (maxPages && isFinite(maxPages)) {
-      formData.append('maxPages', maxPages.toString());
-    }
-
-    const response = await fetch(`${resolvedBackendUrl}/api/flipbook/convert-pdf-inkscape`, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    });
-
-    if (!response.ok) {
-      let errData = null;
-      try { errData = await response.json(); } catch(e) {}
-      const errMsg = errData?.message || `Conversion failed with status ${response.status}`;
-      const isCorrupt = errData?.isCorrupted ||
-                        errMsg.toLowerCase().includes("corrupt") ||
-                        errMsg.toLowerCase().includes("cannot be read") ||
-                        errMsg.toLowerCase().includes("not be loaded") ||
-                        errMsg.toLowerCase().includes("damaged") ||
-                        errMsg.toLowerCase().includes("password");
-      if (isCorrupt) {
-        throw new Error(errMsg.includes("corrupted") ? errMsg : `Your file "${file.name}" is corrupted, unreadable, or password-protected. Please check the file and try again.`);
-      }
-      throw new Error(errMsg);
-    }
-
-    const data = await response.json();
-    if (data.success && Array.isArray(data.pages) && data.pages.length > 0) {
-      return data.pages.map((p) => ({
-        pageNumber: p.pageNumber,
-        pageName: p.pageName || `Page ${p.pageNumber}`,
-        content: p.content,
-        width: p.width,
-        height: p.height,
-        dataUrl: svgToDataUrl(p.content),
-        isVector: true
-      }));
-    }
-  } catch (err) {
-    const isCorrupt = (err.message || "").toLowerCase().includes("corrupt") ||
-                      (err.message || "").toLowerCase().includes("cannot be read") ||
-                      (err.message || "").toLowerCase().includes("not be loaded") ||
-                      (err.message || "").toLowerCase().includes("damaged") ||
-                      (err.message || "").toLowerCase().includes("password");
-    if (isCorrupt) {
-      throw err; // Re-throw immediately so caller displays the corrupted file alert
-    }
-    console.warn("[PDF/Doc] Direct backend Inkscape conversion failed, trying fallback:", err);
-  }
-
-  // Graceful fallback: if direct conversion failed on backend, try office-to-pdf conversion first, then client-side MuPDF raster conversion
+  // 1. If Office Document (.doc, .docx, .ppt, .pptx), convert to PDF client-side
   let targetFile = file;
   if (isOfficeDocument(file.name)) {
     try {
-      targetFile = await convertOfficeDocumentToPdf(file, resolvedBackendUrl);
+      targetFile = await convertOfficeDocumentToPdf(file, resolvedBackendUrl, onProgress);
     } catch (convErr) {
-      console.warn(`[Document] Direct office-to-pdf fallback failed:`, convErr);
-      throw convErr; // If office document conversion failed, throw immediately so corrupted file error is shown!
+      console.error('[Document] Client office-to-pdf conversion failed:', convErr);
+      throw convErr;
     }
   }
 
+  // If targetFile was extracted client-side with native vector SVG pages (e.g. from PPTX extractor)
+  if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0 && targetFile.pagesData[0].isVector) {
+    return targetFile.pagesData.map((p, idx) => {
+      let rawContent = p.content || p.svgString || '';
+      if (rawContent && rawContent.includes('<svg')) {
+        rawContent = rawContent.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+        rawContent = rawContent.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+        if (!rawContent.includes('width="100%"')) {
+          rawContent = rawContent.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+        }
+      }
+      return {
+        pageNumber: idx + 1,
+        pageName: `Page ${idx + 1}`,
+        content: rawContent,
+        svgString: rawContent,
+        width: p.width,
+        height: p.height,
+        dataUrl: p.dataUrl || svgToDataUrl(rawContent),
+        blob: p.blob || new Blob([rawContent], { type: 'image/svg+xml' }),
+        isVector: true
+      };
+    });
+  }
+
+  // 2. Client-side MuPDF WebAssembly engine (100% server-free, 0 RAM / 0 server CPU)
   try {
-    const images = await convertPdfToImages(targetFile, 2.5, maxPages);
+    const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress);
     return images.map((img, idx) => ({
       pageNumber: idx + 1,
       pageName: `Page ${idx + 1}`,
-      content: null,
+      content: img.content || img.svgString || generatePdfPageSvg(img.dataUrl, `Page ${idx + 1}`, img.width, img.height, true),
+      svgString: img.svgString || img.content,
       dataUrl: img.dataUrl,
       blob: img.blob,
       width: img.width,
       height: img.height,
-      isVector: false
+      isVector: Boolean(img.isVector)
     }));
   } catch (rasterErr) {
-    throw new Error(`Unable to convert file ${file.name}. Please ensure LibreOffice is installed or use a PDF.`);
+    console.error('[MuPDF] Page extraction error:', rasterErr);
+    throw new Error(`Unable to extract pages from ${file.name}: ${rasterErr.message || 'unknown error'}`);
   }
 };
+
+// Backwards-compatibility alias for all modules importing convertPdfWithInkscape
+export const convertPdfWithInkscape = convertDocumentPages;

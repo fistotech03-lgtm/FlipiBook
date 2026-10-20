@@ -7,11 +7,15 @@ const connectDB = async () => {
       throw new Error('MONGO_URI is not defined in environment variables');
     }
 
-    const conn = await mongoose.connect(mongoURI);
+    const conn = await mongoose.connect(mongoURI, {
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+    });
     console.log(`[Auth Service] MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     console.error(`[Auth Service] Database connection error: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 

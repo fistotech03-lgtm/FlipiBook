@@ -26,6 +26,23 @@ const cleanStaticHtml = (html) => {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
+
+        const rootSvg = doc.querySelector('svg');
+        if (rootSvg) {
+            const w = rootSvg.getAttribute('width');
+            const h = rootSvg.getAttribute('height');
+            const vb = rootSvg.getAttribute('viewBox');
+            if (!vb && w && h && !w.includes('%') && !h.includes('%')) {
+                const nw = parseFloat(w);
+                const nh = parseFloat(h);
+                if (!isNaN(nw) && !isNaN(nh)) {
+                    rootSvg.setAttribute('viewBox', `0 0 ${nw} ${nh}`);
+                }
+            }
+            rootSvg.setAttribute('width', '100%');
+            rootSvg.setAttribute('height', '100%');
+        }
+
         // Remove foreignObjects containing video/iframe from static background so they don't load twice or flash
         doc.querySelectorAll('foreignObject[data-type="video"], foreignObject video, foreignObject iframe').forEach(el => {
             const fo = el.tagName?.toLowerCase() === 'foreignobject' ? el : el.closest('foreignObject');
@@ -43,6 +60,22 @@ const sanitizePageHtmlForPreview = (html) => {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
+
+        const rootSvg = doc.querySelector('svg');
+        if (rootSvg) {
+            const w = rootSvg.getAttribute('width');
+            const h = rootSvg.getAttribute('height');
+            const vb = rootSvg.getAttribute('viewBox');
+            if (!vb && w && h && !w.includes('%') && !h.includes('%')) {
+                const nw = parseFloat(w);
+                const nh = parseFloat(h);
+                if (!isNaN(nw) && !isNaN(nh)) {
+                    rootSvg.setAttribute('viewBox', `0 0 ${nw} ${nh}`);
+                }
+            }
+            rootSvg.setAttribute('width', '100%');
+            rootSvg.setAttribute('height', '100%');
+        }
 
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
@@ -88,6 +121,15 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     margin:0; padding:0; overflow:hidden; background:transparent; width:100%; height:100%;
     backface-visibility: hidden !important;
     -webkit-backface-visibility: hidden !important;
+  }
+  body > svg,
+  svg:not(foreignObject svg):not([data-type="icon"]):not([data-type="button"] svg) {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    shape-rendering: geometricPrecision !important;
   }
   * { box-sizing: border-box; outline: none !important; }
 
@@ -461,24 +503,27 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                             <div
                                 className="fbe-static-bg"
                                 style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: page.isTransparentSheet ? 'transparent' : '#fff', borderRadius: 'inherit', pointerEvents: 'none' }}
-                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg * { vector-effect: non-scaling-stroke !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
+                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg * { vector-effect: non-scaling-stroke !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
                             />
-                            <iframe
-                                title={`Page ${i + 1}`}
-                                srcDoc={(externalBuildPageDoc || buildPageDoc)(page.html || page.content || '', i + 1)}
-                                onLoad={(e) => { 
-                                    e.target.style.opacity = 1; 
-                                    try {
-                                        if (e.target.contentDocument) {
-                                            initGifRunner(e.target.contentDocument);
-                                        }
-                                    } catch(err) { console.error("Error init gif runner", err); }
-                                }}
-                                frameBorder="0"
-                                allowFullScreen={true}
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                                style={{ position: 'absolute', inset: 0, border: 'none', outline: 'none', width: '100%', height: '100%', pointerEvents: 'auto', borderRadius: 'inherit', opacity: 0.01, transition: 'opacity 0.3s ease', display: page.isTransparentSheet ? 'none' : 'block' }}
-                            />
+                            {/* VIRTUALIZATION: For large books, only mount heavy iframes within ±3 pages of active spread */}
+                            {(augmentedPages.length <= 12 || Math.abs(i - currentPage) <= 3) && (
+                                <iframe
+                                    title={`Page ${i + 1}`}
+                                    srcDoc={(externalBuildPageDoc || buildPageDoc)(page.html || page.content || '', i + 1)}
+                                    onLoad={(e) => { 
+                                        e.target.style.opacity = 1; 
+                                        try {
+                                            if (e.target.contentDocument) {
+                                                initGifRunner(e.target.contentDocument);
+                                            }
+                                        } catch(err) { console.error("Error init gif runner", err); }
+                                    }}
+                                    frameBorder="0"
+                                    allowFullScreen={true}
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                                    style={{ position: 'absolute', inset: 0, border: 'none', outline: 'none', width: '100%', height: '100%', pointerEvents: 'auto', borderRadius: 'inherit', opacity: 0.01, transition: 'opacity 0.3s ease', display: page.isTransparentSheet ? 'none' : 'block' }}
+                                />
+                            )}
                         </div>
                         {(!page.isTransparentSheet && textureStyle && (textureStyle.backgroundImage !== 'none' || textureStyle.backgroundColor)) && (
                             <div
@@ -504,7 +549,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                 )}
             </div>
         );
-    }), [augmentedPages, makeFirstLastPageHard, selectCustomHardPages, customHardPages, hardCovers, externalBuildPageDoc, cornerRadius, textureStyle]);
+    }), [augmentedPages, currentPage, makeFirstLastPageHard, selectCustomHardPages, customHardPages, hardCovers, externalBuildPageDoc, cornerRadius, textureStyle]);
 
     /* ── Load Scripts from local /public/lib/ (no CDN) ── */
     useEffect(() => {
@@ -512,7 +557,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         (async () => {
             try {
                 if (!window.jQuery) await loadScript('/lib/jquery.min.js');
-                if (!window.jQuery?.fn?.turn) await loadScript('/lib/turn.min.js?v=4');
+                await loadScript('/lib/turn.min.js?v=6');
                 if (alive) setReady(true);
             } catch (err) {
                 console.error('[FlipBookEngine] Script load failed:', err);
@@ -584,6 +629,14 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         // Without removeData(), stale $.data('turn.turn') causes widgetInterface
         // to treat the options object as a method name → TypeError on .apply().
         try {
+            $book.find('*').addBack().each(function() {
+                const elData = $(this).data();
+                if (elData && elData.effect && elData.effect.handle) {
+                    clearInterval(elData.effect.handle);
+                    delete elData.effect;
+                }
+                try { $(this).turn('stop'); } catch (_) {}
+            });
             const oldData = $book.data();
             if (oldData && oldData.pages) {
                 // Wipe the pages from the old instance to neutralize leaked document closures in turn.js v3
@@ -671,14 +724,22 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                 staticBg.className = 'fbe-static-bg';
                 const bgStyleColor = page.isTransparentSheet ? 'transparent' : '#fff';
                 staticBg.style.cssText = `position:absolute;inset:0;overflow:hidden;background:${bgStyleColor};pointer-events:none;border-radius:inherit;`;
-                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) { vector-effect: non-scaling-stroke !important; } .fbe-static-bg [data-type="pdf-vector-layer"], .fbe-static-bg [data-type="pdf-vector-layer"] * { vector-effect: none !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
+                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) { vector-effect: non-scaling-stroke !important; } .fbe-static-bg [data-type="pdf-vector-layer"], .fbe-static-bg [data-type="pdf-vector-layer"] * { vector-effect: none !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
                 inner.appendChild(staticBg);
 
                 const iframe = document.createElement('iframe');
                 iframe.setAttribute('frameBorder', '0');
                 iframe.setAttribute('allowfullscreen', 'true');
                 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-                iframe.srcdoc = (externalBuildPageDoc || buildPageDoc)(page.html || page.content || '', i + 1);
+                const fullDoc = (externalBuildPageDoc || buildPageDoc)(page.html || page.content || '', i + 1);
+
+                // Virtualize Turn.js iframes for large flipbooks (> 12 pages)
+                const isInitialTurnNearby = augmented.length <= 12 || Math.abs(i - startPage) <= 3;
+                if (isInitialTurnNearby) {
+                    iframe.srcdoc = fullDoc;
+                } else {
+                    iframe.dataset.srcdoc = fullDoc;
+                }
                 // Start visible immediately — static background is already showing the page content
                 // so there's no blank flash. Images load lazily inside the iframe.
                 iframe.style.cssText = 'position:absolute;inset:0;border:none;outline:none;width:100%;height:100%;pointer-events:auto;opacity:1;border-radius:inherit;';
@@ -812,6 +873,16 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     }
                     const logical = turnPage - 1;
                     if (onTurningRef.current) onTurningRef.current({ data: logical });
+
+                    // Lazily hydrate Turn.js iframes for the target page and its neighbors
+                    if (bookEl.current && augmented.length > 12) {
+                        for (let pNum = Math.max(1, turnPage - 2); pNum <= Math.min(augmented.length, turnPage + 3); pNum++) {
+                            const ifr = bookEl.current.querySelector(`.p${pNum} iframe`);
+                            if (ifr && ifr.dataset?.srcdoc && !ifr.srcdoc) {
+                                ifr.srcdoc = ifr.dataset.srcdoc;
+                            }
+                        }
+                    }
                 },
                 turned: (_e, turnPage) => {
                     const logical = turnPage - 1;
@@ -837,7 +908,20 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         if (!useMouseEvents) $book.turn('disable', true);
 
         return () => {
-            try { $book.turn('destroy'); } catch (_) { /* noop */ }
+            try {
+                $book.find('*').addBack().each(function() {
+                    const elData = $(this).data();
+                    if (elData && elData.effect && elData.effect.handle) {
+                        clearInterval(elData.effect.handle);
+                        delete elData.effect;
+                    }
+                    try { $(this).turn('stop'); } catch (_) {}
+                });
+                $book.turn('destroy');
+            } catch (_) { /* noop */ }
+            $book.off();
+            $book.removeData();
+            $book.empty();
         };
         // onFlip intentionally excluded — it's captured in the closure correctly
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -40,6 +40,7 @@ export const activeBookSlice = createSlice({
   initialState,
   reducers: {
     setCurrentBook: (state, action) => {
+      if (state.currentBook === action.payload) return;
       state.currentBook = action.payload;
       if (action.payload?.flipbookName) {
         state.bookName = action.payload.flipbookName;

@@ -180,7 +180,7 @@ const initFlipbookStorage = (bookDir) => {
     }
 
     const assetsDir = path.join(bookDir, 'assets');
-    const assetSubdirs = ['audio', 'download', 'gif', 'Image', 'video', '3D_Model'];
+    const assetSubdirs = ['audio', 'download', 'gif', 'Image', 'video'];
     assetSubdirs.forEach((sub) => {
       const p = path.join(assetsDir, sub);
       if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -260,6 +260,5 @@ module.exports = {
   resolveFolder,
   resolveFlipbookPaths,
   initFlipbookStorage,
-  ensureUserWorkspace,
-  WORKSPACE_FOLDERS
+  ensureUserWorkspace
 };

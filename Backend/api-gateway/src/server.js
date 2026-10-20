@@ -18,9 +18,48 @@ const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127
 const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
 const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
 
+// Global Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:8000',
+  'https://testing.flipibook.com',
+  'https://flipibook.com',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Server-to-server, curl, health probes
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)*flipibook\.com$/.test(origin)) return true;
+  return false;
+};
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+  credentials: true,
+  exposedHeaders: ['Content-Length', 'Content-Range', 'ETag', 'Accept-Ranges']
+}));
+
 const storageRoot = process.env.STORAGE_PATH
   ? path.resolve(process.env.STORAGE_PATH)
   : path.resolve(__dirname, '../../storage');
+
+const sendStaticFile = (res, filePath) => {
+  return res.sendFile(filePath, {
+    maxAge: '1d',
+    headers: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin') || '*',
+      'Access-Control-Expose-Headers': 'Content-Length, Content-Range, ETag, Accept-Ranges'
+    }
+  });
+};
 
 // Static storage serving with fallback across user folder aliases (e.g. FLIPI0001 vs sanitizedEmail)
 // Cache top directories in memory with a 60-second TTL to avoid crawling disk on every missing asset/404
@@ -45,7 +84,7 @@ const storageStaticMiddleware = async (req, res, next) => {
   try {
     const stat = await fs.promises.stat(directPath).catch(() => null);
     if (stat && stat.isFile()) {
-      return res.sendFile(directPath, { maxAge: '1d' });
+      return sendStaticFile(res, directPath);
     }
   } catch (e) {}
 
@@ -58,7 +97,7 @@ const storageStaticMiddleware = async (req, res, next) => {
         const candidatePath = path.join(storageRoot, d, restOfPath);
         const candStat = await fs.promises.stat(candidatePath).catch(() => null);
         if (candStat && candStat.isFile()) {
-          return res.sendFile(candidatePath, { maxAge: '1d' });
+          return sendStaticFile(res, candidatePath);
         }
       }
     } catch (e) {}
@@ -92,7 +131,7 @@ const storageStaticMiddleware = async (req, res, next) => {
             return null;
           };
           const found = scanForFile(userFlipbooksDir);
-          if (found) return res.sendFile(found);
+          if (found) return sendStaticFile(res, found);
         }
       }
     } catch (e) {}
@@ -101,38 +140,23 @@ const storageStaticMiddleware = async (req, res, next) => {
   next();
 };
 
-// Global Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:8000',
-  'https://testing.flipibook.com',
-  'https://flipibook.com',
-  process.env.CLIENT_URL
-].filter(Boolean);
-
-const isAllowedOrigin = (origin) => {
-  if (!origin) return true; // Server-to-server, curl, health probes
-  if (allowedOrigins.includes(origin)) return true;
-  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
-  if (/^https:\/\/([a-zA-Z0-9-]+\.)*flipibook\.com$/.test(origin)) return true;
-  return false;
+const staticConfig = {
+  maxAge: '1d',
+  setHeaders: (res) => {
+    if (!res.getHeader('Access-Control-Allow-Origin')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, ETag, Accept-Ranges');
+  }
 };
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (isAllowedOrigin(origin)) {
-      return callback(null, true);
-    }
-    return callback(null, false);
-  },
-  credentials: true
-}));
-
 app.use('/storage', storageStaticMiddleware);
-app.use('/storage', express.static(storageRoot));
+app.use('/storage', express.static(storageRoot, staticConfig));
 app.use('/uploads', storageStaticMiddleware);
-app.use('/uploads', express.static(storageRoot));
+app.use('/uploads', express.static(storageRoot, staticConfig));
+app.use(['/storage', '/uploads'], (req, res) => {
+  res.status(404).json({ success: false, message: `Asset not found: ${req.path}` });
+});
 
 // Health Check
 app.get('/health', (req, res) => {

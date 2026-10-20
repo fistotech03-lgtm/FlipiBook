@@ -6,6 +6,7 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { MeshoptEncoder } from "meshoptimizer";
 import initOCCT from "occt-import-js";
 import axios from "axios";
+import { store } from "../../../store";
 
 // Patch GLTFExporter
 if (GLTFExporter && GLTFExporter.prototype && !GLTFExporter.prototype._isSafeExporterPatched) {
@@ -402,12 +403,13 @@ export const convert3dsToGlbBlob = async (file, { setLoadingText, setSafeProgres
   return new Blob([glbBuffer], { type: 'model/gltf-binary' });
 };
 
-export const convertModelViaBackend = async (file, ext, baseName, { setLoadingText, setSafeProgress, startConversionTicker, stopConversionTicker }) => {
+export const convertModelViaBackend = async (file, ext, baseName, helpers = {}) => {
+  const { setLoadingText, setSafeProgress, startConversionTicker, stopConversionTicker } = helpers;
   const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
   const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
-  const storedUser = localStorage.getItem('user');
-  const user = storedUser ? JSON.parse(storedUser) : { emailId: 'guest_user' };
-  const emailId = user.emailId || 'guest_user';
+  const authUser = helpers?.user || store.getState()?.auth?.user;
+  const emailId = authUser?.emailId || authUser?.email || 'guest_user';
+  const userID = authUser?.userID || authUser?.userId;
 
   const isCad = ['step', 'stp', 'iges', 'igs', 'stl'].includes(ext);
   const engineName = isCad ? "OpenCASCADE" : "Assimp";
@@ -434,6 +436,7 @@ export const convertModelViaBackend = async (file, ext, baseName, { setLoadingTe
       chunkFormData.append('totalChunks', totalChunks);
       chunkFormData.append('fileName', file.name);
       chunkFormData.append('emailId', emailId);
+      if (userID) chunkFormData.append('userID', userID);
       chunkFormData.append('isConverter', 'true');
       chunkFormData.append('chunk', chunk);
 
@@ -480,6 +483,7 @@ export const convertModelViaBackend = async (file, ext, baseName, { setLoadingTe
   const formData = new FormData();
   formData.append('model', file);
   formData.append('emailId', emailId);
+  if (userID) formData.append('userID', userID);
 
   try {
     let uploadDone = false;

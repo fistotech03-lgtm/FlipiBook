@@ -9,6 +9,7 @@ import AlertModal from "../../AlertModal";
 import { useToast } from "../../../components/CustomToast";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
 import { process3DDropEvent } from "../utils/modelDropHandler";
+import { useAuth } from "../../../context/AuthContext";
 
 class ThumbnailErrorBoundary extends React.Component {
     constructor(props) {
@@ -217,6 +218,7 @@ export default function AddModelModal({
     loadedModels = [],
     hideDelete = false
 }) {
+    const { user } = useAuth();
     const [modalTab, setModalTab] = useState("gallery"); // 'gallery' | 'upload'
     const [models, setModels] = useState([]);
     const [defaultModels, setDefaultModels] = useState([]);
@@ -267,23 +269,22 @@ export default function AddModelModal({
         if (isOpen) {
             fetchModels();
         }
-    }, [isOpen]);
+    }, [isOpen, user]);
 
     const fetchModels = async () => {
         try {
             setLoading(true);
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const storedUser = localStorage.getItem('user');
+            const emailId = user?.emailId || user?.email;
             
             const promises = [
                 axios.get(`${backendUrl}/api/presets/models`).catch(() => ({ data: { models: [] } }))
             ];
             
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
+            if (emailId) {
                 promises.push(
                     axios.get(`${backendUrl}/api/3d-models/get-models`, {
-                        params: { emailId: user.emailId }
+                        params: { emailId }
                     }).catch(() => ({ data: { models: [] } }))
                 );
             }
@@ -397,17 +398,16 @@ export default function AddModelModal({
     };
 
     const handleDeleteModel = async (model) => {
-        const userStr = localStorage.getItem('user');
-        if (!userStr || !model) {
+        const emailId = user?.emailId || user?.email;
+        if (!emailId || !model) {
             console.warn("Cannot delete: User session or model data missing");
             return;
         }
-        const user = JSON.parse(userStr);
         
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
             await axios.delete(`${backendUrl}/api/3d-models/delete-model/${model.modelId}`, {
-                data: { emailId: user.emailId }
+                data: { emailId }
             });
             
             setModels(prev => prev.filter(m => m.modelId !== model.modelId));
@@ -423,9 +423,8 @@ export default function AddModelModal({
     };
 
     const handleDeleteMultiple = async () => {
-        const userStr = localStorage.getItem('user');
-        if (!userStr || selectedForDeletion.length === 0) return;
-        const user = JSON.parse(userStr);
+        const emailId = user?.emailId || user?.email;
+        if (!emailId || selectedForDeletion.length === 0) return;
 
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -433,7 +432,7 @@ export default function AddModelModal({
             
             await axios.post(`${backendUrl}/api/3d-models/delete-multiple-models`, {
                 modelIds: idsToDelete,
-                emailId: user.emailId
+                emailId
             });
 
             setModels(prev => prev.filter(m => !idsToDelete.includes(m.modelId)));

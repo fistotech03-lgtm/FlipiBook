@@ -31,7 +31,7 @@ import { fetchFlipbookFolders, fetchFlipbookBooks, queryClient } from '../queryC
 import { useAuth } from '../context/AuthContext';
 import flipbookApi from '../api/flipbookApi';
 import useUserStorage from '../hooks/useUserStorage';
-import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { getAssetBaseUrl } from '../utils/assetUtils';
 
 
 const sortCategories = [

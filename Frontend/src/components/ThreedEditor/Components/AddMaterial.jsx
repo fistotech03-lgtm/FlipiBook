@@ -5,6 +5,7 @@ import { X, Upload, Check, AlertCircle, Edit3, ChevronDown } from "lucide-react"
 import axios from "axios";
 import { useToast } from "../../../components/CustomToast";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
+import { useAuth } from "../../../context/AuthContext";
 
 const MapUploadBox = ({ label, id, maps, setMaps, setMapFiles, mapMenuOpen, setMapMenuOpen, handleMapUpload, loadingMaps, setLoadingMaps, isRequired = false, isSmall = false }) => {
   const fileInputRef = useRef(null);
@@ -157,15 +158,10 @@ export default function AddMaterial({ isOpen, onClose, editData, onUpdateSuccess
   const [isPreviewDragging, setIsPreviewDragging] = useState(false);
   const [loadingMaps, setLoadingMaps] = useState({});
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const { user } = useAuth();
 
   const getUserEmail = () => {
-    try {
-      const stored = localStorage.getItem("user") || localStorage.getItem("user_profile");
-      const u = stored ? JSON.parse(stored) : null;
-      return u?.emailId || u?.email || null;
-    } catch (_) {
-      return null;
-    }
+    return user?.emailId || user?.email || null;
   };
 
   // Initialize state when editData or initialCategory is provided
@@ -282,6 +278,9 @@ export default function AddMaterial({ isOpen, onClose, editData, onUpdateSuccess
       formData.append("uploadId", uploadId);
       formData.append("fileName", file.name);
       formData.append("userEmail", email);
+      if (user?.userID || user?.userId) {
+        formData.append("userID", user.userID || user.userId);
+      }
       formData.append("materialName", material);
       formData.append("fieldName", field);
       formData.append("chunk", chunk);
@@ -374,6 +373,7 @@ export default function AddMaterial({ isOpen, onClose, editData, onUpdateSuccess
         // ADD new material
         const response = await axios.post(`${backendUrl}/api/textures/add`, {
           userEmail: email,
+          userID: user?.userID || user?.userId,
           materialName,
           materialCategory: category,
           maps: finalMaps

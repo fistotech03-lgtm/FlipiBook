@@ -34,6 +34,7 @@ import dashboardBannerImg from '../../assets/Dashboard/Main.png';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 import AlertModal from '../AlertModal';
 import ThreeDBanner from './ThreeDBanner';
+import { useAuth } from '../../context/AuthContext';
 
 // Helper to construct cache-busting URLs for 3D models and thumbnails
 const buildVersionedUrl = (rawPath, updatedAt, uploadedAt) => {
@@ -244,7 +245,7 @@ export default function ThreeDDashboard({
 } = {}) {
   const internalNavigate = useNavigate();
   const navigate = propNavigate || internalNavigate;
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'recent', 'favorites', 'trash'
@@ -309,13 +310,9 @@ export default function ThreeDDashboard({
   const menuRef = useRef(null);
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-  // Load User & Favorites from storage
+  // Load Favorites and UI preferences from storage
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
       const savedFavs = localStorage.getItem('3d_model_favorites');
       if (savedFavs) {
         setFavorites(new Set(JSON.parse(savedFavs)));
@@ -344,23 +341,26 @@ export default function ThreeDDashboard({
   }, []);
 
   // Fetch 3D models
-  const fetchModels = async () => {
+  const fetchModels = useCallback(async () => {
+    const emailId = user?.emailId || user?.email;
+    const userID = user?.userID || user?.userId;
+    if (!emailId && !userID) {
+      setModels([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-      if (storedUser) {
-        const u = JSON.parse(storedUser);
-        const res = await axios.get(`${backendUrl}/api/3d-models/get-models`, {
-          params: { emailId: u.emailId }
-        });
-        setModels(res.data.models || []);
-      }
+      const res = await axios.get(`${backendUrl}/api/3d-models/get-models`, {
+        params: { emailId, userID }
+      });
+      setModels(res.data.models || []);
     } catch (err) {
       console.error('Error fetching 3D models:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendUrl, user]);
 
   useEffect(() => {
     fetchModels();
@@ -394,7 +394,7 @@ export default function ThreeDDashboard({
       if (bc) bc.close();
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [fetchModels]);
 
   // Favorite toggle
   const toggleFavorite = (modelId) => {
@@ -562,7 +562,7 @@ export default function ThreeDDashboard({
     return `${Math.round(mb)} MB`;
   };
 
-  const userName = user?.name || user?.emailId?.split('@')[0] || 'User';
+  const userName = user?.name || (user?.emailId || user?.email)?.split('@')[0] || 'User';
 
   const handleLaunchEditor = (modelId = null) => {
     if (modelId) {
@@ -573,12 +573,12 @@ export default function ThreeDDashboard({
   };
 
   const executeUpload = async (fileToUpload, displayName, forceNew = false) => {
-    const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-    if (!storedUser) {
+    const emailId = user?.emailId || user?.email;
+    const userID = user?.userID || user?.userId;
+    if (!emailId && !userID) {
       setUploadError('User session missing. Please log in.');
       return;
     }
-    const u = JSON.parse(storedUser);
 
     setIsUploading(true);
     setUploadProgress(15);
@@ -591,7 +591,8 @@ export default function ThreeDDashboard({
       formData.append('chunkIndex', '0');
       formData.append('totalChunks', '1');
       formData.append('fileName', fileToUpload.name);
-      formData.append('emailId', u.emailId);
+      if (emailId) formData.append('emailId', emailId);
+      if (userID) formData.append('userID', userID);
       formData.append('chunk', fileToUpload);
       if (forceNew) {
         formData.append('forceNew', 'true');
@@ -663,14 +664,15 @@ export default function ThreeDDashboard({
 
   const handleRenameSubmit = async () => {
     if (!renamingModel || !newNameInput.trim()) return;
-    const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-    if (!storedUser) return;
-    const u = JSON.parse(storedUser);
+    const emailId = user?.emailId || user?.email;
+    const userID = user?.userID || user?.userId;
+    if (!emailId && !userID) return;
 
     setIsRenaming(true);
     try {
       await axios.post(`${backendUrl}/api/3d-models/rename-model`, {
-        emailId: u.emailId,
+        emailId,
+        userID,
         modelId: renamingModel.modelId,
         oldName: renamingModel.name,
         newName: newNameInput.trim()
@@ -687,14 +689,15 @@ export default function ThreeDDashboard({
 
   const handleDeleteConfirm = async () => {
     if (!deletingModel) return;
-    const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-    if (!storedUser) return;
-    const u = JSON.parse(storedUser);
+    const emailId = user?.emailId || user?.email || user?.userID || 'user';
+    const userID = user?.userID || user?.userId;
 
     setIsDeleting(true);
     try {
-      const emailEncoded = encodeURIComponent(u.emailId);
-      await axios.delete(`${backendUrl}/api/3d-models/delete-model/${emailEncoded}/${deletingModel.modelId}`);
+      const emailEncoded = encodeURIComponent(emailId);
+      await axios.delete(`${backendUrl}/api/3d-models/delete-model/${emailEncoded}/${deletingModel.modelId}`, {
+        params: { userID }
+      });
       setDeletingModel(null);
       fetchModels();
     } catch (err) {
@@ -706,14 +709,15 @@ export default function ThreeDDashboard({
 
   const handleBulkDelete = async () => {
     if (!selectedModelIds || selectedModelIds.length === 0) return;
+    const emailId = user?.emailId || user?.email || user?.userID || 'user';
+    const userID = user?.userID || user?.userId;
     try {
-      const storedUser = localStorage.getItem('user') || localStorage.getItem('user_profile');
-      if (!storedUser) return;
-      const u = JSON.parse(storedUser);
-      const emailEncoded = encodeURIComponent(u.emailId);
+      const emailEncoded = encodeURIComponent(emailId);
       await Promise.all(
         selectedModelIds.map((id) =>
-          axios.delete(`${backendUrl}/api/3d-models/delete-model/${emailEncoded}/${id}`)
+          axios.delete(`${backendUrl}/api/3d-models/delete-model/${emailEncoded}/${id}`, {
+            params: { userID }
+          })
         )
       );
       setSelectedModelIds([]);

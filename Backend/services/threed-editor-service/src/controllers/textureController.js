@@ -44,7 +44,7 @@ const addTexture = async (req, res) => {
 
     // Direct file uploads if provided
     if (req.files && Object.keys(req.files).length > 0) {
-      const userDir = getUserTextureDir(userEmail, materialName);
+      const userDir = await getUserTextureDir(userEmail, materialName, req);
       for (const field of ['preview', 'base', 'metallic', 'roughness', 'normal', 'ao', 'displacement', 'opacity', 'emissive']) {
         if (req.files[field] && req.files[field][0]) {
           const file = req.files[field][0];
@@ -109,7 +109,7 @@ const uploadTextureChunk = async (req, res) => {
 
     const curIndex = parseInt(chunkIndex, 10);
     const total = parseInt(totalChunks, 10);
-    const tempDir = getTempChunkDir(`tex_${uploadId}`);
+    const tempDir = await getTempChunkDir(`tex_${uploadId}`, userEmail, req);
 
     if (req.file) {
       const chunkFileDest = path.join(tempDir, `chunk_${curIndex}`);
@@ -120,7 +120,7 @@ const uploadTextureChunk = async (req, res) => {
     }
 
     if (curIndex === total - 1) {
-      const userDir = getUserTextureDir(userEmail, materialName);
+      const userDir = await getUserTextureDir(userEmail, materialName, req);
       const ext = path.extname(fileName);
       const safeField = (fieldName || 'map').replace(/[^a-zA-Z0-9_-]/g, '_');
       const uniqueFileName = `${safeField}${ext}`;
@@ -148,15 +148,22 @@ const uploadTextureChunk = async (req, res) => {
  */
 const getUserTextures = async (req, res) => {
   try {
-    const email = req.query.email || req.query.userEmail || req.query.emailId;
-    if (!email) {
-      return res.status(400).json({ message: 'User email required' });
+    const email = req.query.email || req.query.userEmail || req.query.emailId || req.user?.emailId || req.user?.email;
+    const userID = req.query.userID || req.user?.userID || req.user?.userId;
+    if (!email && !userID) {
+      return res.status(400).json({ message: 'User email or userID required' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const textures = await Texture.find({
-      $or: [{ userEmail: cleanEmail }, { emailId: cleanEmail }, { userEmail: email }, { emailId: email }]
-    }).sort({ createdAt: -1 });
+    const queryConditions = [];
+    if (email) {
+      const cleanEmail = email.trim().toLowerCase();
+      queryConditions.push({ userEmail: cleanEmail }, { emailId: cleanEmail }, { userEmail: email }, { emailId: email });
+    }
+    if (userID) {
+      queryConditions.push({ userEmail: userID }, { emailId: userID }, { userID: userID });
+    }
+
+    const textures = await Texture.find({ $or: queryConditions }).sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: textures.length, textures });
   } catch (error) {
@@ -207,7 +214,7 @@ const deleteTexture = async (req, res) => {
 
     // Delete texture folder if exists
     try {
-      const userDir = getUserTextureDir(texture.userEmail, texture.materialName);
+      const userDir = await getUserTextureDir(texture.userEmail, texture.materialName, req);
       if (fs.existsSync(userDir)) {
         fs.rmSync(userDir, { recursive: true, force: true });
       }

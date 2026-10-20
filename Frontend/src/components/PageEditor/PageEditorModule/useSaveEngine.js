@@ -293,7 +293,10 @@ export const useSaveEngine = ({
                   }
 
                   const formData = new FormData();
-                  formData.append("emailId", user?.emailId);
+                  formData.append("emailId", user?.emailId || user?.email);
+                  if (user?.userID || user?.userId) {
+                    formData.append("userID", user.userID || user.userId);
+                  }
                   formData.append("folderName", fNameFor3D);
                   formData.append("flipbookName", bNameFor3D);
                   if (currentBook?.v_id || v_id) {

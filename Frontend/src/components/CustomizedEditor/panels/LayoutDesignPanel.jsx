@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useState,useEffect } from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> origin/praveen
 import { Icon } from '@iconify/react';
 import LayoutColorCustomizer from '../LayoutColorCustomizer';
 import ColorPicker from '../../ColorPallet';

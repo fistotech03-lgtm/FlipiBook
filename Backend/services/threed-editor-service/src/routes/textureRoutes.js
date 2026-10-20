@@ -4,8 +4,10 @@ const path = require('path');
 const os = require('os');
 const textureController = require('../controllers/textureController');
 const textureCategoryController = require('../controllers/textureCategoryController');
+const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+router.use(optionalAuth);
 
 const upload = multer({
   dest: path.join(os.tmpdir(), 'texture_uploads'),

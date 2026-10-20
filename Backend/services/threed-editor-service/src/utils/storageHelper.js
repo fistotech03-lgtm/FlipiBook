@@ -1,6 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
+
+let User;
+try {
+  User = require('../models/User');
+} catch (_) {}
+
+const userFolderCache = new Map();
 
 /**
  * Generate unique ID
@@ -57,7 +65,7 @@ const getTexturesRoot = () => {
 };
 
 /**
- * Sanitize email for folder path
+ * Sanitize email for folder path (fallback only)
  */
 const sanitizeEmail = (email) => {
   if (!email) return 'default_user';
@@ -74,44 +82,145 @@ const sanitizeFileName = (name, fallback = 'model.glb') => {
 };
 
 /**
- * Resolve existing user folder (e.g. 'FLIPI0001' or sanitizedEmail)
+ * Resolve existing user folder (e.g. 'FLIPI0001') - Async with DB lookup
+ * NEVER create an email folder like 'fistotech04_gmail_com'.
  */
-const resolveUserFolder = (emailOrUserId) => {
+const resolveUserFolderAsync = async (emailOrUserId, fallbackReq = null) => {
   const root = getStorageRoot();
-  if (!emailOrUserId) return 'default_user';
+  const cand = (
+    (typeof emailOrUserId === 'string' ? emailOrUserId : '') ||
+    fallbackReq?.body?.userID ||
+    fallbackReq?.query?.userID ||
+    fallbackReq?.user?.userId ||
+    fallbackReq?.user?.userID ||
+    fallbackReq?.body?.emailId ||
+    fallbackReq?.query?.emailId ||
+    fallbackReq?.user?.emailId ||
+    ''
+  ).toString().trim();
 
-  const raw = emailOrUserId.toString().trim();
-  // 1. Direct match (e.g. FLIPI0001)
-  if (fs.existsSync(path.join(root, raw))) {
-    return raw;
+  // 1. If candidate is explicitly a FLIPI user ID
+  if (/^FLIPI\d+/i.test(cand)) {
+    const userDir = path.join(root, cand);
+    if (!fs.existsSync(userDir)) {
+      try { fs.mkdirSync(userDir, { recursive: true }); } catch (_) {}
+    }
+    userFolderCache.set(cand.toLowerCase(), cand);
+    return cand;
   }
 
-  // 2. Sanitized email match
-  const sanitized = sanitizeEmail(raw);
-  if (fs.existsSync(path.join(root, sanitized))) {
-    return sanitized;
+  // 2. Check memory cache
+  if (cand && userFolderCache.has(cand.toLowerCase())) {
+    return userFolderCache.get(cand.toLowerCase());
   }
 
-  // 3. Check for any directory containing user identifier
+  // 3. Database lookup for user's userID (e.g. 'FLIPI0001')
   try {
-    const dirs = fs.readdirSync(root);
-    for (const d of dirs) {
-      if (d.toLowerCase() === raw.toLowerCase() || d.toLowerCase() === sanitized.toLowerCase()) {
-        return d;
+    const UserModel = User || mongoose.models.User || mongoose.model('User');
+    if (UserModel && cand) {
+      const u = await UserModel.findOne({
+        $or: [
+          { emailId: cand.toLowerCase() },
+          { userID: cand },
+          ...(mongoose.Types.ObjectId.isValid(cand) ? [{ _id: new mongoose.Types.ObjectId(cand) }] : [])
+        ]
+      }).select('userID emailId');
+
+      if (u && u.userID) {
+        const userDir = path.join(root, u.userID);
+        if (!fs.existsSync(userDir)) {
+          try { fs.mkdirSync(userDir, { recursive: true }); } catch (_) {}
+        }
+        userFolderCache.set(cand.toLowerCase(), u.userID);
+        if (u.emailId) {
+          userFolderCache.set(u.emailId.toLowerCase(), u.userID);
+        }
+        userFolderCache.set(u.userID.toLowerCase(), u.userID);
+        return u.userID;
       }
     }
-  } catch (e) {}
+  } catch (dbErr) {
+    console.warn('[Storage] DB lookup notice:', dbErr.message);
+  }
 
-  // Default to sanitized email or raw id
-  return sanitized;
+  // 4. Synchronous directory inspection fallback
+  return resolveUserFolder(cand, fallbackReq);
 };
 
 /**
- * Directory for user's 3D models (supports 3D_Models and 3D_Modals)
+ * Resolve existing user folder (e.g. 'FLIPI0001') - Synchronous
+ * NEVER create an email folder like 'fistotech04_gmail_com'.
  */
-const getUser3DDir = (emailOrUserId) => {
+const resolveUserFolder = (emailOrUserId, fallbackReq = null) => {
   const root = getStorageRoot();
-  const userFolder = resolveUserFolder(emailOrUserId);
+  const cand = (
+    (typeof emailOrUserId === 'string' ? emailOrUserId : '') ||
+    fallbackReq?.body?.userID ||
+    fallbackReq?.query?.userID ||
+    fallbackReq?.user?.userId ||
+    fallbackReq?.user?.userID ||
+    fallbackReq?.body?.emailId ||
+    fallbackReq?.query?.emailId ||
+    fallbackReq?.user?.emailId ||
+    ''
+  ).toString().trim();
+
+  // 1. Direct FLIPI match
+  if (/^FLIPI\d+/i.test(cand)) {
+    const userDir = path.join(root, cand);
+    if (!fs.existsSync(userDir)) {
+      try { fs.mkdirSync(userDir, { recursive: true }); } catch (_) {}
+    }
+    userFolderCache.set(cand.toLowerCase(), cand);
+    return cand;
+  }
+
+  // 2. Check cache
+  if (cand && userFolderCache.has(cand.toLowerCase())) {
+    return userFolderCache.get(cand.toLowerCase());
+  }
+
+  // 3. Check existing directories in storageRoot for FLIPI folders
+  try {
+    const dirs = fs.readdirSync(root);
+    const flipiDirs = dirs.filter(d => /^FLIPI\d+/i.test(d));
+    if (flipiDirs.length === 1) {
+      userFolderCache.set(cand.toLowerCase(), flipiDirs[0]);
+      return flipiDirs[0];
+    }
+    if (flipiDirs.length > 1) {
+      return flipiDirs[0];
+    }
+  } catch (_) {}
+
+  // 4. If a directory with cand already exists and is not an email
+  if (cand && !cand.includes('@') && fs.existsSync(path.join(root, cand))) {
+    userFolderCache.set(cand.toLowerCase(), cand);
+    return cand;
+  }
+
+  return 'FLIPI0001';
+};
+
+/**
+ * Directory for user's 3D models (supports 3D_Models)
+ */
+const getUser3DDir = async (emailOrUserId, fallbackReq = null) => {
+  const root = getStorageRoot();
+  const userFolder = await resolveUserFolderAsync(emailOrUserId, fallbackReq);
+  const preferredDir = path.join(root, userFolder, '3D_Models');
+  if (!fs.existsSync(preferredDir)) {
+    fs.mkdirSync(preferredDir, { recursive: true });
+  }
+  return preferredDir;
+};
+
+/**
+ * Synchronous variant of getUser3DDir
+ */
+const getUser3DDirSync = (emailOrUserId, fallbackReq = null) => {
+  const root = getStorageRoot();
+  const userFolder = resolveUserFolder(emailOrUserId, fallbackReq);
   const preferredDir = path.join(root, userFolder, '3D_Models');
   if (!fs.existsSync(preferredDir)) {
     fs.mkdirSync(preferredDir, { recursive: true });
@@ -122,9 +231,9 @@ const getUser3DDir = (emailOrUserId) => {
 /**
  * Directory for user's textures
  */
-const getUserTextureDir = (emailOrUserId, materialName = '') => {
+const getUserTextureDir = async (emailOrUserId, materialName = '', fallbackReq = null) => {
   const root = getStorageRoot();
-  const userFolder = resolveUserFolder(emailOrUserId);
+  const userFolder = await resolveUserFolderAsync(emailOrUserId, fallbackReq);
   const cleanMat = sanitizeFileName(materialName, '');
   const dir = cleanMat
     ? path.join(root, userFolder, 'Texture', cleanMat)
@@ -136,11 +245,12 @@ const getUserTextureDir = (emailOrUserId, materialName = '') => {
 };
 
 /**
- * Directory for chunk uploads
+ * Directory for chunk uploads - inside user workspace!
  */
-const getTempChunkDir = (uploadId) => {
+const getTempChunkDir = async (uploadId, emailOrUserId = null, fallbackReq = null) => {
   const root = getStorageRoot();
-  const dir = path.join(root, '.temp_chunks', sanitizeFileName(uploadId, 'chunk'));
+  const userFolder = await resolveUserFolderAsync(emailOrUserId, fallbackReq);
+  const dir = path.join(root, userFolder, '.temp_chunks', sanitizeFileName(uploadId, 'chunk'));
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -148,11 +258,12 @@ const getTempChunkDir = (uploadId) => {
 };
 
 /**
- * Directory for temporary converted models
+ * Directory for temporary converted models - inside user workspace!
  */
-const getConvertedDir = () => {
+const getConvertedDir = async (emailOrUserId = null, fallbackReq = null) => {
   const root = getStorageRoot();
-  const dir = path.join(root, '.converted_models');
+  const userFolder = await resolveUserFolderAsync(emailOrUserId, fallbackReq);
+  const dir = path.join(root, userFolder, '.converted_models');
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -160,7 +271,8 @@ const getConvertedDir = () => {
 };
 
 /**
- * Assemble chunks into final file
+ * Assemble chunks into final file.
+ * Only removes individual chunk files; does NOT delete targetFilePath or tempDir!
  */
 const assembleChunks = async (tempDir, targetFilePath, totalChunks) => {
   const writeStream = fs.createWriteStream(targetFilePath);
@@ -168,7 +280,7 @@ const assembleChunks = async (tempDir, targetFilePath, totalChunks) => {
   for (let i = 0; i < totalChunks; i++) {
     const chunkPath = path.join(tempDir, `chunk_${i}`);
     let retry = 0;
-    while (!fs.existsSync(chunkPath) && retry < 15) {
+    while (!fs.existsSync(chunkPath) && retry < 20) {
       await new Promise((r) => setTimeout(r, 100));
       retry++;
     }
@@ -190,16 +302,7 @@ const assembleChunks = async (tempDir, targetFilePath, totalChunks) => {
     });
   });
 
-  // Clean up temp directory
-  try {
-    const files = await fs.promises.readdir(tempDir);
-    for (const f of files) {
-      await fs.promises.unlink(path.join(tempDir, f)).catch(() => {});
-    }
-    await fs.promises.rmdir(tempDir).catch(() => {});
-  } catch (cleanErr) {
-    console.warn('[3D Storage] Chunk cleanup notice:', cleanErr.message);
-  }
+  return targetFilePath;
 };
 
 /**
@@ -233,7 +336,9 @@ module.exports = {
   sanitizeEmail,
   sanitizeFileName,
   resolveUserFolder,
+  resolveUserFolderAsync,
   getUser3DDir,
+  getUser3DDirSync,
   getUserTextureDir,
   getTempChunkDir,
   getConvertedDir,

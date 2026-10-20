@@ -110,7 +110,7 @@ const getModelById = async (req, res) => {
  */
 const uploadChunk = async (req, res) => {
   try {
-    const { uploadId, chunkIndex, totalChunks, fileName, emailId, modelId } = req.body;
+    const { uploadId, chunkIndex, totalChunks, fileName, emailId, modelId, userID } = req.body;
 
     if (!uploadId || !fileName) {
       return res.status(400).json({ message: 'Missing required chunk metadata' });
@@ -118,7 +118,8 @@ const uploadChunk = async (req, res) => {
 
     const curIndex = parseInt(chunkIndex, 10);
     const total = parseInt(totalChunks, 10);
-    const tempDir = getTempChunkDir(uploadId);
+    const userIdentifier = userID || req.user?.userId || req.user?.userID || emailId;
+    const tempDir = await getTempChunkDir(uploadId, userIdentifier, req);
 
     // Save uploaded chunk
     if (req.file) {
@@ -131,7 +132,7 @@ const uploadChunk = async (req, res) => {
 
     // When last chunk arrives, assemble
     if (curIndex === total - 1) {
-      const userDir = getUser3DDir(emailId);
+      const userDir = await getUser3DDir(userIdentifier, req);
       const ext = path.extname(fileName);
       const rawBase = path.basename(fileName, ext);
       const safeBase = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
@@ -163,6 +164,8 @@ const uploadChunk = async (req, res) => {
           finalFilePath = convertedGlbPath;
         } catch (convErr) {
           console.warn('[3D Models] Conversion warning:', convErr.message);
+          finalFileName = `${candidateBase}${ext}`;
+          finalFilePath = tempMergedPath;
         }
       }
 
@@ -175,9 +178,11 @@ const uploadChunk = async (req, res) => {
 
       // Clean up temp
       try {
-        if (fs.existsSync(tempMergedPath)) fs.unlinkSync(tempMergedPath);
-        if (fs.existsSync(finalFilePath) && finalFilePath !== destPath) fs.unlinkSync(finalFilePath);
         fs.rmSync(tempDir, { recursive: true, force: true });
+        const parentTemp = path.dirname(tempDir);
+        if (fs.existsSync(parentTemp) && fs.readdirSync(parentTemp).length === 0) {
+          fs.rmdirSync(parentTemp);
+        }
       } catch (_) {}
 
       const stats = fs.statSync(destPath);
@@ -400,7 +405,8 @@ const saveSession = async (req, res) => {
       return res.status(400).json({ message: 'Email and state are required' });
     }
 
-    const userDir = getUser3DDir(emailId);
+    const userIdentifier = req.body?.userID || req.user?.userId || req.user?.userID || emailId;
+    const userDir = await getUser3DDir(userIdentifier, req);
     const sessionFile = path.join(userDir, 'session.json');
     await fs.promises.writeFile(sessionFile, JSON.stringify(state, null, 2), 'utf-8');
 
@@ -418,7 +424,8 @@ const getSession = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const userDir = getUser3DDir(emailId);
+    const userIdentifier = req.query?.userID || req.user?.userId || req.user?.userID || emailId;
+    const userDir = await getUser3DDir(userIdentifier, req);
     const sessionFile = path.join(userDir, 'session.json');
     if (fs.existsSync(sessionFile)) {
       const content = await fs.promises.readFile(sessionFile, 'utf-8');
@@ -449,7 +456,8 @@ const renameModel = async (req, res) => {
       cleanNewName += ext;
     }
 
-    const userDir = getUser3DDir(emailId);
+    const userIdentifier = req.body?.userID || req.user?.userId || req.user?.userID || emailId;
+    const userDir = await getUser3DDir(userIdentifier, req);
     const oldPath = path.join(userDir, oldName);
     const newPath = path.join(userDir, cleanNewName);
 
@@ -539,7 +547,8 @@ const deleteModel = async (req, res) => {
 
     if (model) {
       // Delete file on disk if exists
-      const userDir = getUser3DDir(model.userEmail || emailId);
+      const userIdentifier = req.params?.userID || req.user?.userId || req.user?.userID || model.userEmail || emailId;
+      const userDir = await getUser3DDir(userIdentifier, req);
       const filePath = path.join(userDir, model.name);
       if (fs.existsSync(filePath)) {
         try { fs.unlinkSync(filePath); } catch (_) {}
@@ -566,14 +575,15 @@ const deleteModel = async (req, res) => {
  */
 const deleteMultipleModels = async (req, res) => {
   try {
-    const { emailId, modelIds } = req.body;
+    const { emailId, modelIds, userID } = req.body;
     if (!Array.isArray(modelIds) || modelIds.length === 0) {
       return res.status(400).json({ message: 'modelIds array is required' });
     }
 
+    const userIdentifier = userID || req.user?.userId || req.user?.userID || emailId;
+    const userDir = await getUser3DDir(userIdentifier, req);
     const models = await ThreedModel.find({ modelId: { $in: modelIds } });
     for (const m of models) {
-      const userDir = getUser3DDir(m.userEmail || emailId);
       const filePath = path.join(userDir, m.name);
       if (fs.existsSync(filePath)) {
         try { fs.unlinkSync(filePath); } catch (_) {}

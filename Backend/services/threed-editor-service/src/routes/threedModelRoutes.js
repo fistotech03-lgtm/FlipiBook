@@ -4,8 +4,10 @@ const path = require('path');
 const os = require('os');
 const threedModelController = require('../controllers/threedModelController');
 const { getStorageRoot } = require('../utils/storageHelper');
+const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+router.use(optionalAuth);
 
 const upload = multer({
   dest: path.join(os.tmpdir(), 'threed_uploads'),

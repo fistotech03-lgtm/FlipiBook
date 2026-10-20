@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const Flipbook = require('../models/Flipbook');
 const FlipbookAsset = require('../models/FlipbookAsset');
+const InteractionThreedModel = require('../models/InteractionThreedModel');
 const { getAuthUser } = require('../utils/userHelper');
 const {
   generateId,
@@ -347,6 +348,83 @@ const savePagesBatch = async (req, res) => {
         }
       }
     } catch (cleanErr) {}
+
+    // Reconcile and clean up unreferenced FlipbookAsset & InteractionThreedModel
+    try {
+      if (fs.existsSync(pagesDir)) {
+        let allPageSvgs = '';
+        const pageFiles = fs.readdirSync(pagesDir);
+        for (const pf of pageFiles) {
+          if (pf.endsWith('.svg') || pf.endsWith('.html')) {
+            try {
+              allPageSvgs += ' ' + fs.readFileSync(path.join(pagesDir, pf), 'utf8').toLowerCase();
+            } catch (e) {}
+          }
+        }
+        for (const resItem of uploadResults) {
+          if (resItem.processedContent) {
+            allPageSvgs += ' ' + String(resItem.processedContent).toLowerCase();
+          }
+        }
+
+        // Clean up unreferenced InteractionThreedModel
+        const query3DOr = [{ flipbook_v_id: doc.v_id }];
+        if (flipbookName) {
+          query3DOr.push({
+            flipbookName: flipbookName,
+            userEmail: new RegExp(`^${doc.userEmail || emailId}$`, 'i')
+          });
+        }
+        const all3DModels = await InteractionThreedModel.find({ $or: query3DOr });
+        for (const model of all3DModels) {
+          const fNameLower = (model.fileName || '').toLowerCase();
+          const vIdLower = (model.v_id || '').toLowerCase();
+          const isReferenced =
+            (fNameLower && allPageSvgs.includes(fNameLower)) ||
+            (vIdLower && allPageSvgs.includes(vIdLower));
+
+          if (!isReferenced) {
+            const disk3DPath = path.join(bookDir, 'assets', '3D_Model', model.fileName);
+            if (fs.existsSync(disk3DPath)) {
+              try {
+                fs.unlinkSync(disk3DPath);
+              } catch (e) {}
+            }
+            await InteractionThreedModel.deleteOne({ _id: model._id });
+            await FlipbookAsset.deleteMany({
+              flipbook_v_id: doc.v_id,
+              $or: [{ fileName: model.fileName }, { file_v_id: model.v_id }]
+            }).catch(() => {});
+            console.log(`[Page Controller] Cleaned up unreferenced InteractionThreedModel: ${model.fileName} (${model.v_id})`);
+          }
+        }
+
+        // Clean up unreferenced FlipbookAssets
+        const allAssets = await FlipbookAsset.find({ flipbook_v_id: doc.v_id });
+        for (const asset of allAssets) {
+          if (asset.isGallery) continue;
+          const fNameLower = (asset.fileName || '').toLowerCase();
+          const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
+          if (!isReferenced) {
+            const diskAssetPath = path.join(bookDir, 'assets', asset.assetType || 'Image', asset.fileName);
+            if (fs.existsSync(diskAssetPath)) {
+              try {
+                fs.unlinkSync(diskAssetPath);
+              } catch (e) {}
+            }
+            await FlipbookAsset.deleteOne({ _id: asset._id });
+            if (asset.assetType === '3D_Model' || fNameLower.endsWith('.glb')) {
+              await InteractionThreedModel.deleteMany({
+                $or: [{ fileName: asset.fileName }, { v_id: asset.file_v_id }, { url: asset.url }]
+              }).catch(() => {});
+            }
+            console.log(`[Page Controller] Cleaned up unreferenced asset: ${asset.fileName}`);
+          }
+        }
+      }
+    } catch (assetCleanErr) {
+      console.warn('[Page Controller] Warning cleaning up unused assets:', assetCleanErr.message);
+    }
 
     doc.lastUpdated = new Date();
     doc.markModified('pages');

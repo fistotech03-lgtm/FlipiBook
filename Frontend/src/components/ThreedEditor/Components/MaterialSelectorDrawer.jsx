@@ -5,6 +5,7 @@ import { textureData, fetchMaterials } from "../../../data/textureData";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
 import AddMaterial from "./AddMaterial";
 import AlertModal from "../../../components/AlertModal";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function MaterialSelectorDrawer({
   isOpen = false,
@@ -17,6 +18,7 @@ export default function MaterialSelectorDrawer({
   refreshTrigger
 }) {
   const [activeTab, setActiveTab] = useState("predefined"); // "predefined" | "uploaded"
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadedTextures, setUploadedTextures] = useState([]);
@@ -128,15 +130,9 @@ export default function MaterialSelectorDrawer({
     };
   }, []);
 
-  const getUserEmail = () => {
-    try {
-      const stored = localStorage.getItem("user") || localStorage.getItem("user_profile");
-      const u = stored ? JSON.parse(stored) : null;
-      return u?.emailId || u?.email || null;
-    } catch (_) {
-      return null;
-    }
-  };
+  const getUserEmail = useCallback(() => {
+    return user?.emailId || user?.email || null;
+  }, [user]);
 
   // Fetch uploaded textures
   const fetchUploadedTextures = useCallback(async () => {
@@ -165,7 +161,7 @@ export default function MaterialSelectorDrawer({
     } catch (error) {
       console.error("Error fetching uploaded textures:", error);
     }
-  }, []);
+  }, [getUserEmail]);
 
   // Fetch user categories / folders
   const fetchCategories = useCallback(async () => {
@@ -187,7 +183,7 @@ export default function MaterialSelectorDrawer({
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
-  }, [activeTab]);
+  }, [activeTab, getUserEmail]);
 
   useEffect(() => {
     if (isOpen) {

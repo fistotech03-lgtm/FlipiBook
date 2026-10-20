@@ -9,6 +9,7 @@ import RenderModel from "./ModelLoaders";
 import AlertModal from "../../AlertModal";
 import { useToast } from "../../../components/CustomToast";
 import { resolveUploadsPath } from "../../../utils/assetUtils";
+import { useAuth } from "../../../context/AuthContext";
 
 class ThumbnailErrorBoundary extends React.Component {
     constructor(props) {
@@ -161,14 +162,7 @@ const ModelThumbnail = React.memo(({ model }) => {
         <div ref={viewRef} className="w-full h-full relative group bg-gray-500">
             {isInView ? (
                 <Canvas style={{ width: '100%', height: '100%', background: 'transparent' }} camera={{ fov: 32, position: [2.8, 2.0, 3.2] }}>
-                    <Suspense fallback={
-                        <Html center className="pointer-events-none">
-                            <div className="flex flex-col items-center justify-center gap-[0.5vw]">
-                                <div className="w-[1.4vw] h-[1.4vw] border-[0.2vw] border-white/30 border-t-white rounded-full animate-spin"></div>
-                                <span className="text-[0.6vw] font-medium text-white/80">Loading...</span>
-                            </div>
-                        </Html>
-                    }>
+                    <Suspense fallback={null}>
                         <ambientLight intensity={1.6} />
                         <pointLight position={[10, 10, 10]} intensity={1.5} />
                         <directionalLight position={[-5, 5, 5]} intensity={1} />
@@ -206,6 +200,7 @@ const ModelThumbnail = React.memo(({ model }) => {
 
 export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hideDelete, loadedModels = [], onClearModel }) {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { modelId: urlModelId } = useParams();
     const [models, setModels] = useState([]);
     const [defaultModels, setDefaultModels] = useState([]);
@@ -258,23 +253,23 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
         if (isOpen) {
             fetchModels();
         }
-    }, [isOpen]);
+    }, [isOpen, user]);
 
     const fetchModels = async () => {
         try {
             setLoading(true);
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const storedUser = localStorage.getItem('user');
+            const emailId = user?.emailId || user?.email;
+            const userID = user?.userID || user?.userId;
             
             const promises = [
                 axios.get(`${backendUrl}/api/presets/models`).catch(() => ({ data: { models: [] } }))
             ];
             
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
+            if (emailId || userID) {
                 promises.push(
                     axios.get(`${backendUrl}/api/3d-models/get-models`, {
-                        params: { emailId: user.emailId }
+                        params: { emailId, userID }
                     }).catch(() => ({ data: { models: [] } }))
                 );
             }
@@ -299,8 +294,6 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
             setLoading(false);
         }
     };
-
-    if (!isOpen) return null;
 
     const allCombinedModels = useMemo(() => {
         if (activeTab === "default") return defaultModels;
@@ -328,24 +321,26 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
     };
 
     const handleDeleteModel = async (model) => {
-        const userStr = localStorage.getItem('user');
-        if (!userStr || !model) {
+        const emailId = user?.emailId || user?.email || user?.userID || 'user';
+        const userID = user?.userID || user?.userId;
+        if (!emailId || !model) {
             console.warn("Cannot delete: User session or model data missing");
             return;
         }
-        const user = JSON.parse(userStr);
         const wasInUse = isModelInUse(model);
         
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const email = encodeURIComponent(user.emailId);
+            const email = encodeURIComponent(emailId);
             const deleteUrl = `${backendUrl}/api/3d-models/delete-model/${email}/${model.modelId}`;
             
             console.log("Attempting to delete model:", model.name);
-            console.log(`Target User: ${user.emailId}, ID: ${model.modelId}`);
+            console.log(`Target User: ${emailId}, ID: ${model.modelId}`);
             console.log(`Action URL: ${deleteUrl}`);
 
-            const response = await axios.delete(deleteUrl);
+            const response = await axios.delete(deleteUrl, {
+                params: { userID }
+            });
             
             console.log("Delete response:", response.data);
             toast.success("Model deleted from gallery and database");
@@ -366,7 +361,7 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
         } catch (error) {
             console.error("Delete operation failed!");
             console.error("Context:", { 
-                email: user.emailId,
+                email: emailId,
                 modelId: model.modelId,
                 status: error.response?.status,
                 data: error.response?.data 
@@ -378,17 +373,19 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
     };
 
     const handleDeleteMultipleModels = async (modelsToDelete) => {
-        const userStr = localStorage.getItem('user');
-        if (!userStr || !modelsToDelete || modelsToDelete.length === 0) return;
-        const user = JSON.parse(userStr);
+        const emailId = user?.emailId || user?.email || user?.userID || 'user';
+        const userID = user?.userID || user?.userId;
+        if (!emailId || !modelsToDelete || modelsToDelete.length === 0) return;
         const hasInUse = modelsToDelete.some(m => isModelInUse(m));
         
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const email = encodeURIComponent(user.emailId);
+            const email = encodeURIComponent(emailId);
             
             await Promise.all(modelsToDelete.map(model => 
-                axios.delete(`${backendUrl}/api/3d-models/delete-model/${email}/${model.modelId}`)
+                axios.delete(`${backendUrl}/api/3d-models/delete-model/${email}/${model.modelId}`, {
+                    params: { userID }
+                })
             ));
             
             toast.success(`${modelsToDelete.length} model(s) deleted successfully`);

@@ -155,8 +155,18 @@ export const useInteractEngine = ({
             if (selectedId && selectedSelectToolRef.current !== 'direct') {
               const selectedEl = container?.querySelector(`[id="${selectedId}"]`);
               if (selectedEl && selectedEl !== svgElement) {
-                if (hitTest(selectedEl, event.clientX, event.clientY, 2)) {
-                  target = selectedEl; // Redirect drag to the current selection!
+                // If the user clicked directly on an actual child element with an ID inside the frame,
+                // allow the child element to be targeted directly rather than forcing the parent frame!
+                const isDirectChildHit = event.target && event.target !== selectedEl && selectedEl.contains(event.target);
+                const leafElement = isDirectChildHit ? getDraggableElement(event.target, selectedEl) : null;
+                const shouldTargetChild = leafElement && leafElement !== selectedEl && leafElement.id && leafElement.getAttribute('data-name') !== 'Overlay';
+
+                if (!shouldTargetChild) {
+                  if (hitTest(selectedEl, event.clientX, event.clientY, 2)) {
+                    target = selectedEl; // Redirect drag to the current selection!
+                  }
+                } else {
+                  target = leafElement;
                 }
               }
             }
@@ -261,7 +271,8 @@ export const useInteractEngine = ({
                       const isMainPageFrame = topFrames.length === 1 && selEl.id === topFrames[0].id;
 
                       if (!isMainPageFrame) {
-                        elementToDrag = selEl;
+                        const isChildOfSelected = target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
+                        elementToDrag = isChildOfSelected ? target : selEl;
                         break; // Found it!
                       }
                     }
@@ -362,21 +373,25 @@ export const useInteractEngine = ({
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
             if (!isSelected) {
-              if (setSelectedLayerId) {
-                setSelectedLayerId(elementToDrag.id);
-                if (setMultiSelectedIds) setMultiSelectedIds(new Set([elementToDrag.id]));
-                // Force update ref so it's visible to subsequent drag steps
-                selectedLayerIdRef.current = elementToDrag.id;
-                multiSelectedIdsRef.current = new Set([elementToDrag.id]);
+              // Force update refs immediately so drag logic sees the selection
+              selectedLayerIdRef.current = elementToDrag.id;
+              multiSelectedIdsRef.current = new Set([elementToDrag.id]);
 
-                // Clear previous stale selection overlays immediately before drawing new one
-                clearOverlayType('selected');
-                clearOverlayType('child-selected');
+              // Clear previous stale selection overlays immediately before drawing new one
+              clearOverlayType('selected');
+              clearOverlayType('child-selected');
 
-                // Visualize selection immediately
-                const highlightType = currentFrameIdRef.current && elementToDrag.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
-                drawOverlayHighlight(elementToDrag, highlightType);
-              }
+              // Visualize selection immediately
+              const highlightType = currentFrameIdRef.current && elementToDrag.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
+              drawOverlayHighlight(elementToDrag, highlightType);
+
+              // Defer React state updates to avoid blocking drag start with re-render cascade
+              // (refs are already updated above for instant drag tracking)
+              const idToSelect = elementToDrag.id;
+              queueMicrotask(() => {
+                if (setSelectedLayerId) setSelectedLayerId(idToSelect);
+                if (setMultiSelectedIds) setMultiSelectedIds(new Set([idToSelect]));
+              });
             }
 
             // ── Build multi-drag list: all multi-selected elements in the same SVG ──
@@ -466,7 +481,7 @@ export const useInteractEngine = ({
             };
 
             if (!dragState.thresholdMet) {
-              const DRAG_THRESHOLD = 2;
+              const DRAG_THRESHOLD = 6;
               const dxClient = event.clientX - dragState.initialClientX;
               const dyClient = event.clientY - dragState.initialClientY;
               const distance = Math.sqrt(dxClient * dxClient + dyClient * dyClient);
@@ -492,12 +507,12 @@ export const useInteractEngine = ({
 
               // Purge lingering ghost selection boxes for other elements across all overlay layers
               if (!dragState.multiDragItems && dragState.element?.id) {
+                const activeHighlightType = currentFrameIdRef.current && dragState.element.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
+                const keepPolyId = `overlay-poly-${activeHighlightType}-${dragState.element.id}`;
+                const keepPathId = `overlay-path-${activeHighlightType}-${dragState.element.id}`;
                 document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-                  ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
-                    if (node.id !== `overlay-poly-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-poly-child-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-path-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-path-child-selected-${dragState.element.id}`) {
+                  ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected, [id^="overlay-poly-"], [id^="overlay-path-"]').forEach(node => {
+                    if (node.id !== keepPolyId && node.id !== keepPathId) {
                       node.remove();
                     }
                   });
@@ -563,21 +578,34 @@ export const useInteractEngine = ({
 
             if (dragState.multiDragItems) {
               // Move ALL multi-selected elements freely across canvas with smart snapping
-              const primaryItem = dragState.multiDragItems[0];
-              const pPointLocal = getLocalPoint(dragState.svgElement, primaryItem.element.parentNode, event.clientX, event.clientY);
-              let rawDx = pPointLocal && primaryItem.startPointLocal ? (pPointLocal.x - primaryItem.startPointLocal.x) : 0;
-              let rawDy = pPointLocal && primaryItem.startPointLocal ? (pPointLocal.y - primaryItem.startPointLocal.y) : 0;
+              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
+              const rootDx = (rootStart && rootCurrent) ? (rootCurrent.x - rootStart.x) : 0;
+              const rootDy = (rootStart && rootCurrent) ? (rootCurrent.y - rootStart.y) : 0;
 
               const snap = computeSmartGuides({
                 dragState,
-                rawDx,
-                rawDy,
+                rawDx: rootDx,
+                rawDy: rootDy,
                 zoomScale: zoom / 100,
                 disabled: event.ctrlKey || event.metaKey
               });
 
               for (const item of dragState.multiDragItems) {
-                const translation = new DOMMatrix().translate(snap.snappedDx, snap.snappedDy);
+                let itemDeltaX = snap.snappedDx;
+                let itemDeltaY = snap.snappedDy;
+                if (item.element.parentNode && item.element.parentNode !== dragState.svgElement) {
+                  try {
+                    const parentCtm = item.element.parentNode.getScreenCTM();
+                    const svgCtm = dragState.svgElement.getScreenCTM();
+                    if (parentCtm && svgCtm) {
+                      const rootToParent = parentCtm.inverse().multiply(svgCtm);
+                      itemDeltaX = rootToParent.a * snap.snappedDx + rootToParent.c * snap.snappedDy;
+                      itemDeltaY = rootToParent.b * snap.snappedDx + rootToParent.d * snap.snappedDy;
+                    }
+                  } catch { /* fallback */ }
+                }
+                const translation = new DOMMatrix().translate(itemDeltaX, itemDeltaY);
                 const nextMatrix = translation.multiply(item.initialMatrix);
                 item.element.setAttribute('transform', matrixToTransform(nextMatrix));
               }
@@ -586,21 +614,40 @@ export const useInteractEngine = ({
             } else {
               // Single element drag with smart snapping, magenta guidelines, and coordinate badge
               const target = dragState.element;
-              const currentPointLocal = getLocalPoint(dragState.svgElement, target.parentNode, event.clientX, event.clientY);
-              if (!currentPointLocal || !dragState.startPointLocal) return;
+              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
+              if (!rootStart || !rootCurrent) return;
 
-              let dx = currentPointLocal.x - dragState.startPointLocal.x;
-              let dy = currentPointLocal.y - dragState.startPointLocal.y;
+              const rootDx = rootCurrent.x - rootStart.x;
+              const rootDy = rootCurrent.y - rootStart.y;
 
               const snap = computeSmartGuides({
                 dragState,
-                rawDx: dx,
-                rawDy: dy,
+                rawDx: rootDx,
+                rawDy: rootDy,
                 zoomScale: zoom / 100,
                 disabled: event.ctrlKey || event.metaKey
               });
 
-              const translation = new DOMMatrix().translate(snap.snappedDx, snap.snappedDy);
+              // Project root snapped displacement into target.parentNode's coordinate space
+              let localDeltaX = snap.snappedDx;
+              let localDeltaY = snap.snappedDy;
+
+              if (target.parentNode && target.parentNode !== dragState.svgElement) {
+                try {
+                  const parentCtm = target.parentNode.getScreenCTM();
+                  const svgCtm = dragState.svgElement.getScreenCTM();
+                  if (parentCtm && svgCtm) {
+                    const rootToParent = parentCtm.inverse().multiply(svgCtm);
+                    localDeltaX = rootToParent.a * snap.snappedDx + rootToParent.c * snap.snappedDy;
+                    localDeltaY = rootToParent.b * snap.snappedDx + rootToParent.d * snap.snappedDy;
+                  }
+                } catch {
+                  /* fallback to localDeltaX/Y */
+                }
+              }
+
+              const translation = new DOMMatrix().translate(localDeltaX, localDeltaY);
               const nextMatrix = translation.multiply(dragState.initialMatrix);
               target.setAttribute('transform', matrixToTransform(nextMatrix));
 
@@ -677,6 +724,10 @@ export const useInteractEngine = ({
 
             if (!dragState.thresholdMet) {
               document.body.classList.remove('dragging-active');
+              if (dragState.element) {
+                dragState.element.removeAttribute('data-dragging');
+                delete dragState.element._dragLocalBBox;
+              }
               delete event.interaction.dragState;
               return;
             }
@@ -702,6 +753,17 @@ export const useInteractEngine = ({
 
             const finalizeEnd = () => {
               document.body.classList.remove('dragging-active');
+              if (dragState.element) {
+                dragState.element.removeAttribute('data-dragging');
+                delete dragState.element._dragLocalBBox;
+              }
+              if (dragState.multiDragItems) {
+                dragState.multiDragItems.forEach(item => {
+                  item.element.removeAttribute('data-dragging');
+                  delete item.element._dragLocalBBox;
+                });
+              }
+
               if (suppressClickRef.current && updatePageHtml) {
                 const container = dragState.element.closest('.page-svg-container');
                 const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : dragState.pageIndex;
@@ -1028,15 +1090,6 @@ export const useInteractEngine = ({
               startPoint = getSvgPoint(svg, event.clientX, event.clientY);
             }
 
-            // ── CONVERT <text> TO <foreignObject> ON RESIZE START ──
-            if (!isMulti && el.tagName.toLowerCase() === 'text') {
-              const fo = convertTextToForeignObject(el);
-              if (fo) {
-                el.replaceWith(fo);
-                el = fo;
-              }
-            }
-
             // Lock cursor globally while dragging to prevent flicker
             const currentCursor = window.getComputedStyle(handle).cursor;
             document.documentElement.style.setProperty('--resizing-cursor', currentCursor);
@@ -1199,7 +1252,10 @@ export const useInteractEngine = ({
               initialCrop,
               initialObjectFit,
               cropInitialized: false,
-              cursor: currentCursor // Store for reinforcement
+              cursor: currentCursor, // Store for reinforcement
+              initialClientX: event.clientX,
+              initialClientY: event.clientY,
+              thresholdMet: false
             };
 
             // Initialize smart guides candidates for resizing
@@ -1215,6 +1271,24 @@ export const useInteractEngine = ({
           move(event) {
             const state = event.interaction.resizeState;
             if (!state) return;
+
+            // Enforce minimum 5px resize movement before mutating DOM or geometry
+            if (!state.thresholdMet) {
+              const dx = event.clientX - (state.initialClientX ?? event.clientX);
+              const dy = event.clientY - (state.initialClientY ?? event.clientY);
+              if (Math.hypot(dx, dy) < 5) return;
+              state.thresholdMet = true;
+
+              // Convert <text> to <foreignObject> ONLY when resize movement actually begins
+              if (!state.isMulti && state.el.tagName && state.el.tagName.toLowerCase() === 'text') {
+                const fo = convertTextToForeignObject(state.el);
+                if (fo) {
+                  state.el.replaceWith(fo);
+                  state.el = fo;
+                  state.element = fo;
+                }
+              }
+            }
 
             // Reinforce cursor during move to prevent flicker from other handlers or React re-renders
             if (state.cursor && document.body.style.cursor !== state.cursor) {
@@ -2411,6 +2485,10 @@ export const useInteractEngine = ({
             document.documentElement.style.removeProperty('--resizing-cursor');
 
             const state = event.interaction.resizeState;
+            if (state && !state.thresholdMet) {
+              delete event.interaction.resizeState;
+              return;
+            }
             if (state) {
               if (state.childrenData) {
                 const textChild = state.childrenData.find(c => c.child.tagName?.toLowerCase() === 'text' || c.child.getAttribute('data-type') === 'text');

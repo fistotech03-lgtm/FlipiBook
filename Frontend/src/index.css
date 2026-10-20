@@ -9,7 +9,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -100,8 +101,8 @@ select:-webkit-autofill:focus {
 
 .custom-scrollbar::-webkit-scrollbar,
 .custom-scrollbar-wrapper::-webkit-scrollbar {
-  width: var(--custom-scrollbar-width, 0.35vw);
-  height: var(--custom-scrollbar-width, 0.35vw);
+  width: var(--custom-scrollbar-width, 0.4vw);
+  height: var(--custom-scrollbar-width, 0.4vw);
 }
 
 .custom-scrollbar::-webkit-scrollbar-track,

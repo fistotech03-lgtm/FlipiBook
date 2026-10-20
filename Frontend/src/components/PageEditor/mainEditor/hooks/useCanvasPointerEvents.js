@@ -10,8 +10,10 @@ import {
   getLocalPoint,
   clearOverlayType
 } from '../utils/geometryUtils';
+import { clearSmartGuides } from '../utils/smartGuides';
 import { getTopLevelFrames, getDirectChildFrames, hitTest } from '../utils/frameHierarchyUtils';
 import { useInlineTextEditor } from './useInlineTextEditor';
+import editCacheManager from '../../utils/EditCacheManager';
 
 /**
  * Hook managing canvas pointer interactions:
@@ -1013,9 +1015,14 @@ export const useCanvasPointerEvents = ({
 
   // ── FIGMA-STYLE MOUSE MOVE: hover highlight & Marquee update ─────────────────
   const handleSvgMouseMove = (pageIndex, e) => {
+    // Fast-path: if an element is currently being dragged, suppress canvas hover scanning
+    if (document.body.classList.contains('dragging-active') || document.querySelector('[data-dragging="true"]')) {
+      return;
+    }
+
     lastMousePosRef.current = { x: e.clientX, y: e.clientY, target: e.target };
     if (isAltPressedRef.current && selectedLayerIdRef.current) {
-      if (drawMeasurementOverlayRef.current && !document.querySelector('[data-dragging="true"]')) {
+      if (drawMeasurementOverlayRef.current) {
         drawMeasurementOverlayRef.current(e.target);
       }
     }
@@ -1363,6 +1370,9 @@ export const useCanvasPointerEvents = ({
       : (document.getElementById(`canvas-content-${pageIndex}`) || document.querySelector(`[data-page-index="${pageIndex}"]`));
     const svg = container?.querySelector('svg');
     if (!svg) return;
+
+    // Fast-path: do not process canvas hover states while user is actively typing or editing text
+    if (isEditingTextRef.current || editCacheManager.isEditing()) return;
 
     // Clear all hover states
     svg.querySelectorAll('[data-hovered="true"]').forEach(el => el.removeAttribute('data-hovered'));
@@ -1792,47 +1802,7 @@ export const useCanvasPointerEvents = ({
       clearOverlayType('selected');
       clearOverlayType('child-selected');
     }
-
-    // ── Figma-style: auto-convert <text> to <foreignObject> on first selection ──
-    // This ensures resize handles, click-to-edit, and style panel all work correctly
-    if (id) {
-      const el = document.getElementById(id);
-      if (el && el.tagName.toLowerCase() === 'text') {
-        const fo = convertTextToForeignObject(el);
-        if (fo) {
-          el.replaceWith(fo);
-
-          // Auto-snap height to perfectly fit the HTML text
-          requestAnimationFrame(() => {
-            const div = fo.firstElementChild;
-            if (div) {
-              const ch = div.scrollHeight;
-              const currentH = parseFloat(fo.getAttribute('height')) || 0;
-
-              if (ch > 0 && Math.abs(ch - currentH) > 2) {
-                fo.setAttribute('height', ch);
-              }
-
-              // Force interact.js/overlays to redraw bounds
-              const event = new Event('resize');
-              window.dispatchEvent(event);
-
-              // Explicitly redraw the highlight now that the FO has painted
-              drawOverlayHighlight(fo, 'selected');
-            }
-          });
-
-          // Save the conversion so it persists
-          const svg = fo.ownerSVGElement;
-          const container = fo.closest('.page-svg-container');
-          if (container && svg) {
-            const pageIdx = parseInt(container.getAttribute('data-page-index'));
-            // Use a microtask so React state settles before saving
-            requestAnimationFrame(() => saveModifiedPageHtml(pageIdx, svg));
-          }
-        }
-      }
-    }
+    clearSmartGuides();
   };
 
 
@@ -1857,6 +1827,7 @@ export const useCanvasPointerEvents = ({
 
   // ── FIGMA-STYLE CLICK: hierarchical frame drill-down selection ─────────────────
   const handleSvgClick = (e) => {
+    clearSmartGuides();
     if (e.target.closest('.resize-handle')) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
@@ -2030,12 +2001,12 @@ export const useCanvasPointerEvents = ({
 
         // Normal click on polygon
         if (selectedLayerIdRef.current === polySelectionId && multiSelectedIdsRef.current.size <= 1) {
-          // Already uniquely selected. Enter text edit mode if text!
-          console.log('[handleSvgClick] Polygon clicked for already selected item:', polySelectionId);
-          const underlyingEl = svg.querySelector(`[id="${polySelectionId}"]`);
-          if (underlyingEl && (underlyingEl.tagName.toLowerCase() === 'text' || underlyingEl.tagName.toLowerCase() === 'tspan' || underlyingEl.tagName.toLowerCase() === 'foreignobject')) {
-            console.log('[handleSvgClick] Entering text edit mode for', underlyingEl);
-            enterTextEditMode(underlyingEl, e.clientX, e.clientY);
+          // If the Type tool is active, clicking on the selected text enters inline editing
+          if (activeMainToolRef.current === 'type') {
+            const underlyingEl = svg.querySelector(`[id="${polySelectionId}"]`);
+            if (underlyingEl && (underlyingEl.tagName.toLowerCase() === 'text' || underlyingEl.tagName.toLowerCase() === 'tspan' || underlyingEl.tagName.toLowerCase() === 'foreignobject')) {
+              enterTextEditMode(underlyingEl, e.clientX, e.clientY);
+            }
           }
           return;
         }
@@ -2224,10 +2195,6 @@ export const useCanvasPointerEvents = ({
 
           if (target && target !== frameEl && frameEl.contains(target)) {
             setSingleSelection(target.id);
-            // Persist auto-assigned ids (e.g. template text with no id) immediately
-            if (target.tagName?.toLowerCase() === 'text') {
-              saveModifiedPageHtml(pageIdx, svg);
-            }
             return;
           }
 
@@ -2372,10 +2339,6 @@ export const useCanvasPointerEvents = ({
         setCurrentFrameId(hitFrame.id);
         currentFrameIdRef.current = hitFrame.id;
         setSingleSelection(target.id);
-        // Persist auto-assigned ids (e.g. template text with no id) immediately
-        if (target.tagName?.toLowerCase() === 'text') {
-          saveModifiedPageHtml(pageIdx, svg);
-        }
         return;
       }
 
@@ -2486,6 +2449,63 @@ export const useCanvasPointerEvents = ({
     if (nodeEditModeRef.current) {
       // Already in node edit mode – do nothing on double click (single click to drag handles)
       return;
+    }
+
+    // ── INSTANT TEXT EDIT MODE (Vector-Studio Style) ─────────────────────────
+    // Directly check what is under the cursor on double-click (pierces selection polygons, user groups, and frames)
+    let directTextEl = null;
+    const clickTargetTag = e.target?.tagName?.toLowerCase();
+    if (['text', 'tspan', 'foreignobject'].includes(clickTargetTag)) {
+      directTextEl = clickTargetTag === 'tspan' ? (e.target.parentElement || e.target.parentNode) : e.target;
+    } else if (e.target?.closest && e.target.closest('foreignObject')) {
+      directTextEl = e.target.closest('foreignObject');
+    } else if (typeof document.elementsFromPoint === 'function') {
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      for (const el of elements) {
+        if (!svg.contains(el)) continue;
+        const tag = el.tagName?.toLowerCase();
+        if (tag === 'tspan') {
+          directTextEl = el.parentElement || el.parentNode;
+          break;
+        }
+        if (tag === 'text' || tag === 'foreignobject') {
+          directTextEl = el;
+          break;
+        }
+        if (el.closest && el.closest('foreignObject')) {
+          directTextEl = el.closest('foreignObject');
+          break;
+        }
+      }
+    }
+
+    // Fallback: check currently selected layer if it's text within hitTest range
+    if (!directTextEl && selectedLayerIdRef.current) {
+      const activeEl = svg.querySelector(`[id="${selectedLayerIdRef.current}"]`);
+      if (activeEl && ['text', 'tspan', 'foreignobject'].includes(activeEl.tagName?.toLowerCase())) {
+        if (hitTest(activeEl, e.clientX, e.clientY, 15)) {
+          directTextEl = activeEl.tagName?.toLowerCase() === 'tspan' ? (activeEl.parentElement || activeEl.parentNode) : activeEl;
+        }
+      }
+    }
+
+    if (directTextEl && directTextEl.getAttribute('data-locked') !== 'true' && directTextEl.getAttribute('data-type') !== 'video' && !directTextEl.querySelector('video, iframe')) {
+      const isModuleWithoutTextEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
+      if (!isModuleWithoutTextEdit) {
+        if (!directTextEl.id) {
+          directTextEl.id = `text-${Math.random().toString(36).substr(2, 9)}`;
+        }
+        // If text is inside a frame, update currentFrameId
+        const topFrames = getTopLevelFrames(svg);
+        const parentFrame = topFrames.find(f => f.contains(directTextEl));
+        if (parentFrame) {
+          setCurrentFrameId(parentFrame.id);
+          currentFrameIdRef.current = parentFrame.id;
+        }
+        setSingleSelection(directTextEl.id);
+        enterTextEditMode(directTextEl, e.clientX, e.clientY);
+        return;
+      }
     }
 
     // Text editing on double-click

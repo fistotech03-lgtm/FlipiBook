@@ -3,8 +3,13 @@ import { isElementCropped } from '../../properties/Crop';
 import { isElementCompletelyOutside } from './trimViewUtils';
 
 /**
- * Calculates and applies Figma-style alignments (left, center, right, top, middle, bottom,
- * distribute horizontally, distribute vertically) across SVG canvas layers.
+ * Calculates and applies professional vector-studio / Figma-style alignments
+ * (left, center, right, top, middle, bottom, distribute horizontally, distribute vertically)
+ * across SVG canvas layers.
+ * 
+ * - When 1 element is selected: aligns relative to the page viewBox / artboard.
+ * - When 2+ elements are selected: aligns relative to the collective selection bounding box.
+ * - Distribution evenly spaces objects or centers along horizontal/vertical axes.
  */
 export const alignSelectedElements = (type, {
   activePageIndex,
@@ -14,7 +19,8 @@ export const alignSelectedElements = (type, {
   saveModifiedPageHtml,
   drawMultiSelectionHighlight,
   drawOverlayHighlight,
-  multiSelectedIdsRef
+  multiSelectedIdsRef,
+  to = 'auto' // 'auto' | 'selection' | 'page'
 }) => {
   const ids = multiSelectedIds && multiSelectedIds.size > 0
     ? Array.from(multiSelectedIds)
@@ -47,8 +53,8 @@ export const alignSelectedElements = (type, {
 
       return {
         minX, maxX, minY, maxY,
-        width: maxX - minX,
-        height: maxY - minY,
+        width: Math.max(0, maxX - minX),
+        height: Math.max(0, maxY - minY),
         midX: (minX + maxX) / 2,
         midY: (minY + maxY) / 2
       };
@@ -60,6 +66,7 @@ export const alignSelectedElements = (type, {
   const elBBoxes = elements.map(el => ({ el, bbox: getElBBox(el) })).filter(item => item.bbox);
   if (elBBoxes.length === 0) return;
 
+  // Page / Artboard bounds
   const vb = svg.viewBox?.baseVal;
   const vx = vb ? vb.x : 0;
   const vy = vb ? vb.y : 0;
@@ -76,11 +83,27 @@ export const alignSelectedElements = (type, {
     height: vh
   };
 
-  // Always align to page bounds so any element (whether inside or outside) aligns cleanly inside the page
-  const targetBBox = pageBBox;
+  // Collective Selection bounds
+  const selectionBBox = elBBoxes.reduce((acc, { bbox }) => ({
+    minX: Math.min(acc.minX, bbox.minX),
+    minY: Math.min(acc.minY, bbox.minY),
+    maxX: Math.max(acc.maxX, bbox.maxX),
+    maxY: Math.max(acc.maxY, bbox.maxY),
+  }), {
+    minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity
+  });
+  selectionBBox.width = Math.max(0, selectionBBox.maxX - selectionBBox.minX);
+  selectionBBox.height = Math.max(0, selectionBBox.maxY - selectionBBox.minY);
+  selectionBBox.midX = (selectionBBox.minX + selectionBBox.maxX) / 2;
+  selectionBBox.midY = (selectionBBox.minY + selectionBBox.maxY) / 2;
+
+  // Align target:
+  // If explicitly 'page' or only 1 element selected, align to Page / Artboard.
+  // If multiple elements selected and 'auto' or 'selection', align to selection bounds.
+  const targetBBox = (to === 'page' || elBBoxes.length < 2) ? pageBBox : selectionBBox;
 
   const applyTranslation = (el, dx, dy) => {
-    if (dx === 0 && dy === 0) return;
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return;
     try {
       const svgEl = el.ownerSVGElement || el.closest('svg');
       const svgCTMInv = svgEl.getScreenCTM().inverse();
@@ -113,6 +136,11 @@ export const alignSelectedElements = (type, {
           const currentCy = parseFloat(el.getAttribute('cy')) || 0;
           el.setAttribute('cx', currentCx + localDx);
           el.setAttribute('cy', currentCy + localDy);
+        } else if (tag === 'line') {
+          el.setAttribute('x1', (parseFloat(el.getAttribute('x1')) || 0) + localDx);
+          el.setAttribute('y1', (parseFloat(el.getAttribute('y1')) || 0) + localDy);
+          el.setAttribute('x2', (parseFloat(el.getAttribute('x2')) || 0) + localDx);
+          el.setAttribute('y2', (parseFloat(el.getAttribute('y2')) || 0) + localDy);
         } else {
           const matrix = typeof getElementMatrix === 'function' ? getElementMatrix(el) : new DOMMatrix(el.getAttribute('transform') || '');
           const nextMatrix = new DOMMatrix().translate(localDx, localDy).multiply(matrix);
@@ -122,39 +150,88 @@ export const alignSelectedElements = (type, {
     } catch { /* ignored */ }
   };
 
-  if (type === 'distribute-h' && elBBoxes.length > 2) {
-    elBBoxes.sort((a, b) => a.bbox.minX - b.bbox.minX);
-    const first = elBBoxes[0];
-    const last = elBBoxes[elBBoxes.length - 1];
+  if (type === 'distribute-h') {
+    if (elBBoxes.length >= 3) {
+      elBBoxes.sort((a, b) => a.bbox.minX - b.bbox.minX);
+      const first = elBBoxes[0];
+      const last = elBBoxes[elBBoxes.length - 1];
 
-    const totalWidth = last.bbox.maxX - first.bbox.minX;
-    const sumOfWidths = elBBoxes.reduce((sum, item) => sum + item.bbox.width, 0);
-    const gap = (totalWidth - sumOfWidths) / (elBBoxes.length - 1);
+      const totalSpan = last.bbox.maxX - first.bbox.minX;
+      const sumOfWidths = elBBoxes.reduce((sum, item) => sum + item.bbox.width, 0);
+      const gap = (totalSpan - sumOfWidths) / (elBBoxes.length - 1);
 
-    let currentX = first.bbox.minX + first.bbox.width + gap;
-    for (let i = 1; i < elBBoxes.length - 1; i++) {
-      const item = elBBoxes[i];
-      const dx = currentX - item.bbox.minX;
-      applyTranslation(item.el, dx, 0);
-      currentX += item.bbox.width + gap;
+      if (gap >= 0) {
+        // Distribute spacing evenly between objects
+        let currentX = first.bbox.minX + first.bbox.width + gap;
+        for (let i = 1; i < elBBoxes.length - 1; i++) {
+          const item = elBBoxes[i];
+          const dx = currentX - item.bbox.minX;
+          applyTranslation(item.el, dx, 0);
+          currentX += item.bbox.width + gap;
+        }
+      } else {
+        // If shapes overlap, distribute by centers evenly
+        const centerStep = (last.bbox.midX - first.bbox.midX) / (elBBoxes.length - 1);
+        for (let i = 1; i < elBBoxes.length - 1; i++) {
+          const item = elBBoxes[i];
+          const targetMidX = first.bbox.midX + i * centerStep;
+          const dx = targetMidX - item.bbox.midX;
+          applyTranslation(item.el, dx, 0);
+        }
+      }
+    } else if (elBBoxes.length === 2) {
+      // For 2 elements, center them symmetrically inside page or selection bounds
+      const [first, second] = elBBoxes.slice().sort((a, b) => a.bbox.minX - b.bbox.minX);
+      const totalW = first.bbox.width + second.bbox.width;
+      const availableW = pageBBox.width;
+      const gap = Math.max(20, (availableW - totalW) / 3);
+      const targetFirstX = pageBBox.minX + gap;
+      const targetSecondX = targetFirstX + first.bbox.width + gap;
+      applyTranslation(first.el, targetFirstX - first.bbox.minX, 0);
+      applyTranslation(second.el, targetSecondX - second.bbox.minX, 0);
     }
-  } else if (type === 'distribute-v' && elBBoxes.length > 2) {
-    elBBoxes.sort((a, b) => a.bbox.minY - b.bbox.minY);
-    const first = elBBoxes[0];
-    const last = elBBoxes[elBBoxes.length - 1];
+  } else if (type === 'distribute-v') {
+    if (elBBoxes.length >= 3) {
+      elBBoxes.sort((a, b) => a.bbox.minY - b.bbox.minY);
+      const first = elBBoxes[0];
+      const last = elBBoxes[elBBoxes.length - 1];
 
-    const totalHeight = last.bbox.maxY - first.bbox.minY;
-    const sumOfHeights = elBBoxes.reduce((sum, item) => sum + item.bbox.height, 0);
-    const gap = (totalHeight - sumOfHeights) / (elBBoxes.length - 1);
+      const totalSpan = last.bbox.maxY - first.bbox.minY;
+      const sumOfHeights = elBBoxes.reduce((sum, item) => sum + item.bbox.height, 0);
+      const gap = (totalSpan - sumOfHeights) / (elBBoxes.length - 1);
 
-    let currentY = first.bbox.minY + first.bbox.height + gap;
-    for (let i = 1; i < elBBoxes.length - 1; i++) {
-      const item = elBBoxes[i];
-      const dy = currentY - item.bbox.minY;
-      applyTranslation(item.el, 0, dy);
-      currentY += item.bbox.height + gap;
+      if (gap >= 0) {
+        // Distribute spacing evenly between objects
+        let currentY = first.bbox.minY + first.bbox.height + gap;
+        for (let i = 1; i < elBBoxes.length - 1; i++) {
+          const item = elBBoxes[i];
+          const dy = currentY - item.bbox.minY;
+          applyTranslation(item.el, 0, dy);
+          currentY += item.bbox.height + gap;
+        }
+      } else {
+        // If shapes overlap, distribute by centers evenly
+        const centerStep = (last.bbox.midY - first.bbox.midY) / (elBBoxes.length - 1);
+        for (let i = 1; i < elBBoxes.length - 1; i++) {
+          const item = elBBoxes[i];
+          const targetMidY = first.bbox.midY + i * centerStep;
+          const dy = targetMidY - item.bbox.midY;
+          applyTranslation(item.el, 0, dy);
+        }
+      }
+    } else if (elBBoxes.length === 2) {
+      // For 2 elements, space them symmetrically vertically inside page
+      const [first, second] = elBBoxes.slice().sort((a, b) => a.bbox.minY - b.bbox.minY);
+      const totalH = first.bbox.height + second.bbox.height;
+      const availableH = pageBBox.height;
+      const gap = Math.max(20, (availableH - totalH) / 3);
+      const targetFirstY = pageBBox.minY + gap;
+      const targetSecondY = targetFirstY + first.bbox.height + gap;
+      applyTranslation(first.el, 0, targetFirstY - first.bbox.minY);
+      applyTranslation(second.el, 0, targetSecondY - second.bbox.minY);
     }
   } else {
+    // Left, center, right, top, middle, bottom alignments
     elBBoxes.forEach(({ el, bbox }) => {
       let dx = 0, dy = 0;
       switch (type) {
@@ -169,7 +246,7 @@ export const alignSelectedElements = (type, {
     });
   }
 
-  // Update trim-outside attributes now that elements have been aligned to the page
+  // Update trim-outside attributes now that elements have been aligned
   elements.forEach(el => {
     if (isElementCompletelyOutside(el, svg)) {
       el.setAttribute('data-trim-outside', 'true');
@@ -200,4 +277,7 @@ export const alignSelectedElements = (type, {
       drawOverlayHighlight(el, 'selected');
     }
   }
+
+  window.dispatchEvent(new CustomEvent('force-update-selection-box'));
 };
+

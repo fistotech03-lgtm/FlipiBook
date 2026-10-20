@@ -236,9 +236,7 @@ export const savePageEditorState = async (data) => {
       pages: sanitizedPages,
       timestamp: data.timestamp || Date.now()
     };
-    const payload = safeClone(rawPayload);
-    await saveToDB(PAGE_EDITOR_KEY, payload);
-    await cleanupLegacyEditorKeys();
+    await saveToDB(PAGE_EDITOR_KEY, rawPayload);
   } catch (err) {
     console.error("[dbUtils] Save Page Editor Error:", err);
   }

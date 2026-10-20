@@ -492,6 +492,54 @@ export const usePopupAndTemplateManager = ({
         });
       }
 
+      // 5.5. Strip artboard/template-level clipping masks so the added template is not clipmasked in the editor
+      const artboardClipIds = new Set();
+      const clipPathElements = Array.from(templateSvg.querySelectorAll('clipPath, clippath'));
+      clipPathElements.forEach(clipEl => {
+        const rect = clipEl.querySelector('rect');
+        if (rect) {
+          const rw = parseFloat(rect.getAttribute('width')) || 0;
+          const rh = parseFloat(rect.getAttribute('height')) || 0;
+          if (
+            (rw >= templateWidth * 0.75 && rh >= templateHeight * 0.75) ||
+            (rect.getAttribute('width') === '100%' && rect.getAttribute('height') === '100%')
+          ) {
+            if (clipEl.id) artboardClipIds.add(clipEl.id);
+          }
+        }
+        if (clipEl.id && (/^tpl-[a-z0-9]+-clip0(_\d+)*$/i.test(clipEl.id) || /^clip0(_\d+)*$/i.test(clipEl.id))) {
+          artboardClipIds.add(clipEl.id);
+        }
+      });
+
+      Array.from(templateSvg.querySelectorAll('*')).forEach(el => {
+        const cp = el.getAttribute('clip-path') || '';
+        for (const cid of artboardClipIds) {
+          if (cp.includes(cid)) {
+            el.removeAttribute('clip-path');
+            if (el.style) {
+              el.style.removeProperty('clip-path');
+              el.style.removeProperty('-webkit-clip-path');
+            }
+            break;
+          }
+        }
+        if (el.parentElement === templateSvg && el.hasAttribute('clip-path')) {
+          el.removeAttribute('clip-path');
+          if (el.style) {
+            el.style.removeProperty('clip-path');
+            el.style.removeProperty('-webkit-clip-path');
+          }
+        }
+      });
+
+      artboardClipIds.forEach(cid => {
+        const clipNode = templateSvg.querySelector(`[id="${cid}"]`);
+        if (clipNode && clipNode.parentNode) {
+          clipNode.parentNode.removeChild(clipNode);
+        }
+      });
+
       // 6. Inject template content into root folder (Ungrouped)
       // Extract children from the template - unwrap any outermost artboard/parent container <g> tags
       const getExplodedTemplateChildren = (svg) => {
@@ -499,7 +547,7 @@ export const usePopupAndTemplateManager = ({
           // IMPORTANT: Transfer visual inheritance (fill, stroke, masks, clip-path, etc.)
           const attrsToInherit = [
             'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin',
-            'opacity', 'visibility', 'filter', 'color', 'clip-path', 'mask',
+            'opacity', 'visibility', 'filter', 'color',
             'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'letter-spacing', 'word-spacing'
           ];
           attrsToInherit.forEach(attr => {
@@ -591,7 +639,7 @@ export const usePopupAndTemplateManager = ({
 
         // Inherit visual attributes from the original template SVG
         const svgAttrs = [
-          'fill', 'stroke', 'stroke-width', 'opacity', 'visibility', 'filter', 'color', 'clip-path', 'mask',
+          'fill', 'stroke', 'stroke-width', 'opacity', 'visibility', 'filter', 'color',
           'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'letter-spacing', 'word-spacing'
         ];
 

@@ -65,6 +65,12 @@ const ImageEditor = ({
   const onUpdateTimerRef = useRef(null);
   const onUpdateRef = useRef(onUpdate);
   const applyVisualsRef = useRef(null);
+  const hasUserInteractedRef = useRef(false);
+  const lastSelectedLayerIdRef = useRef(selectedLayerId);
+  if (lastSelectedLayerIdRef.current !== selectedLayerId) {
+    lastSelectedLayerIdRef.current = selectedLayerId;
+    hasUserInteractedRef.current = false;
+  }
 
   // Sync the ref on every render
   useEffect(() => {
@@ -924,9 +930,9 @@ const ImageEditor = ({
 
   useEffect(() => {
     if (!selectedElement) return;
-    // Strip data-type and id from inner image immediately on selection to fix interact.js targeting
+    // Strip data-type and id from inner image only if it is already an established Image Group
     const svgImageEl = getSvgImageEl(selectedElement);
-    if (svgImageEl && svgImageEl !== selectedElement) {
+    if (selectedElement.getAttribute("data-is-image-group") === "true" && svgImageEl && svgImageEl !== selectedElement) {
       svgImageEl.removeAttribute("data-type");
       svgImageEl.removeAttribute("id");
     }
@@ -967,7 +973,7 @@ const ImageEditor = ({
       );
       if (relevantMutation) {
         syncStateFromDOM();
-        if (applyVisualsRef.current) applyVisualsRef.current();
+        if (applyVisualsRef.current && hasUserInteractedRef.current) applyVisualsRef.current();
       }
     });
     observerRef.current = observer;
@@ -1005,10 +1011,8 @@ const ImageEditor = ({
   }, [selectedElement, syncStateFromDOM]);
 
   const applyVisuals = useCallback(() => {
-    // 0. Skip only during initial mount hydration from DOM, not during user interactions
-    // isHydrating is set to true by syncStateFromDOM(true) during initial mount,
-    // and we skip applyVisuals to avoid overwriting synced DOM values with stale defaults.
-    // However, direct user interactions (like clicking Fit/Fill) clear isHydrating first.
+    // 0. SELECTION IS READ-ONLY: Never mutate DOM unless the user explicitly interacted with a control in this panel.
+    if (!hasUserInteractedRef.current) return;
     if (isHydrating.current) return;
 
     // 1. Re-resolve the live element from the active page container to ensure we are
@@ -1048,7 +1052,8 @@ const ImageEditor = ({
       svgImageEl &&
       liveElement.getAttribute("data-is-image-group") !== "true"
     ) {
-      if (tagLower === "image") {
+      const insideDefsOrPattern = liveElement.closest("defs, pattern, clipPath");
+      if (!insideDefsOrPattern && tagLower === "image") {
         const parent = liveElement.parentNode;
         const newGroup = document.createElementNS(
           "http://www.w3.org/2000/svg",
@@ -1079,7 +1084,7 @@ const ImageEditor = ({
 
         liveElement = newGroup;
         tagLower = "g";
-      } else {
+      } else if (!insideDefsOrPattern) {
         liveElement.setAttribute("data-is-image-group", "true");
       }
     }
@@ -1965,30 +1970,33 @@ const ImageEditor = ({
 
           if (patternEl && svgImageEl) {
             // --- PATTERN CROP ---
-            svgImageEl.setAttribute("width", "100%");
-            svgImageEl.setAttribute("height", "100%");
-            const underlyingFitPattern =
-              liveElement.getAttribute("data-crop-underlying-fit") || "none";
-            const meetOrSlicePattern =
-              underlyingFitPattern === "Fill"
-                ? "xMidYMid slice"
-                : underlyingFitPattern === "Stretch"
-                  ? "none"
-                  : "xMidYMid meet";
-            svgImageEl.setAttribute("preserveAspectRatio", meetOrSlicePattern);
+            const hasCrop = crop && (parseFloat(crop.left) > 0 || parseFloat(crop.top) > 0 || parseFloat(crop.width) < 100 || parseFloat(crop.height) < 100);
+            if (hasCrop) {
+              svgImageEl.setAttribute("width", "100%");
+              svgImageEl.setAttribute("height", "100%");
+              const underlyingFitPattern =
+                liveElement.getAttribute("data-crop-underlying-fit") || "none";
+              const meetOrSlicePattern =
+                underlyingFitPattern === "Fill"
+                  ? "xMidYMid slice"
+                  : underlyingFitPattern === "Stretch"
+                    ? "none"
+                    : "xMidYMid meet";
+              svgImageEl.setAttribute("preserveAspectRatio", meetOrSlicePattern);
 
-            patternEl.removeAttribute("viewBox");
-            patternEl.setAttribute("width", "100%");
-            patternEl.setAttribute("height", "100%");
+              patternEl.removeAttribute("viewBox");
+              patternEl.setAttribute("width", "100%");
+              patternEl.setAttribute("height", "100%");
 
-            const insetTop = crop.top;
-            const insetRight =
-              100 - (parseFloat(crop.left) + parseFloat(crop.width));
-            const insetBottom =
-              100 - (parseFloat(crop.top) + parseFloat(crop.height));
-            const insetLeft = crop.left;
-            const svgClipVal = `inset(${insetTop}% ${insetRight}% ${insetBottom}% ${insetLeft}%${radiusStr})`;
-            liveElement.style.setProperty("clip-path", svgClipVal, "important");
+              const insetTop = crop.top;
+              const insetRight =
+                100 - (parseFloat(crop.left) + parseFloat(crop.width));
+              const insetBottom =
+                100 - (parseFloat(crop.top) + parseFloat(crop.height));
+              const insetLeft = crop.left;
+              const svgClipVal = `inset(${insetTop}% ${insetRight}% ${insetBottom}% ${insetLeft}%${radiusStr})`;
+              liveElement.style.setProperty("clip-path", svgClipVal, "important");
+            }
           } else if (svgImageEl) {
             // --- SVG PATH (Container with inner image) ---
             let imgEl = svgImageEl;
@@ -2910,9 +2918,12 @@ const ImageEditor = ({
               radius.bl.toString(),
             );
           } else {
-            liveElement.style.removeProperty("clip-path");
+            const existingClip = liveElement.getAttribute("clip-path") || liveElement.style?.clipPath || "";
+            if (!existingClip.includes("url(") || existingClip.includes("crop") || existingClip.includes("inset")) {
+              liveElement.style.removeProperty("clip-path");
+              liveElement.removeAttribute("clip-path");
+            }
             liveElement.style.removeProperty("border-radius");
-            liveElement.removeAttribute("clip-path");
             liveElement.removeAttribute("data-effect-radius-tl");
             liveElement.removeAttribute("data-effect-radius-tr");
             liveElement.removeAttribute("data-effect-radius-br");
@@ -2922,9 +2933,11 @@ const ImageEditor = ({
               liveElement.removeAttribute("ry");
             }
             if (svgImageEl) {
-              svgImageEl.style.removeProperty("clip-path");
-              svgImageEl.style.removeProperty("border-radius");
-              svgImageEl.removeAttribute("clip-path");
+              const imgClip = svgImageEl.getAttribute("clip-path") || svgImageEl.style?.clipPath || "";
+              if (!imgClip.includes("url(") || imgClip.includes("crop") || imgClip.includes("inset")) {
+                svgImageEl.style.removeProperty("clip-path");
+                svgImageEl.removeAttribute("clip-path");
+              }
               if (svgImageEl.tagName?.toLowerCase() === "rect") {
                 svgImageEl.removeAttribute("rx");
                 svgImageEl.removeAttribute("ry");
@@ -4734,13 +4747,23 @@ const ImageEditor = ({
 
   useEffect(() => {
     applyVisualsRef.current = applyVisuals;
-    applyVisuals();
+    if (hasUserInteractedRef.current) {
+      applyVisuals();
+    }
   }, [applyVisuals]);
 
   if (!selectedElement) return null;
 
   return (
-    <div className="relative flex flex-col gap-[1vw] w-full max-w-[25vw] font-sans">
+    <div
+      className="relative flex flex-col gap-[1vw] w-full max-w-[25vw] font-sans"
+      onPointerDownCapture={() => {
+        hasUserInteractedRef.current = true;
+      }}
+      onKeyDownCapture={() => {
+        hasUserInteractedRef.current = true;
+      }}
+    >
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 0.25vw; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 0.5vw; }

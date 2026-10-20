@@ -113,7 +113,7 @@ export default function HomeNav() {
   return (
     <>
       <nav 
-        className="w-full bg-white px-[1.5vw] flex items-center justify-between z-50 border-b border-gray-200 shadow-xs" 
+        className="w-full h-full bg-white px-[1.5vw] flex items-center justify-between border-b border-gray-200 shadow-xs" 
         style={{ height: '7vh' }}
         aria-label="Main Navigation"
       >

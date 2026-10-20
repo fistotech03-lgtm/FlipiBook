@@ -116,15 +116,43 @@ export async function extractPresentationToPdf(fileInput, fileName = 'presentati
     const widthMm = Math.round(widthPt * ptToMm * 10) / 10;
     const heightMm = Math.round(heightPt * ptToMm * 10) / 10;
 
+    let normalizedSvg = svgString;
+    if (normalizedSvg && typeof normalizedSvg === 'string') {
+      normalizedSvg = normalizedSvg.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+        let newAttrs = attrs;
+        const wMatch = attrs.match(/\bwidth=["']([^"']*)["']/i);
+        const hMatch = attrs.match(/\bheight=["']([^"']*)["']/i);
+        const vbMatch = attrs.match(/\bviewBox=["']([^"']*)["']/i);
+        if (!vbMatch && wMatch && hMatch && !wMatch[1].includes('%') && !hMatch[1].includes('%')) {
+          const nw = parseFloat(wMatch[1]);
+          const nh = parseFloat(hMatch[1]);
+          if (!isNaN(nw) && !isNaN(nh)) {
+            newAttrs += ` viewBox="0 0 ${nw} ${nh}"`;
+          }
+        }
+        if (/\bwidth=["'][^"']*["']/i.test(newAttrs)) {
+          newAttrs = newAttrs.replace(/\bwidth=["'][^"']*["']/i, 'width="100%"');
+        } else {
+          newAttrs += ' width="100%"';
+        }
+        if (/\bheight=["'][^"']*["']/i.test(newAttrs)) {
+          newAttrs = newAttrs.replace(/\bheight=["'][^"']*["']/i, 'height="100%"');
+        } else {
+          newAttrs += ' height="100%"';
+        }
+        return `<svg${newAttrs}>`;
+      });
+    }
+
     previewPages.push({
       index: i + 1,
       pageNumber: i + 1,
       pageName: `Page ${i + 1}`,
       width: widthMm,
       height: heightMm,
-      svgString,
-      content: svgString,
-      dataUrl: `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`,
+      svgString: normalizedSvg,
+      content: normalizedSvg,
+      dataUrl: `data:image/svg+xml;utf8,${encodeURIComponent(normalizedSvg)}`,
       isVector: true,
     });
   }

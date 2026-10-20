@@ -1160,17 +1160,27 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
 
   // If targetFile was extracted client-side with native vector SVG pages (e.g. from PPTX extractor)
   if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0 && targetFile.pagesData[0].isVector) {
-    return targetFile.pagesData.map((p, idx) => ({
-      pageNumber: idx + 1,
-      pageName: `Page ${idx + 1}`,
-      content: p.content || p.svgString,
-      svgString: p.svgString || p.content,
-      width: p.width,
-      height: p.height,
-      dataUrl: p.dataUrl || svgToDataUrl(p.content || p.svgString),
-      blob: p.blob || new Blob([p.content || p.svgString], { type: 'image/svg+xml' }),
-      isVector: true
-    }));
+    return targetFile.pagesData.map((p, idx) => {
+      let rawContent = p.content || p.svgString || '';
+      if (rawContent && rawContent.includes('<svg')) {
+        rawContent = rawContent.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+        rawContent = rawContent.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+        if (!rawContent.includes('width="100%"')) {
+          rawContent = rawContent.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+        }
+      }
+      return {
+        pageNumber: idx + 1,
+        pageName: `Page ${idx + 1}`,
+        content: rawContent,
+        svgString: rawContent,
+        width: p.width,
+        height: p.height,
+        dataUrl: p.dataUrl || svgToDataUrl(rawContent),
+        blob: p.blob || new Blob([rawContent], { type: 'image/svg+xml' }),
+        isVector: true
+      };
+    });
   }
 
   // 2. Client-side MuPDF WebAssembly engine (100% server-free, 0 RAM / 0 server CPU)

@@ -26,6 +26,23 @@ const cleanStaticHtml = (html) => {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
+
+        const rootSvg = doc.querySelector('svg');
+        if (rootSvg) {
+            const w = rootSvg.getAttribute('width');
+            const h = rootSvg.getAttribute('height');
+            const vb = rootSvg.getAttribute('viewBox');
+            if (!vb && w && h && !w.includes('%') && !h.includes('%')) {
+                const nw = parseFloat(w);
+                const nh = parseFloat(h);
+                if (!isNaN(nw) && !isNaN(nh)) {
+                    rootSvg.setAttribute('viewBox', `0 0 ${nw} ${nh}`);
+                }
+            }
+            rootSvg.setAttribute('width', '100%');
+            rootSvg.setAttribute('height', '100%');
+        }
+
         // Remove foreignObjects containing video/iframe from static background so they don't load twice or flash
         doc.querySelectorAll('foreignObject[data-type="video"], foreignObject video, foreignObject iframe').forEach(el => {
             const fo = el.tagName?.toLowerCase() === 'foreignobject' ? el : el.closest('foreignObject');
@@ -43,6 +60,22 @@ const sanitizePageHtmlForPreview = (html) => {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
+
+        const rootSvg = doc.querySelector('svg');
+        if (rootSvg) {
+            const w = rootSvg.getAttribute('width');
+            const h = rootSvg.getAttribute('height');
+            const vb = rootSvg.getAttribute('viewBox');
+            if (!vb && w && h && !w.includes('%') && !h.includes('%')) {
+                const nw = parseFloat(w);
+                const nh = parseFloat(h);
+                if (!isNaN(nw) && !isNaN(nh)) {
+                    rootSvg.setAttribute('viewBox', `0 0 ${nw} ${nh}`);
+                }
+            }
+            rootSvg.setAttribute('width', '100%');
+            rootSvg.setAttribute('height', '100%');
+        }
 
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
@@ -88,6 +121,15 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     margin:0; padding:0; overflow:hidden; background:transparent; width:100%; height:100%;
     backface-visibility: hidden !important;
     -webkit-backface-visibility: hidden !important;
+  }
+  body > svg,
+  svg:not(foreignObject svg):not([data-type="icon"]):not([data-type="button"] svg) {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    shape-rendering: geometricPrecision !important;
   }
   * { box-sizing: border-box; outline: none !important; }
 
@@ -461,7 +503,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                             <div
                                 className="fbe-static-bg"
                                 style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: page.isTransparentSheet ? 'transparent' : '#fff', borderRadius: 'inherit', pointerEvents: 'none' }}
-                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg * { vector-effect: non-scaling-stroke !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
+                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg * { vector-effect: non-scaling-stroke !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
                             />
                             {/* VIRTUALIZATION: For large books, only mount heavy iframes within ±3 pages of active spread */}
                             {(augmentedPages.length <= 12 || Math.abs(i - currentPage) <= 3) && (
@@ -682,7 +724,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                 staticBg.className = 'fbe-static-bg';
                 const bgStyleColor = page.isTransparentSheet ? 'transparent' : '#fff';
                 staticBg.style.cssText = `position:absolute;inset:0;overflow:hidden;background:${bgStyleColor};pointer-events:none;border-radius:inherit;`;
-                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) { vector-effect: non-scaling-stroke !important; } .fbe-static-bg [data-type="pdf-vector-layer"], .fbe-static-bg [data-type="pdf-vector-layer"] * { vector-effect: none !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
+                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) { vector-effect: non-scaling-stroke !important; } .fbe-static-bg [data-type="pdf-vector-layer"], .fbe-static-bg [data-type="pdf-vector-layer"] * { vector-effect: none !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
                 inner.appendChild(staticBg);
 
                 const iframe = document.createElement('iframe');

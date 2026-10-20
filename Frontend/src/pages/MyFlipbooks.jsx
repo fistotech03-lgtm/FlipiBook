@@ -125,6 +125,7 @@ export default function MyFlipbooks() {
     }, [searchParams]);
 
     const [active3dFolder, setActive3dFolder] = useState('All Models');
+    const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [sortOption, setSortOption] = useState('Recently Created');
@@ -482,7 +483,14 @@ export default function MyFlipbooks() {
             const allPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
                 const base64Url = img.dataUrl || (img.content ? svgToDataUrl(img.content) : "") || (img.blob ? await blobToBase64(img.blob) : "");
-                const html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
+                let html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
+                if (html && html.includes('<svg')) {
+                    html = html.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+                    html = html.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+                    if (!html.includes('width="100%"')) {
+                        html = html.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+                    }
+                }
                 return {
                     pageName: `Page ${pageIndex}`,
                     content: html,
@@ -508,6 +516,8 @@ export default function MyFlipbooks() {
                 stage: 'saving'
             });
 
+            const orientation = maxWidth > maxHeight ? 'landscape' : (Math.abs(maxWidth - maxHeight) < 2 ? 'square' : 'portrait');
+
             const createRes = await flipbookApi.saveBook({
                 emailId,
                 flipbookName: uniqueName,
@@ -515,7 +525,12 @@ export default function MyFlipbooks() {
                 overwrite: false,
                 folderName: targetFolder,
                 keepBase64: true,
-                fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
+                fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0),
+                meta: {
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation
+                }
             });
             const v_id = createRes.data.v_id;
             createdFlipbookVIdRef.current = v_id;
@@ -531,7 +546,10 @@ export default function MyFlipbooks() {
                 bookName: uniqueName,
                 folderName: targetFolder,
                 pages: allPages,
-                targetPage: 0
+                targetPage: 0,
+                width: maxWidth,
+                height: maxHeight,
+                orientation
             }).catch(err => console.warn('[MyFlipbooks] Pre-cache save error:', err));
 
             // Queue remaining pages for non-blocking asynchronous cloud sync
@@ -557,6 +575,7 @@ export default function MyFlipbooks() {
                     pages: allPages,
                     width: maxWidth,
                     height: maxHeight,
+                    orientation,
                     folderName: targetFolder,
                     v_id: v_id
                 }
@@ -1654,6 +1673,7 @@ export default function MyFlipbooks() {
                     setDashboardMode={setDashboardMode}
                     active3dFolder={active3dFolder}
                     setActive3dFolder={setActive3dFolder}
+                    threeDCounts={threeDCounts}
                 />
 
             {/* Main Content */}
@@ -1664,6 +1684,7 @@ export default function MyFlipbooks() {
                     <ThreeDDashboard
                         navigate={navigate}
                         activeFolder={active3dFolder}
+                        onCountsChange={setThreeDCounts}
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">

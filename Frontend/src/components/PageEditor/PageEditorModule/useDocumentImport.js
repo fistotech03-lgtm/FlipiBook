@@ -238,7 +238,14 @@ export const useDocumentImport = ({
         const updatedPage = { ...page };
 
         const pageName = updatedPage.name || `Page ${pageIndex + 1}`;
-        const absoluteHtml = image.content || generatePdfPageSvg(base64Data, pageName, baseWidth, baseHeight, true);
+        let absoluteHtml = image.content || generatePdfPageSvg(base64Data, pageName, baseWidth, baseHeight, true);
+        if (absoluteHtml && absoluteHtml.includes('<svg')) {
+          absoluteHtml = absoluteHtml.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+          absoluteHtml = absoluteHtml.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+          if (!absoluteHtml.includes('width="100%"')) {
+            absoluteHtml = absoluteHtml.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+          }
+        }
         const parser = new DOMParser();
         const doc = parser.parseFromString(absoluteHtml, 'image/svg+xml');
         updatedPage.html = absoluteHtml;
@@ -475,7 +482,14 @@ export const useDocumentImport = ({
         const startNum = pdfNums.length > 0 ? Math.max(...pdfNums) + 1 : 1;
 
         const pageName = `Page ${startNum + i}`;
-        const absoluteHtml = image.content || generatePdfPageSvg(base64Data, pageName, baseWidth, baseHeight, true);
+        let absoluteHtml = image.content || generatePdfPageSvg(base64Data, pageName, baseWidth, baseHeight, true);
+        if (absoluteHtml && absoluteHtml.includes('<svg')) {
+          absoluteHtml = absoluteHtml.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+          absoluteHtml = absoluteHtml.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+          if (!absoluteHtml.includes('width="100%"')) {
+            absoluteHtml = absoluteHtml.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+          }
+        }
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(absoluteHtml, 'image/svg+xml');

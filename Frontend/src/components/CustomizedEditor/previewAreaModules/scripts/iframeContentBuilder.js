@@ -52,6 +52,15 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                 <style>
                     html, body { cursor: default !important; -webkit-user-select: none; user-select: none; }
                     body { margin: 0; padding: 0; overflow: hidden; background: transparent; width: 100%; height: 100%; }
+                    body > svg,
+                    svg:not(foreignObject svg):not([data-type="icon"]):not([data-type="button"] svg) {
+                        width: 100% !important;
+                        height: 100% !important;
+                        display: block !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        shape-rendering: geometricPrecision !important;
+                    }
                     * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
                     ::-webkit-scrollbar { width: 0px; background: transparent; }
                     [data-interaction="open-link"][data-interaction-value]:not([data-interaction-value=""]),

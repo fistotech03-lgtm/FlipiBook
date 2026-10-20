@@ -1,89 +1,189 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import Sidebar from './sidebar/Sidebar';
 import PreviewArea from './PreviewArea';
-import {
-  BackgroundPanel,
-  LayoutDesignPanel,
-  LayoutSettingsPanel,
-  BookAppearancePanel,
-  LeadFormPanel,
-  VisibilityPrivacyPanel,
-  AnalyticsPanel,
-  BrandingPanel,
-} from './panels';
-import OtherSetup from './components/OtherSetup';
-import {
-  saveCustomizedEditorState,
-  getCustomizedEditorState,
-  getPageEditorState,
-  cleanupLegacyEditorKeys,
-  ensureCleanBook,
-} from '../../utils/dbUtils';
-import { getDominantColors, REACT_BITS_THEMES_COLORS } from '../../utils/colorExtractor';
-import { getSupabaseBaseUrl, rewriteHtmlUploads } from '../../utils/assetUtils';
+import DetailPanelContainer from './components/DetailPanelContainer';
+import PreloaderOverlay from './components/PreloaderOverlay';
+import { ensureCleanBook } from '../../utils/dbUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useLayoutColorVars } from './hooks/useLayoutColorVars';
-import { createDefaultPageData } from './utils/defaultPageData';
-import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
-import { getTint, isLightColor, ensureDarkText } from './utils/colorHelpers';
+import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
+import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
+import { useCustomizedActions } from './hooks/useCustomizedActions';
+import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import {
+  createDefaultLogoSettings,
+  createDefaultWatermarkSettings,
+  createDefaultPreloaderSettings,
+  createDefaultProfileSettings,
+  createDefaultBackgroundSettings,
+  createDefaultAppearanceSettings,
+  createDefaultLayoutSettings,
+  createDefaultLayoutColors,
+  createDefaultMenuBarSettings,
+  createDefaultOtherSetupSettings,
+  createDefaultLeadFormSettings,
+  createDefaultVisibilitySettings,
+  createDefaultShareSettings
+} from './utils/defaultSettings';
+
+const normalizeSvgMarkup = (htmlStr) => {
+  if (!htmlStr || typeof htmlStr !== 'string') return htmlStr;
+  try {
+    return htmlStr.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+      let newAttrs = attrs;
+      const widthMatch = attrs.match(/\bwidth=["']([^"']*)["']/i);
+      const heightMatch = attrs.match(/\bheight=["']([^"']*)["']/i);
+      const viewBoxMatch = attrs.match(/\bviewBox=["']([^"']*)["']/i);
+      
+      const wVal = widthMatch ? widthMatch[1] : null;
+      const hVal = heightMatch ? heightMatch[1] : null;
+      
+      if (!viewBoxMatch && wVal && hVal && !wVal.includes('%') && !hVal.includes('%')) {
+        const numW = parseFloat(wVal);
+        const numH = parseFloat(hVal);
+        if (!isNaN(numW) && !isNaN(numH)) {
+          newAttrs += ` viewBox="0 0 ${numW} ${numH}"`;
+        }
+      }
+      
+      if (/\bwidth=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bwidth=["'][^"']*["']/i, 'width="100%"');
+      } else {
+        newAttrs += ' width="100%"';
+      }
+      if (/\bheight=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bheight=["'][^"']*["']/i, 'height="100%"');
+      } else {
+        newAttrs += ' height="100%"';
+      }
+      return `<svg${newAttrs}>`;
+    });
+  } catch (e) {
+    return htmlStr;
+  }
+};
 
 const CustomizedEditor = () => {
   const { folder, v_id, page } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, setHasUnsavedChanges, hasUnsavedChanges, triggerSaveSuccess, isAutoSaveEnabled, currentBook, setCurrentBook, activeDevice } = useOutletContext() || {};
+  const {
+    setExportHandler,
+    setSaveHandler,
+    setPreviewHandler,
+    setClearHandler,
+    setHasUnsavedChanges,
+    hasUnsavedChanges,
+    triggerSaveSuccess,
+    isAutoSaveEnabled,
+    currentBook,
+    setCurrentBook,
+    activeDevice
+  } = useOutletContext() || {};
   const { user } = useAuth();
 
+<<<<<<< HEAD
   const [bookName, setBookName] = useState(() => location.state?.flipbookName || currentBook?.flipbookName || 'Name of the Book');
+=======
+  // Core Editor States
+  const [bookName, setBookName] = useState(() => currentBook?.flipbookName || 'Name of the Book');
+>>>>>>> origin/praveen
   const [activeSubView, setActiveSubView] = useState(null);
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [pages, setPages] = useState(() => {
     if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
-      return location.state.pages.map((p, i) => ({
-        id: p.id !== undefined ? p.id : i,
-        name: p.pageName || p.name || `Page ${i + 1}`,
-        html: p.content || p.html || '',
-        content: p.content || p.html || '',
-        isHidden: Boolean(p.isHidden || p.hide === 1)
-      }));
+      return location.state.pages.map((p, i) => {
+        const normalized = normalizeSvgMarkup(p.content || p.html || '');
+        return {
+          id: p.id !== undefined ? p.id : i,
+          name: p.pageName || p.name || `Page ${i + 1}`,
+          html: normalized,
+          content: normalized,
+          isHidden: Boolean(p.isHidden || p.hide === 1)
+        };
+      });
     }
     return [];
   });
+  const [metaDimensions, setMetaDimensions] = useState(() => ({
+    width: location.state?.width || currentBook?.width || null,
+    height: location.state?.height || currentBook?.height || null,
+    orientation: location.state?.orientation || currentBook?.orientation || null
+  }));
   const [devicePages, setDevicePages] = useState({ Desktop: 0, Tablet: 0, Mobile: 0 });
   const targetPage = devicePages[activeDevice || 'Desktop'] || 0;
   const setTargetPage = useCallback((pageNum) => {
-    setDevicePages(prev => ({
-      ...prev,
-      [activeDevice || 'Desktop']: pageNum
-    }));
+    setDevicePages(prev => {
+      const dev = activeDevice || 'Desktop';
+      if (prev[dev] === pageNum) return prev;
+      return {
+        ...prev,
+        [dev]: pageNum
+      };
+    });
   }, [activeDevice]);
+
   const [projectBaseUrl, setProjectBaseUrl] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [notes, setNotes] = useState([]);
+<<<<<<< HEAD
   const [isDataLoaded, setIsDataLoaded] = useState(() => {
     return Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
   });
+=======
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [tocOpenTrigger, setTocOpenTrigger] = useState(0);
+>>>>>>> origin/praveen
 
-  // Reset collapsed state whenever a new sub-view is selected
+  // Customization Settings States
+  const [logoSettings, setLogoSettings] = useState(() => createDefaultLogoSettings(currentBook, location.state));
+  const [watermarkSettings, setWatermarkSettings] = useState(() => createDefaultWatermarkSettings(currentBook, location.state));
+  const [preloaderSettings, setPreloaderSettings] = useState(() => createDefaultPreloaderSettings(currentBook, location.state));
+  const [profileSettings, setProfileSettings] = useState(() => createDefaultProfileSettings(currentBook, location.state));
+  const [backgroundSettings, setBackgroundSettings] = useState(() => createDefaultBackgroundSettings(currentBook, location.state));
+  const [bookAppearanceSettings, setBookAppearanceSettings] = useState(() => createDefaultAppearanceSettings(currentBook, location.state));
+  const [layoutSettings, setLayoutSettings] = useState(() => createDefaultLayoutSettings(currentBook, location.state));
+  const [layoutColors, setLayoutColors] = useState(() => createDefaultLayoutColors(currentBook, location.state));
+  const [menuBarSettings, setMenuBarSettings] = useState(() => createDefaultMenuBarSettings());
+  const [otherSetupSettings, setOtherSetupSettings] = useState(() => createDefaultOtherSetupSettings());
+  const [leadFormSettings, setLeadFormSettings] = useState(() => createDefaultLeadFormSettings());
+  const [visibilitySettings, setVisibilitySettings] = useState(() => createDefaultVisibilitySettings());
+  const [shareSettings, setShareSettings] = useState(() => createDefaultShareSettings());
+
+  // Panel state synchronization
   useEffect(() => {
     setIsPanelCollapsed(false);
   }, [activeSubView]);
 
-  // Clear previous book from IndexedDB when opening a new book in Customized Editor
+<<<<<<< HEAD
+  // Clear previous book from IndexedDB and reset stale Redux book when opening a new book in Customized Editor
+=======
+>>>>>>> origin/praveen
   useEffect(() => {
     if (v_id) {
       ensureCleanBook(v_id);
+      if (setCurrentBook && currentBook?.v_id && currentBook.v_id !== v_id) {
+        setCurrentBook(prev => ({
+          ...(prev || {}),
+          v_id: v_id,
+          flipbookName: bookName,
+          folder: folder || 'My_Flipbooks',
+          pages: pages && pages.length > 0 ? pages : []
+        }));
+      }
     }
   }, [v_id]);
 
   const profilePreviewForcedRef = useRef(false);
+<<<<<<< HEAD
+  const hasFetchedRef = useRef(null);
 
+=======
+>>>>>>> origin/praveen
   useEffect(() => {
     const shouldBeOpen = activeSubView === 'profile' && !isPanelCollapsed;
-    
     if (shouldBeOpen && !profilePreviewForcedRef.current) {
       window.dispatchEvent(new Event('open-profile-preview'));
       profilePreviewForcedRef.current = true;
@@ -93,31 +193,44 @@ const CustomizedEditor = () => {
     }
   }, [activeSubView, isPanelCollapsed]);
 
-  // Handle initial page from URL
+  // Handle page sync with URL
   useEffect(() => {
+<<<<<<< HEAD
+    if (page !== undefined && page !== null && page !== '') {
+=======
     if (page) {
-      const pageNum = parseInt(page);
+>>>>>>> origin/praveen
+      const pageNum = parseInt(page, 10);
       if (!isNaN(pageNum)) {
         setTargetPage(pageNum);
       }
     }
-  }, [page]);
+  }, [page, setTargetPage]);
 
-  // Update URL when page changes to maintain state on refresh
   useEffect(() => {
     if (folder && v_id) {
-      // Use replace: true to avoid cluttering history with every page turn
-      navigate(`/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`, { replace: true });
-    }
-  }, [targetPage, folder, v_id, navigate]);
+<<<<<<< HEAD
+      const targetPath = targetPage > 0
+        ? `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`
+        : `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}`;
 
-  // Sync with global flipbook name from context (Template Editor sync)
+      if (location.pathname !== targetPath) {
+        navigate(targetPath, { replace: true, state: location.state });
+      }
+=======
+      navigate(`/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`, { replace: true });
+>>>>>>> origin/praveen
+    }
+  }, [targetPage, folder, v_id, navigate, location.pathname, location.state]);
+
+  // Global flipbook name sync
   useEffect(() => {
-    if (currentBook?.flipbookName) {
+    if (currentBook?.flipbookName && currentBook?.v_id === v_id) {
       setBookName(prev => (prev === currentBook.flipbookName ? prev : currentBook.flipbookName));
     }
-  }, [currentBook?.flipbookName]);
+  }, [currentBook?.flipbookName, currentBook?.v_id, v_id]);
 
+<<<<<<< HEAD
 
   // Customization States
   // Customization States (Loaded from currentBook/location.state synchronously, then updated via DB API)
@@ -798,6 +911,9 @@ const CustomizedEditor = () => {
         folderName: folder || 'Recent Book',
         pages: pages && pages.length > 0 ? pages : [],
         targetPage: targetPage || 0,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -822,28 +938,146 @@ const CustomizedEditor = () => {
 
     return () => clearTimeout(timer);
   }, [
+=======
+  const bookNameRef = useRef(bookName);
+  bookNameRef.current = bookName;
+
+  // 1. Dynamic Layout Colors Extraction Hook
+  useDynamicLayoutColors({
+    backgroundSettings,
+    layoutSettings,
+    setLayoutColors,
+    v_id,
+    user,
+    folder,
+    bookNameRef,
+    bookName
+  });
+
+  // 2. Actions & Context Handlers Hook
+  const {
+    handleSave,
+    handleSaveRef,
+    handleExport,
+    handlePreview,
+    handleClearAllPages,
+    stableSaveHandler,
+    lastLoadedBookNameRef
+  } = useCustomizedActions({
+    folder,
+>>>>>>> origin/praveen
     v_id,
     bookName,
-    folder,
+    setBookName,
     pages,
+    setPages,
     targetPage,
+    projectBaseUrl,
+    setProjectBaseUrl,
+    logoSettings,
+    watermarkSettings,
+    preloaderSettings,
+    profileSettings,
     backgroundSettings,
     bookAppearanceSettings,
     layoutSettings,
     layoutColors,
     menuBarSettings,
+    otherSetupSettings,
+    leadFormSettings,
+    visibilitySettings,
+    shareSettings,
+    setShareSettings,
+    bookmarks,
+    notes,
+    user,
+    currentBook,
+    setCurrentBook,
+    setExportHandler,
+    setSaveHandler,
+    setPreviewHandler,
+    setClearHandler,
+    setHasUnsavedChanges,
+    triggerSaveSuccess
+  });
+
+  // 3. Data Fetching & State Initialization Hook
+  const {
+    isLoading,
+    setIsLoading,
+    loadingProgress,
+    initialLoadRef
+  } = useCustomizedEditorData({
+    folder,
+    v_id,
+    page,
+    setTargetPage,
+    location,
+    user,
+    currentBook,
+    setCurrentBook,
+    bookName,
+    setBookName,
+    setPages,
+    setProjectBaseUrl,
+    setLogoSettings,
+    setWatermarkSettings,
+    setPreloaderSettings,
+    setProfileSettings,
+    setBackgroundSettings,
+    setBookAppearanceSettings,
+    setLayoutSettings,
+    setLayoutColors,
+    setMenuBarSettings,
+    setOtherSetupSettings,
+    setLeadFormSettings,
+    setVisibilitySettings,
+    setShareSettings,
+    setBookmarks,
+    setNotes,
+    setIsDataLoaded,
+    lastLoadedBookNameRef,
+    setHasUnsavedChanges
+  });
+
+  // 4. Auto-save & Change Tracking Hook
+  useCustomizedAutoSave({
+    v_id,
+    folder,
+    bookName,
+    bookNameRef,
+    currentBook,
+    pages,
+    targetPage,
+    isDataLoaded,
+    user,
+    backgroundSettings,
+    bookAppearanceSettings,
+    layoutSettings,
+    layoutColors,
+    menuBarSettings,
+    setMenuBarSettings,
+    otherSetupSettings,
+    setOtherSetupSettings,
+    leadFormSettings,
+    visibilitySettings,
+    shareSettings,
+    setShareSettings,
     logoSettings,
     watermarkSettings,
     preloaderSettings,
-    visibilitySettings,
-    shareSettings,
-    otherSetupSettings,
-    leadFormSettings,
+    profileSettings,
     bookmarks,
     notes,
-    isDataLoaded
-  ]);
+    setHasUnsavedChanges,
+    hasUnsavedChanges,
+    isAutoSaveEnabled,
+    isLoading,
+    initialLoadRef,
+    handleSaveRef
+  });
 
+<<<<<<< HEAD
   // Logic for saving and exporting
   const handleExport = useCallback(() => {
     console.log("Exporting...");
@@ -1001,6 +1235,9 @@ const CustomizedEditor = () => {
         folderName: folder || 'Recent Book',
         pages: updatedPagesList,
         activePageIndex: targetPage || 0,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -1083,6 +1320,9 @@ const CustomizedEditor = () => {
         pages: pages,
         activePageIndex: targetPage || 0,
         projectBaseUrl: projectBaseUrl,
+        width: metaDimensions.width,
+        height: metaDimensions.height,
+        orientation: metaDimensions.orientation,
         Background: backgroundSettings,
         BookAppearance: bookAppearanceSettings,
         Layouts: {
@@ -1156,6 +1396,9 @@ const CustomizedEditor = () => {
   }, [setExportHandler, setSaveHandler, setPreviewHandler, setClearHandler, stableSaveHandler, stableExportHandler, stablePreviewHandler, handleClearAllPages]);
 
   // Sync Current Book to Navbar and ShareModal in real-time
+=======
+  // Real-time synchronization of current book to Navbar and ShareModal
+>>>>>>> origin/praveen
   useEffect(() => {
     if (setCurrentBook && bookName && v_id) {
       const currentAccess = visibilitySettings?.type || visibilitySettings?.access || 'Public';
@@ -1172,16 +1415,16 @@ const CustomizedEditor = () => {
           prev?.flipbookName === bookName &&
           prev?.v_id === v_id &&
           prev?.shareId === sId &&
-          prev?.access === currentAccess
+          (prev?.access || '').toLowerCase() === (currentAccess || '').toLowerCase()
         ) {
           return prev;
         }
 
         return {
           ...(prev || {}),
-          folder: folder,
+          folder,
           flipbookName: bookName,
-          v_id: v_id,
+          v_id,
           shareId: sId,
           type: currentAccess,
           access: currentAccess,
@@ -1208,7 +1451,7 @@ const CustomizedEditor = () => {
               access: currentAccess
             }
           },
-          pages: pages,
+          pages,
           settings: {
             ...(prev?.settings || {}),
             visibility: visibilitySettings
@@ -1216,6 +1459,7 @@ const CustomizedEditor = () => {
         };
       });
     }
+<<<<<<< HEAD
   }, [setCurrentBook, folder, v_id, bookName, shareSettings?.shareId, visibilitySettings?.access, visibilitySettings?.type, visibilitySettings?.shareId]);
 
   const hasInstantPages = Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
@@ -1307,6 +1551,10 @@ const CustomizedEditor = () => {
 
   // Load Flipbook Data
   useEffect(() => {
+    if (!v_id) return;
+    if (hasFetchedRef.current === v_id) return;
+    hasFetchedRef.current = v_id;
+
     const fetchBook = async () => {
       const userEmail = user?.emailId || user?.email;
 
@@ -1337,7 +1585,21 @@ const CustomizedEditor = () => {
             setBookName(prev => (prev === cached.bookName ? prev : cached.bookName));
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
-            setPages(cached.pages);
+            setPages(cached.pages.map((p, i) => {
+              const normalized = normalizeSvgMarkup(p.content || p.html || '');
+              return {
+                ...p,
+                html: normalized,
+                content: normalized
+              };
+            }));
+          }
+          if (cached.width && cached.height) {
+            setMetaDimensions({
+              width: cached.width,
+              height: cached.height,
+              orientation: cached.orientation || (cached.width > cached.height ? 'landscape' : 'portrait')
+            });
           }
           setIsDataLoaded(true);
         }
@@ -1378,6 +1640,7 @@ const CustomizedEditor = () => {
                 rawHTML = rawHTML.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${autoBaseUrl}assets/`);
               }
               rawHTML = rewriteHtmlUploads(rawHTML);
+              rawHTML = normalizeSvgMarkup(rawHTML);
 
               return {
                 id: p.id || i,
@@ -1478,6 +1741,7 @@ const CustomizedEditor = () => {
                   }
 
                   rawHTML = rewriteHtmlUploads(rawHTML);
+                  rawHTML = normalizeSvgMarkup(rawHTML);
 
                   return {
                     id: p.id || i,
@@ -1487,6 +1751,13 @@ const CustomizedEditor = () => {
                     isHidden: p.hide === 1 || p.isHidden
                   };
                 });
+              });
+            }
+            if (res.data.meta?.width && res.data.meta?.height) {
+              setMetaDimensions({
+                width: res.data.meta.width,
+                height: res.data.meta.height,
+                orientation: res.data.meta.orientation || (res.data.meta.width > res.data.meta.height ? 'landscape' : 'portrait')
               });
             }
 
@@ -1754,7 +2025,7 @@ const CustomizedEditor = () => {
       }
     };
     fetchBook();
-  }, [v_id, folder, user]);
+  }, [v_id, folder, user?.emailId || user?.email]);
 
 
 
@@ -1876,10 +2147,12 @@ const CustomizedEditor = () => {
         return null;
     }
   };
+=======
+  }, [setCurrentBook, folder, v_id, bookName, shareSettings?.shareId, visibilitySettings?.access, visibilitySettings?.type, visibilitySettings?.shareId, pages]);
+>>>>>>> origin/praveen
 
   // Build CSS variables for active layout colors
   const layoutColorVars = useLayoutColorVars(layoutSettings, layoutColors);
-
   const visiblePages = useMemo(() => pages.filter(p => !p.isHidden), [pages]);
 
   return (
@@ -1891,8 +2164,6 @@ const CustomizedEditor = () => {
       })) : {}}
     >
       <style>{`:root { ${layoutColorVars} }`}</style>
-      {/* Navbar handled by parent layout */}
-
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Sidebar - Always Visible */}
@@ -1914,10 +2185,11 @@ const CustomizedEditor = () => {
 
         {/* Sub-side Panel (Detail View) - Opens next to Main Sidebar */}
         <div
-          className={`h-full bg-white shadow-lg z-10 border-r border-gray-100 transition-all duration-300 ease-in-out flex-shrink-0 ${activeSubView && !isPanelCollapsed
-            ? 'w-[21.25vw] opacity-100 translate-x-0 overflow-visible'
-            : 'w-0 opacity-0 -translate-x-full pointer-events-none overflow-hidden'
-            }`}
+          className={`h-full bg-white shadow-lg z-10 border-r border-gray-100 transition-all duration-300 ease-in-out flex-shrink-0 ${
+            activeSubView && !isPanelCollapsed
+              ? 'w-[21.25vw] opacity-100 translate-x-0 overflow-visible'
+              : 'w-0 opacity-0 -translate-x-full pointer-events-none overflow-hidden'
+          }`}
         >
           <div className="w-[21vw] h-full flex flex-col overflow-visible">
             {isLoading ? (
@@ -1934,13 +2206,50 @@ const CustomizedEditor = () => {
                 </div>
               </div>
             ) : (
-              activeSubView && renderDetailContent()
+              activeSubView && (
+                <DetailPanelContainer
+                  activeSubView={activeSubView}
+                  setActiveSubView={setActiveSubView}
+                  setIsPanelCollapsed={setIsPanelCollapsed}
+                  logoSettings={logoSettings}
+                  setLogoSettings={setLogoSettings}
+                  watermarkSettings={watermarkSettings}
+                  setWatermarkSettings={setWatermarkSettings}
+                  preloaderSettings={preloaderSettings}
+                  setPreloaderSettings={setPreloaderSettings}
+                  backgroundSettings={backgroundSettings}
+                  setBackgroundSettings={setBackgroundSettings}
+                  layoutSettings={layoutSettings}
+                  setLayoutSettings={setLayoutSettings}
+                  layoutColors={layoutColors}
+                  setLayoutColors={setLayoutColors}
+                  bookAppearanceSettings={bookAppearanceSettings}
+                  setBookAppearanceSettings={setBookAppearanceSettings}
+                  menuBarSettings={menuBarSettings}
+                  setMenuBarSettings={setMenuBarSettings}
+                  otherSetupSettings={otherSetupSettings}
+                  setOtherSetupSettings={setOtherSetupSettings}
+                  otherSetupTarget={otherSetupTarget}
+                  setOtherSetupTarget={setOtherSetupTarget}
+                  leadFormSettings={leadFormSettings}
+                  setLeadFormSettings={setLeadFormSettings}
+                  visibilitySettings={visibilitySettings}
+                  setVisibilitySettings={setVisibilitySettings}
+                  pages={pages}
+                  folder={folder}
+                  bookName={bookName}
+                  v_id={v_id}
+                  setTocOpenTrigger={setTocOpenTrigger}
+                  setIsLoading={setIsLoading}
+                />
+              )
             )}
           </div>
         </div>
 
         {/* Main Preview Area */}
         <div className="flex-1 min-w-0 flex flex-col relative z-0 overflow-hidden">
+<<<<<<< HEAD
           {/* Modern Flipbook Skeleton Loader */}
           {isLoading && (
             <div 
@@ -2030,6 +2339,13 @@ const CustomizedEditor = () => {
               </div>
             </div>
           )}
+=======
+          <PreloaderOverlay
+            isLoading={isLoading}
+            preloaderSettings={preloaderSettings}
+            loadingProgress={loadingProgress}
+          />
+>>>>>>> origin/praveen
           <PreviewArea
             bookName={bookName}
             pages={visiblePages}
@@ -2062,7 +2378,6 @@ const CustomizedEditor = () => {
           />
         </div>
       </div>
-
     </div>
   );
 };

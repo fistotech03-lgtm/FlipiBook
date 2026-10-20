@@ -766,22 +766,25 @@ const PageEditor = () => {
     autoSaveTimerRef,
   ]);
 
-  // Sync state to IndexedDB for Preview / Customized Editor
+  // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
-      savePageEditorState({
-        v_id: activeVId,
-        pages: popupEditContext ? popupEditContext.backup.pages : pages,
-        activePageIndex: popupEditContext
-          ? popupEditContext.backup.activePageIndex
-          : activePageIndex,
-        pageName:
-          currentBook?.flipbookName ||
-          location.state?.flipbookName ||
-          "Untitled Flipbook",
-        timestamp: Date.now(),
-      });
+      const timer = setTimeout(() => {
+        savePageEditorState({
+          v_id: activeVId,
+          pages: popupEditContext ? popupEditContext.backup.pages : pages,
+          activePageIndex: popupEditContext
+            ? popupEditContext.backup.activePageIndex
+            : activePageIndex,
+          pageName:
+            currentBook?.flipbookName ||
+            location.state?.flipbookName ||
+            "Untitled Flipbook",
+          timestamp: Date.now(),
+        });
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [
     pages,
@@ -914,17 +917,9 @@ const PageEditor = () => {
   useEffect(() => {
     const initializeEditor = async () => {
       const activeVId = v_id || location.state?.v_id;
-      const hasInitialPages = Boolean(
-        location.state?.pages &&
-        Array.isArray(location.state.pages) &&
-        location.state.pages.length > 0
-      );
-      if (!hasInitialPages) {
-        setIsLoading(true);
-      }
       try {
         if (activeVId) {
-          // 1. Quick-load cached state from IndexedDB for instant UI render
+          // 1. Quick-load cached state from IndexedDB for instant UI render & refresh persistence
           try {
             await ensureCleanBook(activeVId);
             const cachedState = await getPageEditorState(activeVId);
@@ -936,6 +931,8 @@ const PageEditor = () => {
             ) {
               console.log("[PageEditor] Quick-load cache hit from IndexedDB for", activeVId);
               setPages(cachedState.pages);
+              hasLocalCachedPages = true;
+              loadedCachedPages = cachedState.pages;
               if (
                 typeof cachedState.activePageIndex === "number" &&
                 cachedState.activePageIndex >= 0
@@ -1143,6 +1140,14 @@ const PageEditor = () => {
                   updatedHtml,
                   "image/svg+xml",
                 );
+                const rootFrame = doc.querySelector('g[data-type="frame"]') || doc.querySelector('svg > g');
+                if (rootFrame && rootFrame.hasAttribute('clip-path')) {
+                  rootFrame.removeAttribute('clip-path');
+                  if (rootFrame.style) {
+                    rootFrame.style.removeProperty('clip-path');
+                    rootFrame.style.removeProperty('-webkit-clip-path');
+                  }
+                }
                 const allEls = doc.querySelectorAll("*");
                 allEls.forEach((el) => {
                   const hasDropShadow =
@@ -1274,12 +1279,7 @@ const PageEditor = () => {
                 processPageItem(p, idx),
               );
 
-              setPages((prevPages) => {
-                if (prevPages && prevPages.length > mappedPages.length) {
-                  return prevPages;
-                }
-                return mappedPages;
-              });
+              setPages(mappedPages);
               setIsLoading(false);
 
               const firstRootId = mappedPages[0]?.layers?.[0]?.id;

@@ -13,7 +13,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import axios from "axios";
-import { saveToDB, savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
+import { savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
 import Layer from "./panels/Layer";
 import MainEditor from "./MainEditor";
 import RightSidebar from "./panels/RightSidebar";
@@ -93,9 +93,26 @@ const PageEditor = () => {
   } = useOutletContext();
 
   // ── Core States ────────────────────────────────────────────────────────────
-  const [pages, setPages] = useState([]);
+  const [pages, setPages] = useState(() => {
+    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
+      return location.state.pages.map((p, idx) => ({
+        id: p.id || p.v_id || `page_${idx + 1}`,
+        v_id: p.v_id || p.id || `page_${idx + 1}`,
+        name: p.name || p.pageName || `Page ${idx + 1}`,
+        fileName: p.fileName || `${idx + 1}.svg`,
+        pageNumber: p.pageNumber || idx + 1,
+        isHidden: Boolean(p.isHidden || p.hide === 1),
+        html: p.html || p.content || '',
+        layers: Array.isArray(p.layers) ? p.layers : [],
+        isLazy: false
+      }));
+    }
+    return [];
+  });
   const [activePageIndex, setActivePageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    return !(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
+  });
   const [isDoublePage, setIsDoublePage] = useState(false);
   const [isRulerEnabled, setIsRulerEnabled] = useState(() => {
     const saved = localStorage.getItem("isRulerEnabled");
@@ -896,14 +913,21 @@ const PageEditor = () => {
   // ── Initial Flipbook Loader ───────────────────────────────────────────────
   useEffect(() => {
     const initializeEditor = async () => {
-      setIsLoading(true);
       const activeVId = v_id || location.state?.v_id;
+      const hasInitialPages = Boolean(
+        location.state?.pages &&
+        Array.isArray(location.state.pages) &&
+        location.state.pages.length > 0
+      );
+      if (!hasInitialPages) {
+        setIsLoading(true);
+      }
       try {
         if (activeVId) {
           // 1. Quick-load cached state from IndexedDB for instant UI render
           try {
             await ensureCleanBook(activeVId);
-            const cachedState = await getPageEditorState();
+            const cachedState = await getPageEditorState(activeVId);
             if (
               cachedState &&
               cachedState.v_id === activeVId &&
@@ -1250,7 +1274,12 @@ const PageEditor = () => {
                 processPageItem(p, idx),
               );
 
-              setPages(mappedPages);
+              setPages((prevPages) => {
+                if (prevPages && prevPages.length > mappedPages.length) {
+                  return prevPages;
+                }
+                return mappedPages;
+              });
               setIsLoading(false);
 
               const firstRootId = mappedPages[0]?.layers?.[0]?.id;
@@ -1298,7 +1327,7 @@ const PageEditor = () => {
             console.error("Failed to fetch flipbook:", err);
             // Fallback to IndexedDB offline cache if available
             try {
-              const offlineCached = await getPageEditorState();
+              const offlineCached = await getPageEditorState(activeVId);
               if (
                 offlineCached &&
                 offlineCached.v_id === activeVId &&
@@ -1505,12 +1534,12 @@ const PageEditor = () => {
         />
       )}
       <AnimatePresence>
-        {isLoading && (
+        {isLoading && pages.length === 0 && (
           <Motion.div
             key="editor-loader"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-white h-full w-full gap-3"
           >
             <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -1522,9 +1551,9 @@ const PageEditor = () => {
       </AnimatePresence>
 
       <Motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isLoading ? 0 : 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        initial={{ opacity: pages.length > 0 ? 1 : 0 }}
+        animate={{ opacity: isLoading && pages.length === 0 ? 0 : 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="flex h-full w-full overflow-hidden relative"
       >
         <div

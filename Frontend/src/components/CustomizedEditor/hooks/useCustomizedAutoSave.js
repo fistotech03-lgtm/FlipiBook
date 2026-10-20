@@ -37,7 +37,7 @@ export const useCustomizedAutoSave = ({
   initialLoadRef,
   handleSaveRef,
 }) => {
-  // Keep menuBarSettings.media strictly in sync with otherSetupSettings.sound
+  // 1. Keep menuBarSettings.media strictly in sync with otherSetupSettings.sound
   useEffect(() => {
     if (otherSetupSettings?.sound) {
       setMenuBarSettings(prev => {
@@ -69,7 +69,7 @@ export const useCustomizedAutoSave = ({
     }
   }, [otherSetupSettings?.sound, setMenuBarSettings]);
 
-  // Keep menuBarSettings.interaction.gallerySettings strictly in sync with otherSetupSettings.gallery
+  // 2. Keep menuBarSettings.interaction.gallerySettings strictly in sync with otherSetupSettings.gallery
   useEffect(() => {
     if (otherSetupSettings?.gallery?.images) {
       setMenuBarSettings(prev => {
@@ -95,51 +95,28 @@ export const useCustomizedAutoSave = ({
     }
   }, [otherSetupSettings?.gallery?.images, setMenuBarSettings]);
 
-  // Save Appearance Logic with Debounce
-  useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
+  // 3. Consolidated, Single-Pipeline Server Auto-Save with AbortController
+  const abortControllerRef = useRef(null);
 
-    const timer = setTimeout(() => {
+  useEffect(() => {
+    if (!v_id || !isDataLoaded || initialLoadRef?.current) return;
+
+    const timer = setTimeout(async () => {
+      // Abort previous in-flight save request if any
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       const userEmail = user?.emailId || user?.email;
       const userId = user?.userId || user?._id || user?.id;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      
-      axios.post(`${backendUrl}/api/flipbook/background`, {
-        action: 'save',
-        userId,
-        customUserId: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookName,
-        backgroundSettings
-      }, { withCredentials: true }).catch(err => console.warn("Background API auto-save warning:", err));
 
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookName,
-        Background: backgroundSettings,
-        BookAppearance: bookAppearanceSettings,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
-        }
-      }, { withCredentials: true }).catch(err => console.warn("Appearance/Background auto-save warning:", err));
-    }, 500);
+      const mergedGallery = {
+        ...(menuBarSettings?.interaction?.gallerySettings || {}),
+        ...(otherSetupSettings?.gallery || {})
+      };
 
-    return () => clearTimeout(timer);
-  }, [backgroundSettings, bookAppearanceSettings, layoutSettings, layoutColors, v_id, isDataLoaded, folder, bookName, user]);
-
-  // Save Setup Logic with Debounce
-  useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
-
-    const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const updatedShare = {
         ...(shareSettings || {}),
         access: visibilitySettings?.type || 'Public',
@@ -148,114 +125,25 @@ export const useCustomizedAutoSave = ({
         isPasswordSaved: Boolean(visibilitySettings?.isPasswordSaved),
         inviteOnly: visibilitySettings?.inviteOnly || {}
       };
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+
+      const payload = {
         userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: v_id,
-        newName: bookNameRef?.current || currentBook?.flipbookName,
-        MenuBar: menuBarSettings,
-        otherSetup: otherSetupSettings,
-        leadForm: leadFormSettings,
-        Visibility: updatedShare
-      }, { withCredentials: true }).then((res) => {
-        if (res.data?.share || res.data?.settings?.Visibility) {
-          const vis = res.data.share || res.data.settings.Visibility;
-          setShareSettings(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(vis)) return prev;
-            return vis;
-          });
-        }
-      }).catch(err => console.error("Visibility auto-save failed:", err));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [menuBarSettings, otherSetupSettings, leadFormSettings, isDataLoaded, v_id, folder, shareSettings, visibilitySettings, currentBook, bookNameRef, setShareSettings, user]);
-
-  // Save Branding Logic with Debounce
-  useEffect(() => {
-    if (!v_id || !isDataLoaded) return;
-
-    const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
+        userId,
         emailId: userEmail,
         v_id: v_id,
         folderName: folder || 'Recent Book',
         bookName: bookNameRef?.current || bookName,
         newName: bookNameRef?.current || bookName,
+        Background: backgroundSettings,
+        BookAppearance: bookAppearanceSettings,
+        Layouts: {
+          layoutStyle: layoutSettings,
+          layoutColors: layoutColors
+        },
         Branding: {
           logoSettings,
           watermarkSettings,
           preloaderSettings
-        }
-      }, { withCredentials: true }).catch(err => console.warn("Branding auto-save warning:", err));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [logoSettings, watermarkSettings, preloaderSettings, v_id, isDataLoaded, folder, bookName, bookNameRef, user]);
-
-  // Auto-save & Real-time preview sync for otherSetupSettings
-  useEffect(() => {
-    if (!isDataLoaded || !otherSetupSettings) return;
-
-    // Real-time sync gallery to menuBarSettings for live preview
-    if (otherSetupSettings.gallery) {
-      setMenuBarSettings(prev => {
-        const curGallery = prev?.interaction?.gallerySettings || {};
-        const newGallery = otherSetupSettings.gallery;
-        if (
-          curGallery.primaryColor === newGallery.primaryColor &&
-          curGallery.secondaryColor === newGallery.secondaryColor &&
-          curGallery.bgColor === newGallery.bgColor &&
-          curGallery.transitionEffect === newGallery.transitionEffect &&
-          curGallery.speed === newGallery.speed &&
-          curGallery.autoPlay === newGallery.autoPlay &&
-          curGallery.autoSlide === newGallery.autoSlide &&
-          curGallery.infiniteLoop === newGallery.infiniteLoop &&
-          curGallery.showDots === newGallery.showDots &&
-          curGallery.navStyle === newGallery.navStyle &&
-          curGallery.images === newGallery.images
-        ) {
-          return prev;
-        }
-        return {
-          ...prev,
-          interaction: {
-            ...prev?.interaction,
-            gallerySettings: {
-              ...curGallery,
-              ...newGallery
-            }
-          }
-        };
-      });
-    }
-
-    // Debounced Auto-save to MongoDB
-    const timer = setTimeout(() => {
-      if (!v_id) return;
-      const userEmail = user?.emailId || user?.email;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-
-      const mergedGallery = {
-        ...(menuBarSettings?.interaction?.gallerySettings || {}),
-        ...(otherSetupSettings?.gallery || {})
-      };
-
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookNameRef?.current || bookName,
-        otherSetup: {
-          ...otherSetupSettings,
-          gallery: mergedGallery
         },
         MenuBar: {
           ...menuBarSettings,
@@ -263,38 +151,62 @@ export const useCustomizedAutoSave = ({
             ...menuBarSettings?.interaction,
             gallerySettings: mergedGallery
           }
+        },
+        otherSetup: {
+          ...otherSetupSettings,
+          gallery: mergedGallery
+        },
+        leadForm: leadFormSettings,
+        Visibility: updatedShare
+      };
+
+      try {
+        const res = await axios.post(`${backendUrl}/api/flipbook/update-settings`, payload, {
+          withCredentials: true,
+          signal: abortControllerRef.current.signal
+        });
+
+        if (res.data?.share || res.data?.settings?.Visibility) {
+          const vis = res.data.share || res.data.settings.Visibility;
+          setShareSettings(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(vis)) return prev;
+            return vis;
+          });
         }
-      }, { withCredentials: true }).catch(err => console.warn("otherSetup auto-save warning:", err));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [otherSetupSettings, isDataLoaded, v_id, folder, bookName, bookNameRef, menuBarSettings, setMenuBarSettings, user]);
-
-  // Auto-save Layouts (layoutStyle & layoutColors) to MongoDB
-  useEffect(() => {
-    if (!isDataLoaded || !v_id || !layoutColors) return;
-
-    const timer = setTimeout(() => {
-      const userEmail = user?.emailId || user?.email;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-
-      axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-        userID: user?.userID,
-        emailId: userEmail,
-        v_id: v_id,
-        folderName: folder || 'Recent Book',
-        bookName: bookNameRef?.current || bookName,
-        Layouts: {
-          layoutStyle: layoutSettings,
-          layoutColors: layoutColors
+      } catch (err) {
+        if (!axios.isCancel(err)) {
+          console.warn('[AutoSave] Unified settings auto-save warning:', err?.message || err);
         }
-      }, { withCredentials: true }).catch(err => console.warn("Layouts auto-save warning:", err));
-    }, 500);
+      }
+    }, 800);
 
-    return () => clearTimeout(timer);
-  }, [layoutSettings, layoutColors, isDataLoaded, v_id, folder, bookName, bookNameRef, user]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [
+    v_id,
+    folder,
+    bookName,
+    bookNameRef,
+    isDataLoaded,
+    backgroundSettings,
+    bookAppearanceSettings,
+    layoutSettings,
+    layoutColors,
+    logoSettings,
+    watermarkSettings,
+    preloaderSettings,
+    menuBarSettings,
+    otherSetupSettings,
+    leadFormSettings,
+    visibilitySettings,
+    shareSettings,
+    setShareSettings,
+    user,
+    initialLoadRef
+  ]);
 
-  // Cache customized editor state to IndexedDB under 'customized_editor'
+  // 4. Cache customized editor state to IndexedDB with book-specific key
   useEffect(() => {
     if (!isDataLoaded || !v_id) return;
 
@@ -325,7 +237,7 @@ export const useCustomizedAutoSave = ({
         notes,
         timestamp: Date.now()
       });
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [
@@ -354,7 +266,7 @@ export const useCustomizedAutoSave = ({
 
   const notifiedUnsavedRef = useRef(false);
 
-  // Track changes for unsaved status
+  // 5. Track changes for unsaved status indicator
   useEffect(() => {
     if (initialLoadRef?.current) return;
 
@@ -364,14 +276,14 @@ export const useCustomizedAutoSave = ({
     }
   }, [
     bookName, logoSettings, profileSettings, backgroundSettings,
-    bookAppearanceSettings, layoutSettings, menuBarSettings,
+    bookAppearanceSettings, layoutSettings, layoutColors, menuBarSettings,
     otherSetupSettings, leadFormSettings, visibilitySettings,
     setHasUnsavedChanges, initialLoadRef
   ]);
 
   const autoSaveTimerRef = useRef(null);
 
-  // Auto-Save Mechanism for Customized Editor (Only runs when user makes changes)
+  // 6. Periodic Full Flipbook Save (triggers handleSaveRef for pages/structures)
   useEffect(() => {
     if (isAutoSaveEnabled && hasUnsavedChanges && !initialLoadRef?.current && !isLoading) {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);

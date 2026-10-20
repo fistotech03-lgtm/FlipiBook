@@ -1,11 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, memo } from 'react';
 import axios from 'axios';
 import { BookOpen } from 'lucide-react';
 
 const resolveUploadsPath = (path) => path || '';
 
-// Lazy-load preview iframe: only fetches HTML when card is visible in viewport
-export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl }) {
+// Global font cache across all preview cards to prevent duplicate Google Fonts requests
+const globallyRequestedFonts = new Set();
+
+function LazyPreviewComponent({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl }) {
     const containerRef = useRef(null);
     const [html, setHtml] = useState(null);
     const [loaded, setLoaded] = useState(false);
@@ -16,17 +18,26 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
         const el = containerRef.current;
         if (!el) return;
 
+        let isMounted = true;
+        const abortController = new AbortController();
+
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && !loaded && !fetching) {
                     observer.disconnect();
+                    if (!isMounted) return;
                     setFetching(true);
-                    // Always fetch first-page HTML for both PDF and template books
+
+                    // Always fetch first-page HTML for preview
                     axios
-                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, {
+                            params: { emailId },
+                            signal: abortController.signal
+                        })
                         .then((res) => {
+                            if (!isMounted) return;
                             if (res.data?.html) {
-                                // Extract and dynamically load Google Fonts found in the SVG
+                                // Extract and dynamically deduplicate Google Fonts found in SVG
                                 const fontsToLoad = new Set();
                                 const cssRegex = /font-family\s*:\s*(?:['"]([^'"]+)['"]|([^;}'"\s]+))/g;
                                 const attrRegex = /font-family\s*=\s*['"]([^'"]+)['"]/g;
@@ -34,30 +45,52 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
                                 while ((match = cssRegex.exec(res.data.html)) !== null) {
                                     let f = match[1] || match[2];
                                     if (f) f = f.split(',')[0].replace(/['"]/g, '').trim();
-                                    if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) fontsToLoad.add(f);
+                                    if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) {
+                                        fontsToLoad.add(f);
+                                    }
                                 }
                                 while ((match = attrRegex.exec(res.data.html)) !== null) {
                                     let f = match[1].split(',')[0].replace(/['"]/g, '').trim();
-                                    if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) fontsToLoad.add(f);
+                                    if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) {
+                                        fontsToLoad.add(f);
+                                    }
                                 }
-                                
+
+                                const newFonts = Array.from(fontsToLoad).filter(f => !globallyRequestedFonts.has(f));
+                                newFonts.forEach(f => globallyRequestedFonts.add(f));
+
                                 let fontImports = '';
                                 if (fontsToLoad.size > 0) {
                                     const fontList = Array.from(fontsToLoad).map(f => f.replace(/\s+/g, '+')).join('|');
                                     fontImports = `<link href="https://fonts.googleapis.com/css?family=${fontList}:300,400,500,600,700,800,900&display=swap" rel="stylesheet">`;
                                 }
-                                
+
                                 setHtml({ content: res.data.html, fontImports });
                             }
                         })
-                        .catch(() => {})
-                        .finally(() => { setFetching(false); setLoaded(true); });
+                        .catch((err) => {
+                            if (!axios.isCancel(err)) {
+                                console.warn(`[LazyPreview] Preview load warning for ${v_id}:`, err?.message);
+                            }
+                        })
+                        .finally(() => {
+                            if (isMounted) {
+                                setFetching(false);
+                                setLoaded(true);
+                            }
+                        });
                 }
             },
             { threshold: 0.1 }
         );
+
         observer.observe(el);
-        return () => observer.disconnect();
+
+        return () => {
+            isMounted = false;
+            observer.disconnect();
+            abortController.abort();
+        };
     }, [v_id, loaded, fetching, backendUrl, emailId]);
 
     const isLoading = !loaded || fetching;
@@ -67,7 +100,6 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
             {/* Skeleton shimmer — visible while loading */}
             {isLoading && (
                 <div className="absolute inset-0 bg-gray-200/80 overflow-hidden">
-                    {/* Shimmer sweep animation */}
                     <div
                         className="absolute inset-0 z-10 pointer-events-none"
                         style={{
@@ -106,10 +138,8 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
                     />
                 );
             })() : loaded && imageUrl ? (
-                // Fallback: asset image if no HTML was found
                 <img src={resolveUploadsPath(imageUrl)} alt={title} className="w-full h-full object-contain" />
             ) : loaded && !html ? (
-                // Loaded but nothing available
                 <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
                     <BookOpen size="1.8vw" strokeWidth={1.5} />
                     <span className="text-[0.7vw] mt-1 font-semibold">No Preview</span>
@@ -118,3 +148,6 @@ export default function LazyPreview({ v_id, emailId, backendUrl, iframeBaseUrl, 
         </div>
     );
 }
+
+export const LazyPreview = memo(LazyPreviewComponent);
+export default LazyPreview;

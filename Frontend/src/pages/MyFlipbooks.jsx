@@ -11,8 +11,9 @@ import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
-import { saveCustomizedEditorState } from '../utils/dbUtils';
+import { saveCustomizedEditorState, savePageEditorState } from '../utils/dbUtils';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
+import { preloadEditorComponents } from '../utils/preloadUtils';
 const ShareModal = React.lazy(() => import('../components/ShareModal'));
 const ExportModal = React.lazy(() => import('../components/ExportModal'));
 import {
@@ -92,6 +93,11 @@ export default function MyFlipbooks() {
         setIsUpgradeCardClosed,
         fetchLiveStorageSettings,
     } = useUserStorage(emailId);
+
+    // Warm up editor components in background so navigation never hits chunk load delays
+    useEffect(() => {
+        preloadEditorComponents();
+    }, []);
 
     const [searchParams] = useSearchParams();
     const [activeFolder, setActiveFolder] = useState(() => {
@@ -410,16 +416,30 @@ export default function MyFlipbooks() {
                     fileName: file.name,
                     stage: 'converting'
                 });
-                const images = await convertPdfWithInkscape(file, Infinity, backendUrl, (curr, total, pct) => {
+                const images = await convertPdfWithInkscape(file, Infinity, backendUrl, (currOrObj, total, pct, stage, msg) => {
+                    let current, pageCount, percent, message, currentStage;
+                    if (typeof currOrObj === 'object' && currOrObj !== null) {
+                        percent = currOrObj.percent ?? currOrObj.pct;
+                        current = currOrObj.current ?? currOrObj.curr;
+                        pageCount = currOrObj.total ?? currOrObj.pageCount;
+                        currentStage = currOrObj.stage || 'converting';
+                        message = currOrObj.message || (percent !== undefined ? `Converting ${docLabel} (${percent}%)...` : `Converting ${docLabel}...`);
+                    } else {
+                        current = currOrObj;
+                        pageCount = total;
+                        percent = pct;
+                        currentStage = stage || 'converting';
+                        message = msg || (total ? `Extracting page ${currOrObj} of ${total} (${pct}%)...` : `Converting ${docLabel} (${pct}%)...`);
+                    }
                     setProcessingProgress(prev => ({
                         ...(prev || {}),
-                        current: curr,
-                        total: total,
-                        pageCount: total,
-                        percent: pct,
-                        message: `Extracting page ${curr} of ${total} (${pct}%)...`,
+                        current: current !== undefined ? current : prev?.current,
+                        total: pageCount !== undefined ? pageCount : prev?.total,
+                        pageCount: pageCount !== undefined ? pageCount : prev?.pageCount,
+                        percent: percent !== undefined ? percent : prev?.percent,
+                        message: message || prev?.message,
                         fileName: file.name,
-                        stage: 'converting'
+                        stage: currentStage || prev?.stage || 'converting'
                     }));
                 });
                 if (isUploadCancelledRef.current) return;
@@ -470,13 +490,14 @@ export default function MyFlipbooks() {
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
 
-            // Step 2 â€” Encode pages and save flipbook in a single high-speed request
+            // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
                 current: 0,
                 total: allImages.length,
                 totalFiles: files.length,
                 pageCount: allImages.length,
-                message: 'Saving pages & binding flipbook...',
+                percent: 88,
+                message: 'Saving pages & preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
             });
@@ -500,8 +521,15 @@ export default function MyFlipbooks() {
 
             if (isUploadCancelledRef.current) return;
 
-            // Save initial batch (up to 12 pages) to create flipbook record and get v_id instantly
-            const initialBatchSize = Math.min(allPages.length, 12);
+            // Generate unique book ID immediately for pre-caching
+            const cryptoVId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+                : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+
+            const orientation = maxWidth > maxHeight ? 'landscape' : (Math.abs(maxWidth - maxHeight) < 2 ? 'square' : 'portrait');
+
+            // Save initial 2 pages to create the book record on server in <200ms
+            const initialBatchSize = Math.min(allPages.length, 2);
             const initialBatch = allPages.slice(0, initialBatchSize);
             const remainingPages = allPages.slice(initialBatchSize);
 
@@ -510,13 +538,42 @@ export default function MyFlipbooks() {
                 total: allPages.length,
                 totalFiles: files.length,
                 pageCount: allPages.length,
-                percent: 95,
+                percent: 94,
                 message: 'Preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
             });
 
-            const orientation = maxWidth > maxHeight ? 'landscape' : (Math.abs(maxWidth - maxHeight) < 2 ? 'square' : 'portrait');
+            // Pre-cache ALL pages in IndexedDB for BOTH CustomizedEditor and PageEditor immediately
+            await Promise.all([
+                saveCustomizedEditorState({
+                    v_id: cryptoVId,
+                    bookName: uniqueName,
+                    folderName: targetFolder,
+                    pages: allPages,
+                    targetPage: 0,
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation
+                }),
+                savePageEditorState({
+                    v_id: cryptoVId,
+                    pageName: uniqueName,
+                    bookName: uniqueName,
+                    folderName: targetFolder,
+                    pages: allPages.map((p, idx) => ({
+                        id: `page_${idx + 1}`,
+                        v_id: `page_${idx + 1}`,
+                        name: p.pageName || `Page ${idx + 1}`,
+                        fileName: `${idx + 1}.svg`,
+                        pageNumber: idx + 1,
+                        html: p.content || p.html || '',
+                        layers: [],
+                        isLazy: false
+                    })),
+                    activePageIndex: 0
+                })
+            ]).catch(err => console.warn('[MyFlipbooks] Pre-cache save error:', err));
 
             const createRes = await flipbookApi.saveBook({
                 emailId,
@@ -525,6 +582,7 @@ export default function MyFlipbooks() {
                 overwrite: false,
                 folderName: targetFolder,
                 keepBase64: true,
+                v_id: cryptoVId,
                 fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0),
                 meta: {
                     width: maxWidth,
@@ -532,7 +590,7 @@ export default function MyFlipbooks() {
                     orientation
                 }
             });
-            const v_id = createRes.data.v_id;
+            const v_id = createRes.data?.v_id || cryptoVId;
             createdFlipbookVIdRef.current = v_id;
 
             if (isUploadCancelledRef.current) {
@@ -540,17 +598,38 @@ export default function MyFlipbooks() {
                 return;
             }
 
-            // Pre-cache ALL pages in IndexedDB so Customized Editor has the entire book instantly
-            await saveCustomizedEditorState({
-                v_id,
-                bookName: uniqueName,
-                folderName: targetFolder,
-                pages: allPages,
-                targetPage: 0,
-                width: maxWidth,
-                height: maxHeight,
-                orientation
-            }).catch(err => console.warn('[MyFlipbooks] Pre-cache save error:', err));
+            // If server returned a different v_id, also cache under that v_id
+            if (v_id !== cryptoVId) {
+                await Promise.all([
+                    saveCustomizedEditorState({
+                        v_id,
+                        bookName: uniqueName,
+                        folderName: targetFolder,
+                        pages: allPages,
+                        targetPage: 0,
+                        width: maxWidth,
+                        height: maxHeight,
+                        orientation
+                    }),
+                    savePageEditorState({
+                        v_id,
+                        pageName: uniqueName,
+                        bookName: uniqueName,
+                        folderName: targetFolder,
+                        pages: allPages.map((p, idx) => ({
+                            id: `page_${idx + 1}`,
+                            v_id: `page_${idx + 1}`,
+                            name: p.pageName || `Page ${idx + 1}`,
+                            fileName: `${idx + 1}.svg`,
+                            pageNumber: idx + 1,
+                            html: p.content || p.html || '',
+                            layers: [],
+                            isLazy: false
+                        })),
+                        activePageIndex: 0
+                    })
+                ]).catch(() => {});
+            }
 
             // Queue remaining pages for non-blocking asynchronous cloud sync
             if (remainingPages.length > 0) {
@@ -566,6 +645,9 @@ export default function MyFlipbooks() {
                 fileName: uniqueName,
                 stage: 'done'
             });
+
+            // Smooth transition: small delay to let progress hit 100% cleanly
+            await new Promise(res => setTimeout(res, 80));
 
             // Navigate to the customized editor IMMEDIATELY with all in-memory pages
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {

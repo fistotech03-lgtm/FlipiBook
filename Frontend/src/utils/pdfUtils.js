@@ -1127,7 +1127,13 @@ export const convertOfficeDocumentToPdf = async (file, backendUrl = null, onProg
 
   return await extractOfficeDocClient(file, (p) => {
     if (onProgress && typeof onProgress === 'function') {
-      onProgress(p);
+      try {
+        if (typeof p === 'object' && p !== null) {
+          onProgress(p.current || 1, p.total || 1, p.percent, 'converting', p.stage || p.message);
+        } else {
+          onProgress(p);
+        }
+      } catch (e) {}
     }
   });
 };
@@ -1160,6 +1166,11 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
 
   // If targetFile was extracted client-side with native vector SVG pages (e.g. from PPTX extractor)
   if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0 && targetFile.pagesData[0].isVector) {
+    if (typeof onProgress === 'function') {
+      try {
+        onProgress(targetFile.pagesData.length, targetFile.pagesData.length, 100, 'converting', 'All vector slides extracted!');
+      } catch (e) {}
+    }
     return targetFile.pagesData.map((p, idx) => {
       let rawContent = p.content || p.svgString || '';
       if (rawContent && rawContent.includes('<svg')) {

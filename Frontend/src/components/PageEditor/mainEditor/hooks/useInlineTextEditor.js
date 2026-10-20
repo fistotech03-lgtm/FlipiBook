@@ -1,7 +1,9 @@
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
 import { clearOverlayType } from '../utils/geometryUtils';
+import { clearSmartGuides } from '../utils/smartGuides';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 import { TYPE_CURSOR, PENCIL_CURSOR, PEN_CURSOR, SHAPE_CURSOR } from '../utils/constants';
+import editCacheManager from '../../utils/EditCacheManager';
 
 /**
  * Custom hook to manage inline text editing within SVG foreignObjects,
@@ -79,6 +81,7 @@ export const useInlineTextEditor = ({
 
     clearOverlayType('hover');
     clearOverlayType('child-hover');
+    clearSmartGuides();
 
     // Mark as editing
     foTarget.setAttribute('data-editing', 'true');
@@ -96,84 +99,24 @@ export const useInlineTextEditor = ({
     div.addEventListener('touchstart', stopScrollPropagation);
     div.addEventListener('wheel', stopScrollPropagation);
 
+    // Initialize EditCacheManager session for instant, lag-free editing
+    editCacheManager.startSession(foTarget, div);
+
     const handleInput = () => {
-      const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-height';
-      const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
-
-      if (!isScrollable) {
-        const oldHeight = div.style.height;
-        const oldMinHeight = div.style.minHeight;
-        const oldWidth = div.style.width;
-
-        // Temporarily allow height to shrink to measure true text height
-        div.style.setProperty('height', 'auto', 'important');
-        div.style.setProperty('min-height', '0px', 'important');
-
-        if (sizingMode === 'auto-width') {
-          div.style.setProperty('width', 'max-content', 'important');
-        }
-
-        const contentH = div.scrollHeight;
-        const contentW = div.scrollWidth;
-
-        div.style.setProperty('height', oldHeight || '100%', 'important');
-        div.style.setProperty('min-height', oldMinHeight || '100%', 'important');
-        if (sizingMode === 'auto-width') {
-          div.style.setProperty('width', oldWidth || '100%', 'important');
-        }
-
-        const foH = parseFloat(foTarget.getAttribute('height')) || 0;
-        const foW = parseFloat(foTarget.getAttribute('width')) || 0;
-        const currentX = parseFloat(foTarget.getAttribute('x')) || 0;
-
-        if (sizingMode === 'auto-width' && Math.abs(contentW - foW) > 2) {
-          const widthDiff = contentW - foW;
-          const align = window.getComputedStyle(div).textAlign;
-          foTarget.setAttribute('width', Math.max(contentW + 4, 10));
-          if (align === 'center') {
-            foTarget.setAttribute('x', currentX - (widthDiff / 2));
-          } else if (align === 'right' || align === 'end') {
-            foTarget.setAttribute('x', currentX - widthDiff);
-          }
-        }
-
-        if (sizingMode !== 'fixed' && Math.abs(contentH - foH) > 2) {
-          foTarget.setAttribute('height', contentH + 4);
-        }
-
-        // Always ensure the selection overlay highlight precisely encloses the current element
-        const highlightType = document.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`) ? 'child-selected' : 'selected';
-        const container = foTarget.closest('.page-svg-container');
-        if (container) {
-          const pageIdx = container.getAttribute('data-page-index');
-          const overlay = document.getElementById(`highlight-overlay-${pageIdx}`);
-          if (overlay) {
-            const oldSel = overlay.querySelector(`[id="overlay-poly-selected-${foTarget.id}"]`);
-            if (oldSel) oldSel.remove();
-            const oldChildSel = overlay.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`);
-            if (oldChildSel) oldChildSel.remove();
-          }
-        }
-        drawOverlayHighlight(foTarget, highlightType);
-        clearOverlayType('hover');
-        clearOverlayType('child-hover');
-
-        // Also redraw parent group's entered overlay to prevent the dashed line from sticking in the middle
-        const parentGroup = foTarget.closest('g');
-        if (parentGroup && parentGroup.getAttribute('data-name') === 'Group') {
-          const overlayNode = document.querySelector(`[id="overlay-poly-entered-${parentGroup.id}"]`);
-          if (overlayNode) {
-            overlayNode.remove();
-            drawOverlayHighlight(parentGroup, 'entered');
-          }
-        }
-      }
+      // Coalesce keystrokes via EditCacheManager - 0ms latency, zero layout thrashing
+      editCacheManager.scheduleInputMeasurement((el, highlightType) => {
+        drawOverlayHighlight(el, highlightType);
+      });
     };
+
     div.addEventListener('input', handleInput);
     div.focus();
 
-    // Immediately trigger a resize so it precisely shrink-wraps the initial text
-    handleInput();
+    // Immediately perform initial measurement
+    editCacheManager.batchMeasurement({
+      forceOverlay: true,
+      onRedrawOverlay: (el, highlightType) => drawOverlayHighlight(el, highlightType)
+    });
 
     // Place cursor at the clicked position using caretRangeFromPoint if coords are available
     // Otherwise fall back to end of text
@@ -228,8 +171,9 @@ export const useInlineTextEditor = ({
 
     const cleanup = () => {
       isEditingTextRef.current = false;
-      
-      
+      clearSmartGuides();
+      editCacheManager.endSession((el, highlightType) => drawOverlayHighlight(el, highlightType));
+      div.removeEventListener('input', handleInput);
       foTarget.removeAttribute('data-editing');
       div.removeAttribute('contenteditable');
       div.style.outline = 'none';

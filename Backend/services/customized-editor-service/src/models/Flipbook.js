@@ -111,4 +111,8 @@ const flipbookSchema = new mongoose.Schema(
   }
 );
 
+flipbookSchema.index({ userEmail: 1, trash: 1, updatedAt: -1 });
+flipbookSchema.index({ 'Visibility.shareId': 1 }, { sparse: true });
+flipbookSchema.index({ 'share.shareId': 1 }, { sparse: true });
+
 module.exports = mongoose.models.Flipbook || mongoose.model('Flipbook', flipbookSchema);

@@ -41,13 +41,19 @@ export const useCustomizedEditorData = ({
   setHasUnsavedChanges,
   notifiedUnsavedRef
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const hasInMemoryPages = Boolean(
+    location?.state?.pages && 
+    Array.isArray(location.state.pages) && 
+    location.state.pages.length > 0
+  );
+
+  const [isLoading, setIsLoading] = useState(() => !hasInMemoryPages);
+  const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(() => hasInMemoryPages);
+  const [loadingProgress, setLoadingProgress] = useState(() => hasInMemoryPages ? 100 : 0);
 
   useEffect(() => {
     let interval;
-    if (isLoading) {
+    if (isLoading && !hasInMemoryPages) {
       setLoadingProgress(0);
       interval = setInterval(() => {
         setLoadingProgress((prev) => {
@@ -55,22 +61,22 @@ export const useCustomizedEditorData = ({
             clearInterval(interval);
             return 100;
           }
-          const increment = prev < 40 ? 5 : prev < 75 ? 3 : 1;
+          const increment = prev < 40 ? 10 : prev < 75 ? 6 : 3;
           return Math.min(prev + increment, 100);
         });
-      }, 40);
+      }, 25);
+    } else if (hasInMemoryPages) {
+      setLoadingProgress(100);
+      setIsLoading(false);
     }
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, hasInMemoryPages]);
 
   useEffect(() => {
-    if (isDataLoadingComplete && loadingProgress === 100 && isLoading) {
-      const timeout = setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-      return () => clearTimeout(timeout);
+    if (isDataLoadingComplete && (loadingProgress === 100 || hasInMemoryPages) && isLoading) {
+      setIsLoading(false);
     }
-  }, [isDataLoadingComplete, loadingProgress, isLoading]);
+  }, [isDataLoadingComplete, loadingProgress, isLoading, hasInMemoryPages]);
 
   const initialLoadRef = useRef(true);
 
@@ -93,7 +99,7 @@ export const useCustomizedEditorData = ({
 
       // 1. Instant Quick-Load Cache from IndexedDB
       try {
-        const cached = await getCustomizedEditorState();
+        const cached = await getCustomizedEditorState(v_id);
         if (cached && (!v_id || cached.v_id === v_id)) {
           if (cached.Background) setBackgroundSettings(cached.Background);
           if (cached.BookAppearance) setBookAppearanceSettings(cached.BookAppearance);
@@ -118,6 +124,9 @@ export const useCustomizedEditorData = ({
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
             setPages(cached.pages);
+            setIsLoading(false);
+            setIsDataLoadingComplete(true);
+            setLoadingProgress(100);
           }
           setIsDataLoaded(true);
         }
@@ -127,7 +136,7 @@ export const useCustomizedEditorData = ({
 
       // 2. Check if page_editor has newer pages for this flipbook
       try {
-        const pageEditorData = await getPageEditorState();
+        const pageEditorData = await getPageEditorState(v_id);
         if (pageEditorData && (!v_id || pageEditorData.v_id === v_id) && Array.isArray(pageEditorData.pages) && pageEditorData.pages.length > 0) {
           const isCorrupted = pageEditorData.pages.some(p => 
             typeof p.html === 'object' || 
@@ -170,6 +179,9 @@ export const useCustomizedEditorData = ({
               setBookName(data.pageName);
             }
             if (!page) setTargetPage(0);
+            setIsLoading(false);
+            setIsDataLoadingComplete(true);
+            setLoadingProgress(100);
           }
         }
       } catch (e) {
@@ -248,7 +260,12 @@ export const useCustomizedEditorData = ({
                   isHidden: p.hide === 1 || p.isHidden
                 };
               }));
-              setPages(mappedPages);
+              setPages(prevPages => {
+                if (prevPages && prevPages.length > mappedPages.length) {
+                  return prevPages;
+                }
+                return mappedPages;
+              });
             }
 
             const cs = res.data.Customized_Settings || res.data.settings || {};

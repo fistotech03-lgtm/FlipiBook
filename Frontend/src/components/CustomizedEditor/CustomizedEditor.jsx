@@ -507,7 +507,7 @@ const CustomizedEditor = () => {
         {/* Main Preview Area */}
         <div className="flex-1 min-w-0 flex flex-col relative z-0 overflow-hidden">
           {/* Modern Flipbook Skeleton Loader */}
-          {isLoading && (
+          {isLoading && pages.length === 0 && (
             <div 
               className="absolute inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
               style={{

@@ -3,7 +3,7 @@ import { getVisualBBox } from './geometryUtils';
 /**
  * Computes an element's axis-aligned bounding box projected into the SVG coordinate space.
  */
-export const getBoxInSvg = (el, svg) => {
+export const getBoxInSvg = (el, svg, cachedSvgInvCtm = null) => {
   if (!el || typeof el.getBBox !== 'function' || !svg) return null;
   let bbox = null;
   try {
@@ -22,10 +22,11 @@ export const getBoxInSvg = (el, svg) => {
 
   try {
     const elCtm = el.getScreenCTM();
-    const svgCtm = svg.getScreenCTM();
-    if (!elCtm || !svgCtm) return null;
+    if (!elCtm) return null;
+    const inv = cachedSvgInvCtm || svg.getScreenCTM()?.inverse();
+    if (!inv) return null;
 
-    const m = svgCtm.inverse().multiply(elCtm);
+    const m = inv.multiply(elCtm);
     const pts = [
       { x: bbox.x, y: bbox.y },
       { x: bbox.x + bbox.width, y: bbox.y },
@@ -71,19 +72,21 @@ export const initSmartGuides = (dragState) => {
   const pageW = (viewBox && viewBox.width > 0) ? viewBox.width : (parseFloat(svg.getAttribute('width')) || 595.28);
   const pageH = (viewBox && viewBox.height > 0) ? viewBox.height : (parseFloat(svg.getAttribute('height')) || 841.89);
 
-  // Physical screen scale factor (screen pixels per canvas unit)
+  // Physical screen scale factor (screen pixels per canvas unit) & inverted CTM
   let scaleFactor = 1;
+  let svgInvCtm = null;
   try {
     const svgCtm = svg.getScreenCTM();
-    if (svgCtm && svgCtm.a) {
-      scaleFactor = Math.hypot(svgCtm.a, svgCtm.b) || 1;
+    if (svgCtm) {
+      if (svgCtm.a) scaleFactor = Math.hypot(svgCtm.a, svgCtm.b) || 1;
+      svgInvCtm = svgCtm.inverse();
     }
   } catch {
     /* fallback */
   }
 
   // Initial box of the dragged element in SVG space
-  const targetBox = getBoxInSvg(target, svg);
+  const targetBox = getBoxInSvg(target, svg, svgInvCtm);
   if (!targetBox) return;
 
   // Collect IDs to exclude (target, children, multi-selected elements)
@@ -97,17 +100,25 @@ export const initSmartGuides = (dragState) => {
     });
   }
 
-  // Collect all candidate elements on this canvas
+  // Collect candidate elements on this canvas:
+  // Only check top-level frames/elements or direct children (skip tspans, defs, overlays, sub-paths)
   const candidates = [];
-  const allElements = svg.querySelectorAll('[id]:not(defs):not(clipPath):not(style):not(script)');
-  allElements.forEach(el => {
-    if (excludedIds.has(el.id)) return;
+  const MAX_CANDIDATES = 50;
+
+  // Target meaningful candidate tags only
+  const allElements = svg.querySelectorAll('g[id], path[id], rect[id], circle[id], ellipse[id], text[id], foreignObject[id], image[id]');
+  for (let i = 0; i < allElements.length && candidates.length < MAX_CANDIDATES; i++) {
+    const el = allElements[i];
+    if (excludedIds.has(el.id)) continue;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'tspan' || tag === 'textpath') continue;
+
     const name = el.getAttribute('data-name') || '';
     const type = el.getAttribute('data-type') || '';
-    if (name === 'Overlay' || name === 'Document Shield' || type === 'background' || type === 'shield') return;
-    if (el.getAttribute('data-hidden') === 'true' || el.style.visibility === 'hidden' || el.style.display === 'none') return;
-    if (el.closest('[data-name="Overlay"]') || el.closest('[data-type="background"]')) return;
-    if (el === svg) return;
+    if (name === 'Overlay' || name === 'Document Shield' || type === 'background' || type === 'shield') continue;
+    if (el.getAttribute('data-hidden') === 'true' || el.style.visibility === 'hidden' || el.style.display === 'none') continue;
+    if (el.closest('[data-name="Overlay"]') || el.closest('[data-type="background"]')) continue;
+    if (el === svg) continue;
 
     // Skip nested children inside groups to align with group bounds
     const parentGroup = el.parentElement?.closest('g[id]');
@@ -119,17 +130,15 @@ export const initSmartGuides = (dragState) => {
         parentGroup.getAttribute('data-is-video-group') === 'true' ||
         parentGroup.getAttribute('data-is-gif-group') === 'true'
       ) {
-        return;
+        continue;
       }
     }
 
-    const box = getBoxInSvg(el, svg);
+    const box = getBoxInSvg(el, svg, svgInvCtm);
     if (box && box.width > 0 && box.height > 0) {
-      if (!candidates.some(c => c.id === el.id)) {
-        candidates.push({ id: el.id, ...box });
-      }
+      candidates.push({ id: el.id, ...box });
     }
-  });
+  }
 
   dragState.smartGuidesData = {
     pageW,
@@ -794,15 +803,21 @@ export const clearSmartGuides = () => {
   if (linesContainer) {
     linesContainer.innerHTML = '';
   }
-  const badgeEl = document.getElementById('smart-guides-badge');
-  if (badgeEl) {
-    badgeEl.style.display = 'none';
+  const screenOverlay = document.getElementById('smart-guides-screen-overlay');
+  if (screenOverlay) {
+    screenOverlay.querySelectorAll('#smart-guides-badge, [id^="smart-guides-badge"]').forEach(b => {
+      b.style.display = 'none';
+      b.remove();
+    });
+    const lines = screenOverlay.querySelector('#smart-guides-lines');
+    if (lines) lines.innerHTML = '';
   }
+  document.querySelectorAll('#smart-guides-badge, [id^="smart-guides-badge"]').forEach(b => {
+    b.style.display = 'none';
+    b.remove();
+  });
   document.querySelectorAll('#smart-guides-group').forEach(g => {
     g.innerHTML = '';
-  });
-  document.querySelectorAll('#smart-guides-badge').forEach(b => {
-    b.style.display = 'none';
   });
 };
 

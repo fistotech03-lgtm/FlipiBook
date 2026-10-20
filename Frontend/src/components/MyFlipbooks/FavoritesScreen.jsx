@@ -339,10 +339,27 @@ export default function FavoritesScreen({
                 : typeof book.pages === 'number'
                 ? book.pages
                 : book.pagesCount) || 1;
+        const pagesArray = Array.isArray(book.pagesList) && book.pagesList.length > 0 
+            ? book.pagesList 
+            : Array.isArray(book.pages) && book.pages.length > 0 && typeof book.pages[0] === 'object'
+            ? book.pages
+            : undefined;
+
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(targetFolder || 'My_Flipbooks')}/${identifier}`,
-            { state: { flipbookName: book.realName, pageCount: pageCountVal } }
+            {
+                state: {
+                    flipbookName: book.realName,
+                    pageCount: pageCountVal,
+                    pages: pagesArray,
+                    v_id: book.v_id,
+                    folderName: targetFolder || 'My_Flipbooks',
+                    width: book.width,
+                    height: book.height,
+                    orientation: book.orientation
+                }
+            }
         );
     };
 
@@ -354,9 +371,23 @@ export default function FavoritesScreen({
             );
             if (physical) targetFolder = physical.folder;
         }
+        const pagesArray = Array.isArray(book.pagesList) && book.pagesList.length > 0 
+            ? book.pagesList 
+            : Array.isArray(book.pages) && book.pages.length > 0 && typeof book.pages[0] === 'object'
+            ? book.pages
+            : undefined;
+
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(targetFolder || 'My_Flipbooks')}/${identifier}`, {
-            state: { flipbookName: book.realName }
+            state: {
+                flipbookName: book.realName,
+                pages: pagesArray,
+                v_id: book.v_id,
+                folderName: targetFolder || 'My_Flipbooks',
+                width: book.width,
+                height: book.height,
+                orientation: book.orientation
+            }
         });
     };
 

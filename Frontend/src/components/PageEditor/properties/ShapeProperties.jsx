@@ -197,6 +197,18 @@ const ShapeProperties = ({
     if (backgroundColor.strokeAngle !== next.strokeAngle) updates['stroke-angle'] = next.strokeAngle;
     if (backgroundColor.strokeRadius !== next.strokeRadius) updates['stroke-radius'] = next.strokeRadius;
 
+    // Apply immediate live DOM updates for smooth scrubbing feedback
+    const liveEl = document.getElementById(selectedLayerId);
+    if (liveEl) {
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v === 'none' && (k === 'fill' || k === 'stroke')) {
+          liveEl.setAttribute(k, 'none');
+        } else {
+          liveEl.setAttribute(k, v);
+        }
+      });
+    }
+
     if (Object.keys(updates).length > 0) {
       updateElementAttribute(activePageIndex, selectedLayerId, updates);
     }
@@ -221,6 +233,40 @@ const ShapeProperties = ({
     const maxR = Math.max(next.tl || 0, next.tr || 0, next.bl || 0, next.br || 0);
     updates['rx'] = maxR.toString();
     updates['ry'] = maxR.toString();
+
+    // Immediate live DOM update for responsive slider/drag experience
+    const liveEl = document.getElementById(selectedLayerId);
+    if (liveEl) {
+      Object.entries(updates).forEach(([k, v]) => liveEl.setAttribute(k, v));
+      const shapeType = liveEl.getAttribute('data-shape-type') || (liveEl.tagName.toLowerCase() === 'rect' ? 'rectangle' : null);
+      if (shapeType === 'rectangle') {
+        const x = parseFloat(liveEl.getAttribute('x') || 0);
+        const y = parseFloat(liveEl.getAttribute('y') || 0);
+        const w = parseFloat(liveEl.getAttribute('width') || 0);
+        const h = parseFloat(liveEl.getAttribute('height') || 0);
+        const limitR = Math.min(w / 2, h / 2);
+        const tl = Math.min(next.tl || 0, limitR);
+        const tr = Math.min(next.tr || 0, limitR);
+        const bl = Math.min(next.bl || 0, limitR);
+        const br = Math.min(next.br || 0, limitR);
+
+        if (tl === tr && tr === bl && bl === br && liveEl.tagName.toLowerCase() === 'rect') {
+          liveEl.setAttribute('rx', tl);
+          liveEl.setAttribute('ry', tl);
+        } else {
+          const d = `M ${x + tl},${y} L ${x + w - tr},${y} A ${tr},${tr} 0 0 1 ${x + w},${y + tr} L ${x + w},${y + h - br} A ${br},${br} 0 0 1 ${x + w - br},${y + h} L ${x + bl},${y + h} A ${bl},${bl} 0 0 1 ${x},${y + h - bl} L ${x},${y + tl} A ${tl},${tl} 0 0 1 ${x + tl},${y} Z`.replace(/\s+/g, ' ').trim();
+          if (liveEl.tagName.toLowerCase() === 'rect') {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            Array.from(liveEl.attributes).forEach(a => path.setAttribute(a.name, a.value));
+            path.setAttribute('d', d);
+            path.setAttribute('data-shape-type', 'rectangle');
+            if (liveEl.parentNode) liveEl.parentNode.replaceChild(path, liveEl);
+          } else {
+            liveEl.setAttribute('d', d);
+          }
+        }
+      }
+    }
 
     updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };

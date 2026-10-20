@@ -294,8 +294,7 @@ const customizedSettingsSchema = new mongoose.Schema(
     // 8. Visibility & Access Protection
     Visibility: {
       shareId: {
-        type: String,
-        index: true
+        type: String
       },
       access: {
         type: String,
@@ -340,8 +339,10 @@ const customizedSettingsSchema = new mongoose.Schema(
   }
 );
 
-// Compound index to guarantee fast, unique lookup strictly by userID and flipbook v_id
+// Compound and performance indexes for fast lookups
 customizedSettingsSchema.index({ userID: 1, v_id: 1 }, { unique: true });
+customizedSettingsSchema.index({ 'Visibility.shareId': 1 }, { sparse: true });
+customizedSettingsSchema.index({ userEmail: 1, v_id: 1 });
 
 module.exports =
   mongoose.models.CustomizedSettings ||

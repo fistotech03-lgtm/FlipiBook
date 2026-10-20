@@ -89,9 +89,10 @@ const enforceRecentLimit = async (userQuery) => {
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
-const formatBook = (doc) => {
+const formatBook = (doc, settingsDoc = null) => {
   const primaryFolder = resolveFolder(doc.folderName);
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
+  const s = settingsDoc || doc.Customized_Settings || {};
 
   return {
     id: doc._id.toString(),
@@ -127,11 +128,11 @@ const formatBook = (doc) => {
     updatedAt: doc.updatedAt || mtime,
     mtime: mtime,
     allFolders: Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName],
-    width: doc.Customized_Settings?.width || null,
-    height: doc.Customized_Settings?.height || null,
-    orientation: doc.Customized_Settings?.orientation || null,
-    templateId: doc.Customized_Settings?.templateId || null,
-    Customized_Settings: doc.Customized_Settings || {},
+    width: s?.FlipbookInfo?.width || s?.width || null,
+    height: s?.FlipbookInfo?.height || s?.height || null,
+    orientation: s?.FlipbookInfo?.orientation || s?.orientation || null,
+    templateId: s?.FlipbookInfo?.templateId || s?.templateId || null,
+    Customized_Settings: s || {},
   };
 };
 
@@ -187,7 +188,24 @@ exports.getBooks = async (req, res) => {
         new Date(b.updatedAt || b.lastUpdated || b.createdAt) -
         new Date(a.updatedAt || a.lastUpdated || a.createdAt),
     );
-    const physicalBooks = rawBooks.map(formatBook);
+    // Fetch customizedsettings for all books in one batch
+    const vIds = rawBooks.map((b) => b.v_id).filter(Boolean);
+    const settingsMap = new Map();
+    try {
+      if (mongoose.connection && mongoose.connection.db && vIds.length > 0) {
+        const settingsDocs = await mongoose.connection.db
+          .collection("customizedsettings")
+          .find({ v_id: { $in: vIds } })
+          .toArray();
+        for (const s of settingsDocs) {
+          settingsMap.set(s.v_id, s);
+        }
+      }
+    } catch (e) {
+      console.warn("[Book Controller] Failed to fetch customizedsettings in getBooks:", e.message);
+    }
+
+    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}));
 
     const hasRecentTag = (doc) => {
       if (doc.trash) return false;
@@ -213,7 +231,7 @@ exports.getBooks = async (req, res) => {
     );
 
     const recentBooks = recentDocs.map((doc) => {
-      const base = formatBook(doc);
+      const base = formatBook(doc, settingsMap.get(doc.v_id) || {});
       return {
         ...base,
         id: `Recent_${doc.v_id || doc._id.toString()}`,
@@ -606,11 +624,11 @@ exports.duplicateBook = async (req, res) => {
     cloneData.trashedAt = null;
     cloneData.isPublished = false;
 
-    const cloneFolders = Array.isArray(existing.folderName)
-      ? existing.folderName.filter((f) => f && f !== "Trash")
-      : [existing.folderName || "My_Flipbooks"];
+    const cloneFolders = (Array.isArray(existing.folderName) ? existing.folderName.flat(Infinity) : [existing.folderName])
+      .filter((f) => f && typeof f === "string" && f.trim() && f.trim() !== "Trash")
+      .map((f) => f.trim());
     if (!cloneFolders.includes("Recent Book")) cloneFolders.push("Recent Book");
-    cloneData.folderName = cloneFolders;
+    cloneData.folderName = [...new Set(cloneFolders.length > 0 ? cloneFolders : ["My_Flipbooks"])];
     cloneData.lastUpdated = new Date();
 
     const duplicated = await Flipbook.create(cloneData);
@@ -799,7 +817,13 @@ exports.publishBook = async (req, res) => {
     const cleanAbout = typeof about === 'string' ? about.trim() : (meta?.about || '');
     const cleanTags = Array.isArray(tags) ? tags : (Array.isArray(meta?.tags) ? meta.tags : []);
 
-    const existingCustomized = book.Customized_Settings || {};
+    let existingCustomized = {};
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        existingCustomized = (await mongoose.connection.db.collection('customizedsettings').findOne({ v_id: book.v_id })) || {};
+      }
+    } catch (e) {}
+
     const existingFlipbookInfo = existingCustomized.FlipbookInfo || {};
 
     const updatedFlipbookInfo = {
@@ -815,20 +839,10 @@ exports.publishBook = async (req, res) => {
 
     book.isPublished = true;
     book.publishedAt = new Date();
-    book.Customized_Settings = {
-      ...existingCustomized,
-      FlipbookInfo: updatedFlipbookInfo,
-      category: cleanCategory,
-      language: cleanLanguage,
-      tags: cleanTags,
-      quotes: cleanQuotes,
-      about: cleanAbout
-    };
     book.lastUpdated = new Date();
     await book.save();
 
     try {
-      const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.db) {
         await mongoose.connection.db.collection('customizedsettings').updateOne(
           { v_id: book.v_id },
@@ -847,7 +861,7 @@ exports.publishBook = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Flipbook published successfully",
-      book: formatBook(book)
+      book: formatBook(book, { ...existingCustomized, FlipbookInfo: updatedFlipbookInfo })
     });
   } catch (err) {
     console.error("[Book Controller] Error publishing book:", err);
@@ -952,8 +966,8 @@ exports.saveBook = async (req, res) => {
     }
 
     const safeName = flipbookName.trim();
-    const resolvedPhysical = resolveFolder(folderName);
-    const targetFolder = [resolvedPhysical];
+    const resolvedPhysical = resolveFolder(folderName) || "My_Flipbooks";
+    const targetFolder = resolvedPhysical;
 
     let book = null;
     if (providedVId) {
@@ -1071,20 +1085,15 @@ exports.saveBook = async (req, res) => {
     const physicalFolder = targetFolder || "My_Flipbooks";
     if (book) {
       book.flipbookName = safeName;
-      const existingFolders = Array.isArray(book.folderName)
-        ? book.folderName.filter((f) => f && f !== "Trash")
-        : [book.folderName || physicalFolder];
+      const existingFolders = (Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName])
+        .filter((f) => typeof f === "string" && f.trim() && f.trim() !== "Trash")
+        .map((f) => f.trim());
       if (!existingFolders.includes(physicalFolder)) existingFolders.unshift(physicalFolder);
       if (!existingFolders.includes("Recent Book")) existingFolders.push("Recent Book");
       book.folderName = [...new Set(existingFolders)];
 
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
-      if (meta)
-        book.Customized_Settings = {
-          ...(book.Customized_Settings || {}),
-          ...meta,
-        };
       book.lastUpdated = new Date();
       await book.save();
     } else {
@@ -1094,12 +1103,34 @@ exports.saveBook = async (req, res) => {
         userEmail: emailId,
         v_id: resolvedVId,
         flipbookName: finalFlipbookName,
-        folderName: [physicalFolder, "Recent Book"],
+        folderName: physicalFolder === "Recent Book" ? ["Recent Book"] : [physicalFolder, "Recent Book"],
         pages: mongoPages,
         fileSize: fileSize || 0,
-        Customized_Settings: meta || {},
         lastUpdated: new Date(),
       });
+    }
+
+    if (meta && Object.keys(meta).length > 0) {
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          await mongoose.connection.db.collection('customizedsettings').updateOne(
+            { v_id: resolvedVId },
+            {
+              $set: {
+                v_id: resolvedVId,
+                userID: customUserId || book.userID,
+                userEmail: emailId || book.userEmail,
+                flipbookName: finalFlipbookName,
+                folderName: physicalFolder,
+                ...meta
+              }
+            },
+            { upsert: true }
+          );
+        }
+      } catch (e) {
+        console.warn('[Book Controller] Sync meta to customizedsettings failed:', e.message);
+      }
     }
 
     if (userQuery) {
@@ -1163,10 +1194,8 @@ exports.saveBook = async (req, res) => {
         }
 
         if (!svgContent || svgContent.trim() === "") {
-          const pageWidth =
-            meta?.width || book.Customized_Settings?.width || 595;
-          const pageHeight =
-            meta?.height || book.Customized_Settings?.height || 842;
+          const pageWidth = meta?.width || 595;
+          const pageHeight = meta?.height || 842;
           const gId = `g_page_${sp.pageNumber}_${crypto.randomBytes(4).toString("hex")}`;
           const rectId = `rect_${sp.pageNumber}_${crypto.randomBytes(4).toString("hex")}`;
           svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%" style="overflow: visible"><defs></defs><g id="${gId}" data-name="${sp.name || `Page ${sp.pageNumber}`}" data-type="frame"><rect id="${rectId}" x="0" y="0" width="${pageWidth}" height="${pageHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges"/></g></svg>`;
@@ -1779,8 +1808,6 @@ exports.getBook = async (req, res) => {
       };
     });
 
-    const formattedMeta = formatBook(book);
-
     let customizedDoc = null;
     try {
       if (mongoose.connection && mongoose.connection.db) {
@@ -1789,6 +1816,8 @@ exports.getBook = async (req, res) => {
           .findOne({ v_id: book.v_id });
       }
     } catch (e) {}
+
+    const formattedMeta = formatBook(book, customizedDoc || {});
 
     let resolvedShareId =
       customizedDoc?.Visibility?.shareId ||
@@ -1815,7 +1844,6 @@ exports.getBook = async (req, res) => {
 
     if (customizedDoc) {
       formattedMeta.Customized_Settings = {
-        ...(formattedMeta.Customized_Settings || {}),
         ...customizedDoc,
         Visibility: {
           ...(customizedDoc.Visibility || {}),
@@ -1832,6 +1860,7 @@ exports.getBook = async (req, res) => {
       success: true,
       meta: formattedMeta,
       settings: formattedMeta.Customized_Settings || {},
+      Customized_Settings: formattedMeta.Customized_Settings || {},
       pages: populatedPages,
       share: {
         shareId: resolvedShareId,
@@ -1884,7 +1913,16 @@ exports.updateSettings = async (req, res) => {
         .json({ success: false, message: "Flipbook not found" });
     }
 
-    const currentSettings = book.Customized_Settings || {};
+    let currentSettings = {};
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        currentSettings =
+          (await mongoose.connection.db
+            .collection("customizedsettings")
+            .findOne({ v_id: book.v_id })) || {};
+      }
+    } catch (e) {}
+
     const rawCustomized = Customized_Settings || {};
     const rawSettings = settings || {};
     const newSettings = {
@@ -1919,14 +1957,33 @@ exports.updateSettings = async (req, res) => {
     delete newSettings.settings;
     delete newSettings.leadform;
 
-    book.Customized_Settings = newSettings;
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        await mongoose.connection.db.collection("customizedsettings").updateOne(
+          { v_id: book.v_id },
+          {
+            $set: {
+              v_id: book.v_id,
+              userID: book.userID,
+              userEmail: book.userEmail,
+              flipbookName: book.flipbookName,
+              ...newSettings,
+            },
+          },
+          { upsert: true }
+        );
+      }
+    } catch (e) {
+      console.warn("[Book Controller] Failed to update customizedsettings:", e.message);
+    }
+
     book.lastUpdated = new Date();
     await book.save();
 
     res.status(200).json({
       success: true,
       message: "Settings updated successfully",
-      settings: book.Customized_Settings,
+      settings: newSettings,
     });
   } catch (err) {
     console.error("[Book Controller] Error updating settings:", err);
@@ -2781,8 +2838,8 @@ exports.renamePage = async (req, res) => {
       }
     } else {
       if (!pageSvgContent || !pageSvgContent.trim()) {
-        const pageWidth = book.Customized_Settings?.width || 595;
-        const pageHeight = book.Customized_Settings?.height || 842;
+        const pageWidth = 595;
+        const pageHeight = 842;
         const gId = `g_page_${page.pageNumber}_${crypto.randomBytes(4).toString("hex")}`;
         const rectId = `rect_${page.pageNumber}_${crypto.randomBytes(4).toString("hex")}`;
         pageSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%" style="overflow: visible"><defs></defs><g id="${gId}" data-name="${trimmedNewName}" data-type="frame"><rect id="${rectId}" x="0" y="0" width="${pageWidth}" height="${pageHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges"/></g></svg>`;

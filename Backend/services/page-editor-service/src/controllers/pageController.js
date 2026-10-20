@@ -94,8 +94,8 @@ const savePage = async (req, res) => {
     });
 
     if (!processedContent || processedContent.trim() === '') {
-      const pageWidth = doc.Customized_Settings?.width || 595;
-      const pageHeight = doc.Customized_Settings?.height || 842;
+      const pageWidth = 595;
+      const pageHeight = 842;
       processedContent = createBlankSvg(pageWidth, pageHeight, resolvedPageNumber);
     } else if (processedContent.includes('<svg') && !processedContent.includes('data-name="Page ') && !processedContent.includes(`data-name="Page ${resolvedPageNumber}"`)) {
       const gId = `g_page_${resolvedPageNumber}_${Date.now().toString(36)}`;
@@ -248,8 +248,8 @@ const savePagesBatch = async (req, res) => {
       });
 
       if (!processedContent || processedContent.trim() === '') {
-        const pageWidth = doc.Customized_Settings?.width || 595;
-        const pageHeight = doc.Customized_Settings?.height || 842;
+        const pageWidth = 595;
+        const pageHeight = 842;
         processedContent = createBlankSvg(pageWidth, pageHeight, resolvedPageNumber);
       } else if (processedContent.includes('<svg') && !processedContent.includes('data-name="Page ') && !processedContent.includes(`data-name="Page ${resolvedPageNumber}"`)) {
         const gId = `g_page_${resolvedPageNumber}_${Date.now().toString(36)}`;
@@ -579,8 +579,8 @@ const renamePage = async (req, res) => {
       }
     } else {
       if (!pageSvgContent || !pageSvgContent.trim()) {
-        const pageWidth = doc.Customized_Settings?.width || 595;
-        const pageHeight = doc.Customized_Settings?.height || 842;
+        const pageWidth = 595;
+        const pageHeight = 842;
         pageSvgContent = createBlankSvg(pageWidth, pageHeight, page.pageNumber);
       }
       fs.writeFileSync(newFilePath, pageSvgContent, 'utf8');

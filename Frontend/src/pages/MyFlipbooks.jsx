@@ -125,6 +125,7 @@ export default function MyFlipbooks() {
     }, [searchParams]);
 
     const [active3dFolder, setActive3dFolder] = useState('All Models');
+    const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [sortOption, setSortOption] = useState('Recently Created');
@@ -1672,6 +1673,7 @@ export default function MyFlipbooks() {
                     setDashboardMode={setDashboardMode}
                     active3dFolder={active3dFolder}
                     setActive3dFolder={setActive3dFolder}
+                    threeDCounts={threeDCounts}
                 />
 
             {/* Main Content */}
@@ -1682,6 +1684,7 @@ export default function MyFlipbooks() {
                     <ThreeDDashboard
                         navigate={navigate}
                         activeFolder={active3dFolder}
+                        onCountsChange={setThreeDCounts}
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">

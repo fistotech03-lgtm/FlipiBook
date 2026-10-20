@@ -664,13 +664,16 @@ const PageEditor = () => {
     }
 
     setTimeout(() => {
+      const activeVId = v_id || currentBook?.v_id;
       const candidateShareId =
         currentBook?.Customized_Settings?.Visibility?.shareId ||
         currentBook?.Visibility?.shareId ||
-        (currentBook?.shareId && currentBook.shareId !== v_id ? currentBook.shareId : null) ||
-        (currentBook?.share?.shareId && currentBook.share.shareId !== v_id ? currentBook.share.shareId : null);
-      if (candidateShareId && candidateShareId !== v_id) {
-        window.open(`/preview?shareId=${candidateShareId}`, "_blank");
+        (currentBook?.shareId && currentBook.shareId !== activeVId ? currentBook.shareId : null) ||
+        (currentBook?.share?.shareId && currentBook.share.shareId !== activeVId ? currentBook.share.shareId : null);
+      if (candidateShareId && candidateShareId !== activeVId) {
+        window.open(`/preview?shareId=${candidateShareId}${activeVId ? `&v_id=${activeVId}` : ''}`, "_blank");
+      } else if (activeVId) {
+        window.open(`/preview?v_id=${activeVId}`, "_blank");
       } else {
         window.open("/preview", "_blank");
       }
@@ -983,6 +986,11 @@ const PageEditor = () => {
                 fetchedSettings.orientation ||
                 location.state?.orientation;
 
+              const fetchedShareId =
+                res.data.share?.shareId ||
+                fetchedSettings?.Visibility?.shareId ||
+                fetchedMeta?.Customized_Settings?.Visibility?.shareId;
+
               setCurrentBook((prev) => ({
                 ...(prev || {}),
                 ...(fetchedMeta || {}),
@@ -996,6 +1004,9 @@ const PageEditor = () => {
                 height: targetHeight,
                 templateId: targetTemplateId,
                 orientation: targetOrientation,
+                shareId: fetchedShareId,
+                Customized_Settings: fetchedSettings || fetchedMeta?.Customized_Settings || {},
+                share: res.data.share || (fetchedShareId ? { shareId: fetchedShareId } : undefined)
               }));
 
               const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;

@@ -1008,11 +1008,11 @@ const PreviewArea = React.memo(({
         if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
         if (activeDevice === 'Tablet' && !isPhysicalTablet) return {
             position: 'absolute',
-            top: '9.38%',
-            bottom: '7.7%',
-            left: '5.3%',
-            right: '6.6%',
-            borderRadius: '12px',
+            top: '7.4%',
+            bottom: '5.9%',
+            left: '3.14%',
+            right: '4.48%',
+            borderRadius: '14px',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -2514,6 +2514,7 @@ const PreviewArea = React.memo(({
                 activeLayout={activeLayout}
                 isTablet={isTablet}
                 deviceStyles={deviceStyles}
+                getScreenWrapperStyle={getScreenWrapperStyle}
                 renderSharedOverlays={renderSharedOverlays}
                 layout1Bookmarks={layout1Bookmarks} layout1Notes={layout1Notes}
                 layout2Bookmarks={layout2Bookmarks} layout2Notes={layout2Notes}
@@ -2540,7 +2541,6 @@ const PreviewArea = React.memo(({
                 setShowMoreMenuMemo={setShowMoreMenuMemo}
                 showNotesMenu={showNotesMenu}
                 setShowNotesMenuMemo={setShowNotesMenuMemo}
-                getScreenWrapperStyle={getScreenWrapperStyle}
             />
 
             <AnimatePresence>

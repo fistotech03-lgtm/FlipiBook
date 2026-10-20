@@ -34,6 +34,7 @@ import dashboardBannerImg from '../../assets/Dashboard/Main.png';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 import AlertModal from '../AlertModal';
 import ThreeDBanner from './ThreeDBanner';
+import CustomScrollbar from '../CustomScrollbar';
 import { useAuth } from '../../context/AuthContext';
 
 // Helper to construct cache-busting URLs for 3D models and thumbnails
@@ -729,7 +730,7 @@ export default function ThreeDDashboard({
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto pl-[0.2vw] pr-[0.4vw] select-none text-slate-800">
+    <div className="w-full h-full flex flex-col select-none text-slate-800 min-h-0">
       {/* TOP 3D BANNER (Unified with FlipbooksBanner styling & split into file) */}
       <ThreeDBanner
         user={user}
@@ -939,6 +940,14 @@ export default function ThreeDDashboard({
         </div>
       </div>
 
+      {/* 3D MODELS SCROLLABLE AREA (Models scrollable while banner & toolbar remain fixed) */}
+      <CustomScrollbar
+        color="#d1d5db"
+        hoverColor="#9ca3af"
+        width="0.35vw"
+        className="flex-1 pr-[0.3vw] pb-[2vw] z-10 min-h-0"
+        onScroll={() => setActiveMenuId(null)}
+      >
         {/* 3D MODELS LIST / EMPTY STATE */}
         {loading ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(14vw,16.5vw))] gap-[1.2vw]">
@@ -1133,6 +1142,7 @@ export default function ThreeDDashboard({
             })}
           </div>
         )}
+      </CustomScrollbar>
 
       {/* UPLOAD 3D MODEL MODAL (100% vw styling) */}
       {isUploadModalOpen && (

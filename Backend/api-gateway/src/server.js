@@ -154,6 +154,10 @@ app.use('/storage', storageStaticMiddleware);
 app.use('/storage', express.static(storageRoot, staticConfig));
 app.use('/uploads', storageStaticMiddleware);
 app.use('/uploads', express.static(storageRoot, staticConfig));
+
+const templateAssetsRoot = path.resolve(__dirname, '../../services/page-editor-service/src/assets');
+app.use('/assets', express.static(templateAssetsRoot, staticConfig));
+
 app.use(['/storage', '/uploads'], (req, res) => {
   res.status(404).json({ success: false, message: `Asset not found: ${req.path}` });
 });
@@ -450,6 +454,82 @@ app.use(
           res.status(502).json({
             success: false,
             message: 'MyFlipibook Service unavailable. Please ensure myflipibook service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/explore requests to MyFlipibook Service
+app.use(
+  '/api/explore',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/explore`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for explore:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Explore Service unavailable. Please ensure myflipibook service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/profile requests to MyFlipibook Service
+app.use(
+  '/api/profile',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/profile`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for profile:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Profile Service unavailable. Please ensure myflipibook service is running.'
           });
         }
       }

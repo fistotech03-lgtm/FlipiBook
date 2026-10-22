@@ -92,8 +92,8 @@ export const useInteractEngine = ({
   };
 
   useEffect(() => {
-    // Setup interactjs for elements within the SVG - targeting both elements and the background
-    const interactable = interact('.page-svg-container svg, .page-svg-container svg *')
+    // Setup interactjs for elements within the SVG - targeting the SVG container (events bubble up with full performance)
+    const interactable = interact('.page-svg-container svg')
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
@@ -672,9 +672,8 @@ export const useInteractEngine = ({
                 }
               }
 
-              // dynamically update the outline while dragging
+              // Batch overlay highlight and smart guides rendering via RAF for 60fps smoothness
               const highlightType = currentFrameIdRef.current && target.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
-              drawOverlayHighlight(target, highlightType);
 
               if (localTrimViewRef.current && dragState.svgElement) {
                 const isOutside = isElementCompletelyOutside(target, dragState.svgElement);
@@ -692,8 +691,18 @@ export const useInteractEngine = ({
                 }
               }
 
-              // Render smart guide lines and floating coordinate badge
-              renderSmartGuides(dragState.pageIndex, snap.guides, snap.badge, zoom / 100, dragState.svgElement);
+              dragState.pendingTarget = target;
+              dragState.pendingHighlightType = highlightType;
+              dragState.pendingGuides = snap.guides;
+              dragState.pendingBadge = snap.badge;
+              if (!dragState.rafId) {
+                dragState.rafId = requestAnimationFrame(() => {
+                  dragState.rafId = null;
+                  if (!dragState.pendingTarget) return;
+                  drawOverlayHighlight(dragState.pendingTarget, dragState.pendingHighlightType);
+                  renderSmartGuides(dragState.pageIndex, dragState.pendingGuides, dragState.pendingBadge, zoom / 100, dragState.svgElement);
+                });
+              }
             }
 
             if (isAltPressedCurrent && drawMeasurementOverlayRef.current) {
@@ -720,6 +729,11 @@ export const useInteractEngine = ({
               return;
             }
 
+            if (dragState.rafId) {
+              cancelAnimationFrame(dragState.rafId);
+              dragState.rafId = null;
+            }
+            dragState.pendingTarget = null;
             clearSmartGuides(dragState.pageIndex);
 
             if (!dragState.thresholdMet) {
@@ -764,8 +778,8 @@ export const useInteractEngine = ({
                 });
               }
 
-              if (suppressClickRef.current && updatePageHtml) {
-                const container = dragState.element.closest('.page-svg-container');
+              if (updatePageHtml && dragState.svgElement) {
+                const container = dragState.element?.closest?.('.page-svg-container');
                 const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : dragState.pageIndex;
                 saveModifiedPageHtml(pageIdx, dragState.svgElement);
               }
@@ -774,13 +788,7 @@ export const useInteractEngine = ({
                 suppressClickRef.current = false;
               }, 50);
 
-              const svgEl = dragState.svgElement;
-              const pageIndex = dragState.pageIndex;
               delete event.interaction.dragState;
-
-              if (updatePageHtmlRef.current && svgEl) {
-                updatePageHtmlRef.current(pageIndex, svgEl.outerHTML);
-              }
 
               // Restore handles and highlight overlay
               if (dragState.multiDragItems) {

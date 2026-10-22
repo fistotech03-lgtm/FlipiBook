@@ -757,15 +757,18 @@ export default function MyFlipbooks() {
             }
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
+            const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
 
-            console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}"...`);
+            console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}" with v_id: ${generatedVId}...`);
             const res = await flipbookApi.saveBook({
                 emailId,
+                v_id: generatedVId,
                 flipbookName: uniqueName,
                 pages: pages,
                 overwrite: false,
                 folderName: targetFolder,
                 meta: {
+                    v_id: generatedVId,
                     width: templateData.width,
                     height: templateData.height,
                     templateId: templateData.templateId,
@@ -774,19 +777,17 @@ export default function MyFlipbooks() {
             });
 
             console.log("Creation result:", res.data);
-
-            if (res.data && res.data.v_id) {
-                const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${res.data.v_id}`;
-                console.log("Navigating with v_id:", redirectUrl);
-                navigate(redirectUrl, { state: templateData });
-            } else {
-                console.warn("Backend didn't return v_id, using fallback editor route");
-                navigate('/editor', { state: templateData });
-            }
+            const finalVId = res.data?.v_id || generatedVId;
+            const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${finalVId}`;
+            console.log("Navigating with v_id:", redirectUrl);
+            navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, emailId } });
         } catch (e) {
             console.error("Creation failed", e);
-            showAlert('Creation Error', 'Backend creation failed. You can still edit, but must save manually.', 'warning');
-            navigate('/editor', { state: templateData });
+            showAlert('Creation Warning', 'Backend save warning. Continuing to Editor with generated book ID.', 'warning');
+            const fallbackVId = generatedVId || Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+            navigate(`/editor/${encodeURIComponent(targetFolder)}/${fallbackVId}`, {
+                state: { ...templateData, v_id: fallbackVId, emailId }
+            });
         } finally {
             setIsLoading(false);
         }

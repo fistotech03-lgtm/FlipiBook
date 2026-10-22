@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { TEMPLATES as popupTemplates } from '../modals/PopupTemplateSelection';
 import { formatTemplateSvgToPageSvg } from '../utils/editorUtils';
 import { parseLayersFromSVG } from './svgFilterUtils';
+import { consolidateTransforms } from '../mainEditor/utils/geometryUtils';
 
 export const usePopupAndTemplateManager = ({
   pages,
@@ -584,7 +585,9 @@ export const usePopupAndTemplateManager = ({
           if (groupTransform) {
             Array.from(group.children).forEach(child => {
               const childTransform = child.getAttribute('transform') || '';
-              child.setAttribute('transform', `${groupTransform} ${childTransform}`.trim());
+              const consolidated = consolidateTransforms(groupTransform, childTransform);
+              if (consolidated) child.setAttribute('transform', consolidated);
+              else child.removeAttribute('transform');
             });
           }
 
@@ -668,10 +671,12 @@ export const usePopupAndTemplateManager = ({
             imported.setAttribute('class', importedClass ? `${svgClass} ${importedClass}` : svgClass);
           }
 
-          // Apply scaling and translation to fit A4
+          // Apply scaling and translation to fit A4 (consolidated into clean matrix)
           const currentTransform = imported.getAttribute('transform') || '';
           const fittingTransform = `translate(${offsetX}, ${offsetY}) scale(${scale}) translate(${-viewBoxX}, ${-viewBoxY})`;
-          imported.setAttribute('transform', `${fittingTransform} ${currentTransform}`.trim());
+          const consolidated = consolidateTransforms(fittingTransform, currentTransform);
+          if (consolidated) imported.setAttribute('transform', consolidated);
+          else imported.removeAttribute('transform');
 
           // Insert into target parent
           if (nextSiblingRef) {

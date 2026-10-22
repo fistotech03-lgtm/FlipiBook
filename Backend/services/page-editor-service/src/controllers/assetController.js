@@ -1,11 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const mongoose = require('mongoose');
-const Flipbook = require('../models/Flipbook');
-const FlipbookAsset = require('../models/FlipbookAsset');
-const ThreedModel = require('../models/ThreedModel');
-const InteractionThreedModel = require('../models/InteractionThreedModel');
-const { getAuthUser } = require('../utils/userHelper');
+const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
+const Flipbook = require("../models/Flipbook");
+const FlipbookAsset = require("../models/FlipbookAsset");
+const ThreedModel = require("../models/ThreedModel");
+const InteractionThreedModel = require("../models/InteractionThreedModel");
+const { getAuthUser } = require("../utils/userHelper");
 const {
   generateId,
   getStorageRoot,

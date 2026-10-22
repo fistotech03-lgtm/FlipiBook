@@ -34,10 +34,14 @@ const Features = lazy(() => import("./pages/Features"));
 const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Forum = lazy(() => import("./pages/Forum"));
+const Overview = lazy(() => import("./pages/Overview"));
+const Guide = lazy(() => import("./pages/Guide"));
 
 // Preview & Share Pages
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
 const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
+const ARView = lazy(() => import("./pages/ARView"));
 
 // Editor Components
 const EditorLayout = lazy(() => import("./Layouts/EditorLayout"));
@@ -186,6 +190,22 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/overview"
+                  element={
+                    <Suspense fallback={null}>
+                      <Overview />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/guide"
+                  element={
+                    <Suspense fallback={null}>
+                      <Guide />
+                    </Suspense>
+                  }
+                />
+                <Route
                   path="/explore"
                   element={
                     <Suspense fallback={null}>
@@ -223,6 +243,14 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <Pricing />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/forum"
+                  element={
+                    <Suspense fallback={null}>
+                      <Forum />
                     </Suspense>
                   }
                 />
@@ -365,6 +393,20 @@ export default function App() {
               <Route
                 path="/threed_editor/:modelId"
                 element={<Navigate to="/editor/threed_editor" replace />}
+              />
+
+              {/* Augmented Reality (AR) View Route */}
+              <Route
+                path="/ar-view"
+                element={
+                  <Suspense fallback={null}>
+                    <ARView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/ar"
+                element={<Navigate to="/ar-view" replace />}
               />
 
 

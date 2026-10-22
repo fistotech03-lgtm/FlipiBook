@@ -1001,7 +1001,7 @@ export const useSaveEngine = ({
         }
       });
 
-      let currentVId = v_id;
+      let currentVId = v_id || currentBook?.v_id || location.state?.v_id;
       let lastRes = null;
 
       if (modifiedPagesIndices.length === 0) {

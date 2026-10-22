@@ -859,12 +859,7 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    if (!['select', 'upload', 'grid'].includes(activeMainTool)) return;
-
-    // Automatically close the icon popup (which uses 'grid' tool) when interacting with the canvas
-    if (activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {
-      setActiveMainTool('select');
-    }
+    if (!['select', 'upload'].includes(activeMainTool)) return;
 
     // ── Update Active Page on MouseDown ─────────────────────────────────────
     if (setActivePageIndex && activePageIndex !== pageIndex) {
@@ -1321,7 +1316,7 @@ export const useCanvasPointerEvents = ({
 
     const isPenToolActive = activeMainTool === 'pen';
     const isShapes = activeMainTool === 'shapes';
-    const isSelectionTool = ['select', 'upload', 'grid'].includes(activeMainTool);
+    const isSelectionTool = ['select', 'upload'].includes(activeMainTool);
     const allowSelection = isSelectionTool || ((isPenToolActive || isShapes) && pageIndex !== activePageIndex);
 
     if (!allowSelection) return;
@@ -2075,7 +2070,7 @@ export const useCanvasPointerEvents = ({
     // ── CLICK-OUTSIDE-PREVENTION (if in tools like pen/shapes but not typing) ───
     const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
     const isDrawingTool = activeMainTool === 'pen' || activeMainTool === 'shapes';
-    const isSelectionTool = ['select', 'upload', 'type', 'grid'].includes(activeMainTool);
+    const isSelectionTool = ['select', 'upload', 'type'].includes(activeMainTool);
     const allowClick = isSelectionTool || (isDrawingTool && pageIdx !== activePageIndex);
 
     if (!allowClick && !getDraggableElement(e.target, e.currentTarget)) {

@@ -366,63 +366,112 @@ export const useCanvasAssetInsertion = ({
   // Handle external asset insertion events
   useEffect(() => {
     const handleAddIcon = (e) => {
-      const { icon, pageIndex } = e.detail;
+      const { icon, pageIndex, dropPoint } = e.detail || {};
+      if (!icon) return;
       const targetPageIndex = pageIndex !== undefined ? pageIndex : activePageIndex;
       const page = pages[targetPageIndex];
       if (!page) return;
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(page.html || '', 'image/svg+xml');
-      const svg = doc.querySelector('svg');
-      if (!svg) return;
+      const liveContainer = document.querySelector(`.page-svg-container[data-page-index="${targetPageIndex}"]`);
+      const liveSvg = liveContainer?.querySelector('svg');
 
-      let svgW = 793;
-      let svgH = 1121;
-      const viewBox = svg.getAttribute('viewBox');
+      let targetSvg = liveSvg;
+      let doc = null;
+
+      if (!targetSvg) {
+        const parser = new DOMParser();
+        doc = parser.parseFromString(page.html || '', 'image/svg+xml');
+        targetSvg = doc.querySelector('svg');
+      }
+      if (!targetSvg) return;
+
+      let svgW = baseWidth || 793;
+      let svgH = baseHeight || 1121;
+      let vbMinX = 0;
+      let vbMinY = 0;
+      const viewBox = targetSvg.getAttribute('viewBox');
       if (viewBox) {
-        const parts = viewBox.split(/[ ,]+/).map(parseFloat);
-        if (parts.length === 4) {
+        const parts = viewBox.trim().split(/[\s,]+/).map(parseFloat);
+        if (parts.length === 4 && !isNaN(parts[2]) && !isNaN(parts[3])) {
+          vbMinX = parts[0];
+          vbMinY = parts[1];
           svgW = parts[2];
           svgH = parts[3];
         }
       } else {
-        const wAttr = parseFloat(svg.getAttribute('width'));
-        const hAttr = parseFloat(svg.getAttribute('height'));
+        const wAttr = parseFloat(targetSvg.getAttribute('width'));
+        const hAttr = parseFloat(targetSvg.getAttribute('height'));
         if (!isNaN(wAttr) && wAttr > 0) svgW = wAttr;
         if (!isNaN(hAttr) && hAttr > 0) svgH = hAttr;
       }
-      const centerX = e.detail.dropPoint ? e.detail.dropPoint.x : (svgW / 2);
-      const centerY = e.detail.dropPoint ? e.detail.dropPoint.y : (svgH / 2);
 
-      const newId = `icon-${Date.now()}`;
+      const size = 42;
+      let cx = dropPoint ? dropPoint.x : (vbMinX + svgW / 2);
+      let cy = dropPoint ? dropPoint.y : (vbMinY + svgH / 2);
+
+      const margin = 15;
+      cx = Math.max(vbMinX + margin, Math.min(vbMinX + svgW - margin, cx));
+      cy = Math.max(vbMinY + margin, Math.min(vbMinY + svgH - margin, cy));
+
+      const newId = `icon-${Math.random().toString(36).substr(2, 9)}`;
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.id = newId;
       g.setAttribute('data-type', 'icon');
-      g.setAttribute('transform', `translate(${centerX - 6}, ${centerY - 6}) scale(0.5)`);
-      g.setAttribute('fill', 'none');
-      g.setAttribute('stroke', '#000000');
-      g.setAttribute('stroke-width', '1');
+      g.setAttribute('data-name', `${icon.name || 'Icon'}`);
+      g.setAttribute('transform', `translate(${cx - size / 2}, ${cy - size / 2})`);
 
-      if (icon.html) g.innerHTML = icon.html;
-      else if (icon.d) {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', icon.d);
-        g.appendChild(path);
-      }
+      // Transparent hit-box for reliable selection, dragging, and hover
+      const hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hitRect.setAttribute('x', '0');
+      hitRect.setAttribute('y', '0');
+      hitRect.setAttribute('width', String(size));
+      hitRect.setAttribute('height', String(size));
+      hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('pointer-events', 'all');
+      g.appendChild(hitRect);
+
+      // Scaled icon paths container
+      const iconGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      iconGroup.setAttribute('transform', `scale(${size / 24})`);
+      iconGroup.setAttribute('fill', 'none');
+      iconGroup.setAttribute('stroke', '#111827');
+      iconGroup.setAttribute('stroke-width', '2');
+      iconGroup.setAttribute('stroke-linecap', 'round');
+      iconGroup.setAttribute('stroke-linejoin', 'round');
+      iconGroup.setAttribute('pointer-events', 'none');
 
       if (icon.html) {
-        const rects = g.querySelectorAll('rect');
-        rects.forEach(rect => {
-          if (!rect.hasAttribute('fill')) {
-            rect.setAttribute('fill', 'none');
-          }
+        iconGroup.innerHTML = icon.html;
+      } else if (icon.d) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', icon.d);
+        iconGroup.appendChild(path);
+      }
+      g.appendChild(iconGroup);
+
+      const targetContainer = targetSvg.querySelector('[data-type="frame"]') ||
+                              targetSvg.querySelector('[data-name="Overlay"]')?.parentElement ||
+                              targetSvg.querySelector('g[id^="g-"]') ||
+                              targetSvg.querySelector('g') ||
+                              targetSvg;
+
+      // Migrate orphaned elements
+      if (targetContainer !== targetSvg) {
+        Array.from(targetSvg.children).forEach(child => {
+          if (child === targetContainer) return;
+          if (['defs', 'metadata', 'style', 'title', 'desc'].includes(child.tagName.toLowerCase())) return;
+          if (child.getAttribute('data-name') === 'Document Shield' || child.getAttribute('data-type') === 'shield') return;
+          targetContainer.appendChild(child);
         });
       }
 
-      const targetContainer = svg.querySelector('[data-type="frame"]') || svg.querySelector('[data-name="Overlay"]') || svg;
       targetContainer.appendChild(g);
 
-      if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
+      if (liveSvg && saveModifiedPageHtml) {
+        saveModifiedPageHtml(targetPageIndex, targetSvg);
+      } else if (updatePageHtml) {
+        updatePageHtml(targetPageIndex, targetSvg.outerHTML);
+      }
 
       if (setSelectedLayerId) setSelectedLayerId(newId);
       if (selectedLayerIdRef) selectedLayerIdRef.current = newId;

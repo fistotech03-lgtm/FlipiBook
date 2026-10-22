@@ -55,6 +55,16 @@ export const useCanvasTransforms = ({
           elements: ids.map(id => {
             const el = document.getElementById(id);
             if (!el) return null;
+            if (
+              el.getAttribute('data-name') === 'Overlay' ||
+              el.getAttribute('data-type') === 'background' ||
+              el.getAttribute('data-name')?.startsWith('Page ') ||
+              el.getAttribute('data-name') === 'Document Shield' ||
+              el.getAttribute('data-type') === 'shield' ||
+              el.parentElement?.tagName.toLowerCase() === 'svg'
+            ) {
+              return null;
+            }
             const parentCTM = typeof el.parentNode?.getScreenCTM === 'function' ? el.parentNode.getScreenCTM() : el.ownerSVGElement?.getScreenCTM();
             const groupCenterInParent = (parentCTM && centerScreen)
               ? new DOMPoint(centerScreen.x, centerScreen.y).matrixTransform(parentCTM.inverse())
@@ -108,6 +118,18 @@ export const useCanvasTransforms = ({
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
+
+      // GUARD: Never rotate page background, page root frame, or root SVG group
+      if (
+        el.getAttribute('data-name') === 'Overlay' ||
+        el.getAttribute('data-type') === 'background' ||
+        el.getAttribute('data-name')?.startsWith('Page ') ||
+        el.getAttribute('data-name') === 'Document Shield' ||
+        el.getAttribute('data-type') === 'shield' ||
+        (el.parentElement?.tagName.toLowerCase() === 'svg')
+      ) {
+        return;
+      }
 
       const matrix = getElementMatrix(el);
       let bbox = getVisualBBox(el);
@@ -168,6 +190,18 @@ export const useCanvasTransforms = ({
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
+
+      // GUARD: Never flip page background, page root frame, or root SVG group
+      if (
+        el.getAttribute('data-name') === 'Overlay' ||
+        el.getAttribute('data-type') === 'background' ||
+        el.getAttribute('data-name')?.startsWith('Page ') ||
+        el.getAttribute('data-name') === 'Document Shield' ||
+        el.getAttribute('data-type') === 'shield' ||
+        (el.parentElement?.tagName.toLowerCase() === 'svg')
+      ) {
+        return;
+      }
 
       const matrix = getElementMatrix(el);
       let bbox = getVisualBBox(el);

@@ -17,7 +17,6 @@ import {
   ImportViaUrlModal,
   MediaGalleryPopup
 } from '../properties';
-import IconGallery from '../modals/icons';
 import AnimationPanel from './AnimationPanel';
 import InteractionPanel from './InteractionPanel';
 import PopupTemplateSelection from '../modals/PopupTemplateSelection';
@@ -686,26 +685,7 @@ const RightSidebar = ({
     <div
       className="bg-white border-l border-[#EEEEEE] flex flex-col overflow-hidden select-none flex-shrink-0 h-full"
       style={{ width: '24vw' }}
-      onMouseDown={() => {
-        if (activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {
-          setActiveMainTool('select');
-        }
-      }}
     >
-      {activeMainTool === 'grid' && (
-        <IconGallery
-          isOpen={true}
-          onClose={() => setActiveMainTool('select')}
-          onSelect={(icon) => {
-            window.dispatchEvent(new CustomEvent('add-icon-to-editor', {
-              detail: {
-                pageIndex: activePageIndex,
-                icon: icon
-              }
-            }));
-          }}
-        />
-      )}
       {/* ================= Popup Apply/Cancel Banner ================= */}
       {isPopupEditor && (
         <div className="flex-shrink-0 bg-white border-b border-gray-100 px-[1.5vw] flex items-center justify-between" style={{ height: '8.5vh' }}>
@@ -928,7 +908,7 @@ const RightSidebar = ({
                 />
               ) : (
                 <div className="flex flex-col p-[1.5vw] gap-[1.5vw]">
-                  {(selectedElementProps || activeMainTool === 'grid') ? (
+                  {selectedElementProps ? (
                     <div className="flex flex-col gap-[1.5vw]">
                       {(selectedElementProps?.isUserGroup || (multiSelectedIds && multiSelectedIds.size > 1)) ? (
                         <GroupProperties

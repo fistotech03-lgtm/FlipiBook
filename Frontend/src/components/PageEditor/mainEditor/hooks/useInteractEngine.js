@@ -113,7 +113,7 @@ export const useInteractEngine = ({
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
             // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
-            if (!['select', 'upload', 'grid'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
+            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
               return;
             }

@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const myflipibookRoutes = require('./routes/myflipibookRoutes');
 const userSettingRoutes = require('./routes/userSettingRoutes');
+const forumRoutes = require('./forum/forumRoutes');
 
 const app = express();
 app.set('trust proxy', true);
@@ -124,6 +125,8 @@ app.use('/uploads', express.static(getStorageRoot()));
 // Service routes (Both /api/myflipibook and /api/flipbook, plus root fallback for full compatibility)
 app.use('/api/myflipibook', myflipibookRoutes);
 app.use('/api/flipbook', myflipibookRoutes);
+app.use('/api/forum', forumRoutes);
+app.use('/forum', forumRoutes);
 app.use('/api/usersetting', userSettingRoutes);
 app.use('/usersetting', userSettingRoutes);
 app.use('/', userSettingRoutes);

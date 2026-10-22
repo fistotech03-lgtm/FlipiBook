@@ -34,6 +34,7 @@ const Features = lazy(() => import("./pages/Features"));
 const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Forum = lazy(() => import("./pages/Forum/Forum"));
 
 // Preview & Share Pages
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
@@ -218,11 +219,19 @@ export default function App() {
                     </Suspense>
                   }
                 />
-                <Route
+                                <Route
                   path="/pricing"
                   element={
                     <Suspense fallback={null}>
                       <Pricing />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/forum"
+                  element={
+                    <Suspense fallback={null}>
+                      <Forum />
                     </Suspense>
                   }
                 />

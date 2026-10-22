@@ -17,7 +17,9 @@ const DEFAULT_NAV_LINKS = [
   { name: 'Explore', path: '/explore' },
   { name: 'Features', path: '/features' },
   { name: 'Converter', path: '/converter' },
-  { name: 'Pricing', path: '/pricing' },
+  {
+  name: 'Pricing', path: '/pricing' },
+  { name: 'Forum', path: '/forum' },
   { name: 'Help', path: '/help' },
 ];
 
@@ -26,6 +28,8 @@ const MY_FLIPBOOKS_NAV_LINKS = [
   { name: 'My Flipibooks', path: '/my-flipbooks' },
   { name: 'Templates', path: '/templates' },
   { name: 'Features', path: '/features' },
+  {
+  name: 'Forum', path: '/forum' },
   { name: 'Help / Support', path: '/help' },
 ];
 
@@ -48,6 +52,7 @@ const checkIsLinkActive = (link, currentPath) => {
          (link.name === 'Home' && currentPath === '/') ||
          (link.name === 'Over View' && currentPath === '/home') ||
          (link.name === 'My Flipibooks' && currentPath.startsWith('/my-flipbooks')) ||
+         (link.name === 'Forum' && currentPath.startsWith('/forum')) ||
          (link.path === '/contact' && currentPath === '/contact-us') ||
          (link.path === '/help' && (currentPath === '/help' || currentPath === '/contact'));
 };

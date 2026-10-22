@@ -3,11 +3,12 @@ const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
+const dns = require('node:dns');
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.GATEWAY_PORT || process.env.PORT || 8000;
@@ -414,6 +415,42 @@ app.use(
           res.status(502).json({
             success: false,
             message: 'MyFlipibook Service unavailable. Please ensure myflipibook service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/forum requests to MyFlipibook Service
+app.use(
+  '/api/forum',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/forum`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for forum:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Forum Service unavailable. Please ensure myflipibook service is running.'
           });
         }
       }

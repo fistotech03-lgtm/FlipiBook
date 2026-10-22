@@ -1,7 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import HomeNav from '../components/NavBar/HomeNav';
-// import EditorNav from '../components/NavBar/EditorNav';
 
 export default function MainLayout({ children }) {
   const location = useLocation();
@@ -12,7 +11,6 @@ export default function MainLayout({ children }) {
       <header className="w-full flex-none bg-white z-[100]" style={{ height: '7vh' }}>
         <HomeNav />
       </header>
-      {/* EditorNav will be included later */}
       <main className={`flex-1 ${isDashboard ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden custom-scrollbar'}`}>
         {children || <Outlet />}
       </main>

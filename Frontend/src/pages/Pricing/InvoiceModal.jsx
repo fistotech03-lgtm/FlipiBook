@@ -755,10 +755,10 @@ const InvoiceModal = ({ isOpen, onClose, defaultPlan = 'standard', isAnnual = fa
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 print:p-0 print:bg-white animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] overflow-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 print:p-0 print:bg-white animate-in fade-in duration-200">
       
       {/* Container Card */}
-      <div className="relative w-full max-w-4xl bg-slate-100 rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col h-[94vh] max-h-[980px] print:h-auto print:max-h-none print:shadow-none print:border-none print:rounded-none">
+      <div className="relative w-full max-w-4xl bg-slate-100 rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col h-[90vh] max-h-[920px] print:h-auto print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Top Header Control Bar */}
         <div className="bg-[#1e2430] text-white px-5 sm:px-6 py-3 flex items-center justify-between shrink-0 print:hidden border-b border-slate-700/80">

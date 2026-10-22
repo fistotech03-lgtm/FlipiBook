@@ -6,10 +6,10 @@ import { Icon } from '@iconify/react';
 import { 
   CreditCard, 
   RotateCw, 
-  ChevronDown,
-  ArrowRight,
-  Minus,
-  Receipt
+  ChevronDown, 
+  ArrowRight, 
+  Minus, 
+  Receipt 
 } from 'lucide-react';
 import InvoiceModal from './Pricing/InvoiceModal';
 
@@ -37,27 +37,27 @@ const Pricing = () => {
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#ea7233] selection:text-white w-full overflow-x-hidden">
       
       {/* ------------------------------------------------------------- */}
-      {/* 1. HERO SECTION (Compact Height, Responsive & vw Sizing) */}
+      {/* 1. HERO SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section className="pt-6 sm:pt-8 lg:pt-[2.5vw] pb-4 sm:pb-6 lg:pb-[1.8vw] px-4 sm:px-6 lg:px-[6vw] text-center max-w-full mx-auto">
-        <div className="max-w-4xl lg:max-w-[75vw] mx-auto space-y-3 sm:space-y-4 lg:space-y-[1vw]">
+      <section className="pt-8 sm:pt-12 lg:pt-14 pb-6 sm:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 text-center max-w-full mx-auto">
+        <div className="max-w-4xl mx-auto space-y-4">
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[5vw] font-bold tracking-tight text-[#232733] leading-tight sm:leading-tight lg:leading-[1.15]">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[#232733] leading-tight">
             Plans built for the way <span className="text-[#ea7233]">your work</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-gray-600 text-sm sm:text-base md:text-lg lg:text-[1.4vw] font-normal max-w-2xl lg:max-w-[40vw] mx-auto leading-relaxed lg:leading-[1.5]">
+          <p className="text-gray-600 text-sm sm:text-base md:text-lg font-normal max-w-2xl mx-auto leading-relaxed">
             Choose the right plan for your needs and create stunning interactive digital catalogues with ease.
           </p>
 
           {/* Billing Switcher Toggle */}
-          <div className="pt-2 sm:pt-3 lg:pt-[0.8vw] pb-1 flex justify-center items-center">
-            <div className="bg-slate-100 p-1 sm:p-1.5 lg:p-[0.35vw] rounded-lg inline-flex items-center gap-1 lg:gap-[0.4vw] shadow-inner border border-slate-200 shadow-lg">
+          <div className="pt-2 pb-1 flex justify-center items-center">
+            <div className="bg-slate-100 p-1 sm:p-1.5 rounded-xl inline-flex items-center gap-1 shadow-inner border border-slate-200">
               <button
                 type="button"
                 onClick={() => setBillingCycle('monthly')}
-                className={`px-4 sm:px-6 lg:px-[1.6vw] py-1.5 sm:py-2.5 lg:py-[0.6vw] rounded-lg text-xs sm:text-sm lg:text-[1vw] font-regular transition-all duration-300 ${
+                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
                   !isAnnual
                     ? 'bg-[#181e29] text-white shadow-md'
                     : 'text-slate-700 hover:text-slate-900 bg-transparent'
@@ -69,14 +69,14 @@ const Pricing = () => {
               <button
                 type="button"
                 onClick={() => setBillingCycle('annual')}
-                className={`px-4 sm:px-6 lg:px-[1.6vw] py-1.5 sm:py-2.5 lg:py-[0.6vw] rounded-lg text-xs sm:text-sm lg:text-[1vw] font-regular transition-all duration-300 flex items-center gap-1.5 lg:gap-[0.5vw] ${
+                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
                   isAnnual
                     ? 'bg-[#181e29] text-white shadow-md'
-                    : 'text-slate-700 hover:text-slate-900 bg-[#fff]'
+                    : 'text-slate-700 hover:text-slate-900 bg-white'
                 }`}
               >
                 <span>Annual billing</span>
-                <span className="bg-[#ff3b30] text-white text-[9px] sm:text-[10px] lg:text-[0.68vw] font-bold px-2 lg:px-[0.5vw] py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                <span className="bg-[#ff3b30] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                   Save 20%
                 </span>
               </button>
@@ -84,24 +84,24 @@ const Pricing = () => {
           </div>
 
           {/* Trust Badges & Quick Invoice Trigger */}
-          <div className="pt-2 sm:pt-3 lg:pt-[0.8vw] flex flex-wrap items-center justify-center gap-4 sm:gap-8 lg:gap-[2.2vw] text-xs sm:text-sm lg:text-[0.88vw] font-medium text-slate-600">
-            <div className="flex items-center gap-2 lg:gap-[0.5vw]">
-              <div className="w-6 sm:w-7 lg:w-[1.8vw] h-6 sm:h-7 lg:h-[1.8vw] rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
-                <CreditCard className="w-3.5 sm:w-4 lg:w-[1vw] h-3.5 sm:h-4 lg:h-[1vw]" />
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8 text-xs sm:text-sm font-medium text-slate-600">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
+                <CreditCard className="w-3.5 h-3.5" />
               </div>
               <span>No credit card required</span>
             </div>
 
-            <div className="flex items-center gap-2 lg:gap-[0.5vw]">
-              <div className="w-6 sm:w-7 lg:w-[1.8vw] h-6 sm:h-7 lg:h-[1.8vw] rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
-                <RotateCw className="w-3.5 sm:w-4 lg:w-[1vw] h-3.5 sm:h-4 lg:h-[1vw]" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
+                <RotateCw className="w-3.5 h-3.5" />
               </div>
               <span>Easy upgrade anytime</span>
             </div>
 
-            <div className="flex items-center gap-2 lg:gap-[0.5vw]">
-              <div className="w-6 sm:w-7 lg:w-[1.8vw] h-6 sm:h-7 lg:h-[1.8vw] rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
-                <Icon icon="hugeicons:tick-01" className="w-3.5 sm:w-4 lg:w-[1vw] h-3.5 sm:h-4 lg:h-[1vw]" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ea7233] text-white flex items-center justify-center shadow-sm shrink-0">
+                <Icon icon="hugeicons:tick-01" className="w-3.5 h-3.5" />
               </div>
               <span>Secure &amp; reliable</span>
             </div>
@@ -109,10 +109,10 @@ const Pricing = () => {
             <button
               type="button"
               onClick={() => openInvoiceForPlan('standard')}
-              className="flex items-center gap-1.5 lg:gap-[0.4vw] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-orange-50 border border-[#ea7233]/40 text-[#ea7233] hover:bg-[#ea7233] hover:text-white transition-all font-semibold shadow-xs cursor-pointer group"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-50 border border-[#ea7233]/40 text-[#ea7233] hover:bg-[#ea7233] hover:text-white transition-all font-semibold shadow-xs cursor-pointer group"
               title="Preview official Flipibook invoice for your business"
             >
-              <Receipt className="w-3.5 sm:w-4 h-3.5 sm:h-4 transition-transform group-hover:scale-110" />
+              <Receipt className="w-4 h-4 transition-transform group-hover:scale-110" />
               <span>Preview Invoice</span>
             </button>
           </div>
@@ -122,43 +122,43 @@ const Pricing = () => {
       {/* ------------------------------------------------------------- */}
       {/* 2. PRICING CARDS SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-6 sm:py-10 lg:py-[3vw] px-4 sm:px-6 lg:px-[6vw] max-w-full mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-[2vw] items-stretch max-w-7xl lg:max-w-[85vw] mx-auto">
+      <section className="py-6 sm:py-8 lg:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
           
           {/* CARD 1: FREE */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl lg:rounded-[1.5vw] p-6 sm:p-8 lg:p-[2vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 lg:p-8 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div>
               {/* Top Icon */}
-              <div className="w-12 sm:w-16 lg:w-[3.6vw] h-12 sm:h-16 lg:h-[3.6vw] rounded-full bg-slate-100 flex items-center justify-center mb-2">
-                <Icon icon="carbon:cube" className="w-6 sm:w-8 lg:w-[1.8vw] h-6 sm:h-8 lg:h-[1.8vw] text-slate-700" />
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-4">
+                <Icon icon="carbon:cube" className="w-6 h-6 text-slate-700" />
               </div>
 
               {/* Title & Description */}
-              <h3 className="text-2xl sm:text-3xl lg:text-[1.8vw] font-bold text-slate-900 mb-1.5 sm:mb-2 lg:mb-[0.5vw]">Free</h3>
-              <p className="text-gray-700 text-sm sm:text-sm lg:text-[1.2vw] mb-4 sm:mb-6 lg:mb-[0.5vw] ">
+              <h3 className="text-2xl font-bold text-slate-900 mb-1.5">Free</h3>
+              <p className="text-gray-600 text-sm mb-5 min-h-[40px]">
                 Perfect for individuals and small business getting started.
               </p>
 
               {/* Price */}
-              <div className="mb-4 sm:mb-6 lg:mb-[1.5vw] flex items-baseline gap-1 lg:gap-[0.3vw]">
-                <span className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.8vw] font-bold text-slate-900 tracking-tight">
+              <div className="mb-6 flex items-baseline gap-1">
+                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                   {isAnnual ? '$15.99' : '$19.99'}
                 </span>
-                <span className="text-slate-500 font-medium text-xs sm:text-sm lg:text-[0.88vw]">/month</span>
+                <span className="text-slate-500 font-medium text-xs sm:text-sm">/month</span>
               </div>
 
               {/* Action Button */}
-              <div className="space-y-2 mb-6 sm:mb-8 lg:mb-[1.8vw]">
+              <div className="space-y-2 mb-6">
                 <Link
                   to="/signup"
-                  className="w-full py-2.5 sm:py-3 lg:py-[0.7vw] px-4 sm:px-6 lg:px-[1.5vw] rounded-xl lg:rounded-[0.8vw] border-2 border-[#ea7233] text-[#ea7233] font-bold text-xs sm:text-sm lg:text-[0.9vw] text-center block hover:bg-orange-50 transition-colors"
+                  className="w-full py-2.5 px-4 rounded-xl border-2 border-[#ea7233] text-[#ea7233] font-bold text-sm text-center block hover:bg-orange-50 transition-colors"
                 >
                   Get Started
                 </Link>
                 <button
                   type="button"
                   onClick={() => openInvoiceForPlan('free')}
-                  className="w-full py-1.5 sm:py-2 px-3 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs lg:text-[0.8vw] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-1.5 px-3 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Receipt className="w-3.5 h-3.5 text-[#ea7233]" />
                   <span>View Sample Invoice</span>
@@ -166,31 +166,31 @@ const Pricing = () => {
               </div>
 
               {/* Features List */}
-              <div className="space-y-3 lg:space-y-[0.8vw]">
-                <p className="text-xs sm:text-sm lg:text-[1vw] font-semibold text-slate-900">What&apos;s include :</p>
-                <ul className="space-y-2.5 sm:space-y-3.5 lg:space-y-[0.75vw] text-xs sm:text-sm lg:text-[0.85vw] text-slate-600">
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-900">What&apos;s included :</p>
+                <ul className="space-y-3 text-sm text-slate-600">
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Create up to 5 flipbooks/month</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Basic templates</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Add images, videos &amp; links</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Share via link or embed</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Basic analytics</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Email support</span>
                   </li>
                 </ul>
@@ -199,45 +199,45 @@ const Pricing = () => {
           </div>
 
           {/* CARD 2: STANDARD (MOST POPULAR) */}
-          <div className="relative bg-[#fff7f2] border-2 border-[#f7a072] rounded-2xl sm:rounded-3xl lg:rounded-[1.5vw] p-6 sm:p-8 lg:p-[2vw] shadow-md flex flex-col justify-between">
+          <div className="relative bg-[#fff7f2] border-2 border-[#ea7233] rounded-2xl p-6 sm:p-7 lg:p-8 shadow-md flex flex-col justify-between">
             {/* Most Popular Badge */}
-            <div className="absolute top-4 sm:top-6 lg:top-[1.2vw] right-4 sm:right-6 lg:right-[1.2vw] bg-white border border-orange-200 shadow-xs px-2.5 sm:px-3 lg:px-[0.7vw] py-0.5 sm:py-1 lg:py-[0.25vw] rounded-full flex items-center gap-1 lg:gap-[0.3vw]">
-              <Icon icon="fa6-solid:crown" className="w-3 sm:w-3.5 lg:w-[0.8vw] h-3 sm:h-3.5 lg:h-[0.8vw] text-[#ea7233]" />
-              <span className="text-[10px] sm:text-xs lg:text-[0.72vw] font-bold text-[#ea7233]">Most Popular</span>
+            <div className="absolute -top-3.5 right-6 bg-[#ea7233] text-white shadow-sm px-3 py-1 rounded-full flex items-center gap-1.5">
+              <Icon icon="fa6-solid:crown" className="w-3 h-3 text-white" />
+              <span className="text-[11px] font-bold tracking-wide uppercase">Most Popular</span>
             </div>
 
             <div>
               {/* Top Icon */}
-              <div className="w-12 sm:w-16 lg:w-[3.6vw] h-12 sm:h-16 lg:h-[3.6vw] rounded-full bg-orange-100/80 flex items-center justify-center mb-2">
-                <Icon icon="bi:people" className="w-6 sm:w-8 lg:w-[1.8vw] h-6 sm:h-8 lg:h-[1.8vw] text-[#ea7233]" />
+              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
+                <Icon icon="bi:people" className="w-6 h-6 text-[#ea7233]" />
               </div>
 
               {/* Title & Description */}
-              <h3 className="text-2xl sm:text-3xl lg:text-[1.8vw] font-bold text-slate-900 mb-1.5 sm:mb-2 lg:mb-[0.5vw]">Standard</h3>
-              <p className="text-gray-700 text-sm sm:text-sm lg:text-[1.2vw] mb-4 sm:mb-6 lg:mb-[0.5vw]   ">
+              <h3 className="text-2xl font-bold text-slate-900 mb-1.5">Standard</h3>
+              <p className="text-gray-600 text-sm mb-5 min-h-[40px]">
                 Ideal for growing teams and businesses with advanced needs.
               </p>
 
               {/* Price */}
-              <div className="mb-4 sm:mb-6 lg:mb-[1.5vw] flex items-baseline gap-1 lg:gap-[0.3vw]">
-                <span className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.8vw] font-bold text-slate-900 tracking-tight">
+              <div className="mb-6 flex items-baseline gap-1">
+                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                   {isAnnual ? '$31.99' : '$39.99'}
                 </span>
-                <span className="text-slate-600 font-medium text-xs sm:text-sm lg:text-[0.88vw]">/month</span>
+                <span className="text-slate-600 font-medium text-xs sm:text-sm">/month</span>
               </div>
 
               {/* Action Button */}
-              <div className="space-y-2 mb-6 sm:mb-8 lg:mb-[1.8vw]">
+              <div className="space-y-2 mb-6">
                 <Link
                   to="/signup"
-                  className="w-full py-2.5 sm:py-3 lg:py-[0.7vw] px-4 sm:px-6 lg:px-[1.5vw] rounded-xl lg:rounded-[0.8vw] bg-[#ea7233] hover:bg-[#d65a1c] text-white font-bold text-xs sm:text-sm lg:text-[0.9vw] text-center block shadow-md shadow-orange-500/20 transition-all"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#ea7233] hover:bg-[#d65a1c] text-white font-bold text-sm text-center block shadow-md shadow-orange-500/20 transition-all"
                 >
                   Upgrade Now
                 </Link>
                 <button
                   type="button"
                   onClick={() => openInvoiceForPlan('standard')}
-                  className="w-full py-1.5 sm:py-2 px-3 rounded-lg text-[#ea7233] hover:bg-orange-100/60 font-semibold text-xs lg:text-[0.8vw] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-1.5 px-3 rounded-lg text-[#ea7233] hover:bg-orange-100/60 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Receipt className="w-3.5 h-3.5 text-[#ea7233]" />
                   <span>View Sample Invoice</span>
@@ -245,35 +245,35 @@ const Pricing = () => {
               </div>
 
               {/* Features List */}
-              <div className="space-y-3 lg:space-y-[0.8vw]">
-                <p className="text-xs sm:text-sm lg:text-[1vw] font-semibold text-slate-900">What&apos;s include :</p>
-                <ul className="space-y-2.5 sm:space-y-3.5 lg:space-y-[0.75vw] text-xs sm:text-sm lg:text-[0.85vw] text-slate-700">
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+              <div className="space-y-3 pt-2 border-t border-orange-200/50">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-900">What&apos;s included :</p>
+                <ul className="space-y-3 text-sm text-slate-700">
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Create up to 5 flipbooks/month</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Premium templates</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Custom branding (logo, colors)</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Advanced analytics</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Team collaboration (up to 5 users)</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Custom domain</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Priority support</span>
                   </li>
                 </ul>
@@ -282,39 +282,39 @@ const Pricing = () => {
           </div>
 
           {/* CARD 3: PREMIUM */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl lg:rounded-[1.5vw] p-6 sm:p-8 lg:p-[2vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 lg:p-8 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div>
               {/* Top Icon */}
-              <div className="w-12 sm:w-16 lg:w-[3.6vw] h-12 sm:h-16 lg:h-[3.6vw] rounded-full bg-slate-100 flex items-center justify-center mb-2">
-                <Icon icon="bi:building" className="w-6 sm:w-8 lg:w-[1.8vw] h-6 sm:h-8 lg:h-[1.8vw] text-slate-700" />
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-4">
+                <Icon icon="bi:building" className="w-6 h-6 text-slate-700" />
               </div>
 
               {/* Title & Description */}
-              <h3 className="text-2xl sm:text-3xl lg:text-[1.8vw] font-bold text-slate-900 mb-1.5 sm:mb-2 lg:mb-[0.5vw]">Premium</h3>
-              <p className="text-gray-700 text-sm sm:text-sm lg:text-[1.2vw] mb-4 sm:mb-6 lg:mb-[0.5vw] ">
+              <h3 className="text-2xl font-bold text-slate-900 mb-1.5">Premium</h3>
+              <p className="text-gray-600 text-sm mb-5 min-h-[40px]">
                 For large organizations with custom requirements.
               </p>
 
               {/* Price */}
-              <div className="mb-4 sm:mb-6 lg:mb-[1.5vw] flex items-baseline gap-1 lg:gap-[0.3vw]">
-                <span className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.8vw] font-bold text-slate-900 tracking-tight">
+              <div className="mb-6 flex items-baseline gap-1">
+                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                   {isAnnual ? '$79.99' : '$99.99'}
                 </span>
-                <span className="text-slate-500 font-medium text-xs sm:text-sm lg:text-[0.88vw]">/month</span>
+                <span className="text-slate-500 font-medium text-xs sm:text-sm">/month</span>
               </div>
 
               {/* Action Button */}
-              <div className="space-y-2 mb-6 sm:mb-8 lg:mb-[1.8vw]">
+              <div className="space-y-2 mb-6">
                 <Link
                   to="/signup"
-                  className="w-full py-2.5 sm:py-3 lg:py-[0.7vw] px-4 sm:px-6 lg:px-[1.5vw] rounded-xl lg:rounded-[0.8vw] border-2 border-[#ea7233] text-[#ea7233] font-bold text-xs sm:text-sm lg:text-[0.9vw] text-center block hover:bg-orange-50 transition-colors"
+                  className="w-full py-2.5 px-4 rounded-xl border-2 border-[#ea7233] text-[#ea7233] font-bold text-sm text-center block hover:bg-orange-50 transition-colors"
                 >
                   Go Premium
                 </Link>
                 <button
                   type="button"
                   onClick={() => openInvoiceForPlan('premium')}
-                  className="w-full py-1.5 sm:py-2 px-3 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs lg:text-[0.8vw] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-1.5 px-3 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Receipt className="w-3.5 h-3.5 text-[#ea7233]" />
                   <span>View Sample Invoice</span>
@@ -322,35 +322,35 @@ const Pricing = () => {
               </div>
 
               {/* Features List */}
-              <div className="space-y-3 lg:space-y-[0.8vw]">
-                <p className="text-xs sm:text-sm lg:text-[1vw] font-semibold text-slate-900">What&apos;s include :</p>
-                <ul className="space-y-2.5 sm:space-y-3.5 lg:space-y-[0.75vw] text-xs sm:text-sm lg:text-[0.85vw] text-slate-600">
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-900">What&apos;s included :</p>
+                <ul className="space-y-3 text-sm text-slate-600">
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Unlimited flipbooks</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>All premium features</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Team collaboration (unlimited users)</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Advanced analytics &amp; reports</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>API access &amp; integrations</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Dedicated account manager</span>
                   </li>
-                  <li className="flex items-start gap-2.5 lg:gap-[0.6vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] text-[#ea7233] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-2.5">
+                    <Icon icon="teenyicons:tick-circle-solid" className="w-4 h-4 text-[#ea7233] shrink-0 mt-0.5" />
                     <span>Priority support</span>
                   </li>
                 </ul>
@@ -364,41 +364,41 @@ const Pricing = () => {
       {/* ------------------------------------------------------------- */}
       {/* 3. FEATURE COMPARISON TABLE */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-8 sm:py-16 lg:py-[2vw] px-4 sm:px-6 lg:px-[6vw] max-w-full mx-auto">
+      <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-8 sm:mb-12 lg:mb-[2.5vw]">
-          <p className="text-[10px] sm:text-xs lg:text-[0.75vw] font-bold uppercase  text-slate-700 mb-1 sm:mb-2 lg:mb-[0.1vw]">
+        <div className="text-center mb-8 sm:mb-10">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
             FEATURE COMPARISON
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-[2.2vw] font-bold text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Compare Plans &amp; <span className="text-[#ea7233]">Features</span>
           </h2>
-          <p className="text-slate-700 mt-2 sm:mt-3 lg:mt-[0.6vw] text-xs sm:text-sm lg:text-[1vw] max-w-2xl lg:max-w-[50vw] mx-auto">
-            Explore what each plan includes and find the one that fits flipbook creation publishing needs.
+          <p className="text-slate-600 mt-2 text-sm sm:text-base max-w-2xl mx-auto">
+            Explore what each plan includes and find the one that fits your flipbook creation and publishing needs.
           </p>
         </div>
 
         {/* Comparison Table Container */}
-        <div className="overflow-x-auto rounded-xl sm:rounded-2xl lg:rounded-[1.2vw] border border-slate-200 shadow-sm bg-white max-w-7xl lg:max-w-[85vw] mx-auto [scrollbar-width:thin] [scrollbar-color:#ea7233_#f1f5f9] md:[scrollbar-width:none] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-slate-100 [&::-webkit-scrollbar-track]:rounded-b-xl [&::-webkit-scrollbar-thumb]:bg-[#ea7233] [&::-webkit-scrollbar-thumb]:rounded-full md:[&::-webkit-scrollbar]:h-0">
-          <table className="w-full text-left border-collapse min-w-[650px]">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white">
+          <table className="w-full text-left border-collapse min-w-[640px]">
             {/* Table Header */}
             <thead>
               <tr className="border-b border-slate-200 divide-x divide-slate-200">
-                <th className="w-1/4 bg-[#111827] text-white font-bold text-center py-2 sm:py-3 lg:py-[0.45vw] px-4 sm:px-6 lg:px-[1.5vw] text-base sm:text-lg lg:text-[1.1vw] rounded-tl-xl lg:rounded-tl-[1.2vw]">
+                <th className="w-1/4 bg-[#111827] text-white font-bold text-center py-3.5 px-4 sm:px-6 text-sm sm:text-base">
                   Features
                 </th>
-                <th className="w-1/4 bg-[#edf4ff] text-[#1e293b] font-bold text-center py-2 sm:py-3 lg:py-[0.45vw] px-4 sm:px-6 lg:px-[1.5vw] text-base sm:text-lg lg:text-[1.1vw]">
+                <th className="w-1/4 bg-[#edf4ff] text-[#1e293b] font-bold text-center py-3.5 px-4 sm:px-6 text-sm sm:text-base">
                   Free
                 </th>
-                <th className="w-1/4 bg-[#fff0e6] text-center py-2 sm:py-3 lg:py-[0.45vw] px-4 sm:px-6 lg:px-[1.5vw]">
-                  <div className="font-bold text-[#ea7233] text-base sm:text-lg lg:text-[1.1vw]">Standard</div>
-                  <div className="text-[11px] sm:text-xs lg:text-[0.78vw] text-[#ea7233]/80 font-semibold mt-0.5">
+                <th className="w-1/4 bg-[#fff0e6] text-center py-3.5 px-4 sm:px-6">
+                  <div className="font-bold text-[#ea7233] text-sm sm:text-base">Standard</div>
+                  <div className="text-xs text-[#ea7233]/80 font-medium mt-0.5">
                     {isAnnual ? '$31.99 /month' : '$39.99 /month'}
                   </div>
                 </th>
-                <th className="w-1/4 bg-[#fff8eb] text-center py-2 sm:py-3 lg:py-[0.45vw] px-4 sm:px-6 lg:px-[1.5vw] rounded-tr-xl lg:rounded-tr-[1.2vw]">
-                  <div className="font-bold text-[#854d0e] text-base sm:text-lg lg:text-[1.1vw]">Premium</div>
-                  <div className="text-[11px] sm:text-xs lg:text-[0.78vw] text-[#854d0e]/80 font-semibold mt-0.5">
+                <th className="w-1/4 bg-[#fff8eb] text-center py-3.5 px-4 sm:px-6">
+                  <div className="font-bold text-[#854d0e] text-sm sm:text-base">Premium</div>
+                  <div className="text-xs text-[#854d0e]/80 font-medium mt-0.5">
                     {isAnnual ? '$79.99 /month' : '$99.99 /month'}
                   </div>
                 </th>
@@ -406,105 +406,105 @@ const Pricing = () => {
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-slate-200 text-sm sm:text-base lg:text-[1.1vw] text-slate-700 font-medium">
+            <tbody className="divide-y divide-slate-200 text-sm text-slate-700 font-medium">
               
               {/* Row 1 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Number of Flipbooks</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-600">Up to 5</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Number of Flipbooks</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-600">Up to 5</td>
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 2 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Page view (Monthly)</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-600">1,000</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center font-semibold text-slate-800">10,000</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center font-semibold text-slate-800">Unlimited</td>
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Page view (Monthly)</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-600">1,000</td>
+                <td className="py-3 px-4 sm:px-6 text-center font-semibold text-slate-800">10,000</td>
+                <td className="py-3 px-4 sm:px-6 text-center font-semibold text-slate-800">Unlimited</td>
               </tr>
 
               {/* Row 3 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">3D page Flip effect</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">3D page Flip effect</td>
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 4 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1 sm:py-1.5 lg:py-[0.2vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">
-                  Interactive Elements <br/> <span className="text-xs sm:text-sm lg:text-[0.88vw] text-slate-400 font-normal block sm:inline">(Links, Video, Audio, etc.)</span>
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">
+                  Interactive Elements <br/> <span className="text-xs text-slate-500 font-normal">(Links, Video, Audio, etc.)</span>
                 </td>
-                <td className="py-1 sm:py-1.5 lg:py-[0.2vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-600">Basic</td>
-                <td className="py-1 sm:py-1.5 lg:py-[0.2vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-600">Basic</td>
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1 sm:py-1.5 lg:py-[0.2vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 5 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Product Catalogue Templates</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-600">Basic</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Product Catalogue Templates</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-600">Basic</td>
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 6 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Analytics &amp; Insights</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-600">Basic</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Analytics &amp; Insights</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-600">Basic</td>
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 7 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Remove Flipbook Branding</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-400">
-                  <Minus className="w-4 sm:w-4 lg:w-[0.9vw] h-4 sm:h-4 lg:h-[0.9vw] mx-auto text-slate-300" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Remove Flipbook Branding</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-400">
+                  <Minus className="w-4 h-4 mx-auto text-slate-300" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
               {/* Row 8 */}
               <tr className="hover:bg-slate-50/60 transition-colors divide-x divide-slate-200">
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] font-semibold text-slate-800 bg-[#F3F3F3]">Custom Domain</td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-400">
-                  <Minus className="w-4 sm:w-4 lg:w-[0.9vw] h-4 sm:h-4 lg:h-[0.9vw] mx-auto text-slate-300" />
+                <td className="py-3 px-4 sm:px-6 font-semibold text-slate-800 bg-[#F9FAFB]">Custom Domain</td>
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-400">
+                  <Minus className="w-4 h-4 mx-auto text-slate-300" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center text-slate-400">
-                  <Minus className="w-4 sm:w-4 lg:w-[0.9vw] h-4 sm:h-4 lg:h-[0.9vw] mx-auto text-slate-300" />
+                <td className="py-3 px-4 sm:px-6 text-center text-slate-400">
+                  <Minus className="w-4 h-4 mx-auto text-slate-300" />
                 </td>
-                <td className="py-1.5 sm:py-2 lg:py-[0.3vw] px-4 sm:px-6 lg:px-[1.5vw] text-center">
-                  <Icon icon="hugeicons:tick-01" className="w-7 sm:w-8 lg:w-[2.8vw] h-7 sm:h-8 lg:h-[2.8vw] text-[#16a34a] mx-auto stroke-[2.5]" />
+                <td className="py-3 px-4 sm:px-6 text-center">
+                  <Icon icon="hugeicons:tick-01" className="w-6 h-6 text-[#16a34a] mx-auto stroke-[2.5]" />
                 </td>
               </tr>
 
@@ -513,31 +513,31 @@ const Pricing = () => {
             {/* Table Footer Buttons */}
             <tfoot className="border-t border-slate-200">
               <tr className="divide-x divide-slate-200">
-                <td className="py-4 sm:py-6 lg:py-[1.2vw] px-4 sm:px-6 lg:px-[1.5vw] bg-[#F3F3F3] rounded-bl-xl lg:rounded-bl-[1.2vw]"></td>
-                <td className="py-4 sm:py-6 lg:py-[1.2vw] px-3 sm:px-4 lg:px-[1vw] text-center bg-slate-50/50">
+                <td className="py-4 px-4 sm:px-6 bg-[#F9FAFB]"></td>
+                <td className="py-4 px-3 sm:px-4 text-center bg-slate-50/50">
                   <Link
                     to="/signup"
-                    className="inline-block py-2 sm:py-2.5 lg:py-[0.6vw] px-4 sm:px-6 lg:px-[1.4vw] rounded-xl lg:rounded-[0.7vw] border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs sm:text-sm lg:text-[0.88vw] transition-all shadow-xs"
+                    className="inline-block py-2 px-5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs sm:text-sm transition-all shadow-xs"
                   >
                     Get Started
                   </Link>
                 </td>
-                <td className="py-4 sm:py-6 lg:py-[1.2vw] px-3 sm:px-4 lg:px-[1vw] text-center bg-slate-50/50">
+                <td className="py-4 px-3 sm:px-4 text-center bg-slate-50/50">
                   <Link
                     to="/signup"
-                    className="inline-flex items-center justify-center gap-1 sm:gap-1.5 lg:gap-[0.4vw] py-2 sm:py-2.5 lg:py-[0.6vw] px-4 sm:px-6 lg:px-[1.4vw] rounded-xl lg:rounded-[0.7vw] bg-[#ea7233] hover:bg-[#d65a1c] text-white font-semibold text-xs sm:text-sm lg:text-[0.88vw] transition-all shadow-sm"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-5 rounded-xl bg-[#ea7233] hover:bg-[#d65a1c] text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
                   >
                     <span>Upgrade Now</span>
-                    <ArrowRight className="w-3.5 sm:w-4 lg:w-[0.9vw] h-3.5 sm:h-4 lg:h-[0.9vw]" />
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </td>
-                <td className="py-4 sm:py-6 lg:py-[1.2vw] px-3 sm:px-4 lg:px-[1vw] text-center bg-slate-50/50 rounded-br-xl lg:rounded-br-[1.2vw]">
+                <td className="py-4 px-3 sm:px-4 text-center bg-slate-50/50">
                   <Link
                     to="/signup"
-                    className="inline-flex items-center justify-center gap-1 sm:gap-1.5 lg:gap-[0.4vw] py-2 sm:py-2.5 lg:py-[0.6vw] px-4 sm:px-6 lg:px-[1.4vw] rounded-xl lg:rounded-[0.7vw] bg-[#111827] hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm lg:text-[0.88vw] transition-all shadow-sm"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-5 rounded-xl bg-[#111827] hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
                   >
                     <span>Go Premium</span>
-                    <ArrowRight className="w-3.5 sm:w-4 lg:w-[0.9vw] h-3.5 sm:h-4 lg:h-[0.9vw]" />
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </td>
               </tr>
@@ -549,37 +549,37 @@ const Pricing = () => {
       {/* ------------------------------------------------------------- */}
       {/* 4. FREQUENTLY ASKED QUESTIONS SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-12 sm:py-20 lg:py-[4.5vw] px-4 sm:px-6 lg:px-[6vw] bg-[#f7ddd0] w-full">
-        <div className="max-w-6xl lg:max-w-[75vw] mx-auto">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-[#fdf4ee] w-full">
+        <div className="max-w-5xl mx-auto">
           {/* FAQ Title Header */}
-          <div className="text-center mb-8 sm:mb-12 lg:mb-[2.5vw]">
-            <h2 className="text-2xl sm:text-3xl lg:text-[2.2vw] font-bold text-slate-900 tracking-tight">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Frequently Asked <span className="text-[#ea7233]">Questions</span>
             </h2>
-            <p className="text-slate-600 mt-2 lg:mt-[0.5vw] text-xs sm:text-base lg:text-[1.2vw]">
+            <p className="text-slate-600 mt-2 text-sm sm:text-base">
               Everything you need to know about our pricing, features and support.
             </p>
           </div>
 
           {/* 2-Column FAQ Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-[1.5vw]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             
             {/* FAQ Item 1 */}
             <div 
               onClick={() => toggleFaqCard(0)}
-              className={`bg-white rounded-xl sm:rounded-2xl lg:rounded-[1.2vw] p-5 sm:p-7 lg:p-[1.6vw] shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 0 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100/60'} flex flex-col justify-between`}
+              className={`bg-white rounded-xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 0 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100'} flex flex-col justify-between`}
             >
               <div>
                 <div
-                  className={`w-full text-left font-bold text-sm sm:text-lg lg:text-[1.1vw] flex items-center justify-between gap-3 lg:gap-[1vw] transition-colors ${
+                  className={`w-full text-left font-bold text-base sm:text-lg flex items-center justify-between gap-3 transition-colors ${
                     openFaqIndex === 0 ? 'text-[#ea7233]' : 'text-slate-900 hover:text-[#ea7233]'
                   }`}
                 >
                   <span>Can I try Flipbook for free?</span>
-                  <ChevronDown className={`w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] shrink-0 transition-transform ${openFaqIndex === 0 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
+                  <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-200 ${openFaqIndex === 0 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
                 </div>
                 {openFaqIndex === 0 && (
-                  <p className="mt-2.5 sm:mt-3 lg:mt-[0.8vw] text-slate-600 text-xs sm:text-sm lg:text-[0.88vw] leading-relaxed lg:leading-[1.5]">
+                  <p className="mt-3 text-slate-600 text-sm leading-relaxed">
                     Yes. You can start with our free plan and explore the basic features before upgrading to a paid plan.
                   </p>
                 )}
@@ -589,19 +589,19 @@ const Pricing = () => {
             {/* FAQ Item 2 */}
             <div 
               onClick={() => toggleFaqCard(1)}
-              className={`bg-white rounded-xl sm:rounded-2xl lg:rounded-[1.2vw] p-5 sm:p-7 lg:p-[1.6vw] shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 1 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100/60'} flex flex-col justify-between`}
+              className={`bg-white rounded-xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 1 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100'} flex flex-col justify-between`}
             >
               <div>
                 <div
-                  className={`w-full text-left font-bold text-sm sm:text-lg lg:text-[1.1vw] flex items-center justify-between gap-3 lg:gap-[1vw] transition-colors ${
+                  className={`w-full text-left font-bold text-base sm:text-lg flex items-center justify-between gap-3 transition-colors ${
                     openFaqIndex === 1 ? 'text-[#ea7233]' : 'text-slate-900 hover:text-[#ea7233]'
                   }`}
                 >
                   <span>Can I add videos and links to my catalogue?</span>
-                  <ChevronDown className={`w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] shrink-0 transition-transform ${openFaqIndex === 1 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
+                  <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-200 ${openFaqIndex === 1 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
                 </div>
                 {openFaqIndex === 1 && (
-                  <p className="mt-2.5 sm:mt-3 lg:mt-[0.8vw] text-slate-600 text-xs sm:text-sm lg:text-[0.88vw] leading-relaxed lg:leading-[1.5]">
+                  <p className="mt-3 text-slate-600 text-sm leading-relaxed">
                     Yes. You can add videos, product links, buttons, images, and other interactive elements to make your catalogue more engaging.
                   </p>
                 )}
@@ -611,19 +611,19 @@ const Pricing = () => {
             {/* FAQ Item 3 */}
             <div 
               onClick={() => toggleFaqCard(2)}
-              className={`bg-white rounded-xl sm:rounded-2xl lg:rounded-[1.2vw] p-5 sm:p-7 lg:p-[1.6vw] shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 2 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100/60'} flex flex-col justify-between`}
+              className={`bg-white rounded-xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 2 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100'} flex flex-col justify-between`}
             >
               <div>
                 <div
-                  className={`w-full text-left font-bold text-sm sm:text-lg lg:text-[1.1vw] flex items-center justify-between gap-3 lg:gap-[1vw] transition-colors ${
+                  className={`w-full text-left font-bold text-base sm:text-lg flex items-center justify-between gap-3 transition-colors ${
                     openFaqIndex === 2 ? 'text-[#ea7233]' : 'text-slate-900 hover:text-[#ea7233]'
                   }`}
                 >
                   <span>Can I change my plan later?</span>
-                  <ChevronDown className={`w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] shrink-0 transition-transform ${openFaqIndex === 2 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
+                  <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-200 ${openFaqIndex === 2 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
                 </div>
                 {openFaqIndex === 2 && (
-                  <p className="mt-2.5 sm:mt-3 lg:mt-[0.8vw] text-slate-600 text-xs sm:text-sm lg:text-[0.88vw] leading-relaxed lg:leading-[1.5]">
+                  <p className="mt-3 text-slate-600 text-sm leading-relaxed">
                     Yes. You can upgrade or change your plan whenever your business needs change. Your account and existing catalogues remain available.
                   </p>
                 )}
@@ -633,19 +633,19 @@ const Pricing = () => {
             {/* FAQ Item 4 */}
             <div 
               onClick={() => toggleFaqCard(3)}
-              className={`bg-white rounded-xl sm:rounded-2xl lg:rounded-[1.2vw] p-5 sm:p-7 lg:p-[1.6vw] shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 3 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100/60'} flex flex-col justify-between`}
+              className={`bg-white rounded-xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all border cursor-pointer select-none ${openFaqIndex === 3 ? 'border-[#ea7233]/40 shadow-sm' : 'border-orange-100'} flex flex-col justify-between`}
             >
               <div>
                 <div
-                  className={`w-full text-left font-bold text-sm sm:text-lg lg:text-[1.1vw] flex items-center justify-between gap-3 lg:gap-[1vw] transition-colors ${
+                  className={`w-full text-left font-bold text-base sm:text-lg flex items-center justify-between gap-3 transition-colors ${
                     openFaqIndex === 3 ? 'text-[#ea7233]' : 'text-slate-900 hover:text-[#ea7233]'
                   }`}
                 >
                   <span>Do you provide support for Enterprise plans?</span>
-                  <ChevronDown className={`w-4 sm:w-5 lg:w-[1.2vw] h-4 sm:h-5 lg:h-[1.2vw] shrink-0 transition-transform ${openFaqIndex === 3 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
+                  <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-200 ${openFaqIndex === 3 ? 'rotate-180 text-[#ea7233]' : 'text-slate-400'}`} />
                 </div>
                 {openFaqIndex === 3 && (
-                  <p className="mt-2.5 sm:mt-3 lg:mt-[0.8vw] text-slate-600 text-xs sm:text-sm lg:text-[0.88vw] leading-relaxed lg:leading-[1.5]">
+                  <p className="mt-3 text-slate-600 text-sm leading-relaxed">
                     Yes. Enterprise customers receive priority support and dedicated assistance based on their business requirements.
                   </p>
                 )}
@@ -659,8 +659,8 @@ const Pricing = () => {
       {/* ------------------------------------------------------------- */}
       {/* 5. READY TO GET STARTED CTA BANNER */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-6 sm:py-10 lg:py-[2vw] px-4 sm:px-6 lg:px-[6vw] max-w-full mx-auto">
-        <div className="relative rounded-2xl sm:rounded-3xl lg:rounded-[1.5vw] overflow-hidden shadow-lg min-h-[180px] sm:min-h-[240px] lg:min-h-[16vw] flex items-center justify-center p-4 sm:p-8 lg:p-[1.8vw] border border-slate-200/60 max-w-7xl lg:max-w-[85vw] mx-auto group">
+      <section className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg min-h-[200px] sm:min-h-[250px] flex items-center justify-center p-6 sm:p-10 border border-slate-200/60 group">
           
           {/* Banner Image Background */}
           <img 
@@ -670,24 +670,24 @@ const Pricing = () => {
           />
 
           {/* Center Banner Content */}
-          <div className="relative z-10 text-center max-w-2xl lg:max-w-[45vw] mx-auto space-y-2 sm:space-y-3 lg:space-y-[0.5vw]">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.6vw] font-bold tracking-tight text-[#2D3139] leading-tight">
+          <div className="relative z-10 text-center max-w-2xl mx-auto space-y-3">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[#2D3139] leading-tight">
               Ready to <br />
               <span className="text-[#F55316]">get started?</span>
             </h2>
 
-            <p className="text-[#4A5568] text-xs sm:text-sm lg:text-[0.95vw] max-w-xs sm:max-w-md lg:max-w-[28vw] mx-auto font-semibold leading-snug">
-              Create engaging, interactive catalogue and <br className="hidden sm:block" />
+            <p className="text-[#4A5568] text-xs sm:text-sm md:text-base max-w-md mx-auto font-medium leading-relaxed">
+              Create engaging, interactive catalogues and <br className="hidden sm:block" />
               bring your products to life.
             </p>
 
-            <div className="pt-1 sm:pt-2 lg:pt-[0.3vw] flex justify-center">
+            <div className="pt-2 flex justify-center">
               <Link
                 to="/contact"
-                className="bg-[#F55316] hover:bg-[#e04509] text-white font-semibold text-xs sm:text-sm lg:text-[0.95vw] px-5 sm:px-7 lg:px-[1.8vw] py-2 sm:py-2.5 lg:py-[0.55vw] rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 hover:scale-105"
+                className="bg-[#F55316] hover:bg-[#e04509] text-white font-semibold text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-2 hover:scale-105"
               >
                 <span>Contact Us</span>
-                <ArrowRight className="w-3.5 sm:w-4 lg:w-[0.9vw] h-3.5 sm:h-4 lg:h-[0.9vw]" />
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>

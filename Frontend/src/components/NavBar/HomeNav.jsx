@@ -14,9 +14,9 @@ const DEFAULT_AVATAR_COLORS = [
 
 const DEFAULT_NAV_LINKS = [
   { name: 'Home', path: '/home' },
-  { name: 'Converter', path: '/converter' },
   { name: 'Explore', path: '/explore' },
   { name: 'Features', path: '/features' },
+  { name: 'Converter', path: '/converter' },
   { name: 'Pricing', path: '/pricing' },
   { name: 'Help', path: '/help' },
 ];

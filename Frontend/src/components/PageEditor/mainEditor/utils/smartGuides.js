@@ -105,34 +105,44 @@ export const initSmartGuides = (dragState) => {
   const candidates = [];
   const MAX_CANDIDATES = 50;
 
-  // Target meaningful candidate tags only
-  const allElements = svg.querySelectorAll('g[id], path[id], rect[id], circle[id], ellipse[id], text[id], foreignObject[id], image[id]');
-  for (let i = 0; i < allElements.length && candidates.length < MAX_CANDIDATES; i++) {
-    const el = allElements[i];
-    if (excludedIds.has(el.id)) continue;
-    const tag = el.tagName.toLowerCase();
-    if (tag === 'tspan' || tag === 'textpath') continue;
+  // Prioritize direct siblings and top-level container children (avoid deep vector scanning)
+  const candidateElements = [];
+  const parentContainer = target.parentElement || svg;
+  
+  if (parentContainer && parentContainer.children) {
+    for (const child of parentContainer.children) {
+      if (child.id && child !== target && !excludedIds.has(child.id)) {
+        candidateElements.push(child);
+      }
+    }
+  }
+  if (parentContainer !== svg && svg.children) {
+    for (const child of svg.children) {
+      if (child.id && child !== parentContainer && !excludedIds.has(child.id)) {
+        candidateElements.push(child);
+      }
+    }
+  }
+
+  // Fallback: if very few candidates, query top-level shapes/groups only
+  if (candidateElements.length < 5) {
+    const topShapes = svg.querySelectorAll(':scope > g[id], :scope > rect[id], :scope > circle[id], :scope > text[id], :scope > path[id]');
+    for (const el of topShapes) {
+      if (!candidateElements.includes(el) && !excludedIds.has(el.id)) {
+        candidateElements.push(el);
+      }
+    }
+  }
+
+  for (let i = 0; i < candidateElements.length && candidates.length < MAX_CANDIDATES; i++) {
+    const el = candidateElements[i];
+    const tag = el.tagName?.toLowerCase();
+    if (tag === 'tspan' || tag === 'textpath' || tag === 'defs') continue;
 
     const name = el.getAttribute('data-name') || '';
     const type = el.getAttribute('data-type') || '';
     if (name === 'Overlay' || name === 'Document Shield' || type === 'background' || type === 'shield') continue;
     if (el.getAttribute('data-hidden') === 'true' || el.style.visibility === 'hidden' || el.style.display === 'none') continue;
-    if (el.closest('[data-name="Overlay"]') || el.closest('[data-type="background"]')) continue;
-    if (el === svg) continue;
-
-    // Skip nested children inside groups to align with group bounds
-    const parentGroup = el.parentElement?.closest('g[id]');
-    if (parentGroup && parentGroup !== svg && !excludedIds.has(parentGroup.id)) {
-      if (
-        parentGroup.getAttribute('data-type') === 'group' ||
-        parentGroup.id.startsWith('group-') ||
-        parentGroup.getAttribute('data-is-image-group') === 'true' ||
-        parentGroup.getAttribute('data-is-video-group') === 'true' ||
-        parentGroup.getAttribute('data-is-gif-group') === 'true'
-      ) {
-        continue;
-      }
-    }
 
     const box = getBoxInSvg(el, svg, svgInvCtm);
     if (box && box.width > 0 && box.height > 0) {

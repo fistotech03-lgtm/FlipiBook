@@ -1008,7 +1008,8 @@ const getDraggableElement = (target, canvasRoot) => {
     handleSvgMouseUp,
     handleSvgMouseLeave,
     handleSvgClick,
-} = useCanvasPointerEvents({
+    handleSvgDoubleClick
+  } = useCanvasPointerEvents({
     zoom,
     activePageIndex,
     setActivePageIndex,
@@ -1401,6 +1402,7 @@ const getDraggableElement = (target, canvasRoot) => {
             handleSvgMouseUp={handleSvgMouseUp}
             handleSvgMouseLeave={handleSvgMouseLeave}
             handleSvgClick={handleSvgClick}
+            handleSvgDoubleClick={handleSvgDoubleClick}
             handleSvgContextMenu={handleSvgContextMenu}
             isSpaceDown={isSpaceDown}
             selectedLayerId={selectedLayerId}

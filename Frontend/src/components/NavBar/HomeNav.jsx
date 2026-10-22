@@ -14,19 +14,19 @@ const DEFAULT_AVATAR_COLORS = [
 
 const DEFAULT_NAV_LINKS = [
   { name: 'Home', path: '/home' },
-  { name: 'Converter', path: '/converter' },
   { name: 'Explore', path: '/explore' },
   { name: 'Features', path: '/features' },
+  { name: 'Converter', path: '/converter' },
   { name: 'Pricing', path: '/pricing' },
+  { name: 'Forum', path: '/forum' },
   { name: 'Help', path: '/help' },
 ];
 
 const MY_FLIPBOOKS_NAV_LINKS = [
-  { name: 'Over View', path: '/home' },
+  { name: 'Overview', path: '/overview' },
   { name: 'My Flipibooks', path: '/my-flipbooks' },
   { name: 'Templates', path: '/templates' },
-  { name: 'Features', path: '/features' },
-  { name: 'Help / Support', path: '/help' },
+  { name: 'Guide', path: '/guide' },
 ];
 
 const PROTECTED_NAV_ITEMS = new Set(['/my-flipbooks']);
@@ -46,7 +46,8 @@ const getAvatarColor = (identifier, customColor) => {
 const checkIsLinkActive = (link, currentPath) => {
   return currentPath === link.path || 
          (link.name === 'Home' && currentPath === '/') ||
-         (link.name === 'Over View' && currentPath === '/home') ||
+         (link.name === 'Overview' && currentPath === '/overview') ||
+         (link.name === 'Over View' && currentPath === '/overview') ||
          (link.name === 'My Flipibooks' && currentPath.startsWith('/my-flipbooks')) ||
          (link.path === '/contact' && currentPath === '/contact-us') ||
          (link.path === '/help' && (currentPath === '/help' || currentPath === '/contact'));
@@ -56,7 +57,7 @@ export default function HomeNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const isMyFlipbooksPage = currentPath.startsWith('/my-flipbooks') || currentPath.startsWith('/templates') || currentPath.startsWith('/settings');
+  const isMyFlipbooksPage = currentPath.startsWith('/my-flipbooks') || currentPath.startsWith('/templates') || currentPath.startsWith('/settings') || currentPath.startsWith('/overview') || currentPath.startsWith('/guide');
   
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);

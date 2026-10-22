@@ -901,6 +901,17 @@ const PageEditor = () => {
     const initializeEditor = async () => {
       setIsLoading(true);
       const activeVId = v_id || location.state?.v_id;
+      // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
+      if (!activeVId) {
+        const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+        const targetFolder = resolvePhysicalFolder(location.state?.folderName) || 'My_Flipbooks';
+        navigate(`/editor/${encodeURIComponent(targetFolder)}/${generatedVId}`, {
+          replace: true,
+          state: { ...(location.state || {}), v_id: generatedVId, folderName: targetFolder }
+        });
+        return;
+      }
+
       let hasLocalCachedPages = false;
       let loadedCachedPages = null;
       try {
@@ -928,6 +939,7 @@ const PageEditor = () => {
               if (cachedState.bookName || cachedState.pageName) {
                 setCurrentBook((prev) => ({
                   ...(prev || {}),
+                  v_id: activeVId,
                   flipbookName:
                     cachedState.pageName ||
                     cachedState.bookName ||
@@ -945,18 +957,19 @@ const PageEditor = () => {
             const backendUrl =
               import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
+            const userEmail = user?.emailId || user?.email || location.state?.emailId || 'user@flipibook.com';
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: {
-                emailId: user?.emailId || user?.email,
+                emailId: userEmail,
                 v_id: activeVId,
-                folderName: folder || location.state?.folderName,
+                folderName: folder || location.state?.folderName || 'My_Flipbooks',
                 bookName: decodeURIComponent(activeVId),
               },
+              withCredentials: true,
             });
 
             if (res.data && res.data.pages) {
               const parser = new DOMParser();
-              const userEmail = user?.emailId || user?.email;
               const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
               const actualFolderName = resolvePhysicalFolder(
                 res.data.meta?.folderName ||
@@ -1001,6 +1014,7 @@ const PageEditor = () => {
               setCurrentBook((prev) => ({
                 ...(prev || {}),
                 ...(fetchedMeta || {}),
+                v_id: res.data.meta?.v_id || res.data.v_id || activeVId,
                 folderName: actualFolderName,
                 flipbookName:
                   fetchedMeta.flipbookName ||
@@ -1340,6 +1354,69 @@ const PageEditor = () => {
             } catch (offlineErr) {
               console.warn("[PageEditor] IndexedDB offline fallback check error:", offlineErr);
             }
+            // Fallback: If template data was passed in navigation state, load it into canvas with activeVId!
+            if (location.state && (location.state.templatePages || location.state.initialTemplateSvg || location.state.pageCount)) {
+              console.log("[PageEditor] Loading template pages directly from navigation state for book:", activeVId);
+              const count = location.state.pageCount || (location.state.templatePages ? location.state.templatePages.length : 12);
+              const fallbackTemplatePages = Array.from({ length: count }, (_item, i) => {
+                const name = `Page ${i + 1}`;
+                let html, layers;
+                if (location.state?.templatePages?.[i]) {
+                  html = location.state.templatePages[i];
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, "image/svg+xml");
+                  const svgEl = doc.querySelector("svg");
+                  layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+                } else if (i === 0 && location.state?.initialTemplateSvg) {
+                  html = location.state.initialTemplateSvg;
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, "image/svg+xml");
+                  const svgEl = doc.querySelector("svg");
+                  layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+                } else {
+                  const def = createDefaultPageDataRef.current(
+                    name,
+                    location.state.width,
+                    location.state.height,
+                  );
+                  html = def.html;
+                  layers = def.layers;
+                }
+                const pageUniqueId = `page_${i + 1}_${activeVId}`;
+                return {
+                  id: pageUniqueId,
+                  v_id: pageUniqueId,
+                  name,
+                  html,
+                  layers,
+                };
+              });
+              setPages(fallbackTemplatePages);
+
+              const newFirstRootId = fallbackTemplatePages[0]?.layers?.[0]?.id;
+              if (newFirstRootId) {
+                setSelectedLayerIdRaw(newFirstRootId);
+                setMultiSelectedIds(new Set([newFirstRootId]));
+                setCurrentFrameId(newFirstRootId);
+              }
+              setCurrentBook((prev) => ({
+                ...(prev || {}),
+                v_id: activeVId,
+                flipbookName:
+                  location.state?.flipbookName ||
+                  prev?.flipbookName ||
+                  "Untitled Flipbook",
+                folderName: resolvePhysicalFolder(
+                  location.state?.folderName || prev?.folderName,
+                ),
+                templateId: location.state?.templateId,
+                orientation: location.state?.orientation,
+                width: location.state?.width,
+                height: location.state?.height,
+              }));
+              setIsLoading(false);
+              return;
+            }
             navigate("/not-found", { replace: true });
           }
         } else if (location.state && location.state.pageCount) {
@@ -1385,6 +1462,7 @@ const PageEditor = () => {
           }
           setCurrentBook((prev) => ({
             ...(prev || {}),
+            v_id: activeVId,
             flipbookName:
               prev?.flipbookName ||
               location.state?.flipbookName ||

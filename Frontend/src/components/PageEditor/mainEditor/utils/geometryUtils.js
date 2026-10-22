@@ -261,6 +261,9 @@ export const getCanvasBounds = (svgElement, baseWidth = 210, baseHeight = 297) =
 
 export const syncDOM = (oldNode, newNode) => {
   if (!oldNode || !newNode) return;
+  // Fast path: if the nodes and all their children/attributes are identical, skip recursion entirely!
+  if (oldNode.isEqualNode && oldNode.isEqualNode(newNode)) return;
+
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
     oldNode.replaceWith(newNode.cloneNode(true));
     return;
@@ -303,6 +306,36 @@ export const syncDOM = (oldNode, newNode) => {
       syncDOM(oldChildren[i], newChildren[i]);
     }
   }
+};
+
+/**
+ * Consolidates multiple transform strings or matrix operations into a single clean SVG matrix(...) string.
+ * Prevents compound transform explosion (e.g. translate() scale() translate() matrix()) on template elements.
+ */
+export const consolidateTransforms = (...transforms) => {
+  if (typeof DOMMatrix === 'undefined') {
+    return transforms.filter(Boolean).join(' ').trim();
+  }
+  let m = new DOMMatrix();
+  let hasTransform = false;
+  for (const t of transforms) {
+    if (!t || !t.trim()) continue;
+    try {
+      m = m.multiply(new DOMMatrix(t));
+      hasTransform = true;
+    } catch {
+      return transforms.filter(Boolean).join(' ').trim();
+    }
+  }
+  if (!hasTransform) return '';
+  const a = Math.round(m.a * 100000) / 100000;
+  const b = Math.round(m.b * 100000) / 100000;
+  const c = Math.round(m.c * 100000) / 100000;
+  const d = Math.round(m.d * 100000) / 100000;
+  const e = Math.round(m.e * 1000) / 1000;
+  const f = Math.round(m.f * 1000) / 1000;
+  if (a === 1 && b === 0 && c === 0 && d === 1 && e === 0 && f === 0) return '';
+  return `matrix(${a} ${b} ${c} ${d} ${e} ${f})`;
 };
 
 export const matrixToTransform = (matrix) => {

@@ -180,7 +180,7 @@ export class EditCacheManager {
       const widthDiff = contentW - this.session.currentW;
       if (Math.abs(widthDiff) > 3) {
         targetW = Math.max(contentW + 4, 10);
-        const align = div.style.textAlign || 'left';
+        const align = div.style.textAlign || foTarget.getAttribute('data-text-align') || 'left';
         if (align === 'center') {
           targetX = this.session.currentX - (widthDiff / 2);
         } else if (align === 'right' || align === 'end') {

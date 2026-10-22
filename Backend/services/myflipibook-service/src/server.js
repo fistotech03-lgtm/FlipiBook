@@ -8,6 +8,8 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const myflipibookRoutes = require('./routes/myflipibookRoutes');
 const userSettingRoutes = require('./routes/userSettingRoutes');
+const exploreRoutes = require('./routes/exploreRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 
 const app = express();
 app.set('trust proxy', true);
@@ -126,6 +128,10 @@ app.use('/api/myflipibook', myflipibookRoutes);
 app.use('/api/flipbook', myflipibookRoutes);
 app.use('/api/usersetting', userSettingRoutes);
 app.use('/usersetting', userSettingRoutes);
+app.use('/api/explore', exploreRoutes);
+app.use('/explore', exploreRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/profile', profileRoutes);
 app.use('/', userSettingRoutes);
 app.use('/', myflipibookRoutes);
 

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import CreateFlipbookModal from '../components/CreateFlipbookModal';
 import AlertModal from '../components/AlertModal';
+import { useAuth } from '../context/AuthContext';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import Footer from './Footer';
 import { convertPdfToImages, convertPdfWithInkscape, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
@@ -2238,9 +2239,8 @@ export default function Home() {
   const navigate = useNavigate();
 
   // User Data
-  const storedUser = localStorage.getItem('user');
-  const user = storedUser ? JSON.parse(storedUser) : null;
-  const emailId = user?.emailId;
+  const { user } = useAuth();
+  const emailId = user?.email || user?.emailId;
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
   const [isLoading, setIsLoading] = useState(false);
@@ -2537,31 +2537,36 @@ export default function Home() {
 
       const now = new Date();
       const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+      const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
       const uniqueName = templateData.flipbookName || `Flipbook_${timeString}`;
       const targetFolder = 'My_Flipbooks';
 
       const res = await axios.post(`${backendUrl}/api/flipbook/save`, {
         emailId,
+        v_id: generatedVId,
         flipbookName: uniqueName,
         pages: pages,
         overwrite: true,
         folderName: targetFolder,
         meta: {
+          v_id: generatedVId,
           width: templateData.width,
           height: templateData.height,
           templateId: templateData.templateId,
           orientation: templateData.orientation
         }
-      });
+      }, { withCredentials: true });
 
-      if (res.data && res.data.v_id) {
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${res.data.v_id}`, { state: templateData });
-      } else {
-        navigate('/editor', { state: templateData });
-      }
+      const finalVId = res.data?.v_id || generatedVId;
+      navigate(`/editor/${encodeURIComponent(targetFolder)}/${finalVId}`, {
+        state: { ...templateData, v_id: finalVId, emailId }
+      });
     } catch (e) {
       console.error("Creation failed", e);
-      navigate('/editor', { state: templateData });
+      const fallbackVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+      navigate(`/editor/${encodeURIComponent(targetFolder)}/${fallbackVId}`, {
+        state: { ...templateData, v_id: fallbackVId, emailId }
+      });
     } finally {
       setIsLoading(false);
     }

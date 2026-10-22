@@ -1,3 +1,5 @@
+import { consolidateTransforms } from '../mainEditor/utils/geometryUtils';
+
 export const syncGradient = (doc, element, baseAttr) => {
   const type = element.getAttribute(`${baseAttr}-type`);
   const currentValue = element.getAttribute(baseAttr);
@@ -860,7 +862,9 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
       if (groupTransform) {
         Array.from(group.children).forEach(child => {
           const childTransform = child.getAttribute('transform') || '';
-          child.setAttribute('transform', `${groupTransform} ${childTransform}`.trim());
+          const consolidated = consolidateTransforms(groupTransform, childTransform);
+          if (consolidated) child.setAttribute('transform', consolidated);
+          else child.removeAttribute('transform');
         });
       }
 
@@ -1021,7 +1025,12 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
       }
 
       const currentTransform = imported.getAttribute('transform') || '';
-      imported.setAttribute('transform', `${fittingTransform} ${currentTransform}`.trim());
+      const consolidated = consolidateTransforms(fittingTransform, currentTransform);
+      if (consolidated) {
+        imported.setAttribute('transform', consolidated);
+      } else {
+        imported.removeAttribute('transform');
+      }
 
       targetParent.appendChild(imported);
     });

@@ -33,6 +33,7 @@ export const CanvasViewport = ({
   handleSvgMouseMove,
   handleSvgMouseLeave,
   handleSvgClick,
+  handleSvgDoubleClick,
   handleSvgMouseUp,
   handleSvgContextMenu,
   isSpaceDown,
@@ -144,7 +145,7 @@ export const CanvasViewport = ({
                         return (
                           <div
                             className={`absolute inset-0 w-full h-full overflow-visible flex items-center justify-center ${isPopupEditor ? 'bg-transparent' : 'bg-white'}`}
-                            style={{ cursor: (isPencilActive ? PENCIL_CURSOR : (isPenToolActive ? PEN_CURSOR : (isShapeActive ? SHAPE_CURSOR : (isTypeActive ? TYPE_CURSOR : 'default')))) }}
+                            style={{ cursor: (isEditingTextRef?.current ? TYPE_CURSOR : (isPencilActive ? PENCIL_CURSOR : (isPenToolActive ? PEN_CURSOR : (isShapeActive ? SHAPE_CURSOR : (isTypeActive ? TYPE_CURSOR : 'default'))))) }}
                           >
                             {pageHtml && (
                               <div
@@ -159,8 +160,10 @@ export const CanvasViewport = ({
                                       el.__lastHtml = newHtml;
                                       el.__lastPageIndex = displayIndex;
                                     } else if (el.__lastHtml !== newHtml) {
-                                      // Fast path: When switching between different pages, direct innerHTML swap is 100x faster than recursive syncDOM!
-                                      if (el.__lastPageIndex !== displayIndex) {
+                                      // Fast path: Direct innerHTML swap is hardware accelerated and avoids recursive syncDOM freezes
+                                      // unless actively editing inline text where DOM input focus must be preserved.
+                                      const isTextEditing = isEditingTextRef?.current;
+                                      if (el.__lastPageIndex !== displayIndex || !isTextEditing) {
                                         el.innerHTML = newHtml;
                                         el.__lastPageIndex = displayIndex;
                                         el.__lastHtml = newHtml;
@@ -194,6 +197,7 @@ export const CanvasViewport = ({
                                 onPointerUp={(e) => handleSvgMouseUp && handleSvgMouseUp(e)}
                                 onMouseLeave={handleSvgMouseLeave}
                                 onClick={handleSvgClick}
+                                onDoubleClick={(e) => handleSvgDoubleClick && handleSvgDoubleClick(e)}
                                 onDragOver={(e) => {
                                   e.preventDefault(); // Necessary to allow dropping external assets
                                   e.dataTransfer.dropEffect = 'copy';

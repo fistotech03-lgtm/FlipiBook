@@ -1,3 +1,4 @@
+
 /**
  * Utility to convert raw SVG <text> elements to responsive, multi-line <foreignObject> elements
  * with computed CSS styles, font-families, line-heights, letter-spacing, and text alignments.
@@ -74,10 +75,11 @@ export const convertTextToForeignObject = (el) => {
 
     // 7. Text Alignment: Preserve exact alignment from data-text-align, style.textAlign, SVG text-anchor, or template geometry
     const dataAlign = el.getAttribute('data-text-align') || el.getAttribute('data-align') || firstTspan?.getAttribute('data-text-align');
+    
+    // Check direct anchor on element, on first tspan, or on any tspan (DO NOT use computed style which defaults to 'start')
     let rawAnchor = el.getAttribute('text-anchor') || el.style?.textAnchor;
-    if (!rawAnchor) {
-      const computedAnchor = comp.getPropertyValue ? comp.getPropertyValue('text-anchor') : null;
-      if (computedAnchor && computedAnchor !== 'inherit') rawAnchor = computedAnchor;
+    if (!rawAnchor && firstTspan) {
+      rawAnchor = firstTspan.getAttribute('text-anchor') || firstTspan.style?.textAnchor;
     }
     if (!rawAnchor) {
       const tspanWithAnchor = tspans.find(t => t.getAttribute('text-anchor') || (t.style && t.style.textAnchor));
@@ -88,21 +90,21 @@ export const convertTextToForeignObject = (el) => {
       if (ancestorWithAnchor) rawAnchor = ancestorWithAnchor.getAttribute('text-anchor');
     }
 
-    let rawAlign = el.style?.textAlign || el.getAttribute('text-align');
-    if (!rawAlign && comp.getPropertyValue) {
-      const compAlign = comp.getPropertyValue('text-align');
-      if (compAlign && compAlign !== 'start' && compAlign !== 'left') rawAlign = compAlign;
-    }
+    let rawAlign = el.style?.textAlign || el.getAttribute('text-align') || firstTspan?.style?.textAlign;
 
     let finalAlign = 'left';
-    if (dataAlign && ['left', 'center', 'right', 'justify'].includes(dataAlign)) {
+    const normAnchor = String(rawAnchor || '').toLowerCase().trim();
+    const normAlign = String(rawAlign || dataAlign || '').toLowerCase().trim();
+    if (normAnchor === 'middle' || normAnchor === 'center' || normAlign === 'center' || normAlign === 'middle') {
+      finalAlign = 'center';
+    } else if (normAnchor === 'end' || normAnchor === 'right' || normAlign === 'right' || normAlign === 'end') {
+      finalAlign = 'right';
+    } else if (normAlign === 'justify') {
+      finalAlign = 'justify';
+    } else if (dataAlign && ['left', 'center', 'right', 'justify'].includes(dataAlign)) {
       finalAlign = dataAlign;
     } else if (rawAlign && ['left', 'center', 'right', 'justify'].includes(rawAlign)) {
       finalAlign = rawAlign;
-    } else if (rawAnchor === 'middle') {
-      finalAlign = 'center';
-    } else if (rawAnchor === 'end') {
-      finalAlign = 'right';
     } else {
       // Multi-line tspan geometry analysis: detect centered/right lines in templates exported without text-anchor
       if (tspans.length > 1) {

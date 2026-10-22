@@ -1,6 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Folder, ChevronDown, ArrowDownUp, Trash2, FolderInput, Check, SlidersHorizontal } from 'lucide-react';
+import { Search, Folder, ChevronDown, ArrowDownUp, Trash2, FolderInput, Check } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
 export default function FlipbooksToolbar({
@@ -30,7 +29,6 @@ export default function FlipbooksToolbar({
     isAllSelected,
     handleSelectAll
 }) {
-    const navigate = useNavigate();
 
     return (
         <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
@@ -205,15 +203,7 @@ export default function FlipbooksToolbar({
                         <span className="text-[0.85vw] font-medium text-gray-600">Multiple Selection</span>
                     </label>
 
-                    {/* Quick Access to Loading Screen Studio */}
-                    <button
-                        onClick={() => navigate('/loader-preview')}
-                        className="flex items-center gap-[0.35vw] px-[0.7vw] py-[0.4vw] rounded-[0.5vw] bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 shadow-2xs text-[0.75vw] font-semibold transition-all cursor-pointer group"
-                        title="Open Loading Screen Studio to preview and customize"
-                    >
-                        <SlidersHorizontal size="0.85vw" className="text-indigo-500 group-hover:scale-110 transition-transform" />
-                        <span>Loading Screen Studio</span>
-                    </button>
+
                 </div>
             </div>
         </div>

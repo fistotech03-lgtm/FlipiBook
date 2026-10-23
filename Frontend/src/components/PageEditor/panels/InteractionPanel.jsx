@@ -2005,7 +2005,7 @@ const InteractionPanel = ({
   }
 
   return (
-    <div className="flex flex-col gap-[2vh] px-[1.5vw] pt-[1.8vh] pb-[1.5vw] bg-[#fbfbfb] h-full overflow-y-auto no-scrollbar">
+    <div className="flex flex-col gap-[2vh] px-[1.5vw] pt-[1.8vh] pb-[1.5vw] bg-[#fbfbfb] h-full overflow-y-auto custom-scrollbar">
 
       {/* Interactions in this Page Section */}
       <div className="space-y-[1.5vh] mt-[0.5vh]">

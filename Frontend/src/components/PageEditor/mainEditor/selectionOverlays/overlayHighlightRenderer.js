@@ -1,4 +1,4 @@
-import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
+﻿import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
 import {
   getOverlayForElement,
   getHtmlOverlayForElement,
@@ -127,7 +127,7 @@ export const createOverlayHighlightRenderer = ({
             continue;
           }
 
-          // Purge descendant element overlays (step 3) — check if overlay belongs to any descendant
+          // Purge descendant element overlays (step 3) â€” check if overlay belongs to any descendant
           if (descendantIds.size > 0) {
             let isDescendant = false;
             for (const did of descendantIds) {
@@ -150,8 +150,14 @@ export const createOverlayHighlightRenderer = ({
 
           // Single-selection: purge any other selection polygon (step 2)
           if (!isMulti) {
-            const cls = node.className?.baseVal || node.className || '';
-            if (cls.includes('overlay-type-selected') || cls.includes('overlay-type-child-selected')) {
+            const rawCls = node.className;
+            const cls = typeof rawCls === 'string'
+              ? rawCls
+              : (typeof rawCls?.baseVal === 'string'
+                  ? rawCls.baseVal
+                  : (typeof node.getAttribute === 'function' ? (node.getAttribute('class') || '') : ''));
+
+            if (typeof cls === 'string' && (cls.includes('overlay-type-selected') || cls.includes('overlay-type-child-selected'))) {
               node.remove();
               continue;
             }
@@ -239,7 +245,7 @@ export const createOverlayHighlightRenderer = ({
       const zoomScale = zoom / 100;
       const isVectorPath = el.getAttribute('data-type') === 'vector-path' || el.getAttribute('data-is-vector') === 'true';
 
-      // ── PIXEL-PERFECT PATH for non-frame, non-line elements ──
+      // â”€â”€ PIXEL-PERFECT PATH for non-frame, non-line elements â”€â”€
       if (!isFrame && !isLine) {
         let localBBox = bbox;
         const isHotspot = el.getAttribute('data-is-hotspot') === 'true';
@@ -288,7 +294,7 @@ export const createOverlayHighlightRenderer = ({
           const mapped = [pt1, pt2, pt3, pt4].map(p => p.matrixTransform(localToOverlay));
           const pointsStr = mapped.map(p => `${p.x},${p.y}`).join(' ');
 
-          // ── Exact Path Shape Overlay for Vector Paths ──
+          // â”€â”€ Exact Path Shape Overlay for Vector Paths â”€â”€
           let pathOverlayId = `overlay-path-${type}-${el.id}`;
           let pathOverlay = overlay.querySelector(`[id="${pathOverlayId}"]`);
 
@@ -569,7 +575,7 @@ export const createOverlayHighlightRenderer = ({
               drawInteractionBadge(el, mapped, htmlOverlay, zoomScale, bbox);
             }
           }
-          return; // ← Early return: pixel-perfect path handled
+          return; // â† Early return: pixel-perfect path handled
         }
       }
 
@@ -704,7 +710,7 @@ export const createOverlayHighlightRenderer = ({
         }
       }
 
-      // ── RESIZE HANDLES (8 handles) - Fallback path ──
+      // â”€â”€ RESIZE HANDLES (8 handles) - Fallback path â”€â”€
       const isMultiSelectionBox = el.id === 'multi' || el.id === 'multi-selection-bounds';
       const selectionCount = isMultiSelectionBox ? 1 : (multiSelectedIdsRef.current.size > 0 ? multiSelectedIdsRef.current.size : (selectedLayerIdRef.current ? 1 : 0));
       if (selectionCount === 1 && (type === 'selected' || type === 'child-selected') && !isBeingEdited) {
@@ -890,7 +896,7 @@ export const createOverlayHighlightRenderer = ({
           }
         }
 
-        // ── VIDEO CONTROLS / MOVE TOGGLE BADGE ──
+        // â”€â”€ VIDEO CONTROLS / MOVE TOGGLE BADGE â”€â”€
         const isVideoEl = el.getAttribute('data-type') === 'video' || !!el.querySelector('video, iframe');
         if (isVideoEl && (type === 'selected' || type === 'child-selected') && htmlOverlay) {
           const isInteractive = el.getAttribute('data-video-interactive') === 'true';
@@ -956,7 +962,7 @@ export const createOverlayHighlightRenderer = ({
       }
     }
 
-    // ── INTERACTION BADGE (Fallback path) ──
+    // â”€â”€ INTERACTION BADGE (Fallback path) â”€â”€
     if (isSelected && !isBeingEdited && (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation')) {
       const htmlOverlay = getHtmlOverlayForElement(el);
       if (htmlOverlay) {
@@ -968,3 +974,4 @@ export const createOverlayHighlightRenderer = ({
 
   return { drawOverlayHighlight };
 };
+

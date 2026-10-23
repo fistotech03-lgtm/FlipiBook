@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { X, Search } from 'lucide-react';
-import { ELEMENT_CATEGORIES, ELEMENT_ITEMS } from './elementCatalog';
+import { ELEMENT_CATEGORIES, searchElementCatalog } from './elementCatalog';
+import { useRulerState, useElementInsertion, useCanvasDropListener } from './hooks';
+import { CategorySidebarList, ElementGridCard } from './components';
 
 export const AddElementsModal = ({
   isOpen = false,
   onClose,
   isRulerEnabled = true,
   activePageIndex = 0,
-  pages = [],
   saveModifiedPageHtml,
   setSelectedLayerId,
   setActiveMainTool,
@@ -18,137 +19,36 @@ export const AddElementsModal = ({
   dragConstraintsRef,
 }) => {
   const dragControls = useDragControls();
-  const lastInsertTimeRef = useRef(0);
   const [selectedCategory, setSelectedCategory] = useState('shapes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [rulerActive, setRulerActive] = useState(Boolean(isRulerEnabled));
 
-  // Sync with prop
-  useEffect(() => {
-    setRulerActive(Boolean(isRulerEnabled));
-  }, [isRulerEnabled]);
+  // Synchronized ruler state custom hook
+  const [rulerActive] = useRulerState(isRulerEnabled);
 
-  // Listen to global ruler toggle event
-  useEffect(() => {
-    const handleToggleRuler = (e) => {
-      if (e.detail !== undefined) {
-        const val = typeof e.detail === 'object' && e.detail !== null
-          ? (e.detail.isRulerEnabled !== undefined ? e.detail.isRulerEnabled : e.detail)
-          : e.detail;
-        setRulerActive(Boolean(val));
-      } else {
-        setRulerActive((prev) => !prev);
-      }
-    };
-    window.addEventListener('editor_toggleRuler', handleToggleRuler);
-    return () => window.removeEventListener('editor_toggleRuler', handleToggleRuler);
-  }, []);
-
-  // Handle inserting item into canvas (either at center or drop point)
-  const handleInsert = (item, customX, customY, targetPageIndex) => {
-    const now = Date.now();
-    if (now - lastInsertTimeRef.current < 250) return;
-    lastInsertTimeRef.current = now;
-
-    const pageIdx = targetPageIndex !== undefined ? targetPageIndex : activePageIndex;
-    const container = document.querySelector(`.page-svg-container[data-page-index="${pageIdx}"]`);
-    const svg = container?.querySelector('svg');
-    if (!svg) return;
-
-    let cx = customX;
-    let cy = customY;
-
-    // ViewBox boundary calculations for clamping drop coordinates
-    let vbMinX = 0, vbMinY = 0, vbWidth = baseWidth || 210, vbHeight = baseHeight || 297;
-    const vb = svg.getAttribute('viewBox');
-    if (vb) {
-      const parts = vb.trim().split(/[\s,]+/).map(Number);
-      if (parts.length === 4 && !isNaN(parts[2]) && !isNaN(parts[3])) {
-        vbMinX = parts[0];
-        vbMinY = parts[1];
-        vbWidth = parts[2];
-        vbHeight = parts[3];
-      }
-    }
-
-    if (cx === undefined || cx === null || isNaN(cx) || cy === undefined || cy === null || isNaN(cy)) {
-      cx = vbMinX + vbWidth / 2;
-      cy = vbMinY + vbHeight / 2;
-    } else {
-      // Clamp coordinates within the canvas viewBox so dropped elements are always on the page
-      const margin = 20;
-      cx = Math.max(vbMinX + margin, Math.min(vbMinX + vbWidth - margin, cx));
-      cy = Math.max(vbMinY + margin, Math.min(vbMinY + vbHeight - margin, cy));
-    }
-
-    const id = `el-${Math.random().toString(36).substr(2, 9)}`;
-
-    const el = item.insert(cx, cy);
-    if (!el) return;
-
-    el.setAttribute('id', id);
-    if (!el.getAttribute('data-name')) {
-      el.setAttribute('data-name', item.name);
-    }
-    if (!el.getAttribute('data-type')) {
-      el.setAttribute('data-type', 'shape');
-    }
-
-    // Target the page frame group (e.g. Page 1) rather than the SVG root
-    const pageGroup = svg.querySelector('[data-type="frame"]') ||
-                      svg.querySelector('[data-name="Overlay"]')?.parentElement ||
-                      svg.querySelector('g[id^="g-"]') ||
-                      svg.querySelector('g') ||
-                      svg;
-
-    // Migrate any orphaned elements directly on SVG into the page frame group
-    if (pageGroup !== svg) {
-      Array.from(svg.children).forEach(child => {
-        if (child === pageGroup) return;
-        if (['defs', 'metadata', 'style', 'title', 'desc'].includes(child.tagName.toLowerCase())) return;
-        if (child.getAttribute('data-name') === 'Document Shield' || child.getAttribute('data-type') === 'shield') return;
-        pageGroup.appendChild(child);
-      });
-    }
-
-    pageGroup.appendChild(el);
-
-    if (saveModifiedPageHtml) {
-      saveModifiedPageHtml(pageIdx, svg);
-    }
-    if (setSelectedLayerId) {
-      setSelectedLayerId(id);
-    }
-    if (setActiveMainTool) {
-      setActiveMainTool('select');
-    }
-  };
-
-  // Listen for canvas drop events
-  useEffect(() => {
-    const handleAddElementEvent = (e) => {
-      const { pageIndex, elementId, dropPoint } = e.detail || {};
-      const item = ELEMENT_ITEMS.find((it) => it.id === elementId);
-      if (!item) return;
-      handleInsert(item, dropPoint?.x, dropPoint?.y, pageIndex);
-    };
-
-    window.addEventListener('add-element-to-editor', handleAddElementEvent);
-    return () => {
-      window.removeEventListener('add-element-to-editor', handleAddElementEvent);
-    };
-  }, [activePageIndex, baseWidth, baseHeight, saveModifiedPageHtml, setSelectedLayerId, setActiveMainTool]);
-
-  if (!isOpen) return null;
-
-  // Filter elements
-  const filteredElements = ELEMENT_ITEMS.filter((item) => {
-    const matchesCat = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesQuery;
+  // Element insertion workflow custom hook
+  const { handleInsert } = useElementInsertion({
+    activePageIndex,
+    baseWidth,
+    baseHeight,
+    saveModifiedPageHtml,
+    setSelectedLayerId,
+    setActiveMainTool,
   });
 
-  const activeCategoryObj = ELEMENT_CATEGORIES.find((c) => c.id === selectedCategory) || ELEMENT_CATEGORIES[0];
+  // Canvas drop event listener custom hook
+  useCanvasDropListener(handleInsert);
+
+  // High-performance search via Inverted Index + Memoization Cache
+  const filteredElements = useMemo(() => {
+    if (!isOpen) return [];
+    return searchElementCatalog(searchQuery, selectedCategory);
+  }, [isOpen, searchQuery, selectedCategory]);
+
+  const activeCategoryObj = useMemo(() => {
+    return ELEMENT_CATEGORIES.find((c) => c.id === selectedCategory) || ELEMENT_CATEGORIES[0];
+  }, [selectedCategory]);
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -173,9 +73,9 @@ export const AddElementsModal = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Top Header & Drag Handle (matching screenshot) ── */}
+        {/* Top Header & Drag Handle */}
         <div className="px-[1.2vw] pt-[0.6vh] pb-[0.8vh]">
-          {/* Centered Six-Dot Drag Handle at the very top */}
+          {/* Centered Six-Dot Drag Handle */}
           <div className="flex justify-center items-center">
             <div
               onPointerDown={(e) => dragControls.start(e)}
@@ -205,7 +105,7 @@ export const AddElementsModal = ({
             </button>
           </div>
 
-          {/* Search Bar (seamless, without border divider) */}
+          {/* Search Bar */}
           <div className="mt-[0.9vh]">
             <div className="relative flex items-center">
               <Search size="0.95vw" className="absolute left-[0.75vw] text-gray-400" />
@@ -220,70 +120,24 @@ export const AddElementsModal = ({
           </div>
         </div>
 
-        {/* ── Body: 2 Columns ── */}
+        {/* Body: 2 Columns */}
         <div className="flex-1 min-h-0 flex border-t border-gray-100 mt-[0.2vh] overflow-hidden">
-          {/* Left Categories Sidebar with custom scroll */}
-          <div className="w-[35%] border-r border-gray-100 overflow-y-auto custom-scrollbar py-[0.6vh] flex flex-col gap-[0.25vh]">
-            {ELEMENT_CATEGORIES.map((cat) => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`relative flex items-center gap-[0.55vw] px-[0.75vw] py-[0.75vh] mx-[0.3vw] text-left rounded-[0.45vw] transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-red-50/70 text-[#ea543a] font-semibold'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  {/* Left indicator bar */}
-                  {isActive && (
-                    <div className="absolute left-0 top-[15%] bottom-[15%] w-[3px] bg-[#ea543a] rounded-r-full" />
-                  )}
-                  <Icon
-                    icon={cat.icon}
-                    className={`w-[1.05vw] h-[1.05vw] flex-shrink-0 ${
-                      isActive ? 'text-[#ea543a]' : 'text-gray-500'
-                    }`}
-                  />
-                  <span className="text-[0.72vw] truncate">{cat.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Left Categories Sidebar Component */}
+          <CategorySidebarList
+            categories={ELEMENT_CATEGORIES}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
 
-          {/* Right Elements Grid with custom scroll */}
+          {/* Right Elements Grid */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.9vw] flex flex-col">
             <span className="text-[0.8vw] font-bold text-gray-700 mb-[0.9vh] block">
-              {activeCategoryObj.name === 'Shapes' ? 'Vector Graphic' : activeCategoryObj.name}
+              {activeCategoryObj.name}
             </span>
 
             <div className="grid grid-cols-3 gap-[0.65vw]">
               {filteredElements.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleInsert(item)}
-                  draggable={true}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData(
-                      'application/json',
-                      JSON.stringify({
-                        type: 'element',
-                        elementId: item.id,
-                      })
-                    );
-                    e.dataTransfer.effectAllowed = 'copy';
-                  }}
-                  title={`Click to add or drag to place ${item.name}`}
-                  className="bg-white border border-gray-200 hover:border-gray-400 hover:shadow-md rounded-[0.45vw] p-[0.6vw] aspect-square flex flex-col items-center justify-center cursor-grab active:cursor-grabbing transition-all hover:scale-105 active:scale-95 group"
-                >
-                  <div className="flex-1 flex items-center justify-center pointer-events-none">
-                    {item.renderPreview()}
-                  </div>
-                  <span className="text-[0.62vw] font-medium text-gray-500 group-hover:text-gray-800 truncate w-full text-center mt-[0.3vh] pointer-events-none">
-                    {item.name}
-                  </span>
-                </button>
+                <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
               ))}
 
               {filteredElements.length === 0 && (

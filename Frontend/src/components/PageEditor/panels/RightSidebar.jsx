@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { getVisualBBox, getCanvasBounds } from '../mainEditor/utils/geometryUtils';
 import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, ChevronRight, Upload, Link, Check, FileText, Video } from 'lucide-react';
 import { Icon } from '@iconify/react';
@@ -7,6 +7,17 @@ import {
   DimensionProperties,
   PageProperties,
   ShapeProperties,
+  ElementShapesProperties,
+  TextElementEditor,
+  ElementButtonProperties,
+  ImageFramingProperties,
+  ElementTableProperties,
+  ElementQRCodeProperties,
+  ElementMapProperties,
+  ElementEmbedProperties,
+  ElementSlideshowProperties,
+  ElementDecoratorProperties,
+  ElementAudioProperties,
   PenToolProperties,
   ImageEditor,
   TextEditor,
@@ -665,7 +676,94 @@ const RightSidebar = ({
         const isText = (lowerTagName === 'text' || lowerTagName === 'tspan' || (lowerTagName === 'foreignobject' && !isVideo)) || dataType === 'text' || lowerDataName.includes('text') || lowerId.includes('text');
         const isIcon = dataType === 'icon' || dataType === 'hotspot' || lowerDataName.includes('icon') || lowerDataName.includes('hotspot') || lowerId.includes('icon') || lowerId.includes('hotspot') || lowerTagName.includes('lucide') || el.classList.contains('lucide') || el.classList.contains('iconify');
 
-        props.isUserGroup = isUserGroup;
+                const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
+          el.getAttribute('data-shape-type') !== null ||
+          (el.querySelector && el.querySelector('[data-is-element-shape="true"]') !== null);
+
+        const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
+          el.getAttribute('data-typography-type') === 'kinetic' ||
+          el.getAttribute('data-typography-type') === 'motion-graphic' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('typography-')) ||
+          (el.querySelector && el.querySelector('[data-is-element-typography="true"], [data-typography-type]'));
+
+        const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
+        const isElementButton = el.getAttribute('data-is-element-button') === 'true' ||
+          el.getAttribute('data-type') === 'button' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('button-')) ||
+          (el.querySelector && el.querySelector('[data-is-element-button="true"]')) ||
+          !!buttonParent;
+
+        const isImageFrame = el.getAttribute('data-is-image-frame') === 'true' ||
+          el.getAttribute('data-type') === 'image-frame' ||
+          el.getAttribute('data-frame-type') !== null ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('image-frame-'));
+
+        const isTable = el.getAttribute('data-type') === 'table-frame' ||
+          el.getAttribute('data-type') === 'table' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('table-')) ||
+          (el.querySelector && el.querySelector('[data-type="table-frame"], table') !== null);
+
+        const qrParent = el?.closest?.('[data-type="qrcode"], g[id^="qrcode-"]');
+        const isQRCode = el.getAttribute('data-type') === 'qrcode' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('qrcode-')) ||
+          !!qrParent;
+
+        const mapParent = el?.closest?.('[data-type="map"], g[id^="map-"]');
+        const isMap = el.getAttribute('data-type') === 'map' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('map-')) ||
+          !!mapParent;
+
+        const embedParent = el?.closest?.('[data-type="embed-frame"], g[id^="embed-"]');
+        const isEmbed = el.getAttribute('data-type') === 'embed-frame' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('embed-')) ||
+          !!embedParent;
+
+        const isSlideshow = el.getAttribute('data-type') === 'slideshow' ||
+          el.getAttribute('data-is-slideshow') === 'true' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('slideshow-'));
+
+        const isDecorator = el.getAttribute('data-type') === 'animated-decorator' ||
+          el.getAttribute('data-is-animated-decorator') === 'true' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('decorator-'));
+
+        const audioParent = el?.closest?.('[data-type="audio-frame"], g[id^="audio-"]');
+        const isAudio = el.getAttribute('data-type') === 'audio-frame' ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('audio-')) ||
+          !!audioParent;
+
+        props.isAudio = isAudio;
+
+        props.isMap = isMap;
+        props.isEmbed = isEmbed;
+        props.isSlideshow = isSlideshow;
+        props.isDecorator = isDecorator;
+
+        props.isTable = isTable;
+        props.isQRCode = isQRCode;
+
+        props.isElementShape = isElementShape;
+        props.isElementTypography = isElementTypography;
+        props.isElementButton = isElementButton;
+        props.isImageFrame = isImageFrame;
+        props.isUserGroup = isUserGroup &&
+          !isElementShape &&
+          !isElementTypography &&
+          !isElementButton &&
+          !isImageFrame &&
+          !isTable &&
+          !isQRCode &&
+          !isMap &&
+          !isEmbed &&
+          !isSlideshow &&
+          !isDecorator &&
+          !isAudio;
+
+        if (isElementButton) {
+          props.isText = false;
+          props.isShape = false;
+          props.isElementShape = false;
+        }
+
         props.isImage = isImage;
         props.isText = isText;
         props.isVideo = isVideo;
@@ -690,7 +788,7 @@ const RightSidebar = ({
       {isPopupEditor && (
         <div className="flex-shrink-0 bg-white border-b border-gray-100 px-[1.5vw] flex items-center justify-between" style={{ height: '8.5vh' }}>
           <span className="text-[0.75vw] text-gray-500 font-medium flex items-center gap-[0.2vw]">
-            Click <span className="text-[#22C55E] font-bold text-[0.8vw] mx-[0.1vw]">(✓)</span> to apply changes
+            Click <span className="text-[#22C55E] font-bold text-[0.8vw] mx-[0.1vw]">(âœ“)</span> to apply changes
           </span>
           <div className="flex items-center gap-[0.5vw]">
             <button
@@ -726,7 +824,7 @@ const RightSidebar = ({
 
       <div className={`flex-1 flex flex-col overflow-hidden bg-[#fbfbfb] ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
         {is3DModalOpen ? (
-          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar">
+          <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
             <Model3DEditor
               onClose={() => setIs3DModalOpen(false)}
               shadowStrength={shadowStrength} setShadowStrength={setShadowStrength}
@@ -750,7 +848,7 @@ const RightSidebar = ({
           </div>
         ) : activeTopTool === 'editor' ? (
           activeMainTool === 'upload' ? (
-            <div className="p-[1.5vw] flex flex-col gap-[0.75vw] overflow-y-auto no-scrollbar h-full justify-between">
+            <div className="p-[1.5vw] flex flex-col gap-[0.75vw] overflow-y-auto custom-scrollbar h-full justify-between">
               {/* Top Content */}
               <div className="flex flex-col gap-[0.75vw]">
                 {/* Header */}
@@ -889,7 +987,7 @@ const RightSidebar = ({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar">
+            <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
               {isPdfProject ? (
                 <InteractionPanel
                   selectedElementProps={selectedElementProps}
@@ -1010,6 +1108,127 @@ const RightSidebar = ({
                           flipbookVId={effectiveVId}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
+                      ) : selectedElementProps?.isTable ? (
+                        <ElementTableProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            return editorDoc.getElementById(selectedLayerId);
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
+                      ) : selectedElementProps?.isQRCode ? (
+                        <ElementQRCodeProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const el = editorDoc.getElementById(selectedLayerId);
+                            return el?.closest?.('[data-type="qrcode"], g[id^="qrcode-"]') || el;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                          onUpdate={() => {}}
+                        />
+                      ) : selectedElementProps?.isMap ? (
+                        <ElementMapProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const el = editorDoc.getElementById(selectedLayerId);
+                            return el?.closest?.('[data-type="map"], g[id^="map-"]') || el;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                          onUpdate={() => {}}
+                        />
+                      ) : selectedElementProps?.isEmbed ? (
+                        <ElementEmbedProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const base = editorDoc.getElementById(selectedLayerId);
+                            return base?.closest?.('[data-type="embed-frame"], g[id^="embed-"]') || base;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
+                      ) : selectedElementProps?.isSlideshow ? (
+                        <ElementSlideshowProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const base = editorDoc.getElementById(selectedLayerId);
+                            return base?.closest?.('[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"]') || base;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                          effectiveFolder={effectiveFolder}
+                          effectiveBook={effectiveBook}
+                          effectiveVId={effectiveVId}
+                          onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
+                        />
+                      ) : selectedElementProps?.isDecorator ? (
+                        <ElementDecoratorProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            return editorDoc.getElementById(selectedLayerId);
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
+                      ) : selectedElementProps?.isAudio ? (
+                        <ElementAudioProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const base = editorDoc.getElementById(selectedLayerId);
+                            return base?.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || base;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
+                      ) : selectedElementProps?.isElementButton ? (
+                        <ElementButtonProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const base = editorDoc.getElementById(selectedLayerId);
+                            return base?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]') || base;
+                          })()}
+                          selectedElementProps={selectedElementProps}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
+                      ) : selectedElementProps?.isImageFrame ? (
+                        <ImageFramingProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            return editorDoc.getElementById(selectedLayerId);
+                          })()}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                          selectedElementProps={selectedElementProps}
+                        />
+                      ) : selectedElementProps?.isElementTypography ? (
+                        <TextElementEditor
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            return editorDoc.getElementById(selectedLayerId);
+                          })()}
+                          updateElementAttribute={updateElementAttribute}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                        />
                       ) : selectedElementProps?.isText ? (
                         <TextEditor
                           selectedElement={(() => {
@@ -1017,7 +1236,7 @@ const RightSidebar = ({
                             const el = editorDoc.getElementById(selectedLayerId);
                             if (!el) return null;
                             const tag = el.tagName?.toLowerCase();
-                            // foreignObject wraps the actual HTML text container — drill into it
+                            // foreignObject wraps the actual HTML text container â€” drill into it
                             if (tag === 'foreignobject') {
                               return el.querySelector('[contenteditable], div, p, span') || el;
                             }
@@ -1140,6 +1359,14 @@ const RightSidebar = ({
                           flipbookVId={effectiveVId}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
+                      ) : selectedElementProps?.isElementShape ? (
+                        <ElementShapesProperties
+                          selectedElementProps={selectedElementProps}
+                          activePageIndex={activePageIndex}
+                          selectedLayerId={selectedLayerId}
+                          updateElementAttribute={updateElementAttribute}
+                          activeMainTool={activeMainTool}
+                        />
                       ) : (
                         <>
                           <PenToolProperties
@@ -1198,7 +1425,7 @@ const RightSidebar = ({
 
         ) : (
           /* Animation Mode */
-          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar p-[1.5vw]">
+          <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-[1.5vw]">
             <AnimationPanel
               selectedElementProps={selectedElementProps}
               flipbookDimensions={flipbookDimensions}

@@ -353,7 +353,17 @@ export const parseLayersFromSVG = (element) => {
 
       const isPdfVector = child.getAttribute('data-type') === 'pdf-vector-layer';
 
-      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector) {
+      const isTypography = child.getAttribute('data-is-element-typography') === 'true' ||
+        child.getAttribute('data-typography-type') === 'kinetic' ||
+        child.getAttribute('data-typography-type') === 'motion-graphic' ||
+        (child.id && child.id.startsWith('typography-')) ||
+        (child.getAttribute('data-type') === 'text' && child.tagName.toLowerCase() === 'g');
+
+      if (isTypography) {
+        layer.type = 'text';
+      }
+
+      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector && !isTypography) {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
@@ -473,9 +483,49 @@ export const applyStyleToActiveTextSelection = (elementId, attribute, value) => 
 // --- Imported from root editorUtils (Template formatting & History) ---
 // Utility functions for the template editor
 
-export const getCleanHTML = (html) => {
-  return html || '';
+
+export const healCorruptedSvgHtml = (html) => {
+  if (!html) return html;
+  let healed = html
+    .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
+    .replace(/<\/\s*br\s*>/gi, '')
+    .replace(/&nbsp;/gi, '&#160;');
+
+  // Repair broken span style tags with unescaped quotes from font-family
+  healed = healed.replace(/<span([^>]*?)style="([^"]*?font-family:\s*)"\s*([^>]*?)>([\s\S]*?)<\/span>/gi, (match, beforeStyle, prefix, brokenAttrs, inner) => {
+    let fontName = 'Playfair Display';
+    if (/playfair/i.test(brokenAttrs)) fontName = 'Playfair Display';
+    else if (/inter/i.test(brokenAttrs)) fontName = 'Inter';
+    else if (/roboto/i.test(brokenAttrs)) fontName = 'Roboto';
+    else if (/poppins/i.test(brokenAttrs)) fontName = 'Poppins';
+    else if (/satisfy/i.test(brokenAttrs)) fontName = 'Satisfy';
+    else if (/bangers/i.test(brokenAttrs)) fontName = 'Bangers';
+    else if (/oswald/i.test(brokenAttrs)) fontName = 'Oswald';
+    else {
+      const m = brokenAttrs.match(/([a-zA-Z0-9_\s]+)",=""/);
+      if (m) fontName = m[1].trim();
+    }
+
+    let extra = '';
+    const weightMatch = brokenAttrs.match(/font-weight:=""\s*(\d+);=""/i);
+    if (weightMatch) extra += `; font-weight: ${weightMatch[1]}`;
+
+    const cleanStyle = `${prefix}'${fontName}', sans-serif${extra}`.replace(/"/g, "'");
+    return `<span${beforeStyle}style="${cleanStyle}">${inner}</span>`;
+  });
+
+  // Strip any invalid XML attribute tokens containing quotes, commas, colons or semicolons
+  healed = healed.replace(/\s+[a-zA-Z0-9_\-\:]*[",:][a-zA-Z0-9_\-\:]*=""/gi, '');
+  healed = healed.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
+  healed = healed.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
+
+  return healed;
 };
+
+export const getCleanHTML = (html) => {
+  return healCorruptedSvgHtml(html || '');
+};
+
 
 
 // Reset properties to default values

@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../../../context/AuthContext';
-import { getSupabaseBaseUrl } from '../../../../utils/assetUtils';
+import { getSupabaseBaseUrl, resolveUploadsPath } from '../../../../utils/assetUtils';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 
 const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
@@ -144,13 +144,34 @@ export const useCanvasAssetInsertion = ({
             const filename = res.data.filename;
             const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/${subFolder}/${filename}`);
 
-            imgNode.setAttribute('href', relativePath);
-            try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch {}
+            // Live rendering needs a fully accessible URL, NOT an unresolvable relative ../assets/ path
+            let accessibleUrl = '';
+            if (res.data.serverUrl || res.data.storageUrl) {
+              accessibleUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl);
+            } else if (res.data.url && !res.data.url.startsWith('../') && !res.data.url.startsWith('./')) {
+              accessibleUrl = resolveUploadsPath(res.data.url);
+            } else {
+              const projectBaseUrl = getSupabaseBaseUrl(
+                user?.userID || user?.emailId || user?.email,
+                resolvedFolder,
+                resolvedBook
+              );
+              accessibleUrl = `${projectBaseUrl}assets/${subFolder}/${filename}`;
+            }
+
+            imgNode.setAttribute('href', accessibleUrl);
+            try { imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', accessibleUrl); } catch {}
+            imgNode.setAttribute('data-relative-src', relativePath);
+            imgNode.setAttribute('data-flipbook-path', relativePath);
             if (res.data.file_v_id) {
               imgNode.dataset.fileVid = res.data.file_v_id;
               if (groupNode) {
                 groupNode.dataset.fileVid = res.data.file_v_id;
                 groupNode.setAttribute('data-file-vid', res.data.file_v_id);
+                if (groupNode.hasAttribute('data-masked-image-url')) {
+                  groupNode.setAttribute('data-masked-image-url', accessibleUrl);
+                  groupNode.setAttribute('data-relative-src', relativePath);
+                }
               }
             }
 
@@ -159,7 +180,7 @@ export const useCanvasAssetInsertion = ({
             } else if (updatePageHtml) {
               updatePageHtml(pageIdx, svg.outerHTML);
             }
-            console.log(`[CanvasAssetInsertion] Background asset uploaded: ${relativePath}`);
+            console.log(`[CanvasAssetInsertion] Background asset uploaded: ${relativePath} -> live: ${accessibleUrl}`);
           }
         } catch (err) {
           console.error('[CanvasAssetInsertion] Background asset upload failed:', err);
@@ -789,14 +810,32 @@ export const useCanvasAssetInsertion = ({
               const filename = res.data.filename;
               const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${filename}`);
 
+              let accessibleUrl = '';
+              if (res.data.serverUrl || res.data.storageUrl) {
+                accessibleUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl);
+              } else if (res.data.url && !res.data.url.startsWith('../') && !res.data.url.startsWith('./')) {
+                accessibleUrl = resolveUploadsPath(res.data.url);
+              } else {
+                const projectBaseUrl = getSupabaseBaseUrl(
+                  user?.userID || user?.emailId || user?.email,
+                  resolvedFolder,
+                  resolvedBook
+                );
+                accessibleUrl = `${projectBaseUrl}assets/video/${filename}`;
+              }
+
               fo.setAttribute('data-video-src', relativePath);
               fo.setAttribute('data-relative-src', relativePath);
+              const vTag = fo.querySelector('video');
+              if (vTag && accessibleUrl) {
+                vTag.src = accessibleUrl;
+              }
               if (res.data.file_v_id) {
                 fo.setAttribute('data-file-vid', res.data.file_v_id);
                 videoGroup.setAttribute('data-file-vid', res.data.file_v_id);
               }
               if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
-              console.log(`[CanvasAssetInsertion] Background video uploaded: ${relativePath}`);
+              console.log(`[CanvasAssetInsertion] Background video uploaded: ${relativePath} -> live: ${accessibleUrl}`);
             }
           } catch (err) {
             console.error('[CanvasAssetInsertion] Background video upload failed:', err);

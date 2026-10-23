@@ -17,6 +17,7 @@ const PAGE_EDITOR_SERVICE_URL = process.env.PAGE_EDITOR_SERVICE_URL || 'http://1
 const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127.0.0.1:5004';
 const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
 const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
+const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
 
 // Global Middleware
 const allowedOrigins = [
@@ -88,6 +89,18 @@ const storageStaticMiddleware = async (req, res, next) => {
     }
   } catch (e) {}
 
+  // Seamless fallback for requests referencing My_Flipbooks -> check books
+  if (relPath.includes('My_Flipbooks')) {
+    const booksRelPath = relPath.replace('My_Flipbooks', 'books');
+    const booksDirectPath = path.join(storageRoot, booksRelPath);
+    try {
+      const bStat = await fs.promises.stat(booksDirectPath).catch(() => null);
+      if (bStat && bStat.isFile()) {
+        return sendStaticFile(res, booksDirectPath);
+      }
+    } catch (e) {}
+  }
+
   const parts = relPath.split(/[/\\]/);
   if (parts.length > 1) {
     const restOfPath = parts.slice(1).join(path.sep);
@@ -111,27 +124,31 @@ const storageStaticMiddleware = async (req, res, next) => {
     try {
       const topDirs = fs.readdirSync(storageRoot);
       for (const d of topDirs) {
-        const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
-        if (fs.existsSync(userFlipbooksDir)) {
-          const scanForFile = (dir, depth = 0) => {
-            if (depth > 6) return null;
-            try {
-              const entries = fs.readdirSync(dir, { withFileTypes: true });
-              for (const ent of entries) {
-                const full = path.join(dir, ent.name);
-                if (ent.isFile() && ent.name.toLowerCase() === assetFile.toLowerCase()) {
-                  return full;
+        const bookDirs = [
+          path.join(storageRoot, d, 'books')
+        ];
+        for (const userFlipbooksDir of bookDirs) {
+          if (fs.existsSync(userFlipbooksDir)) {
+            const scanForFile = (dir, depth = 0) => {
+              if (depth > 6) return null;
+              try {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const ent of entries) {
+                  const full = path.join(dir, ent.name);
+                  if (ent.isFile() && ent.name.toLowerCase() === assetFile.toLowerCase()) {
+                    return full;
+                  }
+                  if (ent.isDirectory()) {
+                    const found = scanForFile(full, depth + 1);
+                    if (found) return found;
+                  }
                 }
-                if (ent.isDirectory()) {
-                  const found = scanForFile(full, depth + 1);
-                  if (found) return found;
-                }
-              }
-            } catch (e) {}
-            return null;
-          };
-          const found = scanForFile(userFlipbooksDir);
-          if (found) return sendStaticFile(res, found);
+              } catch (e) {}
+              return null;
+            };
+            const found = scanForFile(userFlipbooksDir);
+            if (found) return sendStaticFile(res, found);
+          }
         }
       }
     } catch (e) {}
@@ -671,6 +688,7 @@ app.use(
           proxyReq.setHeader('x-real-ip', clientIp);
         }
       },
+
       error: (err, req, res) => {
         console.error('[API Gateway] Proxy error to threed-editor-service for 3d-models:', err.message);
         if (!res.headersSent) {
@@ -784,6 +802,42 @@ app.use(
   })
 );
 
+// Proxy /api/payment requests to Payment Service (port 5007)
+app.use(
+  '/api/payment',
+  createProxyMiddleware({
+    target: `${PAYMENT_SERVICE_URL}/api/payment`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to payment-services:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Payment Service unavailable. Please ensure payment service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
@@ -798,6 +852,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/presets -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /hdri -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /textures -> ${THREED_EDITOR_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/payment -> ${PAYMENT_SERVICE_URL}`);
 });
 
 module.exports = app;

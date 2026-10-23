@@ -1,8 +1,36 @@
 const mongoose = require('mongoose');
-const UserSettings = require('../models/UserSettings');
+const PageEditorSettings = require('../models/PageEditorSettings');
+const User = require('../models/User');
 const Flipbook = require('../models/Flipbook');
 const { calculateUserStorage } = require('../utils/storageHelper');
-const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
+const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
+
+/**
+ * Resolves user credentials and builds query specifically for pageEditorSettings
+ */
+const resolveSettingsUser = async (req) => {
+  let { objectId, customUserId, rawId, emailId } = getAuthUser(req);
+
+  // If objectId is not in token but emailId is present, resolve user from DB
+  if (!objectId && emailId) {
+    try {
+      const u = await User.findOne({ emailId }).select('_id userID');
+      if (u) {
+        objectId = u._id;
+        if (!customUserId) customUserId = u.userID;
+      }
+    } catch (_) {}
+  }
+
+  const conds = [];
+  if (objectId) conds.push({ userObjectID: objectId });
+  if (customUserId) conds.push({ userID: customUserId });
+
+  const settingsQuery =
+    conds.length === 1 ? conds[0] : conds.length > 1 ? { $or: conds } : null;
+
+  return { objectId, customUserId, rawId, emailId, settingsQuery };
+};
 
 /**
  * GET /api/usersetting/get-settings
@@ -10,26 +38,24 @@ const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/us
  */
 exports.getStorageSettings = async (req, res) => {
   try {
-    const { objectId, customUserId, rawId, emailId } = getAuthUser(req);
-    const userQuery = getUserQuery(req);
+    const { objectId, customUserId, rawId, emailId, settingsQuery } =
+      await resolveSettingsUser(req);
     const flipQuery = getFlipbookUserQuery(req);
 
-    if (!userQuery) {
+    if (!settingsQuery && !emailId) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    let settings = await UserSettings.findOne(userQuery);
-    if (!settings) {
-      settings = await UserSettings.create({
-        ...(objectId ? { userId: objectId } : {}),
+    let settings = settingsQuery ? await PageEditorSettings.findOne(settingsQuery) : null;
+    if (!settings && settingsQuery) {
+      settings = await PageEditorSettings.create({
+        ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
-        emailId,
         editorSettings: {
-          isAutoSaveEnabled: true,
+          isAutoSaveEnabled: false,
           isTrimViewEnabled: false,
           isRulerEnabled: true
-        },
-        maxStorage: 300 * 1024 * 1024
+        }
       }).catch(() => null);
     }
 
@@ -40,15 +66,15 @@ exports.getStorageSettings = async (req, res) => {
     res.status(200).json({
       success: true,
       _id: settings?._id,
-      userId: settings?.userId || objectId || customUserId,
-      emailId: settings?.emailId || emailId,
+      userObjectID: settings?.userObjectID || objectId || null,
       editorSettings: settings?.editorSettings || {
-        isAutoSaveEnabled: true,
+        isAutoSaveEnabled: false,
         isTrimViewEnabled: false,
         isRulerEnabled: true
       },
+      isAutoSaveEnabled: settings?.editorSettings?.isAutoSaveEnabled ?? false,
       usedStorage,
-      maxStorage: settings?.maxStorage || 300 * 1024 * 1024
+      maxStorage: 300 * 1024 * 1024
     });
   } catch (err) {
     console.error('[Storage Controller] Error fetching settings:', err);
@@ -62,27 +88,28 @@ exports.getStorageSettings = async (req, res) => {
  */
 exports.updateAutoSave = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
-    const userQuery = getUserQuery(req);
+    const { objectId, customUserId, settingsQuery } = await resolveSettingsUser(req);
     const { isAutoSaveEnabled } = req.body;
 
-    if (!userQuery) {
+    if (!settingsQuery) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     const updateDoc = {
       $set: { 'editorSettings.isAutoSaveEnabled': Boolean(isAutoSaveEnabled) }
     };
-    const insertFields = {};
-    if (objectId) insertFields.userId = objectId;
+    const insertFields = {
+      'editorSettings.isTrimViewEnabled': false,
+      'editorSettings.isRulerEnabled': true
+    };
+    if (objectId) insertFields.userObjectID = objectId;
     if (customUserId) insertFields.userID = customUserId;
-    if (emailId) insertFields.emailId = emailId;
     if (Object.keys(insertFields).length > 0) {
       updateDoc.$setOnInsert = insertFields;
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
-      userQuery,
+    const settings = await PageEditorSettings.findOneAndUpdate(
+      settingsQuery,
       updateDoc,
       { returnDocument: 'after', upsert: true }
     );
@@ -105,11 +132,10 @@ exports.updateAutoSave = async (req, res) => {
  */
 exports.updateEditorSettings = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
-    const userQuery = getUserQuery(req);
+    const { objectId, customUserId, settingsQuery } = await resolveSettingsUser(req);
     const { editorSettings } = req.body;
 
-    if (!userQuery) {
+    if (!settingsQuery) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
@@ -128,15 +154,14 @@ exports.updateEditorSettings = async (req, res) => {
 
     const updateDoc = { $set: updateFields };
     const insertFields = {};
-    if (objectId) insertFields.userId = objectId;
+    if (objectId) insertFields.userObjectID = objectId;
     if (customUserId) insertFields.userID = customUserId;
-    if (emailId) insertFields.emailId = emailId;
     if (Object.keys(insertFields).length > 0) {
       updateDoc.$setOnInsert = insertFields;
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
-      userQuery,
+    const settings = await PageEditorSettings.findOneAndUpdate(
+      settingsQuery,
       updateDoc,
       { returnDocument: 'after', upsert: true }
     );

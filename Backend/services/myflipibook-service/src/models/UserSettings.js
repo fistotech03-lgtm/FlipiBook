@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
-const userSettingsSchema = new mongoose.Schema(
+const pageEditorSettingsSchema = new mongoose.Schema(
   {
-    userId: {
+    userObjectID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: false,
@@ -13,16 +13,10 @@ const userSettingsSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
-    emailId: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      index: true
-    },
     editorSettings: {
       isAutoSaveEnabled: {
         type: Boolean,
-        default: true
+        default: false
       },
       isTrimViewEnabled: {
         type: Boolean,
@@ -32,10 +26,6 @@ const userSettingsSchema = new mongoose.Schema(
         type: Boolean,
         default: true
       }
-    },
-    maxStorage: {
-      type: Number,
-      default: 300 * 1024 * 1024 // 300 MB default quota
     }
   },
   {
@@ -43,4 +33,6 @@ const userSettingsSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('UserSettings', userSettingsSchema, 'UserSettings');
+module.exports =
+  mongoose.models.PageEditorSettings ||
+  mongoose.model('PageEditorSettings', pageEditorSettingsSchema, 'pageEditorSettings');

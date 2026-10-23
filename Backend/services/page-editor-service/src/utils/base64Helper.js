@@ -209,9 +209,9 @@ const processAndSaveBase64Assets = ({
 
   const storageRoot = getStorageRoot();
   const resolvedUFolder = userFolder || sanitizedEmail;
-  let bookDir = path.join(storageRoot, resolvedUFolder, 'My_Flipbooks', physicalFolderName, flipbookName);
+  let bookDir = path.join(storageRoot, resolvedUFolder, 'books', physicalFolderName, flipbookName);
   if (!fs.existsSync(bookDir) && sanitizedEmail && sanitizedEmail !== resolvedUFolder) {
-    const altDir = path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', physicalFolderName, flipbookName);
+    const altDir = path.join(storageRoot, sanitizedEmail, 'books', physicalFolderName, flipbookName);
     if (fs.existsSync(altDir)) bookDir = altDir;
   }
 

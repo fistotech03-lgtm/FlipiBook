@@ -89,7 +89,7 @@ const storageStaticMiddleware = (req, res, next) => {
     try {
       const topDirs = fs.readdirSync(storageRoot);
       for (const d of topDirs) {
-        const userFlipbooksDir = path.join(storageRoot, d, 'My_Flipbooks');
+        const userFlipbooksDir = path.join(storageRoot, d, 'books');
         if (fs.existsSync(userFlipbooksDir)) {
           const scanForFile = (dir, depth = 0) => {
             if (depth > 6) return null;

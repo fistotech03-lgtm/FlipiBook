@@ -4,6 +4,7 @@ const path = require("path");
 const mongoose = require("mongoose");
 const Flipbook = require("../models/Flipbook");
 const FlipbookAsset = require("../models/FlipbookAsset");
+const UserGallery = require("../models/UserGallery");
 const InteractionThreedModel = require("../models/InteractionThreedModel");
 const {
   deleteBookStorage,
@@ -47,16 +48,26 @@ const resolveFolder = (folderName) => {
     const realFolders = flat.filter(
       (f) => f && typeof f === "string" && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()),
     );
-    return realFolders.length > 0
-      ? String(realFolders[0]).trim()
-      : "My_Flipbooks";
+    if (realFolders.length > 0) {
+      const first = String(realFolders[0]).trim();
+      const lower = first.toLowerCase();
+      if (lower === "my flipbooks" || lower === "default") {
+        return "default";
+      }
+      return first;
+    }
+    return "default";
   }
   if (typeof folderName === "string" && folderName.trim()) {
     const clean = folderName.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return "My_Flipbooks";
+    const lower = clean.toLowerCase();
+    if (VIRTUAL_FOLDERS.has(lower)) return "default";
+    if (lower === "my flipbooks" || lower === "default") {
+      return "default";
+    }
     return clean;
   }
-  return "My_Flipbooks";
+  return "default";
 };
 
 /**
@@ -92,6 +103,7 @@ const enforceRecentLimit = async (userQuery) => {
  */
 const formatBook = (doc, settingsDoc = null) => {
   const primaryFolder = resolveFolder(doc.folderName);
+  const displayFolder = primaryFolder === "default" ? "My Flipbooks" : primaryFolder;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
   const s = settingsDoc || doc.Customized_Settings || {};
 
@@ -104,10 +116,10 @@ const formatBook = (doc, settingsDoc = null) => {
     title: doc.flipbookName,
     realName: doc.flipbookName,
     flipbookName: doc.flipbookName,
-    folder: primaryFolder,
-    folderName: primaryFolder,
-    actualFolder: primaryFolder,
-    originalFolder: primaryFolder,
+    folder: displayFolder,
+    folderName: displayFolder,
+    actualFolder: displayFolder,
+    originalFolder: displayFolder,
     pages: Array.isArray(doc.pages)
       ? doc.pages.length
       : typeof doc.pages === "number"
@@ -452,7 +464,7 @@ exports.emptyTrash = async (req, res) => {
       deleteBookStorage(
         rawId || customUserId,
         emailId,
-        folder || "My_Flipbooks",
+        folder || "default",
         b.flipbookName,
         b,
       );
@@ -542,9 +554,9 @@ exports.renameBook = async (req, res) => {
 
         for (const uf of userFolders) {
           const candidateOldDirs = [
-            path.join(storageRoot, uf, "My_Flipbooks", folder, oldName),
+            path.join(storageRoot, uf, "books", folder, oldName),
+            path.join(storageRoot, uf, "books", oldName),
             path.join(storageRoot, uf, folder, oldName),
-            path.join(storageRoot, uf, "My_Flipbooks", oldName),
             path.join(storageRoot, uf, oldName),
           ];
           for (const oldDir of candidateOldDirs) {
@@ -629,7 +641,7 @@ exports.duplicateBook = async (req, res) => {
       .filter((f) => f && typeof f === "string" && f.trim() && f.trim() !== "Trash")
       .map((f) => f.trim());
     if (!cloneFolders.includes("Recent Book")) cloneFolders.push("Recent Book");
-    cloneData.folderName = [...new Set(cloneFolders.length > 0 ? cloneFolders : ["My_Flipbooks"])];
+    cloneData.folderName = [...new Set(cloneFolders.length > 0 ? cloneFolders : ["default"])];
     cloneData.lastUpdated = new Date();
 
     const duplicated = await Flipbook.create(cloneData);
@@ -691,7 +703,7 @@ exports.deleteBookPermanently = async (req, res) => {
     deleteBookStorage(
       rawId || customUserId,
       emailId,
-      folder || "My_Flipbooks",
+      folder || "default",
       book.flipbookName,
       book,
     );
@@ -973,7 +985,7 @@ exports.saveBook = async (req, res) => {
     }
 
     const safeName = flipbookName.trim();
-    const resolvedPhysical = resolveFolder(folderName) || "My_Flipbooks";
+    const resolvedPhysical = resolveFolder(folderName) || "default";
     const targetFolder = resolvedPhysical;
 
     let book = null;
@@ -1089,7 +1101,7 @@ exports.saveBook = async (req, res) => {
       hide: p.hide,
     }));
 
-    const physicalFolder = targetFolder || "My_Flipbooks";
+    const physicalFolder = targetFolder || "default";
     if (book) {
       book.flipbookName = safeName;
       const existingFolders = (Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName])
@@ -1160,7 +1172,7 @@ exports.saveBook = async (req, res) => {
       const wsBookDir = path.join(
         storageRoot,
         userFolder,
-        "My_Flipbooks",
+        "books",
         targetSubfolder,
         finalFlipbookName,
       );
@@ -1577,7 +1589,7 @@ exports.savePagesBatch = async (req, res) => {
       const wsBookDir = path.join(
         storageRoot,
         userFolder,
-        "My_Flipbooks",
+        "books",
         folder,
         book.flipbookName,
       );
@@ -1883,8 +1895,8 @@ exports.getBook = async (req, res) => {
         [
           resolveFolder(book.folderName),
           ...(Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName]),
-          "My_Flipbooks",
-        ].filter((f) => f && typeof f === "string" && f.trim())
+          "default",
+        ].filter((f) => f && typeof f === "string" && f.trim() && !VIRTUAL_FOLDERS.has(f.toLowerCase()))
       )
     );
 
@@ -1893,15 +1905,11 @@ exports.getBook = async (req, res) => {
     for (const uf of userFolders) {
       for (const f of folders) {
         candidateDirs.push(
-          path.join(storageRoot, uf, "My_Flipbooks", f, book.flipbookName),
-          path.join(storageRoot, uf, "My_Flipbooks", f, book.v_id),
-          path.join(
-            storageRoot,
-            uf,
-            "My_Flipbooks",
-            f,
-            `${book.flipbookName}_${book.v_id}`,
-          ),
+          path.join(storageRoot, uf, "books", f, book.flipbookName),
+          path.join(storageRoot, uf, "books", f, book.v_id),
+          path.join(storageRoot, uf, "books", f, `${book.flipbookName}_${book.v_id}`),
+          path.join(storageRoot, uf, "books", book.flipbookName),
+          path.join(storageRoot, uf, "books", book.v_id),
           path.join(storageRoot, uf, f, book.flipbookName),
           path.join(storageRoot, uf, f, book.v_id),
           path.join(storageRoot, "flipbooks", uf, f, book.flipbookName),
@@ -2188,8 +2196,8 @@ exports.previewBook = async (req, res) => {
         : [book.folderName];
       const folders = Array.from(
         new Set(
-          [primaryFolder, ...rawFolders, "My_Flipbooks"]
-            .filter((f) => f && typeof f === "string" && f.trim())
+          [primaryFolder, ...rawFolders, "default"]
+            .filter((f) => f && typeof f === "string" && f.trim() && !VIRTUAL_FOLDERS.has(f.toLowerCase()))
             .map((f) => String(f).trim()),
         ),
       );
@@ -2216,9 +2224,9 @@ exports.previewBook = async (req, res) => {
           for (const bn of bookNames) {
             if (!bn || typeof bn !== "string") continue;
             candidateDirs.push(
-              path.join(storageRoot, uf, "My_Flipbooks", f, bn),
+              path.join(storageRoot, uf, "books", f, bn),
+              path.join(storageRoot, uf, "books", bn),
               path.join(storageRoot, uf, f, bn),
-              path.join(storageRoot, uf, "My_Flipbooks", bn),
               path.join(storageRoot, uf, bn),
               path.join(storageRoot, "flipbooks", uf, f, bn),
               path.join(storageRoot, "flipbooks", uf, bn),
@@ -2230,8 +2238,8 @@ exports.previewBook = async (req, res) => {
       // 2. Fallback scan for matching book directory
       for (const uf of userFolders) {
         const searchBases = [
-          path.join(storageRoot, uf, "My_Flipbooks", "My_Flipbooks"),
-          path.join(storageRoot, uf, "My_Flipbooks"),
+          path.join(storageRoot, uf, "books"),
+          path.join(storageRoot, uf, "books", "default"),
           path.join(storageRoot, uf),
         ];
         for (const sb of searchBases) {
@@ -2437,7 +2445,45 @@ exports.getGalleryAssets = async (req, res) => {
     const validMediaExtensions =
       /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|mkv|mp3|wav|ogg|glb|gltf)$/i;
 
-    // 1. Query FlipbookAsset collection for gallery assets
+    // 1. Fetch from consolidated UserGallery model
+    try {
+      const userGallery = await UserGallery.findOne({
+        $or: [
+          { emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, 'i') },
+          { userID: userFolder }
+        ]
+      });
+
+      if (userGallery && userGallery.pageEditorgallery) {
+        const { images = [], video = [], gif = [] } = userGallery.pageEditorgallery;
+
+        const processList = (list, itemType) => {
+          for (const item of list) {
+            if (!item || !item.convertedName || !item.url) continue;
+            if (currentFileName && (item.convertedName === currentFileName || item._id?.toString() === currentFileName)) continue;
+            if (currentUrl && item.url.toLowerCase().includes(currentUrl.toLowerCase())) continue;
+
+            if (!requestedType || itemType === requestedType) {
+              assetsMap.set(item.convertedName, {
+                id: item.convertedName,
+                file_v_id: item.convertedName,
+                name: item.originalName || item.convertedName,
+                url: item.url,
+                type: itemType,
+                size: item.size || 0,
+                uploadedAt: item.timestamp || new Date()
+              });
+            }
+          }
+        };
+
+        processList(images, 'image');
+        processList(video, 'video');
+        processList(gif, 'gif');
+      }
+    } catch (e) {}
+
+    // 2. Query FlipbookAsset collection for legacy gallery assets
     const dbAssets = await FlipbookAsset.find({
       userEmail: new RegExp(
         `^${emailId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
@@ -2754,7 +2800,7 @@ exports.useGalleryAsset = async (req, res) => {
     const targetDir = path.join(
       storageRoot,
       userFolder,
-      "My_Flipbooks",
+      "books",
       safeFolderName,
       safeFlipbookName,
       "assets",
@@ -2791,7 +2837,7 @@ exports.useGalleryAsset = async (req, res) => {
       }
     }
 
-    const relativeUrl = `/storage/${userFolder}/My_Flipbooks/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
+    const relativeUrl = `/storage/${userFolder}/books/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
     const svgRelativePath = `../assets/${subFolder}/${newFileName}`;
 
     // Create a NEW FlipbookAsset document for this flipbook (isGallery: false)
@@ -2919,20 +2965,15 @@ exports.renamePage = async (req, res) => {
     let wsBookDir = path.join(
       storageRoot,
       userFolders[0] || "default",
-      "My_Flipbooks",
+      "books",
       folder,
       book.flipbookName,
     );
     for (const uf of userFolders) {
       const candidates = [
-        path.join(storageRoot, uf, "My_Flipbooks", folder, book.flipbookName),
-        path.join(
-          storageRoot,
-          uf,
-          "My_Flipbooks",
-          "My_Flipbooks",
-          book.flipbookName,
-        ),
+        path.join(storageRoot, uf, "books", folder, book.flipbookName),
+        path.join(storageRoot, uf, "books", "default", book.flipbookName),
+        path.join(storageRoot, uf, "books", book.flipbookName),
         path.join(storageRoot, uf, folder, book.flipbookName),
       ];
       for (const cand of candidates) {
@@ -3147,7 +3188,7 @@ exports.deletePage = async (req, res) => {
     let wsBookDir = path.join(
       storageRoot,
       userFolders[0] || "default",
-      "My_Flipbooks",
+      "books",
       folder,
       book.flipbookName,
     );
@@ -3157,8 +3198,9 @@ exports.deletePage = async (req, res) => {
       if (foundDir) break;
       for (const variant of dirVariants) {
         const candidates = [
-          path.join(storageRoot, uf, "My_Flipbooks", folder, variant),
-          path.join(storageRoot, uf, "My_Flipbooks", "My_Flipbooks", variant),
+          path.join(storageRoot, uf, "books", folder, variant),
+          path.join(storageRoot, uf, "books", "default", variant),
+          path.join(storageRoot, uf, "books", variant),
           path.join(storageRoot, uf, folder, variant),
           path.join(storageRoot, uf, variant),
         ];
@@ -3171,12 +3213,12 @@ exports.deletePage = async (req, res) => {
         }
         if (foundDir) break;
 
-        const myFlipbooksDir = path.join(storageRoot, uf, "My_Flipbooks");
-        if (fs.existsSync(myFlipbooksDir)) {
+        const booksDir = path.join(storageRoot, uf, "books");
+        if (fs.existsSync(booksDir)) {
           try {
-            const subdirs = fs.readdirSync(myFlipbooksDir);
+            const subdirs = fs.readdirSync(booksDir);
             for (const sd of subdirs) {
-              const nestedCand = path.join(myFlipbooksDir, sd, variant);
+              const nestedCand = path.join(booksDir, sd, variant);
               if (fs.existsSync(nestedCand)) {
                 wsBookDir = nestedCand;
                 foundDir = true;

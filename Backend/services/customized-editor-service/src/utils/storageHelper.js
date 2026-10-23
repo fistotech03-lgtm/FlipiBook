@@ -38,19 +38,21 @@ const getAssetTypeFolder = (type) => {
 /**
  * Resolves or initializes target disk directory for a customized asset upload
  */
-const getCustomizedAssetUploadDir = (userFolder, folderName = 'My_Flipbooks', bookName = null, assetType = 'Logo') => {
+const getCustomizedAssetUploadDir = (userFolder, folderName = 'default', bookName = null, assetType = 'Logo') => {
   const root = getStorageRoot();
   const typeFolder = getAssetTypeFolder(assetType);
   const cleanUser = String(userFolder || 'default_user').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const cleanFolder = String(folderName || 'My_Flipbooks').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'My_Flipbooks';
 
   let targetDir;
-  if (bookName) {
-    const cleanBook = String(bookName).replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Untitled';
-    targetDir = path.join(root, cleanUser, 'My_Flipbooks', cleanFolder, cleanBook, 'customized_assets', typeFolder);
+  if (typeFolder === 'Logo' || typeFolder === 'Company_Logo' || typeFolder === 'Preloader') {
+    targetDir = path.join(root, cleanUser, 'Gallery', 'userdetails', 'Company_logo');
+  } else if (typeFolder === 'Profile') {
+    targetDir = path.join(root, cleanUser, 'Gallery', 'userdetails', 'Profile');
+  } else if (typeFolder === 'Video') {
+    targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Videos');
   } else {
-    // User-level customized assets
-    targetDir = path.join(root, cleanUser, 'customized_assets', typeFolder);
+    // Images, Background, Watermark, Texture, Transparent_Sheet, Gallery_Image, Audio, Other
+    targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Images');
   }
 
   if (!fs.existsSync(targetDir)) {

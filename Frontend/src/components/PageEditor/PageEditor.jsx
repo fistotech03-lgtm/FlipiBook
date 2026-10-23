@@ -13,7 +13,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import axios from "axios";
-import { savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
+import { getPageEditorState, savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
 import Layer from "./panels/Layer";
 import MainEditor from "./MainEditor";
 import RightSidebar from "./panels/RightSidebar";
@@ -1106,6 +1106,9 @@ const PageEditor = () => {
                 }
 
                 let updatedHtml = pageHtml;
+                if (updatedHtml.includes("My_Flipbooks/")) {
+                  updatedHtml = updatedHtml.split("My_Flipbooks/").join("books/");
+                }
                 if (updatedHtml.includes("../assets/")) {
                   updatedHtml = updatedHtml
                     .split("../assets/")

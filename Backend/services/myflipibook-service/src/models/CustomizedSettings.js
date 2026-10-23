@@ -28,7 +28,7 @@ const customizedSettingsSchema = new mongoose.Schema(
     },
     folderName: {
       type: String,
-      default: 'My_Flipbooks'
+      default: 'default'
     },
 
     // 1. Flipbook Information & Metadata

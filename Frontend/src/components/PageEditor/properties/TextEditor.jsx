@@ -1377,11 +1377,41 @@ const TextEditor = ({
       const parser = new DOMParser();
       // Replace any variation of <br> (with or without attributes/slashes) and any closing </br> with a clean <br/>
       // and replace invalid XML entity &nbsp; with &#160;
-      const cleanHtml = page.html
+      let cleanHtml = page.html
         .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
         .replace(/<\/\s*br\s*>/gi, '')
         .replace(/&nbsp;/gi, '&#160;');
+
+      // Auto-heal broken style attributes (e.g. unescaped quotes in font-family)
+      cleanHtml = cleanHtml.replace(/<span([^>]*?)style="([^"]*?font-family:\s*)"\s*([^>]*?)>([\s\S]*?)<\/span>/gi, (match, beforeStyle, prefix, brokenAttrs, inner) => {
+        let fontName = 'Playfair Display';
+        if (/playfair/i.test(brokenAttrs)) fontName = 'Playfair Display';
+        else if (/inter/i.test(brokenAttrs)) fontName = 'Inter';
+        else if (/roboto/i.test(brokenAttrs)) fontName = 'Roboto';
+        else if (/poppins/i.test(brokenAttrs)) fontName = 'Poppins';
+        else if (/satisfy/i.test(brokenAttrs)) fontName = 'Satisfy';
+        else if (/bangers/i.test(brokenAttrs)) fontName = 'Bangers';
+        else if (/oswald/i.test(brokenAttrs)) fontName = 'Oswald';
+        else {
+          const m = brokenAttrs.match(/([a-zA-Z0-9_\s]+)",=""/);
+          if (m) fontName = m[1].trim();
+        }
+        let extra = '';
+        const weightMatch = brokenAttrs.match(/font-weight:=""\s*(\d+);=""/i);
+        if (weightMatch) extra += `; font-weight: ${weightMatch[1]}`;
+        const cleanStyle = `${prefix}'${fontName}', sans-serif${extra}`.replace(/"/g, "'");
+        return `<span${beforeStyle}style="${cleanStyle}">${inner}</span>`;
+      });
+      cleanHtml = cleanHtml.replace(/\s+[a-zA-Z0-9_\-\:]*[",:][a-zA-Z0-9_\-\:]*=""/gi, '');
+      cleanHtml = cleanHtml.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
+      cleanHtml = cleanHtml.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
+
       let doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
+
+      if (!doc.querySelector('parsererror')) {
+        const lingering = document.getElementById('xml-debug-error');
+        if (lingering) lingering.remove();
+      }
 
       // Auto-recover if the React state was permanently corrupted by a previous crash
       // (meaning the cleanHtml string literally contains the error document itself)
@@ -2133,23 +2163,24 @@ const TextEditor = ({
       }
 
       // Transform text content to list
-      let lines = latestText.split('\n').map(l => l.trim());
-      if (value === 'disc') {
-        lines = lines.map(line => {
+      let rawLines = latestText.split('\n').map(l => l.trim());
+      let counter = 1;
+      let lines = rawLines.map((line) => {
+        if (!line) return '';
+        if (value === 'disc') {
           if (line.startsWith('• ')) return line;
           if (line.match(/^\d+\. /)) return line.replace(/^\d+\. /, '• ');
           return '• ' + line;
-        });
-      } else if (value === 'decimal') {
-        lines = lines.map((line, i) => {
-          const prefix = `${i + 1}. `;
+        } else if (value === 'decimal') {
+          const prefix = `${counter++}. `;
           if (line.startsWith('• ')) return line.replace('• ', prefix);
           if (line.match(/^\d+\. /)) return line.replace(/^\d+\. /, prefix);
           return prefix + line;
-        });
-      } else if (value === 'none') {
-        lines = lines.map(line => line.replace(/^(• |\d+\. )/, ''));
-      }
+        } else if (value === 'none') {
+          return line.replace(/^(• |\d+\. )/, '');
+        }
+        return line;
+      });
       const newText = lines.join('\n');
       setTextContent(newText);
 

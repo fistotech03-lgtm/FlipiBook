@@ -47,7 +47,7 @@ export function normalizeStylePatch(attribute, value) {
     }
     case 'fontFamily': {
       let ff = String(value).replace(/['"]/g, '').split(',')[0].trim();
-      patch.fontFamily = `'${ff}', sans-serif`;
+      patch.fontFamily = `'${ff.replace(/["']/g, '')}', sans-serif`;
       break;
     }
     case 'fontWeight':
@@ -117,7 +117,7 @@ export function parseHtmlToRuns(rootDiv) {
       if (s) {
         if (s.color) nextStyle.color = s.color;
         if (s.fontSize) nextStyle.fontSize = s.fontSize;
-        if (s.fontFamily) nextStyle.fontFamily = s.fontFamily;
+        if (s.fontFamily) nextStyle.fontFamily = s.fontFamily.replace(/"/g, "'");
         if (s.fontWeight) nextStyle.fontWeight = s.fontWeight;
         if (s.fontStyle) nextStyle.fontStyle = s.fontStyle;
         if (s.textDecoration) nextStyle.textDecoration = s.textDecoration;
@@ -140,7 +140,7 @@ export function parseHtmlToRuns(rootDiv) {
   if (rootDiv.style) {
     if (rootDiv.style.color) baseStyle.color = rootDiv.style.color;
     if (rootDiv.style.fontSize) baseStyle.fontSize = rootDiv.style.fontSize;
-    if (rootDiv.style.fontFamily) baseStyle.fontFamily = rootDiv.style.fontFamily;
+    if (rootDiv.style.fontFamily) baseStyle.fontFamily = rootDiv.style.fontFamily.replace(/"/g, "'");
     if (rootDiv.style.fontWeight) baseStyle.fontWeight = rootDiv.style.fontWeight;
     if (rootDiv.style.fontStyle) baseStyle.fontStyle = rootDiv.style.fontStyle;
     if (rootDiv.style.textDecoration) baseStyle.textDecoration = rootDiv.style.textDecoration;
@@ -193,7 +193,7 @@ export function runsToHtml(chars, baseStyle = {}) {
       const cssRules = [];
       if (currentRunStyle.color) cssRules.push(`color: ${currentRunStyle.color}`);
       if (currentRunStyle.fontSize) cssRules.push(`font-size: ${currentRunStyle.fontSize}`);
-      if (currentRunStyle.fontFamily) cssRules.push(`font-family: ${currentRunStyle.fontFamily}`);
+      if (currentRunStyle.fontFamily) cssRules.push(`font-family: ${String(currentRunStyle.fontFamily).replace(/"/g, "'")}`);
       if (currentRunStyle.fontWeight) cssRules.push(`font-weight: ${currentRunStyle.fontWeight}`);
       if (currentRunStyle.fontStyle) cssRules.push(`font-style: ${currentRunStyle.fontStyle}`);
       if (currentRunStyle.textDecoration) cssRules.push(`text-decoration: ${currentRunStyle.textDecoration}`);
@@ -201,7 +201,8 @@ export function runsToHtml(chars, baseStyle = {}) {
       if (currentRunStyle.letterSpacing) cssRules.push(`letter-spacing: ${currentRunStyle.letterSpacing}`);
       if (currentRunStyle.backgroundColor) cssRules.push(`background-color: ${currentRunStyle.backgroundColor}`);
 
-      html += `<span style="${cssRules.join('; ')}">${escaped}</span>`;
+      const safeStyle = cssRules.join('; ').replace(/"/g, "'");
+      html += `<span style="${safeStyle}">${escaped}</span>`;
     } else {
       html += escaped;
     }

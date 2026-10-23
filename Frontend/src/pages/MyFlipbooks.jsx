@@ -103,6 +103,7 @@ export default function MyFlipbooks() {
     const [activeFolder, setActiveFolder] = useState(() => {
         const saved = localStorage.getItem('last_active_folder');
         if (saved === 'Recent Book') return 'Recent';
+        if (saved === 'default' || saved === 'My_Flipbooks') return 'My Flipbooks';
         return saved || 'All Flipbook';
     });
     const [dashboardMode, setDashboardMode] = useState(() => {
@@ -488,7 +489,7 @@ export default function MyFlipbooks() {
             }
             uniqueName = candidateBookName;
 
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
+            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
 
             // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
@@ -756,7 +757,7 @@ export default function MyFlipbooks() {
                 uniqueName = `${uniqueName} (${counter})`;
             }
 
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
+            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
             const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
 
             console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}" with v_id: ${generatedVId}...`);
@@ -857,8 +858,9 @@ export default function MyFlipbooks() {
     });
 
     const handleDeleteFolderClick = (folder) => {
-        if (folder.name?.toLowerCase() === 'my_flipbooks') {
-            showAlert('Cannot Delete', 'My_Flipbooks is the default folder and cannot be deleted.');
+        const lower = folder.name?.toLowerCase().trim();
+        if (folder.isDefault || lower === 'my flipbooks' || lower === 'default') {
+            showAlert('Cannot Delete', 'This is the default folder and cannot be deleted.');
             return;
         }
         setDeleteConfirmation({
@@ -1005,7 +1007,7 @@ export default function MyFlipbooks() {
         if (selectedIds.length === 0) return;
         const targetBooks = books.filter(b => selectedIds.includes(b.id));
         const prevBooks = [...books];
-        setBooks(prev => prev.map(b => selectedIds.includes(b.id) ? { ...b, trash: false, folder: b.originalFolder || 'My_Flipbooks' } : b));
+        setBooks(prev => prev.map(b => selectedIds.includes(b.id) ? { ...b, trash: false, folder: b.originalFolder || 'My Flipbooks' } : b));
         setSelectedBooks([]);
         try {
             await Promise.all(targetBooks.map(book =>
@@ -1146,7 +1148,7 @@ export default function MyFlipbooks() {
     const handleRestoreBook = async (book) => {
         setActiveBookMenu(null);
         const prevBooks = [...books];
-        const restoreFolder = book.originalFolder || 'My_Flipbooks';
+        const restoreFolder = book.originalFolder || 'My Flipbooks';
         setBooks(prev => prev.map(b => b.id === book.id ? { ...b, trash: false, folder: restoreFolder } : b));
         try {
             await flipbookApi.restoreBook(
@@ -1250,7 +1252,7 @@ export default function MyFlipbooks() {
                             isPublished: false,
                             published: false,
                             folder: 'Trash',
-                            originalFolder: b.actualFolder || b.originalFolder || 'My_Flipbooks'
+                            originalFolder: b.actualFolder || b.originalFolder || 'My Flipbooks'
                         }];
                     }
 
@@ -1263,7 +1265,7 @@ export default function MyFlipbooks() {
                         folder: 'Trash',
                         originalFolder: (b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent')
                             ? b.folder
-                            : (b.originalFolder || 'My_Flipbooks')
+                            : (b.originalFolder || 'My Flipbooks')
                     }];
                 });
             });

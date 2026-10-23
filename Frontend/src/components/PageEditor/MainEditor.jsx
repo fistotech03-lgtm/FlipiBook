@@ -39,6 +39,12 @@ import { useCanvasContextMenuAndBadges } from './mainEditor/hooks/useCanvasConte
 import { useCanvasPointerEvents } from './mainEditor/hooks/useCanvasPointerEvents';
 import { CanvasViewport } from './mainEditor/components/CanvasViewport';
 import { FloatingToolbars } from './mainEditor/components/FloatingToolbars';
+import {
+  LeftActionMenu,
+  AddElementsModal,
+  StylesModal,
+  IconsModal
+} from './LeftActionMenu';
 import { getTopLevelFrames, hitTest as hitTestExt } from './mainEditor/utils/frameHierarchyUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
@@ -86,10 +92,15 @@ const MainEditor = ({
   const [showPenOptions, setShowPenOptions] = useState(false);
   const [showShapesOptions, setShowShapesOptions] = useState(false);
   const [localTrimView, setLocalTrimView] = useState(isTrimView);
+  const [localRulerEnabled, setLocalRulerEnabled] = useState(isRulerEnabled);
 
   useEffect(() => {
     setLocalTrimView(isTrimView);
   }, [isTrimView]);
+
+  useEffect(() => {
+    setLocalRulerEnabled(isRulerEnabled);
+  }, [isRulerEnabled]);
 
   useEffect(() => {
     const handleToggleTrim = (e) => {
@@ -101,6 +112,21 @@ const MainEditor = ({
     };
     window.addEventListener('editor_toggleTrimView', handleToggleTrim);
     return () => window.removeEventListener('editor_toggleTrimView', handleToggleTrim);
+  }, []);
+
+  useEffect(() => {
+    const handleToggleRuler = (e) => {
+      if (e.detail !== undefined) {
+        const val = typeof e.detail === 'object' && e.detail !== null
+          ? (e.detail.isRulerEnabled !== undefined ? e.detail.isRulerEnabled : e.detail)
+          : e.detail;
+        setLocalRulerEnabled(Boolean(val));
+      } else {
+        setLocalRulerEnabled(prev => !prev);
+      }
+    };
+    window.addEventListener('editor_toggleRuler', handleToggleRuler);
+    return () => window.removeEventListener('editor_toggleRuler', handleToggleRuler);
   }, []);
 
   // Robustly ensure multi-selection dotted outlines are removed when selection is no longer multiple
@@ -119,6 +145,9 @@ const MainEditor = ({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isSpaceDown, setIsSpaceDown] = useState(false);
   const [openMenuIndex, setOpenMenuIndex] = useState(null); // Track which page's menu is open
+  const [isElementsModalOpen, setIsElementsModalOpen] = useState(false);
+  const [isStylesModalOpen, setIsStylesModalOpen] = useState(false);
+  const [isIconsModalOpen, setIsIconsModalOpen] = useState(false);
 
 
   const isConvertedFlipbook = Boolean(isPdfProject || (pages && pages.some(p => p.html && (p.html.includes('PDF Background') || p.html.includes('pdf-vector-layer') || p.html.includes('Document Shield')))));
@@ -361,7 +390,31 @@ const MainEditor = ({
     tempDiv.querySelectorAll('.slideshow-transition-clone').forEach(el => el.remove());
     tempDiv.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
     cleanTrimViewFromHtml(tempDiv);
+    // Ensure all style attributes use single quotes rather than double quotes inside attribute values
+    tempDiv.querySelectorAll('[style]').forEach(el => {
+      const st = el.getAttribute('style');
+      if (st && st.includes('"')) {
+        el.setAttribute('style', st.replace(/"/g, "'"));
+      }
+    });
+
     let finalHtml = tempDiv.innerHTML;
+    // Auto-heal any broken unescaped span style attributes
+    finalHtml = finalHtml.replace(/<span([^>]*?)style="([^"]*?font-family:\s*)"\s*([^>]*?)>([\s\S]*?)<\/span>/gi, (match, beforeStyle, prefix, brokenAttrs, inner) => {
+      let fontName = 'Playfair Display';
+      if (/playfair/i.test(brokenAttrs)) fontName = 'Playfair Display';
+      else if (/inter/i.test(brokenAttrs)) fontName = 'Inter';
+      else if (/roboto/i.test(brokenAttrs)) fontName = 'Roboto';
+      else if (/poppins/i.test(brokenAttrs)) fontName = 'Poppins';
+      else if (/satisfy/i.test(brokenAttrs)) fontName = 'Satisfy';
+      else if (/bangers/i.test(brokenAttrs)) fontName = 'Bangers';
+      else if (/oswald/i.test(brokenAttrs)) fontName = 'Oswald';
+      const cleanStyle = `${prefix}'${fontName}', sans-serif`.replace(/"/g, "'");
+      return `<span${beforeStyle}style="${cleanStyle}">${inner}</span>`;
+    });
+    finalHtml = finalHtml.replace(/\s+[a-zA-Z0-9_\-\:]*[",:][a-zA-Z0-9_\-\:]*=""/gi, '');
+    finalHtml = finalHtml.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
+    finalHtml = finalHtml.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
     finalHtml = finalHtml
       .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
       .replace(/<\/\s*br\s*>/gi, '');
@@ -876,6 +929,87 @@ const getDraggableElement = (target, canvasRoot) => {
       return videoGroup;
     }
 
+    // Button elements are single compound elements; if clicking anywhere inside a button group, drag/select the whole button!
+    const buttonGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]') : null;
+    if (buttonGroup) {
+      if (!buttonGroup.id) {
+        buttonGroup.id = `button-${Date.now()}`;
+      }
+      return buttonGroup;
+    }
+
+    // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
+    const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
+    if (typographyGroup) {
+      if (!typographyGroup.id) {
+        typographyGroup.id = `typography-${Date.now()}`;
+      }
+      return typographyGroup;
+    }
+
+    // Decorator elements are single compound elements; always drag/select the whole decorator group
+    const decoratorGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-animated-decorator="true"], [data-type="animated-decorator"], [data-type="decorator"], g[id^="decorator-"]') : null;
+    if (decoratorGroup) {
+      if (!decoratorGroup.id) {
+        decoratorGroup.id = `decorator-${Date.now()}`;
+      }
+      return decoratorGroup;
+    }
+
+    // Image frame elements are single compound elements
+    const imageFrameGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]') : null;
+    if (imageFrameGroup) {
+      if (!imageFrameGroup.id) {
+        imageFrameGroup.id = `image-frame-${Date.now()}`;
+      }
+      return imageFrameGroup;
+    }
+
+    // QR Code elements are single compound elements; always drag/select the whole QR Code group
+    const qrGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="qrcode"], g[id^="qrcode-"]') : null;
+    if (qrGroup) {
+      if (!qrGroup.id) {
+        qrGroup.id = `qrcode-${Date.now()}`;
+      }
+      return qrGroup;
+    }
+
+    // Map elements are single compound elements; always drag/select the whole map group
+    const mapGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="map"], g[id^="map-"]') : null;
+    if (mapGroup) {
+      if (!mapGroup.id) {
+        mapGroup.id = `map-${Date.now()}`;
+      }
+      return mapGroup;
+    }
+
+    // Slideshow elements are single compound elements; always drag/select the whole slideshow group
+    const slideshowGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"]') : null;
+    if (slideshowGroup) {
+      if (!slideshowGroup.id) {
+        slideshowGroup.id = `slideshow-${Date.now()}`;
+      }
+      return slideshowGroup;
+    }
+
+    // Audio elements are single compound elements; always drag/select the whole audio group
+    const audioGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="audio-frame"], g[id^="audio-"]') : null;
+    if (audioGroup) {
+      if (!audioGroup.id) {
+        audioGroup.id = `audio-${Date.now()}`;
+      }
+      return audioGroup;
+    }
+
+    // Embed elements are single compound elements; always drag/select the whole embed group
+    const embedGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="embed-frame"], g[id^="embed-"]') : null;
+    if (embedGroup) {
+      if (!embedGroup.id) {
+        embedGroup.id = `embed-${Date.now()}`;
+      }
+      return embedGroup;
+    }
+
     let deepestElementWithId = null;
 
     while (current && current !== canvasRoot && current.tagName) {
@@ -1309,7 +1443,7 @@ const getDraggableElement = (target, canvasRoot) => {
         )}
 
         {/* Canvas Ruler */}
-        {isRulerEnabled && (
+        {localRulerEnabled && (
           <CanvasRuler
             zoom={zoom}
             pan={currentPanRef.current}
@@ -1323,7 +1457,7 @@ const getDraggableElement = (target, canvasRoot) => {
         )}
 
         {/* Guides Overlay */}
-        {isRulerEnabled && (
+        {localRulerEnabled && (
           <GuidesOverlay
             zoom={zoom}
             pan={currentPanRef.current}
@@ -1370,9 +1504,6 @@ const getDraggableElement = (target, canvasRoot) => {
           ref={editorContainerRef}
           className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'bg-transparent overflow-visible' : 'overflow-hidden bg-[#e6e7e7]'}`}
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget && activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {
-              setActiveMainTool('select');
-            }
             if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
               if (handleSvgMouseDown) {
                 handleSvgMouseDown(activePageIndex, e);
@@ -1380,6 +1511,84 @@ const getDraggableElement = (target, canvasRoot) => {
             }
           }}
         >
+          {/* Left Action Menu (Elements, Templets, Styles, Icons) */}
+          {!isPopupEditor && (
+            <LeftActionMenu
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              pages={pages}
+              onOpenTemplateModal={onOpenTemplateModal}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              updatePageHtml={updatePageHtml}
+              setSelectedLayerId={setSelectedLayerId}
+              setActiveMainTool={setActiveMainTool}
+              setSelectedShapeTool={setSelectedShapeTool}
+              activeMainTool={activeMainTool}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              isElementsModalOpen={isElementsModalOpen}
+              onToggleElementsModal={() => {
+                setIsStylesModalOpen(false);
+                setIsIconsModalOpen(false);
+                setIsElementsModalOpen(prev => !prev);
+              }}
+              onCloseElementsModal={() => setIsElementsModalOpen(false)}
+              isStylesModalOpen={isStylesModalOpen}
+              onToggleStylesModal={() => {
+                setIsElementsModalOpen(false);
+                setIsIconsModalOpen(false);
+                setIsStylesModalOpen(prev => !prev);
+              }}
+              onCloseStylesModal={() => setIsStylesModalOpen(false)}
+              isIconsModalOpen={isIconsModalOpen}
+              onToggleIconsModal={() => {
+                setIsElementsModalOpen(false);
+                setIsStylesModalOpen(false);
+                setIsIconsModalOpen(prev => !prev);
+              }}
+              onCloseIconsModal={() => setIsIconsModalOpen(false)}
+            />
+          )}
+
+          {/* Draggable Add Elements Modal */}
+          <AddElementsModal
+            isOpen={isElementsModalOpen}
+            onClose={() => setIsElementsModalOpen(false)}
+            isRulerEnabled={localRulerEnabled}
+            activePageIndex={activePageIndex}
+            pages={pages}
+            saveModifiedPageHtml={saveModifiedPageHtml}
+            setSelectedLayerId={setSelectedLayerId}
+            setActiveMainTool={setActiveMainTool}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
+            dragConstraintsRef={editorContainerRef}
+          />
+
+          {/* Draggable Styles Modal */}
+          <StylesModal
+            isOpen={isStylesModalOpen}
+            onClose={() => setIsStylesModalOpen(false)}
+            isRulerEnabled={localRulerEnabled}
+            activePageIndex={activePageIndex}
+            saveModifiedPageHtml={saveModifiedPageHtml}
+            dragConstraintsRef={editorContainerRef}
+          />
+
+          {/* Draggable Icons Modal */}
+          <IconsModal
+            isOpen={isIconsModalOpen}
+            onClose={() => setIsIconsModalOpen(false)}
+            isRulerEnabled={localRulerEnabled}
+            activePageIndex={activePageIndex}
+            saveModifiedPageHtml={saveModifiedPageHtml}
+            setSelectedLayerId={setSelectedLayerId}
+            setActiveMainTool={setActiveMainTool}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
+            dragConstraintsRef={editorContainerRef}
+          />
+
           {/* Modular Canvas Viewport */}
           <CanvasViewport
             zoomContainerRef={zoomContainerRef}

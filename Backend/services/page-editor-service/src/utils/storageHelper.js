@@ -64,14 +64,14 @@ const resolveFolder = (folderName) => {
     const realFolders = flat.filter(
       (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
-    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'default';
   }
   if (typeof folderName === 'string' && folderName.trim()) {
     const clean = folderName.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'default';
     return clean;
   }
-  return 'My_Flipbooks';
+  return 'default';
 };
 
 /**
@@ -89,7 +89,7 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
     flipbookName || (doc ? doc.flipbookName : 'Untitled_Document'),
     'Untitled_Document'
   );
-  const effectiveFolder = resolveFolder(folderName || (doc ? doc.folderName : 'My_Flipbooks'));
+  const effectiveFolder = resolveFolder(folderName || (doc ? doc.folderName : 'default'));
 
   const sanitizedEmail = sanitizeEmail(effectiveEmail);
   const storageRoot = getStorageRoot();
@@ -102,7 +102,7 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
   let bookDir = path.join(
     storageRoot,
     userFolders[0] || sanitizedEmail,
-    'My_Flipbooks',
+    'books',
     effectiveFolder,
     effectiveBook
   );
@@ -120,8 +120,9 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
     if (found) break;
     for (const variant of dirVariants) {
       const candidates = [
-        path.join(storageRoot, uf, 'My_Flipbooks', effectiveFolder, variant),
-        path.join(storageRoot, uf, 'My_Flipbooks', 'My_Flipbooks', variant),
+        path.join(storageRoot, uf, 'books', effectiveFolder, variant),
+        path.join(storageRoot, uf, 'books', 'default', variant),
+        path.join(storageRoot, uf, 'books', variant),
         path.join(storageRoot, uf, effectiveFolder, variant),
         path.join(storageRoot, uf, variant)
       ];
@@ -134,13 +135,13 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
       }
       if (found) break;
 
-      // Also scan subdirectories inside My_Flipbooks
-      const myFlipbooksDir = path.join(storageRoot, uf, 'My_Flipbooks');
-      if (fs.existsSync(myFlipbooksDir)) {
+      // Also scan subdirectories inside books
+      const subDir = path.join(storageRoot, uf, 'books');
+      if (fs.existsSync(subDir)) {
         try {
-          const subdirs = fs.readdirSync(myFlipbooksDir);
+          const subdirs = fs.readdirSync(subDir);
           for (const sd of subdirs) {
-            const nestedCand = path.join(myFlipbooksDir, sd, variant);
+            const nestedCand = path.join(subDir, sd, variant);
             if (fs.existsSync(nestedCand)) {
               bookDir = nestedCand;
               found = true;
@@ -199,15 +200,23 @@ const initFlipbookStorage = (bookDir) => {
 };
 
 const WORKSPACE_FOLDERS = [
-  '3D_Models',
-  '3D_Screenshot',
-  'Company_logo',
-  'gifs',
-  'Images',
-  'My_Flipbooks',
-  'Profile',
-  'Texture',
-  'Videos'
+  'Gallery',
+  'Gallery/userdetails',
+  'Gallery/userdetails/Profile',
+  'Gallery/userdetails/Company_logo',
+  'Gallery/pageEditorgallery',
+  'Gallery/pageEditorgallery/Images',
+  'Gallery/pageEditorgallery/Videos',
+  'Gallery/pageEditorgallery/gifs',
+  'Gallery/CustomizationGallery',
+  'Gallery/CustomizationGallery/Images',
+  'Gallery/CustomizationGallery/Videos',
+  'Gallery/3DGallery',
+  'Gallery/3DGallery/Models',
+  'Gallery/3DGallery/Texture',
+  'Gallery/3DGallery/Snapshot',
+  'books',
+  'books/default'
 ];
 
 const ensureDirPerms = (p) => {
@@ -236,11 +245,11 @@ const ensureUserWorkspace = (userId, emailId, folderName = null) => {
       ensureDirPerms(fp);
     }
 
-    const defaultFolder = path.join(userDir, 'My_Flipbooks', 'My_Flipbooks');
-    ensureDirPerms(defaultFolder);
+    const defaultBooks = path.join(userDir, 'books', 'default');
+    ensureDirPerms(defaultBooks);
 
     if (folderName) {
-      const customF = path.join(userDir, 'My_Flipbooks', folderName);
+      const customF = path.join(userDir, 'books', folderName);
       ensureDirPerms(customF);
     }
 

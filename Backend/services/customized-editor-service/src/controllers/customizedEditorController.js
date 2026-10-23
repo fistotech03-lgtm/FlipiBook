@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 
 const CustomizedSettings = require('../models/CustomizedSettings');
 const Lead = require('../models/Lead');
-const CustomizedAsset = require('../models/CustomizedAsset');
+const UserGallery = require('../models/UserGallery');
 const EditorPreset = require('../models/EditorPreset');
 const Flipbook = require('../models/Flipbook');
 
@@ -35,14 +35,14 @@ const resolveFolder = (folderName) => {
     const realFolders = flat.filter(
       (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
-    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'default';
   }
   if (typeof folderName === 'string' && folderName.trim()) {
     const clean = folderName.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'default';
     return clean;
   }
-  return 'My_Flipbooks';
+  return 'default';
 };
 
 /**
@@ -469,7 +469,7 @@ const updateSettings = async (req, res) => {
         userEmail: targetEmail,
         v_id: resolvedVId,
         flipbookName: effectiveBookName || flipbook?.flipbookName || existing?.flipbookName,
-        folderName: folderName || existing?.folderName || 'My_Flipbooks',
+        folderName: folderName || existing?.folderName || 'default',
         ...cleanSettings
       },
       $unset: {
@@ -566,15 +566,88 @@ const resetSettings = async (req, res) => {
 };
 
 /**
+ * Helper to find or create UserGallery document for a user in Customized Editor
+ */
+const findOrCreateUserGallery = async (authUser, req = null) => {
+  let userGallery = null;
+  const orConds = [];
+  if (authUser.objectId) orConds.push({ userObjectID: authUser.objectId });
+  if (authUser.customUserId) orConds.push({ userID: authUser.customUserId });
+  if (authUser.emailId) {
+    orConds.push({ emailId: new RegExp(`^${authUser.emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+  }
+
+  const reqEmail = req?.body?.emailId || req?.query?.emailId;
+  if (reqEmail && (!authUser.emailId || reqEmail.toLowerCase() !== authUser.emailId.toLowerCase())) {
+    orConds.push({ emailId: new RegExp(`^${reqEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+  }
+
+  if (orConds.length > 0) {
+    userGallery = await UserGallery.findOne({ $or: orConds });
+  }
+
+  if (!userGallery) {
+    let resolvedUserId = authUser.customUserId;
+    let userObjectId = authUser.objectId;
+    const targetEmail = authUser.emailId || reqEmail;
+
+    if (!resolvedUserId && targetEmail) {
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          const u = await mongoose.connection.db.collection('users').findOne({
+            emailId: new RegExp(`^${targetEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+          });
+          if (u) {
+            resolvedUserId = u.userID || resolvedUserId;
+            userObjectId = u._id || userObjectId;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!resolvedUserId) {
+      resolvedUserId = getUserStorageFolder(req);
+    }
+
+    userGallery = new UserGallery({
+      userObjectID: userObjectId || null,
+      userID: resolvedUserId || null,
+      emailId: targetEmail ? targetEmail.toLowerCase() : undefined,
+      userdetails: { images: [] },
+      pageEditorgallery: { images: [], video: [], gif: [] },
+      CustomizationGallery: { images: [], videos: [] },
+      '3DGallery': { models: [], texture: [], snapshot: [] }
+    });
+
+    try {
+      await userGallery.save();
+    } catch (saveErr) {
+      if (saveErr.code === 11000 && orConds.length > 0) {
+        userGallery = await UserGallery.findOne({ $or: orConds });
+      }
+    }
+  }
+
+  if (userGallery) {
+    if (!userGallery.userdetails) userGallery.userdetails = { images: [] };
+    if (!userGallery.CustomizationGallery) userGallery.CustomizationGallery = { images: [], videos: [] };
+    if (!userGallery.pageEditorgallery) userGallery.pageEditorgallery = { images: [], video: [], gif: [] };
+    if (!userGallery['3DGallery']) userGallery['3DGallery'] = { models: [], texture: [], snapshot: [] };
+  }
+
+  return userGallery;
+};
+
+/**
  * POST /upload-customized-asset
  * Upload logo, watermark, background image/video, sound, etc.
- * Stores in storage/<userFolder>/.../customized_assets/<assetType>/
- * Registers in CustomizedAsset model with userId as owner.
+ * Stores in unified UserGallery schema and storage/<userFolder>/Gallery/...
  */
 const uploadCustomizedAsset = async (req, res) => {
   try {
     const authUser = getAuthUser(req);
-    if (!authUser.objectId && !authUser.emailId) {
+    const reqEmail = req.body.emailId || req.query.emailId;
+    if (!authUser.objectId && !authUser.emailId && !reqEmail) {
       return res.status(401).json({ success: false, message: 'Authentication required to upload assets' });
     }
 
@@ -582,11 +655,34 @@ const uploadCustomizedAsset = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const { assetType = 'Logo', folderName = 'My_Flipbooks', flipbookName, v_id } = req.body;
-    const userFolder = getUserStorageFolder(req);
+    const { assetType = 'Logo', folderName = 'default', flipbookName, v_id, oldSrc } = req.body;
+    let userFolder = getUserStorageFolder(req);
+
+    // If userFolder was a raw ObjectId or email, try to resolve to canonical FLIPIxxxx if available
+    const emailToLookup = authUser.emailId || reqEmail;
+    if (emailToLookup && (!userFolder || !/^FLIPI\d+/i.test(userFolder))) {
+      try {
+        if (mongoose.connection && mongoose.connection.db) {
+          const u = await mongoose.connection.db.collection('users').findOne({
+            emailId: new RegExp(`^${emailToLookup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+          });
+          if (u && u.userID) {
+            userFolder = u.userID;
+          }
+        }
+      } catch (e) {}
+    }
+
     const typeFolder = getAssetTypeFolder(assetType);
 
-    // Target upload folder on disk
+    // If replacing an old asset, remove from disk
+    if (oldSrc) {
+      try {
+        deleteAssetFile(oldSrc);
+      } catch (e) {}
+    }
+
+    // Target upload folder on disk in unified Gallery structure
     const targetDir = getCustomizedAssetUploadDir(userFolder, folderName, flipbookName, typeFolder);
 
     const ext = path.extname(req.file.originalname).toLowerCase();
@@ -602,22 +698,71 @@ const uploadCustomizedAsset = async (req, res) => {
     }
 
     const publicUrl = toPublicStorageUrl(targetPath);
+    const fileSize = req.file.size || (fs.existsSync(targetPath) ? fs.statSync(targetPath).size : 0);
 
-    // Record asset in CustomizedAsset model indexed by userId
-    const newAsset = await CustomizedAsset.create({
-      userId: authUser.objectId,
-      userID: authUser.customUserId,
-      userEmail: authUser.emailId,
-      v_id: v_id || null,
-      flipbookName: flipbookName || null,
-      assetType: typeFolder,
-      fileName: safeName,
-      originalName: req.file.originalname,
-      url: publicUrl,
-      storagePath: targetPath,
-      size: req.file.size || fs.statSync(targetPath).size,
-      mimeType: req.file.mimetype
-    });
+    // Record asset in UserGallery model
+    const userGallery = await findOrCreateUserGallery(authUser, req);
+    let assetId = safeName;
+
+    if (userGallery) {
+      if (typeFolder === 'Logo' || typeFolder === 'Company_Logo' || typeFolder === 'Preloader') {
+        const item = {
+          type: 'company_logo',
+          originalName: req.file.originalname,
+          convertedName: safeName,
+          filePath: targetPath,
+          url: publicUrl,
+          size: fileSize,
+          timestamp: new Date()
+        };
+        userGallery.userdetails.images.push(item);
+        userGallery.markModified('userdetails');
+        const added = userGallery.userdetails.images[userGallery.userdetails.images.length - 1];
+        if (added && added._id) assetId = added._id.toString();
+      } else if (typeFolder === 'Profile') {
+        const item = {
+          type: 'profile',
+          originalName: req.file.originalname,
+          convertedName: safeName,
+          filePath: targetPath,
+          url: publicUrl,
+          size: fileSize,
+          timestamp: new Date()
+        };
+        userGallery.userdetails.images.push(item);
+        userGallery.markModified('userdetails');
+        const added = userGallery.userdetails.images[userGallery.userdetails.images.length - 1];
+        if (added && added._id) assetId = added._id.toString();
+      } else if (typeFolder === 'Video') {
+        const item = {
+          originalName: req.file.originalname,
+          convertedName: safeName,
+          filePath: targetPath,
+          url: publicUrl,
+          size: fileSize,
+          timestamp: new Date()
+        };
+        userGallery.CustomizationGallery.videos.push(item);
+        userGallery.markModified('CustomizationGallery');
+        const added = userGallery.CustomizationGallery.videos[userGallery.CustomizationGallery.videos.length - 1];
+        if (added && added._id) assetId = added._id.toString();
+      } else {
+        // Images, Background, Watermark, Transparent_Sheet, Texture, Gallery_Image, Other
+        const item = {
+          originalName: req.file.originalname,
+          convertedName: safeName,
+          filePath: targetPath,
+          url: publicUrl,
+          size: fileSize,
+          timestamp: new Date()
+        };
+        userGallery.CustomizationGallery.images.push(item);
+        userGallery.markModified('CustomizationGallery');
+        const added = userGallery.CustomizationGallery.images[userGallery.CustomizationGallery.images.length - 1];
+        if (added && added._id) assetId = added._id.toString();
+      }
+      await userGallery.save();
+    }
 
     return res.status(200).json({
       success: true,
@@ -625,8 +770,8 @@ const uploadCustomizedAsset = async (req, res) => {
       url: publicUrl,
       fileName: safeName,
       assetType: typeFolder,
-      assetId: newAsset._id,
-      size: newAsset.size
+      assetId,
+      size: fileSize
     });
   } catch (err) {
     console.error('[Customized Editor] Error uploading asset:', err);
@@ -639,35 +784,82 @@ const uploadCustomizedAsset = async (req, res) => {
 
 /**
  * POST /delete-customized-asset
- * Deletes asset file from disk and its metadata record.
- * Validates ownership using userId.
+ * Deletes asset file from disk and its metadata record from UserGallery.
  */
 const deleteCustomizedAsset = async (req, res) => {
   try {
     const authUser = getAuthUser(req);
-    const { url, assetId } = req.body;
+    const { url, assetId, fileName } = req.body;
 
-    if (!url && !assetId) {
-      return res.status(400).json({ success: false, message: 'Asset url or assetId required' });
+    if (!url && !assetId && !fileName) {
+      return res.status(400).json({ success: false, message: 'Asset url, assetId or fileName required' });
     }
 
+    // 1. Delete asset file from disk
     let deletedFromDisk = false;
     if (url) {
       deletedFromDisk = deleteAssetFile(url);
     }
 
-    // Delete record from CustomizedAsset collection
-    const query = {};
-    if (authUser.objectId) query.userId = authUser.objectId;
-    else if (authUser.emailId) query.userEmail = authUser.emailId;
+    // 2. Remove record from UserGallery
+    const userGallery = await findOrCreateUserGallery(authUser, req);
+    if (userGallery) {
+      const matchPred = (item) => {
+        if (!item) return false;
+        if (url && item.url === url) return true;
+        if (assetId && (item._id?.toString() === String(assetId) || item.convertedName === String(assetId))) return true;
+        if (fileName && item.convertedName === fileName) return true;
+        return false;
+      };
 
-    if (assetId) query._id = assetId;
-    else if (url) query.url = url;
+      const filterSection = (arr) => {
+        const removed = [];
+        const kept = [];
+        for (const it of arr) {
+          if (matchPred(it)) {
+            removed.push(it);
+          } else {
+            kept.push(it);
+          }
+        }
+        return { kept, removed };
+      };
 
-    const doc = await CustomizedAsset.findOneAndDelete(query);
-    if (doc && doc.storagePath && !deletedFromDisk) {
-      deleteAssetFile(doc.storagePath);
+      const resUserImages = filterSection(userGallery.userdetails?.images || []);
+      const resCustomImages = filterSection(userGallery.CustomizationGallery?.images || []);
+      const resCustomVideos = filterSection(userGallery.CustomizationGallery?.videos || []);
+
+      userGallery.userdetails.images = resUserImages.kept;
+      userGallery.CustomizationGallery.images = resCustomImages.kept;
+      userGallery.CustomizationGallery.videos = resCustomVideos.kept;
+
+      userGallery.markModified('userdetails');
+      userGallery.markModified('CustomizationGallery');
+      await userGallery.save();
+
+      // If file was not yet deleted from disk by URL, delete via item.filePath
+      if (!deletedFromDisk) {
+        const allRemoved = [...resUserImages.removed, ...resCustomImages.removed, ...resCustomVideos.removed];
+        for (const it of allRemoved) {
+          if (it.filePath && fs.existsSync(it.filePath)) {
+            try { fs.unlinkSync(it.filePath); } catch (e) {}
+          }
+        }
+      }
     }
+
+    // 3. For backwards compatibility, clean legacy collection if any doc remains
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        const q = {};
+        if (url) q.url = url;
+        if (fileName) q.fileName = fileName;
+        if (assetId && /^[0-9a-fA-F]{24}$/.test(assetId)) q._id = new mongoose.Types.ObjectId(assetId);
+        if (Object.keys(q).length > 0) {
+          await mongoose.connection.db.collection('customizedassets').deleteMany(q);
+        }
+      }
+    } catch (e) {}
 
     return res.status(200).json({
       success: true,
@@ -681,32 +873,122 @@ const deleteCustomizedAsset = async (req, res) => {
 
 /**
  * GET /assets
- * List user's customized assets by userId
+ * List user's customized assets from UserGallery
  */
 const getUserAssets = async (req, res) => {
   try {
     const authUser = getAuthUser(req);
-    const userQuery = getUserQuery(req);
     const { assetType, v_id } = req.query;
 
-    if (!userQuery) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
+    const userGallery = await findOrCreateUserGallery(authUser, req);
+    const assets = [];
+
+    if (userGallery) {
+      // 1. userdetails.images (Logo / Profile)
+      (userGallery.userdetails?.images || []).forEach(item => {
+        if (!item || !item.url) return;
+        const mappedType = item.type === 'company_logo' ? 'Logo' : 'Profile';
+        assets.push({
+          id: item._id?.toString() || item.convertedName,
+          _id: item._id?.toString() || item.convertedName,
+          fileName: item.convertedName,
+          originalName: item.originalName,
+          url: item.url,
+          storagePath: item.filePath,
+          size: item.size || 0,
+          assetType: mappedType,
+          createdAt: item.timestamp || new Date()
+        });
+      });
+
+      // 2. CustomizationGallery.images (Background / Watermark / Texture / etc.)
+      (userGallery.CustomizationGallery?.images || []).forEach(item => {
+        if (!item || !item.url) return;
+        let detectedType = 'Background';
+        const nameLower = (item.convertedName || '').toLowerCase();
+        if (nameLower.includes('watermark')) detectedType = 'Watermark';
+        else if (nameLower.includes('texture')) detectedType = 'Texture';
+        else if (nameLower.includes('transparent')) detectedType = 'Transparent_Sheet';
+        else if (nameLower.includes('preloader')) detectedType = 'Preloader';
+
+        assets.push({
+          id: item._id?.toString() || item.convertedName,
+          _id: item._id?.toString() || item.convertedName,
+          fileName: item.convertedName,
+          originalName: item.originalName,
+          url: item.url,
+          storagePath: item.filePath,
+          size: item.size || 0,
+          assetType: detectedType,
+          createdAt: item.timestamp || new Date()
+        });
+      });
+
+      // 3. CustomizationGallery.videos (Video / Audio)
+      (userGallery.CustomizationGallery?.videos || []).forEach(item => {
+        if (!item || !item.url) return;
+        assets.push({
+          id: item._id?.toString() || item.convertedName,
+          _id: item._id?.toString() || item.convertedName,
+          fileName: item.convertedName,
+          originalName: item.originalName,
+          url: item.url,
+          storagePath: item.filePath,
+          size: item.size || 0,
+          assetType: 'Video',
+          createdAt: item.timestamp || new Date()
+        });
+      });
     }
 
-    const filter = { ...userQuery };
+    // 4. Query legacy customizedassets collection if any exist
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        const legacyQuery = {};
+        if (authUser.objectId) legacyQuery.userId = authUser.objectId;
+        else if (authUser.emailId) legacyQuery.userEmail = authUser.emailId;
+
+        const legacyDocs = await mongoose.connection.db.collection('customizedassets').find(legacyQuery).toArray();
+        for (const doc of legacyDocs) {
+          if (doc && doc.url && !assets.some(a => a.url === doc.url)) {
+            assets.push({
+              id: doc._id?.toString() || doc.fileName,
+              _id: doc._id?.toString() || doc.fileName,
+              fileName: doc.fileName,
+              originalName: doc.originalName || doc.fileName,
+              url: doc.url,
+              storagePath: doc.storagePath,
+              size: doc.size || 0,
+              assetType: doc.assetType || 'Background',
+              createdAt: doc.createdAt || new Date()
+            });
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Filter by assetType if requested
+    let filteredAssets = assets;
     if (assetType) {
-      filter.assetType = getAssetTypeFolder(assetType);
-    }
-    if (v_id) {
-      filter.v_id = v_id;
+      const normalizedTarget = getAssetTypeFolder(assetType).toLowerCase();
+      filteredAssets = assets.filter(a => {
+        const aType = (a.assetType || '').toLowerCase();
+        if (normalizedTarget === 'logo' || normalizedTarget === 'company_logo') {
+          return aType === 'logo' || aType === 'company_logo';
+        }
+        if (normalizedTarget === 'background') {
+          return aType === 'background' || aType === 'image' || aType === 'watermark' || aType === 'texture' || aType === 'transparent_sheet';
+        }
+        return aType === normalizedTarget;
+      });
     }
 
-    const assets = await CustomizedAsset.find(filter).sort({ createdAt: -1 });
+    filteredAssets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return res.status(200).json({
       success: true,
-      assets,
-      count: assets.length
+      assets: filteredAssets,
+      count: filteredAssets.length
     });
   } catch (err) {
     console.error('[Customized Editor] Error listing assets:', err);
@@ -760,7 +1042,7 @@ const getBackgroundAssets = async (req, res) => {
 const copyThemeAsset = async (req, res) => {
   try {
     const authUser = getAuthUser(req);
-    const { imageUrl, v_id, folderName = 'My_Flipbooks', flipbookName = 'Untitled' } = req.body;
+    const { imageUrl, v_id, folderName = 'default', flipbookName = 'Untitled' } = req.body;
 
     if (!imageUrl) {
       return res.status(400).json({ success: false, message: 'Missing imageUrl' });
@@ -789,6 +1071,29 @@ const copyThemeAsset = async (req, res) => {
     }
 
     const publicUrl = toPublicStorageUrl(destPath);
+
+    // Record in UserGallery
+    try {
+      const userGallery = await findOrCreateUserGallery(authUser, req);
+      if (userGallery) {
+        const item = {
+          originalName: path.basename(imageUrl),
+          convertedName: fileName,
+          filePath: destPath,
+          url: publicUrl,
+          size: fs.existsSync(destPath) ? fs.statSync(destPath).size : 0,
+          timestamp: new Date()
+        };
+        if (isVideo) {
+          userGallery.CustomizationGallery.videos.push(item);
+        } else {
+          userGallery.CustomizationGallery.images.push(item);
+        }
+        userGallery.markModified('CustomizationGallery');
+        await userGallery.save();
+      }
+    } catch (ugErr) {}
+
     return res.status(200).json({
       success: true,
       message: 'Theme asset copied successfully',
@@ -1586,7 +1891,7 @@ const getPublicBook = async (req, res) => {
     const rawFolders = Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName];
     const folders = Array.from(
       new Set(
-        [primaryFolder, ...rawFolders, 'My_Flipbooks']
+        [primaryFolder, ...rawFolders, 'default']
           .filter((f) => f && typeof f === 'string' && f.trim())
           .map((f) => String(f).trim())
       )
@@ -1609,9 +1914,9 @@ const getPublicBook = async (req, res) => {
         for (const bn of bookNames) {
           if (!bn || typeof bn !== 'string') continue;
           candidateDirs.push(
-            path.join(storageRoot, uf, "My_Flipbooks", f, bn),
+            path.join(storageRoot, uf, "books", f, bn),
+            path.join(storageRoot, uf, "books", bn),
             path.join(storageRoot, uf, f, bn),
-            path.join(storageRoot, uf, "My_Flipbooks", bn),
             path.join(storageRoot, uf, bn),
             path.join(storageRoot, "flipbooks", uf, f, bn),
             path.join(storageRoot, "flipbooks", uf, bn)
@@ -1623,7 +1928,7 @@ const getPublicBook = async (req, res) => {
     const sanitizedEmail = (book.userEmail || '').replace(/[@.]/g, '_');
     let effectiveUserFolder = book.userID || sanitizedEmail;
     for (const uf of userFolders) {
-      if (fs.existsSync(path.join(storageRoot, uf, 'My_Flipbooks', primaryFolder, book.flipbookName))) {
+      if (fs.existsSync(path.join(storageRoot, uf, 'books', primaryFolder, book.flipbookName))) {
         effectiveUserFolder = uf;
         break;
       }
@@ -1632,7 +1937,7 @@ const getPublicBook = async (req, res) => {
         break;
       }
     }
-    const resolvedBaseUrl = `/storage/${effectiveUserFolder}/My_Flipbooks/${primaryFolder}/${book.flipbookName}/`;
+    const resolvedBaseUrl = `/storage/${effectiveUserFolder}/books/${primaryFolder}/${book.flipbookName}/`;
 
     const populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };

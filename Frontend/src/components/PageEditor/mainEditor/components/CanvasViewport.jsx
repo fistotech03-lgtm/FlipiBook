@@ -204,6 +204,7 @@ export const CanvasViewport = ({
                                 }}
                                 onDrop={(e) => {
                                   e.preventDefault();
+                                  e.stopPropagation();
                                   if (typeof setActiveMainTool === 'function') {
                                     setActiveMainTool('select');
                                   }
@@ -326,11 +327,11 @@ export const CanvasViewport = ({
                                         }
                                       }));
                                       setShowHotspotPopup(false);
-                                    } else if (data.type === 'icon') {
+                                    } else if (data.type === 'icon' || data.type === 'lucide-icon') {
                                       window.dispatchEvent(new CustomEvent('add-icon-to-editor', {
                                         detail: {
                                           pageIndex: displayIndex,
-                                          icon: data.icon,
+                                          icon: data.icon || { name: data.name, html: data.html },
                                           dropPoint
                                         }
                                       }));
@@ -355,6 +356,14 @@ export const CanvasViewport = ({
                                           type: 'gif',
                                           dropPoint,
                                           targetShapeId
+                                        }
+                                      }));
+                                    } else if (data.type === 'element' || data.type === 'element-item' || data.elementId) {
+                                      window.dispatchEvent(new CustomEvent('add-element-to-editor', {
+                                        detail: {
+                                          pageIndex: displayIndex,
+                                          elementId: data.elementId,
+                                          dropPoint
                                         }
                                       }));
                                     } else if (data.type === 'video') {

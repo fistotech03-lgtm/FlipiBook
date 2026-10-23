@@ -60,8 +60,18 @@ export const createRotationOverlayEngine = ({
     show = false
   }) => {
     if (!htmlOverlay || !cornersMap) return;
+    const targetEl = targetIds[0] ? document.getElementById(targetIds[0]) : document.getElementById(targetKey);
+    if (
+      targetEl?.getAttribute('data-name') === 'Overlay' ||
+      targetEl?.getAttribute('data-type') === 'background' ||
+      targetEl?.getAttribute('data-name')?.startsWith('Page ') ||
+      targetEl?.parentElement?.tagName.toLowerCase() === 'svg'
+    ) {
+      const staleUI = htmlOverlay.querySelectorAll(`[id^="rotate-handle-${targetKey}"], [id^="rotate-hotspot-${targetKey}"]`);
+      staleUI.forEach(el => el.remove());
+      return;
+    }
     if (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') {
-      const targetEl = targetIds[0] ? document.getElementById(targetIds[0]) : document.getElementById(targetKey);
       const isFreeFrame = targetEl?.getAttribute('data-name')?.toLowerCase() === 'free frame' || targetEl?.getAttribute('data-type') === 'free-frame' || targetEl?.id?.startsWith('free-frame');
       if (!isFreeFrame) {
         const staleUI = htmlOverlay.querySelectorAll(`[id^="rotate-handle-${targetKey}"], [id^="rotate-hotspot-${targetKey}"]`);

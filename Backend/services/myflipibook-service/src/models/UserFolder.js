@@ -6,6 +6,10 @@ const folderItemSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
+    },
+    isDefault: {
+      type: Boolean,
+      default: false
     }
   },
   {
@@ -22,6 +26,12 @@ folderItemSchema.virtual('id').get(function () {
 const userFolderSchema = new mongoose.Schema(
   {
     userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+      index: true
+    },
+    userObjectID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: false,
@@ -45,6 +55,7 @@ const userFolderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    strict: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }

@@ -5,99 +5,152 @@ import arViewImg from '../../assets/Home/final-images/ar-integration/ar-integrat
 
 export default function ArIntegrationSection() {
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="relative w-full bg-white font-poppins overflow-hidden">
-      
-      {/* 2-Column Layout: Left Content with comfortable padding | Right Docked to bottom-right corner */}
-      <div className="w-full flex flex-col lg:flex-row items-stretch justify-between min-h-0 lg:min-h-[42vw]">
+    <motion.section
+      initial={{ opacity: 0, y: 35 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: false, amount: 0.2 }}
+      transition={{ duration: 0.8 }}
+      className="relative w-full bg-white font-poppins overflow-hidden"
+    >
+      {/* 2-Column Layout */}
+      <div className="w-full flex flex-col lg:flex-row items-stretch justify-between">
         
-        {/* Left Column: Lowered slightly with pt-10 sm:pt-14 lg:pt-[5vw] */}
-        <div className="w-full lg:w-[46%] xl:w-[44%] flex flex-col justify-start text-center lg:text-left items-center lg:items-start pt-8 sm:pt-12 lg:pt-[5.2vw] pb-6 sm:pb-10 lg:pb-[3.5vw] px-6 sm:px-10 lg:pl-[5.5vw] lg:pr-4 z-10 shrink-0">
+        {/* Left Column: Content with exact matching proportions */}
+        <div className="w-full lg:w-[48%] xl:w-[46%] flex flex-col justify-start text-left items-start pt-6 sm:pt-8 lg:pt-[4.5vw] pb-3 sm:pb-3 lg:pb-[4.5vw] px-6 sm:px-12 lg:pl-[6.2vw] lg:pr-2 z-10 shrink-0">
           
           {/* 1. Top Header Tag: AR INTEGRATION with horizontal rule */}
-          <div className="flex items-center gap-3.5 mb-4 sm:mb-6 lg:mb-[1.8vw]">
-            <span className="text-[11px] sm:text-xs lg:text-[0.82vw] font-bold tracking-[0.25em] text-[#35363A] uppercase">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
+            className="flex items-center gap-2.5 sm:gap-4 mb-2.5 sm:mb-4 lg:mb-[2.2vw]"
+          >
+            <span className="text-[10px] sm:text-[13px] lg:text-[0.82vw] font-semibold tracking-[0.22em] text-[#35363A] uppercase">
               AR INTEGRATION
             </span>
-            <div className="w-10 sm:w-12 lg:w-[3.2vw] h-[1.5px] bg-[#9ca0a6]"></div>
-          </div>
+            <div className="w-8 sm:w-14 lg:w-[3.4vw] h-[1.5px] bg-[#35363A]/40"></div>
+          </motion.div>
 
-          {/* 2. Headline: Big font size & font-bold as requested */}
-          <div className="mb-3 sm:mb-5 lg:mb-[1.4vw]">
-            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.5vw] xl:text-[4.8vw] font-bold leading-[1.08] tracking-tight">
-              <span className="text-[#2B3037] block">See Products</span>
-              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.2vw]">in Real Space</span>
+          {/* 2. Headline: Left-aligned across all breakpoints */}
+          <motion.div
+            initial={{ opacity: 0, x: -35 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
+          >
+            <h2 className="text-[26px] sm:text-[44px] md:text-[48px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
+              <span className="block">See Products</span>
+              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Real Space</span>
             </h2>
-          </div>
+          </motion.div>
 
           {/* 3. Divider line under headline */}
-          <div className="w-36 sm:w-56 lg:w-[15vw] h-[1px] bg-[#d2d5d8] mb-4 sm:mb-6 lg:mb-[1.6vw]"></div>
+          <motion.div
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: false }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="w-20 sm:w-36 lg:w-[12vw] h-[1px] bg-[#d2d5d8] mb-2 sm:mb-3.5 lg:mb-[1.8vw] origin-left"
+          ></motion.div>
 
           {/* 4. Description Paragraph */}
-          <p className="text-xs sm:text-[13.5px] lg:text-[0.92vw] text-[#787D85] font-normal leading-[1.65] max-w-[340px] sm:max-w-[420px] lg:max-w-[22vw] mb-6 sm:mb-8 lg:mb-[2.6vw]">
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[3.2vw] text-left"
+          >
             Bring your products to life with AR. Scan the QR code from your flipbook and view 3D models in your space.
-          </p>
+          </motion.p>
 
-          {/* 5. Three Circular Badges Row */}
-          <div className="flex items-start justify-center lg:justify-start gap-5 sm:gap-8 lg:gap-[2.6vw] w-full">
+          {/* 5. Three Circular Badges Row: For Tablet (sm to lg), icon is placed to the RIGHT of text (flex-row-reverse). Mobile & Desktop keep standard vertical stack */}
+          <div className="flex items-start justify-start gap-4 sm:gap-6 md:gap-8 lg:gap-[2.6vw] w-full">
             
             {/* Badge 1: Realistic 3D Models */}
-            <div className="flex flex-col items-center text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 25, scale: 0.9 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+            >
               <div
-                className="w-12 h-12 sm:w-16 sm:h-16 lg:w-[4.2vw] lg:h-[4.2vw] rounded-full flex items-center justify-center text-[#EC5137] mb-2 sm:mb-2.5"
+                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="energy-icons:cube-20" className="w-5 h-5 sm:w-7 sm:h-7 lg:w-[1.8vw] lg:h-[1.8vw]" />
+                <Icon icon="energy-icons:cube-20" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
               </div>
-              <span className="text-xs sm:text-sm lg:text-[0.92vw] font-bold text-[#1C1D21] leading-tight">
-                Realistic
-              </span>
-              <span className="text-[10.5px] sm:text-xs lg:text-[0.75vw] text-[#858585] leading-tight mt-1 font-normal">
-                3D Models
-              </span>
-            </div>
+              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
+                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+                  Realistic
+                </span>
+                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                  3D Models
+                </span>
+              </div>
+            </motion.div>
 
             {/* Badge 2: View at Actual Size */}
-            <div className="flex flex-col items-center text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 25, scale: 0.9 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.35 }}
+              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+            >
               <div
-                className="w-12 h-12 sm:w-16 sm:h-16 lg:w-[4.2vw] lg:h-[4.2vw] rounded-full flex items-center justify-center text-[#EC5137] mb-2 sm:mb-2.5"
+                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="carbon:carbon-for-mobile" className="w-5 h-5 sm:w-7 sm:h-7 lg:w-[1.8vw] lg:h-[1.8vw]" />
+                <Icon icon="carbon:carbon-for-mobile" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
               </div>
-              <span className="text-xs sm:text-sm lg:text-[0.92vw] font-bold text-[#1C1D21] leading-tight">
-                View at
-              </span>
-              <span className="text-[10.5px] sm:text-xs lg:text-[0.75vw] text-[#858585] leading-tight mt-1 font-normal">
-                Actual Size
-              </span>
-            </div>
+              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
+                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+                  View at
+                </span>
+                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                  Actual Size
+                </span>
+              </div>
+            </motion.div>
 
             {/* Badge 3: 360° Interaction */}
-            <div className="flex flex-col items-center text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 25, scale: 0.9 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.45 }}
+              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+            >
               <div
-                className="w-12 h-12 sm:w-16 sm:h-16 lg:w-[4.2vw] lg:h-[4.2vw] rounded-full flex items-center justify-center text-[#EC5137] mb-2 sm:mb-2.5"
+                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="andrsrxn:rotate-3d" className="w-5 h-5 sm:w-7 sm:h-7 lg:w-[1.8vw] lg:h-[1.8vw]" />
+                <Icon icon="andrsrxn:rotate-3d" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
               </div>
-              <span className="text-xs sm:text-sm lg:text-[0.92vw] font-bold text-[#1C1D21] leading-tight">
-                360°
-              </span>
-              <span className="text-[10.5px] sm:text-xs lg:text-[0.75vw] text-[#858585] leading-tight mt-1 font-normal">
-                Interaction
-              </span>
-            </div>
+              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
+                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+                  360°
+                </span>
+                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                  Interaction
+                </span>
+              </div>
+            </motion.div>
 
           </div>
 
         </div>
 
-        {/* Right Column: Responsively sized & docked to bottom-right corner across screens */}
-        <div className="w-full lg:w-[54%] xl:w-[56%] flex items-end justify-center lg:justify-end self-end pointer-events-none select-none mt-4 sm:mt-6 lg:mt-0">
+        {/* Right Column: Docked to bottom right without cropping or overflow */}
+        <div className="w-full lg:w-[52%] xl:w-[54%] flex items-end justify-center lg:justify-end self-end pointer-events-none select-none mt-2 sm:mt-1 md:-mt-4 lg:mt-0 px-2 sm:px-6 lg:px-0">
           <img
             src={arViewImg}
             alt="AR Real Space Experience"
-            className="w-full max-w-[420px] sm:max-w-[580px] md:max-w-[680px] lg:max-w-none h-auto max-h-[360px] sm:max-h-[480px] md:max-h-[560px] lg:max-h-[44vw] xl:max-h-[740px] object-contain object-bottom lg:object-right-bottom block"
+            className="w-full max-w-[480px] sm:max-w-[560px] md:max-w-[620px] lg:max-w-none h-auto block object-contain object-bottom"
           />
         </div>
 

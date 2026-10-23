@@ -5,7 +5,7 @@ import exploreArrowIcon from '../../assets/Home/explore-arrow-icon.png';
 
 export default function WhyChooseFlipibook() {
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
       
       {/* Top Header Tag Row with Sub-Labels */}
       <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]">
@@ -43,9 +43,9 @@ export default function WhyChooseFlipibook() {
       {/* 
         Exact Figma Canvas Container:
         Figma artboard coordinate reference: X: 0 to 1920, Y: 340 to 920 (~580px relative height)
-        Aspect ratio lock ensures SVG and cards NEVER detach or stretch out of alignment on any screen width!
+        Aspect ratio lock ensures SVG and cards NEVER detach or stretch out of alignment on desktop screens (>= 992px)!
       */}
-      <div className="w-full max-w-[1920px] mx-auto relative hidden md:block mt-0 lg:-mt-[1.5vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
+      <div className="w-full max-w-[1920px] mx-auto relative hidden min-[992px]:block mt-0 lg:-mt-[1.5vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
         
         {/* Background SVG Wave and Accent Dots directly from Figma:
             Bounding box transformed to (0, 340) coordinate space:
@@ -157,7 +157,7 @@ export default function WhyChooseFlipibook() {
           }}
           initial={{ opacity: 0, scale: 0.2, x: -120, y: 80, rotate: -25 }}
           whileInView={{ opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
         >
           <motion.img
@@ -304,38 +304,38 @@ export default function WhyChooseFlipibook() {
 
       </div>
 
-      {/* Mobile Stack fallback (under md) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 gap-6 sm:gap-8 md:hidden mt-8">
-        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
-            <Icon icon="mdi:account-group" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
+      {/* Responsive Grid layout for Mobile and Tablet (< 992px) */}
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-7 min-[992px]:hidden mt-8 max-w-2xl sm:max-w-3xl mx-auto">
+        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
+            <Icon icon="mdi:account-group" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">100+</h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Happy Clients</h4>
-          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Trusted by businesses across various industries</p>
+          <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Trusted by businesses across various industries</p>
         </div>
-        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
-            <Icon icon="basil:book-open-outline" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
+            <Icon icon="basil:book-open-outline" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">500+</h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Flipibooks Created</h4>
-          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">From Product catalogues to brand stories</p>
+          <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">From Product catalogues to brand stories</p>
         </div>
-        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
-            <Icon icon="mdi:eye-outline" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
+            <Icon icon="mdi:eye-outline" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">1M+</h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Page Views</h4>
-          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Read, share and explore FlipiBooks across the globe.</p>
+          <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Read, share and explore FlipiBooks across the globe.</p>
         </div>
-        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
-            <Icon icon="mdi:earth" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
+            <Icon icon="mdi:earth" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
           </div>
           <h4 className="text-lg sm:text-xl font-semibold text-[#051B2E] mb-1 mt-1">Global Reach</h4>
-          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Share Everywhere, <br />Anytime.</p>
+          <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Share Everywhere, <br />Anytime.</p>
         </div>
       </div>
 

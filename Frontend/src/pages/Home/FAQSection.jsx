@@ -37,10 +37,16 @@ export default function FAQSection() {
   };
 
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.2 }} transition={{ duration: 0.8 }} className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
       
       {/* Section Header */}
-      <div className="text-center w-full max-w-xl lg:max-w-[60vw] mb-8 lg:mb-[3.5vw] space-y-2">
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.2 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="text-center w-full max-w-xl lg:max-w-[60vw] mb-8 lg:mb-[3.5vw] space-y-2"
+      >
         <h2 className="text-2xl sm:text-4xl lg:text-[2.8vw] font-bold text-[#1b222c] tracking-tight leading-tight">
           Common Questions About <br />
           <span className="text-[#ea7233]">Flipibook</span>
@@ -48,15 +54,19 @@ export default function FAQSection() {
         <p className="text-xs sm:text-sm lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed">
           Turn static PDFs into engaging digital catalogue experiences.
         </p>
-      </div>
+      </motion.div>
 
-      {/* 2-Column FAQ Grid */}
+      {/* 2-Column FAQ Grid with Staggered Entrance */}
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5 items-start">
         {faqs.map((faq, index) => {
           const isOpen = openIndex === index;
           return (
-            <div
+            <motion.div
               key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: (index % 4) * 0.08, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => toggleFAQ(index)}
               className={`bg-white border rounded-xl p-4 lg:p-[1.2vw] cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md ${
                 isOpen ? 'border-[#ea7233]/50 ring-1 ring-[#ea7233]/20' : 'border-gray-200 hover:border-gray-300'
@@ -93,7 +103,7 @@ export default function FAQSection() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           );
         })}
       </div>

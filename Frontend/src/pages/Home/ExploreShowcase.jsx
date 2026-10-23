@@ -14,6 +14,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [likedBooks, setLikedBooks] = useState({});
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [activeCardId, setActiveCardId] = useState(null);
 
   const baseFlipbooks = [
     {
@@ -179,7 +180,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
   ];
 
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
       
       {/* Top Header Tag */}
       <div className="w-full flex items-center gap-3 lg:gap-[0.6vw] mb-4 lg:mb-[1.2vw]">
@@ -222,16 +223,19 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
         {/* Cards Row Carousel */}
         <div
           ref={scrollRef}
-          className="w-full flex items-stretch gap-4 sm:gap-5 lg:gap-[1.2vw] overflow-x-auto py-3 px-1 scroll-smooth scrollbar-none snap-x"
+          className="w-full flex items-stretch gap-6 sm:gap-7 lg:gap-[2vw] overflow-x-auto py-3 px-1 scroll-smooth scrollbar-none snap-x"
         >
           {flipbooks.map((book) => {
             const isLiked = Boolean(likedBooks[book.uniqueId]);
             const isMenuOpen = activeMenuId === book.uniqueId;
+            const isActive = activeCardId === book.uniqueId;
 
             return (
               <div
                 key={book.uniqueId}
-                className="w-[260px] sm:w-[275px] lg:w-[15.8vw] shrink-0 bg-white border border-gray-200/90 rounded-2xl lg:rounded-[1vw] overflow-hidden flex flex-col shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all duration-300 group cursor-pointer snap-start relative"
+                onMouseEnter={() => setActiveCardId(book.uniqueId)}
+                onMouseLeave={() => setActiveCardId(null)}
+                className="w-[260px] sm:w-[275px] lg:w-[15.8vw] shrink-0 bg-white border border-gray-300/80 rounded-2xl lg:rounded-[1vw] overflow-hidden flex flex-col shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.05)] hover:border-gray-400 hover:shadow-[0_0_0_1.5px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)] transition-all duration-300 group cursor-pointer snap-start relative"
                 onClick={() => navigate && navigate('/explore')}
               >
                 {/* Card Thumbnail Image with bottom left & right rounded corners */}
@@ -318,8 +322,14 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
                       </p>
                     </div>
 
-                    {/* Card Action Button: Matching Image 2 with red-orange accent */}
-                    <div className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.2vw] lg:h-[2.2vw] rounded-full bg-[#EA5834] text-white flex items-center justify-center shadow-sm shrink-0 hover:scale-105 active:scale-95 transition-transform duration-200">
+                    {/* Card Action Button: Orange only on active card, otherwise black */}
+                    <div
+                      className={`absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.2vw] lg:h-[2.2vw] rounded-full text-white flex items-center justify-center shadow-sm shrink-0 transition-all duration-300 ${
+                        isActive
+                          ? 'bg-[#EA5834] scale-105 shadow-[0_4px_12px_rgba(234,88,52,0.35)]'
+                          : 'bg-[#1a1a1a] group-hover:bg-[#EA5834]'
+                      }`}
+                    >
                       <Icon icon="lucide:arrow-up-right" className="w-4 h-4 lg:w-[1.05vw] lg:h-[1.05vw] stroke-[2.5]" />
                     </div>
                   </div>

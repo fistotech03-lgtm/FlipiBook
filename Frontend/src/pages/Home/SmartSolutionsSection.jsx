@@ -34,8 +34,8 @@ const SmartSolutionsSection = () => {
             IT STARTS WITH A CLICK
           </motion.h2>
 
-          {/* 3D Model Viewer in Rage Italic / #EC5137 - exactly starting below A */}
-          <span className="absolute left-[64.5%] sm:left-[64%] lg:left-[65.4%] -bottom-1 sm:-bottom-[0.1vw] lg:-bottom-[0.2vw] font-rage italic text-xl sm:text-2xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
+          {/* 3D Model Viewer in Rage Italic / #EC5137 - shifted +8% to right */}
+          <span className="absolute left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] -bottom-1 sm:-bottom-[0.1vw] lg:bottom-auto font-rage italic text-xl sm:text-2xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
             3D Model Viewer
           </span>
         </div>
@@ -49,11 +49,11 @@ const SmartSolutionsSection = () => {
         {/* CENTER 3D MODEL & CIRCULAR ORBIT NAVIGATION */}
         <div className="relative w-full lg:w-[50vw] flex items-center justify-center min-h-[200px] sm:min-h-[280px] lg:h-[26vw] py-2 lg:py-0">
 
-          {/* Exact Figma Vector Orbit (Arc + Dashed lines + Orange Badges + Labels) */}
+          {/* Exact Figma Vector Orbit (Arc + Dashed lines + Orange Badges + Labels) with drop shadow */}
           <img
             src={exampleSvg}
             alt="IDC Industry Categories Orbit"
-            className="absolute w-[92vw] sm:w-[65vw] lg:w-[37.5vw] h-auto lg:top-[7vw] pointer-events-none top-[0vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[48%] z-10 select-none"
+            className="absolute w-[92vw] sm:w-[65vw] lg:w-[37.5vw] h-auto lg:top-[7vw] pointer-events-none top-[0vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[48%] z-10 select-none drop-shadow-[0_10px_20px_rgba(236,81,55,0.18)]"
           />
 
           {/* Center 3D Motor Image */}
@@ -110,16 +110,16 @@ const SmartSolutionsSection = () => {
         {/* CARD 1: Immersive 3D */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+          className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-3 lg:p-[0.75vw] w-full sm:w-1/3 lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
-          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
-            <Icon icon="lucide:box" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
+          <div className="w-9 h-9 lg:w-[2.5vw] lg:h-[2.5vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.5vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="lucide:box" className="w-4.5 h-4.5 lg:w-[1.35vw] lg:h-[1.35vw]" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+          <div className="text-left min-w-0 flex-1">
+            <h3 className="text-xs sm:text-[13.5px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 transition-colors duration-300">
               Immersive 3D
             </h3>
-            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
+            <p className="text-[10.5px] sm:text-[11.5px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.35] transition-colors duration-300 max-w-[200px] sm:max-w-[220px] lg:max-w-[15.5vw]">
               Add depth with realistic models and smooth page-turn effects.
             </p>
           </div>
@@ -128,17 +128,17 @@ const SmartSolutionsSection = () => {
         {/* CARD 2: Interactive Elements */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+          className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-3 lg:p-[0.75vw] w-full sm:w-1/3 lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
-          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
-            <Icon icon="mdi:cursor-default-click-outline" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
+          <div className="w-9 h-9 lg:w-[2.5vw] lg:h-[2.5vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.5vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="mdi:cursor-default-click-outline" className="w-4.5 h-4.5 lg:w-[1.35vw] lg:h-[1.35vw]" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+          <div className="text-left min-w-0 flex-1">
+            <h3 className="text-xs sm:text-[13.5px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 transition-colors duration-300">
               Interactive Elements
             </h3>
-            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
-              Engage your users with rich interactive content.
+            <p className="text-[10.5px] sm:text-[11.5px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.35] transition-colors duration-300 max-w-[200px] sm:max-w-[220px] lg:max-w-[15.5vw]">
+              Engage your users with rich interactive digital content.
             </p>
           </div>
         </motion.div>
@@ -146,17 +146,17 @@ const SmartSolutionsSection = () => {
         {/* CARD 3: Publish Anywhere */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+          className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-3 lg:p-[0.75vw] w-full sm:w-1/3 lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
-          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
-            <Icon icon="clarity:world-line" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
+          <div className="w-9 h-9 lg:w-[2.5vw] lg:h-[2.5vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.5vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="clarity:world-line" className="w-4.5 h-4.5 lg:w-[1.35vw] lg:h-[1.35vw]" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+          <div className="text-left min-w-0 flex-1">
+            <h3 className="text-xs sm:text-[13.5px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 transition-colors duration-300">
               Publish Anywhere
             </h3>
-            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
-              Share and publish across all platforms and devices.
+            <p className="text-[10.5px] sm:text-[11.5px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.35] transition-colors duration-300 max-w-[200px] sm:max-w-[220px] lg:max-w-[15.5vw]">
+              Share and publish seamlessly across all platforms & devices.
             </p>
           </div>
         </motion.div>

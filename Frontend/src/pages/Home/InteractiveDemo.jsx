@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import demoBook1 from '../../assets/Home/final-images/interactive-demo-section/interactive-demo-book-1.webp';
 import demoBook2 from '../../assets/Home/final-images/interactive-demo-section/interactive-demo-book-2.webp';
 import demoBook3 from '../../assets/Home/final-images/interactive-demo-section/interactive-demo-book-3.webp';
@@ -42,7 +43,7 @@ export default function InteractiveDemo() {
   ];
 
   return (
-    <section id="interactive-demo-section" className="w-full bg-[#f6f6f6] pt-8 pb-10 sm:pt-10 sm:pb-14 lg:pt-[2.6vw] lg:pb-[3.5vw] px-4 sm:px-8 lg:px-[4.2vw] font-poppins select-none">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} id="interactive-demo-section" className="w-full bg-[#f6f6f6] pt-8 pb-10 sm:pt-10 sm:pb-14 lg:pt-[2.6vw] lg:pb-[3.5vw] px-4 sm:px-8 lg:px-[4.2vw] font-poppins select-none">
       <div className="w-full mx-auto flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-[4.2vw]">
         
         {/* Left Column: Heading, Subtitle & Description */}
@@ -121,7 +122,7 @@ export default function InteractiveDemo() {
         </div>
 
       </div>
-    </section>
+    </motion.section>
   );
 }
 

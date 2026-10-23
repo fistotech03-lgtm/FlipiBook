@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import c1 from '../../assets/Home/final-images/explore-section/explore-slider-img-1.webp';
 import c2 from '../../assets/Home/final-images/explore-section/explore-slider-img-2.webp';
@@ -178,7 +179,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
   ];
 
   return (
-    <section className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
       
       {/* Top Header Tag */}
       <div className="w-full flex items-center gap-3 lg:gap-[0.6vw] mb-4 lg:mb-[1.2vw]">
@@ -190,16 +191,16 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
 
       {/* Main Center Title */}
       <div className="w-full text-center mb-8 lg:mb-[2.6vw]">
-        <h2 className="text-3xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#1b222c] tracking-tight inline-flex items-baseline justify-center flex-wrap">
+        <h2 className="text-3xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap">
           <span>Disc</span>
-          <span className="inline-flex self-center items-center justify-center text-[#FE4B0F] mx-[0.04em] translate-y-[0.06em]">
-            <Icon icon="weui:discover-outlined" className="w-[0.78em] h-[0.78em]" />
+          <span className="inline-flex self-center items-center justify-center text-[#EC5137] mx-[0.02em] translate-y-[0.05em]">
+            <Icon icon="weui:discover-outlined" className="w-[0.8em] h-[0.8em]" />
           </span>
-          <span>ver. Read. Get Inspired</span>
+          <span>ver.&nbsp;&nbsp;Read.&nbsp;&nbsp;Get Inspired</span>
         </h2>
-        <p className="text-xs sm:text-sm lg:text-[0.95vw] text-[#717680] font-normal mt-2 lg:mt-[0.6vw] leading-relaxed">
+        <p className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-3 lg:mt-[1vw] leading-[1.6]">
           Dive into interactive flipbooks created by our community <br className="hidden sm:inline" />
-          click any book to start reading
+          click any book to start reding
         </p>
       </div>
 
@@ -233,12 +234,12 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
                 className="w-[260px] sm:w-[275px] lg:w-[15.8vw] shrink-0 bg-white border border-gray-200/90 rounded-2xl lg:rounded-[1vw] overflow-hidden flex flex-col shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all duration-300 group cursor-pointer snap-start relative"
                 onClick={() => navigate && navigate('/explore')}
               >
-                {/* Card Thumbnail Image */}
-                <div className="relative w-full aspect-[4/3.5] lg:aspect-[4/3.4] overflow-hidden flex items-center justify-center bg-[#F4E8DF] shrink-0">
+                {/* Card Thumbnail Image with bottom left & right rounded corners */}
+                <div className="relative w-full aspect-[4/3.5] lg:aspect-[4/3.4] overflow-hidden rounded-b-xl lg:rounded-b-[0.9vw] flex items-center justify-center bg-[#F4E8DF] shrink-0">
                   <img
                     src={book.cover}
                     alt={book.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-b-xl lg:rounded-b-[0.9vw]"
                   />
 
                   {/* Top Right Floating Actions: Heart and 3-dots */}
@@ -266,57 +267,60 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
                   </div>
                 </div>
 
-                {/* Card Body */}
-                <div className="p-3 sm:p-3.5 lg:p-[0.9vw] flex-1 flex flex-col justify-between">
+                {/* Card Body with precise vertical spacing matching reference */}
+                <div className="p-3.5 sm:p-4 lg:p-[1vw] flex-1 flex flex-col justify-between">
                   <div>
                     {/* Author Row */}
-                    <div className="flex items-center gap-2 lg:gap-[0.5vw] mb-2 lg:mb-[0.5vw]">
+                    <div className="flex items-center gap-2.5 lg:gap-[0.6vw] mb-3 lg:mb-[0.75vw]">
                       <img
                         src={book.avatar}
                         alt={book.author}
-                        className="w-7 h-7 sm:w-8 sm:h-8 lg:w-[2vw] lg:h-[2vw] rounded-full object-cover shrink-0 ring-1 ring-emerald-100/70"
+                        className="w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.2vw] lg:h-[2.2vw] rounded-full object-cover shrink-0 ring-1 ring-emerald-100/70"
                       />
                       <div className="flex flex-col text-left min-w-0 justify-center">
-                        <span className="text-xs sm:text-[13px] lg:text-[0.8vw] font-bold text-gray-900 leading-tight truncate">
+                        <span className="text-[13px] sm:text-[14px] lg:text-[0.85vw] font-normal text-[#000000] leading-tight truncate">
                           {book.author}
                         </span>
-                        <div className="flex items-center gap-1 text-[10px] lg:text-[0.65vw] text-gray-400 mt-0.5">
+                        <div className="flex items-center gap-1 text-[11px] lg:text-[0.68vw] font-light text-[#858585] mt-0.5">
                           <span className="truncate leading-none">{book.authorRole}</span>
-                          <span className="text-[10px] lg:text-[0.65vw] leading-none text-red-500">📍</span>
+                          <span className="text-[11px] lg:text-[0.68vw] leading-none text-red-500">📍</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Stats Row (Divider line layout) */}
-                    <div className="flex items-center gap-2 lg:gap-[0.5vw] text-[10.5px] sm:text-xs lg:text-[0.7vw] text-gray-600 font-medium py-1.5 lg:py-[0.4vw] border-b border-gray-100 whitespace-nowrap mb-2 lg:mb-[0.5vw]">
-                      <span className="font-semibold text-gray-900">{book.pages}</span>
-                      <span className="text-gray-300">|</span>
-                      <span className="flex items-center gap-1 lg:gap-[0.25vw] text-gray-600">
-                        <Icon icon="lucide:eye" className="w-3 h-3 lg:w-[0.75vw] lg:h-[0.75vw] text-gray-400" />
+                    {/* Stats Row without full divider border */}
+                    <div className="flex items-center gap-3 lg:gap-[0.7vw] text-[11px] sm:text-xs lg:text-[0.74vw] pt-0.5 pb-3 lg:pb-[0.8vw] whitespace-nowrap">
+                      <span className="text-[#000000]">
+                        <span className="font-medium">{book.pages.split(' ')[0]}</span>{' '}
+                        <span className="font-normal text-gray-500">{book.pages.split(' ')[1] || 'Pages'}</span>
+                      </span>
+                      <span className="text-gray-300 font-light">|</span>
+                      <span className="flex items-center gap-1.5 lg:gap-[0.3vw] text-[#000000] font-medium">
+                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 lg:w-[0.8vw] lg:h-[0.8vw] text-gray-700" />
                         <span>{book.views}</span>
                       </span>
-                      <span className="text-gray-300">|</span>
-                      <span className="flex items-center gap-1 lg:gap-[0.25vw] text-gray-900 font-semibold">
-                        <Icon icon="fa6-solid:star" className="w-2.5 h-2.5 lg:w-[0.65vw] lg:h-[0.65vw] text-amber-400" />
+                      <span className="text-gray-300 font-light">|</span>
+                      <span className="flex items-center gap-1.5 lg:gap-[0.3vw] text-[#000000] font-medium">
+                        <Icon icon="fa6-solid:star" className="w-3 h-3 lg:w-[0.7vw] lg:h-[0.7vw] text-[#EAB308]" />
                         <span>{book.rating}</span>
                       </span>
                     </div>
                   </div>
 
-                  {/* Title & Description with Bottom Right Coral/Orange Button */}
-                  <div className="relative text-left flex-1 flex flex-col justify-between pt-0.5 min-h-[3.8rem] lg:min-h-[3.6vw]">
-                    <div className="pr-10 lg:pr-[2.5vw]">
-                      <h4 className="text-xs sm:text-sm lg:text-[0.88vw] font-bold text-gray-900 leading-tight mb-1 whitespace-normal">
+                  {/* Title & Description with Bottom Right Orange Button */}
+                  <div className="relative text-left flex-1 flex flex-col justify-between pt-1 min-h-[4rem] lg:min-h-[3.8vw]">
+                    <div className="pr-12 lg:pr-[3vw]">
+                      <h4 className="text-sm sm:text-[15px] lg:text-[0.96vw] font-medium text-[#000000] leading-snug mb-1.5 lg:mb-[0.35vw] whitespace-normal">
                         {book.title}
                       </h4>
-                      <p className="text-[11px] sm:text-xs lg:text-[0.72vw] text-gray-500 italic leading-snug whitespace-normal">
+                      <p className="text-[11.5px] sm:text-xs lg:text-[0.76vw] font-normal text-[#555555] leading-relaxed whitespace-normal">
                         {book.desc}
                       </p>
                     </div>
 
-                    {/* Card Action: Black by default, Orange/Coral on hover/active */}
-                    <div className="absolute bottom-0 right-0 w-7.5 h-7.5 sm:w-8 sm:h-8 lg:w-[2vw] lg:h-[2vw] rounded-full bg-black text-white flex items-center justify-center group-hover:bg-[#EA5834] group-active:bg-[#EA5834] transition-all duration-300 shadow-sm shrink-0">
-                      <Icon icon="lucide:arrow-up-right" className="w-4 h-4 lg:w-[1vw] lg:h-[1vw] stroke-[2.5]" />
+                    {/* Card Action Button: Matching Image 2 with red-orange accent */}
+                    <div className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.2vw] lg:h-[2.2vw] rounded-full bg-[#EA5834] text-white flex items-center justify-center shadow-sm shrink-0 hover:scale-105 active:scale-95 transition-transform duration-200">
+                      <Icon icon="lucide:arrow-up-right" className="w-4 h-4 lg:w-[1.05vw] lg:h-[1.05vw] stroke-[2.5]" />
                     </div>
                   </div>
                 </div>
@@ -388,6 +392,6 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
         </div>
       )}
 
-    </section>
+    </motion.section>
   );
 }

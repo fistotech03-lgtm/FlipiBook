@@ -1,10 +1,11 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import arViewImg from '../../assets/Home/final-images/ar-integration/ar-integration.webp';
 
 export default function ArIntegrationSection() {
   return (
-    <section className="relative w-full bg-white font-poppins overflow-hidden">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="relative w-full bg-white font-poppins overflow-hidden">
       
       {/* 2-Column Layout: Left Content with comfortable padding | Right Docked to bottom-right corner */}
       <div className="w-full flex flex-col lg:flex-row items-stretch justify-between min-h-[460px] sm:min-h-[520px] lg:min-h-[42vw]">
@@ -102,6 +103,6 @@ export default function ArIntegrationSection() {
 
       </div>
 
-    </section>
+    </motion.section>
   );
 }

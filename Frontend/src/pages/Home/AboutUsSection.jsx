@@ -1,9 +1,10 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import aboutUsImg from '../../assets/Home/final-images/about-us/about-us-image.png';
 
 export default function AboutUsSection() {
   return (
-    <section className="w-full bg-[#E2E2E2] font-poppins relative overflow-hidden select-none pt-5 sm:pt-7 lg:pt-[1.8vw] pb-4 sm:pb-6 lg:pb-0">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-[#E2E2E2] font-poppins relative overflow-hidden select-none pt-5 sm:pt-7 lg:pt-[1.8vw] pb-4 sm:pb-6 lg:pb-0">
       
       {/* Top Header Tag: Guaranteed above all graphics */}
       <div className="w-full px-5 sm:px-8 lg:px-[4.5vw] mb-1 sm:mb-2 lg:mb-[0.4vw] flex items-center gap-3 relative z-30">
@@ -72,6 +73,6 @@ export default function AboutUsSection() {
 
       </div>
 
-    </section>
+    </motion.section>
   );
 }

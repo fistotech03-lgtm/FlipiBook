@@ -37,7 +37,7 @@ export default function FAQSection() {
   };
 
   return (
-    <section className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
       
       {/* Section Header */}
       <div className="text-center w-full max-w-xl lg:max-w-[60vw] mb-8 lg:mb-[3.5vw] space-y-2">
@@ -98,6 +98,6 @@ export default function FAQSection() {
         })}
       </div>
 
-    </section>
+    </motion.section>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import workImg1 from '../../assets/Home/final-images/how-it-works/step-1.webp';
 import workImg2 from '../../assets/Home/final-images/how-it-works/step-2.webp';
 import workImg3 from '../../assets/Home/final-images/how-it-works/step-3.webp';
@@ -42,7 +43,7 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="relative w-full bg-white font-poppins py-10 lg:py-[3vw] px-6 sm:px-10 lg:px-[6vw] flex flex-col items-center justify-between border-t border-gray-100">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="relative w-full bg-white font-poppins py-10 lg:py-[3vw] px-6 sm:px-10 lg:px-[6vw] flex flex-col items-center justify-between border-t border-gray-100">
       
       {/* Top Header */}
       <div className="w-full text-left mb-6 lg:mb-[1.5vw]">
@@ -121,6 +122,6 @@ export default function HowItWorksSection() {
         })}
       </div>
 
-    </section>
+    </motion.section>
   );
 }

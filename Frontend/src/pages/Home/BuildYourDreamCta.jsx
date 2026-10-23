@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 
 export default function BuildYourDreamCta({ onOpenCreateModal }) {
@@ -10,7 +11,7 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
   };
 
   return (
-    <section className="relative w-full bg-transparent font-poppins pt-16 pb-16 lg:pt-[5vw] lg:pb-[5vw] px-6 sm:px-12 lg:px-[4.5vw] overflow-hidden flex items-center justify-center min-h-[260px] lg:min-h-[16vw]">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} className="relative w-full bg-transparent font-poppins pt-16 pb-16 lg:pt-[5vw] lg:pb-[5vw] px-6 sm:px-12 lg:px-[4.5vw] overflow-hidden flex items-center justify-center min-h-[260px] lg:min-h-[16vw]">
       
       {/* Watermark IDC in background - Centered horizontally and vertically */}
       <span
@@ -71,6 +72,6 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
 
       </div>
 
-    </section>
+    </motion.section>
   );
 }

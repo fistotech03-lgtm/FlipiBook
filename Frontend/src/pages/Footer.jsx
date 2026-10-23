@@ -150,7 +150,7 @@ export default function Footer() {
           
           {/* Copyright Left */}
           <div>
-            Copyright © 2025 <a href="#" className="underline text-gray-200 hover:text-white">Fisto Tech Private Limited</a>. All Rights Reserved.
+            Copyright © 2026 <a href="#" className="underline text-gray-200 hover:text-white">Fisto Tech Private Limited</a>. All Rights Reserved.
           </div>
 
           {/* Legal Links Right */}

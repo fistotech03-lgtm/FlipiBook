@@ -142,3 +142,19 @@ select:-webkit-autofill:focus {
 
 
 
+
+.font-script {
+  font-family: 'Caveat', 'Dancing Script', cursive;
+}
+
+@font-face {
+  font-family: 'Rage Italic';
+  src: url('/fonts/RageItalic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+.font-rage {
+  font-family: 'Rage Italic', 'Rage', cursive;
+}

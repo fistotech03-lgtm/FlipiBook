@@ -1,120 +1,168 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import exampleSvg from '../../assets/Home/example svg.svg';
 import PumpImage from '../../assets/Home/Pump-image.png';
 
-export default function SmartSolutionsSection() {
+// Smart Solutions for Modern Industries Section Component
+const SmartSolutionsSection = () => {
+  const sectionRef = useRef(null);
+
   return (
-    <section className="relative w-full bg-[#fdfdfd] font-poppins py-12 lg:py-[5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col justify-between items-center overflow-hidden border-t border-gray-100">
-      
-      {/* Top Header Tag */}
-      <div className="w-full mx-auto flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <span className="text-xs lg:text-[0.8vw] font-bold tracking-[0.25em] text-gray-700 uppercase">
+    <section ref={sectionRef} className="relative w-full min-h-screen lg:h-[100vh] bg-white font-sans py-8 lg:py-[1.2vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col justify-between items-center overflow-hidden">
+
+      {/* Top FEATURES Tag */}
+      <div className="w-full flex items-center justify-between pointer-events-none select-none z-10 pt-1 lg:pt-[0.4vw]">
+        <div className="flex items-center gap-3 lg:gap-[0.6vw]">
+          <span className="text-xs lg:text-[0.68vw] font-bold tracking-[0.25em] text-[#35363A] uppercase">
             FEATURES
           </span>
-          <div className="w-8 lg:w-[2.5vw] h-[1.5px] bg-gray-400"></div>
+          <div className="w-8 lg:w-[2.4vw] h-[1.5px] lg:h-[0.1vw] bg-[#35363A]/40"></div>
         </div>
       </div>
 
-      {/* 1. Large Background Heading with Text Gradient Fade + Red Accent Badge "3D Model Viewer" */}
-      <div className="relative w-full mx-auto flex items-center justify-between pointer-events-none select-none z-0 mb-4 lg:mb-2">
-        <motion.h2
-          initial={{ opacity: 0, y: -10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-2xl sm:text-4xl lg:text-[5vw] font-black tracking-wider uppercase text-gray-200/90 leading-tight"
-        >
-          IT STARTS WITH A CLICK
-        </motion.h2>
+      {/* 1. BACKGROUND HEADING WITH TEXT SMOKE GRADIENT FADE + 3D MODEL VIEWER */}
+      <div className="relative w-full flex justify-center pointer-events-none select-none z-0 lg:-mt-[1.2vw]">
+        <div className="relative w-full flex items-center justify-center">
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-2xl sm:text-4xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
+          >
+            IT STARTS WITH A CLICK
+          </motion.h2>
 
-        <span className="font-serif italic text-sm sm:text-base lg:text-[1.1vw] text-[#ea7233] font-semibold tracking-wide">
-          3D Model Viewer
-        </span>
+          {/* 3D Model Viewer in Rage Italic / #EC5137 - exactly starting below A */}
+          <span className="absolute left-[64.5%] sm:left-[64%] lg:left-[65.4%] -bottom-1 sm:-bottom-[0.1vw] lg:-bottom-[0.2vw] font-rage italic text-xl sm:text-2xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
+            3D Model Viewer
+          </span>
+        </div>
       </div>
 
-      {/* 2. Center Content: Orbit 3D Motor Diagram + Right Text */}
-      <div className="relative z-10 w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center my-6 lg:my-8">
-        
-        {/* Left Diagram with Motor & Orbit Categories (col-span-7) */}
-        <div className="lg:col-span-7 relative flex items-center justify-center min-h-[300px] sm:min-h-[380px] lg:min-h-[420px]">
-          {/* Orbit Background SVG */}
+      {/* 2. CENTER & RIGHT MAIN CONTENT CONTAINER (Flex Row for Desktop) */}
+      <div
+        className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between lg:gap-[3vw] my-4 lg:my-0"
+      >
+
+        {/* CENTER 3D MODEL & CIRCULAR ORBIT NAVIGATION */}
+        <div className="relative w-full lg:w-[50vw] flex items-center justify-center min-h-[200px] sm:min-h-[280px] lg:h-[26vw] py-2 lg:py-0">
+
+          {/* Exact Figma Vector Orbit (Arc + Dashed lines + Orange Badges + Labels) */}
           <img
             src={exampleSvg}
-            alt="Industry Orbit"
-            className="absolute w-[95%] sm:w-[85%] lg:w-[78%] h-auto top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none z-0"
+            alt="IDC Industry Categories Orbit"
+            className="absolute w-[92vw] sm:w-[65vw] lg:w-[37.5vw] h-auto lg:top-[7vw] pointer-events-none top-[0vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[48%] z-10 select-none"
           />
 
-          {/* Center 3D Motor */}
-          <div className="relative z-10 w-[70%] sm:w-[58%] lg:w-[55%] flex flex-col items-center justify-center">
+          {/* Center 3D Motor Image */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative z-20 w-[65vw] sm:w-[40vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-6 sm:pt-12 lg:pt-[2.2vw]"
+          >
             <img
               src={PumpImage}
               alt="Industrial Machinery Motor 3D Model"
-              className="w-full h-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.2)] hover:scale-105 transition-transform duration-700"
+              className="w-full h-auto lg:w-[25.5vw] object-contain drop-shadow-[0_1.5vw_2vw_rgba(0,0,0,0.18)] hover:scale-105 transition-transform duration-700"
             />
-            {/* Soft Shadow below Motor */}
-            <div className="w-[80%] h-4 bg-black/15 rounded-full filter blur-md -mt-3 pointer-events-none" />
-          </div>
+
+            {/* Soft Ground Shadow */}
+            <div className="w-[85%] h-3 lg:h-[0.9vw] bg-black/15 rounded-full filter blur-md -mt-2 lg:-mt-[0.4vw] pointer-events-none" />
+          </motion.div>
         </div>
 
-        {/* Right Side: Headline and Narrative Text (col-span-5) */}
-        <div className="lg:col-span-5 flex flex-col justify-center text-left space-y-3 lg:space-y-[1vw]">
-          <h2 className="text-2xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#1b222c] leading-[1.15] tracking-tight">
-            Smart Solutions for <br />
+        {/* RIGHT SIDE TEXT CONTENT */}
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="w-full lg:w-[33vw] flex flex-col justify-center space-y-2.5 lg:space-y-[0.8vw] text-center lg:text-left items-center lg:items-start z-10 px-4 lg:px-0 mt-4 lg:mt-0"
+        >
+          {/* Main Heading */}
+          <h2 className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans">
+            Smart Solutions for <br className="hidden sm:block" />
             Modern Industries
           </h2>
 
-          <p className="text-xs sm:text-sm lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed max-w-[400px]">
+          {/* Thin Black Accent Line under heading */}
+          <div className="w-10 lg:w-[2.2vw] h-[2.5px] lg:h-[0.2vw] bg-gray-900 rounded-full my-1 lg:my-[0.2vw]" />
+
+          {/* Description */}
+          <p className="text-xs sm:text-base lg:text-[1.05vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]">
             Turn static pages into immersive, interactive digital experiences that engage, respond and feel alive with every interaction.
           </p>
-        </div>
-
+        </motion.div>
       </div>
 
-      {/* 3. Bottom 3 Feature Cards */}
-      <div className="relative z-10 w-full mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mt-4">
-        {/* Card 1 */}
-        <div className="bg-white p-4 lg:p-[1.2vw] rounded-xl border border-gray-200/80 shadow-xs flex items-center gap-3.5 hover:shadow-md transition-shadow duration-300">
-          <div className="w-10 h-10 lg:w-[2.8vw] lg:h-[2.8vw] bg-black text-white rounded-lg flex items-center justify-center shrink-0">
-            <Icon icon="lucide:box" className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw]" />
+      {/* 3. BOTTOM FEATURE CARDS (Inverted Colors on Hover) */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+        className="relative z-10 w-full lg:w-[88vw] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 lg:gap-[1.5vw] mt-6 lg:mt-0 mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
+      >
+        {/* CARD 1: Immersive 3D */}
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+        >
+          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="lucide:box" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm lg:text-[0.95vw] font-bold text-[#1b222c] mb-0.5">Immersive 3D</h3>
-            <p className="text-xs lg:text-[0.78vw] text-gray-500 leading-snug">
+            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+              Immersive 3D
+            </h3>
+            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
               Add depth with realistic models and smooth page-turn effects.
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Card 2 */}
-        <div className="bg-white p-4 lg:p-[1.2vw] rounded-xl border border-gray-200/80 shadow-xs flex items-center gap-3.5 hover:shadow-md transition-shadow duration-300">
-          <div className="w-10 h-10 lg:w-[2.8vw] lg:h-[2.8vw] bg-black text-white rounded-lg flex items-center justify-center shrink-0">
-            <Icon icon="mdi:cursor-default-click-outline" className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw]" />
+        {/* CARD 2: Interactive Elements */}
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+        >
+          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="mdi:cursor-default-click-outline" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm lg:text-[0.95vw] font-bold text-[#1b222c] mb-0.5">Interactive Elements</h3>
-            <p className="text-xs lg:text-[0.78vw] text-gray-500 leading-snug">
+            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+              Interactive Elements
+            </h3>
+            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
               Engage your users with rich interactive content.
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Card 3 */}
-        <div className="bg-white p-4 lg:p-[1.2vw] rounded-xl border border-gray-200/80 shadow-xs flex items-center gap-3.5 hover:shadow-md transition-shadow duration-300">
-          <div className="w-10 h-10 lg:w-[2.8vw] lg:h-[2.8vw] bg-black text-white rounded-lg flex items-center justify-center shrink-0">
-            <Icon icon="clarity:world-line" className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw]" />
+        {/* CARD 3: Publish Anywhere */}
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="group bg-white hover:bg-[#1C1D21] p-3 sm:p-4 lg:p-[1vw] w-full sm:w-1/3 lg:w-[27.5vw] rounded-xl lg:rounded-[1vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-3 lg:gap-[1vw] transition-all duration-300"
+        >
+          <div className="w-10 h-10 lg:w-[3vw] lg:h-[3vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg lg:rounded-[0.6vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
+            <Icon icon="clarity:world-line" className="w-5 h-5 lg:w-[1.8vw] lg:h-[1.8vw]" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm lg:text-[0.95vw] font-bold text-[#1b222c] mb-0.5">Publish Anywhere</h3>
-            <p className="text-xs lg:text-[0.78vw] text-gray-500 leading-snug">
+            <h3 className="text-sm sm:text-base lg:text-[1vw] font-bold text-gray-900 group-hover:text-white mb-0.5 lg:mb-[0.1vw] transition-colors duration-300">
+              Publish Anywhere
+            </h3>
+            <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 group-hover:text-gray-300 leading-snug transition-colors duration-300">
               Share and publish across all platforms and devices.
             </p>
           </div>
-        </div>
-      </div>
-
+        </motion.div>
+      </motion.div>
     </section>
   );
-}
+};
+
+export default SmartSolutionsSection;

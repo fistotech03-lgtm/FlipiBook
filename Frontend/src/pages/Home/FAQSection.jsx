@@ -64,7 +64,7 @@ export default function FAQSection() {
             >
               {/* Question Header Row */}
               <div className="flex items-center justify-between gap-3">
-                <h3 className={`text-xs sm:text-sm lg:text-[0.95vw] font-bold text-left transition-colors duration-200 ${
+                <h3 className={`text-xs sm:text-sm lg:text-[0.95vw] font-semibold text-left transition-colors duration-200 ${
                   isOpen ? 'text-[#ea7233]' : 'text-[#1b222c]'
                 }`}>
                   {faq.question}

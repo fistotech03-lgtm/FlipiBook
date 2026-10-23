@@ -12,6 +12,7 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
   const heroBookRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isFlipAudioMuted, setIsFlipAudioMuted] = useState(false);
+  const [isHeroVisible, setIsHeroVisible] = useState(true);
 
   const pagesList = [page1, page2, page3, page4, page5, page6];
   const totalPages = 20;
@@ -20,16 +21,49 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
   const flipAudioRef = useRef(null);
   const autoplayTimerRef = useRef(null);
   const userInteractionTimeoutRef = useRef(null);
+  const isHeroVisibleRef = useRef(true);
+
+  // IntersectionObserver: Only allow autoplay and sound when HeroSection is in viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0.15;
+        setIsHeroVisible(visible);
+        isHeroVisibleRef.current = visible;
+        if (!visible) {
+          stopAutoplay();
+          if (flipAudioRef.current) {
+            flipAudioRef.current.pause();
+            flipAudioRef.current.currentTime = 0;
+          }
+        } else {
+          startAutoplay();
+        }
+      },
+      { threshold: [0, 0.15, 0.5] }
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     flipAudioRef.current = new Audio(softCoverAudio);
     return () => {
-      if (flipAudioRef.current) flipAudioRef.current = null;
+      if (flipAudioRef.current) {
+        flipAudioRef.current.pause();
+        flipAudioRef.current = null;
+      }
     };
   }, []);
 
   const playFlipSound = useCallback(() => {
-    if (isFlipAudioMuted) return;
+    if (isFlipAudioMuted || !isHeroVisibleRef.current) return;
     if (flipAudioRef.current) {
       flipAudioRef.current.currentTime = 0;
       flipAudioRef.current.play().catch(() => {});
@@ -38,7 +72,10 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
 
   const startAutoplay = useCallback(() => {
     if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
+    if (!isHeroVisibleRef.current) return;
+
     autoplayTimerRef.current = setInterval(() => {
+      if (!isHeroVisibleRef.current) return;
       if (heroBookRef.current) {
         const pageFlipObj = heroBookRef.current.pageFlip();
         if (pageFlipObj) {
@@ -67,19 +104,23 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
       clearTimeout(userInteractionTimeoutRef.current);
     }
     userInteractionTimeoutRef.current = setTimeout(() => {
-      startAutoplay();
+      if (isHeroVisibleRef.current) {
+        startAutoplay();
+      }
     }, 6000);
   }, [startAutoplay, stopAutoplay]);
 
   useEffect(() => {
-    startAutoplay();
+    if (isHeroVisible) {
+      startAutoplay();
+    }
     return () => {
       stopAutoplay();
       if (userInteractionTimeoutRef.current) {
         clearTimeout(userInteractionTimeoutRef.current);
       }
     };
-  }, [startAutoplay, stopAutoplay]);
+  }, [isHeroVisible, startAutoplay, stopAutoplay]);
 
   const onHeroBookFlip = useCallback((e) => {
     setCurrentPage(e.data + 1);
@@ -158,8 +199,8 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
           </div>
         </div>
 
-        {/* Right Column (col-span-3) - Expands to fill height in the row with increased vertical gaps */}
-        <div className="lg:col-span-3 flex flex-col justify-between items-end text-right py-1 h-full">
+        {/* Right Column (col-span-3) - Aligned height and position with center flipbook */}
+        <div className="lg:col-span-3 flex flex-col justify-between items-end text-right h-auto lg:h-[30vw] lg:self-center w-full lg:pb-[2vw]">
           
           {/* Top Block: YOUR CONTENT. STORY. */}
           <div className="flex flex-col items-end w-full">
@@ -174,26 +215,26 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
             </h2>
 
             {/* CONTENT. STORY. - #35363A semibold */}
-            <div className="text-xs sm:text-sm lg:text-[0.95vw] font-semibold text-[#35363A] tracking-wider uppercase mt-1 leading-[1.25]">
+            <div className="text-xs sm:text-sm lg:text-[0.95vw] font-semibold text-[#35363A] tracking-wider uppercase mt-1 leading-[1.6]">
               CONTENT.<br />STORY.
             </div>
 
             {/* Interactive, Imm..... - #555555 & medium */}
-            <div className="text-[10px] sm:text-xs lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-1.5 flex-wrap justify-end mt-4 lg:mt-[1.2vw]">
-              <span>• INTERACTIVE</span>
-              <span>• IMMERSIVE</span>
-              <span>• INTELLIGENT</span>
+            <div className="text-[10px] sm:text-xs lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-2.5 sm:gap-3.5 lg:gap-[0.8vw] flex-wrap justify-end mt-3 lg:mt-[0.9vw]">
+              <span className="whitespace-nowrap">• INTERACTIVE</span>
+              <span className="whitespace-nowrap">• IMMERSIVE</span>
+              <span className="whitespace-nowrap">• INTELLIGENT</span>
             </div>
 
             {/* Red Accent Line aligned precisely under INTELLIGENT (slightly increased width) */}
             <div className="w-20 lg:w-[5.4vw] h-[2px] bg-[#EC5137] mt-2 self-end"></div>
           </div>
 
-          {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 (Increased spacing) */}
-          <div className="w-full flex items-center justify-end my-8 lg:my-[2.8vw]">
-            <div className="relative flex items-center gap-4 sm:gap-5 lg:gap-[1.4vw]">
+          {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 */}
+          <div className="w-full flex items-center justify-end my-6 lg:my-auto">
+            <div className="relative flex items-center gap-7 sm:gap-9 lg:gap-[2.5vw]">
               {/* Connecting Red Line */}
-              <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-[1.5px] bg-[#EC5137] z-0"></div>
+              <div className="absolute left-3 sm:left-3.5 lg:left-[0.92vw] right-3 sm:right-3.5 lg:right-[0.92vw] top-1/2 -translate-y-1/2 h-[2px] bg-[#EC5137] z-0"></div>
 
               {/* 1, 2, 3 - medium, orange color - #EC5137 */}
               {/* Step 1: Solid Red Circle */}
@@ -202,12 +243,12 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
               </div>
 
               {/* Step 2: White Circle with Red Outline */}
-              <div className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 lg:w-[1.85vw] lg:h-[1.85vw] rounded-full bg-white border-[1.5px] border-[#EC5137] text-[#EC5137] font-medium text-xs sm:text-sm lg:text-[0.85vw] flex items-center justify-center">
+              <div className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 lg:w-[1.85vw] lg:h-[1.85vw] rounded-full bg-white border-2 border-[#EC5137] text-[#EC5137] font-medium text-xs sm:text-sm lg:text-[0.85vw] flex items-center justify-center">
                 2
               </div>
 
               {/* Step 3: White Circle with Red Outline */}
-              <div className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 lg:w-[1.85vw] lg:h-[1.85vw] rounded-full bg-white border-[1.5px] border-[#EC5137] text-[#EC5137] font-medium text-xs sm:text-sm lg:text-[0.85vw] flex items-center justify-center">
+              <div className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 lg:w-[1.85vw] lg:h-[1.85vw] rounded-full bg-white border-2 border-[#EC5137] text-[#EC5137] font-medium text-xs sm:text-sm lg:text-[0.85vw] flex items-center justify-center">
                 3
               </div>
             </div>

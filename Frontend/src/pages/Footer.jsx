@@ -21,7 +21,7 @@ export default function Footer() {
             </div>
 
             {/* Tagline Headline */}
-            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-[1.4vw] font-bold text-white tracking-tight uppercase leading-snug lg:leading-[1.25]">
+            <h2 className="text-base sm:text-xl md:text-2xl lg:text-[1.4vw] font-bold text-white tracking-tight uppercase leading-snug lg:leading-[1.25]">
               LET&apos;S BUILD YOUR NEXT <br className="hidden sm:inline" />
               DIGITAL EXPERIENCE
             </h2>
@@ -74,7 +74,7 @@ export default function Footer() {
             </div>
 
             {/* 3 Link Columns Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 w-full lg:w-[54vw] ml-0 lg:ml-[4vw] gap-4 sm:gap-8 lg:gap-[2vw] text-xs sm:text-sm lg:text-[0.78vw]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 w-full lg:w-[54vw] ml-0 lg:ml-[4vw] gap-4 sm:gap-8 lg:gap-[2vw] text-xs sm:text-sm lg:text-[0.78vw]">
               
               {/* Column 1: Main Pages */}
               <div className="flex flex-col space-y-2 lg:space-y-[0.7vw]">

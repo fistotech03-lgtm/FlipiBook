@@ -190,33 +190,33 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
       </div>
 
       {/* Main Center Title */}
-      <div className="w-full text-center mb-8 lg:mb-[2.6vw]">
-        <h2 className="text-3xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap">
+      <div className="w-full text-center mb-6 sm:mb-8 lg:mb-[2.6vw]">
+        <h2 className="text-2xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap">
           <span>Disc</span>
           <span className="inline-flex self-center items-center justify-center text-[#EC5137] mx-[0.02em] translate-y-[0.05em]">
             <Icon icon="weui:discover-outlined" className="w-[0.8em] h-[0.8em]" />
           </span>
           <span>ver.&nbsp;&nbsp;Read.&nbsp;&nbsp;Get Inspired</span>
         </h2>
-        <p className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-3 lg:mt-[1vw] leading-[1.6]">
+        <p className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6]">
           Dive into interactive flipbooks created by our community <br className="hidden sm:inline" />
-          click any book to start reding
+          click any book to start reading
         </p>
       </div>
 
       {/* Slider Area with Left/Right Arrow Buttons */}
-      <div className="w-full relative flex items-center px-6 sm:px-8 lg:px-[2.5vw]">
+      <div className="w-full relative flex items-center px-2 sm:px-8 lg:px-[2.5vw]">
         
         {/* Left Arrow Button */}
         <button
           onClick={handleScrollLeft}
           disabled={!canScrollLeft}
           title="Scroll Left"
-          className={`absolute left-0 z-20 w-9 h-9 sm:w-10 sm:h-10 lg:w-[2.6vw] lg:h-[2.6vw] rounded-full bg-white border border-gray-200 text-gray-700 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:bg-gray-50 transition-all ${
+          className={`absolute left-0 z-20 w-8 h-8 sm:w-10 sm:h-10 lg:w-[2.6vw] lg:h-[2.6vw] rounded-full bg-white border border-gray-200 text-gray-700 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:bg-gray-50 transition-all ${
             canScrollLeft ? 'opacity-100 cursor-pointer active:scale-95' : 'opacity-30 cursor-not-allowed pointer-events-none'
           }`}
         >
-          <Icon icon="lucide:arrow-left" className="w-4 h-4 sm:w-5 sm:h-5 lg:w-[1.2vw] lg:h-[1.2vw] text-gray-800" />
+          <Icon icon="lucide:arrow-left" className="w-3.5 h-3.5 sm:w-5 sm:h-5 lg:w-[1.2vw] lg:h-[1.2vw] text-gray-800" />
         </button>
 
         {/* Cards Row Carousel */}
@@ -335,20 +335,20 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
           onClick={handleScrollRight}
           disabled={!canScrollRight}
           title="Scroll Right"
-          className={`absolute right-0 z-20 w-9 h-9 sm:w-10 sm:h-10 lg:w-[2.6vw] lg:h-[2.6vw] rounded-full bg-white border border-gray-200 text-gray-700 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:bg-gray-50 transition-all ${
+          className={`absolute right-0 z-20 w-8 h-8 sm:w-10 sm:h-10 lg:w-[2.6vw] lg:h-[2.6vw] rounded-full bg-white border border-gray-200 text-gray-700 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:bg-gray-50 transition-all ${
             canScrollRight ? 'opacity-100 cursor-pointer active:scale-95' : 'opacity-30 cursor-not-allowed pointer-events-none'
           }`}
         >
-          <Icon icon="lucide:arrow-right" className="w-4 h-4 sm:w-5 sm:h-5 lg:w-[1.2vw] lg:h-[1.2vw] text-gray-800" />
+          <Icon icon="lucide:arrow-right" className="w-3.5 h-3.5 sm:w-5 sm:h-5 lg:w-[1.2vw] lg:h-[1.2vw] text-gray-800" />
         </button>
 
       </div>
 
       {/* Bottom Center Two CTA Buttons */}
-      <div className="flex items-center justify-center gap-4 lg:gap-[1.2vw] mt-8 lg:mt-[2.5vw]">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 lg:gap-[1.2vw] mt-6 sm:mt-8 lg:mt-[2.5vw] w-full max-w-sm sm:max-w-none mx-auto">
         <button
           onClick={() => onOpenCreateModal && onOpenCreateModal()}
-          className="flex items-center gap-2.5 lg:gap-[0.6vw] px-6 py-3 lg:px-[1.8vw] lg:py-[0.85vw] bg-white border border-gray-200/90 hover:border-gray-300 text-gray-900 rounded-2xl lg:rounded-[1vw] font-medium text-xs sm:text-sm lg:text-[0.9vw] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-300 cursor-pointer"
+          className="w-full sm:w-auto flex items-center justify-center gap-2.5 lg:gap-[0.6vw] px-5 sm:px-6 py-2.5 sm:py-3 lg:px-[1.8vw] lg:py-[0.85vw] bg-white border border-gray-200/90 hover:border-gray-300 text-gray-900 rounded-xl sm:rounded-2xl lg:rounded-[1vw] font-medium text-xs sm:text-sm lg:text-[0.9vw] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-300 cursor-pointer"
         >
           <span>Create Your Flipbook</span>
           <Icon icon="proicons:book-open" className="w-4 h-4 lg:w-[1.2vw] lg:h-[1.2vw] text-gray-900" />
@@ -356,7 +356,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
 
         <button
           onClick={() => navigate && navigate('/explore')}
-          className="flex items-center gap-3 lg:gap-[0.8vw] px-6 py-3 lg:px-[1.8vw] lg:py-[0.85vw] bg-black hover:bg-neutral-900 text-white rounded-2xl lg:rounded-[1vw] font-medium text-xs sm:text-sm lg:text-[0.9vw] shadow-[0_2px_12px_rgba(0,0,0,0.12)] hover:shadow-lg transition-all duration-300 cursor-pointer group"
+          className="w-full sm:w-auto flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-[0.8vw] px-5 sm:px-6 py-2.5 sm:py-3 lg:px-[1.8vw] lg:py-[0.85vw] bg-black hover:bg-neutral-900 text-white rounded-xl sm:rounded-2xl lg:rounded-[1vw] font-medium text-xs sm:text-sm lg:text-[0.9vw] shadow-[0_2px_12px_rgba(0,0,0,0.12)] hover:shadow-lg transition-all duration-300 cursor-pointer group"
         >
           <span>Explore more Flipbooks</span>
           <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-[1.5vw] lg:h-[1.5vw] rounded-full bg-white text-black flex items-center justify-center group-hover:bg-[#FE4B0F] group-hover:text-white transition-colors shrink-0">

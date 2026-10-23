@@ -44,13 +44,13 @@ export default function InteractiveDemo() {
 
   return (
     <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8 }} id="interactive-demo-section" className="w-full bg-[#f6f6f6] pt-8 pb-10 sm:pt-10 sm:pb-14 lg:pt-[2.6vw] lg:pb-[3.5vw] px-4 sm:px-8 lg:px-[4.2vw] font-poppins select-none">
-      <div className="w-full mx-auto flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-[4.2vw]">
+      <div className="w-full mx-auto flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 lg:gap-[4.2vw]">
         
         {/* Left Column: Heading, Subtitle & Description */}
-        <div className="w-full lg:w-[25%] flex flex-col text-left shrink-0">
+        <div className="w-full lg:w-[25%] flex flex-col text-center lg:text-left items-center lg:items-start shrink-0">
           
           {/* Header Tag */}
-          <div className="flex items-center gap-3 mb-4 lg:mb-[1.3vw]">
+          <div className="flex items-center gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]">
             <span className="text-[11px] lg:text-[0.82vw] font-bold tracking-[0.22em] text-[#2c2f35] uppercase">
               INTERACTIVE DEMO
             </span>
@@ -58,23 +58,23 @@ export default function InteractiveDemo() {
           </div>
 
           {/* Title */}
-          <h2 className="text-3xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight">
-            Experience <br />
-            <span className="text-[#ED5B43]">Flipibooks</span> <br />
+          <h2 className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight">
+            Experience <br className="hidden sm:inline" />
+            <span className="text-[#ED5B43]">Flipibooks</span> <br className="hidden sm:inline" />
             in Action
           </h2>
 
           {/* Thin Divider Line */}
-          <div className="w-full max-w-[220px] lg:max-w-[15.5vw] h-[1px] bg-[#d2d4d8] mt-5 lg:mt-[1.4vw] mb-4 lg:mb-[1.2vw]"></div>
+          <div className="w-32 sm:w-full max-w-[220px] lg:max-w-[15.5vw] h-[1px] bg-[#d2d4d8] mt-3 sm:mt-5 lg:mt-[1.4vw] mb-3 sm:mb-4 lg:mb-[1.2vw]"></div>
 
           {/* Description */}
-          <p className="text-[11px] sm:text-xs lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] max-w-[280px] lg:max-w-[17vw]">
+          <p className="text-[11px] sm:text-xs lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] max-w-[280px] sm:max-w-[360px] lg:max-w-[17vw]">
             Explore our handpicked demo books. Flip, zoom, and interact to discover how immersive and engaging digital reading can be.
           </p>
         </div>
 
         {/* Right Column: 5 Standing Books with Code-Rendered Realistic Shadows */}
-        <div className="w-full lg:w-[75%] flex items-start justify-between gap-4 sm:gap-6 lg:gap-[3.2vw] overflow-x-auto pb-4 lg:pb-0 scrollbar-none">
+        <div className="w-full lg:w-[75%] flex items-start justify-start sm:justify-between gap-4 sm:gap-6 lg:gap-[3.2vw] overflow-x-auto pb-4 pt-2 lg:pb-0 scrollbar-none px-2 sm:px-0">
           {books.map((book, idx) => {
             const isHovered = selectedBook === idx;
             return (

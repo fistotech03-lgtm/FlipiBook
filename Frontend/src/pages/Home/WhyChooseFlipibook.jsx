@@ -31,11 +31,11 @@ export default function WhyChooseFlipibook() {
 
       {/* Main Title Row: Why Choose Flipibook ? */}
       <div className="w-full max-w-[1920px] mx-auto mb-2 lg:mb-[0.5vw]">
-        <h2 className="text-[40px] sm:text-[48px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.12] lg:max-w-[26vw]">
+        <h2 className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.12] lg:max-w-[26vw]">
           Why Choose <br />
           <span className="text-[#EC5137]">Flipibook ?</span>
         </h2>
-        <p className="text-[14px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] lg:max-w-[28vw] mt-4 lg:mt-[1vw] leading-[1.65] font-normal">
+        <p className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal">
           From product catalogues to marketing brochures, create stunning digital experiences that drive engagement and business growth.
         </p>
       </div>
@@ -305,37 +305,37 @@ export default function WhyChooseFlipibook() {
       </div>
 
       {/* Mobile Stack fallback (under md) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:hidden mt-8">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-sm">
-            <Icon icon="mdi:account-group" className="w-9 h-9 text-[#697689]" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-6 sm:gap-8 md:hidden mt-8">
+        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
+            <Icon icon="mdi:account-group" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
           </div>
-          <h3 className="text-3xl font-bold text-[#051B2E]">100+</h3>
-          <h4 className="text-base font-semibold text-[#051B2E] mb-1">Happy Clients</h4>
-          <p className="text-xs text-[#4B596C]">Trusted by businesses across various industries</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">100+</h3>
+          <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Happy Clients</h4>
+          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Trusted by businesses across various industries</p>
         </div>
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-sm">
-            <Icon icon="basil:book-open-outline" className="w-9 h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
+            <Icon icon="basil:book-open-outline" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
           </div>
-          <h3 className="text-3xl font-bold text-[#051B2E]">500+</h3>
-          <h4 className="text-base font-semibold text-[#051B2E] mb-1">Flipibooks Created</h4>
-          <p className="text-xs text-[#4B596C]">From Product catalogues to brand stories</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">500+</h3>
+          <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Flipibooks Created</h4>
+          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">From Product catalogues to brand stories</p>
         </div>
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-sm">
-            <Icon icon="mdi:eye-outline" className="w-9 h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
+            <Icon icon="mdi:eye-outline" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
           </div>
-          <h3 className="text-3xl font-bold text-[#051B2E]">1M+</h3>
-          <h4 className="text-base font-semibold text-[#051B2E] mb-1">Page Views</h4>
-          <p className="text-xs text-[#4B596C]">Read, share and explore FlipiBooks across the globe.</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">1M+</h3>
+          <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Page Views</h4>
+          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Read, share and explore FlipiBooks across the globe.</p>
         </div>
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-sm">
-            <Icon icon="mdi:earth" className="w-9 h-9 text-[#697689]" />
+        <div className="flex flex-col items-center text-center p-3 bg-white/70 rounded-xl border border-gray-100 shadow-xs">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-2 sm:mb-3 shadow-xs">
+            <Icon icon="mdi:earth" className="w-7 h-7 sm:w-9 sm:h-9 text-[#697689]" />
           </div>
-          <h4 className="text-xl font-semibold text-[#051B2E] mb-1">Global Reach</h4>
-          <p className="text-xs text-[#4B596C]">Share Everywhere, <br />Anytime.</p>
+          <h4 className="text-lg sm:text-xl font-semibold text-[#051B2E] mb-1 mt-1">Global Reach</h4>
+          <p className="text-[11px] sm:text-xs text-[#4B596C] leading-snug">Share Everywhere, <br />Anytime.</p>
         </div>
       </div>
 

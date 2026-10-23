@@ -23,19 +23,19 @@ const SmartSolutionsSection = () => {
 
       {/* 1. BACKGROUND HEADING WITH TEXT SMOKE GRADIENT FADE + 3D MODEL VIEWER */}
       <div className="relative w-full flex justify-center pointer-events-none select-none z-0 lg:-mt-[1.2vw]">
-        <div className="relative w-full flex items-center justify-center">
+        <div className="relative w-full flex flex-col sm:flex-row items-center justify-center">
           <motion.h2
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-2xl sm:text-4xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
+            className="text-xl sm:text-4xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
           >
             IT STARTS WITH A CLICK
           </motion.h2>
 
-          {/* 3D Model Viewer in Rage Italic / #EC5137 - shifted +8% to right */}
-          <span className="absolute left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] -bottom-1 sm:-bottom-[0.1vw] lg:bottom-auto font-rage italic text-xl sm:text-2xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
+          {/* 3D Model Viewer in Rage Italic / #EC5137 */}
+          <span className="sm:absolute static mt-1 sm:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-1 lg:bottom-auto font-rage italic text-lg sm:text-2xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
             3D Model Viewer
           </span>
         </div>
@@ -43,17 +43,17 @@ const SmartSolutionsSection = () => {
 
       {/* 2. CENTER & RIGHT MAIN CONTENT CONTAINER (Flex Row for Desktop) */}
       <div
-        className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between lg:gap-[3vw] my-4 lg:my-0"
+        className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between lg:gap-[3vw] my-2 sm:my-4 lg:my-0"
       >
 
         {/* CENTER 3D MODEL & CIRCULAR ORBIT NAVIGATION */}
-        <div className="relative w-full lg:w-[50vw] flex items-center justify-center min-h-[200px] sm:min-h-[280px] lg:h-[26vw] py-2 lg:py-0">
+        <div className="relative w-full lg:w-[50vw] flex items-center justify-center min-h-[190px] sm:min-h-[260px] lg:h-[26vw] py-1 sm:py-2 lg:py-0">
 
           {/* Exact Figma Vector Orbit (Arc + Dashed lines + Orange Badges + Labels) with drop shadow */}
           <img
             src={exampleSvg}
             alt="IDC Industry Categories Orbit"
-            className="absolute w-[92vw] sm:w-[65vw] lg:w-[37.5vw] h-auto lg:top-[7vw] pointer-events-none top-[0vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[48%] z-10 select-none drop-shadow-[0_10px_20px_rgba(236,81,55,0.18)]"
+            className="absolute w-[88vw] sm:w-[62vw] lg:w-[37.5vw] h-auto lg:top-[7vw] pointer-events-none top-[0vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[48%] z-10 select-none drop-shadow-[0_10px_20px_rgba(236,81,55,0.18)]"
           />
 
           {/* Center 3D Motor Image */}
@@ -62,7 +62,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="relative z-20 w-[65vw] sm:w-[40vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-6 sm:pt-12 lg:pt-[2.2vw]"
+            className="relative z-20 w-[58vw] sm:w-[38vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-4 sm:pt-10 lg:pt-[2.2vw]"
           >
             <img
               src={PumpImage}
@@ -71,7 +71,7 @@ const SmartSolutionsSection = () => {
             />
 
             {/* Soft Ground Shadow */}
-            <div className="w-[85%] h-3 lg:h-[0.9vw] bg-black/15 rounded-full filter blur-md -mt-2 lg:-mt-[0.4vw] pointer-events-none" />
+            <div className="w-[85%] h-2.5 sm:h-3 lg:h-[0.9vw] bg-black/15 rounded-full filter blur-md -mt-2 lg:-mt-[0.4vw] pointer-events-none" />
           </motion.div>
         </div>
 

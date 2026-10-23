@@ -55,11 +55,11 @@ export default function HowItWorksSection() {
         </div>
       </div>
 
-      <div className="text-center w-full mb-8 lg:mb-[2.4vw] space-y-2 lg:space-y-[0.5vw]">
-        <h2 className="text-3xl sm:text-4xl lg:text-[2.3vw] font-extrabold text-[#1b222c] tracking-tight leading-tight">
+      <div className="text-center w-full mb-6 sm:mb-8 lg:mb-[2.4vw] space-y-1.5 sm:space-y-2 lg:space-y-[0.5vw]">
+        <h2 className="text-2xl sm:text-4xl lg:text-[2.3vw] font-extrabold text-[#1b222c] tracking-tight leading-tight">
           Create Your <span className="text-[#ea543a]">Flipbook</span> in 4 Simple Steps
         </h2>
-        <p className="text-sm sm:text-base lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed">
+        <p className="text-xs sm:text-base lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed">
           From upload to publish, everything you need in one simple process.
         </p>
       </div>
@@ -67,11 +67,12 @@ export default function HowItWorksSection() {
       {/* 4 Cards Alternating Grid - Full width with vw-based proportional sizing on desktop */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-[1.5vw] items-end">
         {steps.map((step, idx) => {
+          // On mobile (< sm) enforce consistent layout: card first, then text, or keep alternating only on desktop
           const isTopText = step.textPosition === "top";
 
           // Header/Footer Text Block
           const textBlock = (
-            <div className={`text-center flex flex-col items-center w-full px-2 ${isTopText ? 'mb-4 lg:mb-[1vw]' : 'mt-4 lg:mt-[1vw]'}`}>
+            <div className={`text-center flex flex-col items-center w-full px-2 ${isTopText ? 'order-1 sm:order-none mb-3 sm:mb-4 lg:mb-[1vw]' : 'order-2 sm:order-none mt-3 sm:mt-4 lg:mt-[1vw]'}`}>
               <div className="flex items-center justify-center gap-2.5 lg:gap-[0.5vw] w-full mb-1.5 lg:mb-[0.4vw]">
                 <span className="inline-block w-4 sm:w-6 lg:w-[1.2vw] h-[1.5px] lg:h-[0.1vw] bg-[#9ca3af]"></span>
                 <h3 className="text-base sm:text-lg lg:text-[1.1vw] font-bold text-[#1b222c] leading-snug">
@@ -87,7 +88,7 @@ export default function HowItWorksSection() {
 
           // Card Box (Grey rounded container with giant number and centered graphic)
           const cardBox = (
-            <div className="w-full bg-[#e2e4e7] rounded-[22px] lg:rounded-[1.4vw] p-4 sm:p-5 lg:p-[1.1vw] flex flex-col justify-between aspect-[1/1.14] relative shadow-xs group-hover:shadow-md transition-all duration-300 overflow-hidden">
+            <div className="w-full order-2 sm:order-none bg-[#e2e4e7] rounded-[22px] lg:rounded-[1.4vw] p-4 sm:p-5 lg:p-[1.1vw] flex flex-col justify-between aspect-[1/1.14] relative shadow-xs group-hover:shadow-md transition-all duration-300 overflow-hidden">
               {/* Giant Step Number in top left */}
               <span className="text-4xl sm:text-5xl lg:text-[3.2vw] font-black text-white leading-none select-none block text-left shrink-0">
                 {step.number}
@@ -105,7 +106,7 @@ export default function HowItWorksSection() {
           );
 
           return (
-            <div key={idx} className="flex flex-col items-center group w-full justify-end">
+            <div key={idx} className="flex flex-col items-center group w-full justify-end max-w-[340px] sm:max-w-none mx-auto sm:mx-0">
               {isTopText ? (
                 <>
                   {textBlock}

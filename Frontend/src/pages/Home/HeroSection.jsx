@@ -143,36 +143,36 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
       <div className="w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-stretch">
         
         {/* Left Column (col-span-3) - Expands to fill height in the row */}
-        <div className="lg:col-span-3 flex flex-col justify-start text-left py-1 h-full">
+        <div className="lg:col-span-3 flex flex-col justify-start text-center lg:text-left items-center lg:items-start py-1 h-full">
           {/* Main Headline: INTERACTIVE DIGITAL CATALOGUE - expanded line height */}
-          <h1 className="text-4xl sm:text-5xl lg:text-[3.35vw] font-semibold text-[#35363A] leading-[1.5] lg:leading-[1.55] tracking-tight">
-            INTERACTIVE <br />
-            DIGITAL <br />
+          <h1 className="text-3xl sm:text-5xl lg:text-[3.35vw] font-semibold text-[#35363A] leading-[1.3] sm:leading-[1.4] lg:leading-[1.55] tracking-tight">
+            INTERACTIVE <br className="hidden sm:inline" />
+            DIGITAL <br className="hidden sm:inline" />
             <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUE</span>
           </h1>
 
           {/* Bottom Sub-group: Divider + Description */}
-          <div className=" pt-4">
+          <div className="pt-3 sm:pt-4 flex flex-col items-center lg:items-start">
             {/* Thin Horizontal Rule */}
-            <div className="w-full max-w-[280px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-5 lg:mb-[1.5vw]"></div>
+            <div className="w-full max-w-[200px] sm:max-w-[280px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-3 sm:mb-5 lg:mb-[1.5vw]"></div>
 
             {/* Description Paragraph: font weight light & #555555, line height 160% */}
-            <p className="text-xs sm:text-sm lg:text-[0.92vw] font-light text-[#555555] leading-[160%] max-w-[320px] lg:max-w-[20vw]">
+            <p className="text-xs sm:text-sm lg:text-[0.92vw] font-light text-[#555555] leading-[160%] max-w-[290px] sm:max-w-[340px] lg:max-w-[20vw]">
               Transform your products and ideas into immersive digital catalogues with interactive content, rich visuals, and engaging page-turn experiences.
             </p>
           </div>
         </div>
 
         {/* Center Column: Interactive Flipbook with Page Turning (col-span-6) - Centered */}
-        <div className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-4 lg:my-0 px-1 sm:px-2 w-full">
-          <div className="relative mx-auto w-full max-w-[720px] lg:max-w-[48vw] h-[360px] sm:h-[460px] lg:h-[30vw] flex items-center justify-center group drop-shadow-[0_22px_40px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-2 sm:my-4 lg:my-0 px-1 sm:px-2 w-full">
+          <div className="relative mx-auto w-full max-w-[500px] sm:max-w-[640px] lg:max-w-[48vw] h-[280px] sm:h-[420px] md:h-[460px] lg:h-[30vw] flex items-center justify-center group drop-shadow-[0_22px_40px_rgba(0,0,0,0.22)]">
             <HTMLFlipBook
               width={600}
               height={800}
               size="stretch"
-              minWidth={240}
+              minWidth={220}
               maxWidth={1400}
-              minHeight={300}
+              minHeight={260}
               maxHeight={1800}
               maxShadowOpacity={0.5}
               showCover={false}
@@ -200,10 +200,10 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
         </div>
 
         {/* Right Column (col-span-3) - Aligned height and position with center flipbook */}
-        <div className="lg:col-span-3 flex flex-col justify-between items-end text-right h-auto lg:h-[30vw] lg:self-center w-full lg:pb-[2vw]">
+        <div className="lg:col-span-3 flex flex-col justify-between items-center lg:items-end text-center lg:text-right h-auto lg:h-[30vw] lg:self-center w-full lg:pb-[2vw] space-y-6 lg:space-y-0">
           
           {/* Top Block: YOUR CONTENT. STORY. */}
-          <div className="flex flex-col items-end w-full">
+          <div className="flex flex-col items-center lg:items-end w-full">
             {/* YOUR - semibold, linear 43% #17202C 50% - #C3C3C3 */}
             <h2
               className="text-4xl sm:text-5xl lg:text-[3.9vw] font-semibold tracking-tight leading-none uppercase select-none text-transparent bg-clip-text"
@@ -220,18 +220,18 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
             </div>
 
             {/* Interactive, Imm..... - #555555 & medium */}
-            <div className="text-[10px] sm:text-xs lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-2.5 sm:gap-3.5 lg:gap-[0.8vw] flex-wrap justify-end mt-3 lg:mt-[0.9vw]">
+            <div className="text-[10px] sm:text-xs lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-2.5 sm:gap-3.5 lg:gap-[0.8vw] flex-wrap justify-center lg:justify-end mt-3 lg:mt-[0.9vw]">
               <span className="whitespace-nowrap">• INTERACTIVE</span>
               <span className="whitespace-nowrap">• IMMERSIVE</span>
               <span className="whitespace-nowrap">• INTELLIGENT</span>
             </div>
 
             {/* Red Accent Line aligned precisely under INTELLIGENT (slightly increased width) */}
-            <div className="w-20 lg:w-[5.4vw] h-[2px] bg-[#EC5137] mt-2 self-end"></div>
+            <div className="w-20 lg:w-[5.4vw] h-[2px] bg-[#EC5137] mt-2 self-center lg:self-end"></div>
           </div>
 
           {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 */}
-          <div className="w-full flex items-center justify-end my-6 lg:my-auto">
+          <div className="w-full flex items-center justify-center lg:justify-end my-3 sm:my-4 lg:my-auto">
             <div className="relative flex items-center gap-7 sm:gap-9 lg:gap-[2.5vw]">
               {/* Connecting Red Line */}
               <div className="absolute left-3 sm:left-3.5 lg:left-[0.92vw] right-3 sm:right-3.5 lg:right-[0.92vw] top-1/2 -translate-y-1/2 h-[2px] bg-[#EC5137] z-0"></div>
@@ -255,9 +255,9 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
           </div>
 
           {/* Bottom Block: Customer Reviews with Orange Rings */}
-          <div className="flex flex-col items-end w-full">
+          <div className="flex flex-col items-center lg:items-end w-full">
             {/* Overlapping individual circular avatars matching design */}
-            <div className="flex items-center justify-end -space-x-2.5 lg:-space-x-[0.6vw] mb-1.5">
+            <div className="flex items-center justify-center lg:justify-end -space-x-2.5 lg:-space-x-[0.6vw] mb-1.5">
               <img
                 src={trustedAvatar1}
                 alt="Customer 1"

@@ -67,14 +67,14 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
         <div className="relative w-full min-h-0 lg:min-h-[38vw] flex flex-col lg:flex-row lg:items-start lg:pt-[1.5vw] lg:justify-between">
           
           {/* Left Column: Headings, Copy, Orange CTA */}
-          <div className="w-full lg:w-[23vw] flex flex-col justify-center text-left space-y-5 lg:space-y-[1.4vw] z-20 relative pointer-events-auto">
-            <h2 className="text-4xl sm:text-5xl lg:text-[3vw] lg:leading-[4.5vw] font-bold text-white leading-[1.08] tracking-tight">
+          <div className="w-full lg:w-[23vw] flex flex-col justify-center text-center lg:text-left items-center lg:items-start space-y-4 sm:space-y-5 lg:space-y-[1.4vw] z-20 relative pointer-events-auto">
+            <h2 className="text-3xl sm:text-5xl lg:text-[3vw] lg:leading-[4.5vw] font-bold text-white leading-[1.08] tracking-tight">
               Not Just Pages. <br />
               A <span className="text-[#EC5137]">3D</span> Reading <br />
               Experience.
             </h2>
 
-            <p className="text-sm sm:text-base lg:text-[0.95vw] text-[#A6ABB3] lg:text-[#D9D9D9] font-normal leading-[1.6] max-w-[360px] lg:max-w-none lg:w-[13vw]">
+            <p className="text-xs sm:text-base lg:text-[0.95vw] text-[#A6ABB3] lg:text-[#D9D9D9] font-normal leading-[1.6] max-w-[340px] sm:max-w-[420px] lg:max-w-none lg:w-[13vw]">
               Transform static flipbooks into immersive experiences with realistic 3D objects, interactive hotspots, videos, audio, and smooth page transitions.
             </p>
 
@@ -82,7 +82,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
             <div className="pt-2 lg:pt-[0.2vw]">
               <button
                 onClick={() => onOpenCreateModal && onOpenCreateModal()}
-                className="inline-flex items-center gap-2.5 lg:gap-[0.55vw] px-6 py-3.5 lg:px-[1.65vw] lg:py-[0.85vw] bg-[#EA6229] hover:bg-[#d8551f] text-white rounded-lg lg:rounded-[0.5vw] font-semibold text-sm sm:text-[15px] lg:text-[0.88vw] shadow-md shadow-orange-900/30 transition-all duration-300 active:scale-95 cursor-pointer group"
+                className="inline-flex items-center gap-2.5 lg:gap-[0.55vw] px-5 sm:px-6 py-3 sm:py-3.5 lg:px-[1.65vw] lg:py-[0.85vw] bg-[#EA6229] hover:bg-[#d8551f] text-white rounded-lg lg:rounded-[0.5vw] font-semibold text-xs sm:text-[15px] lg:text-[0.88vw] shadow-md shadow-orange-900/30 transition-all duration-300 active:scale-95 cursor-pointer group"
               >
                 <span>Bring Your Products into 3D</span>
                 <Icon icon="lucide:arrow-right" className="w-4 h-4 lg:w-[0.95vw] lg:h-[0.95vw] group-hover:translate-x-1 transition-transform" />
@@ -95,7 +95,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
             - Desktop: Absolute positioning pinned directly with left: 40vw, top: 19vw, width: 44vw!
             - Tablet/Mobile: Relative flow centered between top and bottom
           */}
-          <div className="relative lg:absolute lg:left-[40vw] lg:top-[19vw] lg:-translate-x-1/2 lg:-translate-y-1/2 w-full max-w-[620px] lg:max-w-none lg:w-[44vw] flex items-center justify-center my-6 lg:my-0 z-10 pointer-events-none">
+          <div className="relative lg:absolute lg:left-[40vw] lg:top-[19vw] lg:-translate-x-1/2 lg:-translate-y-1/2 w-full max-w-[500px] sm:max-w-[620px] lg:max-w-none lg:w-[44vw] flex items-center justify-center my-6 sm:my-8 lg:my-0 z-10 pointer-events-none">
             <img
               src={bookShowImg}
               alt="Modern Living Room 3D Catalogue with Lamp and Phone"
@@ -104,7 +104,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
           </div>
 
           {/* Right Column: 5 Feature Items */}
-          <div className="w-full lg:w-[24vw] flex flex-col justify-center space-y-6 lg:space-y-[2.6vw] text-left z-20 relative pointer-events-auto">
+          <div className="w-full lg:w-[24vw] flex flex-col justify-center space-y-4 sm:space-y-6 lg:space-y-[2.6vw] text-left z-20 relative pointer-events-auto max-w-[420px] lg:max-w-none mx-auto lg:mx-0">
             {features.map((item) => (
               <div key={item.id} className="flex items-center gap-4 lg:gap-[1.2vw] group">
                 {/* Circular Ring Container - reduced internal padding / balanced size */}

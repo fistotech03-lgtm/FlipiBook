@@ -31,7 +31,7 @@ export default function WhyChooseFlipibook() {
 
       {/* Main Title Row: Why Choose Flipibook ? */}
       <div className="w-full max-w-[1920px] mx-auto mb-2 lg:mb-[0.5vw]">
-        <h2 className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.12] lg:max-w-[26vw]">
+        <h2 className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]">
           Why Choose <br />
           <span className="text-[#EC5137]">Flipibook ?</span>
         </h2>

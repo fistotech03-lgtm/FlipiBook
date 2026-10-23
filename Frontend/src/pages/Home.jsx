@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import CreateFlipbookModal from '../components/CreateFlipbookModal';
 import AlertModal from '../components/AlertModal';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
-import HomePreloader from '../components/HomePreloader';
+import HomePreloader from './Home/HomePreloader';
 import Footer from './Footer';
 import { convertPdfWithInkscape, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 

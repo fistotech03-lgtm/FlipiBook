@@ -27,7 +27,7 @@ const SmartSolutionsSection = () => {
           <motion.h2
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             transition={{ duration: 0.8 }}
             className="text-xl sm:text-5xl md:text-6xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
           >
@@ -60,7 +60,7 @@ const SmartSolutionsSection = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             transition={{ duration: 0.8 }}
             className="relative z-20 w-[58vw] sm:w-[33vw] md:w-[31vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-4 sm:pt-6 md:pt-8 lg:pt-[2.2vw] lg:-mt-[4.55vw]"
           >
@@ -79,7 +79,7 @@ const SmartSolutionsSection = () => {
         <motion.div
           initial={{ opacity: 0, x: 40 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false }}
           transition={{ duration: 0.8, delay: 0.2 }}
           className="w-full lg:w-[33vw] flex flex-col justify-center space-y-2.5 sm:space-y-2.5 lg:space-y-[0.8vw] text-center lg:text-left items-center lg:items-start z-10 px-4 lg:px-0 mt-6 sm:mt-6 lg:mt-0"
         >
@@ -103,7 +103,7 @@ const SmartSolutionsSection = () => {
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        viewport={{ once: false }}
         transition={{ duration: 0.8, delay: 0.4 }}
         className="relative z-10 w-full max-w-xl lg:max-w-none lg:w-[88vw] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-3.5 lg:gap-[1.5vw] mt-6 sm:mt-6 lg:mt-0 mb-4 sm:mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
       >

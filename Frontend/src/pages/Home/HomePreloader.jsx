@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import logo from '../assets/logo/Flipibook_logo.svg';
+import logo from '../../assets/logo/Flipibook_logo.svg';
 
 export default function HomePreloader({ onFinish }) {
   const [progress, setProgress] = useState(0);

@@ -173,7 +173,7 @@ export const usePageManager = ({
     });
   };
 
-  const updatePageHtml = (pageIndex, html) => {
+  const updatePageHtml = (pageIndex, html, explicitLayers = null) => {
     let sanitizedHtml = html;
     if (typeof sanitizedHtml === 'string' && sanitizedHtml.includes('custom-video-overlay')) {
       const parser = new DOMParser();
@@ -190,17 +190,39 @@ export const usePageManager = ({
       const page = updated[pageIndex];
       if (!page) return prev;
 
-      // Fast-path: Reuse existing layers for movement/style updates without heavy DOMParser reflows
-      let newLayers = page.layers;
-      const cached = pageCacheManager.getCachedLayers(page.id, sanitizedHtml);
-      if (cached && cached.length > 0) {
-        newLayers = cached;
-      } else if (!newLayers || newLayers.length === 0) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        newLayers = svgEl ? parseLayersFromSVG(svgEl) : [];
-        pageCacheManager.setCachedLayers(page.id, sanitizedHtml, newLayers);
+      let newLayers = explicitLayers;
+      if (!newLayers) {
+        const cached = pageCacheManager.getCachedLayers(page.id, sanitizedHtml);
+        if (cached && cached.length > 0) {
+          newLayers = cached;
+        } else {
+          try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
+            const svgEl = doc.querySelector('svg');
+            if (svgEl) {
+              const pageGroup = svgEl.querySelector('[data-type="frame"]') ||
+                                svgEl.querySelector('[data-name="Overlay"]')?.parentElement;
+              if (pageGroup) {
+                let movedAny = false;
+                Array.from(svgEl.children).forEach(child => {
+                  if (child === pageGroup) return;
+                  if (['defs', 'metadata', 'style', 'title', 'desc'].includes(child.tagName.toLowerCase())) return;
+                  if (child.getAttribute('data-name') === 'Document Shield' || child.getAttribute('data-type') === 'shield') return;
+                  pageGroup.appendChild(child);
+                  movedAny = true;
+                });
+                if (movedAny) {
+                  sanitizedHtml = svgEl.outerHTML;
+                }
+              }
+            }
+            newLayers = svgEl ? parseLayersFromSVG(svgEl) : (page.layers || []);
+            pageCacheManager.setCachedLayers(page.id, sanitizedHtml, newLayers);
+          } catch {
+            newLayers = page.layers || [];
+          }
+        }
       }
 
       // Debounce thumbnail generation so it never blocks smooth editing

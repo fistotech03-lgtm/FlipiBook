@@ -1232,7 +1232,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
               </button>
             </div>
 
-            <div className="anim-panel-gallery-content flex-1 px-[1vw] py-[1vw] overflow-y-auto no-scrollbar">
+            <div className="anim-panel-gallery-content flex-1 px-[1vw] py-[1vw] overflow-y-auto custom-scrollbar">
               <div className="anim-panel-gallery-grid grid grid-cols-4 gap-x-[0.5vw] gap-y-[0.5vw]">
                 {ANIMATION_GALLERY_ITEMS.map((anim, idx) => (
                   <div key={idx} className="anim-panel-gallery-item group cursor-pointer flex flex-col items-center" onClick={(e) => {

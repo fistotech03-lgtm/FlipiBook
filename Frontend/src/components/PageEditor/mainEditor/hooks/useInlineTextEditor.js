@@ -361,6 +361,41 @@ export const useInlineTextEditor = ({
       if (e.key === 'Escape') {
         e.preventDefault();
         div.blur();
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const node = range.startContainer;
+          const textBefore = (node.nodeType === Node.TEXT_NODE ? node.textContent.slice(0, range.startOffset) : '');
+          const currentLine = textBefore.split('\n').pop() || '';
+          
+          const bulletMatch = currentLine.match(/^(•\s*)/);
+          const numMatch = currentLine.match(/^(\d+)\.\s*/);
+
+          if (bulletMatch) {
+            e.preventDefault();
+            if (currentLine.trim() === '•') {
+              // Empty bullet item -> exit list
+              document.execCommand('delete', false, null);
+              document.execCommand('insertText', false, '\n');
+            } else {
+              document.execCommand('insertText', false, '\n• ');
+            }
+          } else if (numMatch) {
+            e.preventDefault();
+            const currentNum = parseInt(numMatch[1], 10);
+            if (currentLine.trim() === `${currentNum}.`) {
+              // Empty numbered item -> exit list
+              document.execCommand('delete', false, null);
+              document.execCommand('insertText', false, '\n');
+            } else {
+              document.execCommand('insertText', false, `\n${currentNum + 1}. `);
+            }
+          }
+        }
       }
     };
 

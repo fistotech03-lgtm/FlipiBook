@@ -25,6 +25,7 @@
     "axios": "^1.20.0",
     "bwip-js": "^4.10.1",
     "dom-to-image-more": "^3.11.0",
+    "exceljs": "^4.4.0",
     "face-api.js": "^0.20.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.31.0",

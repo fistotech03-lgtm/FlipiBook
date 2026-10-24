@@ -169,6 +169,38 @@ const SettingsLayout = () => {
           label: "Notifications",
           icon: "basil:notification-on-outline",
         },
+        {
+          path: "shelf",
+          to: "/my-flipbooks?tab=shelf",
+          id: "shelf",
+          label: "My Shelf",
+          icon: "bi:bookshelf",
+        },
+      ],
+    },
+    {
+      title: "System & Billing",
+      items: [
+        {
+          path: "virtual-stall",
+          to: "#",
+          id: "virtual-stall",
+          label: "Virtual Stall",
+          icon: "icon-park-outline:booth",
+        },
+        {
+          path: "billing",
+          id: "billing",
+          label: "Billing and Invoice",
+          icon: "tdesign:bill",
+        },
+        {
+          path: "support",
+          to: "#",
+          id: "support",
+          label: "Support",
+          icon: "griddy-icons:customer-support",
+        },
       ],
     },
     {
@@ -242,11 +274,28 @@ const SettingsLayout = () => {
                         }
                       `}
                     >
-                      <Icon
-                        icon={item.icon}
-                        className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
-                        style={{ strokeWidth: "1.2px" }}
-                      />
+                      {item.id === "shelf" ? (
+                        <svg
+                          viewBox="0 0 24 20"
+                          fill="currentColor"
+                          className="w-[1.05vw] h-[0.9vw] flex-shrink-0 text-gray-700"
+                        >
+                          {/* Shelf 1: solid background with 4 vertical cutout lines on the right */}
+                          <path d="M 0 0 L 24 0 L 24 5.2 L 0 5.2 Z M 13.5 1.5 L 14.7 1.5 L 14.7 5.2 L 13.5 5.2 Z M 16 1.5 L 17.2 1.5 L 17.2 5.2 L 16 5.2 Z M 18.5 1.5 L 19.7 1.5 L 19.7 5.2 L 18.5 5.2 Z M 21 1.5 L 22.2 1.5 L 22.2 5.2 L 21 5.2 Z" fillRule="evenodd" />
+
+                          {/* Shelf 2: solid background with 3 vertical cutout lines + 1 diagonal leaning cutout line on the left */}
+                          <path d="M 0 6.6 L 24 6.6 L 24 11.8 L 0 11.8 Z M 2.4 7.8 L 3.6 7.8 L 3.6 11.8 L 2.4 11.8 Z M 4.8 7.8 L 6.0 7.8 L 6.0 11.8 L 4.8 11.8 Z M 7.2 7.8 L 8.4 7.8 L 8.4 11.8 L 7.2 11.8 Z M 9.2 11.8 L 10.4 11.8 L 13.0 7.8 L 11.7 7.8 Z" fillRule="evenodd" />
+
+                          {/* Shelf 3: solid background with 2 vertical cutout lines on the left, and 2 horizontal cutout lines on the right */}
+                          <path d="M 0 13.2 L 24 13.2 L 24 18.4 L 0 18.4 Z M 2.4 14.4 L 3.6 14.4 L 3.6 18.4 L 2.4 18.4 Z M 4.8 14.4 L 6.0 14.4 L 6.0 18.4 L 4.8 18.4 Z M 14.0 15.0 L 19.0 15.0 L 18.0 16.2 L 13.0 16.2 Z M 12.0 16.8 L 17.5 16.8 L 17.5 18.0 L 12.0 18.0 Z" fillRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <Icon
+                          icon={item.icon}
+                          className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
+                          style={{ strokeWidth: "1.2px" }}
+                        />
+                      )}
                       {item.label}
                     </Link>
                   );

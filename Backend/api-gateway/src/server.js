@@ -80,25 +80,34 @@ const getCachedTopDirs = async () => {
 };
 
 const storageStaticMiddleware = async (req, res, next) => {
-  const relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
-  const directPath = path.join(storageRoot, relPath);
-  try {
-    const stat = await fs.promises.stat(directPath).catch(() => null);
-    if (stat && stat.isFile()) {
-      return sendStaticFile(res, directPath);
-    }
-  } catch (e) {}
+  let relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
+  const candidateRelPaths = [
+    relPath,
+    relPath.replace(/^(?:testing|production)[/\\]/i, ''),
+    relPath.replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/'),
+    relPath.replace(/^(?:testing|production)[/\\]/i, '').replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/')
+  ];
 
-  // Seamless fallback for requests referencing My_Flipbooks -> check books
-  if (relPath.includes('My_Flipbooks')) {
-    const booksRelPath = relPath.replace('My_Flipbooks', 'books');
-    const booksDirectPath = path.join(storageRoot, booksRelPath);
+  for (const candRel of new Set(candidateRelPaths)) {
+    const directPath = path.join(storageRoot, candRel);
     try {
-      const bStat = await fs.promises.stat(booksDirectPath).catch(() => null);
-      if (bStat && bStat.isFile()) {
-        return sendStaticFile(res, booksDirectPath);
+      const stat = await fs.promises.stat(directPath).catch(() => null);
+      if (stat && stat.isFile()) {
+        return sendStaticFile(res, directPath);
       }
     } catch (e) {}
+
+    // Seamless fallback for requests referencing My_Flipbooks -> check books
+    if (candRel.includes('My_Flipbooks')) {
+      const booksRelPath = candRel.replace('My_Flipbooks', 'books');
+      const booksDirectPath = path.join(storageRoot, booksRelPath);
+      try {
+        const bStat = await fs.promises.stat(booksDirectPath).catch(() => null);
+        if (bStat && bStat.isFile()) {
+          return sendStaticFile(res, booksDirectPath);
+        }
+      } catch (e) {}
+    }
   }
 
   const parts = relPath.split(/[/\\]/);

@@ -22,6 +22,7 @@ import ShareModal from "../ShareModal";
 import EditorSettingsModal from "../PageEditor/modals/EditorSettingsModal";
 
 import { useAuth, useActiveBook, useUIModals } from "../../store/hooks";
+import { queryClient } from "../../queryClient";
 
 const EditorNavbar = ({
   onExport: onExportProp,
@@ -173,11 +174,13 @@ const EditorNavbar = ({
   const isCustomizedEditor = location.pathname.includes("customized_editor");
 
   const handleLinkClick = (e) => {
+    queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
+    queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
       if (
         !window.confirm("Leave site?\n\nChanges you made may not be saved.")
       ) {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
       }
     }
   };

@@ -192,7 +192,9 @@ export default function MyFlipbooks() {
         queryKey: ['flipbook-folders', emailId],
         queryFn: () => fetchFlipbookFolders(emailId),
         enabled: !!emailId,
-        staleTime: 1000 * 60 * 3,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
     });
 
     // React Query: Cached Books
@@ -204,7 +206,9 @@ export default function MyFlipbooks() {
         queryKey: ['flipbook-books', emailId],
         queryFn: () => fetchFlipbookBooks(emailId),
         enabled: !!emailId,
-        staleTime: 1000 * 60 * 3,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
     });
 
     // Synchronize local state with React Query cache
@@ -219,6 +223,14 @@ export default function MyFlipbooks() {
             setBooks(queriedBooks);
         }
     }, [queriedBooks]);
+
+    // Always refetch books and folders on mount (e.g. returning from editor)
+    useEffect(() => {
+        if (emailId) {
+            refetchBooks();
+            refetchFolders();
+        }
+    }, [emailId, refetchBooks, refetchFolders]);
 
     // Data is truly loading only when cache is completely empty and query is in progress
     const isInitialDataLoading =
@@ -647,6 +659,10 @@ export default function MyFlipbooks() {
                 stage: 'done'
             });
 
+            // Invalidate React Query cache so newly created book appears immediately
+            queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+            queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
+
             // Smooth transition: small delay to let progress hit 100% cleanly
             await new Promise(res => setTimeout(res, 80));
 
@@ -779,6 +795,11 @@ export default function MyFlipbooks() {
 
             console.log("Creation result:", res.data);
             const finalVId = res.data?.v_id || generatedVId;
+
+            // Invalidate React Query cache so newly created book appears immediately
+            queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+            queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
+
             const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${finalVId}`;
             console.log("Navigating with v_id:", redirectUrl);
             navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, emailId } });

@@ -16,7 +16,15 @@ export default function FlipbookActionMenu({
 }) {
     if (!activeBookMenu) return null;
 
-    const book = books.find(b => b.id === activeBookMenu || b.v_id === activeBookMenu || b._id === activeBookMenu || b.realName === activeBookMenu);
+    const isRecentView = activeFolder === 'Recent Book' || activeFolder === 'Recent';
+    let book = null;
+    if (isRecentView) {
+        book = books.find(b => (b.folder === 'Recent Book' || b.folder === 'Recent' || String(b.id).startsWith('Recent_')) && 
+            (b.id === activeBookMenu || b.v_id === activeBookMenu || b._id === activeBookMenu || b.realName === activeBookMenu));
+    }
+    if (!book) {
+        book = books.find(b => b.id === activeBookMenu || b.v_id === activeBookMenu || b._id === activeBookMenu || b.realName === activeBookMenu);
+    }
     if (!book) return null;
 
     return (

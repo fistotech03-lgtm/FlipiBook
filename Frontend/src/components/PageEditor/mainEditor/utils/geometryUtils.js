@@ -21,6 +21,161 @@ export const formatSmoothPathD = (pts) => {
 export const getVisualBBox = (el) => {
   if (!el || typeof el.getBBox !== 'function') return { x: 0, y: 0, width: 0, height: 0 };
 
+  // ── TYPOGRAPHY BOUNDING BOX (Kinetic & Motion Graphic) ──
+  const isTypography = el.getAttribute?.('data-is-element-typography') === 'true' ||
+                       el.getAttribute?.('data-typography-type') === 'kinetic' ||
+                       el.getAttribute?.('data-typography-type') === 'motion-graphic' ||
+                       (el.id && el.id.startsWith('typography-')) ||
+                       !!el.querySelector?.('.kinetic-container, .motion-click-boundary');
+  if (isTypography) {
+    const motionBoundary = el.querySelector?.('.motion-click-boundary');
+    if (motionBoundary) {
+      const mw = parseFloat(motionBoundary.getAttribute('width')) || 0;
+      const mh = parseFloat(motionBoundary.getAttribute('height')) || 0;
+      const mx = parseFloat(motionBoundary.getAttribute('x') || '0');
+      const my = parseFloat(motionBoundary.getAttribute('y') || '0');
+      if (mw > 0 && mh > 0) {
+        return { x: mx, y: my, width: mw, height: mh };
+      }
+    }
+    const kineticContainer = el.querySelector?.('.kinetic-container');
+    const fo = el.querySelector?.('foreignObject');
+    if (kineticContainer && fo) {
+      const words = Array.from(kineticContainer.querySelectorAll('.word'));
+      const textLines = words.map(w => (w.textContent || '').trim()).filter(Boolean);
+      const fs = parseFloat(el.getAttribute('data-font-size')) || parseFloat(kineticContainer.style.fontSize) || 34;
+      const pad = parseFloat(el.getAttribute('data-bg-padding')) || parseFloat(kineticContainer.style.padding) || 12;
+      const maxLen = Math.max(...textLines.map(l => l.length), 1);
+      const snugW = Math.round(maxLen * (fs * 0.76) + (pad * 2) + 36);
+      const snugH = Math.round(textLines.length * (fs * 1.25) + (pad * 2) + 16);
+      const fox = parseFloat(fo.getAttribute('x') || '0');
+      const foy = parseFloat(fo.getAttribute('y') || '0');
+      return { x: fox, y: foy, width: Math.max(50, snugW), height: Math.max(30, snugH) };
+    }
+    const bgRect = el.querySelector?.('rect.typography-bg');
+    if (bgRect) {
+      const rw = parseFloat(bgRect.getAttribute('width')) || 0;
+      const rh = parseFloat(bgRect.getAttribute('height')) || 0;
+      const rx = parseFloat(bgRect.getAttribute('x') || '0');
+      const ry = parseFloat(bgRect.getAttribute('y') || '0');
+      if (rw > 0 && rh > 0) {
+        return { x: rx, y: ry, width: rw, height: rh };
+      }
+    }
+  }
+
+  // ── BUTTON ELEMENT BOUNDING BOX ──
+  const isButton = el.getAttribute?.('data-is-element-button') === 'true' ||
+                   el.getAttribute?.('data-type') === 'button' ||
+                   (el.id && el.id.startsWith('button-')) ||
+                   !!el.querySelector?.('[data-is-element-button="true"]');
+  if (isButton) {
+    const bgRect = el.querySelector?.('rect.btn-bg, rect');
+    if (bgRect) {
+      const rw = parseFloat(bgRect.getAttribute('width')) || 0;
+      const rh = parseFloat(bgRect.getAttribute('height')) || 0;
+      const rx = parseFloat(bgRect.getAttribute('x') || '0');
+      const ry = parseFloat(bgRect.getAttribute('y') || '0');
+      if (rw > 0 && rh > 0) {
+        return { x: rx, y: ry, width: rw, height: rh };
+      }
+    }
+  }
+
+  // ── SLIDESHOW ELEMENT BOUNDING BOX ──
+  const isSlideshow = el.getAttribute?.('data-type') === 'slideshow' ||
+                      el.getAttribute?.('data-is-slideshow') === 'true' ||
+                      (el.id && el.id.startsWith('slideshow-')) ||
+                      !!el.querySelector?.('[data-is-slideshow="true"]');
+  if (isSlideshow) {
+    const anchor = el.querySelector?.('.bbox-anchor, rect.bbox-anchor');
+    if (anchor) {
+      const ax = parseFloat(anchor.getAttribute('x') || '0');
+      const ay = parseFloat(anchor.getAttribute('y') || '0');
+      let aw = parseFloat(anchor.getAttribute('width') || '0');
+      const ah = parseFloat(anchor.getAttribute('height') || '0');
+      if (aw > 0 && ah > 0) {
+        return { x: ax, y: ay, width: aw, height: ah };
+      }
+    }
+    const isFlat = el.getAttribute?.('data-style') === 'flat';
+    return { x: -5, y: -5, width: 220, height: isFlat ? 200 : 150 };
+  }
+
+  // ── QR CODE ELEMENT BOUNDING BOX ──
+  const isQRCode = el.getAttribute?.('data-type') === 'qrcode' ||
+                   (el.id && el.id.startsWith('qrcode-')) ||
+                   !!el.querySelector?.('[data-type="qrcode"]');
+  if (isQRCode) {
+    const qrImg = el.querySelector?.('image');
+    const qrRect = el.querySelector?.('rect');
+    const target = qrImg || qrRect;
+    if (target) {
+      const qw = parseFloat(target.getAttribute('width')) || 0;
+      const qh = parseFloat(target.getAttribute('height')) || 0;
+      const qx = parseFloat(target.getAttribute('x') || '0');
+      const qy = parseFloat(target.getAttribute('y') || '0');
+      if (qw > 0 && qh > 0) {
+        return { x: qx, y: qy, width: qw, height: qh };
+      }
+    }
+  }
+
+  // ── MAP ELEMENT BOUNDING BOX ──
+  const isMap = el.getAttribute?.('data-type') === 'map' ||
+                (el.id && el.id.startsWith('map-')) ||
+                !!el.querySelector?.('[data-type="map"]');
+  if (isMap) {
+    const fo = el.querySelector?.('foreignObject');
+    const rect = el.querySelector?.('rect');
+    const target = fo || rect;
+    if (target) {
+      const mw = parseFloat(target.getAttribute('width')) || 0;
+      const mh = parseFloat(target.getAttribute('height')) || 0;
+      const mx = parseFloat(target.getAttribute('x') || '0');
+      const my = parseFloat(target.getAttribute('y') || '0');
+      if (mw > 0 && mh > 0) {
+        return { x: mx, y: my, width: mw, height: mh };
+      }
+    }
+  }
+
+  // ── AUDIO ELEMENT BOUNDING BOX ──
+  const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
+                  (el.id && el.id.startsWith('audio-')) ||
+                  !!el.querySelector?.('[data-type="audio-frame"]');
+  if (isAudio) {
+    const bgRect = el.querySelector?.('rect.audio-fill-layer, rect.svg-image-stroke-overlay, rect');
+    if (bgRect) {
+      const rw = parseFloat(bgRect.getAttribute('width')) || (bgRect.classList?.contains('audio-fill-layer') ? 420 : 0);
+      const rh = parseFloat(bgRect.getAttribute('height')) || 60;
+      const rx = parseFloat(bgRect.getAttribute('x') || '0');
+      const ry = parseFloat(bgRect.getAttribute('y') || '0');
+      if (rw > 0 && rh > 0) {
+        return { x: rx, y: ry, width: rw, height: rh };
+      }
+    }
+    return { x: 0, y: 0, width: 420, height: 60 };
+  }
+
+  // ── EMBED ELEMENT BOUNDING BOX ──
+  const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
+                  (el.id && el.id.startsWith('embed-')) ||
+                  !!el.querySelector?.('[data-type="embed-frame"]');
+  if (isEmbed) {
+    const bgRect = el.querySelector?.('rect.embed-fill-layer, rect.svg-image-stroke-overlay, foreignObject, rect');
+    if (bgRect) {
+      const rw = parseFloat(bgRect.getAttribute('width')) || 0;
+      const rh = parseFloat(bgRect.getAttribute('height')) || 0;
+      const rx = parseFloat(bgRect.getAttribute('x') || '0');
+      const ry = parseFloat(bgRect.getAttribute('y') || '0');
+      if (rw > 0 && rh > 0) {
+        return { x: rx, y: ry, width: rw, height: rh };
+      }
+    }
+    return { x: 0, y: 0, width: 650, height: 400 };
+  }
+
   const isUserGroup = el.tagName?.toLowerCase() === 'g' && (
     el.getAttribute('data-type') === 'group' ||
     (el.getAttribute('data-name') || '').toLowerCase() === 'group' ||
@@ -261,6 +416,9 @@ export const getCanvasBounds = (svgElement, baseWidth = 210, baseHeight = 297) =
 
 export const syncDOM = (oldNode, newNode) => {
   if (!oldNode || !newNode) return;
+  // Fast path: if the nodes and all their children/attributes are identical, skip recursion entirely!
+  if (oldNode.isEqualNode && oldNode.isEqualNode(newNode)) return;
+
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
     oldNode.replaceWith(newNode.cloneNode(true));
     return;
@@ -303,6 +461,36 @@ export const syncDOM = (oldNode, newNode) => {
       syncDOM(oldChildren[i], newChildren[i]);
     }
   }
+};
+
+/**
+ * Consolidates multiple transform strings or matrix operations into a single clean SVG matrix(...) string.
+ * Prevents compound transform explosion (e.g. translate() scale() translate() matrix()) on template elements.
+ */
+export const consolidateTransforms = (...transforms) => {
+  if (typeof DOMMatrix === 'undefined') {
+    return transforms.filter(Boolean).join(' ').trim();
+  }
+  let m = new DOMMatrix();
+  let hasTransform = false;
+  for (const t of transforms) {
+    if (!t || !t.trim()) continue;
+    try {
+      m = m.multiply(new DOMMatrix(t));
+      hasTransform = true;
+    } catch {
+      return transforms.filter(Boolean).join(' ').trim();
+    }
+  }
+  if (!hasTransform) return '';
+  const a = Math.round(m.a * 100000) / 100000;
+  const b = Math.round(m.b * 100000) / 100000;
+  const c = Math.round(m.c * 100000) / 100000;
+  const d = Math.round(m.d * 100000) / 100000;
+  const e = Math.round(m.e * 1000) / 1000;
+  const f = Math.round(m.f * 1000) / 1000;
+  if (a === 1 && b === 0 && c === 0 && d === 1 && e === 0 && f === 0) return '';
+  return `matrix(${a} ${b} ${c} ${d} ${e} ${f})`;
 };
 
 export const matrixToTransform = (matrix) => {

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveUploadsPath, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { useAuth } from '../context/AuthContext';
 import p1 from '../assets/Explore/p1.png';
 import cover1 from '../assets/Explore/c-bg1.png';
 import cover2 from '../assets/Explore/c-bg2.png';
@@ -165,7 +166,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook }) => {
         if (onOpenBook) {
             onOpenBook(book);
         } else {
-            const targetShareId = book.shareId || book.v_id;
+            const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
             const rawAcc = String(book.access || 'public').toLowerCase();
             if (targetShareId) {
                 window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
@@ -323,21 +324,8 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     const [openMenuId, setOpenMenuId] = useState(null);
     const [hoveredInfoId, setHoveredInfoId] = useState(null);
 
-    const currentUserEmail = (() => {
-        try {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const u = JSON.parse(storedUser);
-                if (u?.emailId || u?.email) return (u.emailId || u.email).toLowerCase();
-            }
-            const storedProfile = localStorage.getItem('user_profile');
-            if (storedProfile) {
-                const p = JSON.parse(storedProfile);
-                if (p?.emailId || p?.email) return (p.emailId || p.email).toLowerCase();
-            }
-        } catch (e) { }
-        return '';
-    })();
+    const { user } = useAuth();
+    const currentUserEmail = (user?.emailId || user?.email || '').toLowerCase();
     const [scrollProgress, setScrollProgress] = useState(0);
     const [isScrolling, setIsScrolling] = useState(false);
     const scrollTimeout = useRef(null);
@@ -468,7 +456,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
                         return {
                             rawBook: b,
                             v_id: b.v_id,
-                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || b.v_id,
+                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || (b.share?.shareId && b.share.shareId !== b.v_id ? b.share.shareId : null) || (b.shareId && b.shareId !== b.v_id ? b.shareId : null) || '',
                             access: b.Customized_Settings?.Visibility?.access || b.Visibility?.access || 'public',
                             title: b.flipbookName || b.title || `Flipbook ${idx + 1}`,
                             cover: b.image || covers[idx % covers.length],
@@ -541,7 +529,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     };
 
     const handleOpenBook = (book) => {
-        const targetShareId = book.shareId || book.v_id;
+        const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
         const rawAcc = String(book.access || 'public').toLowerCase();
         if (targetShareId) {
             window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');

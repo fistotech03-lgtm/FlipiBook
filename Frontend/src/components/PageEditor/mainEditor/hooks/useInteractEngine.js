@@ -92,8 +92,8 @@ export const useInteractEngine = ({
   };
 
   useEffect(() => {
-    // Setup interactjs for elements within the SVG - targeting both elements and the background
-    const interactable = interact('.page-svg-container svg, .page-svg-container svg *')
+    // Setup interactjs for elements within the SVG - targeting the SVG container (events bubble up with full performance)
+    const interactable = interact('.page-svg-container svg')
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
@@ -113,7 +113,7 @@ export const useInteractEngine = ({
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
             // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
-            if (!['select', 'upload', 'grid'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
+            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
               return;
             }
@@ -155,8 +155,18 @@ export const useInteractEngine = ({
             if (selectedId && selectedSelectToolRef.current !== 'direct') {
               const selectedEl = container?.querySelector(`[id="${selectedId}"]`);
               if (selectedEl && selectedEl !== svgElement) {
-                if (hitTest(selectedEl, event.clientX, event.clientY, 2)) {
-                  target = selectedEl; // Redirect drag to the current selection!
+                // If the user clicked directly on an actual child element with an ID inside the frame,
+                // allow the child element to be targeted directly rather than forcing the parent frame!
+                const isDirectChildHit = event.target && event.target !== selectedEl && selectedEl.contains(event.target);
+                const leafElement = isDirectChildHit ? getDraggableElement(event.target, selectedEl) : null;
+                const shouldTargetChild = leafElement && leafElement !== selectedEl && leafElement.id && leafElement.getAttribute('data-name') !== 'Overlay';
+
+                if (!shouldTargetChild) {
+                  if (hitTest(selectedEl, event.clientX, event.clientY, 2)) {
+                    target = selectedEl; // Redirect drag to the current selection!
+                  }
+                } else {
+                  target = leafElement;
                 }
               }
             }
@@ -261,7 +271,8 @@ export const useInteractEngine = ({
                       const isMainPageFrame = topFrames.length === 1 && selEl.id === topFrames[0].id;
 
                       if (!isMainPageFrame) {
-                        elementToDrag = selEl;
+                        const isChildOfSelected = target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
+                        elementToDrag = isChildOfSelected ? target : selEl;
                         break; // Found it!
                       }
                     }
@@ -362,21 +373,25 @@ export const useInteractEngine = ({
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
             if (!isSelected) {
-              if (setSelectedLayerId) {
-                setSelectedLayerId(elementToDrag.id);
-                if (setMultiSelectedIds) setMultiSelectedIds(new Set([elementToDrag.id]));
-                // Force update ref so it's visible to subsequent drag steps
-                selectedLayerIdRef.current = elementToDrag.id;
-                multiSelectedIdsRef.current = new Set([elementToDrag.id]);
+              // Force update refs immediately so drag logic sees the selection
+              selectedLayerIdRef.current = elementToDrag.id;
+              multiSelectedIdsRef.current = new Set([elementToDrag.id]);
 
-                // Clear previous stale selection overlays immediately before drawing new one
-                clearOverlayType('selected');
-                clearOverlayType('child-selected');
+              // Clear previous stale selection overlays immediately before drawing new one
+              clearOverlayType('selected');
+              clearOverlayType('child-selected');
 
-                // Visualize selection immediately
-                const highlightType = currentFrameIdRef.current && elementToDrag.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
-                drawOverlayHighlight(elementToDrag, highlightType);
-              }
+              // Visualize selection immediately
+              const highlightType = currentFrameIdRef.current && elementToDrag.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
+              drawOverlayHighlight(elementToDrag, highlightType);
+
+              // Defer React state updates to avoid blocking drag start with re-render cascade
+              // (refs are already updated above for instant drag tracking)
+              const idToSelect = elementToDrag.id;
+              queueMicrotask(() => {
+                if (setSelectedLayerId) setSelectedLayerId(idToSelect);
+                if (setMultiSelectedIds) setMultiSelectedIds(new Set([idToSelect]));
+              });
             }
 
             // ── Build multi-drag list: all multi-selected elements in the same SVG ──
@@ -466,7 +481,7 @@ export const useInteractEngine = ({
             };
 
             if (!dragState.thresholdMet) {
-              const DRAG_THRESHOLD = 2;
+              const DRAG_THRESHOLD = 6;
               const dxClient = event.clientX - dragState.initialClientX;
               const dyClient = event.clientY - dragState.initialClientY;
               const distance = Math.sqrt(dxClient * dxClient + dyClient * dyClient);
@@ -492,12 +507,12 @@ export const useInteractEngine = ({
 
               // Purge lingering ghost selection boxes for other elements across all overlay layers
               if (!dragState.multiDragItems && dragState.element?.id) {
+                const activeHighlightType = currentFrameIdRef.current && dragState.element.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
+                const keepPolyId = `overlay-poly-${activeHighlightType}-${dragState.element.id}`;
+                const keepPathId = `overlay-path-${activeHighlightType}-${dragState.element.id}`;
                 document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-                  ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
-                    if (node.id !== `overlay-poly-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-poly-child-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-path-selected-${dragState.element.id}` &&
-                        node.id !== `overlay-path-child-selected-${dragState.element.id}`) {
+                  ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected, [id^="overlay-poly-"], [id^="overlay-path-"]').forEach(node => {
+                    if (node.id !== keepPolyId && node.id !== keepPathId) {
                       node.remove();
                     }
                   });
@@ -563,21 +578,34 @@ export const useInteractEngine = ({
 
             if (dragState.multiDragItems) {
               // Move ALL multi-selected elements freely across canvas with smart snapping
-              const primaryItem = dragState.multiDragItems[0];
-              const pPointLocal = getLocalPoint(dragState.svgElement, primaryItem.element.parentNode, event.clientX, event.clientY);
-              let rawDx = pPointLocal && primaryItem.startPointLocal ? (pPointLocal.x - primaryItem.startPointLocal.x) : 0;
-              let rawDy = pPointLocal && primaryItem.startPointLocal ? (pPointLocal.y - primaryItem.startPointLocal.y) : 0;
+              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
+              const rootDx = (rootStart && rootCurrent) ? (rootCurrent.x - rootStart.x) : 0;
+              const rootDy = (rootStart && rootCurrent) ? (rootCurrent.y - rootStart.y) : 0;
 
               const snap = computeSmartGuides({
                 dragState,
-                rawDx,
-                rawDy,
+                rawDx: rootDx,
+                rawDy: rootDy,
                 zoomScale: zoom / 100,
                 disabled: event.ctrlKey || event.metaKey
               });
 
               for (const item of dragState.multiDragItems) {
-                const translation = new DOMMatrix().translate(snap.snappedDx, snap.snappedDy);
+                let itemDeltaX = snap.snappedDx;
+                let itemDeltaY = snap.snappedDy;
+                if (item.element.parentNode && item.element.parentNode !== dragState.svgElement) {
+                  try {
+                    const parentCtm = item.element.parentNode.getScreenCTM();
+                    const svgCtm = dragState.svgElement.getScreenCTM();
+                    if (parentCtm && svgCtm) {
+                      const rootToParent = parentCtm.inverse().multiply(svgCtm);
+                      itemDeltaX = rootToParent.a * snap.snappedDx + rootToParent.c * snap.snappedDy;
+                      itemDeltaY = rootToParent.b * snap.snappedDx + rootToParent.d * snap.snappedDy;
+                    }
+                  } catch { /* fallback */ }
+                }
+                const translation = new DOMMatrix().translate(itemDeltaX, itemDeltaY);
                 const nextMatrix = translation.multiply(item.initialMatrix);
                 item.element.setAttribute('transform', matrixToTransform(nextMatrix));
               }
@@ -586,21 +614,40 @@ export const useInteractEngine = ({
             } else {
               // Single element drag with smart snapping, magenta guidelines, and coordinate badge
               const target = dragState.element;
-              const currentPointLocal = getLocalPoint(dragState.svgElement, target.parentNode, event.clientX, event.clientY);
-              if (!currentPointLocal || !dragState.startPointLocal) return;
+              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
+              if (!rootStart || !rootCurrent) return;
 
-              let dx = currentPointLocal.x - dragState.startPointLocal.x;
-              let dy = currentPointLocal.y - dragState.startPointLocal.y;
+              const rootDx = rootCurrent.x - rootStart.x;
+              const rootDy = rootCurrent.y - rootStart.y;
 
               const snap = computeSmartGuides({
                 dragState,
-                rawDx: dx,
-                rawDy: dy,
+                rawDx: rootDx,
+                rawDy: rootDy,
                 zoomScale: zoom / 100,
                 disabled: event.ctrlKey || event.metaKey
               });
 
-              const translation = new DOMMatrix().translate(snap.snappedDx, snap.snappedDy);
+              // Project root snapped displacement into target.parentNode's coordinate space
+              let localDeltaX = snap.snappedDx;
+              let localDeltaY = snap.snappedDy;
+
+              if (target.parentNode && target.parentNode !== dragState.svgElement) {
+                try {
+                  const parentCtm = target.parentNode.getScreenCTM();
+                  const svgCtm = dragState.svgElement.getScreenCTM();
+                  if (parentCtm && svgCtm) {
+                    const rootToParent = parentCtm.inverse().multiply(svgCtm);
+                    localDeltaX = rootToParent.a * snap.snappedDx + rootToParent.c * snap.snappedDy;
+                    localDeltaY = rootToParent.b * snap.snappedDx + rootToParent.d * snap.snappedDy;
+                  }
+                } catch {
+                  /* fallback to localDeltaX/Y */
+                }
+              }
+
+              const translation = new DOMMatrix().translate(localDeltaX, localDeltaY);
               const nextMatrix = translation.multiply(dragState.initialMatrix);
               target.setAttribute('transform', matrixToTransform(nextMatrix));
 
@@ -625,9 +672,8 @@ export const useInteractEngine = ({
                 }
               }
 
-              // dynamically update the outline while dragging
+              // Batch overlay highlight and smart guides rendering via RAF for 60fps smoothness
               const highlightType = currentFrameIdRef.current && target.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
-              drawOverlayHighlight(target, highlightType);
 
               if (localTrimViewRef.current && dragState.svgElement) {
                 const isOutside = isElementCompletelyOutside(target, dragState.svgElement);
@@ -645,8 +691,18 @@ export const useInteractEngine = ({
                 }
               }
 
-              // Render smart guide lines and floating coordinate badge
-              renderSmartGuides(dragState.pageIndex, snap.guides, snap.badge, zoom / 100, dragState.svgElement);
+              dragState.pendingTarget = target;
+              dragState.pendingHighlightType = highlightType;
+              dragState.pendingGuides = snap.guides;
+              dragState.pendingBadge = snap.badge;
+              if (!dragState.rafId) {
+                dragState.rafId = requestAnimationFrame(() => {
+                  dragState.rafId = null;
+                  if (!dragState.pendingTarget) return;
+                  drawOverlayHighlight(dragState.pendingTarget, dragState.pendingHighlightType);
+                  renderSmartGuides(dragState.pageIndex, dragState.pendingGuides, dragState.pendingBadge, zoom / 100, dragState.svgElement);
+                });
+              }
             }
 
             if (isAltPressedCurrent && drawMeasurementOverlayRef.current) {
@@ -673,10 +729,19 @@ export const useInteractEngine = ({
               return;
             }
 
+            if (dragState.rafId) {
+              cancelAnimationFrame(dragState.rafId);
+              dragState.rafId = null;
+            }
+            dragState.pendingTarget = null;
             clearSmartGuides(dragState.pageIndex);
 
             if (!dragState.thresholdMet) {
               document.body.classList.remove('dragging-active');
+              if (dragState.element) {
+                dragState.element.removeAttribute('data-dragging');
+                delete dragState.element._dragLocalBBox;
+              }
               delete event.interaction.dragState;
               return;
             }
@@ -702,8 +767,19 @@ export const useInteractEngine = ({
 
             const finalizeEnd = () => {
               document.body.classList.remove('dragging-active');
-              if (suppressClickRef.current && updatePageHtml) {
-                const container = dragState.element.closest('.page-svg-container');
+              if (dragState.element) {
+                dragState.element.removeAttribute('data-dragging');
+                delete dragState.element._dragLocalBBox;
+              }
+              if (dragState.multiDragItems) {
+                dragState.multiDragItems.forEach(item => {
+                  item.element.removeAttribute('data-dragging');
+                  delete item.element._dragLocalBBox;
+                });
+              }
+
+              if (updatePageHtml && dragState.svgElement) {
+                const container = dragState.element?.closest?.('.page-svg-container');
                 const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : dragState.pageIndex;
                 saveModifiedPageHtml(pageIdx, dragState.svgElement);
               }
@@ -712,13 +788,7 @@ export const useInteractEngine = ({
                 suppressClickRef.current = false;
               }, 50);
 
-              const svgEl = dragState.svgElement;
-              const pageIndex = dragState.pageIndex;
               delete event.interaction.dragState;
-
-              if (updatePageHtmlRef.current && svgEl) {
-                updatePageHtmlRef.current(pageIndex, svgEl.outerHTML);
-              }
 
               // Restore handles and highlight overlay
               if (dragState.multiDragItems) {
@@ -927,7 +997,7 @@ export const useInteractEngine = ({
 
                 // Helper: convert a child's local bbox corner to SVG root space
                 const childLocalToSvgRoot = (child, px, py) => {
-                  const childCTM = child.getScreenCTM();
+                  const childCTM = (child && typeof child.getScreenCTM === 'function') ? child.getScreenCTM() : null;
                   if (!childCTM) return { x: px, y: py };
                   // screen = childCTM * local, svgRoot = svgRootInv * screen
                   return new DOMPoint(px, py).matrixTransform(toDOMMatrix(childCTM)).matrixTransform(svgRootInv);
@@ -996,8 +1066,8 @@ export const useInteractEngine = ({
                 return;
               }
             } else {
-              const parentCtm = el.parentNode ? el.parentNode.getScreenCTM() : null;
-              const ctm = el.getScreenCTM();
+              const parentCtm = el.parentNode ? (typeof el.parentNode.getScreenCTM === 'function' ? el.parentNode.getScreenCTM() : null) : null;
+              const ctm = typeof el.getScreenCTM === 'function' ? el.getScreenCTM() : null;
               if (parentCtm && ctm) {
                 matrix = toDOMMatrix(parentCtm).inverse().multiply(toDOMMatrix(ctm));
               } else {
@@ -1017,7 +1087,7 @@ export const useInteractEngine = ({
             }
 
             const svg = el.ownerSVGElement || canvasSvg;
-            const parentCtmForStart = el.parentNode ? el.parentNode.getScreenCTM() : svg?.getScreenCTM();
+            const parentCtmForStart = el.parentNode ? (typeof el.parentNode.getScreenCTM === 'function' ? el.parentNode.getScreenCTM() : null) : (typeof svg?.getScreenCTM === 'function' ? svg.getScreenCTM() : null);
             let startPoint = null;
             if (parentCtmForStart && svg) {
               const pt = svg.createSVGPoint();
@@ -1026,15 +1096,6 @@ export const useInteractEngine = ({
               startPoint = pt.matrixTransform(parentCtmForStart.inverse());
             } else {
               startPoint = getSvgPoint(svg, event.clientX, event.clientY);
-            }
-
-            // ── CONVERT <text> TO <foreignObject> ON RESIZE START ──
-            if (!isMulti && el.tagName.toLowerCase() === 'text') {
-              const fo = convertTextToForeignObject(el);
-              if (fo) {
-                el.replaceWith(fo);
-                el = fo;
-              }
             }
 
             // Lock cursor globally while dragging to prevent flicker
@@ -1067,7 +1128,16 @@ export const useInteractEngine = ({
               el.getAttribute('data-type') === 'gif'
             ));
             if (isGroupOrImageEl) {
-              const childrenList = isMulti ? multiIds.map(resolveChild).filter(Boolean) : (el.tagName.toLowerCase() === 'g' && el.children.length > 0 ? Array.from(el.children) : [el]);
+              const nonGraphicTags = new Set(['style', 'defs', 'clippath', 'mask', 'filter', 'lineargradient', 'radialgradient', 'pattern', 'title', 'desc', 'metadata']);
+              const isRenderable = (node) => {
+                if (!node || !node.tagName) return false;
+                const tag = node.tagName.toLowerCase();
+                if (nonGraphicTags.has(tag)) return false;
+                return typeof node.getScreenCTM === 'function' || typeof node.getBBox === 'function';
+              };
+
+              let childrenList = isMulti ? multiIds.map(resolveChild).filter(isRenderable) : (el.tagName.toLowerCase() === 'g' && el.children.length > 0 ? Array.from(el.children).filter(isRenderable) : [el]);
+              if (childrenList.length === 0) childrenList = [el];
               const childLocalToSvgRoot = el._childLocalToSvgRoot;
               childrenData = childrenList.map(child => {
                 let cb = getVisualBBox(child);
@@ -1081,7 +1151,7 @@ export const useInteractEngine = ({
                 }
                 const cMatrix = getElementMatrix(child);
                 const svgRootInv = el._svgRootInv;
-                const childCTM = child.getScreenCTM();
+                const childCTM = typeof child?.getScreenCTM === 'function' ? child.getScreenCTM() : null;
                 const childWorldMatrix = (svgRootInv && childCTM) ? toDOMMatrix(svgRootInv).multiply(toDOMMatrix(childCTM)) : toDOMMatrix(cMatrix);
 
                 let minX, maxX, minY, maxY;
@@ -1199,7 +1269,10 @@ export const useInteractEngine = ({
               initialCrop,
               initialObjectFit,
               cropInitialized: false,
-              cursor: currentCursor // Store for reinforcement
+              cursor: currentCursor, // Store for reinforcement
+              initialClientX: event.clientX,
+              initialClientY: event.clientY,
+              thresholdMet: false
             };
 
             // Initialize smart guides candidates for resizing
@@ -1215,6 +1288,24 @@ export const useInteractEngine = ({
           move(event) {
             const state = event.interaction.resizeState;
             if (!state) return;
+
+            // Enforce minimum 5px resize movement before mutating DOM or geometry
+            if (!state.thresholdMet) {
+              const dx = event.clientX - (state.initialClientX ?? event.clientX);
+              const dy = event.clientY - (state.initialClientY ?? event.clientY);
+              if (Math.hypot(dx, dy) < 5) return;
+              state.thresholdMet = true;
+
+              // Convert <text> to <foreignObject> ONLY when resize movement actually begins
+              if (!state.isMulti && state.el.tagName && state.el.tagName.toLowerCase() === 'text') {
+                const fo = convertTextToForeignObject(state.el);
+                if (fo) {
+                  state.el.replaceWith(fo);
+                  state.el = fo;
+                  state.element = fo;
+                }
+              }
+            }
 
             // Reinforce cursor during move to prevent flicker from other handlers or React re-renders
             if (state.cursor && document.body.style.cursor !== state.cursor) {
@@ -1261,7 +1352,7 @@ export const useInteractEngine = ({
 
             const { el, bbox, worldAnchor, matrix, dir } = state;
 
-            const parentCTM = el.parentNode ? el.parentNode.getScreenCTM() : state.svg.getScreenCTM();
+            const parentCTM = el.parentNode ? (typeof el.parentNode.getScreenCTM === 'function' ? el.parentNode.getScreenCTM() : null) : (typeof state.svg?.getScreenCTM === 'function' ? state.svg.getScreenCTM() : null);
             if (!parentCTM) return;
             const pt = state.svg.createSVGPoint();
             pt.x = event.clientX;
@@ -1386,11 +1477,48 @@ export const useInteractEngine = ({
             const isShape = (['path', 'polygon', 'circle', 'ellipse', 'rect', 'polyline', 'line'].includes(el.tagName?.toLowerCase()) || isGroup) && !isFreeFrame && !isForeignObject;
             const isCorner = ['nw', 'ne', 'se', 'sw'].includes(dir);
 
+            const isButton = el.getAttribute?.('data-is-element-button') === 'true' ||
+                             el.getAttribute?.('data-type') === 'button' ||
+                             (el.id && el.id.startsWith('button-')) ||
+                             !!el.querySelector?.('[data-is-element-button="true"]');
+
             const isHotspot = el.getAttribute('data-is-hotspot') === 'true';
             const isInteractiveButton = isHotspot && state.childrenData && state.childrenData.some(c => c.child.tagName.toLowerCase() === 'rect') && state.childrenData.some(c => c.child.tagName.toLowerCase() === 'text' || c.child.getAttribute('data-type') === 'text');
             const isHotspotPreset = isHotspot && !isInteractiveButton;
 
-            if (isInteractiveButton) {
+            const isSlideshow = el.getAttribute?.('data-type') === 'slideshow' ||
+                             el.getAttribute?.('data-is-slideshow') === 'true' ||
+                             (el.id && el.id.startsWith('slideshow-'));
+
+            const isQRCode = el.getAttribute?.('data-type') === 'qrcode' ||
+                             (el.id && el.id.startsWith('qrcode-'));
+
+            const isMap = el.getAttribute?.('data-type') === 'map' ||
+                          (el.id && el.id.startsWith('map-'));
+
+            const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
+                            (el.id && el.id.startsWith('audio-'));
+
+            const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
+                            (el.id && el.id.startsWith('embed-'));
+
+            if (isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed) {
+              if (isCorner) {
+                const dot = vCurrentLocal.x * vOriginalLocal.x + vCurrentLocal.y * vOriginalLocal.y;
+                const origLenSq = vOriginalLocal.x * vOriginalLocal.x + vOriginalLocal.y * vOriginalLocal.y;
+                let s = origLenSq > 0 ? (dot / origLenSq) : ((scaleX + scaleY) / 2);
+                const minS = bbox.height > 0 ? (12 / bbox.height) : 0.1;
+                if (s < minS) s = minS;
+                scaleX = s;
+                scaleY = s;
+              } else {
+                const sSide = (dir === 'n' || dir === 's') ? scaleY : scaleX;
+                const minS = bbox.height > 0 ? (12 / bbox.height) : 0.1;
+                let s = Math.max(minS, sSide);
+                scaleX = s;
+                scaleY = s;
+              }
+            } else if (isInteractiveButton) {
               if (isCorner) {
                 // Diagonal projection for smooth, natural scaling up and down
                 const dot = vCurrentLocal.x * vOriginalLocal.x + vCurrentLocal.y * vOriginalLocal.y;
@@ -1557,8 +1685,20 @@ export const useInteractEngine = ({
                       adjustedWidth = bestW;
                       el.setAttribute('width', adjustedWidth);
                       adjustedHeight = div.scrollHeight + 4;
+                    } else if (isCorner && (isText || el.getAttribute('data-type') === 'text') && !isScrollable) {
+                      // Dragging CORNER handle on text scales full content (font size + box proportionally)
+                      const origW = state.bbox?.width || 1;
+                      const origH = state.bbox?.height || 1;
+                      const scale = Math.max(0.1, Math.min(finalWidth / origW, finalHeight / origH));
+                      if (!state.initialFontSize) {
+                        state.initialFontSize = parseFloat(div.style.fontSize) || parseFloat(el.getAttribute('data-font-size')) || 16;
+                      }
+                      const newFs = Math.max(6, Math.round(state.initialFontSize * scale));
+                      div.style.fontSize = `${newFs}px`;
+                      el.setAttribute('data-font-size', newFs.toString());
+                      adjustedHeight = Math.max(10, div.scrollHeight + 4);
                     } else {
-                      // Corners or fixed mode -> Fixed size, respect final height exactly so clipping/scrolling works
+                      // Fixed mode -> Fixed size, respect final height exactly so clipping/scrolling works
                       adjustedHeight = finalHeight;
                     }
                   } else {
@@ -1753,6 +1893,56 @@ export const useInteractEngine = ({
                   // the group's position and size in the page change correctly.
                   // Modifying children would only scale inside the 48×48 local space while
                   // the group's outer translate+scale stays the same → no visible resize effect.
+                  // ── TYPOGRAPHY & DECORATOR: scale outer transform to scale full content ──
+                  const isTypography = el.getAttribute?.('data-is-element-typography') === 'true' ||
+                                       el.getAttribute?.('data-typography-type') === 'kinetic' ||
+                                       el.getAttribute?.('data-typography-type') === 'motion-graphic' ||
+                                       (el.id && el.id.startsWith('typography-')) ||
+                                       !!el.querySelector?.('.kinetic-container, .motion-click-boundary');
+
+                  const isDecorator = el.getAttribute?.('data-type') === 'decorator' ||
+                                      (el.id && el.id.startsWith('decorator-')) ||
+                                      !!el.querySelector?.('.animated-decorator-container');
+
+                  const isButton = el.getAttribute?.('data-is-element-button') === 'true' ||
+                                   el.getAttribute?.('data-type') === 'button' ||
+                                   (el.id && el.id.startsWith('button-')) ||
+                                   !!el.querySelector?.('[data-is-element-button="true"]');
+
+                  const isSlideshow = el.getAttribute?.('data-type') === 'slideshow' ||
+                                   el.getAttribute?.('data-is-slideshow') === 'true' ||
+                                   (el.id && el.id.startsWith('slideshow-'));
+
+                  const isQRCode = el.getAttribute?.('data-type') === 'qrcode' ||
+                                   (el.id && el.id.startsWith('qrcode-'));
+
+                  const isMap = el.getAttribute?.('data-type') === 'map' ||
+                                (el.id && el.id.startsWith('map-'));
+
+                  const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
+                                  (el.id && el.id.startsWith('audio-'));
+
+                  const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
+                                  (el.id && el.id.startsWith('embed-'));
+
+                  if (isTypography || isDecorator || isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed) {
+                    try {
+                      const scaleMatrix = new DOMMatrix()
+                        .translate(worldAnchor.x, worldAnchor.y)
+                        .scale(scaleX, scaleY)
+                        .translate(-worldAnchor.x, -worldAnchor.y);
+                      const nextMatrix = scaleMatrix.multiply(matrix);
+                      el.setAttribute('transform', matrixToTransform(nextMatrix));
+                      if (typeof drawOverlayHighlight === 'function') {
+                        const highlightType = (currentFrameIdRef?.current && el.id !== currentFrameIdRef.current) ? 'child-selected' : 'selected';
+                        drawOverlayHighlight(el, highlightType);
+                      }
+                    } catch (err) {
+                      console.debug('Failed to scale typography/decorator transform:', err);
+                    }
+                    return; // skip modifying internal children so full content scales cleanly
+                  }
+
                   if (isHotspot && !isInteractiveButton) {
                     try {
                       // finalX/Y/W/H are in the group's LOCAL coordinate space (0–48 range).
@@ -2411,6 +2601,10 @@ export const useInteractEngine = ({
             document.documentElement.style.removeProperty('--resizing-cursor');
 
             const state = event.interaction.resizeState;
+            if (state && !state.thresholdMet) {
+              delete event.interaction.resizeState;
+              return;
+            }
             if (state) {
               if (state.childrenData) {
                 const textChild = state.childrenData.find(c => c.child.tagName?.toLowerCase() === 'text' || c.child.getAttribute('data-type') === 'text');

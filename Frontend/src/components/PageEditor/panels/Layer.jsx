@@ -557,7 +557,15 @@ const Layer = ({
     const path = folder
       ? `/editor/customized_editor/${folder}/${v_id}`
       : `/editor/customized_editor/${v_id}`;
-    navigate(path);
+    navigate(path, {
+      state: {
+        pages,
+        pageCount: pages?.length || 1,
+        flipbookName: currentBook?.flipbookName,
+        folderName: folder,
+        v_id
+      }
+    });
   };
 
   const nameInputRef = useRef(null);
@@ -1396,6 +1404,7 @@ const Layer = ({
                         <div
                           key={pageKey}
                           className="flex flex-col relative"
+                          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragLeave={handleDragLeave}
                           onDragEnd={handleDragEnd}

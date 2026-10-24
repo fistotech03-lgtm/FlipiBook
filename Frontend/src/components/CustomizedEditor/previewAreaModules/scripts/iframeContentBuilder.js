@@ -1,11 +1,25 @@
 import sanitizeHtmlForPreview from './sanitizeHtml';
+import { rewriteHtmlUploads } from '../../../../utils/assetUtils';
 import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
 import getVideoControlsScript from './videoControlsScript';
 
-export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false) => {
-    const cleanHtml = sanitizeHtmlForPreview(html);
+export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false, baseUrl = null) => {
+    let rawCleanHtml = sanitizeHtmlForPreview(html);
+    if (baseUrl) {
+        if (rawCleanHtml.includes('../assets/')) {
+            rawCleanHtml = rawCleanHtml.split('../assets/').join(`${baseUrl}assets/`);
+        }
+        if (rawCleanHtml.includes('./assets/')) {
+            rawCleanHtml = rawCleanHtml.split('./assets/').join(`${baseUrl}assets/`);
+        }
+        if (rawCleanHtml.includes('nullassets/')) {
+            rawCleanHtml = rawCleanHtml.split('nullassets/').join(`${baseUrl}assets/`);
+        }
+        rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${baseUrl}assets/`);
+    }
+    const cleanHtml = rewriteHtmlUploads(rawCleanHtml);
     // Extract and dynamically load Google Fonts found in the SVG
     const fontsToLoad = new Set();
     if (cleanHtml) {
@@ -38,6 +52,15 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                 <style>
                     html, body { cursor: default !important; -webkit-user-select: none; user-select: none; }
                     body { margin: 0; padding: 0; overflow: hidden; background: transparent; width: 100%; height: 100%; }
+                    body > svg,
+                    svg:not(foreignObject svg):not([data-type="icon"]):not([data-type="button"] svg) {
+                        width: 100% !important;
+                        height: 100% !important;
+                        display: block !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        shape-rendering: geometricPrecision !important;
+                    }
                     * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
                     ::-webkit-scrollbar { width: 0px; background: transparent; }
                     [data-interaction="open-link"][data-interaction-value]:not([data-interaction-value=""]),

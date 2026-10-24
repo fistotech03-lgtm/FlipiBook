@@ -12,9 +12,6 @@ const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.AUTH_PORT || process.env.PORT || 5001;
 
-// Connect to MongoDB Database
-connectDB();
-
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -60,8 +57,18 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found on auth-service' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Auth Service] Running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Auth Service] Running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error(`[Auth Service] Fatal startup error:`, err);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 module.exports = app;

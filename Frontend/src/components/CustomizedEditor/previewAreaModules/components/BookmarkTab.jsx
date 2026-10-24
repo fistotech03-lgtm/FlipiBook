@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { getBookmarkSVGPath } from '../../BookmarkStylesPopup';
+import { getBookmarkSVGPath } from '../../components/BookmarkStylesPopup';
 
 const BookmarkTab = ({ label, color, pageIndex, currentPage, index, onClick, styleIdx = 1, font = 'Poppins', flipTime = 500, singlePage, spacing = 5 }) => {
     // Determine leaf and flip state physically bound to the leaf structure

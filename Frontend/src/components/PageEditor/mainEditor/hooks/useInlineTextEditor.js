@@ -1,11 +1,16 @@
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
 import { clearOverlayType } from '../utils/geometryUtils';
+import { clearSmartGuides } from '../utils/smartGuides';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 import { TYPE_CURSOR, PENCIL_CURSOR, PEN_CURSOR, SHAPE_CURSOR } from '../utils/constants';
+import editCacheManager from '../../utils/EditCacheManager';
 
 /**
- * Custom hook to manage inline text editing within SVG foreignObjects,
- * caret positioning, auto-resizing, and font styles.
+ * Custom hook to manage direct inline text editing on the exact existing text element:
+ * - Edits directly in-place on the canvas (ZERO dummy overlays or floating textareas).
+ * - Preserves exact text alignment (center, right, left, justify) before, during, and after editing.
+ * - Instant 0ms startup without layout thrashing or lag.
+ * - Applies TYPE_CURSOR during editing.
  */
 export const useInlineTextEditor = ({
   isEditingTextRef,
@@ -24,28 +29,26 @@ export const useInlineTextEditor = ({
   drawOverlayHighlight,
   saveModifiedPageHtml
 }) => {
+
   const enterTextEditMode = (target, clientX = null, clientY = null, selectAll = false) => {
     if (!target || !target.id) return;
     if (activeTopTool === 'interaction' || activeTopTool === 'animation') return;
 
+    // 1. Remove any dummy overlay if one lingered in the DOM
+    const dummy = document.getElementById('vector-studio-type-router');
+    if (dummy) dummy.remove();
+
     let foTarget = target;
 
-    // If the target is a raw <text> element, convert it to foreignObject first
+    // 2. If target is raw SVG <text> or <tspan>, convert it in-place to <foreignObject>
     if (target.tagName.toLowerCase() === 'text' || target.tagName.toLowerCase() === 'tspan') {
-      const textEl = target.tagName.toLowerCase() === 'tspan' ? target.closest('text') : target;
+      const textEl = target.tagName.toLowerCase() === 'tspan' ? (target.closest('text') || target) : target;
       if (!textEl) return;
       const fo = convertTextToForeignObject(textEl);
       if (!fo) return;
       textEl.replaceWith(fo);
       foTarget = fo;
 
-      // Explicitly redraw the highlight now that the FO is in the DOM
-      requestAnimationFrame(() => {
-        const highlightType = document.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`) ? 'child-selected' : 'selected';
-        drawOverlayHighlight(foTarget, highlightType);
-      });
-
-      // Update selection to reflect new FO id (same as original text id)
       if (setSelectedLayerId) setSelectedLayerId(fo.id);
       selectedLayerIdRef.current = fo.id;
       if (setMultiSelectedIds) {
@@ -64,29 +67,68 @@ export const useInlineTextEditor = ({
     }
 
     isEditingTextRef.current = true;
-    const svgRoot = foTarget.ownerSVGElement;
+    const svgRoot = foTarget.ownerSVGElement || foTarget.closest('svg');
+    const svgContainer = foTarget.closest('.page-svg-container') || svgRoot?.parentElement;
 
-    // Set cursor for the wrapper container
-    const svgContainer = foTarget.closest('.page-svg-container');
-    if (svgContainer) {
-      const divWrapper = svgContainer.querySelector('div');
-      if (divWrapper) divWrapper.style.cursor = 'text';
+    // 3. Strictly preserve exact text alignment (never default center/right to left)
+    const rawAnchor = (
+      foTarget.getAttribute('text-anchor') ||
+      target?.getAttribute?.('text-anchor') ||
+      target?.closest?.('[text-anchor]')?.getAttribute('text-anchor') ||
+      ''
+    ).toLowerCase().trim();
+    const isAnchorCenter = rawAnchor === 'middle' || rawAnchor === 'center';
+    const isAnchorRight = rawAnchor === 'end' || rawAnchor === 'right';
+
+    const dataAlign = (
+      foTarget.getAttribute('data-text-align') ||
+      foTarget.getAttribute('data-align') ||
+      foTarget.getAttribute('text-align') ||
+      target?.getAttribute?.('data-text-align') ||
+      target?.getAttribute?.('data-align') ||
+      ''
+    ).toLowerCase().trim();
+
+    const inlineAlign = (div.style.textAlign || '').toLowerCase().trim();
+    const validInline = inlineAlign && inlineAlign !== 'start' && inlineAlign !== 'initial' && inlineAlign !== 'inherit';
+
+    let detectedAlign = 'left';
+    if (isAnchorCenter || dataAlign === 'center' || inlineAlign === 'center') {
+      detectedAlign = 'center';
+    } else if (isAnchorRight || dataAlign === 'right' || inlineAlign === 'right') {
+      detectedAlign = 'right';
+    } else if (dataAlign === 'justify' || inlineAlign === 'justify') {
+      detectedAlign = 'justify';
+    } else if (validInline) {
+      detectedAlign = inlineAlign;
     }
 
-    // Keep the main selection overlay but remove the corner dots
+    div.style.textAlign = detectedAlign;
+    foTarget.setAttribute('data-text-align', detectedAlign);
+
+    // 4. Set cursor to TYPE_CURSOR
+    if (svgContainer) {
+      svgContainer.classList.add('text-editing-mode');
+      const divWrapper = svgContainer.querySelector('div');
+      if (divWrapper) divWrapper.style.cursor = TYPE_CURSOR;
+    }
+
+    // Remove selection handles during active editing
     document.querySelectorAll('.selection-overlay-layer .resize-handle').forEach(h => h.remove());
     document.querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle').forEach(h => h.remove());
 
     clearOverlayType('hover');
     clearOverlayType('child-hover');
+    clearSmartGuides();
 
-    // Mark as editing
+    // 5. Make exact text directly editable in-place on the page
     foTarget.setAttribute('data-editing', 'true');
     div.setAttribute('contenteditable', 'true');
+    div.setAttribute('spellcheck', 'false');
     div.style.outline = 'none';
     div.style.userSelect = 'text';
     div.style.pointerEvents = 'auto';
-    div.style.cursor = 'text';
+    div.style.cursor = TYPE_CURSOR;
 
     const stopScrollPropagation = (e) => {
       e.stopPropagation();
@@ -96,87 +138,24 @@ export const useInlineTextEditor = ({
     div.addEventListener('touchstart', stopScrollPropagation);
     div.addEventListener('wheel', stopScrollPropagation);
 
+    // 6. Fast session initialization
+    editCacheManager.startSession(foTarget, div);
+
     const handleInput = () => {
-      const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-height';
-      const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
-
-      if (!isScrollable) {
-        const oldHeight = div.style.height;
-        const oldMinHeight = div.style.minHeight;
-        const oldWidth = div.style.width;
-
-        // Temporarily allow height to shrink to measure true text height
-        div.style.setProperty('height', 'auto', 'important');
-        div.style.setProperty('min-height', '0px', 'important');
-
-        if (sizingMode === 'auto-width') {
-          div.style.setProperty('width', 'max-content', 'important');
-        }
-
-        const contentH = div.scrollHeight;
-        const contentW = div.scrollWidth;
-
-        div.style.setProperty('height', oldHeight || '100%', 'important');
-        div.style.setProperty('min-height', oldMinHeight || '100%', 'important');
-        if (sizingMode === 'auto-width') {
-          div.style.setProperty('width', oldWidth || '100%', 'important');
-        }
-
-        const foH = parseFloat(foTarget.getAttribute('height')) || 0;
-        const foW = parseFloat(foTarget.getAttribute('width')) || 0;
-        const currentX = parseFloat(foTarget.getAttribute('x')) || 0;
-
-        if (sizingMode === 'auto-width' && Math.abs(contentW - foW) > 2) {
-          const widthDiff = contentW - foW;
-          const align = window.getComputedStyle(div).textAlign;
-          foTarget.setAttribute('width', Math.max(contentW + 4, 10));
-          if (align === 'center') {
-            foTarget.setAttribute('x', currentX - (widthDiff / 2));
-          } else if (align === 'right' || align === 'end') {
-            foTarget.setAttribute('x', currentX - widthDiff);
-          }
-        }
-
-        if (sizingMode !== 'fixed' && Math.abs(contentH - foH) > 2) {
-          foTarget.setAttribute('height', contentH + 4);
-        }
-
-        // Always ensure the selection overlay highlight precisely encloses the current element
-        const highlightType = document.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`) ? 'child-selected' : 'selected';
-        const container = foTarget.closest('.page-svg-container');
-        if (container) {
-          const pageIdx = container.getAttribute('data-page-index');
-          const overlay = document.getElementById(`highlight-overlay-${pageIdx}`);
-          if (overlay) {
-            const oldSel = overlay.querySelector(`[id="overlay-poly-selected-${foTarget.id}"]`);
-            if (oldSel) oldSel.remove();
-            const oldChildSel = overlay.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`);
-            if (oldChildSel) oldChildSel.remove();
-          }
-        }
-        drawOverlayHighlight(foTarget, highlightType);
-        clearOverlayType('hover');
-        clearOverlayType('child-hover');
-
-        // Also redraw parent group's entered overlay to prevent the dashed line from sticking in the middle
-        const parentGroup = foTarget.closest('g');
-        if (parentGroup && parentGroup.getAttribute('data-name') === 'Group') {
-          const overlayNode = document.querySelector(`[id="overlay-poly-entered-${parentGroup.id}"]`);
-          if (overlayNode) {
-            overlayNode.remove();
-            drawOverlayHighlight(parentGroup, 'entered');
-          }
-        }
+      // Keep alignment strictly locked
+      if (div.style.textAlign !== detectedAlign) {
+        div.style.textAlign = detectedAlign;
       }
+      // Zero-lag measurement without expensive overlay highlight recalculations during typing
+      editCacheManager.scheduleInputMeasurement(null);
     };
+
     div.addEventListener('input', handleInput);
+
+    // 7. Instant focus with 0ms lag
     div.focus();
 
-    // Immediately trigger a resize so it precisely shrink-wraps the initial text
-    handleInput();
-
-    // Place cursor at the clicked position using caretRangeFromPoint if coords are available
-    // Otherwise fall back to end of text
+    // 8. Place caret at exact click coordinates
     const placeCaretAtClick = (cx, cy) => {
       let placed = false;
       if (selectAll) {
@@ -187,7 +166,6 @@ export const useInlineTextEditor = ({
         sel.addRange(range);
         placed = true;
       } else if (cx !== null && cy !== null) {
-        // Standard (Chrome/Edge/Safari)
         if (document.caretRangeFromPoint) {
           const clickRange = document.caretRangeFromPoint(cx, cy);
           if (clickRange) {
@@ -196,7 +174,6 @@ export const useInlineTextEditor = ({
             sel.addRange(clickRange);
             placed = true;
           }
-          // Firefox
         } else if (document.caretPositionFromPoint) {
           const pos = document.caretPositionFromPoint(cx, cy);
           if (pos) {
@@ -211,7 +188,6 @@ export const useInlineTextEditor = ({
         }
       }
       if (!placed) {
-        // Fallback: move to end
         const range = document.createRange();
         range.selectNodeContents(div);
         range.collapse(false);
@@ -221,15 +197,19 @@ export const useInlineTextEditor = ({
       }
     };
 
-    // Use a tiny timeout so the browser has fully rendered the contenteditable before we place the caret
-    setTimeout(() => placeCaretAtClick(clientX, clientY), 0);
+    placeCaretAtClick(clientX, clientY);
 
-    div.setAttribute('spellcheck', 'false');
+    // Defer highlight redraw to rAF to guarantee 0ms focus latency
+    requestAnimationFrame(() => {
+      drawOverlayHighlight(foTarget, 'selected');
+    });
 
     const cleanup = () => {
       isEditingTextRef.current = false;
-      
-      
+      clearSmartGuides();
+      editCacheManager.endSession((el, highlightType) => drawOverlayHighlight(el, highlightType));
+
+      div.removeEventListener('input', handleInput);
       foTarget.removeAttribute('data-editing');
       div.removeAttribute('contenteditable');
       div.style.outline = 'none';
@@ -238,17 +218,19 @@ export const useInlineTextEditor = ({
       div.style.pointerEvents = 'none';
       div.style.cursor = '';
       div.classList.remove('text-edit-box');
+
       div.removeEventListener('blur', handleBlur);
       div.removeEventListener('keydown', handleKeyDown);
       div.removeEventListener('mousedown', stopScrollPropagation);
       div.removeEventListener('pointerdown', stopScrollPropagation);
       div.removeEventListener('touchstart', stopScrollPropagation);
       div.removeEventListener('wheel', stopScrollPropagation);
+
       const s = window.getSelection();
       if (s) s.removeAllRanges();
 
-      // Restore cursor for wrapper
       if (svgContainer) {
+        svgContainer.classList.remove('text-editing-mode');
         const divWrapper = svgContainer.querySelector('div');
         if (divWrapper) {
           const isPencilActive = activeMainToolRef.current === 'pen' && selectedPenToolRef.current === 'pencil';
@@ -278,7 +260,6 @@ export const useInlineTextEditor = ({
       suppressClickRef.current = true;
       setTimeout(() => { suppressClickRef.current = false; }, 200);
 
-      
       const finalContent = div.innerText || '';
 
       if (finalContent.trim().length === 0) {
@@ -310,7 +291,7 @@ export const useInlineTextEditor = ({
         return;
       }
 
-      // Auto-grow height and width to fit content
+      // Auto-grow height and width while maintaining exact alignment
       const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-height';
       const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
 
@@ -323,7 +304,6 @@ export const useInlineTextEditor = ({
           div.style.width = 'max-content';
         }
 
-        // Temporarily allow height to shrink to measure true text height
         div.style.setProperty('height', 'auto', 'important');
         div.style.setProperty('min-height', '0px', 'important');
 
@@ -338,13 +318,13 @@ export const useInlineTextEditor = ({
         const currentH = parseFloat(foTarget.getAttribute('height')) || 0;
         const currentX = parseFloat(foTarget.getAttribute('x')) || 0;
 
-        if (sizingMode === 'auto-width' && Math.abs(contentW - currentW) > 2) {
+        if (Math.abs(contentW - currentW) > 2) {
           const widthDiff = contentW - currentW;
-          const align = window.getComputedStyle(div).textAlign;
+          const currentAlign = div.style.textAlign || foTarget.getAttribute('data-text-align') || 'left';
           foTarget.setAttribute('width', Math.max(contentW + 4, 10));
-          if (align === 'center') {
+          if (currentAlign === 'center') {
             foTarget.setAttribute('x', currentX - (widthDiff / 2));
-          } else if (align === 'right' || align === 'end') {
+          } else if (currentAlign === 'right' || currentAlign === 'end') {
             foTarget.setAttribute('x', currentX - widthDiff);
           }
         }
@@ -354,9 +334,14 @@ export const useInlineTextEditor = ({
         }
       }
 
+      // Persist alignment on div and foreignObject
+      const finalAlign = div.style.textAlign || foTarget.getAttribute('data-text-align') || 'left';
+      div.style.textAlign = finalAlign;
+      foTarget.setAttribute('data-text-align', finalAlign);
+
       cleanup();
 
-      // Re-select the element and redraw handles
+      // Re-select element and redraw highlight
       if (foTarget.id) {
         if (setSelectedLayerId) setSelectedLayerId(foTarget.id);
         selectedLayerIdRef.current = foTarget.id;
@@ -376,67 +361,38 @@ export const useInlineTextEditor = ({
       if (e.key === 'Escape') {
         e.preventDefault();
         div.blur();
-      } else if (e.key === 'Enter' && !e.shiftKey) {
-        const sel = window.getSelection();
-        if (sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
           const node = range.startContainer;
+          const textBefore = (node.nodeType === Node.TEXT_NODE ? node.textContent.slice(0, range.startOffset) : '');
+          const currentLine = textBefore.split('\n').pop() || '';
+          
+          const bulletMatch = currentLine.match(/^(•\s*)/);
+          const numMatch = currentLine.match(/^(\d+)\.\s*/);
 
-          let lineText = '';
-          let walker = document.createTreeWalker(div, NodeFilter.SHOW_ALL, null, false);
-          walker.currentNode = node;
-
-          if (node.nodeType === Node.TEXT_NODE) {
-            lineText = node.textContent.substring(0, range.startOffset);
-          }
-
-          let prev = walker.previousNode();
-          while (prev) {
-            if (prev.nodeName === 'BR' || prev.nodeName === 'DIV' || prev.nodeName === 'P') break;
-            if (prev.nodeType === Node.TEXT_NODE) lineText = prev.textContent + lineText;
-            prev = walker.previousNode();
-          }
-
-          const bulletMatch = lineText.match(/^\s*(•|-)\s+/);
-          const numberMatch = lineText.match(/^\s*(\d+)\.\s+/);
-
-          if (bulletMatch || numberMatch) {
+          if (bulletMatch) {
             e.preventDefault();
-            let prefix = '';
-            let isEmpty = false;
-
-            if (bulletMatch) {
-              if (lineText.trim() === bulletMatch[0].trim()) isEmpty = true;
-              else prefix = bulletMatch[0].trim() + ' ';
-            } else if (numberMatch) {
-              if (lineText.trim() === numberMatch[0].trim()) isEmpty = true;
-              else {
-                const nextNum = parseInt(numberMatch[1], 10) + 1;
-                prefix = nextNum + '. ';
-              }
-            }
-
-            if (isEmpty) {
-              const deleteRange = document.createRange();
-              deleteRange.setEnd(range.startContainer, range.startOffset);
-              let startNode = node;
-              let startOffset = 0;
-              walker.currentNode = node;
-              let p = walker.previousNode();
-              while (p) {
-                if (p.nodeName === 'BR' || p.nodeName === 'DIV' || p.nodeName === 'P') break;
-                if (p.nodeType === Node.TEXT_NODE) {
-                  startNode = p;
-                  startOffset = 0;
-                }
-                p = walker.previousNode();
-              }
-              deleteRange.setStart(startNode, startOffset);
-              sel.removeAllRanges();
-              sel.addRange(deleteRange);
-              document.execCommand('delete', false);
+            if (currentLine.trim() === '•') {
+              // Empty bullet item -> exit list
+              document.execCommand('delete', false, null);
+              document.execCommand('insertText', false, '\n');
             } else {
-              document.execCommand('insertHTML', false, '<br>' + prefix);
+              document.execCommand('insertText', false, '\n• ');
+            }
+          } else if (numMatch) {
+            e.preventDefault();
+            const currentNum = parseInt(numMatch[1], 10);
+            if (currentLine.trim() === `${currentNum}.`) {
+              // Empty numbered item -> exit list
+              document.execCommand('delete', false, null);
+              document.execCommand('insertText', false, '\n');
+            } else {
+              document.execCommand('insertText', false, `\n${currentNum + 1}. `);
             }
           }
         }
@@ -446,8 +402,6 @@ export const useInlineTextEditor = ({
     div.addEventListener('blur', handleBlur);
     div.addEventListener('keydown', handleKeyDown);
   };
-
-
 
   return {
     enterTextEditMode

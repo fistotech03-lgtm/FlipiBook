@@ -14,19 +14,19 @@ const DEFAULT_AVATAR_COLORS = [
 
 const DEFAULT_NAV_LINKS = [
   { name: 'Home', path: '/home' },
-  { name: 'Converter', path: '/converter' },
   { name: 'Explore', path: '/explore' },
   { name: 'Features', path: '/features' },
+  { name: 'Converter', path: '/converter' },
   { name: 'Pricing', path: '/pricing' },
+  { name: 'Forum', path: '/forum' },
   { name: 'Help', path: '/help' },
 ];
 
 const MY_FLIPBOOKS_NAV_LINKS = [
-  { name: 'Over View', path: '/home' },
+  { name: 'Overview', path: '/overview' },
   { name: 'My Flipibooks', path: '/my-flipbooks' },
   { name: 'Templates', path: '/templates' },
-  { name: 'Features', path: '/features' },
-  { name: 'Help / Support', path: '/help' },
+  { name: 'Guide', path: '/guide' },
 ];
 
 const PROTECTED_NAV_ITEMS = new Set(['/my-flipbooks']);
@@ -46,7 +46,8 @@ const getAvatarColor = (identifier, customColor) => {
 const checkIsLinkActive = (link, currentPath) => {
   return currentPath === link.path || 
          (link.name === 'Home' && currentPath === '/') ||
-         (link.name === 'Over View' && currentPath === '/home') ||
+         (link.name === 'Overview' && currentPath === '/overview') ||
+         (link.name === 'Over View' && currentPath === '/overview') ||
          (link.name === 'My Flipibooks' && currentPath.startsWith('/my-flipbooks')) ||
          (link.path === '/contact' && currentPath === '/contact-us') ||
          (link.path === '/help' && (currentPath === '/help' || currentPath === '/contact'));
@@ -56,7 +57,7 @@ export default function HomeNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const isMyFlipbooksPage = currentPath.startsWith('/my-flipbooks') || currentPath.startsWith('/templates') || currentPath.startsWith('/settings');
+  const isMyFlipbooksPage = currentPath.startsWith('/my-flipbooks') || currentPath.startsWith('/templates') || currentPath.startsWith('/settings') || currentPath.startsWith('/overview') || currentPath.startsWith('/guide');
   
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -113,7 +114,7 @@ export default function HomeNav() {
   return (
     <>
       <nav 
-        className="w-full bg-white px-[1.5vw] flex items-center justify-between z-50 border-b border-gray-200 shadow-xs" 
+        className="w-full h-full bg-white px-[1.5vw] flex items-center justify-between border-b border-gray-200 shadow-xs" 
         style={{ height: '7vh' }}
         aria-label="Main Navigation"
       >
@@ -185,8 +186,10 @@ export default function HomeNav() {
                   style={{ backgroundColor: avatarBgColor }}
                 >
                   {!user ? (
-                    <div className="w-full h-full rounded-full flex items-center justify-center bg-gray-100 animate-pulse">
-                      <div className="w-[1.1vw] h-[1.1vw] rounded-full bg-gray-300/80" />
+                    <div className="w-full h-full rounded-full flex items-center justify-center bg-gray-100 text-gray-400">
+                      <svg className="w-[1.2vw] h-[1.2vw]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                      </svg>
                     </div>
                   ) : hasValidPicture ? (
                     <img 

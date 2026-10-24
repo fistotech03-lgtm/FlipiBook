@@ -8,6 +8,19 @@ const createTransporter = () => {
     console.warn('[Email Service] Warning: EMAIL_USER or EMAIL_APP_PASSWORD not set in environment.');
   }
 
+  // Support custom transactional SMTP services (e.g. Resend, Brevo, SendGrid, Amazon SES)
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    });
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -18,24 +31,28 @@ const createTransporter = () => {
 };
 
 /**
- * Sends a 6-digit OTP email to user
+ * Sends a 6-digit OTP email to user for password reset
  * @param {string} toEmail 
  * @param {string} otp 
  */
 const sendOtpEmail = async (toEmail, otp) => {
   const transporter = createTransporter();
   const senderEmail = process.env.EMAIL_USER || 'no-reply@flipibook.com';
+  const fromHeader = process.env.EMAIL_FROM_NAME
+    ? `"${process.env.EMAIL_FROM_NAME}" <${senderEmail}>`
+    : `"Flipbook" <${senderEmail}>`;
 
   const mailOptions = {
-    from: `"Flipbook Security" <${senderEmail}>`,
+    from: fromHeader,
     to: toEmail,
-
-    subject: `🔐 Your Flipbook Password Reset Code: ${otp}`,
+    subject: 'Flipbook Password Reset Code',
+    text: `Hello,\n\nWe received a request to reset your password for your Flipbook account (${toEmail}).\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this code, please safely ignore this email.\n\n© ${new Date().getFullYear()} Flipbook. All rights reserved.`,
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f7; color: #333333; margin: 0; padding: 0; }
           .container { max-width: 520px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
@@ -50,7 +67,7 @@ const sendOtpEmail = async (toEmail, otp) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Flipbook Security</h1>
+            <h1>Flipbook</h1>
           </div>
           <div class="content">
             <p style="font-size: 16px; margin-top: 0;">Hello,</p>
@@ -60,7 +77,7 @@ const sendOtpEmail = async (toEmail, otp) => {
               <div class="otp-code" title="Click to select code">${otp}</div>
               <span style="font-size: 11px; color: #999999; display: block; margin-top: 8px;">(Click or tap code to select & copy) &bull; Valid for 10 minutes</span>
             </div>
-            <p style="font-size: 13px; color: #777777;">If you did not request this code, please ignore this email or contact support if you suspect unauthorized activity.</p>
+            <p style="font-size: 13px; color: #777777;">If you did not request this code, please safely ignore this email.</p>
           </div>
           <div class="footer">
             &copy; ${new Date().getFullYear()} Flipbook. All rights reserved.
@@ -82,20 +99,23 @@ const sendOtpEmail = async (toEmail, otp) => {
  */
 const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
   const transporter = createTransporter();
-
   const greeting = userName ? `Hello ${userName},` : 'Hello,';
-
   const senderEmail = process.env.EMAIL_USER || 'no-reply@flipibook.com';
+  const fromHeader = process.env.EMAIL_FROM_NAME
+    ? `"${process.env.EMAIL_FROM_NAME}" <${senderEmail}>`
+    : `"Flipbook" <${senderEmail}>`;
 
   const mailOptions = {
-    from: `"Flipbook Security" <${senderEmail}>`,
+    from: fromHeader,
     to: toEmail,
-    subject: `🎉 Your Flipbook Account Verification Code: ${otp}`,
+    subject: 'Verify your Flipbook account',
+    text: `${greeting}\n\nThank you for registering with Flipbook. To complete your account creation, please verify your email address (${toEmail}).\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not initiate this registration, please safely ignore this email.\n\n© ${new Date().getFullYear()} Flipbook. All rights reserved.`,
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f7; color: #333333; margin: 0; padding: 0; }
           .container { max-width: 520px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
@@ -135,3 +155,4 @@ const sendSignupOtpEmail = async (toEmail, otp, userName = '') => {
 };
 
 module.exports = { sendOtpEmail, sendSignupOtpEmail };
+

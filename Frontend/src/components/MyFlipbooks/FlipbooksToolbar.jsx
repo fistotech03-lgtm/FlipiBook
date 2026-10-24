@@ -29,6 +29,7 @@ export default function FlipbooksToolbar({
     isAllSelected,
     handleSelectAll
 }) {
+
     return (
         <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
             <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">
@@ -46,7 +47,7 @@ export default function FlipbooksToolbar({
                             placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-sm"
+                            className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:border-[#ec5137] focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-sm transition-colors"
                         />
                     </div>
 
@@ -201,6 +202,8 @@ export default function FlipbooksToolbar({
                         </div>
                         <span className="text-[0.85vw] font-medium text-gray-600">Multiple Selection</span>
                     </label>
+
+
                 </div>
             </div>
         </div>

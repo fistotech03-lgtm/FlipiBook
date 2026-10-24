@@ -1,8 +1,9 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { Check, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const activityOptions = [
   'All Activities',
@@ -139,16 +140,8 @@ const Activity = ({ userEmail: propEmail }) => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
-  const effectiveEmail = propEmail || (() => {
-    try {
-      const stored = localStorage.getItem('user_profile') || localStorage.getItem('user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.emailId || parsed.email || (typeof stored === 'string' && !stored.startsWith('{') ? stored : '');
-      }
-    } catch (e) {}
-    return '';
-  })();
+  const { user } = useAuth();
+  const effectiveEmail = propEmail || user?.emailId || user?.email || '';
 
   // Debounce search query
   useEffect(() => {

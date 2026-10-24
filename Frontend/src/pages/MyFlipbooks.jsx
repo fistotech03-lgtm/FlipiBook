@@ -8,6 +8,12 @@ import AlertModal from '../components/AlertModal';
 import CreateBookLayout from '../Layouts/CreateBookLayout';
 import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
+import StorageLimitModal from '../components/StorageLimitModal';
+import LegacyFormatModal from '../components/LegacyFormatModal';
+import { validateStorageBeforeUpload } from '../utils/storageValidation';
+import { saveCustomizedEditorState, savePageEditorState } from '../utils/dbUtils';
+import { backgroundSyncManager } from '../utils/backgroundSyncManager';
+import { preloadEditorComponents } from '../utils/preloadUtils';
 const ShareModal = React.lazy(() => import('../components/ShareModal'));
 const ExportModal = React.lazy(() => import('../components/ExportModal'));
 import {
@@ -31,7 +37,7 @@ import { fetchFlipbookFolders, fetchFlipbookBooks, queryClient } from '../queryC
 import { useAuth } from '../context/AuthContext';
 import flipbookApi from '../api/flipbookApi';
 import useUserStorage from '../hooks/useUserStorage';
-import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { getAssetBaseUrl } from '../utils/assetUtils';
 
 
 const sortCategories = [
@@ -73,16 +79,8 @@ const templates = [
 export default function MyFlipbooks() {
     const navigate = useNavigate();
 
-    // User Data from Redux Auth (with fallback to localStorage for backward compatibility)
-    const { user: authUser } = useAuth();
-    const user = authUser || (() => {
-        try {
-            const storedUser = localStorage.getItem('user');
-            return storedUser ? JSON.parse(storedUser) : null;
-        } catch (e) {
-            return null;
-        }
-    })();
+    // User Data from Redux Auth
+    const { user } = useAuth();
     const emailId = user?.emailId || user?.email;
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -96,10 +94,16 @@ export default function MyFlipbooks() {
         fetchLiveStorageSettings,
     } = useUserStorage(emailId);
 
+    // Warm up editor components in background so navigation never hits chunk load delays
+    useEffect(() => {
+        preloadEditorComponents();
+    }, []);
+
     const [searchParams] = useSearchParams();
     const [activeFolder, setActiveFolder] = useState(() => {
         const saved = localStorage.getItem('last_active_folder');
         if (saved === 'Recent Book') return 'Recent';
+        if (saved === 'default' || saved === 'My_Flipbooks') return 'My Flipbooks';
         return saved || 'All Flipbook';
     });
     const [dashboardMode, setDashboardMode] = useState(() => {
@@ -128,6 +132,7 @@ export default function MyFlipbooks() {
     }, [searchParams]);
 
     const [active3dFolder, setActive3dFolder] = useState('All Models');
+    const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [sortOption, setSortOption] = useState('Recently Created');
@@ -247,10 +252,22 @@ export default function MyFlipbooks() {
         e.preventDefault();
     };
 
-    const handleUploadBoxDrop = (e) => {
+    const handleUploadBoxDrop = async (e) => {
         e.preventDefault();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            setInitialDroppedFiles(Array.from(e.dataTransfer.files));
+            const dropped = Array.from(e.dataTransfer.files);
+            const totalSize = dropped.reduce((acc, f) => acc + (f.size || 0), 0);
+            const validation = await validateStorageBeforeUpload(emailId, totalSize, storage);
+            if (validation.exceeds) {
+                setStorageLimitModal({
+                    isOpen: true,
+                    storage: { used: validation.used, total: validation.total },
+                    requiredSize: totalSize,
+                    isFull: validation.isFull
+                });
+                return;
+            }
+            setInitialDroppedFiles(dropped);
             setCreateModalInitialView('upload');
             setIsCreateModalOpen(true);
         }
@@ -270,6 +287,19 @@ export default function MyFlipbooks() {
         type: 'error',
         showCancel: false,
         onConfirm: null
+    });
+
+    const [storageLimitModal, setStorageLimitModal] = useState({
+        isOpen: false,
+        storage: null,
+        requiredSize: 0,
+        isFull: false
+    });
+
+    const [legacyModal, setLegacyModal] = useState({
+        isOpen: false,
+        file: null,
+        legacyType: 'doc'
     });
 
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -319,6 +349,25 @@ export default function MyFlipbooks() {
 
     const handleUploadPDF = async (files, customName) => {
         if (!files || files.length === 0) return;
+
+        // Calculate incoming total file size
+        const totalPdfSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
+
+        // Validate actual storage space occupied by user BEFORE starting extraction/upload
+        const validation = await validateStorageBeforeUpload(emailId, totalPdfSize, storage);
+        if (validation.exceeds) {
+            setIsCreateModalOpen(false);
+            setInitialDroppedFiles(null);
+            setIsLoading(false);
+            setStorageLimitModal({
+                isOpen: true,
+                storage: { used: validation.used, total: validation.total },
+                requiredSize: totalPdfSize,
+                isFull: validation.isFull
+            });
+            return;
+        }
+
         setIsCreateModalOpen(false);
         setInitialDroppedFiles(null);
         setIsLoading(true);
@@ -345,10 +394,6 @@ export default function MyFlipbooks() {
         });
 
         try {
-            let totalPdfSize = 0;
-            for (const file of files) {
-                totalPdfSize += file.size || 0;
-            }
             let allImages = [];
 
             // Step 1 â€” Extract all PDF pages into SVG blobs
@@ -372,7 +417,32 @@ export default function MyFlipbooks() {
                     fileName: file.name,
                     stage: 'converting'
                 });
-                const images = await convertPdfWithInkscape(file, Infinity, backendUrl);
+                const images = await convertPdfWithInkscape(file, Infinity, backendUrl, (currOrObj, total, pct, stage, msg) => {
+                    let current, pageCount, percent, message, currentStage;
+                    if (typeof currOrObj === 'object' && currOrObj !== null) {
+                        percent = currOrObj.percent ?? currOrObj.pct;
+                        current = currOrObj.current ?? currOrObj.curr;
+                        pageCount = currOrObj.total ?? currOrObj.pageCount;
+                        currentStage = currOrObj.stage || 'converting';
+                        message = currOrObj.message || (percent !== undefined ? `Converting ${docLabel} (${percent}%)...` : `Converting ${docLabel}...`);
+                    } else {
+                        current = currOrObj;
+                        pageCount = total;
+                        percent = pct;
+                        currentStage = stage || 'converting';
+                        message = msg || (total ? `Extracting page ${currOrObj} of ${total} (${pct}%)...` : `Converting ${docLabel} (${pct}%)...`);
+                    }
+                    setProcessingProgress(prev => ({
+                        ...(prev || {}),
+                        current: current !== undefined ? current : prev?.current,
+                        total: pageCount !== undefined ? pageCount : prev?.total,
+                        pageCount: pageCount !== undefined ? pageCount : prev?.pageCount,
+                        percent: percent !== undefined ? percent : prev?.percent,
+                        message: message || prev?.message,
+                        fileName: file.name,
+                        stage: currentStage || prev?.stage || 'converting'
+                    }));
+                });
                 if (isUploadCancelledRef.current) return;
                 allImages = [...allImages, ...images];
             }
@@ -419,21 +489,30 @@ export default function MyFlipbooks() {
             }
             uniqueName = candidateBookName;
 
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
+            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
 
-            // Step 2 â€” Encode pages and save flipbook in a single high-speed request
+            // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
                 current: 0,
                 total: allImages.length,
                 totalFiles: files.length,
-                message: 'Saving pages & binding flipbook...',
+                pageCount: allImages.length,
+                percent: 88,
+                message: 'Saving pages & preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
             });
             const allPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
                 const base64Url = img.dataUrl || (img.content ? svgToDataUrl(img.content) : "") || (img.blob ? await blobToBase64(img.blob) : "");
-                const html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
+                let html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
+                if (html && html.includes('<svg')) {
+                    html = html.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
+                    html = html.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
+                    if (!html.includes('width="100%"')) {
+                        html = html.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
+                    }
+                }
                 return {
                     pageName: `Page ${pageIndex}`,
                     content: html,
@@ -443,51 +522,60 @@ export default function MyFlipbooks() {
 
             if (isUploadCancelledRef.current) return;
 
-            // For standard flipbooks (up to 20 pages), save in a single request!
-            if (allPages.length <= 20) {
-                setProcessingProgress({
-                    current: allPages.length,
-                    total: allPages.length,
-                    totalFiles: files.length,
-                    message: 'Saving pages & binding flipbook...',
-                    fileName: uniqueName,
-                    stage: 'saving'
-                });
-                const createRes = await flipbookApi.saveBook({
-                    emailId,
-                    flipbookName: uniqueName,
-                    pages: allPages,
-                    overwrite: false,
+            // Generate unique book ID immediately for pre-caching
+            const cryptoVId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+                : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+
+            const orientation = maxWidth > maxHeight ? 'landscape' : (Math.abs(maxWidth - maxHeight) < 2 ? 'square' : 'portrait');
+
+            // Save initial 2 pages to create the book record on server in <200ms
+            const initialBatchSize = Math.min(allPages.length, 2);
+            const initialBatch = allPages.slice(0, initialBatchSize);
+            const remainingPages = allPages.slice(initialBatchSize);
+
+            setProcessingProgress({
+                current: allPages.length,
+                total: allPages.length,
+                totalFiles: files.length,
+                pageCount: allPages.length,
+                percent: 94,
+                message: 'Preparing flipbook...',
+                fileName: uniqueName,
+                stage: 'saving'
+            });
+
+            // Pre-cache ALL pages in IndexedDB for BOTH CustomizedEditor and PageEditor immediately
+            await Promise.all([
+                saveCustomizedEditorState({
+                    v_id: cryptoVId,
+                    bookName: uniqueName,
                     folderName: targetFolder,
-                    keepBase64: true,
-                    fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
-                });
-                const v_id = createRes.data.v_id;
-                createdFlipbookVIdRef.current = v_id;
+                    pages: allPages,
+                    targetPage: 0,
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation
+                }),
+                savePageEditorState({
+                    v_id: cryptoVId,
+                    pageName: uniqueName,
+                    bookName: uniqueName,
+                    folderName: targetFolder,
+                    pages: allPages.map((p, idx) => ({
+                        id: `page_${idx + 1}`,
+                        v_id: `page_${idx + 1}`,
+                        name: p.pageName || `Page ${idx + 1}`,
+                        fileName: `${idx + 1}.svg`,
+                        pageNumber: idx + 1,
+                        html: p.content || p.html || '',
+                        layers: [],
+                        isLazy: false
+                    })),
+                    activePageIndex: 0
+                })
+            ]).catch(err => console.warn('[MyFlipbooks] Pre-cache save error:', err));
 
-                if (isUploadCancelledRef.current) {
-                    flipbookApi.deleteBook(emailId, v_id).catch(() => {});
-                    return;
-                }
-
-                setProcessingProgress({
-                    current: allPages.length,
-                    total: allPages.length,
-                    totalFiles: files.length,
-                    message: 'Opening flipbook...',
-                    fileName: uniqueName,
-                    stage: 'done'
-                });
-
-                // Navigate to the customized editor
-                navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {
-                    state: { flipbookName: uniqueName, pageCount: allPages.length }
-                });
-                return;
-            }
-
-            // For extra large flipbooks (> 20 pages), save initial batch then batch remaining
-            const initialBatch = allPages.slice(0, 20);
             const createRes = await flipbookApi.saveBook({
                 emailId,
                 flipbookName: uniqueName,
@@ -495,57 +583,111 @@ export default function MyFlipbooks() {
                 overwrite: false,
                 folderName: targetFolder,
                 keepBase64: true,
-                fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
-            });
-            const v_id = createRes.data.v_id;
-            createdFlipbookVIdRef.current = v_id;
-
-            const BATCH_SIZE = 15;
-            for (let i = 20; i < allPages.length; i += BATCH_SIZE) {
-                if (isUploadCancelledRef.current) {
-                    flipbookApi.deleteBook(emailId, v_id).catch(() => {});
-                    return;
+                v_id: cryptoVId,
+                fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0),
+                meta: {
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation
                 }
-                const batchPages = allPages.slice(i, i + BATCH_SIZE);
-                setProcessingProgress({
-                    current: Math.min(i + BATCH_SIZE, allPages.length),
-                    total: allPages.length,
-                    totalFiles: files.length,
-                    message: `Saving pages ${i + 1} to ${Math.min(i + BATCH_SIZE, allPages.length)} of ${allPages.length}...`,
-                    fileName: uniqueName,
-                    stage: 'saving'
-                });
-                await flipbookApi.savePagesBatch({
-                    emailId,
-                    v_id,
-                    pages: batchPages,
-                    keepBase64: true,
-                    fileSize: totalPdfSize
-                });
-            }
+            });
+            const v_id = createRes.data?.v_id || cryptoVId;
+            createdFlipbookVIdRef.current = v_id;
 
             if (isUploadCancelledRef.current) {
                 flipbookApi.deleteBook(emailId, v_id).catch(() => {});
                 return;
             }
 
+            // If server returned a different v_id, also cache under that v_id
+            if (v_id !== cryptoVId) {
+                await Promise.all([
+                    saveCustomizedEditorState({
+                        v_id,
+                        bookName: uniqueName,
+                        folderName: targetFolder,
+                        pages: allPages,
+                        targetPage: 0,
+                        width: maxWidth,
+                        height: maxHeight,
+                        orientation
+                    }),
+                    savePageEditorState({
+                        v_id,
+                        pageName: uniqueName,
+                        bookName: uniqueName,
+                        folderName: targetFolder,
+                        pages: allPages.map((p, idx) => ({
+                            id: `page_${idx + 1}`,
+                            v_id: `page_${idx + 1}`,
+                            name: p.pageName || `Page ${idx + 1}`,
+                            fileName: `${idx + 1}.svg`,
+                            pageNumber: idx + 1,
+                            html: p.content || p.html || '',
+                            layers: [],
+                            isLazy: false
+                        })),
+                        activePageIndex: 0
+                    })
+                ]).catch(() => {});
+            }
+
+            // Queue remaining pages for non-blocking asynchronous cloud sync
+            if (remainingPages.length > 0) {
+                backgroundSyncManager.enqueue(v_id, emailId, remainingPages, totalPdfSize);
+            }
+
             setProcessingProgress({
                 current: allPages.length,
                 total: allPages.length,
                 totalFiles: files.length,
+                percent: 100,
                 message: 'Opening flipbook...',
                 fileName: uniqueName,
                 stage: 'done'
             });
 
-            // Step 4 â€” Navigate to the customized editor
+            // Smooth transition: small delay to let progress hit 100% cleanly
+            await new Promise(res => setTimeout(res, 80));
+
+            // Navigate to the customized editor IMMEDIATELY with all in-memory pages
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {
-                state: { flipbookName: uniqueName, pageCount: allPages.length }
+                state: { 
+                    flipbookName: uniqueName, 
+                    pageCount: allPages.length,
+                    pages: allPages,
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation,
+                    folderName: targetFolder,
+                    v_id: v_id
+                }
             });
+            return;
 
         } catch (error) {
             if (!isUploadCancelledRef.current) {
                 console.error("PDF/Document conversion error:", error);
+                if (error.isLegacyFormat) {
+                    setLegacyModal({
+                        isOpen: true,
+                        file: files[0],
+                        legacyType: error.legacyType
+                    });
+                    return;
+                }
+                if (error.response?.status === 403 && (error.response?.data?.code === 'STORAGE_LIMIT_EXCEEDED' || error.response?.data?.message?.toLowerCase().includes('storage'))) {
+                    setStorageLimitModal({
+                        isOpen: true,
+                        storage: { 
+                            used: error.response?.data?.usedStorage || storage.used, 
+                            total: error.response?.data?.maxStorage || storage.total 
+                        },
+                        requiredSize: totalPdfSize,
+                        isFull: true
+                    });
+                    return;
+                }
                 const rawMsg = error.response?.data?.message || error.message || "";
                 const isCorrupt = error.response?.data?.isCorrupted ||
                                   /corrupt|cannot be read|not be loaded|damaged|password|format error|failed to parse|invalid pdf|syntax error/i.test(rawMsg);
@@ -615,16 +757,19 @@ export default function MyFlipbooks() {
                 uniqueName = `${uniqueName} (${counter})`;
             }
 
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My_Flipbooks' : activeFolder;
+            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
+            const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
 
-            console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}"...`);
+            console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}" with v_id: ${generatedVId}...`);
             const res = await flipbookApi.saveBook({
                 emailId,
+                v_id: generatedVId,
                 flipbookName: uniqueName,
                 pages: pages,
                 overwrite: false,
                 folderName: targetFolder,
                 meta: {
+                    v_id: generatedVId,
                     width: templateData.width,
                     height: templateData.height,
                     templateId: templateData.templateId,
@@ -633,19 +778,17 @@ export default function MyFlipbooks() {
             });
 
             console.log("Creation result:", res.data);
-
-            if (res.data && res.data.v_id) {
-                const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${res.data.v_id}`;
-                console.log("Navigating with v_id:", redirectUrl);
-                navigate(redirectUrl, { state: templateData });
-            } else {
-                console.warn("Backend didn't return v_id, using fallback editor route");
-                navigate('/editor', { state: templateData });
-            }
+            const finalVId = res.data?.v_id || generatedVId;
+            const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${finalVId}`;
+            console.log("Navigating with v_id:", redirectUrl);
+            navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, emailId } });
         } catch (e) {
             console.error("Creation failed", e);
-            showAlert('Creation Error', 'Backend creation failed. You can still edit, but must save manually.', 'warning');
-            navigate('/editor', { state: templateData });
+            showAlert('Creation Warning', 'Backend save warning. Continuing to Editor with generated book ID.', 'warning');
+            const fallbackVId = generatedVId || Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+            navigate(`/editor/${encodeURIComponent(targetFolder)}/${fallbackVId}`, {
+                state: { ...templateData, v_id: fallbackVId, emailId }
+            });
         } finally {
             setIsLoading(false);
         }
@@ -715,8 +858,9 @@ export default function MyFlipbooks() {
     });
 
     const handleDeleteFolderClick = (folder) => {
-        if (folder.name?.toLowerCase() === 'my_flipbooks') {
-            showAlert('Cannot Delete', 'My_Flipbooks is the default folder and cannot be deleted.');
+        const lower = folder.name?.toLowerCase().trim();
+        if (folder.isDefault || lower === 'my flipbooks' || lower === 'default') {
+            showAlert('Cannot Delete', 'This is the default folder and cannot be deleted.');
             return;
         }
         setDeleteConfirmation({
@@ -863,7 +1007,7 @@ export default function MyFlipbooks() {
         if (selectedIds.length === 0) return;
         const targetBooks = books.filter(b => selectedIds.includes(b.id));
         const prevBooks = [...books];
-        setBooks(prev => prev.map(b => selectedIds.includes(b.id) ? { ...b, trash: false, folder: b.originalFolder || 'My_Flipbooks' } : b));
+        setBooks(prev => prev.map(b => selectedIds.includes(b.id) ? { ...b, trash: false, folder: b.originalFolder || 'My Flipbooks' } : b));
         setSelectedBooks([]);
         try {
             await Promise.all(targetBooks.map(book =>
@@ -947,18 +1091,34 @@ export default function MyFlipbooks() {
 
     const handleRemoveFromRecent = async (book) => {
         setActiveBookMenu(null);
-        setIsLoading(true);
+        
+        // Optimistically remove book from Recent in local state immediately
+        setBooks(prev => prev.filter(b => {
+            const isRecent = b.folder === 'Recent Book' || b.folder === 'Recent' || String(b.id).startsWith('Recent_');
+            if (isRecent) {
+                if (b.id === book.id) return false;
+                if (book.v_id && b.v_id === book.v_id) return false;
+                if (book.realName && (b.realName === book.realName || b.title === book.realName)) return false;
+            }
+            return true;
+        }));
+        setSelectedBooks(prev => prev.filter(id => id !== book.id && id !== book.v_id && id !== `Recent_${book.v_id}`));
+
         try {
             await flipbookApi.removeRecent({
                 emailId,
-                bookName: book.realName
+                bookName: book.realName || book.title || book.flipbookName,
+                v_id: book.v_id
             });
-            await fetchData();
+            await queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+            const res = await refetchBooks();
+            if (res?.data) {
+                setBooks(res.data);
+            }
         } catch (err) {
-            console.error(err);
-            showAlert('Remove Failed', err.message);
-        } finally {
-            setIsLoading(false);
+            console.error("Remove from recent failed:", err);
+            showAlert('Remove Failed', err.response?.data?.message || err.message);
+            await fetchData();
         }
     };
 
@@ -988,7 +1148,7 @@ export default function MyFlipbooks() {
     const handleRestoreBook = async (book) => {
         setActiveBookMenu(null);
         const prevBooks = [...books];
-        const restoreFolder = book.originalFolder || 'My_Flipbooks';
+        const restoreFolder = book.originalFolder || 'My Flipbooks';
         setBooks(prev => prev.map(b => b.id === book.id ? { ...b, trash: false, folder: restoreFolder } : b));
         try {
             await flipbookApi.restoreBook(
@@ -1092,7 +1252,7 @@ export default function MyFlipbooks() {
                             isPublished: false,
                             published: false,
                             folder: 'Trash',
-                            originalFolder: b.actualFolder || b.originalFolder || 'My_Flipbooks'
+                            originalFolder: b.actualFolder || b.originalFolder || 'My Flipbooks'
                         }];
                     }
 
@@ -1105,7 +1265,7 @@ export default function MyFlipbooks() {
                         folder: 'Trash',
                         originalFolder: (b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent')
                             ? b.folder
-                            : (b.originalFolder || 'My_Flipbooks')
+                            : (b.originalFolder || 'My Flipbooks')
                     }];
                 });
             });
@@ -1164,7 +1324,7 @@ export default function MyFlipbooks() {
         try {
             await Promise.all(removedBooks.map(book => {
                 if (isRecent) {
-                    return flipbookApi.removeRecent({ emailId, bookName: book.realName });
+                    return flipbookApi.removeRecent({ emailId, bookName: book.realName, v_id: book.v_id });
                 } else {
                     return flipbookApi.deleteBookPermanently({
                         emailId,
@@ -1174,7 +1334,13 @@ export default function MyFlipbooks() {
                     });
                 }
             }));
-            if (!isRecent) {
+            if (isRecent) {
+                await queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+                const res = await refetchBooks();
+                if (res?.data) {
+                    setBooks(res.data);
+                }
+            } else {
                 await fetchLiveStorageSettings();
             }
         } catch (err) {
@@ -1453,8 +1619,8 @@ export default function MyFlipbooks() {
         };
 
         if (sortOption === 'Recently Created') {
-            if (activeFolder === 'Recent Book') {
-                return parseDate(b.mtime || b.created) - parseDate(a.mtime || a.created);
+            if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
+                return parseDate(b.mtime || b.lastUpdated || b.updatedAt || b.created) - parseDate(a.mtime || a.lastUpdated || a.updatedAt || a.created);
             }
             return parseDate(b.createdAt || b.created) - parseDate(a.createdAt || a.created);
         }
@@ -1564,6 +1730,9 @@ export default function MyFlipbooks() {
             initialTemplateId={selectedTemplateIdForModal}
             existingFlipbooks={books.map(b => b.realName || b.title)}
             initialFiles={initialDroppedFiles}
+            storage={storage}
+            emailId={emailId}
+            onStorageExceeded={(limitData) => setStorageLimitModal(limitData)}
         >
             <div className="flex bg-[#eef0f8] h-full">
                 {/* Sidebar */}
@@ -1589,16 +1758,18 @@ export default function MyFlipbooks() {
                     setDashboardMode={setDashboardMode}
                     active3dFolder={active3dFolder}
                     setActive3dFolder={setActive3dFolder}
+                    threeDCounts={threeDCounts}
                 />
 
             {/* Main Content */}
             <main
-                className="flex-1 ml-[18vw] p-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[92vh] max-h-[92vh] overflow-hidden"
+                className="flex-1 ml-[18vw] p-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[93vh] max-h-[93vh] overflow-hidden"
             >
                 {dashboardMode === '3d' ? (
                     <ThreeDDashboard
                         navigate={navigate}
                         activeFolder={active3dFolder}
+                        onCountsChange={setThreeDCounts}
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
@@ -1811,7 +1982,7 @@ export default function MyFlipbooks() {
                         ? (deleteBookConfirmation.isPublished
                             ? (deleteBookConfirmation.bookId === 'BULK' ? "Unpublish & Move to Trash" : "Unpublish & Move to Trash")
                             : (deleteBookConfirmation.bookId === 'BULK' ? "Move Selected Flipbooks to Trash" : "Move Flipbook to Trash"))
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? (deleteBookConfirmation.bookId === 'BULK' ? "Remove Selected Flipbooks" : "Remove Flipbook from Recent")
                         : (deleteBookConfirmation.bookId === 'BULK' ? "Permanently Delete Flipbooks" : "Permanently Delete Flipbook")
                 }
@@ -1826,7 +1997,7 @@ export default function MyFlipbooks() {
                             : (deleteBookConfirmation.bookId === 'BULK'
                                 ? `Are you sure you want to move ${deleteBookConfirmation.bookTitle} to Trash? You can restore them anytime.`
                                 : `Are you sure you want to move "${deleteBookConfirmation.bookTitle}" to Trash? You can restore it anytime from the Trash folder.`))
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? `Are you sure you want to remove "${deleteBookConfirmation.bookTitle}" from Recent Books?`
                         : `Are you sure you want to permanently delete "${deleteBookConfirmation.bookTitle}"? This action cannot be undone.`
                 }
@@ -1836,7 +2007,7 @@ export default function MyFlipbooks() {
                         ? "Empty Trash"
                         : deleteBookConfirmation.isTrash
                         ? (deleteBookConfirmation.isPublished ? "Unpublish & Move" : "Move to trash")
-                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book')
+                        : (deleteBookConfirmation.isRecent || activeFolder === 'Recent Book' || activeFolder === 'Recent')
                         ? "Remove"
                         : "Delete Permanently"
                 }
@@ -1859,6 +2030,31 @@ export default function MyFlipbooks() {
                 showCancel={alertState.showCancel}
                 onConfirm={alertState.onConfirm}
                 isLoading={isLoading}
+            />
+
+            {/* Storage Limit Exceeded Modal */}
+            <StorageLimitModal
+                isOpen={storageLimitModal.isOpen}
+                onClose={() => setStorageLimitModal(prev => ({ ...prev, isOpen: false }))}
+                storage={storageLimitModal.storage || storage}
+                requiredSize={storageLimitModal.requiredSize}
+                isFull={storageLimitModal.isFull}
+                onUpgrade={() => {
+                    setStorageLimitModal(prev => ({ ...prev, isOpen: false }));
+                    try {
+                        localStorage.removeItem('hide_upgrade_card');
+                        sessionStorage.removeItem('hide_upgrade_card');
+                    } catch (e) {}
+                    navigate('/settings/profile');
+                }}
+            />
+
+            {/* Legacy Office Document Format Modal */}
+            <LegacyFormatModal
+                isOpen={legacyModal.isOpen}
+                onClose={() => setLegacyModal(prev => ({ ...prev, isOpen: false }))}
+                file={legacyModal.file}
+                legacyType={legacyModal.legacyType}
             />
 
             {/* Conflict / Rename & Move Modal */}

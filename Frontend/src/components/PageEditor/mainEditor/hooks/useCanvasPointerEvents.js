@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/purity, react-hooks/immutability */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   pathToDCombo,
   getPaperSegments, getPaperCurves, cleanPaperPathData, mergeMeetingNodes, applyHandleDrag, deleteSelectedNodeOrHandle
@@ -10,8 +10,10 @@ import {
   getLocalPoint,
   clearOverlayType
 } from '../utils/geometryUtils';
+import { clearSmartGuides } from '../utils/smartGuides';
 import { getTopLevelFrames, getDirectChildFrames, hitTest } from '../utils/frameHierarchyUtils';
 import { useInlineTextEditor } from './useInlineTextEditor';
+import editCacheManager from '../../utils/EditCacheManager';
 
 /**
  * Hook managing canvas pointer interactions:
@@ -101,6 +103,7 @@ export const useCanvasPointerEvents = ({
   convertTextToForeignObject,
   getDraggableElement
 }) => {
+  const lastHoveredIdRef = useRef(null);
   const resolveTargetParentForCreation = (svg, clientX, clientY) => {
     let activeId = currentFrameIdRef.current;
     const topFrames = getTopLevelFrames(svg);
@@ -856,12 +859,7 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    if (!['select', 'upload', 'grid'].includes(activeMainTool)) return;
-
-    // Automatically close the icon popup (which uses 'grid' tool) when interacting with the canvas
-    if (activeMainTool === 'grid' && typeof setActiveMainTool === 'function') {
-      setActiveMainTool('select');
-    }
+    if (!['select', 'upload'].includes(activeMainTool)) return;
 
     // ── Update Active Page on MouseDown ─────────────────────────────────────
     if (setActivePageIndex && activePageIndex !== pageIndex) {
@@ -1013,9 +1011,14 @@ export const useCanvasPointerEvents = ({
 
   // ── FIGMA-STYLE MOUSE MOVE: hover highlight & Marquee update ─────────────────
   const handleSvgMouseMove = (pageIndex, e) => {
+    // Fast-path: if an element is currently being dragged, suppress canvas hover scanning
+    if (document.body.classList.contains('dragging-active') || document.querySelector('[data-dragging="true"]')) {
+      return;
+    }
+
     lastMousePosRef.current = { x: e.clientX, y: e.clientY, target: e.target };
     if (isAltPressedRef.current && selectedLayerIdRef.current) {
-      if (drawMeasurementOverlayRef.current && !document.querySelector('[data-dragging="true"]')) {
+      if (drawMeasurementOverlayRef.current) {
         drawMeasurementOverlayRef.current(e.target);
       }
     }
@@ -1313,7 +1316,7 @@ export const useCanvasPointerEvents = ({
 
     const isPenToolActive = activeMainTool === 'pen';
     const isShapes = activeMainTool === 'shapes';
-    const isSelectionTool = ['select', 'upload', 'grid'].includes(activeMainTool);
+    const isSelectionTool = ['select', 'upload'].includes(activeMainTool);
     const allowSelection = isSelectionTool || ((isPenToolActive || isShapes) && pageIndex !== activePageIndex);
 
     if (!allowSelection) return;
@@ -1364,13 +1367,10 @@ export const useCanvasPointerEvents = ({
     const svg = container?.querySelector('svg');
     if (!svg) return;
 
-    // Clear all hover states
-    svg.querySelectorAll('[data-hovered="true"]').forEach(el => el.removeAttribute('data-hovered'));
-    svg.querySelectorAll('[data-child-hovered="true"]').forEach(el => el.removeAttribute('data-child-hovered'));
-    clearOverlayType('hover');
-    clearOverlayType('child-hover');
+    // Fast-path: do not process canvas hover states while user is actively typing or editing text
+    if (isEditingTextRef.current || editCacheManager.isEditing()) return;
 
-    // ── Converted Flipbook Mode (PDF, DOC, PPT): Only hover user-added Frames or Hotspots ──
+    // Converted Flipbook Mode (PDF, DOC, PPT): Only hover user-added Frames or Hotspots
     if (isConvertedFlipbook) {
       let hoverTarget = null;
       let curr = e.target;
@@ -1394,72 +1394,114 @@ export const useCanvasPointerEvents = ({
         curr = curr.parentElement || curr.parentNode;
       }
 
+      const hId = hoverTarget?.id || null;
+      if (hId === lastHoveredIdRef.current) return;
+      if (lastHoveredIdRef.current) {
+        const prev = svg.querySelector(`[id="${CSS.escape(lastHoveredIdRef.current)}"]`);
+        prev?.removeAttribute('data-hovered');
+        clearOverlayType('hover');
+        lastHoveredIdRef.current = null;
+      }
       if (hoverTarget && hoverTarget.id && selectedLayerIdRef.current !== hoverTarget.id) {
+        lastHoveredIdRef.current = hoverTarget.id;
         hoverTarget.setAttribute('data-hovered', 'true');
         drawOverlayHighlight(hoverTarget, 'hover');
       }
       return;
     }
 
-    // ── Direct selection mode: hover the deepest element with an ID ──────────
+    // Direct selection mode: hover the deepest element with an ID
     if (selectedSelectTool === 'direct') {
       const target = getDraggableElement(e.target, svg);
-      if (target && target.id && target.tagName.toLowerCase() !== 'svg') {
-        if (!multiSelectedIdsRef.current.has(target.id) && selectedLayerIdRef.current !== target.id) {
-          target.setAttribute('data-hovered', 'true');
-          drawOverlayHighlight(target, 'child-hover');
-        }
-        return;
+      const targetId = (target && target.id && target.tagName.toLowerCase() !== 'svg') ? target.id : null;
+      if (targetId === lastHoveredIdRef.current) return;
+      if (lastHoveredIdRef.current) {
+        const prev = svg.querySelector(`[id="${CSS.escape(lastHoveredIdRef.current)}"]`);
+        prev?.removeAttribute('data-hovered');
+        clearOverlayType('child-hover');
+        lastHoveredIdRef.current = null;
       }
+      if (targetId && !multiSelectedIdsRef.current.has(targetId) && selectedLayerIdRef.current !== targetId) {
+        lastHoveredIdRef.current = targetId;
+        target.setAttribute('data-hovered', 'true');
+        drawOverlayHighlight(target, 'child-hover');
+      }
+      return;
+    }
+
+    // Normal Mode: Direct O(1) Target Resolution (avoids forced synchronous reflows across hundreds of template elements)
+    const isBackground = !e.target || e.target === svg ||
+      e.target.getAttribute?.('data-name') === 'Overlay' ||
+      e.target.getAttribute?.('data-type') === 'background' ||
+      e.target.getAttribute?.('data-type') === 'shield' ||
+      (e.target.id && e.target.id.includes('overlay-poly-'));
+
+    if (isBackground) {
+      if (lastHoveredIdRef.current) {
+        const prev = svg.querySelector(`[id="${CSS.escape(lastHoveredIdRef.current)}"]`);
+        prev?.removeAttribute('data-hovered');
+        prev?.removeAttribute('data-child-hovered');
+        clearOverlayType('hover');
+        clearOverlayType('child-hover');
+        lastHoveredIdRef.current = null;
+      }
+      return;
     }
 
     const effectiveFrameId = currentFrameIdRef.current;
+    let candidate = null;
+    let isChild = false;
 
     if (effectiveFrameId) {
-      // ── Inside a frame: hover its direct children ──
       const frameEl = svg.querySelector(`[id="${effectiveFrameId}"]`);
-      if (frameEl) {
-        const children = getDirectChildFrames(frameEl);
-        for (let i = children.length - 1; i >= 0; i--) {
-          if (hitTest(children[i], e.clientX, e.clientY)) {
-            // Only hover if not already selected
-            if (!multiSelectedIdsRef.current.has(children[i].id) && selectedLayerIdRef.current !== children[i].id) {
-              children[i].setAttribute('data-child-hovered', 'true');
-              drawOverlayHighlight(children[i], 'child-hover');
-            }
-            return;
-          }
+      if (frameEl && frameEl.contains(e.target) && e.target !== frameEl) {
+        let curr = e.target;
+        while (curr && curr.parentElement && curr.parentElement !== frameEl) {
+          curr = curr.parentElement;
         }
-
-        // Falling outside current frame context: highlight top-level elements
-        if (!hitTest(frameEl, e.clientX, e.clientY)) {
-          const topLevelEls = getTopLevelFrames(svg);
-          for (let i = topLevelEls.length - 1; i >= 0; i--) {
-            if (hitTest(topLevelEls[i], e.clientX, e.clientY)) {
-              // Only hover if not already selected
-              if (!multiSelectedIdsRef.current.has(topLevelEls[i].id) && selectedLayerIdRef.current !== topLevelEls[i].id) {
-                topLevelEls[i].setAttribute('data-hovered', 'true');
-                drawOverlayHighlight(topLevelEls[i], 'hover');
-              }
-              return;
-            }
-          }
-        }
-      }
-    } else {
-      // ── Top-level: hover top-level frames ──
-      const topLevelEls = getTopLevelFrames(svg);
-      for (let i = topLevelEls.length - 1; i >= 0; i--) {
-        if (hitTest(topLevelEls[i], e.clientX, e.clientY)) {
-          // Only hover if not already selected
-          if (!multiSelectedIdsRef.current.has(topLevelEls[i].id) && selectedLayerIdRef.current !== topLevelEls[i].id) {
-            topLevelEls[i].setAttribute('data-hovered', 'true');
-            drawOverlayHighlight(topLevelEls[i], 'hover');
-          }
-          return;
+        if (curr && curr.parentElement === frameEl && curr.id && curr.getAttribute('data-name') !== 'Overlay' && curr.getAttribute('data-locked') !== 'true') {
+          candidate = curr;
+          isChild = true;
         }
       }
     }
+
+    if (!candidate) {
+      let curr = e.target;
+      while (curr && curr.parentElement && curr.parentElement !== svg) {
+        curr = curr.parentElement;
+      }
+      if (curr && curr.parentElement === svg && curr.id && curr.getAttribute('data-name') !== 'Overlay' && curr.getAttribute('data-locked') !== 'true' && curr.tagName.toLowerCase() !== 'style' && curr.tagName.toLowerCase() !== 'defs') {
+        candidate = curr;
+        isChild = false;
+      }
+    }
+
+    const candidateId = candidate ? candidate.id : null;
+    // Same element under cursor - NO work needed!
+    if (candidateId === lastHoveredIdRef.current) return;
+
+    // Clear previous hover
+    if (lastHoveredIdRef.current) {
+      const prev = svg.querySelector(`[id="${CSS.escape(lastHoveredIdRef.current)}"]`);
+      prev?.removeAttribute('data-hovered');
+      prev?.removeAttribute('data-child-hovered');
+      clearOverlayType('hover');
+      clearOverlayType('child-hover');
+      lastHoveredIdRef.current = null;
+    }
+
+    if (!candidate || !candidateId) return;
+
+    // If candidate is already selected, don't draw hover box
+    if (multiSelectedIdsRef.current.has(candidateId) || selectedLayerIdRef.current === candidateId) {
+      lastHoveredIdRef.current = candidateId;
+      return;
+    }
+
+    lastHoveredIdRef.current = candidateId;
+    candidate.setAttribute(isChild ? 'data-child-hovered' : 'data-hovered', 'true');
+    drawOverlayHighlight(candidate, isChild ? 'child-hover' : 'hover');
   };
 
   // ── MARQUEE SELECTION LOGIC (Optimized) ──
@@ -1731,10 +1773,14 @@ export const useCanvasPointerEvents = ({
       cleanupMarquee();
     }
     const container = e.currentTarget.closest('.page-svg-container') || e.currentTarget;
-    const svg = container.querySelector('svg');
+    const svg = container?.querySelector('svg');
     if (svg) {
-      svg.querySelectorAll('[data-hovered="true"]').forEach(el => el.removeAttribute('data-hovered'));
-      svg.querySelectorAll('[data-child-hovered="true"]').forEach(el => el.removeAttribute('data-child-hovered'));
+      if (lastHoveredIdRef.current) {
+        const prev = svg.querySelector(`[id="${CSS.escape(lastHoveredIdRef.current)}"]`);
+        prev?.removeAttribute('data-hovered');
+        prev?.removeAttribute('data-child-hovered');
+        lastHoveredIdRef.current = null;
+      }
       clearOverlayType('hover');
       clearOverlayType('child-hover');
     }
@@ -1792,47 +1838,7 @@ export const useCanvasPointerEvents = ({
       clearOverlayType('selected');
       clearOverlayType('child-selected');
     }
-
-    // ── Figma-style: auto-convert <text> to <foreignObject> on first selection ──
-    // This ensures resize handles, click-to-edit, and style panel all work correctly
-    if (id) {
-      const el = document.getElementById(id);
-      if (el && el.tagName.toLowerCase() === 'text') {
-        const fo = convertTextToForeignObject(el);
-        if (fo) {
-          el.replaceWith(fo);
-
-          // Auto-snap height to perfectly fit the HTML text
-          requestAnimationFrame(() => {
-            const div = fo.firstElementChild;
-            if (div) {
-              const ch = div.scrollHeight;
-              const currentH = parseFloat(fo.getAttribute('height')) || 0;
-
-              if (ch > 0 && Math.abs(ch - currentH) > 2) {
-                fo.setAttribute('height', ch);
-              }
-
-              // Force interact.js/overlays to redraw bounds
-              const event = new Event('resize');
-              window.dispatchEvent(event);
-
-              // Explicitly redraw the highlight now that the FO has painted
-              drawOverlayHighlight(fo, 'selected');
-            }
-          });
-
-          // Save the conversion so it persists
-          const svg = fo.ownerSVGElement;
-          const container = fo.closest('.page-svg-container');
-          if (container && svg) {
-            const pageIdx = parseInt(container.getAttribute('data-page-index'));
-            // Use a microtask so React state settles before saving
-            requestAnimationFrame(() => saveModifiedPageHtml(pageIdx, svg));
-          }
-        }
-      }
-    }
+    clearSmartGuides();
   };
 
 
@@ -1857,6 +1863,7 @@ export const useCanvasPointerEvents = ({
 
   // ── FIGMA-STYLE CLICK: hierarchical frame drill-down selection ─────────────────
   const handleSvgClick = (e) => {
+    clearSmartGuides();
     if (e.target.closest('.resize-handle')) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
@@ -2030,12 +2037,12 @@ export const useCanvasPointerEvents = ({
 
         // Normal click on polygon
         if (selectedLayerIdRef.current === polySelectionId && multiSelectedIdsRef.current.size <= 1) {
-          // Already uniquely selected. Enter text edit mode if text!
-          console.log('[handleSvgClick] Polygon clicked for already selected item:', polySelectionId);
-          const underlyingEl = svg.querySelector(`[id="${polySelectionId}"]`);
-          if (underlyingEl && (underlyingEl.tagName.toLowerCase() === 'text' || underlyingEl.tagName.toLowerCase() === 'tspan' || underlyingEl.tagName.toLowerCase() === 'foreignobject')) {
-            console.log('[handleSvgClick] Entering text edit mode for', underlyingEl);
-            enterTextEditMode(underlyingEl, e.clientX, e.clientY);
+          // If the Type tool is active, clicking on the selected text enters inline editing
+          if (activeMainToolRef.current === 'type') {
+            const underlyingEl = svg.querySelector(`[id="${polySelectionId}"]`);
+            if (underlyingEl && (underlyingEl.tagName.toLowerCase() === 'text' || underlyingEl.tagName.toLowerCase() === 'tspan' || underlyingEl.tagName.toLowerCase() === 'foreignobject')) {
+              enterTextEditMode(underlyingEl, e.clientX, e.clientY);
+            }
           }
           return;
         }
@@ -2063,7 +2070,7 @@ export const useCanvasPointerEvents = ({
     // ── CLICK-OUTSIDE-PREVENTION (if in tools like pen/shapes but not typing) ───
     const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
     const isDrawingTool = activeMainTool === 'pen' || activeMainTool === 'shapes';
-    const isSelectionTool = ['select', 'upload', 'type', 'grid'].includes(activeMainTool);
+    const isSelectionTool = ['select', 'upload', 'type'].includes(activeMainTool);
     const allowClick = isSelectionTool || (isDrawingTool && pageIdx !== activePageIndex);
 
     if (!allowClick && !getDraggableElement(e.target, e.currentTarget)) {
@@ -2224,10 +2231,6 @@ export const useCanvasPointerEvents = ({
 
           if (target && target !== frameEl && frameEl.contains(target)) {
             setSingleSelection(target.id);
-            // Persist auto-assigned ids (e.g. template text with no id) immediately
-            if (target.tagName?.toLowerCase() === 'text') {
-              saveModifiedPageHtml(pageIdx, svg);
-            }
             return;
           }
 
@@ -2372,10 +2375,6 @@ export const useCanvasPointerEvents = ({
         setCurrentFrameId(hitFrame.id);
         currentFrameIdRef.current = hitFrame.id;
         setSingleSelection(target.id);
-        // Persist auto-assigned ids (e.g. template text with no id) immediately
-        if (target.tagName?.toLowerCase() === 'text') {
-          saveModifiedPageHtml(pageIdx, svg);
-        }
         return;
       }
 
@@ -2472,6 +2471,7 @@ export const useCanvasPointerEvents = ({
   // ── FIGMA-STYLE DOUBLE CLICK: enter frame / edit text ─────────────────────────
   const handleSvgDoubleClick = (e) => {
     e.stopPropagation();
+    if (isEditingTextRef.current) return;
     // Intentionally ignore suppressClickRef here so that micro-jitters during double-clicks don't abort text editing!
 
     const container = e.currentTarget;
@@ -2486,6 +2486,63 @@ export const useCanvasPointerEvents = ({
     if (nodeEditModeRef.current) {
       // Already in node edit mode – do nothing on double click (single click to drag handles)
       return;
+    }
+
+    // ── INSTANT TEXT EDIT MODE (Vector-Studio Style) ─────────────────────────
+    // Directly check what is under the cursor on double-click (pierces selection polygons, user groups, and frames)
+    let directTextEl = null;
+    const clickTargetTag = e.target?.tagName?.toLowerCase();
+    if (['text', 'tspan', 'foreignobject'].includes(clickTargetTag)) {
+      directTextEl = clickTargetTag === 'tspan' ? (e.target.parentElement || e.target.parentNode) : e.target;
+    } else if (e.target?.closest && e.target.closest('foreignObject')) {
+      directTextEl = e.target.closest('foreignObject');
+    } else if (typeof document.elementsFromPoint === 'function') {
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      for (const el of elements) {
+        if (!svg.contains(el)) continue;
+        const tag = el.tagName?.toLowerCase();
+        if (tag === 'tspan') {
+          directTextEl = el.parentElement || el.parentNode;
+          break;
+        }
+        if (tag === 'text' || tag === 'foreignobject') {
+          directTextEl = el;
+          break;
+        }
+        if (el.closest && el.closest('foreignObject')) {
+          directTextEl = el.closest('foreignObject');
+          break;
+        }
+      }
+    }
+
+    // Fallback: check currently selected layer if it's text within hitTest range
+    if (!directTextEl && selectedLayerIdRef.current) {
+      const activeEl = svg.querySelector(`[id="${selectedLayerIdRef.current}"]`);
+      if (activeEl && ['text', 'tspan', 'foreignobject'].includes(activeEl.tagName?.toLowerCase())) {
+        if (hitTest(activeEl, e.clientX, e.clientY, 15)) {
+          directTextEl = activeEl.tagName?.toLowerCase() === 'tspan' ? (activeEl.parentElement || activeEl.parentNode) : activeEl;
+        }
+      }
+    }
+
+    if (directTextEl && directTextEl.getAttribute('data-locked') !== 'true' && directTextEl.getAttribute('data-type') !== 'video' && !directTextEl.querySelector('video, iframe')) {
+      const isModuleWithoutTextEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
+      if (!isModuleWithoutTextEdit) {
+        if (!directTextEl.id) {
+          directTextEl.id = `text-${Math.random().toString(36).substr(2, 9)}`;
+        }
+        // If text is inside a frame, update currentFrameId
+        const topFrames = getTopLevelFrames(svg);
+        const parentFrame = topFrames.find(f => f.contains(directTextEl));
+        if (parentFrame) {
+          setCurrentFrameId(parentFrame.id);
+          currentFrameIdRef.current = parentFrame.id;
+        }
+        setSingleSelection(directTextEl.id);
+        enterTextEditMode(directTextEl, e.clientX, e.clientY);
+        return;
+      }
     }
 
     // Text editing on double-click

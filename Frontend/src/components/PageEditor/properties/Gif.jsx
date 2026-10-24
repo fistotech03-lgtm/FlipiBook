@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import { resolveUploadsPath } from "../../../utils/assetUtils";
+import { resolveUploadsPath, getSupabaseBaseUrl } from "../../../utils/assetUtils";
 import { useAuth } from "../../../context/AuthContext";
 import {
   Image as ImageIcon,
@@ -1762,8 +1762,20 @@ const GifEditor = ({
 
   const getSrc = useCallback((el) => {
     if (!el) return "";
-    return el.src || el.getAttribute("href") || el.getAttribute("xlink:href") || "";
-  }, []);
+    let src = el.src || el.getAttribute("href") || el.getAttribute("xlink:href") || "";
+    if (src && (src.startsWith('../assets/') || src.startsWith('./assets/') || src.startsWith('/assets/'))) {
+      const pBase = getSupabaseBaseUrl(user?.userID || user?.emailId || user?.email, folderName, flipbookName);
+      const cleanRel = src.replace(/^(\.\.\/|\.\/)+assets\//, '').replace(/^\/?assets\//, '');
+      const healed = `${pBase}assets/${cleanRel}`;
+      if (el.tagName?.toLowerCase() === 'image') {
+        el.setAttribute('href', healed);
+        try { el.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', healed); } catch {}
+        el.setAttribute('data-relative-src', src);
+      }
+      return healed;
+    }
+    return src;
+  }, [user, folderName, flipbookName]);
 
   useEffect(() => {
     const currentSrc = getSrc(getSvgImageEl(selectedElement) || selectedElement);
@@ -1850,11 +1862,28 @@ const GifEditor = ({
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
-          if (res.data.url) {
-            const serverUrl = resolveUploadsPath(res.data.url);
-            const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/gif/${res.data.filename}`);
-            setSrc(targetImg, relativePath);
-            liveElement.dataset.fileVid = res.data.file_v_id;
+          if (res.data && (res.data.url || res.data.filename)) {
+            const filename = res.data.filename;
+            const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/gif/${filename}`);
+            let accessibleUrl = '';
+            if (res.data.serverUrl || res.data.storageUrl) {
+              accessibleUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl);
+            } else if (res.data.url && !res.data.url.startsWith('../') && !res.data.url.startsWith('./')) {
+              accessibleUrl = resolveUploadsPath(res.data.url);
+            } else {
+              const projectBaseUrl = getSupabaseBaseUrl(
+                user?.userID || user?.emailId || user?.email,
+                folderName,
+                flipbookName
+              );
+              accessibleUrl = `${projectBaseUrl}assets/gif/${filename}`;
+            }
+            setSrc(targetImg, accessibleUrl);
+            targetImg.setAttribute('data-relative-src', relativePath);
+            targetImg.setAttribute('data-flipbook-path', relativePath);
+            if (res.data.file_v_id) {
+              liveElement.dataset.fileVid = res.data.file_v_id;
+            }
             onUpdateRef.current?.();
           }
         } catch (err) { console.error("GIF upload failed:", err); }

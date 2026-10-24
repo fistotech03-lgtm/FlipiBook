@@ -40,6 +40,20 @@ export const getDirectChildFrames = (el) => {
   );
 };
 
+// Cached elementsFromPoint to avoid redundant layout recalculations across successive hitTest calls
+let lastHitCache = { x: null, y: null, elements: null, timestamp: 0 };
+const getCachedElementsFromPoint = (x, y) => {
+  const now = performance.now();
+  if (lastHitCache.elements && lastHitCache.x === x && lastHitCache.y === y && (now - lastHitCache.timestamp < 16)) {
+    return lastHitCache.elements;
+  }
+  const elements = (typeof document !== 'undefined' && typeof document.elementsFromPoint === 'function')
+    ? document.elementsFromPoint(x, y)
+    : [];
+  lastHitCache = { x, y, elements, timestamp: now };
+  return elements;
+};
+
 /**
  * Checks if a point (clientX, clientY) hits an element's bounding box or visual boundaries.
  */
@@ -58,8 +72,8 @@ export const hitTest = (el, clientX, clientY, buffer = 0, selectedLayerId = null
 
   const isCroppedEl = isElementCropped(el);
 
-  // 1. Native browser hit testing
-  const hitElements = document.elementsFromPoint(clientX, clientY);
+  // 1. Native browser hit testing (with coordinate-level caching)
+  const hitElements = getCachedElementsFromPoint(clientX, clientY);
   const isHit = hitElements.includes(el) || (typeof el.contains === 'function' && hitElements.some(he => el.contains(he)));
   if (isHit) {
     if (!isCroppedEl) return true;

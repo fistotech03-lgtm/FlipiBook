@@ -20,7 +20,7 @@ import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
   const el = document.getElementById(id);
   if (el) el.remove();
 });
-import PremiumDropdown from '../../CustomizedEditor/PremiumDropdown';
+import PremiumDropdown from '../../CustomizedEditor/components/PremiumDropdown';
 import NavIconStylesPopup, { NavIconRenderer } from '../../CustomizedEditor/popups/NavIconStylesPopup';
 import DotStylesPopup, { DotRenderer } from '../../CustomizedEditor/popups/DotStylesPopup';
 import axios from 'axios';
@@ -1269,9 +1269,12 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
-      if (res.data.url) {
+      if (res.data && (res.data.url || res.data.filename)) {
+        const accessibleUrl = (res.data.serverUrl || res.data.storageUrl)
+          ? resolveUploadsPath(res.data.serverUrl || res.data.storageUrl)
+          : resolveUploadsPath(res.data.url);
         return {
-          url: resolveUploadsPath(res.data.url),
+          url: accessibleUrl,
           file_v_id: res.data.file_v_id,
           name: res.data.filename
         };

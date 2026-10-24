@@ -50,7 +50,7 @@ const calculateUserStorage = (userId, emailId, userBooks = []) => {
     const storageRoot = getStorageRoot();
     let diskSize = 0;
 
-    // 1. Primary: Check by userId workspace directory (e.g. storage/<userId>/My_Flipbooks)
+    // 1. Primary: Check by userId workspace directory (e.g. storage/<userId>/books)
     if (userId) {
       const userDirById = path.join(storageRoot, String(userId));
       if (fs.existsSync(userDirById)) {
@@ -112,7 +112,7 @@ const deleteBookStorage = (userId, emailId, folderName, bookName, book = null) =
 
     const targetFolders = [
       folderName,
-      'My_Flipbooks',
+      'default',
       ...(book && Array.isArray(book.folderName) ? book.folderName : (book?.folderName ? [book.folderName] : []))
     ].filter(Boolean);
 
@@ -128,19 +128,19 @@ const deleteBookStorage = (userId, emailId, folderName, bookName, book = null) =
     userFolders.forEach(uf => {
       targetFolders.forEach(tf => {
         bookNames.forEach(bn => {
-          dirsToDelete.add(path.join(storageRoot, uf, 'My_Flipbooks', tf, bn));
+          dirsToDelete.add(path.join(storageRoot, uf, 'books', tf, bn));
           dirsToDelete.add(path.join(storageRoot, uf, tf, bn));
           dirsToDelete.add(path.join(storageRoot, 'flipbooks', uf, tf, bn));
         });
       });
-      // Also inspect subdirectories in My_Flipbooks directly
-      const userMyFlipbooks = path.join(storageRoot, uf, 'My_Flipbooks');
-      if (fs.existsSync(userMyFlipbooks)) {
+      // Also inspect subdirectories in books directly
+      const userSubDir = path.join(storageRoot, uf, 'books');
+      if (fs.existsSync(userSubDir)) {
         try {
-          const subdirs = fs.readdirSync(userMyFlipbooks);
+          const subdirs = fs.readdirSync(userSubDir);
           subdirs.forEach(sd => {
             bookNames.forEach(bn => {
-              dirsToDelete.add(path.join(userMyFlipbooks, sd, bn));
+              dirsToDelete.add(path.join(userSubDir, sd, bn));
             });
           });
         } catch (e) {}
@@ -166,7 +166,7 @@ const deleteFolderStorage = (userId, emailId, folderName) => {
     const storageRoot = getStorageRoot();
     if (userId) {
       const dirs = [
-        path.join(storageRoot, String(userId), 'My_Flipbooks', folderName),
+        path.join(storageRoot, String(userId), 'books', folderName),
         path.join(storageRoot, String(userId), folderName),
         path.join(storageRoot, 'flipbooks', String(userId), folderName)
       ];
@@ -177,7 +177,7 @@ const deleteFolderStorage = (userId, emailId, folderName) => {
     if (emailId) {
       const sanitizedEmail = emailId.replace(/[@.]/g, '_');
       const dirs = [
-        path.join(storageRoot, sanitizedEmail, 'My_Flipbooks', folderName),
+        path.join(storageRoot, sanitizedEmail, 'books', folderName),
         path.join(storageRoot, sanitizedEmail, folderName),
         path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName)
       ];
@@ -230,11 +230,73 @@ const initFlipbookStorage = (bookDir) => {
   }
 };
 
+const WORKSPACE_FOLDERS = [
+  'Gallery',
+  'Gallery/userdetails',
+  'Gallery/userdetails/Profile',
+  'Gallery/userdetails/Company_logo',
+  'Gallery/pageEditorgallery',
+  'Gallery/pageEditorgallery/Images',
+  'Gallery/pageEditorgallery/Videos',
+  'Gallery/pageEditorgallery/gifs',
+  'Gallery/CustomizationGallery',
+  'Gallery/CustomizationGallery/Images',
+  'Gallery/CustomizationGallery/Videos',
+  'Gallery/3DGallery',
+  'Gallery/3DGallery/Models',
+  'Gallery/3DGallery/Texture',
+  'Gallery/3DGallery/Snapshot',
+  'books',
+  'books/default'
+];
+
+const ensureDirPerms = (p) => {
+  if (!fs.existsSync(p)) {
+    try { fs.mkdirSync(p, { recursive: true, mode: 0o777 }); } catch (e) {}
+  }
+  try { fs.chmodSync(p, 0o777); } catch (e) {}
+};
+
+/**
+ * Ensure user's physical workspace folders exist on disk for both customUserId and email
+ */
+const ensureUserWorkspace = (userId, emailId, folderName = null) => {
+  try {
+    const storageRoot = getStorageRoot();
+    ensureDirPerms(storageRoot);
+
+    const dirName = userId ? String(userId) : (emailId ? emailId.trim().toLowerCase().replace(/[@.]/g, '_') : null);
+    if (!dirName) return null;
+
+    const userDir = path.join(storageRoot, dirName);
+    ensureDirPerms(userDir);
+
+    for (const wf of WORKSPACE_FOLDERS) {
+      const fp = path.join(userDir, wf);
+      ensureDirPerms(fp);
+    }
+
+    const defaultBooks = path.join(userDir, 'books', 'default');
+    ensureDirPerms(defaultBooks);
+
+    if (folderName) {
+      const customF = path.join(userDir, 'books', folderName);
+      ensureDirPerms(customF);
+    }
+
+    return userDir;
+  } catch (err) {
+    console.error('[Storage Helper] Error ensuring user workspace:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   getStorageRoot,
   getDirSize,
   calculateUserStorage,
   deleteBookStorage,
   deleteFolderStorage,
-  initFlipbookStorage
+  initFlipbookStorage,
+  ensureUserWorkspace
 };

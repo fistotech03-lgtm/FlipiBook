@@ -9,6 +9,7 @@ import html2canvas from 'html2canvas';
 import domtoimage from 'dom-to-image-more';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
 import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { useAuth } from '../context/AuthContext';
 
 
 const SCRIBBLE_ICONS = {
@@ -593,6 +594,7 @@ const SQUARE_BLACK_INK_ICONS = {
 };
 
 const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageIndex = 0, isFromMyFlipbooks = false, isAbsolutePosition = false }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('flipbook');
   const [exportType, setExportType] = useState('entire'); // 'entire' or 'selected'
   const [quality, setQuality] = useState('Medium');
@@ -802,8 +804,6 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
       return;
     }
 
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
     const emailId = currentBook?.userEmail || currentBook?.emailId || user?.emailId || user?.email;
 
     let pBaseUrl = '';
@@ -1605,54 +1605,9 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
           ? `${bookName}_${(modalPages[indices[0]]?.name || `Page_${indices[0]+1}`).replace(/\s+/g,'_')}.pdf`
           : `${bookName}_${indices.length}_pages.pdf`;
 
-        // 3. Primary Strategy: Backend Vector PDF Export via Inkscape CLI
-        //    Inkscape uses --export-type=pdf --export-text-to-path --export-area-page
-        //    Result: 100% vector PDF, all text glyphs are bezier outlines (<path d="...">)
-        //    Zero missing font errors in Adobe Illustrator, zero pixelation!
-        let backendExportSucceeded = false;
-        try {
-          const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
-          const response = await axios.post(
-            `${backendUrl}/api/flipbook/export-vector-pdf`,
-            {
-              pages: preparedPages,
-              bookName: bookName,
-            },
-            {
-              responseType: 'blob',
-              withCredentials: true,
-              timeout: 300000, // 5 minutes timeout for multi-page vector conversions
-            }
-          );
-
-          if (response.data && response.data.size > 0) {
-            // Check if response is actually a JSON error payload sent as blob
-            if (response.data.type === 'application/json') {
-              const text = await response.data.text();
-              const errJson = JSON.parse(text);
-              throw new Error(errJson.error || 'Server returned an error');
-            }
-            saveAs(response.data, pdfName);
-            backendExportSucceeded = true;
-          }
-        } catch (backendErr) {
-          console.error('Backend vector PDF export error:', backendErr);
-          let errMsg = backendErr.message;
-          if (backendErr.response?.data instanceof Blob) {
-            try {
-              const text = await backendErr.response.data.text();
-              const json = JSON.parse(text);
-              errMsg = json.error || text;
-            } catch (e) {}
-          }
-          console.warn('Backend vector PDF export failed:', errMsg);
-        }
-
-        // 4. Client-side Fallback (if backend is offline)
-        if (!backendExportSucceeded) {
-          console.log('Generating vector PDF on client side...');
-          let pdf = null;
-          let first = true;
+        // Pure Client-side Vector PDF Export (0 server RAM, instant download, 0 server storage)
+        let pdf = null;
+        let first = true;
 
           for (const p of preparedPages) {
             const MM_TO_PT  = 72 / 25.4;
@@ -1703,11 +1658,10 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
             first = false;
           }
 
-          if (pdf) {
-            pdf.save(pdfName);
-          } else {
-            throw new Error('Failed to generate PDF document');
-          }
+        if (pdf) {
+          pdf.save(pdfName);
+        } else {
+          throw new Error('Failed to generate PDF document');
         }
 
       } else if (indices.length === 1) {

@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom';
 import { X, ChevronDown, Plus, Info, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './CustomToast';
+import { useAuth } from '../context/AuthContext';
 
 const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
   const toast = useToast();
+  const { user } = useAuth();
 
   const [bookName, setBookName] = useState('');
   const [quotes, setQuotes] = useState('');
@@ -85,13 +87,21 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
     setErrors({});
     setIsPublishing(true);
     try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const v_id = currentBook?.v_id || currentBook?.realName;
-      const userEmail = user?.emailId || currentBook?.userEmail;
+      const getBackendUrl = () => {
+        if (import.meta.env.VITE_BACKEND_URL) return import.meta.env.VITE_BACKEND_URL;
+        const origin = window.location.origin;
+        if (origin.includes('devtunnels.ms')) return origin.replace('-5173', '-8000');
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+          const portMatch = origin.match(/:(\d+)/);
+          if (portMatch) return origin.replace(portMatch[0], ':8000');
+        }
+        return 'http://localhost:8000';
+      };
+      const backendUrl = getBackendUrl();
+      const v_id = currentBook?.v_id || currentBook?.id || currentBook?.realName;
+      const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 
-      if (userEmail && v_id) {
+      if (v_id) {
         await axios.post(`${backendUrl}/api/flipbook/publish`, {
           emailId: userEmail,
           v_id: v_id,
@@ -109,7 +119,7 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
             language: language.trim(),
             tags: tags
           }
-        });
+        }, { withCredentials: true });
       }
 
       toast?.success?.("Flipbook published successfully!");

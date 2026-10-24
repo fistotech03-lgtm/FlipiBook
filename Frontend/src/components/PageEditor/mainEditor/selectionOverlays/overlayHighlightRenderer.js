@@ -1,4 +1,4 @@
-import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
+﻿import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
 import {
   getOverlayForElement,
   getHtmlOverlayForElement,
@@ -70,61 +70,118 @@ export const createOverlayHighlightRenderer = ({
     const overlay = getOverlayForElement(el);
     if (!overlay) return;
 
+    const isDragging = el.getAttribute?.('data-dragging') === 'true' || (typeof document !== 'undefined' && document.body.classList.contains('dragging-active'));
+
     // Purge stale or competing overlays to prevent duplicate selection boxes
     if (type.includes('selected')) {
       const isMulti = multiSelectedIdsRef.current && multiSelectedIdsRef.current.size > 1;
+      const keepPolyId = `overlay-poly-${type}-${el.id}`;
+      const keepPathId = `overlay-path-${type}-${el.id}`;
 
-      // 1. Purge stale/competing overlays for this exact element across ALL overlay layers
-      document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-        ov.querySelectorAll(`[id*="${el.id}"]`).forEach(node => {
-          if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
-            node.remove();
-          }
+      if (isDragging) {
+        // Fast in-place cleanup during active drag: remove any duplicate polygon for this element or other elements
+        overlay.querySelectorAll(`[id^="overlay-poly-"][id$="-${el.id}"], [id^="overlay-path-"][id$="-${el.id}"]`).forEach(n => {
+          if (n.id !== keepPolyId && n.id !== keepPathId) n.remove();
         });
-      });
-
-      // 2. If single-selecting (or during single element drag), purge ANY other selection polygon in the entire document!
-      if (!isMulti) {
-        document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-          ov.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(node => {
-            if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
-              node.remove();
-            }
-          });
-          const mb = ov.querySelector('#overlay-poly-selected-multi-selection-bounds, #overlay-poly-selected-multi');
-          if (mb) mb.remove();
-        });
-        document.querySelectorAll('[id^="highlight-overlay-html-"]').forEach(htmlOv => {
-          htmlOv.querySelectorAll('.resize-handle, [id^="rotate-handle-"], [id^="rotation-degree-badge-"], [id^="rotate-hotspot-"]').forEach(handle => {
-            if (!handle.id.includes(el.id)) {
-              handle.remove();
-            }
-          });
-        });
-      }
-
-      // 3. Purge descendant element overlays (e.g. inner <foreignObject>, <image>, etc. of a group)
-      if (typeof el.querySelectorAll === 'function') {
-        el.querySelectorAll('[id]').forEach(child => {
-          document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-            ov.querySelectorAll(`[id*="${child.id}"]`).forEach(node => {
-              if (node.id !== `overlay-poly-${type}-${el.id}` && node.id !== `overlay-path-${type}-${el.id}`) {
-                node.remove();
-              }
-            });
-          });
-        });
-      }
-
-      // 4. Purge ancestor group overlays (e.g. parent <g> if child is being highlighted)
-      let parent = el.parentElement;
-      while (parent && parent.tagName && parent.tagName.toLowerCase() !== 'svg') {
-        if (parent.id) {
-          document.querySelectorAll('.selection-overlay-layer').forEach(ov => {
-            ov.querySelectorAll(`[id="overlay-poly-selected-${parent.id}"], [id="overlay-poly-child-selected-${parent.id}"], [id="overlay-path-selected-${parent.id}"], [id="overlay-path-child-selected-${parent.id}"]`).forEach(node => node.remove());
+        if (!isMulti) {
+          overlay.querySelectorAll('.overlay-type-selected, .overlay-type-child-selected').forEach(n => {
+            if (n.id !== keepPolyId && n.id !== keepPathId) n.remove();
           });
         }
+      } else {
+
+      // Collect descendant IDs to purge (for groups containing foreignObject, image, etc.)
+      const descendantIds = new Set();
+      if (typeof el.querySelectorAll === 'function') {
+        const children = el.querySelectorAll('[id]');
+        for (let i = 0; i < children.length; i++) {
+          descendantIds.add(children[i].id);
+        }
+      }
+
+      // Collect ancestor IDs to purge
+      const ancestorIds = [];
+      let parent = el.parentElement;
+      while (parent && parent.tagName && parent.tagName.toLowerCase() !== 'svg') {
+        if (parent.id) ancestorIds.push(parent.id);
         parent = parent.parentElement;
+      }
+
+      // Single pass through all overlay layers
+      const overlayLayers = document.querySelectorAll('.selection-overlay-layer');
+      for (let li = 0; li < overlayLayers.length; li++) {
+        const ov = overlayLayers[li];
+        // Walk all children with IDs in one pass instead of multiple querySelectorAll calls
+        const allNodes = ov.children;
+        for (let ni = allNodes.length - 1; ni >= 0; ni--) {
+          const node = allNodes[ni];
+          const nid = node.id;
+          if (!nid) continue;
+
+          // Keep the current element's overlay
+          if (nid === keepPolyId || nid === keepPathId) continue;
+
+          // Purge stale overlays for this element (step 1)
+          if (nid.includes(el.id)) {
+            node.remove();
+            continue;
+          }
+
+          // Purge descendant element overlays (step 3) â€” check if overlay belongs to any descendant
+          if (descendantIds.size > 0) {
+            let isDescendant = false;
+            for (const did of descendantIds) {
+              if (nid.includes(did)) { isDescendant = true; break; }
+            }
+            if (isDescendant) { node.remove(); continue; }
+          }
+
+          // Purge ancestor group overlays (step 4)
+          if (ancestorIds.length > 0) {
+            let isAncestor = false;
+            for (const aid of ancestorIds) {
+              if (nid === `overlay-poly-selected-${aid}` || nid === `overlay-poly-child-selected-${aid}` ||
+                  nid === `overlay-path-selected-${aid}` || nid === `overlay-path-child-selected-${aid}`) {
+                isAncestor = true; break;
+              }
+            }
+            if (isAncestor) { node.remove(); continue; }
+          }
+
+          // Single-selection: purge any other selection polygon (step 2)
+          if (!isMulti) {
+            const rawCls = node.className;
+            const cls = typeof rawCls === 'string'
+              ? rawCls
+              : (typeof rawCls?.baseVal === 'string'
+                  ? rawCls.baseVal
+                  : (typeof node.getAttribute === 'function' ? (node.getAttribute('class') || '') : ''));
+
+            if (typeof cls === 'string' && (cls.includes('overlay-type-selected') || cls.includes('overlay-type-child-selected'))) {
+              node.remove();
+              continue;
+            }
+            if (nid === 'overlay-poly-selected-multi-selection-bounds' || nid === 'overlay-poly-selected-multi') {
+              node.remove();
+              continue;
+            }
+          }
+        }
+      }
+
+      // Single-selection: purge stale resize handles from HTML overlay layers
+      if (!isMulti) {
+        const htmlOverlays = document.querySelectorAll('[id^="highlight-overlay-html-"]');
+        for (let hi = 0; hi < htmlOverlays.length; hi++) {
+          const htmlOv = htmlOverlays[hi];
+          const handles = htmlOv.querySelectorAll('.resize-handle, [id^="rotate-handle-"], [id^="rotation-degree-badge-"], [id^="rotate-hotspot-"]');
+          for (let ri = handles.length - 1; ri >= 0; ri--) {
+            if (!handles[ri].id.includes(el.id)) {
+              handles[ri].remove();
+            }
+          }
+        }
+        }
       }
     }
 
@@ -166,7 +223,10 @@ export const createOverlayHighlightRenderer = ({
     }
 
     try {
-      let bbox = getVisualBBox(el);
+      let bbox = (isDragging && el._dragLocalBBox) ? el._dragLocalBBox : getVisualBBox(el);
+      if (isDragging && !el._dragLocalBBox && bbox) {
+        el._dragLocalBBox = bbox;
+      }
       const ctm = el.getScreenCTM();
       const overlayCtm = overlay.getScreenCTM();
       if (!ctm || !overlayCtm) {
@@ -185,7 +245,7 @@ export const createOverlayHighlightRenderer = ({
       const zoomScale = zoom / 100;
       const isVectorPath = el.getAttribute('data-type') === 'vector-path' || el.getAttribute('data-is-vector') === 'true';
 
-      // ── PIXEL-PERFECT PATH for non-frame, non-line elements ──
+      // â”€â”€ PIXEL-PERFECT PATH for non-frame, non-line elements â”€â”€
       if (!isFrame && !isLine) {
         let localBBox = bbox;
         const isHotspot = el.getAttribute('data-is-hotspot') === 'true';
@@ -234,7 +294,7 @@ export const createOverlayHighlightRenderer = ({
           const mapped = [pt1, pt2, pt3, pt4].map(p => p.matrixTransform(localToOverlay));
           const pointsStr = mapped.map(p => `${p.x},${p.y}`).join(' ');
 
-          // ── Exact Path Shape Overlay for Vector Paths ──
+          // â”€â”€ Exact Path Shape Overlay for Vector Paths â”€â”€
           let pathOverlayId = `overlay-path-${type}-${el.id}`;
           let pathOverlay = overlay.querySelector(`[id="${pathOverlayId}"]`);
 
@@ -289,11 +349,18 @@ export const createOverlayHighlightRenderer = ({
             let polyId = `overlay-poly-${type}-${el.id}`;
             let polygon = overlay.querySelector(`[id="${polyId}"]`);
             if (!polygon) {
-              polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-              polygon.id = polyId;
-              polygon.setAttribute('class', `overlay-type-${type}`);
-              polygon.setAttribute('pointer-events', 'none');
-              overlay.appendChild(polygon);
+              const otherPoly = overlay.querySelector(`[id^="overlay-poly-"][id$="-${el.id}"]`);
+              if (otherPoly) {
+                otherPoly.id = polyId;
+                otherPoly.setAttribute('class', `overlay-type-${type}`);
+                polygon = otherPoly;
+              } else {
+                polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.id = polyId;
+                polygon.setAttribute('class', `overlay-type-${type}`);
+                polygon.setAttribute('pointer-events', 'none');
+                overlay.appendChild(polygon);
+              }
             }
             const isFreeFrameEl = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame';
             const isHotspotEl = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
@@ -508,7 +575,7 @@ export const createOverlayHighlightRenderer = ({
               drawInteractionBadge(el, mapped, htmlOverlay, zoomScale, bbox);
             }
           }
-          return; // ← Early return: pixel-perfect path handled
+          return; // â† Early return: pixel-perfect path handled
         }
       }
 
@@ -591,11 +658,18 @@ export const createOverlayHighlightRenderer = ({
         let polyId = `overlay-poly-${type}-${el.id}`;
         let polygon = overlay.querySelector(`[id="${polyId}"]`);
         if (!polygon) {
-          polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-          polygon.id = polyId;
-          polygon.setAttribute('class', `overlay-type-${type}`);
-          polygon.setAttribute('pointer-events', 'none');
-          overlay.appendChild(polygon);
+          const otherPoly = overlay.querySelector(`[id^="overlay-poly-"][id$="-${el.id}"]`);
+          if (otherPoly) {
+            otherPoly.id = polyId;
+            otherPoly.setAttribute('class', `overlay-type-${type}`);
+            polygon = otherPoly;
+          } else {
+            polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.id = polyId;
+            polygon.setAttribute('class', `overlay-type-${type}`);
+            polygon.setAttribute('pointer-events', 'none');
+            overlay.appendChild(polygon);
+          }
         }
         const isFreeFrameFB = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame';
         const isHotspotFB = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
@@ -636,7 +710,7 @@ export const createOverlayHighlightRenderer = ({
         }
       }
 
-      // ── RESIZE HANDLES (8 handles) - Fallback path ──
+      // â”€â”€ RESIZE HANDLES (8 handles) - Fallback path â”€â”€
       const isMultiSelectionBox = el.id === 'multi' || el.id === 'multi-selection-bounds';
       const selectionCount = isMultiSelectionBox ? 1 : (multiSelectedIdsRef.current.size > 0 ? multiSelectedIdsRef.current.size : (selectedLayerIdRef.current ? 1 : 0));
       if (selectionCount === 1 && (type === 'selected' || type === 'child-selected') && !isBeingEdited) {
@@ -822,7 +896,7 @@ export const createOverlayHighlightRenderer = ({
           }
         }
 
-        // ── VIDEO CONTROLS / MOVE TOGGLE BADGE ──
+        // â”€â”€ VIDEO CONTROLS / MOVE TOGGLE BADGE â”€â”€
         const isVideoEl = el.getAttribute('data-type') === 'video' || !!el.querySelector('video, iframe');
         if (isVideoEl && (type === 'selected' || type === 'child-selected') && htmlOverlay) {
           const isInteractive = el.getAttribute('data-video-interactive') === 'true';
@@ -888,7 +962,7 @@ export const createOverlayHighlightRenderer = ({
       }
     }
 
-    // ── INTERACTION BADGE (Fallback path) ──
+    // â”€â”€ INTERACTION BADGE (Fallback path) â”€â”€
     if (isSelected && !isBeingEdited && (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation')) {
       const htmlOverlay = getHtmlOverlayForElement(el);
       if (htmlOverlay) {
@@ -900,3 +974,4 @@ export const createOverlayHighlightRenderer = ({
 
   return { drawOverlayHighlight };
 };
+

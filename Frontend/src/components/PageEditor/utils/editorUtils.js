@@ -1,3 +1,5 @@
+import { consolidateTransforms } from '../mainEditor/utils/geometryUtils';
+
 export const syncGradient = (doc, element, baseAttr) => {
   const type = element.getAttribute(`${baseAttr}-type`);
   const currentValue = element.getAttribute(baseAttr);
@@ -351,7 +353,17 @@ export const parseLayersFromSVG = (element) => {
 
       const isPdfVector = child.getAttribute('data-type') === 'pdf-vector-layer';
 
-      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector) {
+      const isTypography = child.getAttribute('data-is-element-typography') === 'true' ||
+        child.getAttribute('data-typography-type') === 'kinetic' ||
+        child.getAttribute('data-typography-type') === 'motion-graphic' ||
+        (child.id && child.id.startsWith('typography-')) ||
+        (child.getAttribute('data-type') === 'text' && child.tagName.toLowerCase() === 'g');
+
+      if (isTypography) {
+        layer.type = 'text';
+      }
+
+      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector && !isTypography) {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
@@ -392,28 +404,11 @@ export const parseLayersFromSVG = (element) => {
     });
 };
 
+import { applyStyleToCharacterRange, getSelectionCharacterOffsets } from './vectorTextRuns';
+
 // Global listener to track active text selection range inside contenteditable elements
 if (typeof window !== 'undefined' && !window.__textSelectionTrackingInitialized) {
   window.__textSelectionTrackingInitialized = true;
-  document.addEventListener('selectionchange', () => {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-      const r = sel.getRangeAt(0);
-      const container = r.commonAncestorContainer.nodeType === 1 
-        ? r.commonAncestorContainer 
-        : r.commonAncestorContainer.parentElement;
-      const editableDiv = container?.closest('[contenteditable="true"]');
-      if (editableDiv) {
-        const fo = editableDiv.closest('foreignObject') || editableDiv.closest('[id]');
-        if (fo && fo.id) {
-          window.__savedTextSelection = {
-            elementId: fo.id,
-            range: r.cloneRange()
-          };
-        }
-      }
-    }
-  });
 
   document.addEventListener('mousedown', (e) => {
     const target = e.target;
@@ -436,95 +431,49 @@ if (typeof window !== 'undefined' && !window.__textSelectionTrackingInitialized)
 
 /**
  * Applies character-level style properties (color, fontSize, fontFamily, etc.)
- * specifically to the active or saved text selection range inside a contenteditable text box.
+ * specifically to the active or saved text selection range inside a contenteditable text box
+ * using Vector-Studio's character runs engine.
  * Returns true if a text selection range was styled, or false if no selection exists.
  */
 export const applyStyleToActiveTextSelection = (elementId, attribute, value) => {
   if (!elementId) return false;
-  const sel = window.getSelection();
-  let range = null;
 
   const fo = document.getElementById(elementId);
   if (!fo) return false;
-  const contentDiv = fo.querySelector('[contenteditable="true"]') || fo.firstElementChild;
+  const contentDiv = fo.querySelector('[contenteditable="true"]') || fo.querySelector('.flipbook-text-scrollbar') || fo.firstElementChild;
   if (!contentDiv) return false;
 
-  // 1. Check current live selection in browser window
-  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-    const r = sel.getRangeAt(0);
-    if (contentDiv.contains(r.commonAncestorContainer)) {
-      range = r;
+  // 1. Try to get current character offsets from live window selection
+  let offsets = getSelectionCharacterOffsets(contentDiv);
+
+  // 2. If focus shifted to sidebar controls, check window.__savedTextSelection
+  if (!offsets && window.__savedTextSelection && window.__savedTextSelection.elementId === elementId) {
+    if (window.__savedTextSelection.start !== undefined && window.__savedTextSelection.end !== undefined && window.__savedTextSelection.start !== window.__savedTextSelection.end) {
+      offsets = {
+        start: window.__savedTextSelection.start,
+        end: window.__savedTextSelection.end,
+        text: window.__savedTextSelection.text
+      };
     }
   }
 
-  // 2. Check saved selection if focus shifted to sidebar property controls
-  if (!range && window.__savedTextSelection && window.__savedTextSelection.elementId === elementId) {
-    const savedRange = window.__savedTextSelection.range;
-    if (savedRange && contentDiv.contains(savedRange.commonAncestorContainer)) {
-      range = savedRange;
-    }
-  }
-
-  if (!range || range.collapsed) return false;
-
-  const cssPropMap = {
-    fill: 'color',
-    color: 'color',
-    fontSize: 'font-size',
-    fontFamily: 'font-family',
-    fontWeight: 'font-weight',
-    fontStyle: 'font-style',
-    textDecoration: 'text-decoration',
-    textTransform: 'text-transform'
-  };
-
-  const cssProp = cssPropMap[attribute];
-  if (!cssProp) return false;
-
-  let finalVal = value;
-  if (attribute === 'fontSize' && typeof finalVal === 'number') {
-    finalVal = `${finalVal}px`;
-  } else if (attribute === 'fontFamily' && typeof finalVal === 'string' && !finalVal.includes("'") && !finalVal.includes('"')) {
-    finalVal = `'${finalVal}'`;
-  }
+  if (!offsets || offsets.start === offsets.end) return false;
 
   try {
-    const span = document.createElement('span');
-    span.style.setProperty(cssProp, finalVal, 'important');
-
-    const contents = range.extractContents();
-    
-    // Clean up any nested instances of the same property to prevent override conflicts
-    const nestedElements = contents.querySelectorAll('*');
-    nestedElements.forEach(el => {
-      if (el.style) {
-        el.style.removeProperty(cssProp);
-        
-        // Also remove camelCase version just in case
-        const camelProp = cssProp.replace(/-([a-z])/g, g => g[1].toUpperCase());
-        el.style.removeProperty(camelProp);
-      }
-    });
-
-    span.appendChild(contents);
-    range.insertNode(span);
-
-    // Restore focus and range selection
-    contentDiv.focus();
-    const newRange = document.createRange();
-    newRange.selectNodeContents(span);
-    if (sel) {
-      sel.removeAllRanges();
-      sel.addRange(newRange);
+    const success = applyStyleToCharacterRange(contentDiv, offsets.start, offsets.end, attribute, value);
+    if (success) {
+      window.__savedTextSelection = {
+        elementId,
+        start: offsets.start,
+        end: offsets.end,
+        text: offsets.text,
+        timestamp: Date.now()
+      };
+      return true;
     }
-    window.__savedTextSelection = {
-      elementId,
-      range: newRange.cloneRange()
-    };
-
-    return true;
+    return false;
   } catch (err) {
-    console.error('[applyStyleToActiveTextSelection] Error applying inline selection style:', err);
+    console.error('[applyStyleToActiveTextSelection] Error applying Vector-Studio style to range:', err);
     return false;
   }
 };
@@ -534,9 +483,49 @@ export const applyStyleToActiveTextSelection = (elementId, attribute, value) => 
 // --- Imported from root editorUtils (Template formatting & History) ---
 // Utility functions for the template editor
 
-export const getCleanHTML = (html) => {
-  return html || '';
+
+export const healCorruptedSvgHtml = (html) => {
+  if (!html) return html;
+  let healed = html
+    .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
+    .replace(/<\/\s*br\s*>/gi, '')
+    .replace(/&nbsp;/gi, '&#160;');
+
+  // Repair broken span style tags with unescaped quotes from font-family
+  healed = healed.replace(/<span([^>]*?)style="([^"]*?font-family:\s*)"\s*([^>]*?)>([\s\S]*?)<\/span>/gi, (match, beforeStyle, prefix, brokenAttrs, inner) => {
+    let fontName = 'Playfair Display';
+    if (/playfair/i.test(brokenAttrs)) fontName = 'Playfair Display';
+    else if (/inter/i.test(brokenAttrs)) fontName = 'Inter';
+    else if (/roboto/i.test(brokenAttrs)) fontName = 'Roboto';
+    else if (/poppins/i.test(brokenAttrs)) fontName = 'Poppins';
+    else if (/satisfy/i.test(brokenAttrs)) fontName = 'Satisfy';
+    else if (/bangers/i.test(brokenAttrs)) fontName = 'Bangers';
+    else if (/oswald/i.test(brokenAttrs)) fontName = 'Oswald';
+    else {
+      const m = brokenAttrs.match(/([a-zA-Z0-9_\s]+)",=""/);
+      if (m) fontName = m[1].trim();
+    }
+
+    let extra = '';
+    const weightMatch = brokenAttrs.match(/font-weight:=""\s*(\d+);=""/i);
+    if (weightMatch) extra += `; font-weight: ${weightMatch[1]}`;
+
+    const cleanStyle = `${prefix}'${fontName}', sans-serif${extra}`.replace(/"/g, "'");
+    return `<span${beforeStyle}style="${cleanStyle}">${inner}</span>`;
+  });
+
+  // Strip any invalid XML attribute tokens containing quotes, commas, colons or semicolons
+  healed = healed.replace(/\s+[a-zA-Z0-9_\-\:]*[",:][a-zA-Z0-9_\-\:]*=""/gi, '');
+  healed = healed.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
+  healed = healed.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
+
+  return healed;
 };
+
+export const getCleanHTML = (html) => {
+  return healCorruptedSvgHtml(html || '');
+};
+
 
 
 // Reset properties to default values
@@ -832,14 +821,63 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
       }
     });
 
+    // 3.5. Strip artboard/template-level clipping masks so the added template is not clipmasked in the editor
+    const artboardClipIds = new Set();
+    const clipPathElements = Array.from(templateSvg.querySelectorAll('clipPath, clippath'));
+    clipPathElements.forEach(clipEl => {
+      const rect = clipEl.querySelector('rect');
+      if (rect) {
+        const rw = parseFloat(rect.getAttribute('width')) || 0;
+        const rh = parseFloat(rect.getAttribute('height')) || 0;
+        if (
+          (rw >= templateWidth * 0.75 && rh >= templateHeight * 0.75) ||
+          (rect.getAttribute('width') === '100%' && rect.getAttribute('height') === '100%')
+        ) {
+          if (clipEl.id) artboardClipIds.add(clipEl.id);
+        }
+      }
+      if (clipEl.id && (/^tpl-[a-z0-9]+-clip0(_\d+)*$/i.test(clipEl.id) || /^clip0(_\d+)*$/i.test(clipEl.id))) {
+        artboardClipIds.add(clipEl.id);
+      }
+    });
+
+    // Strip clip-path attributes referencing artboard clips or on top-level groups
+    Array.from(templateSvg.querySelectorAll('*')).forEach(el => {
+      const cp = el.getAttribute('clip-path') || '';
+      for (const cid of artboardClipIds) {
+        if (cp.includes(cid)) {
+          el.removeAttribute('clip-path');
+          if (el.style) {
+            el.style.removeProperty('clip-path');
+            el.style.removeProperty('-webkit-clip-path');
+          }
+          break;
+        }
+      }
+      if (el.parentElement === templateSvg && el.hasAttribute('clip-path')) {
+        el.removeAttribute('clip-path');
+        if (el.style) {
+          el.style.removeProperty('clip-path');
+          el.style.removeProperty('-webkit-clip-path');
+        }
+      }
+    });
+
+    artboardClipIds.forEach(cid => {
+      const clipNode = templateSvg.querySelector(`[id="${cid}"]`);
+      if (clipNode && clipNode.parentNode) {
+        clipNode.parentNode.removeChild(clipNode);
+      }
+    });
+
     // 4. Handle outermost dummy artboard/parent groups
     // Templates exported from Figma/Illustrator wrap the entire artboard in a parent <g> (e.g. <g id="2 - Table of content" clip-path="...">)
     // We unwrap these top-level container groups so all child elements are placed directly in the Root Page Folder.
     const unwrapOuterGroup = (group) => {
-      // 1. Inherit visual styling attributes to children so elements preserve their appearance
+      // 1. Inherit visual styling attributes to children (NEVER inherit clip-path or mask so child elements are not clipmasked)
       const attrsToInherit = [
         'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin',
-        'opacity', 'visibility', 'filter', 'color', 'clip-path', 'mask',
+        'opacity', 'visibility', 'filter', 'color',
         'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'letter-spacing', 'word-spacing'
       ];
       attrsToInherit.forEach(attr => {
@@ -874,7 +912,9 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
       if (groupTransform) {
         Array.from(group.children).forEach(child => {
           const childTransform = child.getAttribute('transform') || '';
-          child.setAttribute('transform', `${groupTransform} ${childTransform}`.trim());
+          const consolidated = consolidateTransforms(groupTransform, childTransform);
+          if (consolidated) child.setAttribute('transform', consolidated);
+          else child.removeAttribute('transform');
         });
       }
 
@@ -1035,7 +1075,12 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
       }
 
       const currentTransform = imported.getAttribute('transform') || '';
-      imported.setAttribute('transform', `${fittingTransform} ${currentTransform}`.trim());
+      const consolidated = consolidateTransforms(fittingTransform, currentTransform);
+      if (consolidated) {
+        imported.setAttribute('transform', consolidated);
+      } else {
+        imported.removeAttribute('transform');
+      }
 
       targetParent.appendChild(imported);
     });

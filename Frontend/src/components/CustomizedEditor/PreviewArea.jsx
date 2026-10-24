@@ -1,26 +1,22 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import backgroundComponents from './Backgrounds';
 import animationComponents from './Animations';
-import * as BookAppearanceHelpers from './bookAppearanceHelpers';
+import * as BookAppearanceHelpers from './utils/bookAppearanceHelpers';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 
-
-import { LAYOUT_DEFAULT_COLORS } from './Layout';
+import { LAYOUT_DEFAULT_COLORS } from './utils/layoutColors';
 import LeadFormPopup from './popups/LeadFormPopup';
-
 
 import {
   getIframeContent,
-  TurnJsBookRenderer,
   SharedOverlays,
   InteractionPopupModal,
   InteractionSlideshowModal,
   DeviceLayoutRenderer
 } from './previewAreaModules';
-import { useCustomizerState, useActiveBook, useUIModals } from '../../store/hooks';
+import tabFrameSvg from '../../assets/cover/Tab 1.svg';
+import { useCustomizerState, useActiveBook } from '../../store/hooks';
 
 const PreviewArea = React.memo(({
     pages = [],
@@ -58,10 +54,10 @@ const PreviewArea = React.memo(({
     vId: incomingVIdProp,
     shareId: incomingShareId,
     currentBook: currentBookProp,
+    baseUrl,
 }) => {
     const customizerRedux = useCustomizerState();
     const activeBookRedux = useActiveBook();
-    const uiModalRedux = useUIModals();
 
     const bookName = bookNameProp || activeBookRedux.bookName;
     const currentBook = currentBookProp || activeBookRedux.currentBook;
@@ -163,18 +159,28 @@ const PreviewArea = React.memo(({
     }, [incomingVId, incomingVIdProp, currentBook, incomingSettings]);
 
     const resolvedShareId = React.useMemo(() => {
-        if (incomingShareId) return incomingShareId;
-        if (currentBook?.shareId) return currentBook.shareId;
-        if (currentBook?.share?.shareId) return currentBook.share.shareId;
-        if (incomingSettings?.shareId) return incomingSettings.shareId;
-        if (incomingSettings?.Visibility?.shareId) return incomingSettings.Visibility.shareId;
-        if (incomingSettings?.share?.shareId) return incomingSettings.share.shareId;
+        const visShareId =
+            incomingSettings?.Visibility?.shareId ||
+            currentBook?.Customized_Settings?.Visibility?.shareId ||
+            currentBook?.Visibility?.shareId ||
+            incomingSettings?.Customized_Settings?.Visibility?.shareId ||
+            incomingSettings?.share?.shareId ||
+            currentBook?.share?.shareId;
+        if (visShareId && visShareId !== resolvedVId) return visShareId;
+
         if (typeof window !== 'undefined') {
-            const match = window.location.pathname.match(/\/share=[^/]+\/([^/?#]+)/);
-            if (match && match[1]) return match[1];
+            const queryShareId = new URLSearchParams(window.location.search).get('shareId');
+            if (queryShareId && queryShareId !== resolvedVId) return queryShareId;
+            const match = window.location.pathname.match(/\/share(=[^/]+)?\/([^/?#]+)/);
+            if (match && match[2] && match[2] !== resolvedVId) return match[2];
         }
-        return '';
-    }, [incomingShareId, currentBook, incomingSettings]);
+
+        if (incomingShareId && incomingShareId !== resolvedVId) return incomingShareId;
+        if (currentBook?.shareId && currentBook.shareId !== resolvedVId) return currentBook.shareId;
+        if (incomingSettings?.shareId && incomingSettings.shareId !== resolvedVId) return incomingSettings.shareId;
+
+        return visShareId || incomingShareId || '';
+    }, [incomingShareId, currentBook, incomingSettings, resolvedVId]);
 
     const resolvedBookName = React.useMemo(() => {
         return bookName || currentBook?.flipbookName || currentBook?.title || incomingSettings?.flipbookName || incomingSettings?.FlipbookInfo?.flipbookName || 'Flipbook';
@@ -353,8 +359,6 @@ const PreviewArea = React.memo(({
     const containerRef = useRef();
     const screenRef = useRef();
     const isFlippingRef = useRef(false);
-    const lastTapRef = useRef(0);
-    const lastSyncPage = useRef(targetPage);
     const lastPreviewOpen = useRef(otherSetupSettings?.gallery?.previewOpen);
 
     const activeDevice = activeDeviceProp; // Desktop, Tablet, Mobile
@@ -426,7 +430,7 @@ const PreviewArea = React.memo(({
             iframes.forEach(iframe => {
                 try {
                     iframe.contentWindow.postMessage({ type: 'BLINK_INTERACTIONS' }, '*');
-                } catch (err) { }
+                } catch { }
             });
         };
 
@@ -515,6 +519,9 @@ const PreviewArea = React.memo(({
 
     const isTurnJs = !bookAppearanceSettings?.hardCover;
     const [actualPhysicalZoom, setActualPhysicalZoom] = useState(1);
+    // Page dimensions (A4 ratio) dynamically scaled
+    const [WIDTH, setWIDTH] = useState(400);
+    const [HEIGHT, setHEIGHT] = useState(566);
     const currentZoom = useMemo(() => manualZoom * (activeDevice === 'Desktop' ? 1 : fitScale), [manualZoom, fitScale, activeDevice]);
 
     useEffect(() => {
@@ -631,62 +638,73 @@ const PreviewArea = React.memo(({
             return;
         }
 
+        let rafId = null;
+
         const computeFitScale = () => {
             const screen = screenRef.current;
             if (!screen) return;
 
             const { clientWidth, clientHeight } = screen;
+            if (!clientWidth || !clientHeight) return;
+
             const isCurrentlyFullscreen = (document.fullscreenElement === containerRef.current) || isFullscreen;
 
-            const wFactor = isCurrentlyFullscreen ? 0.70 : 0.70;
-            const hFactor = isCurrentlyFullscreen ? 0.80 : 0.80;
+            const wFactor = 0.70;
+            const hFactor = 0.80;
 
             const availableW = clientWidth * wFactor;
             const availableH = clientHeight * hFactor;
 
-            // Calculate effective zoom (manualZoom only, interactionZoom is handled via CSS transform)
-            // The user wants NO CSS scaling for manual zoom, meaning we apply the scale directly to the physical dimensions
             let baseZoom = manualZoom;
-
-            // In fullscreen we might have a scaling factor applied externally
-            if (isCurrentlyFullscreen) {
-                baseZoom = baseZoom;
-            }
 
             // Use the template editor height and width ratio
             const availablePageW = isSinglePage ? availableW : availableW / 2;
             const availablePageH = availableH;
 
-            const scaleX = availablePageW / baseDimensions.width;
-            const scaleY = availablePageH / baseDimensions.height;
+            const baseW = (baseDimensions && Number.isFinite(baseDimensions.width) && baseDimensions.width > 0) ? baseDimensions.width : 210;
+            const baseH = (baseDimensions && Number.isFinite(baseDimensions.height) && baseDimensions.height > 0) ? baseDimensions.height : 297;
+
+            const scaleX = availablePageW / baseW;
+            const scaleY = availablePageH / baseH;
             const scale = Math.min(scaleX, scaleY);
 
-            const physicalZoom = baseZoom;
+            const physicalZoom = Number.isFinite(baseZoom) && baseZoom > 0 ? baseZoom : 1;
 
-            setWIDTH(Math.round(baseDimensions.width * scale * physicalZoom));
-            setHEIGHT(Math.round(baseDimensions.height * scale * physicalZoom));
-            setActualPhysicalZoom(physicalZoom);
+            if (Number.isFinite(scale) && scale > 0) {
+                const newW = Math.round(baseW * scale * physicalZoom);
+                const newH = Math.round(baseH * scale * physicalZoom);
+                if (newW > 10 && newH > 10) {
+                    setWIDTH(prev => (Math.abs(prev - newW) >= 2 ? newW : prev));
+                    setHEIGHT(prev => (Math.abs(prev - newH) >= 2 ? newH : prev));
+                    setActualPhysicalZoom(prev => (Math.abs(prev - physicalZoom) > 0.01 ? physicalZoom : prev));
+                }
+            }
         };
 
-        const observer = new ResizeObserver(computeFitScale);
+        const scheduleCompute = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(computeFitScale);
+        };
+
+        const observer = new ResizeObserver(scheduleCompute);
         observer.observe(screenRef.current);
 
-        // Re-run immediately on fullscreen change (before the ResizeObserver fires)
+        // Re-run immediately on fullscreen change
         const onFSChange = () => {
-            // Use rAF to let the browser finish reflow after fullscreen transition
-            requestAnimationFrame(computeFitScale);
+            scheduleCompute();
         };
         document.addEventListener('fullscreenchange', onFSChange);
         document.addEventListener('webkitfullscreenchange', onFSChange);
 
-        computeFitScale();
+        scheduleCompute();
 
         return () => {
+            if (rafId) cancelAnimationFrame(rafId);
             observer.disconnect();
             document.removeEventListener('fullscreenchange', onFSChange);
             document.removeEventListener('webkitfullscreenchange', onFSChange);
         };
-    }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions, isTurnJs]);
+    }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions?.width, baseDimensions?.height, isTurnJs]);
 
     const setCurrentZoom = useCallback((val) => {
         if (typeof val === 'function') {
@@ -700,10 +718,6 @@ const PreviewArea = React.memo(({
     const [showNotesMenu, setShowNotesMenu] = useState(false);
     const [isAutoFlipping, setIsAutoFlipping] = useState(false);
     const [countdown, setCountdown] = useState(null);
-
-    // Page dimensions (A4 ratio) dynamically scaled
-    const [WIDTH, setWIDTH] = useState(400);
-    const [HEIGHT, setHEIGHT] = useState(566);
 
     const [currentPage, setCurrentPage] = useState(targetPage);
     const [offset, setOffset] = useState(() => {
@@ -980,8 +994,8 @@ const PreviewArea = React.memo(({
             borderRadius: '0',
             margin: 'auto',
             position: 'relative',
-            backgroundImage: 'url("/src/assets/cover/Tab 1.svg")',
-            backgroundSize: '95% 95%',
+            backgroundImage: `url("${tabFrameSvg}")`,
+            backgroundSize: '100% 100%',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundColor: 'transparent',
@@ -992,13 +1006,13 @@ const PreviewArea = React.memo(({
 
     const getScreenWrapperStyle = () => {
         if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
-        if (activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) return {
+        if (activeDevice === 'Tablet' && !isPhysicalTablet) return {
             position: 'absolute',
-            top: '9.38%',
-            bottom: '7.7%',
-            left: '5.3%',
-            right: '6.6%',
-            borderRadius: '12px',
+            top: '7.4%',
+            bottom: '5.9%',
+            left: '3.14%',
+            right: '4.48%',
+            borderRadius: '14px',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -1212,7 +1226,7 @@ const PreviewArea = React.memo(({
                     if (meta.data) {
                         forceDownload(meta.data, meta.name || 'download');
                     }
-                } catch (err) {
+                } catch {
                     forceDownload(e.data.value, 'download');
                 }
             } else if (e.data && e.data.type === 'open-email') {
@@ -1593,7 +1607,7 @@ const PreviewArea = React.memo(({
             containerRef.current.querySelectorAll('iframe').forEach(iframe => {
                 try {
                     iframe.contentWindow?.postMessage({ type: 'PAGE_TURNED', visiblePages }, '*');
-                } catch (err) { /* cross-origin iframe – skip */ }
+                } catch { /* cross-origin iframe – skip */ }
             });
         }
 
@@ -1670,15 +1684,15 @@ const PreviewArea = React.memo(({
                     img.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
                     img.style.filter = filterStr;
                 }
-            } catch (e) { }
+            } catch { }
         });
     }, [watermarkSettings]);
 
     const watermarkSrc = watermarkSettings?.src;
 
     const memoizedBuildPageDoc = useCallback((html, pageNum) => {
-        return getIframeContent(html, pageNum, watermarkSettingsRef.current, pages.length, isSinglePage);
-    }, [watermarkSrc, pages.length, isSinglePage]);
+        return getIframeContent(html, pageNum, watermarkSettingsRef.current, pages.length, isSinglePage, baseUrl);
+    }, [watermarkSrc, pages.length, isSinglePage, baseUrl]);
 
     const bookRendererProps = {
         augmentedPages,
@@ -2169,7 +2183,7 @@ const PreviewArea = React.memo(({
                             fsWrapper._bPlaceholder = bPlaceholder;
                             const reqFs = fsWrapper.requestFullscreen || fsWrapper.webkitRequestFullscreen;
                             if (reqFs) {
-                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(err => {
+                                reqFs.call(fsWrapper).then(() => { if (wasPlaying) video.play().catch(() => { }); }).catch(() => {
                                     if (vPlaceholder.parentNode) vPlaceholder.parentNode.insertBefore(video, vPlaceholder);
                                     if (bPlaceholder.parentNode) bPlaceholder.parentNode.insertBefore(bar, bPlaceholder);
                                     vPlaceholder.remove(); bPlaceholder.remove(); fsWrapper.remove();
@@ -2483,7 +2497,7 @@ const PreviewArea = React.memo(({
             }}
         >
 
-            {(!['Tablet', 'Mobile'].includes(activeDevice) || isPublishedPreview || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
+            {(!['Tablet', 'Mobile'].includes(activeDevice) || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
 
             <DeviceLayoutRenderer
                 activeDevice={activeDevice}
@@ -2500,6 +2514,7 @@ const PreviewArea = React.memo(({
                 activeLayout={activeLayout}
                 isTablet={isTablet}
                 deviceStyles={deviceStyles}
+                getScreenWrapperStyle={getScreenWrapperStyle}
                 renderSharedOverlays={renderSharedOverlays}
                 layout1Bookmarks={layout1Bookmarks} layout1Notes={layout1Notes}
                 layout2Bookmarks={layout2Bookmarks} layout2Notes={layout2Notes}
@@ -2526,7 +2541,6 @@ const PreviewArea = React.memo(({
                 setShowMoreMenuMemo={setShowMoreMenuMemo}
                 showNotesMenu={showNotesMenu}
                 setShowNotesMenuMemo={setShowNotesMenuMemo}
-                getScreenWrapperStyle={getScreenWrapperStyle}
             />
 
             <AnimatePresence>

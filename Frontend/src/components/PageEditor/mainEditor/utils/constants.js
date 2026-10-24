@@ -140,7 +140,12 @@ export const svgGlobalStyles = `
 
   /* Allow text selection when editing */
   .page-svg-container svg [contenteditable="true"],
-  .page-svg-container svg foreignObject[data-editing="true"] {
+  .page-svg-container svg foreignObject[data-editing="true"],
+  .page-svg-container svg text[data-editing="true"],
+  .page-svg-container svg text[data-editing="true"] *,
+  .page-svg-container.text-editing-mode,
+  .page-svg-container.text-editing-mode *,
+  #vector-studio-type-router {
     user-select: text !important;
     -webkit-user-select: text !important;
     cursor: ${TYPE_CURSOR} !important;

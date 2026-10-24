@@ -212,7 +212,7 @@ const isSecureConnection = (req) => {
  * Helper to securely attach HttpOnly cookies for Access Token and Refresh Token (7 days)
  * and a non-sensitive cookie indicator for client UI routing
  */
-const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
+const setAuthCookies = (res, accessToken, refreshToken = null, req = null, user = null) => {
   const isSecure = isSecureConnection(req);
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -225,7 +225,9 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
   };
 
   // 1. HttpOnly Access Token cookie
-  res.cookie("token", accessToken, cookieOptions);
+  if (accessToken) {
+    res.cookie("token", accessToken, cookieOptions);
+  }
 
   // 2. HttpOnly Refresh Token cookie (7 days)
   if (refreshToken) {
@@ -237,6 +239,20 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
     ...cookieOptions,
     httpOnly: false,
   });
+
+  // 4. Non-sensitive client user display info for instant UI hydration without localStorage
+  if (user) {
+    const safeUserData = {
+      name: user.name || "",
+      emailId: user.emailId || user.email || "",
+      email: user.emailId || user.email || "",
+      picture: user.picture || "",
+    };
+    res.cookie("flipibook_user", encodeURIComponent(JSON.stringify(safeUserData)), {
+      ...cookieOptions,
+      httpOnly: false,
+    });
+  }
 };
 
 const clearAuthCookies = (res, req = null) => {
@@ -250,6 +266,7 @@ const clearAuthCookies = (res, req = null) => {
   res.clearCookie("token", cookieOpts);
   res.clearCookie("refreshToken", cookieOpts);
   res.clearCookie("flipibook_logged_in", { ...cookieOpts, httpOnly: false });
+  res.clearCookie("flipibook_user", { ...cookieOpts, httpOnly: false });
 };
 
 /**
@@ -332,7 +349,7 @@ const signup = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
 
     return res.status(201).json({
       success: true,
@@ -538,7 +555,7 @@ const verifySignupOtp = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
 
     return res.status(201).json({
       success: true,
@@ -676,7 +693,7 @@ const login = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
 
     return res.status(200).json({
       success: true,
@@ -810,7 +827,7 @@ const googleLogin = async (req, res) => {
       sessionId: loginLog?._id,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
 
     return res.status(200).json({
       success: true,
@@ -1115,17 +1132,21 @@ const verifySession = async (req, res) => {
     if (accessToken) {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
-        // Verify session is active in LoginLog
+        // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedAccess.sessionId && mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)) {
-          const session = await LoginLog.findById(decodedAccess.sessionId);
-          if (session && session.status === "LOGGED_OUT") {
-            clearAuthCookies(res, req);
-            return res.status(200).json({
-              success: true,
-              isAuthenticated: false,
-              user: null,
-              message: "Session has been logged out",
-            });
+          try {
+            const session = await LoginLog.findById(decodedAccess.sessionId);
+            if (session && session.status === "LOGGED_OUT") {
+              clearAuthCookies(res, req);
+              return res.status(200).json({
+                success: true,
+                isAuthenticated: false,
+                user: null,
+                message: "Session has been logged out",
+              });
+            }
+          } catch (sessionErr) {
+            console.warn("[Verify Session] Warning checking LoginLog:", sessionErr.message);
           }
         }
         targetUserId = decodedAccess.id;
@@ -1139,17 +1160,21 @@ const verifySession = async (req, res) => {
       const decodedRefresh = verifyToken(refreshToken);
       if (decodedRefresh && decodedRefresh.id) {
         tokenEmail = decodedRefresh.emailId || null;
-        // Verify session is active in LoginLog
-        if (decodedRefresh.sessionId) {
-          const session = await LoginLog.findById(decodedRefresh.sessionId);
-          if (session && session.status === "LOGGED_OUT") {
-            clearAuthCookies(res, req);
-            return res.status(200).json({
-              success: true,
-              isAuthenticated: false,
-              user: null,
-              message: "Session has been logged out",
-            });
+        // Verify session is active in LoginLog (safeguarded against DB buffering delay)
+        if (decodedRefresh.sessionId && mongoose.Types.ObjectId.isValid(decodedRefresh.sessionId)) {
+          try {
+            const session = await LoginLog.findById(decodedRefresh.sessionId);
+            if (session && session.status === "LOGGED_OUT") {
+              clearAuthCookies(res, req);
+              return res.status(200).json({
+                success: true,
+                isAuthenticated: false,
+                user: null,
+                message: "Session has been logged out",
+              });
+            }
+          } catch (sessionErr) {
+            console.warn("[Verify Session] Warning checking refresh LoginLog:", sessionErr.message);
           }
         }
 
@@ -1161,8 +1186,6 @@ const verifySession = async (req, res) => {
           sessionId: decodedRefresh.sessionId,
         });
 
-        // Set the refreshed Access Token cookie while maintaining the 7-day Refresh Token
-        setAuthCookies(res, newAccessToken, refreshToken, req);
         targetUserId = decodedRefresh.id;
         activeToken = newAccessToken;
       }
@@ -1192,25 +1215,32 @@ const verifySession = async (req, res) => {
     // 5. Retrieve user details by ID
     let user = null;
     if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
-      user = await User.findById(targetUserId).select(
-        "name picture emailId userID",
-      );
+      try {
+        user = await User.findById(targetUserId).select(
+          "name picture emailId userID",
+        );
+      } catch (userErr) {
+        console.warn("[Verify Session] User lookup by ID warning:", userErr.message);
+      }
     }
 
     // Fallback: If not found by _id, check if user exists by verified email in token
     if (!user && tokenEmail) {
-      user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
-        "name picture emailId userID",
-      );
-      if (user) {
-        // Auto-repair cookie session with current active user _id
-        const repairedAccessToken = generateToken({
-          userId: user.userID,
-          emailId: user.emailId,
-          id: user._id,
-        });
-        setAuthCookies(res, repairedAccessToken, refreshToken, req);
-        activeToken = repairedAccessToken;
+      try {
+        user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
+          "name picture emailId userID",
+        );
+        if (user) {
+          // Auto-repair cookie session with current active user _id
+          const repairedAccessToken = generateToken({
+            userId: user.userID,
+            emailId: user.emailId,
+            id: user._id,
+          });
+          activeToken = repairedAccessToken;
+        }
+      } catch (emailErr) {
+        console.warn("[Verify Session] User lookup by email warning:", emailErr.message);
       }
     }
 
@@ -1225,6 +1255,9 @@ const verifySession = async (req, res) => {
       });
     }
 
+    // Refresh cookies with user display info for instant client hydration
+    setAuthCookies(res, activeToken, refreshToken, req, user);
+
     return res.status(200).json({
       success: true,
       isAuthenticated: true,
@@ -1233,13 +1266,13 @@ const verifySession = async (req, res) => {
         name: user.name,
         picture: user.picture,
         emailId: user.emailId,
+        email: user.emailId,
       },
     });
   } catch (error) {
     console.error("[Verify Session Error]:", error);
     return res.status(500).json({
       success: false,
-      isAuthenticated: false,
       message: "Server error verifying session",
     });
   }

@@ -31,6 +31,33 @@ const fontWeights = [
 
 
 
+// Typographic unit conversions (1 pt = 96/72 px = 4/3 px; 1 px = 72/96 pt = 0.75 pt)
+export const pxToPt = (px) => {
+  const num = parseFloat(px);
+  if (isNaN(num)) return 12;
+  return Math.round((num * 0.75) * 10) / 10;
+};
+
+export const ptToPx = (pt) => {
+  const num = parseFloat(pt);
+  if (isNaN(num)) return 16;
+  return Math.round((num * (4 / 3)) * 10) / 10;
+};
+
+export const parsePtValue = (val) => {
+  if (typeof val === 'number') return Math.round(val * 10) / 10;
+  if (!val) return 12;
+  const str = val.toString().trim();
+  if (str.endsWith('pt')) {
+    return parseFloat(str) || 12;
+  }
+  if (str.endsWith('px')) {
+    return pxToPt(parseFloat(str));
+  }
+  const num = parseFloat(str);
+  return isNaN(num) ? 12 : Math.round(num * 10) / 10;
+};
+
 const getStrokeColorWithOpacity = (color, opacityStr) => {
   if (color === 'none' || color === 'transparent' || !color) return 'transparent';
   if (color.startsWith('#')) {
@@ -1023,10 +1050,15 @@ const TextEditor = ({
   }, [selectedLayerId, pages, activePageIndex]);
 
   const updateElementAttributeLocal = (pageIdx, elId, attribute, value, skipLiveUpdate = false) => {
-    // Immediate Live Feedback for DOM and Overlay
     const liveEl = document.getElementById(elId);
     const styleProp = STYLE_MAP[attribute];
-    const finalVal = (attribute === 'fontSize' || attribute === 'letterSpacing') && !value?.toString().includes('px') && !value?.toString().includes('em') ? `${value}px` : value;
+    let finalVal = value;
+    if (attribute === 'fontSize') {
+      const ptVal = parsePtValue(value);
+      finalVal = `${ptVal}pt`;
+    } else if (attribute === 'letterSpacing' && !value?.toString().includes('px') && !value?.toString().includes('em')) {
+      finalVal = `${value}px`;
+    }
 
     if (liveEl) {
       const liveTag = liveEl.tagName.toLowerCase();
@@ -1082,6 +1114,13 @@ const TextEditor = ({
             let selectionApplied = false;
             if (isCharacterProp) {
               selectionApplied = applyStyleToActiveTextSelection(elId, attribute, value);
+              if (selectionApplied) {
+                const liveTarget = liveEl.querySelector('.flipbook-text-scrollbar') || liveEl.firstElementChild;
+                if (liveTarget) {
+                  updateElementAttributeLocal(activePageIndex, elId, 'innerHTML', liveTarget.innerHTML, true);
+                }
+                window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: elId } }));
+              }
             }
 
             if (!selectionApplied) {
@@ -1184,6 +1223,34 @@ const TextEditor = ({
             const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
             liveEl.setAttribute('paint-order', paintOrder);
             liveEl.style.setProperty('paint-order', paintOrder, 'important');
+          }
+          if (liveTag === 'text') {
+            if (attribute === 'textAlign') {
+              const anchor = (value === 'center' || value === 'middle') ? 'middle' : ((value === 'right' || value === 'end') ? 'end' : 'start');
+              liveEl.setAttribute('text-anchor', anchor);
+              liveEl.style.setProperty('text-anchor', anchor, 'important');
+              liveEl.setAttribute('data-text-align', value);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => {
+                c.setAttribute('text-anchor', anchor);
+                c.style.setProperty('text-anchor', anchor, 'important');
+              });
+            } else if (attribute === 'fontSize') {
+              liveEl.setAttribute('font-size', finalVal);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => c.setAttribute('font-size', finalVal));
+            } else if (attribute === 'fontFamily') {
+              const cleanFf = value.replace(/['"]/g, '');
+              liveEl.setAttribute('font-family', cleanFf);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => c.setAttribute('font-family', cleanFf));
+            } else if (attribute === 'fontWeight') {
+              liveEl.setAttribute('font-weight', value);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => c.setAttribute('font-weight', value));
+            } else if (attribute === 'fontStyle') {
+              liveEl.setAttribute('font-style', value);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => c.setAttribute('font-style', value));
+            } else if (attribute === 'fill') {
+              liveEl.setAttribute('fill', value);
+              Array.from(liveEl.querySelectorAll('tspan')).forEach(c => c.setAttribute('fill', value));
+            }
           }
           if (liveTag === 'text' || liveTag === 'g') {
             Array.from(liveEl.querySelectorAll('tspan, path, rect, circle, ellipse, polygon, polyline')).forEach(child => {
@@ -1310,11 +1377,41 @@ const TextEditor = ({
       const parser = new DOMParser();
       // Replace any variation of <br> (with or without attributes/slashes) and any closing </br> with a clean <br/>
       // and replace invalid XML entity &nbsp; with &#160;
-      const cleanHtml = page.html
+      let cleanHtml = page.html
         .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
         .replace(/<\/\s*br\s*>/gi, '')
         .replace(/&nbsp;/gi, '&#160;');
+
+      // Auto-heal broken style attributes (e.g. unescaped quotes in font-family)
+      cleanHtml = cleanHtml.replace(/<span([^>]*?)style="([^"]*?font-family:\s*)"\s*([^>]*?)>([\s\S]*?)<\/span>/gi, (match, beforeStyle, prefix, brokenAttrs, inner) => {
+        let fontName = 'Playfair Display';
+        if (/playfair/i.test(brokenAttrs)) fontName = 'Playfair Display';
+        else if (/inter/i.test(brokenAttrs)) fontName = 'Inter';
+        else if (/roboto/i.test(brokenAttrs)) fontName = 'Roboto';
+        else if (/poppins/i.test(brokenAttrs)) fontName = 'Poppins';
+        else if (/satisfy/i.test(brokenAttrs)) fontName = 'Satisfy';
+        else if (/bangers/i.test(brokenAttrs)) fontName = 'Bangers';
+        else if (/oswald/i.test(brokenAttrs)) fontName = 'Oswald';
+        else {
+          const m = brokenAttrs.match(/([a-zA-Z0-9_\s]+)",=""/);
+          if (m) fontName = m[1].trim();
+        }
+        let extra = '';
+        const weightMatch = brokenAttrs.match(/font-weight:=""\s*(\d+);=""/i);
+        if (weightMatch) extra += `; font-weight: ${weightMatch[1]}`;
+        const cleanStyle = `${prefix}'${fontName}', sans-serif${extra}`.replace(/"/g, "'");
+        return `<span${beforeStyle}style="${cleanStyle}">${inner}</span>`;
+      });
+      cleanHtml = cleanHtml.replace(/\s+[a-zA-Z0-9_\-\:]*[",:][a-zA-Z0-9_\-\:]*=""/gi, '');
+      cleanHtml = cleanHtml.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
+      cleanHtml = cleanHtml.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
+
       let doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
+
+      if (!doc.querySelector('parsererror')) {
+        const lingering = document.getElementById('xml-debug-error');
+        if (lingering) lingering.remove();
+      }
 
       // Auto-recover if the React state was permanently corrupted by a previous crash
       // (meaning the cleanHtml string literally contains the error document itself)
@@ -1941,7 +2038,7 @@ const TextEditor = ({
 
   const updateStyle = useCallback((property, value) => {
     if (property === 'fontFamily') setFontFamily(value.replace(/['"]/g, '').split(',')[0]);
-    if (property === 'fontSize') setFontSize(parseInt(value));
+    if (property === 'fontSize') setFontSize(parsePtValue(value));
     if (property === 'fontWeight') setFontWeight(value.toString());
     if (property === 'fontStyle') setFontStyle(value);
     if (property === 'textDecorationLine' || property === 'textDecoration') setTextDecoration(value);
@@ -2066,23 +2163,24 @@ const TextEditor = ({
       }
 
       // Transform text content to list
-      let lines = latestText.split('\n').map(l => l.trim());
-      if (value === 'disc') {
-        lines = lines.map(line => {
+      let rawLines = latestText.split('\n').map(l => l.trim());
+      let counter = 1;
+      let lines = rawLines.map((line) => {
+        if (!line) return '';
+        if (value === 'disc') {
           if (line.startsWith('• ')) return line;
           if (line.match(/^\d+\. /)) return line.replace(/^\d+\. /, '• ');
           return '• ' + line;
-        });
-      } else if (value === 'decimal') {
-        lines = lines.map((line, i) => {
-          const prefix = `${i + 1}. `;
+        } else if (value === 'decimal') {
+          const prefix = `${counter++}. `;
           if (line.startsWith('• ')) return line.replace('• ', prefix);
           if (line.match(/^\d+\. /)) return line.replace(/^\d+\. /, prefix);
           return prefix + line;
-        });
-      } else if (value === 'none') {
-        lines = lines.map(line => line.replace(/^(• |\d+\. )/, ''));
-      }
+        } else if (value === 'none') {
+          return line.replace(/^(• |\d+\. )/, '');
+        }
+        return line;
+      });
       const newText = lines.join('\n');
       setTextContent(newText);
 
@@ -2147,12 +2245,28 @@ const TextEditor = ({
         if (el) {
           const styleProp = STYLE_MAP[property];
           if (styleProp) {
-            const finalVal = (property === 'fontSize' || property === 'letterSpacing') && !adjustedValue.toString().includes('px') && !adjustedValue.toString().includes('em') ? `${adjustedValue}px` : adjustedValue;
+            let finalVal = adjustedValue;
+            if (property === 'fontSize') {
+              const ptVal = parsePtValue(adjustedValue);
+              finalVal = `${ptVal}pt`;
+            } else if (property === 'letterSpacing' && !adjustedValue.toString().includes('px') && !adjustedValue.toString().includes('em')) {
+              finalVal = `${adjustedValue}px`;
+            }
 
             if (el.tagName.toLowerCase() === 'foreignobject') {
               if (el.firstElementChild) {
                 const div = el.firstElementChild;
                 div.style[styleProp] = finalVal;
+                if (property === 'textAlign') {
+                  el.setAttribute('data-text-align', finalVal);
+                  if (finalVal === 'justify') {
+                    div.style.textAlignLast = 'left';
+                    div.style.textJustify = 'inter-word';
+                  } else {
+                    div.style.removeProperty('text-align-last');
+                    div.style.removeProperty('text-justify');
+                  }
+                }
               }
             } else {
               // SVG text element — set both CSS style and SVG presentation attribute
@@ -2161,6 +2275,7 @@ const TextEditor = ({
               if (property === 'textAlign') {
                 const anchorVal = TEXT_ALIGN_TO_ANCHOR[value] || 'start';
                 el.setAttribute('text-anchor', anchorVal);
+                el.setAttribute('data-text-align', finalVal);
               } else {
                 el.setAttribute(svgAttrName, finalVal);
               }
@@ -2440,15 +2555,42 @@ const TextEditor = ({
       const content = getDeepContent(el);
       setTextContent(content);
 
-      // Update styles
-      const ff = getDeepStyle(el, 'fontFamily');
-      const fs = getDeepStyle(el, 'fontSize');
+      // Update styles: if a sub-range or word is selected, reflect the selected character style (Vector-Studio style)
       const targetEl = el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild : el;
-      const style = window.getComputedStyle(targetEl);
+      let activeStyleTarget = targetEl;
+      if (window.__savedTextSelection && window.__savedTextSelection.elementId === el.id) {
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          const anchorEl = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+          if (anchorEl && targetEl.contains(anchorEl)) {
+            activeStyleTarget = anchorEl;
+          }
+        }
+      }
+      const style = window.getComputedStyle(activeStyleTarget);
+      const firstTspanEl = el.querySelector('tspan');
+      const tspanStyle = firstTspanEl ? window.getComputedStyle(firstTspanEl) : null;
 
-      if (ff) setFontFamily(ff.replace(/['"]/g, '').split(',')[0]);
+      const ff = el.getAttribute('font-family') || (el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild.style.fontFamily : '') || getDeepStyle(el, 'fontFamily') || style.fontFamily;
+      const fs = el.getAttribute('font-size') || getDeepStyle(el, 'fontSize') || style.fontSize;
+
+      if (ff) {
+        const cleanFf = ff.replace(/['"]/g, '').split(',')[0].trim();
+        if (cleanFf) setFontFamily(cleanFf);
+      }
       if (fs) {
-        let fontSizeVal = parseInt(fs);
+        let fontSizeVal;
+        const rawAttr = el.getAttribute('font-size') || el.style.fontSize || '';
+        if (rawAttr.includes('pt')) {
+          fontSizeVal = parseFloat(rawAttr) || 12;
+        } else if (rawAttr.includes('px')) {
+          fontSizeVal = pxToPt(parseFloat(rawAttr));
+        } else if (fs.includes('pt')) {
+          fontSizeVal = parseFloat(fs) || 12;
+        } else {
+          fontSizeVal = pxToPt(parseFloat(fs));
+        }
+
         const transform = el.getAttribute('transform');
         if (transform && transform.includes('matrix') && el.tagName.toLowerCase() !== 'foreignobject') {
           const match = transform.match(/matrix\(([^)]+)\)/);
@@ -2456,18 +2598,18 @@ const TextEditor = ({
             const vals = match[1].split(/[ ,]+/).map(parseFloat);
             if (vals.length >= 4) {
               const scaleY = Math.sqrt(vals[2] * vals[2] + vals[3] * vals[3]);
-              if (scaleY > 0) fontSizeVal = Math.round(fontSizeVal * scaleY);
+              if (scaleY > 0) fontSizeVal = Math.round(fontSizeVal * scaleY * 10) / 10;
             }
           }
         }
         setFontSize(fontSizeVal);
       }
 
-      const weight = style.fontWeight || el.getAttribute('font-weight');
-      const normalizedWeight = weight === 'bold' ? '700' : (weight === 'normal' ? '400' : weight);
+      const rawWeight = style.fontWeight || el.getAttribute('font-weight') || (tspanStyle ? tspanStyle.fontWeight : null);
+      const normalizedWeight = rawWeight === 'bold' ? '700' : (rawWeight === 'normal' ? '400' : rawWeight);
       if (normalizedWeight) setFontWeight(normalizedWeight.toString());
 
-      const fontStyleVal = style.fontStyle || el.getAttribute('font-style');
+      const fontStyleVal = style.fontStyle || el.getAttribute('font-style') || (tspanStyle ? tspanStyle.fontStyle : null);
       if (fontStyleVal && fontStyleVal !== 'normal') setFontStyle(fontStyleVal);
       else setFontStyle('normal');
 
@@ -2475,17 +2617,30 @@ const TextEditor = ({
       if (textDeco && !textDeco.includes('none')) setTextDecoration(textDeco);
       else setTextDecoration('none');
 
-      let alignVal = style.textAlign;
-      if (el.tagName.toLowerCase() === 'text' || el.tagName.toLowerCase() === 'tspan') {
-        const anchor = el.getAttribute('text-anchor');
-        if (anchor === 'middle') alignVal = 'center';
-        else if (anchor === 'end') alignVal = 'right';
-        else if (anchor === 'start') alignVal = 'left';
-      } else {
-        if (alignVal === 'start') alignVal = 'left';
-        if (alignVal === 'end') alignVal = 'right';
+      // Alignment detection: check explicit data-text-align, style.textAlign, SVG text-anchor (middle -> center, end -> right), and template geometry
+      const dataAlign = el.getAttribute('data-text-align') || el.getAttribute('data-align') || firstTspanEl?.getAttribute('data-text-align');
+      let rawAnchor = el.getAttribute('text-anchor') || el.style?.textAnchor || firstTspanEl?.getAttribute('text-anchor') || firstTspanEl?.style?.textAnchor;
+      if (!rawAnchor && style && style.getPropertyValue) {
+        const computedAnchor = style.getPropertyValue('text-anchor');
+        if (computedAnchor && computedAnchor !== 'inherit') rawAnchor = computedAnchor;
       }
-      if (alignVal) setTextAlign(alignVal);
+      if (!rawAnchor) {
+        const ancestorWithAnchor = el.closest('[text-anchor]');
+        if (ancestorWithAnchor) rawAnchor = ancestorWithAnchor.getAttribute('text-anchor');
+      }
+
+      const rawAlign = el.style?.textAlign || el.getAttribute('text-align') || (el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild.style?.textAlign : null);
+      let alignVal = 'left';
+      if (dataAlign && ['left', 'center', 'right', 'justify'].includes(dataAlign)) {
+        alignVal = dataAlign;
+      } else if (rawAlign && ['left', 'center', 'right', 'justify'].includes(rawAlign)) {
+        alignVal = rawAlign;
+      } else if (rawAnchor === 'middle') {
+        alignVal = 'center';
+      } else if (rawAnchor === 'end') {
+        alignVal = 'right';
+      }
+      setTextAlign(alignVal);
 
       const textTransformVal = style.textTransform || el.getAttribute('text-transform');
       if (textTransformVal) setTextTransform(textTransformVal);
@@ -2524,11 +2679,12 @@ const TextEditor = ({
     if (el) {
       observer = new MutationObserver(() => {
         if (el.getAttribute('data-editing') === 'true') return;
+        if (el.getAttribute('data-dragging') === 'true' || document.body.classList.contains('dragging-active')) return;
         // Optimization: only sync if relevant nodes changed
         syncFromCanvas();
       });
 
-      // Observe the element itself and its parent (for sibling overlays)
+      // Observe the element itself (for internal text changes) and direct parent childList (for replacement)
       observer.observe(el, {
         attributes: true,
         attributeFilter: ['data-sizing-mode'],
@@ -2537,11 +2693,38 @@ const TextEditor = ({
         subtree: true
       });
       if (el.parentNode) {
-        observer.observe(el.parentNode, { childList: true, subtree: true });
+        observer.observe(el.parentNode, { childList: true });
       }
     }
 
+    // Debounced and optimized selectionchange listener:
+    // When typing (selection is collapsed), skip re-renders completely for 0ms typing latency!
+    // When selecting a character range, debounce so React doesn't freeze the UI.
+    let selectionTimeout = null;
+    const handleSelectionChange = () => {
+      const activeEl = document.activeElement;
+      const isEditing = activeEl && (activeEl.isContentEditable || activeEl.getAttribute('contenteditable') === 'true');
+      if (isEditing) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) {
+          // Caret movement / typing: do not trigger React re-renders!
+          return;
+        }
+        // Sub-range selected: debounce sync so dragging selection stays 60fps
+        if (selectionTimeout) clearTimeout(selectionTimeout);
+        selectionTimeout = setTimeout(() => {
+          syncFromCanvas();
+        }, 120);
+        return;
+      }
+      syncFromCanvas();
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+
     return () => {
+      if (selectionTimeout) clearTimeout(selectionTimeout);
+      document.removeEventListener('selectionchange', handleSelectionChange);
       observer?.disconnect();
     };
   }, [selectedLayerId, selectedElement, getDeepContent, getDeepStyle]);
@@ -2610,31 +2793,37 @@ const TextEditor = ({
         </div>
         <div className="relative flex-1" ref={fontSizeRef}>
           <div className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white focus-within:border-indigo-500 transition-colors">
-            <input
-              type="text"
-              value={fontSize}
-              onChange={(e) => {
-                setFontSize(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    updateStyle('fontSize', val);
-                    setShowFontSizeDropdown(false);
+            <div className="flex items-center flex-1 min-w-0 mr-1">
+              <input
+                type="text"
+                value={fontSize}
+                onChange={(e) => {
+                  setFontSize(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parsePtValue(e.target.value);
+                    if (!isNaN(val)) {
+                      setFontSize(val);
+                      updateStyle('fontSize', `${val}pt`);
+                      setShowFontSizeDropdown(false);
+                    }
+                    e.target.blur();
                   }
-                  e.target.blur();
-                }
-              }}
-              onBlur={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!isNaN(val)) {
-                  updateStyle('fontSize', val);
-                }
-              }}
-              onFocus={() => setShowFontSizeDropdown(true)}
-              className="w-full bg-transparent outline-none text-[0.85vw] text-gray-700"
-            />
+                }}
+                onBlur={(e) => {
+                  const val = parsePtValue(e.target.value);
+                  if (!isNaN(val)) {
+                    setFontSize(val);
+                    updateStyle('fontSize', `${val}pt`);
+                  }
+                }}
+                onFocus={() => setShowFontSizeDropdown(true)}
+                className="w-full bg-transparent outline-none text-[0.85vw] text-gray-700 font-semibold"
+                placeholder="16"
+              />
+              <span className="text-[0.7vw] font-medium text-gray-400 select-none uppercase tracking-wider">pt</span>
+            </div>
             <ChevronDown
               size="1vw"
               className="text-gray-500 cursor-pointer flex-shrink-0"
@@ -2642,9 +2831,20 @@ const TextEditor = ({
             />
           </div>
           {showFontSizeDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[12vw] overflow-y-auto">
-              {[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96, 128].map(size => (
-                <div key={size} onClick={() => { updateStyle('fontSize', size); setShowFontSizeDropdown(false); }} className="px-[0.75vw] py-[0.4vw] hover:bg-gray-100 cursor-pointer text-[0.85vw] text-center">{size}</div>
+            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto">
+              {[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 21, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96, 120].map(size => (
+                <div
+                  key={size}
+                  onClick={() => {
+                    setFontSize(size);
+                    updateStyle('fontSize', `${size}pt`);
+                    setShowFontSizeDropdown(false);
+                  }}
+                  className={`px-[0.75vw] py-[0.35vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.8vw] flex items-center justify-between ${Number(fontSize) === size ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'}`}
+                >
+                  <span>{size}</span>
+                  <span className="text-[0.65vw] text-gray-400 font-normal">pt</span>
+                </div>
               ))}
             </div>
           )}

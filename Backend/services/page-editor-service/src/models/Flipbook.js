@@ -32,8 +32,16 @@ const flipbookSchema = new mongoose.Schema(
       index: true
     },
     folderName: {
-      type: mongoose.Schema.Types.Mixed,
-      default: ['My_Flipbooks']
+      type: [String],
+      set: function (val) {
+        if (!val) return ['default'];
+        const arr = Array.isArray(val) ? val.flat(Infinity) : [val];
+        const cleaned = arr
+          .filter((f) => f !== null && f !== undefined && String(f).trim() !== '')
+          .map((f) => String(f).trim());
+        return [...new Set(cleaned.length > 0 ? cleaned : ['default'])];
+      },
+      default: ['default']
     },
     flipbookName: {
       type: String,
@@ -71,10 +79,6 @@ const flipbookSchema = new mongoose.Schema(
     trashedAt: {
       type: Date,
       default: null
-    },
-    Customized_Settings: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {}
     }
   },
   {

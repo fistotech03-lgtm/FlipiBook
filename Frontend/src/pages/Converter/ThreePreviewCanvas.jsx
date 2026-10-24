@@ -1,0 +1,299 @@
+import React, { useRef, useEffect, useState } from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three-stdlib';
+import { GLTFLoader } from 'three-stdlib';
+import { OBJLoader } from 'three-stdlib';
+import { STLLoader } from 'three-stdlib';
+import { FBXLoader } from 'three-stdlib';
+import occtimportjs from 'occt-import-js';
+import { Loader2 } from 'lucide-react';
+
+/**
+ * Lightweight, memory-optimized 3D Canvas Previewer
+ * Supports: GLB, GLTF, OBJ, STL, FBX, STEP/STP
+ */
+export default function ThreePreviewCanvas({
+  blobUrl,
+  format = 'GLB',
+  autoRotate = true,
+  className = ''
+}) {
+  const mountRef = useRef(null);
+  const controlsRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Sync autoRotate updates dynamically without re-mounting the entire WebGL canvas
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = autoRotate;
+    }
+  }, [autoRotate]);
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container || !blobUrl) return;
+
+    let isMounted = true;
+    let animId = null;
+    let loadedObject = null;
+    setIsLoading(true);
+
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf1f5f9);
+
+    const width = container.clientWidth || 300;
+    const height = container.clientHeight || 240;
+
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(2, 2, 3);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.5;
+    container.replaceChildren(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = autoRotate;
+    controls.autoRotateSpeed = 1.8;
+    controlsRef.current = controls;
+
+    // High-clarity studio lighting setup
+    // Hemisphere light simulates sky and ground reflections
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 1.8);
+    scene.add(hemiLight);
+
+    // Key front-top light for primary highlights
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    keyLight.position.set(6, 12, 8);
+    scene.add(keyLight);
+
+    // Fill light from opposite side to soften shadows
+    const fillLight = new THREE.DirectionalLight(0xfff7ed, 1.2);
+    fillLight.position.set(-8, 6, -6);
+    scene.add(fillLight);
+
+    // Rim/Back light to define silhouettes and edges
+    const rimLight = new THREE.DirectionalLight(0xf0f9ff, 1.0);
+    rimLight.position.set(0, -6, -8);
+    scene.add(rimLight);
+
+    // Grid Floor
+    const grid = new THREE.GridHelper(10, 20, 0xd1d5db, 0xe5e7eb);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    // Load Model
+    const fmt = format.toUpperCase();
+
+    const normalizeAndCenterModel = (object) => {
+      if (!isMounted || !object) return;
+      loadedObject = object;
+      scene.add(object);
+
+      const box = new THREE.Box3().setFromObject(object);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      // Center model
+      object.position.x += -center.x;
+      object.position.y += -box.min.y;
+      object.position.z += -center.z;
+
+      // Fit camera
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const fov = camera.fov * (Math.PI / 180);
+      let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.8;
+      cameraZ = Math.max(cameraZ, 2.5);
+
+      camera.position.set(cameraZ * 0.8, cameraZ * 0.7, cameraZ);
+      controls.target.set(0, size.y / 2, 0);
+      controls.update();
+
+      setIsLoading(false);
+    };
+
+    if (fmt === 'GLB' || fmt === 'GLTF') {
+      const loader = new GLTFLoader();
+      loader.load(
+        blobUrl,
+        (gltf) => {
+          normalizeAndCenterModel(gltf.scene || gltf.scenes[0]);
+        },
+        undefined,
+        (err) => {
+          console.error('Error loading GLTF preview:', err);
+          if (isMounted) setIsLoading(false);
+        }
+      );
+    } else if (fmt === 'OBJ') {
+      const loader = new OBJLoader();
+      loader.load(
+        blobUrl,
+        (obj) => {
+          normalizeAndCenterModel(obj);
+        },
+        undefined,
+        (err) => {
+          console.error('Error loading OBJ preview:', err);
+          if (isMounted) setIsLoading(false);
+        }
+      );
+    } else if (fmt === 'STL') {
+      const loader = new STLLoader();
+      loader.load(
+        blobUrl,
+        (geometry) => {
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x3b82f6,
+            roughness: 0.4,
+            metalness: 0.2
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          normalizeAndCenterModel(mesh);
+        },
+        undefined,
+        (err) => {
+          console.error('Error loading STL preview:', err);
+          if (isMounted) setIsLoading(false);
+        }
+      );
+    } else if (fmt === 'FBX') {
+      (async () => {
+        try {
+          const resp = await fetch(blobUrl);
+          const buffer = await resp.arrayBuffer();
+          if (!isMounted) return;
+          const loader = new FBXLoader();
+          const object = loader.parse(buffer, '');
+          normalizeAndCenterModel(object);
+        } catch (err) {
+          console.error('Error loading FBX preview:', err);
+          if (isMounted) setIsLoading(false);
+        }
+      })();
+    } else if (fmt === 'STEP' || fmt === 'STP') {
+      (async () => {
+        try {
+          const response = await fetch(blobUrl);
+          const buffer = await response.arrayBuffer();
+          const occt = await occtimportjs({
+            locateFile: () => '/occt-import-js.wasm'
+          });
+          const fileBytes = new Uint8Array(buffer);
+          const result = occt.ReadStepFile(fileBytes, null);
+
+          if (!result || !result.success || !result.meshes) {
+            if (isMounted) setIsLoading(false);
+            return;
+          }
+
+          const group = new THREE.Group();
+          const material = new THREE.MeshStandardMaterial({ color: 0x99aab5, roughness: 0.4, metalness: 0.3 });
+
+          for (const meshData of result.meshes) {
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(meshData.attributes.position.array, 3));
+            if (meshData.attributes.normal) {
+              geometry.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.attributes.normal.array, 3));
+            } else {
+              geometry.computeVertexNormals();
+            }
+            if (meshData.index) {
+              geometry.setIndex(new THREE.Uint32BufferAttribute(meshData.index.array, 1));
+            }
+            const mesh = new THREE.Mesh(geometry, material);
+            group.add(mesh);
+          }
+          normalizeAndCenterModel(group);
+        } catch (err) {
+          console.error('Error loading STEP preview:', err);
+          if (isMounted) setIsLoading(false);
+        }
+      })();
+    }
+
+    // Animation Loop
+    const animate = () => {
+      if (!isMounted) return;
+      controls.update();
+      renderer.render(scene, camera);
+      animId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    // Resize observer
+    const resizeObserver = new ResizeObserver(() => {
+      if (!container || !isMounted) return;
+      const newW = container.clientWidth || 300;
+      const newH = container.clientHeight || 240;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      isMounted = false;
+      cancelAnimationFrame(animId);
+      resizeObserver.disconnect();
+      controls.dispose();
+      controlsRef.current = null;
+
+      if (loadedObject) {
+        loadedObject.traverse((node) => {
+          if (node.geometry) {
+            node.geometry.dispose();
+          }
+          if (node.material) {
+            const mats = Array.isArray(node.material) ? node.material : [node.material];
+            mats.forEach((m) => {
+              if (m.map) m.map.dispose();
+              if (m.lightMap) m.lightMap.dispose();
+              if (m.bumpMap) m.bumpMap.dispose();
+              if (m.normalMap) m.normalMap.dispose();
+              if (m.specularMap) m.specularMap.dispose();
+              if (m.envMap) m.envMap.dispose();
+              m.dispose();
+            });
+          }
+        });
+      }
+
+      grid.geometry.dispose();
+      grid.material.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+
+      if (container) {
+        container.replaceChildren();
+      }
+    };
+  }, [blobUrl, format, autoRotate]);
+
+  return (
+    <div className={`relative w-full h-full min-h-[200px] rounded-xl overflow-hidden ${className}`}>
+      <div ref={mountRef} className="w-full h-full" />
+      {isLoading && (
+        <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10 transition-opacity">
+          <div className="p-3 bg-white rounded-2xl shadow-md border border-gray-100 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-[#ea543a] animate-spin" />
+          </div>
+          <span className="text-xs font-semibold text-gray-600 tracking-tight">
+            Loading 3D Model...
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

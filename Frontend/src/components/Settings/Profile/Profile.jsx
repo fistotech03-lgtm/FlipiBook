@@ -151,6 +151,7 @@ const defaultProfile = {
   companyEmail: '',
   website: '',
   services: [],
+  specialization: [],
   company_logo_url: '',
   companyLogo: '',
   address1: '',
@@ -276,6 +277,7 @@ const Profile = () => {
                 companyLogo: p.company_logo_url || p.companyLogo || prev.company_logo_url || prev.companyLogo || '',
                 avatarBgColor: p.avatarBgColor || prev.avatarBgColor || '#E8D4C8',
                 services: p.services || prev.services || [],
+                specialization: p.specialization || prev.specialization || [],
                 followers: p.followers || prev.followers || [],
                 following: p.following || prev.following || [],
                 visibilitySettings: {
@@ -867,9 +869,7 @@ const Profile = () => {
                       <span>
                         {((Array.isArray(user.services) && user.services.length > 0)
                           ? user.services
-                          : ((Array.isArray(user.specialization) && user.specialization.length > 0)
-                              ? user.specialization
-                              : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs'])
+                          : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs']
                         ).join(', ')}
                       </span>
                     </div>
@@ -974,7 +974,7 @@ const Profile = () => {
                     </button>
                   </div>
 
-                  {activeTab === 'Edit Profile' && editProfileActions && (
+                  {activeTab === 'Edit Profile' && editProfileActions && editProfileActions.isDirty && (
                     <div className="flex items-center gap-[0.8vw]">
                       <button
                         type="button"

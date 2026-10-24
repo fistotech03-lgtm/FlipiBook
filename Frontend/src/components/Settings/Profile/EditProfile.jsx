@@ -424,6 +424,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
         company_logo_url: savedProfile?.company_logo_url || savedProfile?.companyLogo || updatedEditedUser.company_logo_url || updatedEditedUser.companyLogo || '',
         companyLogo: savedProfile?.company_logo_url || savedProfile?.companyLogo || updatedEditedUser.company_logo_url || updatedEditedUser.companyLogo || '',
         services: savedProfile?.services || updatedEditedUser.services || [],
+        specialization: savedProfile?.specialization || updatedEditedUser.specialization || [],
         // The user's explicit sanitized socials MUST take precedence over stale backend fields
         socials: sanitizedSocials
       };
@@ -462,17 +463,18 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
   };
 
   const actionRef = useRef({});
-  actionRef.current = { handleSave, handleCancel, isSaving };
+  actionRef.current = { handleSave, handleCancel, isSaving, isDirty: isEdited };
 
   useEffect(() => {
     if (onActionReady) {
       onActionReady({
         handleSave: () => actionRef.current.handleSave?.(),
         handleCancel: () => actionRef.current.handleCancel?.(),
-        isSaving
+        isSaving,
+        isDirty: isEdited
       });
     }
-  }, [onActionReady, isSaving]);
+  }, [onActionReady, isSaving, isEdited]);
 
   const [portalTarget, setPortalTarget] = useState(null);
 
@@ -588,7 +590,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
       const updated = [...servicesList, val];
       updateEditedUser({
         services: updated,
-        specialization: updated,
         skills: updated
       });
     }
@@ -600,7 +601,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
     const nextList = servicesList.filter(s => s !== itemToRemove);
     updateEditedUser({
       services: nextList,
-      specialization: nextList,
       skills: nextList
     });
   };
@@ -708,31 +708,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
     p => !activeSocialKeys.includes(p.key)
   );
 
-  const saveActions = (
-    <div className="flex items-center gap-[0.8vw]">
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={handleCancel}
-        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] border border-gray-300 rounded-[0.5vw] text-[0.85vw] font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
-      >
-        <X className="w-[1vw] h-[1vw] text-gray-500" strokeWidth={1.8} /> Cancel
-      </button>
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={handleSave}
-        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] bg-[#43A047] hover:bg-[#388E3C] rounded-[0.5vw] text-[0.85vw] font-medium text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
-      >
-        {isSaving ? (
-          <Icon icon="line-md:loading-loop" className="w-[1vw] h-[1vw]" />
-        ) : (
-          <Check className="w-[1vw] h-[1vw] text-white" strokeWidth={2.5} />
-        )}
-        {isSaving ? 'Saving...' : 'Save Changes'}
-      </button>
-    </div>
-  );
 
   return (
     <div className="flex flex-col flex-1 w-full relative h-full">

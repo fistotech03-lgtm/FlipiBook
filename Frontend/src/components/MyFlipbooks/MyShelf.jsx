@@ -710,7 +710,7 @@ const MyShelf = () => {
   const newSpacing = spacing / heightRatio;
 
   return (
-    <div className="flex flex-col w-full h-full px-4 pb-0 pt-2.5 overflow-visible font-sans text-gray-800">
+    <div className="flex flex-col w-full h-full px-4 pb-0 pt-0 overflow-visible font-sans text-gray-800">
 
       {/* Header (shown in Overview and in List View) */}
       {(currentView === 'overview' || view === 'list') && (
@@ -847,7 +847,7 @@ const MyShelf = () => {
 
       {/* Shelf View Header (Screenshot 2) or Toolbar (List View) */}
       {view === 'shelf' ? (
-        <div className="flex items-center justify-between mb-4 w-full mt-2">
+        <div className="flex items-center justify-between mb-3 w-full -mt-3">
           <div>
             <div className="flex items-center gap-2">
               <button
@@ -1602,23 +1602,6 @@ const MyShelf = () => {
                   />
                 )}
 
-                {/* Interactive Wall Switch Hotspot */}
-                <button
-                  type="button"
-                  title={decors.lights ? 'Turn off light' : 'Turn on light'}
-                  onClick={() => setDecors(prev => ({ ...prev, lights: !prev.lights }))}
-                  className="absolute z-30 cursor-pointer rounded transition-transform active:scale-95 group focus:outline-none"
-                  style={{
-                    top: '8.5%',
-                    right: '4.8%',
-                    width: '3.4%',
-                    height: '8.8%',
-                  }}
-                >
-                  <span className="sr-only">Toggle Room Lights</span>
-                  {/* Subtle hover indicator around wall switch */}
-                  <div className="w-full h-full rounded border border-white/0 group-hover:border-white/40 transition-colors" />
-                </button>
             </div>
 
             {/* Shelf Styles Carousel / Pagination matching Screenshot 2 */}

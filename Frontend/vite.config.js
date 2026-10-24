@@ -26,6 +26,9 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/jspdf/') || id.includes('node_modules/html2canvas/')) {
               return 'export-libs';
             }
+            if (id.includes('ImageFraming') || id.includes('imageFramingCatalog')) {
+              return 'image-framing';
+            }
           }
         }
       }

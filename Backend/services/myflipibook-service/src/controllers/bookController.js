@@ -2167,7 +2167,13 @@ exports.previewBook = async (req, res) => {
   try {
     const v_id = req.params?.v_id;
     const reqEmail = req.query?.emailId;
-    const book = await Flipbook.findOne({ v_id });
+    let book = await Flipbook.findOne({ v_id });
+    if (!book && mongoose.Types.ObjectId.isValid(v_id)) {
+      book = await Flipbook.findById(v_id);
+    }
+    if (!book) {
+      book = await Flipbook.findOne({ flipbookName: v_id });
+    }
     if (!book) {
       return res
         .status(404)
@@ -2269,6 +2275,22 @@ exports.previewBook = async (req, res) => {
         }
       }
 
+      // 3. Fallback scan all top-level storage directories if needed
+      try {
+        if (fs.existsSync(storageRoot)) {
+          const topDirs = fs.readdirSync(storageRoot);
+          for (const td of topDirs) {
+            for (const bn of bookNames) {
+              candidateDirs.push(
+                path.join(storageRoot, td, "books", "default", bn),
+                path.join(storageRoot, td, "books", bn),
+                path.join(storageRoot, td, bn),
+              );
+            }
+          }
+        }
+      } catch (e) {}
+
       const uniqueCandidateDirs = Array.from(new Set(candidateDirs));
 
       // 3. Build candidate file names for the first page
@@ -2357,6 +2379,12 @@ exports.previewBook = async (req, res) => {
 
         if (firstPageHtml) break;
       }
+    }
+
+    if (!firstPageHtml) {
+      const pageWidth = 595;
+      const pageHeight = 842;
+      firstPageHtml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%"><rect width="${pageWidth}" height="${pageHeight}" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/><text x="50%" y="50%" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#64748b" text-anchor="middle" dominant-baseline="middle">${book.flipbookName || 'Page 1'}</text></svg>`;
     }
 
     res.status(200).json({

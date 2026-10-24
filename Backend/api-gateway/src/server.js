@@ -34,6 +34,7 @@ const isAllowedOrigin = (origin) => {
   if (allowedOrigins.includes(origin)) return true;
   if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
   if (/^https:\/\/([a-zA-Z0-9-]+\.)*flipibook\.com$/.test(origin)) return true;
+  if (/^https?:\/\/([a-zA-Z0-9-]+\.)*sslip\.io(:\d+)?$/.test(origin)) return true;
   return false;
 };
 

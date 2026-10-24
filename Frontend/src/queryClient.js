@@ -106,13 +106,13 @@ export const prefetchMyFlipbooks = (emailId) => {
   queryClient.prefetchQuery({
     queryKey: ['flipbook-folders', emailId],
     queryFn: () => fetchFlipbookFolders(emailId),
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
   });
 
   queryClient.prefetchQuery({
     queryKey: ['flipbook-books', emailId],
     queryFn: () => fetchFlipbookBooks(emailId),
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
   });
 
   queryClient.prefetchQuery({

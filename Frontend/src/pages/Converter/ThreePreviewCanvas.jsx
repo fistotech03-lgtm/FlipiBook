@@ -1,16 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+import JSZip from 'jszip';
 import { OrbitControls } from 'three-stdlib';
 import { GLTFLoader } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
-import { STLLoader } from 'three-stdlib';
 import { FBXLoader } from 'three-stdlib';
-import occtimportjs from 'occt-import-js';
+import { USDLoader } from 'three/examples/jsm/loaders/USDLoader.js';
 import { Loader2 } from 'lucide-react';
 
 /**
  * Lightweight, memory-optimized 3D Canvas Previewer
- * Supports: GLB, GLTF, OBJ, STL, FBX, STEP/STP
+ * Supports: GLB, OBJ, FBX, USDZ
  */
 export default function ThreePreviewCanvas({
   blobUrl,
@@ -151,30 +151,24 @@ export default function ThreePreviewCanvas({
       loader.load(
         blobUrl,
         (obj) => {
+          obj.traverse((child) => {
+            if (child.isMesh) {
+              if (child.geometry && !child.geometry.attributes.normal) {
+                child.geometry.computeVertexNormals();
+              }
+              child.material = new THREE.MeshStandardMaterial({
+                color: 0xdadada, // #dadada requested material color
+                roughness: 0.45,
+                metalness: 0.15,
+                side: THREE.DoubleSide
+              });
+            }
+          });
           normalizeAndCenterModel(obj);
         },
         undefined,
         (err) => {
           console.error('Error loading OBJ preview:', err);
-          if (isMounted) setIsLoading(false);
-        }
-      );
-    } else if (fmt === 'STL') {
-      const loader = new STLLoader();
-      loader.load(
-        blobUrl,
-        (geometry) => {
-          const material = new THREE.MeshStandardMaterial({
-            color: 0x3b82f6,
-            roughness: 0.4,
-            metalness: 0.2
-          });
-          const mesh = new THREE.Mesh(geometry, material);
-          normalizeAndCenterModel(mesh);
-        },
-        undefined,
-        (err) => {
-          console.error('Error loading STL preview:', err);
           if (isMounted) setIsLoading(false);
         }
       );
@@ -204,7 +198,7 @@ export default function ThreePreviewCanvas({
 
               if (isDarkOrMissing) {
                 child.material = new THREE.MeshStandardMaterial({
-                  color: 0x94a3b8, // Clean slate-gray
+                  color: 0xdadada, // #dadada requested material color
                   roughness: 0.45,
                   metalness: 0.15,
                   side: THREE.DoubleSide
@@ -224,42 +218,112 @@ export default function ThreePreviewCanvas({
           if (isMounted) setIsLoading(false);
         }
       })();
-    } else if (fmt === 'STEP' || fmt === 'STP') {
+    } else if (fmt === 'USDZ') {
       (async () => {
         try {
           const response = await fetch(blobUrl);
           const buffer = await response.arrayBuffer();
-          const occt = await occtimportjs({
-            locateFile: () => '/occt-import-js.wasm'
-          });
-          const fileBytes = new Uint8Array(buffer);
-          const result = occt.ReadStepFile(fileBytes, null);
+          if (!isMounted) return;
+          const loader = new USDLoader();
+          const object = loader.parse(buffer);
 
-          if (!result || !result.success || !result.meshes) {
-            if (isMounted) setIsLoading(false);
-            return;
+          // Restore opacities, alpha cutoff and material blending from USDA
+          try {
+            const zip = await JSZip.loadAsync(buffer);
+            let mainUsdaText = '';
+            for (const filename of Object.keys(zip.files)) {
+              if (filename.endsWith('.usda') || filename.endsWith('.usd')) {
+                const txt = await zip.files[filename].async('string');
+                if (txt.includes('def Material') || txt.includes('outputs:surface.connect')) {
+                  mainUsdaText = txt;
+                  break;
+                }
+              }
+            }
+
+            if (mainUsdaText) {
+              const matInfo = {};
+              const mats = mainUsdaText.split('def Material ');
+              for (let i = 1; i < mats.length; i++) {
+                const block = mats[i];
+                const name = block.substring(1, block.indexOf(String.fromCharCode(34), 1));
+                let opacity = 1.0;
+                let hasAlpha = false;
+                let diffuseColor = null;
+
+                for (const rawLine of block.split('\n')) {
+                  const line = rawLine.trim();
+                  if (line.includes('inputs:opacity.connect')) hasAlpha = true;
+                  if (line.includes('inputs:opacity =')) {
+                    const val = parseFloat(line.split('=')[1].trim());
+                    if (!isNaN(val)) opacity = val;
+                  }
+                  if (line.includes('color3f inputs:diffuseColor =')) {
+                    const colStr = line.split('=')[1].replace(/[()]/g, '').trim();
+                    const parts = colStr.split(',').map((v) => parseFloat(v.trim()));
+                    if (parts.length === 3 && !parts.some(isNaN)) diffuseColor = parts;
+                  }
+                }
+                matInfo[name] = { opacity, hasAlpha, diffuseColor };
+              }
+
+              const meshBindings = {};
+              let currentMesh = null;
+              for (const rawLine of mainUsdaText.split('\n')) {
+                const line = rawLine.trim();
+                if (line.startsWith('def Xform') || line.startsWith('def Mesh')) {
+                  const idx1 = line.indexOf(String.fromCharCode(34));
+                  if (idx1 !== -1) {
+                    const idx2 = line.indexOf(String.fromCharCode(34), idx1 + 1);
+                    if (idx2 !== -1) currentMesh = line.substring(idx1 + 1, idx2);
+                  }
+                }
+                if (line.includes('rel material:binding = </Materials/')) {
+                  const mat = line.split('rel material:binding = </Materials/')[1].replace('>', '').trim();
+                  if (currentMesh) meshBindings[currentMesh] = mat;
+                }
+              }
+
+              object.traverse((child) => {
+                if (child.isMesh && child.material) {
+                  const mats = Array.isArray(child.material) ? child.material : [child.material];
+                  const boundMatName = meshBindings[child.name] || meshBindings[child.parent?.name];
+                  const info = boundMatName ? matInfo[boundMatName] : null;
+
+                  mats.forEach((mat) => {
+                    mat.side = THREE.DoubleSide;
+                    const lowerName = (child.name + ' ' + (child.parent?.name || '') + ' ' + (mat.name || '')).toLowerCase();
+                    const isGlassLike = lowerName.includes('glass') || lowerName.includes('lens') || lowerName.includes('gauge_cover');
+
+                    if (info) {
+                      if (info.opacity < 0.99 || isGlassLike) {
+                        mat.transparent = true;
+                        mat.opacity = Math.min(info.opacity, isGlassLike ? 0.25 : info.opacity);
+                        mat.depthWrite = !isGlassLike;
+                      }
+                      if (info.hasAlpha && mat.map) {
+                        mat.transparent = true;
+                        mat.alphaTest = 0.05;
+                      }
+                      if (info.diffuseColor && !mat.map) {
+                        mat.color.setRGB(info.diffuseColor[0], info.diffuseColor[1], info.diffuseColor[2]);
+                      }
+                    } else if (isGlassLike) {
+                      mat.transparent = true;
+                      mat.opacity = 0.25;
+                      mat.depthWrite = false;
+                    }
+                  });
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('USDA texture enhancement failed:', e);
           }
 
-          const group = new THREE.Group();
-          const material = new THREE.MeshStandardMaterial({ color: 0x99aab5, roughness: 0.4, metalness: 0.3 });
-
-          for (const meshData of result.meshes) {
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(meshData.attributes.position.array, 3));
-            if (meshData.attributes.normal) {
-              geometry.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.attributes.normal.array, 3));
-            } else {
-              geometry.computeVertexNormals();
-            }
-            if (meshData.index) {
-              geometry.setIndex(new THREE.Uint32BufferAttribute(meshData.index.array, 1));
-            }
-            const mesh = new THREE.Mesh(geometry, material);
-            group.add(mesh);
-          }
-          normalizeAndCenterModel(group);
+          normalizeAndCenterModel(object);
         } catch (err) {
-          console.error('Error loading STEP preview:', err);
+          console.error('Error loading USDZ preview:', err);
           if (isMounted) setIsLoading(false);
         }
       })();

@@ -27,7 +27,7 @@ const SmartSolutionsSection = () => {
           <motion.h2
             initial={{ opacity: 0, y: -25 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
             className="text-xl sm:text-5xl md:text-6xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
           >
@@ -38,7 +38,7 @@ const SmartSolutionsSection = () => {
           <motion.span
             initial={{ opacity: 0, scale: 0.85, y: 15 }}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="sm:absolute static mt-1 sm:mt-2 md:mt-3 lg:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-3 md:-bottom-4 lg:bottom-auto font-rage italic text-lg sm:text-3xl md:text-4xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap"
           >
@@ -59,7 +59,7 @@ const SmartSolutionsSection = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute w-[88vw] sm:w-[72vw] md:w-[68vw] lg:w-[37.5vw] h-auto lg:top-[6.1vw] pointer-events-none top-[-3vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[52%] z-10 select-none drop-shadow-[0_10px_20px_rgba(236,81,55,0.18)]"
           >
@@ -70,7 +70,7 @@ const SmartSolutionsSection = () => {
           <motion.div
             initial={{ scale: 0.88, opacity: 0, y: 20 }}
             whileInView={{ scale: 1, opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.0, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-20 w-[58vw] sm:w-[33vw] md:w-[31vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-4 sm:pt-6 md:pt-8 lg:pt-[2.2vw] lg:-mt-[4.55vw]"
           >
@@ -93,7 +93,7 @@ const SmartSolutionsSection = () => {
           <motion.h2
             initial={{ opacity: 0, x: 35 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans"
           >
@@ -105,7 +105,7 @@ const SmartSolutionsSection = () => {
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="w-10 lg:w-[2.2vw] h-[2.5px] lg:h-[0.2vw] bg-gray-900 rounded-full my-1 lg:my-[0.2vw] origin-left"
           />
@@ -114,7 +114,7 @@ const SmartSolutionsSection = () => {
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
             className="text-xs sm:text-base lg:text-[1.05vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
           >
@@ -131,7 +131,7 @@ const SmartSolutionsSection = () => {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
@@ -153,7 +153,7 @@ const SmartSolutionsSection = () => {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
@@ -175,7 +175,7 @@ const SmartSolutionsSection = () => {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"

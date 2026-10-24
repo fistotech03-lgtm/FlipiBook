@@ -180,13 +180,13 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
   ];
 
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
       
       {/* Top Header Tag */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         className="w-full flex items-center gap-3 lg:gap-[0.6vw] mb-4 lg:mb-[1.2vw]"
       >
@@ -201,7 +201,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
         <motion.h2
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="text-2xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap gap-x-2"
         >
@@ -219,7 +219,7 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6]"
         >

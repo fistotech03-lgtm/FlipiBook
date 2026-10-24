@@ -18,7 +18,10 @@ export default function MediaPreviewModal({
 }) {
   if (!isOpen || !item) return null;
 
-  const url = item.convertedUrl || item.originalUrl || item.blobUrl;
+  const url = item.previewUrl || item.blobUrl || item.convertedUrl || item.originalUrl;
+  const fileName = item.name || item.newName || item.originalName || 'Preview';
+  const formatName = item.targetFormat || item.ext || 'Preview';
+  const fileSize = item.formattedSize || item.newSize || item.originalSize;
   const isVideo = mediaType === 'video';
   const isImage = mediaType === 'image';
   const is3D = mediaType === 'threed';
@@ -34,12 +37,12 @@ export default function MediaPreviewModal({
               <ZoomIn className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 truncate">
-                {item.newName || item.originalName}
+              <h3 className="text-sm font-bold text-gray-900 truncate max-w-md" title={fileName}>
+                {fileName}
               </h3>
               <p className="text-[11px] text-gray-500">
-                Format: <span className="font-semibold text-gray-700">{item.targetFormat || 'Preview'}</span>
-                {item.newSize && ` • Size: ${item.newSize}`}
+                Format: <span className="font-semibold text-gray-700">{formatName}</span>
+                {fileSize && ` • Size: ${fileSize}`}
                 {item.savedPercent > 0 && ` (-${item.savedPercent}%)`}
               </p>
             </div>
@@ -50,7 +53,7 @@ export default function MediaPreviewModal({
               <button
                 type="button"
                 onClick={() => onDownload(item)}
-                className="px-3 py-1.5 rounded-lg bg-[#ea543a] hover:bg-[#d5452e] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-3.5 py-1.5 rounded-lg bg-[#1e232d] hover:bg-[#ea543a] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download</span>
@@ -73,7 +76,7 @@ export default function MediaPreviewModal({
             <div className="w-full h-full flex items-center justify-center">
               <img
                 src={url}
-                alt={item.newName || item.originalName}
+                alt={fileName}
                 className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
               />
             </div>

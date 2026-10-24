@@ -47,7 +47,7 @@ const getQualityAndScale = (compressionPreset) => {
  * Converts and compresses an image in browser using Canvas API
  *
  * @param {File} file
- * @param {string} targetFormat - 'WEBP' | 'PNG' | 'JPG' | 'AVIF'
+ * @param {string} targetFormat - 'WEBP' | 'PNG' | 'JPG'
  * @param {string} compressionPreset
  * @param {Function} onProgress - (percent: number, msg: string) => void
  * @returns {Promise<Blob>}
@@ -99,7 +99,6 @@ export async function convertAndCompressImage(file, targetFormat, compressionPre
   if (fmt === 'PNG') mimeType = 'image/png';
   else if (fmt === 'JPG' || fmt === 'JPEG') mimeType = 'image/jpeg';
   else if (fmt === 'WEBP') mimeType = 'image/webp';
-  else if (fmt === 'AVIF') mimeType = 'image/avif';
 
   const blob = await new Promise((resolve) => {
     canvas.toBlob((b) => {

@@ -173,10 +173,9 @@ export default function HomeNav() {
             <button
               type="button"
               onClick={() => isLoggedIn ? navigate('/my-flipbooks') : openAuthModal('signin', '/my-flipbooks')}
-              className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.5vw] px-2.5 sm:px-4 lg:px-[1.3vw] py-1.5 sm:py-2 lg:py-[0.55vw] rounded-lg lg:rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d5452e] text-white text-[11px] sm:text-sm lg:text-[0.85vw] font-medium shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 cursor-pointer group whitespace-nowrap"
+              className="hidden lg:flex items-center gap-1.5 sm:gap-2 lg:gap-[0.5vw] px-2.5 sm:px-4 lg:px-[1.3vw] py-1.5 sm:py-2 lg:py-[0.55vw] rounded-lg lg:rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d5452e] text-white text-[11px] sm:text-sm lg:text-[0.85vw] font-medium shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 cursor-pointer group whitespace-nowrap"
             >
-              <span className="hidden sm:inline">Go to My FlipiBook</span>
-              <span className="sm:hidden">My Flipbook</span>
+              <span>Go to My FlipiBook</span>
               <ArrowRight className="w-3.5 h-3.5 lg:w-[1vw] lg:h-[1vw] transition-transform duration-200 group-hover:translate-x-0.5" />
             </button>
           )}

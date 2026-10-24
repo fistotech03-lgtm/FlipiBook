@@ -45,7 +45,7 @@ export default function HowItWorksSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="relative w-full bg-white font-poppins py-10 lg:py-[3vw] px-6 sm:px-10 lg:px-[6vw] flex flex-col items-center justify-between border-t border-gray-100"
     >
@@ -53,7 +53,7 @@ export default function HowItWorksSection() {
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: false, amount: 0.3 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.6 }}
         className="w-full text-left mb-6 lg:mb-[1.5vw]"
       >
@@ -68,7 +68,7 @@ export default function HowItWorksSection() {
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
         className="text-center w-full mb-7 sm:mb-9 md:mb-11 lg:mb-[3.2vw] space-y-2 sm:space-y-2.5 lg:space-y-[0.7vw]"
       >
@@ -137,7 +137,7 @@ export default function HowItWorksSection() {
               key={idx}
               initial={{ opacity: 0, y: 35, scale: 0.95 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.15 + idx * 0.15, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center group w-full justify-start lg:justify-end max-w-[340px] sm:max-w-none mx-auto sm:mx-0"
             >

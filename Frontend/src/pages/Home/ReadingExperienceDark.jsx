@@ -50,7 +50,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="w-full bg-[#252728] text-white py-10 sm:py-14 lg:py-[3.2vw] px-6 sm:px-8 md:px-10 lg:px-[5.2vw] font-poppins border-t border-gray-800 overflow-hidden relative"
     >
@@ -60,7 +60,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="flex items-center justify-start gap-3 sm:gap-4 lg:gap-[1vw]"
         >
@@ -84,7 +84,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
             <motion.h2
               initial={{ opacity: 0, x: -35 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.95, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
               className="text-3xl sm:text-4xl md:text-5xl lg:text-[3vw] lg:leading-[4.5vw] font-bold text-white leading-[1.08] sm:leading-[1.12] tracking-tight"
             >
@@ -96,7 +96,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
             <motion.p
               initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="text-xs sm:text-[14px] md:text-[15.5px] lg:text-[0.95vw] text-[#A6ABB3] lg:text-[#D9D9D9] font-normal leading-[1.65] sm:leading-[1.75] text-justify lg:text-left w-full max-w-full sm:max-w-[560px] md:max-w-[620px] lg:max-w-none lg:w-[13vw]"
             >
@@ -107,7 +107,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="pt-2 sm:pt-3 lg:pt-[0.2vw]"
             >
@@ -129,7 +129,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 25 }}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
             className="relative lg:absolute lg:left-[40vw] lg:top-[19vw] lg:-translate-x-1/2 lg:-translate-y-1/2 w-full max-w-[460px] sm:max-w-[560px] md:max-w-[620px] lg:max-w-none lg:w-[44vw] flex items-center justify-center my-6 sm:my-8 md:my-10 lg:my-0 z-10 pointer-events-none mx-auto"
           >
@@ -152,7 +152,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
                 key={item.id}
                 initial={{ opacity: 0, x: 25 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: false, amount: 0.2 }}
+                viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                 transition={{ duration: 0.8, delay: 0.2 + idx * 0.12, ease: [0.22, 1, 0.36, 1] }}
                 className="flex items-center gap-3.5 sm:gap-4 lg:gap-[1.18vw] group bg-white/[0.03] sm:bg-white/[0.04] lg:bg-transparent p-3 sm:p-3.5 md:p-4 lg:p-0 rounded-xl sm:rounded-2xl lg:rounded-none border border-white/5 lg:border-transparent transition-all"
               >

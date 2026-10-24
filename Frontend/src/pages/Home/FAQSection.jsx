@@ -37,13 +37,13 @@ export default function FAQSection() {
   };
 
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.2 }} transition={{ duration: 0.8 }} className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-white py-14 lg:py-[5.5vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col items-center justify-center font-poppins border-t border-gray-100">
       
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
         className="text-center w-full max-w-xl lg:max-w-[60vw] mb-8 lg:mb-[3.5vw] space-y-2"
       >
@@ -65,7 +65,7 @@ export default function FAQSection() {
               key={index}
               initial={{ opacity: 0, y: 22 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.15 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.75, delay: (index % 4) * 0.12, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => toggleFAQ(index)}
               className={`bg-white border rounded-xl p-4 lg:p-[1.2vw] cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md ${

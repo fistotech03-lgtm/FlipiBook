@@ -7,7 +7,7 @@ export default function AboutUsSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="w-full bg-[#E2E2E2] font-poppins relative overflow-hidden select-none pt-6 sm:pt-8 md:pt-10 lg:pt-[3.5vw] pb-0"
     >
@@ -26,7 +26,7 @@ export default function AboutUsSection() {
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.96 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
           className="w-full order-2 lg:order-1 lg:absolute lg:inset-x-0 lg:bottom-0 lg:top-[1.5vw] flex items-end justify-center lg:justify-start pointer-events-none z-0 mt-6 sm:mt-8 md:mt-12 lg:mt-0"
         >
@@ -49,7 +49,7 @@ export default function AboutUsSection() {
               <motion.div
                 initial={{ opacity: 0, y: -25 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, amount: 0.2 }}
+                viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                 transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col items-start lg:items-end w-full"
               >
@@ -76,7 +76,7 @@ export default function AboutUsSection() {
               <motion.div
                 initial={{ scaleX: 0 }}
                 whileInView={{ scaleX: 1 }}
-                viewport={{ once: false, amount: 0.2 }}
+                viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                 transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className="w-full max-w-[260px] sm:max-w-[360px] md:max-w-[460px] lg:max-w-full h-[1px] bg-[#c2c5c9] mt-3 sm:mt-5 md:mt-7 lg:mt-[2.2vw] mb-3 sm:mb-5 md:mb-7 lg:mb-[1.8vw] origin-left lg:origin-right"
               ></motion.div>
@@ -86,7 +86,7 @@ export default function AboutUsSection() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full max-w-full lg:max-w-[22vw] flex flex-col items-start lg:items-end space-y-2.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.6vw] text-xs sm:text-[14px] md:text-[16px] lg:text-[0.94vw] text-[#2b2e34] font-normal leading-[1.65] sm:leading-[1.75] md:leading-[1.85] text-justify lg:text-right pb-1 sm:pb-2 lg:pb-[1vw]"
             >

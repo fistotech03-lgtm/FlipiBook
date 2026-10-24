@@ -46,7 +46,7 @@ export default function InteractiveDemo() {
     <motion.section
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
-      viewport={{ once: false, amount: 0.15 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.6 }}
       id="interactive-demo-section"
       className="w-full bg-[#f6f6f6] pt-8 pb-10 sm:pt-10 sm:pb-14 lg:pt-[2.6vw] lg:pb-[3.5vw] px-6 sm:px-8 md:px-10 lg:px-[4.2vw] font-poppins select-none [--book-shadow:2px_4px_7px_rgba(0,0,0,0.18)] sm:[--book-shadow:4px_7px_12px_rgba(0,0,0,0.22)] lg:[--book-shadow:8px_14px_20px_rgba(0,0,0,0.28)] [--book-shadow-hover:4px_6px_10px_rgba(0,0,0,0.24)] sm:[--book-shadow-hover:6px_10px_16px_rgba(0,0,0,0.28)] lg:[--book-shadow-hover:10px_18px_24px_rgba(0,0,0,0.36)]"
@@ -61,7 +61,7 @@ export default function InteractiveDemo() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]"
           >
@@ -75,7 +75,7 @@ export default function InteractiveDemo() {
           <motion.h2
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left"
           >
@@ -88,7 +88,7 @@ export default function InteractiveDemo() {
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-32 sm:w-full max-w-[220px] lg:max-w-[15.5vw] h-[1px] bg-[#d2d4d8] mt-3 sm:mt-5 lg:mt-[1.4vw] mb-3 sm:mb-4 lg:mb-[1.2vw] origin-left self-start"
           ></motion.div>
@@ -97,7 +97,7 @@ export default function InteractiveDemo() {
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
           >
@@ -116,7 +116,7 @@ export default function InteractiveDemo() {
                   key={book.id}
                   initial={{ opacity: 0, y: 35, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: false, amount: 0.2 }}
+                  viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                   transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                   onMouseEnter={() => setSelectedBook(idx)}
                   onMouseLeave={() => setSelectedBook(null)}
@@ -164,7 +164,7 @@ export default function InteractiveDemo() {
                   key={book.id}
                   initial={{ opacity: 0, y: 35, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: false, amount: 0.2 }}
+                  viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                   transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                   onMouseEnter={() => setSelectedBook(idx)}
                   onMouseLeave={() => setSelectedBook(null)}

@@ -1,19 +1,19 @@
 /**
  * Client-Side 3D Model Converter & Compressor
- * Supports: GLB, GLTF, OBJ, STL, FBX, STEP/IGES (via occt-import-js)
+ * Supports: GLB, OBJ, FBX, USDZ
  * Memory-safe with geometry quantization, attribute deduping & explicit GPU buffer disposal.
  */
 
 import * as THREE from 'three';
+import JSZip from 'jszip';
 import { GLTFLoader } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
-import { STLLoader } from 'three-stdlib';
 import { FBXLoader } from 'three-stdlib';
 import { OBJExporter } from 'three-stdlib';
-import { STLExporter } from 'three-stdlib';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
-import occtimportjs from 'occt-import-js';
-import { exportToStep, exportToFbx } from './threeDExportHelpers';
+import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
+import { USDLoader } from 'three/examples/jsm/loaders/USDLoader.js';
+import { exportToFbx } from './threeDExportHelpers';
 
 // Non-blocking tick to let UI and GC breathe
 const yieldToMain = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -47,51 +47,116 @@ const load3DModel = async (file, onProgress) => {
     return object;
   }
 
-  if (ext === 'stl') {
-    const loader = new STLLoader();
-    const geometry = loader.parse(buffer);
-    const material = new THREE.MeshStandardMaterial({ color: 0x90caf9, roughness: 0.5 });
-    const mesh = new THREE.Mesh(geometry, material);
-    const group = new THREE.Group();
-    group.add(mesh);
-    return group;
-  }
-
   if (ext === 'fbx') {
     const loader = new FBXLoader();
     const object = loader.parse(buffer, '');
     return object;
   }
 
-  if (ext === 'step' || ext === 'stp' || ext === 'iges' || ext === 'igs') {
-    onProgress?.(30, 'Converting CAD geometry...');
-    await yieldToMain();
-    const occt = await occtimportjs();
-    const fileBytes = new Uint8Array(buffer);
-    const result = occt.ReadStepFile(fileBytes, null);
+  if (ext === 'usdz') {
+    const loader = new USDLoader();
+    const object = loader.parse(buffer);
 
-    if (!result || !result.success) {
-      throw new Error('Failed to parse CAD file with OCCT engine.');
+    // USDLoader in Three.js does not parse opacity / transparent attributes or material blending from USDA.
+    // Inspect USDA in the USDZ archive to restore true material opacities, transparent blending, and proper double-sidedness.
+    try {
+      const zip = await JSZip.loadAsync(buffer);
+      let mainUsdaText = '';
+      for (const filename of Object.keys(zip.files)) {
+        if (filename.endsWith('.usda') || filename.endsWith('.usd')) {
+          const txt = await zip.files[filename].async('string');
+          if (txt.includes('def Material') || txt.includes('outputs:surface.connect')) {
+            mainUsdaText = txt;
+            break;
+          }
+        }
+      }
+
+      if (mainUsdaText) {
+        // 1. Parse material definitions (opacity, alpha texture connection, roughness, metalness)
+        const matInfo = {};
+        const mats = mainUsdaText.split('def Material ');
+        for (let i = 1; i < mats.length; i++) {
+          const block = mats[i];
+          const name = block.substring(1, block.indexOf(String.fromCharCode(34), 1));
+          let opacity = 1.0;
+          let hasAlpha = false;
+          let diffuseColor = null;
+
+          for (const rawLine of block.split('\n')) {
+            const line = rawLine.trim();
+            if (line.includes('inputs:opacity.connect')) hasAlpha = true;
+            if (line.includes('inputs:opacity =')) {
+              const val = parseFloat(line.split('=')[1].trim());
+              if (!isNaN(val)) opacity = val;
+            }
+            if (line.includes('color3f inputs:diffuseColor =')) {
+              const colStr = line.split('=')[1].replace(/[()]/g, '').trim();
+              const parts = colStr.split(',').map((v) => parseFloat(v.trim()));
+              if (parts.length === 3 && !parts.some(isNaN)) diffuseColor = parts;
+            }
+          }
+          matInfo[name] = { opacity, hasAlpha, diffuseColor };
+        }
+
+        // 2. Parse mesh name to material binding
+        const meshBindings = {};
+        let currentMesh = null;
+        for (const rawLine of mainUsdaText.split('\n')) {
+          const line = rawLine.trim();
+          if (line.startsWith('def Xform') || line.startsWith('def Mesh')) {
+            const idx1 = line.indexOf(String.fromCharCode(34));
+            if (idx1 !== -1) {
+              const idx2 = line.indexOf(String.fromCharCode(34), idx1 + 1);
+              if (idx2 !== -1) currentMesh = line.substring(idx1 + 1, idx2);
+            }
+          }
+          if (line.includes('rel material:binding = </Materials/')) {
+            const mat = line.split('rel material:binding = </Materials/')[1].replace('>', '').trim();
+            if (currentMesh) meshBindings[currentMesh] = mat;
+          }
+        }
+
+        // 3. Traverse and apply true material properties & alpha blending
+        object.traverse((child) => {
+          if (child.isMesh && child.material) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            const boundMatName = meshBindings[child.name] || meshBindings[child.parent?.name];
+            const info = boundMatName ? matInfo[boundMatName] : null;
+
+            mats.forEach((mat) => {
+              mat.side = THREE.DoubleSide;
+
+              const lowerName = (child.name + ' ' + (child.parent?.name || '') + ' ' + (mat.name || '')).toLowerCase();
+              const isGlassLike = lowerName.includes('glass') || lowerName.includes('lens') || lowerName.includes('gauge_cover');
+
+              if (info) {
+                if (info.opacity < 0.99 || isGlassLike) {
+                  mat.transparent = true;
+                  mat.opacity = Math.min(info.opacity, isGlassLike ? 0.25 : info.opacity);
+                  mat.depthWrite = !isGlassLike;
+                }
+                if (info.hasAlpha && mat.map) {
+                  mat.transparent = true;
+                  mat.alphaTest = 0.05; // Clean cutout blending for decals / labels / gauge marks
+                }
+                if (info.diffuseColor && !mat.map) {
+                  mat.color.setRGB(info.diffuseColor[0], info.diffuseColor[1], info.diffuseColor[2]);
+                }
+              } else if (isGlassLike) {
+                mat.transparent = true;
+                mat.opacity = 0.25;
+                mat.depthWrite = false;
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('USDA texture and opacity enhancement failed:', e);
     }
 
-    const group = new THREE.Group();
-    const material = new THREE.MeshStandardMaterial({ color: 0x99aab5, roughness: 0.4, metalness: 0.3 });
-
-    for (const meshData of result.meshes) {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(meshData.attributes.position.array, 3));
-      if (meshData.attributes.normal) {
-        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.attributes.normal.array, 3));
-      } else {
-        geometry.computeVertexNormals();
-      }
-      if (meshData.index) {
-        geometry.setIndex(new THREE.Uint32BufferAttribute(meshData.index.array, 1));
-      }
-      const mesh = new THREE.Mesh(geometry, material);
-      group.add(mesh);
-    }
-    return group;
+    return object;
   }
 
   throw new Error(`Unsupported 3D file format .${ext}`);
@@ -202,18 +267,14 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
     return new Blob([objText], { type: 'text/plain' });
   }
 
-  if (fmt === 'STL') {
-    const exporter = new STLExporter();
-    const stlData = exporter.parse(scene, { binary: true });
-    return new Blob([stlData], { type: 'application/octet-stream' });
-  }
-
-  if (fmt === 'STEP' || fmt === 'STP') {
-    return exportToStep(scene);
-  }
-
   if (fmt === 'FBX') {
     return exportToFbx(scene);
+  }
+
+  if (fmt === 'USDZ') {
+    const exporter = new USDZExporter();
+    const arrayBuffer = await exporter.parseAsync(scene);
+    return new Blob([arrayBuffer], { type: 'model/vnd.usdz+zip' });
   }
 
   // Fallback to GLB export

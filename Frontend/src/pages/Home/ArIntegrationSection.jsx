@@ -8,7 +8,7 @@ export default function ArIntegrationSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="relative w-full bg-white font-poppins overflow-hidden"
     >
@@ -22,7 +22,7 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="flex items-center gap-2.5 sm:gap-4 mb-2.5 sm:mb-4 lg:mb-[2.2vw]"
           >
@@ -36,7 +36,7 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ opacity: 0, x: -35 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
           >
@@ -50,7 +50,7 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-20 sm:w-36 lg:w-[12vw] h-[1px] bg-[#d2d5d8] mb-2 sm:mb-3.5 lg:mb-[1.8vw] origin-left"
           ></motion.div>
@@ -59,7 +59,7 @@ export default function ArIntegrationSection() {
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[3.2vw] text-left"
           >
@@ -73,7 +73,7 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >
@@ -97,7 +97,7 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >
@@ -121,7 +121,7 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >

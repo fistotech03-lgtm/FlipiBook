@@ -5,13 +5,13 @@ import exploreArrowIcon from '../../assets/Home/explore-arrow-icon.png';
 
 export default function WhyChooseFlipibook() {
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
       
       {/* Top Header Tag Row with Sub-Labels */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]"
       >
@@ -40,7 +40,7 @@ export default function WhyChooseFlipibook() {
         <motion.h2
           initial={{ opacity: 0, x: -30 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]"
         >
@@ -50,7 +50,7 @@ export default function WhyChooseFlipibook() {
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal"
         >
@@ -175,7 +175,7 @@ export default function WhyChooseFlipibook() {
           }}
           initial={{ opacity: 0, scale: 0.2, x: -120, y: 80, rotate: -25 }}
           whileInView={{ opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }}
-          viewport={{ once: false, amount: 0.3 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
         >
           <motion.img
@@ -208,7 +208,7 @@ export default function WhyChooseFlipibook() {
         <motion.div
           initial={{ opacity: 0, y: 35, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
@@ -238,7 +238,7 @@ export default function WhyChooseFlipibook() {
         <motion.div
           initial={{ opacity: 0, y: 35, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
@@ -268,7 +268,7 @@ export default function WhyChooseFlipibook() {
         <motion.div
           initial={{ opacity: 0, y: 35, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.54, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
@@ -298,7 +298,7 @@ export default function WhyChooseFlipibook() {
         <motion.div
           initial={{ opacity: 0, y: 35, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{

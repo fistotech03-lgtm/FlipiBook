@@ -163,8 +163,8 @@ function FlipbookCard({
         iframeBaseUrl ||
         getAssetBaseUrl(
             userFolder,
-            actualFolder || 'My_Flipbooks',
-            book.realName || book.title
+            actualFolder || 'default',
+            book.realName || book.title || book.flipbookName
         );
 
     // Handlers
@@ -333,12 +333,14 @@ function FlipbookCard({
                 {/* Thumbnail Box (4:3 Aspect Ratio with Stroke) */}
                 <div className="w-[7.6vw] h-[5.7vw] aspect-[4/3] bg-gray-100 rounded-[0.6vw] overflow-hidden flex-shrink-0 border border-gray-200 shadow-xs flex items-center justify-center relative">
                     <LazyPreview
-                        v_id={book.v_id}
+                        v_id={book.v_id || book.id || book._id}
                         emailId={emailId}
                         backendUrl={backendUrl}
                         iframeBaseUrl={resolvedIframeBaseUrl}
                         title={book.title || book.realName || book.flipbookName}
                         imageUrl={book.image || null}
+                        firstPageFileName={book.pagesList?.[0]?.fileName || (book.pagesList?.[0]?.name ? `${book.pagesList[0].name}.svg` : 'Page 1.svg')}
+                        firstPageContent={book.pagesList?.[0]?.html || book.pagesList?.[0]?.content || null}
                     />
                 </div>
 

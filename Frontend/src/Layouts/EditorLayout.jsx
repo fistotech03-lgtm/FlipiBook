@@ -7,6 +7,7 @@ const PublishModal = React.lazy(() => import('../components/PublishModal'));
 import axios from 'axios';
 import { getFromDB, saveToDB } from '../utils/dbUtils';
 import { useAuth, useActiveBook, useUIModals } from '../store/hooks';
+import { queryClient } from '../queryClient';
 
 const STATE_KEY = 'threed_editor_state';
 
@@ -255,6 +256,8 @@ const EditorLayout = () => {
           }
         });
       }
+      queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+      queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
       navigate('/my-flipbooks');
     } catch (err) {
       console.error("Failed to delete flipbook:", err);

@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Pencil, Info, Phone, User, Building, MapPin, BarChart2, MoreVertical, Globe, BookOpen } from 'lucide-react';
+import { Pencil, Info, Phone, User, Building, MapPin, BarChart2, MoreVertical, Globe, BookOpen, Check, X } from 'lucide-react';
 import { Icon } from '@iconify/react';
-import ThumbnailPopup from './Thumbnail_Popup';
-import AvatarPopup from './AvatarPopup';
+import ThumbnailPopup from '../Thumbnail_Popup';
+import AvatarPopup from '../AvatarPopup';
 import EditProfile from './EditProfile';
-import Activity from './Activity';
+import Activity from '../Activity';
 const resolveUploadsPath = (path) => path || '';
-const getSupabaseBaseUrl = () => '';
 
-const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl }) => {
+const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl = '', title, imageUrl }) => {
   const containerRef = useRef(null);
   const [html, setHtml] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -169,6 +168,12 @@ const defaultProfile = {
   },
   followers: [],
   following: [],
+  visibilitySettings: {
+    showInExplore: true,
+    showContact: true,
+    showAddress: true,
+    showSocial: true
+  },
   bannerBg: {
     type: 'gradient',
     value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
@@ -178,14 +183,35 @@ const defaultProfile = {
 const Profile = () => {
   const context = useOutletContext();
   const navigate = useNavigate();
-  const [localUser, setLocalUser] = useState(defaultProfile);
+  const [localUser, setLocalUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user_profile');
+      if (stored) return { ...defaultProfile, ...JSON.parse(stored) };
+    } catch (e) {}
+    return defaultProfile;
+  });
   const user = context?.user ? { ...defaultProfile, ...context.user } : localUser;
   const setUser = context?.setUser || setLocalUser;
+
+  useEffect(() => {
+    const handleProfileUpdate = (e) => {
+      if (e?.detail) {
+        setLocalUser(prev => ({
+          ...defaultProfile,
+          ...prev,
+          ...e.detail
+        }));
+      }
+    };
+    window.addEventListener('profileUpdate', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdate', handleProfileUpdate);
+  }, []);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [activeStatsBookId, setActiveStatsBookId] = useState(null);
   const [isAvatarPopupOpen, setIsAvatarPopupOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Your IDC');
+  const [activeTab, setActiveTab] = useState('Edit Profile');
+  const [editProfileActions, setEditProfileActions] = useState(null);
   const [bannerBg, setBannerBg] = useState({
     type: 'gradient',
     value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
@@ -193,15 +219,11 @@ const Profile = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeout = useRef(null);
-  const [isChildScrollable, setIsChildScrollable] = useState(false);
+  const [isChildScrollable, setIsChildScrollable] = useState(true);
 
   useEffect(() => {
-    if (scrollProgress >= 0.99) {
-      setIsChildScrollable(true);
-    } else if (!isScrolling) {
-      setIsChildScrollable(false);
-    }
-  }, [scrollProgress, isScrolling]);
+    setIsChildScrollable(true);
+  }, []);
 
   const [flipbooks, setFlipbooks] = useState([]);
   const [isLoadingBooks, setIsLoadingBooks] = useState(true);
@@ -210,7 +232,10 @@ const Profile = () => {
 
   const { useremail } = useParams();
   const rawRouteEmail = useremail ? decodeURIComponent(useremail).trim() : '';
-  const ownEmail = (user?.emailId || user?.email || '').trim();
+  const storedUserStr = typeof window !== 'undefined' ? (localStorage.getItem('user') || localStorage.getItem('user_profile')) : null;
+  const storedUser = storedUserStr ? (() => { try { return JSON.parse(storedUserStr); } catch (e) { return null; } })() : null;
+  const fallbackEmail = storedUser?.emailId || storedUser?.email || '';
+  const ownEmail = (user?.emailId || user?.email || fallbackEmail).trim();
   const effectiveEmail = ownEmail || rawRouteEmail;
 
   // 1. Fetch user profile from backend
@@ -229,6 +254,20 @@ const Profile = () => {
                 ...defaultProfile,
                 ...prev,
                 ...p,
+                about: p.about !== undefined ? p.about : prev.about,
+                mobile: p.mobile !== undefined ? p.mobile : prev.mobile,
+                countryCode: p.countryCode || prev.countryCode || '+91',
+                displayName: p.displayName || prev.displayName || '',
+                address1: p.address1 !== undefined ? p.address1 : prev.address1,
+                address2: p.address2 !== undefined ? p.address2 : prev.address2,
+                city: p.city !== undefined ? p.city : prev.city,
+                state: p.state !== undefined ? p.state : prev.state,
+                pincode: p.pincode !== undefined ? p.pincode : prev.pincode,
+                country: p.country !== undefined ? p.country : prev.country,
+                companyName: p.companyName !== undefined ? p.companyName : prev.companyName,
+                industryType: p.industryType !== undefined ? p.industryType : (prev.industryType || prev.industry),
+                companyEmail: p.companyEmail !== undefined ? p.companyEmail : prev.companyEmail,
+                website: p.website !== undefined ? p.website : prev.website,
                 email: p.emailId || prev.email || effectiveEmail,
                 emailId: p.emailId || prev.emailId || effectiveEmail,
                 name: p.name || prev.name || (effectiveEmail.split('@')[0]),
@@ -239,10 +278,17 @@ const Profile = () => {
                 services: p.services || prev.services || [],
                 followers: p.followers || prev.followers || [],
                 following: p.following || prev.following || [],
+                visibilitySettings: {
+                  showInExplore: true,
+                  showContact: true,
+                  showAddress: true,
+                  showSocial: true,
+                  ...(prev.visibilitySettings || {}),
+                  ...(p.visibilitySettings || {})
+                },
                 socials: {
                   ...defaultProfile.socials,
-                  ...(prev.socials || {}),
-                  ...(p.socials || {})
+                  ...(p.socials || prev.socials || {})
                 }
               };
               return updated;
@@ -411,12 +457,7 @@ const Profile = () => {
     fetchUserFlipbooks();
   }, [effectiveEmail, backendUrl]);
 
-  // Dispatch profile update events
-  useEffect(() => {
-    try {
-      window.dispatchEvent(new CustomEvent('profileUpdate', { detail: user }));
-    } catch (e) {}
-  }, [user]);
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -591,22 +632,25 @@ const Profile = () => {
                       />
                     ) : (
                       <span className="text-white text-[4.5vw] font-semibold drop-shadow-md">
-                        {user.name ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
+                        {(() => {
+                          const activeName = (user.displayName && user.displayName.trim() !== '') ? user.displayName.trim() : (user.name || user.email || 'U');
+                          return activeName.charAt(0).toUpperCase();
+                        })()}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Pencil Edit Icon with merged white ring */}
-                <div className="absolute top-[1vw] right-[1.3vw] w-[2vw] h-[2vw] bg-white rounded-[0.4vw] flex items-center justify-center z-20">
+                {/* Camera Edit Icon badge matching screenshot */}
+                <div className="absolute top-[1.5vw] right-[0.8vw] z-20">
                   <button
                     onClick={() => {
                       setIsAvatarPopupOpen(!isAvatarPopupOpen);
                       if (!isAvatarPopupOpen) setIsColorPickerOpen(false);
                     }}
-                    className="w-[1.5vw] h-[1.5vw] bg-white rounded-[0.4vw] hover:bg-gray-50 text-gray-700 flex items-center justify-center transition-colors"
+                    className="w-[2.2vw] h-[2.2vw] bg-white rounded-full border border-gray-100 shadow-md hover:bg-gray-50 text-gray-700 flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
                   >
-                    <Icon icon="mdi:edit-outline" className="w-[1.2vw] h-[1.2vw]" />
+                    <Icon icon="solar:camera-bold" className="w-[1.1vw] h-[1.1vw] text-gray-700" />
                   </button>
                   <div 
                     className="absolute top-0 left-0"
@@ -624,104 +668,291 @@ const Profile = () => {
               </div>
 
               {/* Name and Email */}
-              <h1 className="text-[1.5vw] font-semibold text-gray-900 mt-[1vw] truncate max-w-[18vw]">{user.name}</h1>
-              <div className="flex items-center gap-[0.4vw] text-[0.8vw] text-gray-500 mt-[0.2vw] truncate max-w-[18vw]">
-                <Icon icon="mdi:check-decagram" className="w-[1vw] h-[1vw] text-[#22c55e] flex-shrink-0" />
-                <span className="truncate font-medium">{user.email}</span>
-              </div>
+              <div 
+                className="flex flex-col items-center w-full"
+                style={{ 
+                  transform: `translateY(-${scrollProgress * 1.8}vw)`, 
+                  transition: 'transform 0.05s linear',
+                  willChange: 'transform' 
+                }}
+              >
+                <h1 className="text-[1.5vw] font-bold text-gray-900 mt-[0.3vw] truncate max-w-[18vw]">
+                  {user.displayName && user.displayName.trim() !== '' ? user.displayName.trim() : (user.name || '')}
+                </h1>
+                {user.visibilitySettings?.showContact !== false && (
+                  <div className="flex items-center gap-[0.4vw] text-[0.8vw] text-gray-500 mt-[0.2vw] truncate max-w-[18vw]">
+                    <Icon icon="mdi:check-decagram" className="w-[1vw] h-[1vw] text-[#22c55e] flex-shrink-0" />
+                    <span className="truncate font-medium">{user.email}</span>
+                  </div>
+                )}
 
-              {/* Followers & Following Count */}
-              <div className="flex items-center justify-center gap-[1.2vw] mt-[0.8vw] w-full px-[1vw]">
-                <div className="flex items-center gap-[0.35vw]">
-                  <span className="text-[0.9vw] font-bold text-gray-900 leading-none">
-                    {user.followers?.length || 0}
-                  </span>
-                  <span className="text-[0.75vw] text-gray-500 font-medium leading-none">Followers</span>
-                </div>
-                <div className="w-[1px] h-[0.9vw] bg-gray-300"></div>
-                <div className="flex items-center gap-[0.35vw]">
-                  <span className="text-[0.9vw] font-bold text-gray-900 leading-none">
-                    {user.following?.length || 0}
-                  </span>
-                  <span className="text-[0.75vw] text-gray-500 font-medium leading-none">Following</span>
+                {/* Flipbooks, Followers & Views Stats matching screenshot */}
+                <div className="flex items-center justify-center gap-[1.5vw] mt-[1.2vw] w-full px-[1vw]">
+                  {/* Flipbooks */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                      {flipbooks?.length || 0}
+                    </span>
+                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Flipbooks</span>
+                  </div>
+
+                  <div className="w-[1px] h-[1.8vw] bg-gray-200"></div>
+
+                  {/* Followers */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                      {(() => {
+                        const count = Array.isArray(user.followers) ? user.followers.length : (typeof user.followers === 'number' ? user.followers : 0);
+                        if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+                        return count;
+                      })()}
+                    </span>
+                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Followers</span>
+                  </div>
+
+                  <div className="w-[1px] h-[1.8vw] bg-gray-200"></div>
+
+                  {/* Views */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                      {(() => {
+                        const totalViews = (flipbooks || []).reduce((acc, b) => {
+                          const v = Number(b.viewsCount !== undefined ? b.viewsCount : (b.views !== undefined ? b.views : 0));
+                          return acc + (isNaN(v) ? 0 : v);
+                        }, 0);
+                        const viewsVal = user.views !== undefined ? user.views : totalViews;
+                        if (viewsVal >= 1000) return (viewsVal / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+                        return viewsVal;
+                      })()}
+                    </span>
+                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Views</span>
+                  </div>
                 </div>
               </div>
 
               {/* Info Cards Container */}
-              <div id="left-scroll-container" className={`w-full mt-[1.2vw] pb-[2vw] flex flex-col flex-1 min-h-0 hide-scrollbar rounded-b-[1vw] ${isChildScrollable ? 'overflow-y-scroll' : 'overflow-hidden'}`}>
+              <div 
+                id="left-scroll-container" 
+                className="w-full pb-[2vw] flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar rounded-b-[1vw]"
+                style={{
+                  marginTop: `${1.2 - (scrollProgress * 1.8)}vw`,
+                  transition: 'margin-top 0.05s linear',
+                  willChange: 'margin-top'
+                }}
+              >
 
-                <div className="p-[1vw] border-b border-gray-100">
-                  <h3 className="flex items-center gap-[0.5vw] text-[0.85vw] font-semibold text-gray-700 mb-[0.5vw]">
-                    <Info size="1vw" /> About
+                {/* Full Name (above About) */}
+                {user.name && user.name.trim() !== '' && (
+                  <div className="px-[1.2vw] py-[0.9vw] border-b border-gray-100 bg-white">
+                    <h3 className="flex items-center gap-[0.55vw] text-[0.9vw] font-semibold text-[#374151] mb-[0.3vw]">
+                      <Icon icon="solar:user-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
+                      <span>Full Name</span>
+                    </h3>
+                    <p className="text-[0.82vw] font-medium text-[#22262e] pl-[1.65vw]">
+                      {user.name}
+                    </p>
+                  </div>
+                )}
+
+                {/* About */}
+                <div className="px-[1.2vw] py-[1vw] border-b border-gray-100 bg-white">
+                  <h3 className="flex items-center gap-[0.55vw] text-[0.9vw] font-semibold text-[#374151] mb-[0.6vw]">
+                    <Icon icon="ix:about-filled" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                    <span>About</span>
                   </h3>
-                  <p className="text-[0.75vw] text-gray-500 leading-relaxed whitespace-pre-wrap">
-                    {user.about}
+                  <p className="text-[0.78vw] text-[#555962] leading-[1.65] font-normal whitespace-pre-wrap">
+                    {user.about || 'No about info provided yet.'}
                   </p>
                 </div>
 
-                <div className="p-[1vw] border-b border-gray-100 bg-[#FAFAFA]">
-                  <h3 className="flex items-center gap-[0.5vw] text-[0.85vw] font-semibold text-gray-700 mb-[0.5vw]">
-                    <Phone size="1vw" /> Contact Number
-                  </h3>
-                  <p className="text-[0.75vw] text-gray-500">{user.mobile}</p>
-                </div>
+                {/* Contact Number */}
+                {user.visibilitySettings?.showContact !== false && (
+                  <div className="px-[1.2vw] py-[1.2vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
+                    <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.6vw]">
+                      <Icon icon="mdi:call" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                      <span>Contact Number</span>
+                    </h3>
+                    <div className="flex flex-col gap-[0.3vw] text-[0.82vw] text-[#4b5563] font-normal tracking-wide pl-[0.1vw]">
+                      {user.mobile || user.contact1 ? (
+                        <div>
+                          {user.contact1Label && user.contact1Label !== 'Contact 1' && (
+                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact1Label}:</span>
+                          )}
+                          <span>{(user.contact1CountryCode || user.countryCode || '+91')} {(user.contact1 || user.mobile)}</span>
+                        </div>
+                      ) : (
+                        <span>-</span>
+                      )}
+                      {user.contact2 && (
+                        <div>
+                          {user.contact2Label && user.contact2Label !== 'Contact 2' && (
+                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact2Label}:</span>
+                          )}
+                          <span>{(user.contact2CountryCode || '+91')} {user.contact2}</span>
+                        </div>
+                      )}
+                      {user.contact3 && (
+                        <div>
+                          {user.contact3Label && user.contact3Label !== 'Contact 3' && (
+                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact3Label}:</span>
+                          )}
+                          <span>{(user.contact3CountryCode || '+91')} {user.contact3}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div className="p-[1vw] border-b border-gray-100">
-                  <h3 className="flex items-center gap-[0.5vw] text-[0.85vw] font-semibold text-gray-700 mb-[0.5vw]">
-                    {(user.company_logo_url || user.companyLogo) ? (
-                      <img src={user.company_logo_url || user.companyLogo} alt="Company Logo" className="w-[1.2vw] h-[1.2vw] object-contain rounded-[0.2vw]" />
-                    ) : (
-                      <Building size="1vw" />
+                {/* Professional Details Section matching screenshot */}
+                <div className="px-[1.2vw] py-[1.2vw] border-b border-gray-100 bg-white">
+                  <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.8vw]">
+                    <Icon icon="material-symbols-light:home-work-rounded" className="w-[1.3vw] h-[1.3vw] text-[#4b5563]" />
+                    <span>Professional Details</span>
+                  </h3>
+                  <div className="text-[0.78vw] flex flex-col gap-[0.55vw] text-[#555962]">
+                    <div>
+                      <span className="font-semibold text-[#22262e]">Profile : </span>
+                      <span>{user.profileType || 'Individual'}</span>
+                    </div>
+                    {(user.agencyName || user.businessName || user.companyName) && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">
+                          {user.profileType === 'Company'
+                            ? 'Company / Organization : '
+                            : (user.profileType === 'Agency'
+                              ? 'Agency Name : '
+                              : (user.profileType === 'Freelancer' ? 'Business / Brand : ' : 'Company Name : '))}
+                        </span>
+                        <span>{user.companyName || user.agencyName || user.businessName}</span>
+                      </div>
                     )}
-                    Company / Organization Details
-                  </h3>
-                  <div className="flex flex-col gap-[0.3vw] text-[0.75vw]">
-                    {user.companyName && <p><span className="font-semibold text-gray-700">Name :</span> <span className="text-gray-500">{user.companyName}</span></p>}
-                    {user.industryType && <p><span className="font-semibold text-gray-700">Industry Type :</span> <span className="text-gray-500">{user.industryType}</span></p>}
-                    {user.companyEmail && <p><span className="font-semibold text-gray-700">Gmail :</span> <span className="text-gray-500">{user.companyEmail}</span></p>}
-                    {user.website && <p><span className="font-semibold text-gray-700">Website :</span> <a href={user.website?.startsWith('http') ? user.website : `https://${user.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{user.website}</a></p>}
-                    {user.services?.length > 0 && <p><span className="font-semibold text-gray-700">Services :</span> <span className="text-gray-500">{Array.isArray(user.services) ? user.services.join(', ') : user.services}</span></p>}
+                    <div>
+                      <span className="font-semibold text-[#22262e]">Industry Type : </span>
+                      <span>{user.industryType || user.industry || 'Software Development'}</span>
+                    </div>
+                    {user.profileType === 'Freelancer' && user.experience && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">Experience : </span>
+                        <span>{user.experience}</span>
+                      </div>
+                    )}
+                    {user.profileType === 'Agency' && user.teamSize && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">Team Size : </span>
+                        <span>{user.teamSize}</span>
+                      </div>
+                    )}
+                    {user.profileType === 'Company' && user.companySize && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">Company Size : </span>
+                        <span>{user.companySize}</span>
+                      </div>
+                    )}
+                    {(user.businessEmail || user.companyEmail) && user.visibilitySettings?.showContact !== false && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">
+                          {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') ? 'Business Gmail : ' : 'Company Gmail : '}
+                        </span>
+                        <span>{user.businessEmail || user.companyEmail}</span>
+                      </div>
+                    )}
+                    {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') && Array.isArray(user.specialization) && user.specialization.length > 0 && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">Specialization : </span>
+                        <span>{user.specialization.join(', ')}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-semibold text-[#22262e]">Service/Expertise : </span>
+                      <span>
+                        {((Array.isArray(user.services) && user.services.length > 0)
+                          ? user.services
+                          : ((Array.isArray(user.specialization) && user.specialization.length > 0)
+                              ? user.specialization
+                              : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs'])
+                        ).join(', ')}
+                      </span>
+                    </div>
+                    {user.visibilitySettings?.showContact !== false && Boolean(
+                      (user.website && user.website.trim() !== '') ||
+                      (user.socials?.website && typeof user.socials.website === 'string' && user.socials.website.trim() !== '')
+                    ) && (
+                      <div>
+                        <span className="font-semibold text-[#22262e]">
+                          {user.profileType === 'Company'
+                            ? 'Company Website : '
+                            : (user.profileType === 'Agency'
+                              ? 'Agency Website : '
+                              : (user.profileType === 'Freelancer' ? 'Portfolio / Website : ' : 'Website : '))}
+                        </span>
+                        {(() => {
+                          const siteUrl = (user.website && user.website.trim() !== '') ? user.website.trim() : user.socials.website.trim();
+                          return (
+                            <a
+                              href={siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {siteUrl}
+                            </a>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="p-[1vw] border-b border-gray-100 bg-[#FAFAFA]">
-                  <h3 className="flex items-center gap-[0.5vw] text-[0.85vw] font-semibold text-gray-700 mb-[0.5vw]">
-                    <MapPin size="1vw" /> Address
-                  </h3>
-                  <div className="text-[0.75vw] flex flex-col gap-[0.3vw]  text-gray-500">
-                    {user.address1 || user.address2 ? <div>{[user.address1, user.address2].filter(Boolean).join(', ')}</div> : null}
-                    {user.city || user.state ? <div>{[user.city, user.state].filter(Boolean).join(', ')}</div> : null}
-                    {user.country || user.pincode ? <div>{[user.country, user.pincode].filter(Boolean).join(' - ')}</div> : null}
+                {/* Address */}
+                {user.visibilitySettings?.showAddress !== false && (
+                  <div className="px-[1.2vw] py-[1.2vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
+                    <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.7vw]">
+                      <Icon icon="carbon:location-company-filled" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                      <span>Address</span>
+                    </h3>
+                    <div className="text-[0.8vw] flex flex-col gap-[0.35vw] text-[#4b5563] leading-[1.5] font-normal pl-[0.1vw]">
+                      {(user.address1 || user.address2) ? (
+                        <div>{[user.address1, user.address2].filter(Boolean).join(', ')}</div>
+                      ) : null}
+                      {(user.city || user.state) ? (
+                        <div>{[user.city, user.state].filter(Boolean).join(', ')}</div>
+                      ) : null}
+                      <div>
+                        {[user.country || 'India', user.pincode ? `${user.pincode}` : ''].filter(Boolean).join(' - ')}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="p-[1vw] flex gap-[0.5vw] justify-center items-center">
-                  {user.socials?.website && (
-                    <div onClick={() => window.open(user.socials.website.startsWith('http') ? user.socials.website : `https://${user.socials.website}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1a1a1a] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                      <Globe className="w-[1.2vw] h-[1.2vw] text-white" />
-                    </div>
-                  )}
-                  {user.socials?.linkedin && (
-                    <div onClick={() => window.open(user.socials.linkedin.startsWith('http') ? user.socials.linkedin : `https://${user.socials.linkedin}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#0077b5] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                      <Icon icon="mdi:linkedin" className="w-[1.4vw] h-[1.4vw] text-white" />
-                    </div>
-                  )}
-                  {user.socials?.instagram && (
-                    <div onClick={() => window.open(user.socials.instagram.startsWith('http') ? user.socials.instagram : `https://${user.socials.instagram}`, '_blank')} className="w-[2vw] h-[2vw] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                      <Icon icon="mdi:instagram" className="w-[1.3vw] h-[1.3vw] text-white" />
-                    </div>
-                  )}
-                  {user.socials?.facebook && (
-                    <div onClick={() => window.open(user.socials.facebook.startsWith('http') ? user.socials.facebook : `https://${user.socials.facebook}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1877f2] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                      <Icon icon="mdi:facebook" className="w-[1.4vw] h-[1.4vw] text-white" />
-                    </div>
-                  )}
-                  {user.socials?.whatsapp && (
-                    <div onClick={() => window.open(user.socials.whatsapp.startsWith('http') ? user.socials.whatsapp : `https://wa.me/${user.socials.whatsapp.replace(/[^0-9]/g, '')}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#25d366] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                      <Icon icon="mdi:whatsapp" className="w-[1.4vw] h-[1.4vw] text-white" />
-                    </div>
-                  )}
-                </div>
+                {user.visibilitySettings?.showSocial !== false && (
+                  <div className="px-[1.2vw] py-[1vw] flex gap-[0.6vw] justify-start items-center">
+                    {Boolean(user.socials?.website && typeof user.socials.website === 'string' && user.socials.website.trim() !== '') && (
+                      <div onClick={() => window.open(user.socials.website.startsWith('http') ? user.socials.website : `https://${user.socials.website}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1a1a1a] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <Globe className="w-[1.2vw] h-[1.2vw] text-white" />
+                      </div>
+                    )}
+                    {Boolean(user.socials?.linkedin && typeof user.socials.linkedin === 'string' && user.socials.linkedin.trim() !== '') && (
+                      <div onClick={() => window.open(user.socials.linkedin.startsWith('http') ? user.socials.linkedin : `https://${user.socials.linkedin}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#0077b5] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <Icon icon="mdi:linkedin" className="w-[1.4vw] h-[1.4vw] text-white" />
+                      </div>
+                    )}
+                    {Boolean(user.socials?.instagram && typeof user.socials.instagram === 'string' && user.socials.instagram.trim() !== '') && (
+                      <div onClick={() => window.open(user.socials.instagram.startsWith('http') ? user.socials.instagram : `https://${user.socials.instagram}`, '_blank')} className="w-[2vw] h-[2vw] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <Icon icon="mdi:instagram" className="w-[1.3vw] h-[1.3vw] text-white" />
+                      </div>
+                    )}
+                    {Boolean(user.socials?.facebook && typeof user.socials.facebook === 'string' && user.socials.facebook.trim() !== '') && (
+                      <div onClick={() => window.open(user.socials.facebook.startsWith('http') ? user.socials.facebook : `https://${user.socials.facebook}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1877f2] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <Icon icon="mdi:facebook" className="w-[1.4vw] h-[1.4vw] text-white" />
+                      </div>
+                    )}
+                    {Boolean(user.socials?.whatsapp && typeof user.socials.whatsapp === 'string' && user.socials.whatsapp.trim() !== '') && (
+                      <div onClick={() => window.open(user.socials.whatsapp.startsWith('http') ? user.socials.whatsapp : `https://wa.me/${user.socials.whatsapp.replace(/[^0-9]/g, '')}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#25d366] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <Icon icon="mdi:whatsapp" className="w-[1.4vw] h-[1.4vw] text-white" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -732,35 +963,54 @@ const Profile = () => {
               {/* Header Area */}
               <div className="pt-[1vw] pl-[1vw] pr-[1vw] pb-0 relative flex-shrink-0 z-[60]">
 
-                {/* Buttons Row & Save Actions Portal */}
+                {/* Buttons Row with permanent sticky Cancel & Save Changes */}
                 <div className="flex justify-between items-center w-full relative z-[60]">
-                  <div className="flex gap-[0.5vw]">
+                  <div className="flex items-center gap-[0.6vw]">
                     <button
-                      onClick={() => setActiveTab('Your IDC')}
-                      className={`px-[1vw] py-[0.59vw] text-[0.9vw] font-semibold rounded-[0.5vw] transition-all border border-transparent bg-white ${activeTab === 'Your IDC' ? 'text-gray-900 shadow-[inset_0.2vw_0.2vw_0.4vw_rgba(0,0,0,0.08),inset_-0.2vw_-0.2vw_0.4vw_rgba(255,255,255,0.9)]' : 'text-gray-400 shadow-[0.2vw_0.2vw_0.5vw_rgba(0,0,0,0.05),-0.1vw_-0.1vw_0.3vw_rgba(255,255,255,1)] hover:shadow-[0.3vw_0.3vw_0.7vw_rgba(0,0,0,0.08)]'}`}
-                    >
-                      Your IDC
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('Edit Profile')}
-                      className={`px-[1vw] py-[0.59vw] text-[0.9vw] font-semibold rounded-[0.5vw] transition-all border border-transparent bg-white ${activeTab === 'Edit Profile' ? 'text-gray-900 shadow-[inset_0.2vw_0.2vw_0.4vw_rgba(0,0,0,0.08),inset_-0.2vw_-0.2vw_0.4vw_rgba(255,255,255,0.9)]' : 'text-gray-400 shadow-[0.2vw_0.2vw_0.5vw_rgba(0,0,0,0.05),-0.1vw_-0.1vw_0.3vw_rgba(255,255,255,1)] hover:shadow-[0.3vw_0.3vw_0.7vw_rgba(0,0,0,0.08)]'}`}
+                      type="button"
+                      className="px-[1.1vw] py-[0.55vw] text-[0.85vw] font-semibold rounded-[0.6vw] transition-all bg-white text-gray-900 border border-gray-200 shadow-sm cursor-default"
                     >
                       Edit Profile
                     </button>
-                    <button
-                      onClick={() => setActiveTab('Activity')}
-                      className={`px-[1vw] py-[0.59vw] text-[0.9vw] font-semibold rounded-[0.5vw] transition-all border border-transparent bg-white ${activeTab === 'Activity' ? 'text-gray-900 shadow-[inset_0.2vw_0.2vw_0.4vw_rgba(0,0,0,0.08),inset_-0.2vw_-0.2vw_0.4vw_rgba(255,255,255,0.9)]' : 'text-gray-400 shadow-[0.2vw_0.2vw_0.5vw_rgba(0,0,0,0.05),-0.1vw_-0.1vw_0.3vw_rgba(255,255,255,1)] hover:shadow-[0.3vw_0.3vw_0.7vw_rgba(0,0,0,0.08)]'}`}
-                    >
-                      Activity
-                    </button>
                   </div>
-                  <div id="save-buttons-portal-target"></div>
+
+                  {activeTab === 'Edit Profile' && editProfileActions && (
+                    <div className="flex items-center gap-[0.8vw]">
+                      <button
+                        type="button"
+                        disabled={editProfileActions.isSaving}
+                        onClick={editProfileActions.handleCancel}
+                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] border border-gray-300 rounded-[0.5vw] text-[0.85vw] font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                      >
+                        <X className="w-[1vw] h-[1vw] text-gray-500" strokeWidth={1.8} /> Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={editProfileActions.isSaving}
+                        onClick={editProfileActions.handleSave}
+                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] bg-[#43A047] hover:bg-[#388E3C] rounded-[0.5vw] text-[0.85vw] font-medium text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                      >
+                        {editProfileActions.isSaving ? (
+                          <Icon icon="line-md:loading-loop" className="w-[1vw] h-[1vw]" />
+                        ) : (
+                          <Check className="w-[1vw] h-[1vw] text-white" strokeWidth={2.5} />
+                        )}
+                        {editProfileActions.isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Content Area */}
               <div id="main-scroll-container" className={`flex-1 pl-[1.5vw] pb-[2vw] custom-scrollbar ${isChildScrollable ? 'overflow-y-auto pr-[1.5vw]' : 'overflow-hidden pr-[1.8vw]'}`}>
-                {activeTab === 'Edit Profile' && <EditProfile user={user} setUser={setUser} />}
+                {activeTab === 'Edit Profile' && (
+                  <EditProfile
+                    user={user}
+                    setUser={setUser}
+                    onActionReady={setEditProfileActions}
+                  />
+                )}
 
                 {activeTab === 'Your IDC' && (
                   <div className="flex-1 flex flex-col relative mt-[1.5vw]">
@@ -798,11 +1048,7 @@ const Profile = () => {
                                     v_id={book.v_id}
                                     emailId={effectiveEmail}
                                     backendUrl={backendUrl}
-                                    iframeBaseUrl={getSupabaseBaseUrl(
-                                      (effectiveEmail || '').replace(/[@.]/g, "_"),
-                                      book.folder === 'Recent Book' || book.folder === 'Recent book' ? 'My_Flipbooks' : (book.folder || 'My_Flipbooks'),
-                                      book.realName || book.title
-                                    )}
+                                    iframeBaseUrl=""
                                     title={book.title || book.name}
                                     imageUrl={book.image || null}
                                   />

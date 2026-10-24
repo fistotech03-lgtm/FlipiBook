@@ -95,7 +95,7 @@ const defaultRenderStatusBadge = (book) => {
     );
 };
 
-export default function FlipbookCard({
+function FlipbookCard({
     book,
     variant = 'default', // 'default' | 'favorites' | 'trash'
     selectedBooks,
@@ -201,6 +201,12 @@ export default function FlipbookCard({
             onCustomize(book);
             return;
         }
+        const pagesArray = Array.isArray(book.pagesList) && book.pagesList.length > 0 
+            ? book.pagesList 
+            : Array.isArray(book.pages) && book.pages.length > 0 && typeof book.pages[0] === 'object'
+            ? book.pages
+            : undefined;
+
         const pageCountVal =
             (Array.isArray(book.pages)
                 ? book.pages.length
@@ -210,7 +216,18 @@ export default function FlipbookCard({
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(actualFolder || 'My_Flipbooks')}/${identifier}`,
-            { state: { flipbookName: book.realName, pageCount: pageCountVal } }
+            {
+                state: {
+                    flipbookName: book.realName,
+                    pageCount: pageCountVal,
+                    pages: pagesArray,
+                    v_id: book.v_id,
+                    folderName: actualFolder || 'My_Flipbooks',
+                    width: book.width,
+                    height: book.height,
+                    orientation: book.orientation
+                }
+            }
         );
     };
 
@@ -219,9 +236,23 @@ export default function FlipbookCard({
             onOpenEditor(book);
             return;
         }
+        const pagesArray = Array.isArray(book.pagesList) && book.pagesList.length > 0 
+            ? book.pagesList 
+            : Array.isArray(book.pages) && book.pages.length > 0 && typeof book.pages[0] === 'object'
+            ? book.pages
+            : undefined;
+
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(actualFolder || 'My_Flipbooks')}/${identifier}`, {
-            state: { flipbookName: book.realName }
+            state: {
+                flipbookName: book.realName,
+                pages: pagesArray,
+                v_id: book.v_id,
+                folderName: actualFolder || 'My_Flipbooks',
+                width: book.width,
+                height: book.height,
+                orientation: book.orientation
+            }
         });
     };
 
@@ -519,3 +550,5 @@ export default function FlipbookCard({
         </div>
     );
 }
+
+export default React.memo(FlipbookCard);

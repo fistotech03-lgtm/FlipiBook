@@ -53,6 +53,8 @@ const ThreedEditor = lazy(
   () => import("./components/ThreedEditor/ThreedEditor"),
 );
 
+import "./utils/preloadUtils";
+
 // Settings Components
 const SettingsLayout = lazy(
   () => import("./components/Settings/SettingsLayout"),

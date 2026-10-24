@@ -12,13 +12,15 @@
     "start:pdf-editor": "node services/pdf-editor-service/src/server.js",
     "start:customized-editor": "node services/customized-editor-service/src/server.js",
     "start:threed-editor": "node services/threed-editor-service/src/server.js",
+    "start:payment": "node services/payment-services/src/server.js",
     "dev:gateway": "node --watch api-gateway/src/server.js",
     "dev:auth": "node --watch services/auth-service/src/server.js",
     "dev:myflipibook": "node --watch services/myflipibook-service/src/server.js",
     "dev:page-editor": "node --watch services/page-editor-service/src/server.js",
     "dev:pdf-editor": "node --watch services/pdf-editor-service/src/server.js",
     "dev:customized-editor": "node --watch services/customized-editor-service/src/server.js",
-    "dev:threed-editor": "node --watch services/threed-editor-service/src/server.js"
+    "dev:threed-editor": "node --watch services/threed-editor-service/src/server.js",
+    "dev:payment": "node --watch services/payment-services/src/server.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
@@ -32,6 +34,9 @@
     "http-proxy-middleware": "^3.0.7",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.2",
+    "append-field": "^1.0.0",
+    "busboy": "^1.6.0",
+    "streamsearch": "^1.1.0",
     "multer": "^2.4.0",
     "nanoid": "^6.0.2",
     "nodemailer": "^10.0.12",

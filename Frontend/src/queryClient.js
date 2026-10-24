@@ -15,30 +15,59 @@ export const queryClient = new QueryClient({
 export const fetchFlipbookFolders = async (emailId) => {
   if (!emailId) return [];
   const folderRes = await flipbookApi.getFolders(emailId);
-  let fetchedFolders = (folderRes.data?.folders || []).filter((f) => {
-    const name = typeof f === 'string' ? f : f?.name;
-    const lower = String(name || '').toLowerCase().trim();
-    return (
-      lower !== 'public book' &&
-      lower !== 'recent book' &&
-      lower !== 'recent' &&
-      lower !== 'all flipbook' &&
-      lower !== 'all flipbooks' &&
-      lower !== 'favorites' &&
-      lower !== 'trash'
-    );
-  }).map((f) => {
-    if (typeof f === 'string') return { id: f, name: f };
-    return { id: f.id || f.name, name: f.name };
+  const rawFolders = folderRes.data?.folders || [];
+
+  let hasDefault = false;
+  const cleanedFolders = [];
+  const seenNames = new Set();
+
+  rawFolders.forEach((f) => {
+    const rawName = typeof f === 'string' ? f : f?.name;
+    if (!rawName) return;
+    const lower = String(rawName).trim().toLowerCase();
+    if (
+      lower === 'public book' ||
+      lower === 'recent book' ||
+      lower === 'recent' ||
+      lower === 'all flipbook' ||
+      lower === 'all flipbooks' ||
+      lower === 'favorites' ||
+      lower === 'trash'
+    ) {
+      return;
+    }
+
+    const isDefault = Boolean(typeof f === 'object' && f.isDefault) || (!hasDefault && (lower === 'default' || lower === 'my flipbooks'));
+
+    if (isDefault) {
+      if (!hasDefault) {
+        hasDefault = true;
+        const displayName = (lower === 'default') ? 'My Flipbooks' : String(rawName).trim();
+        cleanedFolders.unshift({
+          id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : 'default_folder',
+          name: displayName,
+          isDefault: true
+        });
+        seenNames.add(displayName.toLowerCase());
+      }
+      return;
+    }
+
+    if (!seenNames.has(lower)) {
+      seenNames.add(lower);
+      cleanedFolders.push({
+        id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : rawName,
+        name: String(rawName).trim(),
+        isDefault: false
+      });
+    }
   });
 
-  const hasDefaultFolder = fetchedFolders.some(
-    (f) => f.name.toLowerCase() === 'my_flipbooks'
-  );
-  if (!hasDefaultFolder) {
-    fetchedFolders.unshift({ id: 'default_my_flipbooks', name: 'My_Flipbooks' });
+  if (!hasDefault) {
+    cleanedFolders.unshift({ id: 'default_folder', name: 'My Flipbooks', isDefault: true });
   }
-  return fetchedFolders;
+
+  return cleanedFolders;
 };
 
 export const fetchFlipbookBooks = async (emailId) => {
@@ -46,13 +75,20 @@ export const fetchFlipbookBooks = async (emailId) => {
   const booksRes = await flipbookApi.getBooks(emailId);
   const rawBooks = booksRes.data?.books || [];
   return rawBooks.map((b) => {
-    const f = b.folder || b.folderName;
+    let f = b.folder || b.folderName;
+    if (Array.isArray(f)) f = f[0];
+    const lower = String(f || '').trim().toLowerCase();
+    const resolvedFolder = (!lower || lower === 'default' || lower === 'my flipbooks' || lower === 'all flipbook' || lower === 'all flipbooks')
+      ? 'My Flipbooks'
+      : f;
+
     const pageCount = Array.isArray(b.pages)
       ? b.pages.length
       : (typeof b.pages === 'number' ? b.pages : (parseInt(b.pagesCount, 10) || 1));
     return {
       ...b,
-      folder: (!f || f === 'All Flipbook' || f === 'All Flipbooks') ? 'My_Flipbooks' : f,
+      folder: resolvedFolder,
+      folderName: resolvedFolder,
       pages: pageCount,
       pagesCount: pageCount,
       pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || []),

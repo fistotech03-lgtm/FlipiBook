@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import { resolveUploadsPath } from '../../../utils/assetUtils';
+import { resolveUploadsPath, getSupabaseBaseUrl } from '../../../utils/assetUtils';
 import { getSvgImageEl, syncGradient } from '../utils/editorUtils';
 import {
   ChevronDown,
@@ -66,7 +66,13 @@ const ImageEditor = ({
   const [previewSrc, setPreviewSrc] = useState(() => {
     if (!selectedElement) return '';
     const imgEl = getSvgImageEl(selectedElement);
-    return imgEl?.getAttribute?.('href') || imgEl?.getAttribute?.('xlink:href') || imgEl?.src || '';
+    const src = imgEl?.getAttribute?.('href') || imgEl?.getAttribute?.('xlink:href') || imgEl?.src || '';
+    if (src && (src.startsWith('../assets/') || src.startsWith('./assets/') || src.startsWith('/assets/'))) {
+      const pBase = getSupabaseBaseUrl(user?.userID || user?.emailId || user?.email, folderName, flipbookName);
+      const cleanRel = src.replace(/^(\.\.\/|\.\/)+assets\//, '').replace(/^\/?assets\//, '');
+      return `${pBase}assets/${cleanRel}`;
+    }
+    return resolveUploadsPath(src);
   });
 
   const displayImageName = useMemo(() => {
@@ -335,18 +341,37 @@ const ImageEditor = ({
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
-            if (res.data.url) {
-              const serverUrl = resolveUploadsPath(res.data.url);
-              const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/Image/${res.data.filename}`);
+            if (res.data && (res.data.url || res.data.filename)) {
+              const filename = res.data.filename;
+              const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/Image/${filename}`);
+
+              let accessibleUrl = '';
+              if (res.data.serverUrl || res.data.storageUrl) {
+                accessibleUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl);
+              } else if (res.data.url && !res.data.url.startsWith('../') && !res.data.url.startsWith('./')) {
+                accessibleUrl = resolveUploadsPath(res.data.url);
+              } else {
+                const projectBaseUrl = getSupabaseBaseUrl(
+                  user?.userID || user?.emailId || user?.email,
+                  folderName,
+                  flipbookName
+                );
+                accessibleUrl = `${projectBaseUrl}assets/Image/${filename}`;
+              }
+
               const svgImgSrv = getSvgImageEl(selectedElement);
               if (svgImgSrv) {
-                svgImgSrv.setAttribute('href', relativePath);
-                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', relativePath); } catch { }
+                svgImgSrv.setAttribute('href', accessibleUrl);
+                try { svgImgSrv.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', accessibleUrl); } catch { }
+                svgImgSrv.setAttribute('data-relative-src', relativePath);
+                svgImgSrv.setAttribute('data-flipbook-path', relativePath);
               } else {
-                selectedElement.src = relativePath;
+                selectedElement.src = accessibleUrl;
               }
-              selectedElement.dataset.fileVid = res.data.file_v_id;
-              setPreviewSrc(serverUrl);
+              if (res.data.file_v_id) {
+                selectedElement.dataset.fileVid = res.data.file_v_id;
+              }
+              setPreviewSrc(accessibleUrl);
               if (onUpdate) onUpdate({ shouldRefresh: true });
             }
           } catch (err) {
@@ -470,9 +495,24 @@ const ImageEditor = ({
     }
 
     // 4. Sync Src
-    const currentSrc = isSvgEl
+    let currentSrc = isSvgEl
       ? (svgImageEl?.getAttribute('href') || svgImageEl?.getAttribute('xlink:href') || '')
       : (selectedElement.src || '');
+
+    // Auto-heal broken relative hrefs in the live DOM
+    if (currentSrc && (currentSrc.startsWith('../assets/') || currentSrc.startsWith('./assets/') || currentSrc.startsWith('/assets/'))) {
+      const pBase = getSupabaseBaseUrl(user?.userID || user?.emailId || user?.email, folderName, flipbookName);
+      const cleanRel = currentSrc.replace(/^(\.\.\/|\.\/)+assets\//, '').replace(/^\/?assets\//, '');
+      const healedUrl = `${pBase}assets/${cleanRel}`;
+      if (isSvgEl && svgImageEl) {
+        svgImageEl.setAttribute('href', healedUrl);
+        try { svgImageEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', healedUrl); } catch {}
+        svgImageEl.setAttribute('data-relative-src', currentSrc);
+        svgImageEl.setAttribute('data-flipbook-path', currentSrc);
+      }
+      currentSrc = healedUrl;
+    }
+
     if (currentSrc !== currentState.previewSrc) {
       currentState.previewSrc = currentSrc;
       setPreviewSrc(currentSrc);

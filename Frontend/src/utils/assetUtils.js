@@ -22,10 +22,16 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
   };
 
   const email = cleanSeg(sanitizedEmail);
-  const folder = cleanSeg(folderName);
+  let folder = cleanSeg(folderName);
   const book = cleanSeg(flipbookName);
 
-  const segments = [email, 'My_Flipbooks', folder, book].filter(Boolean);
+  if (folder.startsWith('books/')) {
+    folder = folder.slice(6);
+  } else if (folder === 'books') {
+    folder = '';
+  }
+
+  const segments = [email, 'books', folder, book].filter(Boolean);
   const fullPath = segments.join('/');
 
   return BACKEND_URL ? `${BACKEND_URL}/storage/${fullPath}/` : `/storage/${fullPath}/`;

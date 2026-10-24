@@ -99,24 +99,24 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             return 15;
         }
 
-        // Step 2: Extracting Pages -> 20% to 80% (Accurately scaled by extractedPages / totalPages)
+        // Step 2: Extracting Pages -> 20% to 85% (Accurately scaled by extractedPages / totalPages)
         if (stage === 'converting') {
             if (totalPagesCount > 0 && extractedPagesCount >= 0) {
                 const ratio = Math.min(1, Math.max(0, extractedPagesCount / totalPagesCount));
-                return Math.min(80, Math.round(20 + ratio * 60));
+                return Math.min(85, Math.round(20 + ratio * 65));
             }
             if (explicitPercent !== undefined && explicitPercent !== null) {
-                return Math.min(80, Math.max(20, Math.round(20 + (explicitPercent / 100) * 60)));
+                return Math.min(85, Math.max(20, Math.round(20 + (explicitPercent / 100) * 65)));
             }
             return 50;
         }
 
-        // Step 3: Processing & Saving -> 80% to 98% (Never 100% until stage === 'done')
+        // Step 3: Processing & Saving -> 85% to 99% (Smooth, never freezes at 98%, 100% when stage === 'done')
         if (stage === 'saving') {
             if (explicitPercent !== undefined && explicitPercent !== null) {
-                return Math.min(98, Math.max(80, Math.round(80 + (explicitPercent / 100) * 18)));
+                return Math.min(99, Math.max(85, Math.round(85 + (explicitPercent / 100) * 14)));
             }
-            return 88;
+            return 92;
         }
 
         // Fallback default
@@ -170,16 +170,16 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
         const interval = setInterval(() => {
             setFluidPercent(prev => {
-                if (prev >= 98) return prev;
-                const ceiling = stage === 'uploading' ? 20 : stage === 'converting' ? 80 : 98;
+                if (prev >= 99) return prev;
+                const ceiling = stage === 'uploading' ? 20 : stage === 'converting' ? 85 : 99;
                 if (prev >= ceiling) return prev;
 
-                const increment = stage === 'uploading' ? 0.4 : stage === 'converting' ? 0.25 : 0.15;
+                const increment = stage === 'uploading' ? 0.4 : stage === 'converting' ? 0.3 : 0.2;
                 const next = Math.min(ceiling, Math.round((prev + increment) * 10) / 10);
                 highestPercentRef.current = Math.max(highestPercentRef.current, next);
                 return highestPercentRef.current;
             });
-        }, 220);
+        }, 180);
 
         return () => clearInterval(interval);
     }, [isDone, stage]);

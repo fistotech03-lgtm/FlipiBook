@@ -1793,11 +1793,16 @@ const VideoEditor = ({
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
-          if (res.data.url) {
-            const serverUrl = resolveUploadsPath(res.data.url);
+          if (res.data && (res.data.url || res.data.filename)) {
+            const serverUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl || res.data.url);
             const relativePath = res.data.flipbookPath || (res.data.url?.startsWith('../') ? res.data.url : `../assets/video/${res.data.filename}`);
             target.setAttribute("src", relativePath);
-            if (source) source.setAttribute("src", relativePath);
+            target.setAttribute("data-relative-src", relativePath);
+            target.setAttribute("data-flipbook-path", relativePath);
+            if (source) {
+              source.setAttribute("src", relativePath);
+              source.setAttribute("data-relative-src", relativePath);
+            }
             target.src = serverUrl;
             if (source) source.src = serverUrl;
             if (liveElement) liveElement.dataset.fileVid = res.data.file_v_id;

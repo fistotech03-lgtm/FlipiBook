@@ -20,88 +20,129 @@ exports.getFolders = async (req, res) => {
 
     let userFolderDoc = await UserFolder.findOne(userQuery);
 
-    // 1. Gather all folder names from UserFolder document
-    const folderMap = new Map();
-    const dbOrder = [];
+    // 1. Identify or initialize the default folder
+    let defaultItem = null;
+    const customItems = [];
+    const seenNames = new Set();
 
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+      // Prioritize explicit isDefault flag
+      defaultItem = userFolderDoc.folders.find((f) => f && f.isDefault === true);
+
+      // Fallback to legacy default names if isDefault not yet explicitly set
+      if (!defaultItem) {
+        defaultItem = userFolderDoc.folders.find((f) => {
+          if (!f || !f.name) return false;
+          const low = String(f.name).trim().toLowerCase();
+          return low === 'default' || low === 'my flipbooks';
+        });
+      }
+
+      // Collect custom folders, avoiding duplicates
       userFolderDoc.folders.forEach((item) => {
-        if (item && item.name) {
-          const idStr = item._id ? item._id.toString() : String(item.id);
-          folderMap.set(item.name, idStr);
-          dbOrder.push({ id: idStr, name: item.name });
+        if (!item || !item.name) return;
+        if (defaultItem && (item === defaultItem || (item._id && defaultItem._id && item._id.toString() === defaultItem._id.toString()))) {
+          return;
+        }
+        const trimmedName = String(item.name).trim();
+        const low = trimmedName.toLowerCase();
+        if (!seenNames.has(low)) {
+          seenNames.add(low);
+          customItems.push({
+            id: item._id ? item._id.toString() : String(item.id),
+            name: trimmedName,
+            isDefault: false
+          });
         }
       });
     }
 
-    // 2. Auto-discover any folders on Flipbook documents
+    // Ensure default folder item exists
+    if (!defaultItem) {
+      defaultItem = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'default',
+        isDefault: true
+      };
+    } else {
+      defaultItem.isDefault = true;
+    }
+
+    const defaultId = defaultItem._id ? defaultItem._id.toString() : new mongoose.Types.ObjectId().toString();
+    const defaultStoredName = String(defaultItem.name || 'default').trim();
+    // In frontend, default folder displays as 'My Flipbooks' unless user renamed it to something custom
+    const defaultDisplayName = defaultStoredName === 'default' ? 'My Flipbooks' : defaultStoredName;
+    seenNames.add(defaultDisplayName.toLowerCase());
+    if (defaultStoredName !== defaultDisplayName) {
+      seenNames.add(defaultStoredName.toLowerCase());
+    }
+
+    // 2. Auto-discover any real custom folders on Flipbook documents
     const flipQuery = getFlipbookUserQuery(req);
     if (flipQuery) {
       const distinctFolders = await Flipbook.distinct('folderName', flipQuery);
       distinctFolders.forEach((f) => {
         const candidates = Array.isArray(f) ? f : [f];
         candidates.forEach((name) => {
-          if (
-            name &&
-            typeof name === 'string' &&
-            name !== 'Recent Book' &&
-            name !== 'Recent book' &&
-            name !== 'Recent' &&
-            name !== 'Trash' &&
-            name !== 'Favorites' &&
-            name !== 'All Flipbook' &&
-            name !== 'All Flipbooks'
-          ) {
+          if (name && typeof name === 'string') {
             const trimmed = name.trim();
-            if (!folderMap.has(trimmed)) {
-              const generatedId = new mongoose.Types.ObjectId().toString();
-              folderMap.set(trimmed, generatedId);
+            const low = trimmed.toLowerCase();
+            const isSystem = (
+              low === 'recent book' || low === 'recent' ||
+              low === 'trash' || low === 'favorites' ||
+              low === 'all flipbook' || low === 'all flipbooks'
+            );
+            const isDef = (
+              low === 'default' ||
+              low === defaultStoredName.toLowerCase() ||
+              low === defaultDisplayName.toLowerCase()
+            );
+            if (!isSystem && !isDef && !seenNames.has(low)) {
+              seenNames.add(low);
+              customItems.push({
+                id: new mongoose.Types.ObjectId().toString(),
+                name: trimmed,
+                isDefault: false
+              });
             }
           }
         });
       });
     }
 
-    // 3. Guarantee 'My_Flipbooks' default folder
-    if (!folderMap.has('My_Flipbooks')) {
-      const defaultId = new mongoose.Types.ObjectId().toString();
-      folderMap.set('My_Flipbooks', defaultId);
-      dbOrder.unshift({ id: defaultId, name: 'My_Flipbooks' });
-    }
-
-    // 4. Construct final list maintaining order
-    const orderedFolders = [];
-    const addedNames = new Set();
-
-    dbOrder.forEach((item) => {
-      if (folderMap.has(item.name)) {
-        orderedFolders.push(item);
-        addedNames.add(item.name);
-      }
-    });
-
-    Array.from(folderMap.entries()).forEach(([name, id]) => {
-      if (!addedNames.has(name)) {
-        orderedFolders.push({ id, name });
-        addedNames.add(name);
-      }
-    });
+    // 3. Assemble final unique list with default folder at the top
+    const orderedFolders = [
+      {
+        id: defaultId,
+        name: defaultDisplayName,
+        rawName: defaultStoredName,
+        isDefault: true
+      },
+      ...customItems
+    ];
 
     // Auto-sync in MongoDB with safe ObjectId references
-    const formattedSubdocs = orderedFolders.map((f) => ({
-      _id: (f.id && mongoose.Types.ObjectId.isValid(f.id) && /^[0-9a-fA-F]{24}$/.test(String(f.id)))
-        ? new mongoose.Types.ObjectId(f.id)
-        : new mongoose.Types.ObjectId(),
-      name: f.name
-    }));
+    const formattedSubdocs = [
+      {
+        _id: (mongoose.Types.ObjectId.isValid(defaultId) && /^[0-9a-fA-F]{24}$/.test(defaultId))
+          ? new mongoose.Types.ObjectId(defaultId)
+          : new mongoose.Types.ObjectId(),
+        name: defaultStoredName,
+        isDefault: true
+      },
+      ...customItems.map((c) => ({
+        _id: (mongoose.Types.ObjectId.isValid(c.id) && /^[0-9a-fA-F]{24}$/.test(c.id))
+          ? new mongoose.Types.ObjectId(c.id)
+          : new mongoose.Types.ObjectId(),
+        name: c.name,
+        isDefault: false
+      }))
+    ];
 
     if (userFolderDoc) {
-      if (objectId && !userFolderDoc.userId) {
-        userFolderDoc.userId = objectId;
-      }
-      if (customUserId && !userFolderDoc.userID) {
-        userFolderDoc.userID = customUserId;
-      }
+      if (objectId && !userFolderDoc.userId) userFolderDoc.userId = objectId;
+      if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
+      if (emailId && !userFolderDoc.emailId) userFolderDoc.emailId = emailId;
       userFolderDoc.folders = formattedSubdocs;
       await userFolderDoc.save().catch(() => {});
     } else {
@@ -139,41 +180,65 @@ exports.createFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid folder name' });
     }
 
+    const lowerSafe = safeFolderName.toLowerCase();
+
+    // Disallow system virtual folder names
+    const systemNames = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+    if (systemNames.includes(lowerSafe)) {
+      return res.status(400).json({ success: false, message: 'This is a reserved folder name' });
+    }
+
     const newId = new mongoose.Types.ObjectId();
     let userFolderDoc = await UserFolder.findOne(userQuery);
 
-    if (userFolderDoc) {
-      const exists = userFolderDoc.folders.some(
-        (f) => f.name.toLowerCase() === safeFolderName.toLowerCase()
-      );
+    if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+      // Enforce strict uniqueness among user's folders (checking both stored name and display name)
+      const exists = userFolderDoc.folders.some((f) => {
+        if (!f || !f.name) return false;
+        const fLow = String(f.name).toLowerCase().trim();
+        if (f.isDefault && fLow === 'default' && lowerSafe === 'my flipbooks') return true;
+        return fLow === lowerSafe;
+      });
       if (exists) {
         return res.status(400).json({ success: false, message: 'Folder with this name already exists' });
       }
-      if (objectId && !userFolderDoc.userId) {
-        userFolderDoc.userId = objectId;
-      }
-      if (customUserId && !userFolderDoc.userID) {
-        userFolderDoc.userID = customUserId;
-      }
-      if (emailId && !userFolderDoc.emailId) {
-        userFolderDoc.emailId = emailId;
-      }
-      userFolderDoc.folders.push({ _id: newId, name: safeFolderName });
+
+      if (objectId && !userFolderDoc.userId) userFolderDoc.userId = objectId;
+      if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
+      if (emailId && !userFolderDoc.emailId) userFolderDoc.emailId = emailId;
+      userFolderDoc.folders.push({ _id: newId, name: safeFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
       await UserFolder.create({
         ...(objectId ? { userId: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
         emailId,
-        folders: [{ _id: newId, name: safeFolderName }]
+        folders: [
+          { _id: new mongoose.Types.ObjectId(), name: 'default', isDefault: true },
+          { _id: newId, name: safeFolderName, isDefault: false }
+        ]
       });
+    }
+
+    // Create physical directory under storage/<userFolder>/books/<safeFolderName>
+    try {
+      const storageRoot = getStorageRoot();
+      const userFolder = customUserId || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
+      const targetDir = path.join(storageRoot, userFolder, 'books', safeFolderName);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+        console.log(`[Folder Controller] Created physical folder: ${targetDir}`);
+      }
+    } catch (fsErr) {
+      console.error('[Folder Controller] Error creating physical folder on disk:', fsErr.message);
     }
 
     res.status(201).json({
       success: true,
       message: 'Folder created',
       folder: safeFolderName,
-      id: newId.toString()
+      id: newId.toString(),
+      isDefault: false
     });
   } catch (err) {
     console.error('[Folder Controller] Error creating folder:', err);
@@ -183,10 +248,11 @@ exports.createFolder = async (req, res) => {
 
 /**
  * POST /api/flipbook/folder/rename
- * Rename an existing folder
+ * Rename an existing folder (including the default folder)
  */
 exports.renameFolder = async (req, res) => {
   try {
+    const { objectId, customUserId, emailId } = getAuthUser(req);
     const userQuery = getUserQuery(req);
     const flipQuery = getFlipbookUserQuery(req);
     const { oldName, newName, folderId } = req.body;
@@ -200,37 +266,92 @@ exports.renameFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid new folder name' });
     }
 
-    // 1. Update in UserFolder
-    let resolvedId = folderId || null;
-    const userFolderDoc = await UserFolder.findOne(userQuery);
-    if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
-      userFolderDoc.folders = userFolderDoc.folders.map((f) => {
-        const fIdStr = f._id ? f._id.toString() : String(f.id);
-        const isMatch = (folderId && fIdStr === String(folderId)) || f.name === oldName;
-        if (isMatch) {
-          resolvedId = fIdStr;
-          return {
-            _id: (mongoose.Types.ObjectId.isValid(fIdStr) && /^[0-9a-fA-F]{24}$/.test(fIdStr))
-              ? new mongoose.Types.ObjectId(fIdStr)
-              : new mongoose.Types.ObjectId(),
-            name: safeNewName
-          };
-        }
-        return f;
-      });
-      await userFolderDoc.save();
+    const lowerNew = safeNewName.toLowerCase();
+    const systemNames = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+    if (systemNames.includes(lowerNew)) {
+      return res.status(400).json({ success: false, message: 'This is a reserved folder name' });
     }
+
+    let userFolderDoc = await UserFolder.findOne(userQuery);
+    if (!userFolderDoc || !Array.isArray(userFolderDoc.folders)) {
+      return res.status(404).json({ success: false, message: 'Folder records not found' });
+    }
+
+    // Find target folder
+    let targetFolder = null;
+    if (folderId) {
+      targetFolder = userFolderDoc.folders.find((f) => (f._id ? f._id.toString() : String(f.id)) === String(folderId));
+    }
+    if (!targetFolder && oldName) {
+      const lowerOld = oldName.toLowerCase().trim();
+      targetFolder = userFolderDoc.folders.find((f) => {
+        const fLow = (f.name || '').toLowerCase().trim();
+        if (f.isDefault && (lowerOld === 'my flipbooks' || lowerOld === 'default')) return true;
+        return fLow === lowerOld;
+      });
+    }
+
+    if (!targetFolder) {
+      return res.status(404).json({ success: false, message: 'Folder not found' });
+    }
+
+    // Enforce folder name uniqueness among user's folders
+    const duplicate = userFolderDoc.folders.some((f) => {
+      if (f === targetFolder || (f._id && targetFolder._id && f._id.toString() === targetFolder._id.toString())) {
+        return false;
+      }
+      const fLow = (f.name || '').toLowerCase().trim();
+      if (f.isDefault && fLow === 'default' && lowerNew === 'my flipbooks') return true;
+      return fLow === lowerNew;
+    });
+
+    if (duplicate) {
+      return res.status(400).json({ success: false, message: 'Folder with this name already exists' });
+    }
+
+    const isDefault = Boolean(targetFolder.isDefault);
+    const oldDiskName = (isDefault && targetFolder.name === 'default') ? 'default' : targetFolder.name;
+
+    // 1. Update in UserFolder
+    targetFolder.name = safeNewName;
+    if (isDefault) {
+      targetFolder.isDefault = true;
+    }
+    await userFolderDoc.save();
 
     // 2. Cascade rename across user's flipbooks
     if (flipQuery) {
+      const candidateOldNames = [oldName, targetFolder.name, oldDiskName];
+      if (isDefault) {
+        candidateOldNames.push('default', 'My Flipbooks', 'My_Flipbooks');
+      }
+      const uniqueOlds = Array.from(new Set(candidateOldNames.filter(Boolean)));
+
       await Flipbook.updateMany(
-        { ...flipQuery, folderName: oldName },
+        { ...flipQuery, folderName: { $in: uniqueOlds } },
         { $set: { folderName: [safeNewName] } }
       );
-      await Flipbook.updateMany(
-        { ...flipQuery, folderName: { $in: [oldName] } },
-        { $set: { 'folderName.$': safeNewName } }
-      );
+    }
+
+    // 3. Rename physical directory on disk under books/<oldDiskName> -> books/<safeNewName>
+    try {
+      const storageRoot = getStorageRoot();
+      const userFolder = customUserId || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
+      const oldDir = path.join(storageRoot, userFolder, 'books', oldDiskName);
+      const newDir = path.join(storageRoot, userFolder, 'books', safeNewName);
+
+      if (fs.existsSync(oldDir)) {
+        if (!fs.existsSync(newDir)) {
+          fs.renameSync(oldDir, newDir);
+          console.log(`[Folder Controller] Renamed physical folder: ${oldDir} -> ${newDir}`);
+        }
+      } else {
+        if (!fs.existsSync(newDir)) {
+          fs.mkdirSync(newDir, { recursive: true });
+        }
+      }
+    } catch (renErr) {
+      console.error('[Folder Controller] Error renaming physical folder on disk:', renErr.message);
     }
 
     res.status(200).json({
@@ -238,7 +359,8 @@ exports.renameFolder = async (req, res) => {
       message: 'Folder renamed successfully',
       oldName,
       newName: safeNewName,
-      id: resolvedId
+      id: targetFolder._id ? targetFolder._id.toString() : String(folderId),
+      isDefault
     });
   } catch (err) {
     console.error('[Folder Controller] Error renaming folder:', err);
@@ -260,40 +382,53 @@ exports.reorderFolders = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing user credentials or folders array' });
     }
 
+    const currentDoc = await UserFolder.findOne(userQuery);
+    const existingFolders = currentDoc?.folders || [];
+
     const safeFolders = folders
       .filter((f) => {
         const name = typeof f === 'string' ? f : f?.name;
-        return name && name !== 'Recent Book' && name !== 'Recent' && name !== 'Favorites' && name !== 'Trash';
+        const low = String(name || '').toLowerCase();
+        return name && low !== 'recent book' && low !== 'recent' && low !== 'favorites' && low !== 'trash';
       })
       .map((f) => {
         const name = typeof f === 'string' ? f.trim() : String(f.name).trim();
         const rawId = typeof f === 'object' ? (f._id || f.id) : null;
+        const matched = existingFolders.find(
+          (ex) => (rawId && (ex._id?.toString() === String(rawId) || String(ex.id) === String(rawId))) || ex.name === name
+        );
         const mongoId = (rawId && mongoose.Types.ObjectId.isValid(rawId) && /^[0-9a-fA-F]{24}$/.test(String(rawId)))
           ? new mongoose.Types.ObjectId(rawId)
-          : new mongoose.Types.ObjectId();
-        return { _id: mongoId, name };
+          : (matched?._id || new mongoose.Types.ObjectId());
+        return {
+          _id: mongoId,
+          name: (matched?.isDefault && matched?.name === 'default') ? 'default' : name,
+          isDefault: Boolean(matched?.isDefault || f.isDefault)
+        };
       });
 
-    const updateFields = { folders: safeFolders };
-    if (objectId) {
-      updateFields.userId = objectId;
-    }
-    if (customUserId) {
-      updateFields.userID = customUserId;
-    }
-    if (emailId) {
-      updateFields.emailId = emailId;
+    if (currentDoc) {
+      if (objectId) {
+        if (!currentDoc.userId) currentDoc.userId = objectId;
+        if (!currentDoc.userObjectID) currentDoc.userObjectID = objectId;
+      }
+      if (customUserId && !currentDoc.userID) currentDoc.userID = customUserId;
+      if (emailId && !currentDoc.emailId) currentDoc.emailId = emailId;
+      currentDoc.folders = safeFolders;
+      await currentDoc.save();
+    } else {
+      currentDoc = await UserFolder.create({
+        ...(objectId ? { userId: objectId, userObjectID: objectId } : {}),
+        ...(customUserId ? { userID: customUserId } : {}),
+        emailId,
+        folders: safeFolders
+      });
     }
 
-    const updatedDoc = await UserFolder.findOneAndUpdate(
-      userQuery,
-      { $set: updateFields },
-      { upsert: true, returnDocument: 'after' }
-    );
-
-    const formattedFolders = (updatedDoc.folders || []).map((f) => ({
+    const formattedFolders = (currentDoc.folders || []).map((f) => ({
       id: f._id ? f._id.toString() : String(f.id),
-      name: f.name
+      name: (f.isDefault && f.name === 'default') ? 'My Flipbooks' : f.name,
+      isDefault: Boolean(f.isDefault)
     }));
 
     res.status(200).json({
@@ -323,33 +458,56 @@ exports.deleteFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing folder identifier' });
     }
 
+    const userFolderDoc = await UserFolder.findOne(userQuery);
+    let targetFolder = null;
+    if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+      if (folderId) {
+        targetFolder = userFolderDoc.folders.find((f) => (f._id ? f._id.toString() : String(f.id)) === String(folderId));
+      }
+      if (!targetFolder && folderName) {
+        const lowerName = folderName.toLowerCase().trim();
+        targetFolder = userFolderDoc.folders.find((f) => {
+          const fLow = (f.name || '').toLowerCase().trim();
+          if (f.isDefault && (lowerName === 'my flipbooks' || lowerName === 'default')) return true;
+          return fLow === lowerName;
+        });
+      }
+    }
+
+    if (targetFolder && targetFolder.isDefault) {
+      return res.status(400).json({ success: false, message: 'Default folder cannot be deleted' });
+    }
+
+    const lowerName = (folderName || (targetFolder ? targetFolder.name : '')).toLowerCase().trim();
+    if (lowerName === 'my flipbooks' || lowerName === 'default') {
+      return res.status(400).json({ success: false, message: 'Default folder cannot be deleted' });
+    }
+
+    const resolvedName = targetFolder ? targetFolder.name : folderName;
+
     // 1. Remove from UserFolder document
-    const pullCondition = [];
-    if (folderName) pullCondition.push({ name: folderName });
-    if (folderId && mongoose.Types.ObjectId.isValid(folderId) && /^[0-9a-fA-F]{24}$/.test(String(folderId))) {
-      pullCondition.push({ _id: new mongoose.Types.ObjectId(folderId) });
+    if (userFolderDoc) {
+      userFolderDoc.folders = userFolderDoc.folders.filter((f) => {
+        if (folderId && (f._id ? f._id.toString() : String(f.id)) === String(folderId)) return false;
+        if (resolvedName && f.name.toLowerCase() === resolvedName.toLowerCase()) return false;
+        return true;
+      });
+      await userFolderDoc.save();
     }
 
-    if (pullCondition.length > 0) {
-      await UserFolder.findOneAndUpdate(
-        userQuery,
-        { $pull: { folders: { $or: pullCondition } } }
-      );
-    }
-
-    // 2. Cascade delete all books in this folder
-    if (folderName && flipQuery) {
+    // 2. Cascade delete all books in this custom folder
+    if (resolvedName && flipQuery) {
       const folderBooks = await Flipbook.find({
         ...flipQuery,
-        $or: [{ folderName }, { folderName: { $in: [folderName] } }]
+        $or: [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }]
       }).select('v_id').lean();
       const folderVIds = folderBooks.map(b => b.v_id).filter(Boolean);
 
       await Flipbook.deleteMany({
         ...flipQuery,
-        $or: [{ folderName }, { folderName: { $in: [folderName] } }]
+        $or: [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }]
       });
-      deleteFolderStorage(rawId || customUserId, emailId, folderName);
+      deleteFolderStorage(customUserId || rawId, emailId, resolvedName);
 
       if (folderVIds.length > 0) {
         try {
@@ -392,11 +550,18 @@ exports.duplicateFolder = async (req, res) => {
     const newFolderName = `${folderName.trim()} Copy`;
     const newId = new mongoose.Types.ObjectId();
 
-    await UserFolder.findOneAndUpdate(
-      userQuery,
-      { $push: { folders: { _id: newId, name: newFolderName } } },
-      { upsert: true }
-    );
+    let userFolderDoc = await UserFolder.findOne(userQuery);
+    if (userFolderDoc) {
+      userFolderDoc.folders.push({ _id: newId, name: newFolderName, isDefault: false });
+      await userFolderDoc.save();
+    } else {
+      await UserFolder.create({
+        ...(objectId ? { userId: objectId, userObjectID: objectId } : {}),
+        ...(customUserId ? { userID: customUserId } : {}),
+        emailId,
+        folders: [{ _id: newId, name: newFolderName, isDefault: false }]
+      });
+    }
 
     // Duplicate all books in this folder
     if (flipQuery) {
@@ -425,8 +590,8 @@ exports.duplicateFolder = async (req, res) => {
       try {
         const storageRoot = getStorageRoot();
         const userFolder = customUserId || (objectId ? String(objectId) : (emailId ? emailId.replace(/[@.]/g, '_') : 'default'));
-        const srcFolderDir = path.join(storageRoot, userFolder, 'My_Flipbooks', folderName);
-        const destFolderDir = path.join(storageRoot, userFolder, 'My_Flipbooks', newFolderName);
+        const srcFolderDir = path.join(storageRoot, userFolder, 'books', folderName);
+        const destFolderDir = path.join(storageRoot, userFolder, 'books', newFolderName);
         if (fs.existsSync(srcFolderDir)) {
           fs.cpSync(srcFolderDir, destFolderDir, { recursive: true });
           console.log(`[Folder Controller] Copied physical storage from "${srcFolderDir}" to "${destFolderDir}"`);

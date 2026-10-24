@@ -34,14 +34,14 @@ const flipbookSchema = new mongoose.Schema(
     folderName: {
       type: [String],
       set: function (val) {
-        if (!val) return ['My_Flipbooks'];
+        if (!val) return ['default'];
         const arr = Array.isArray(val) ? val.flat(Infinity) : [val];
         const cleaned = arr
           .filter((f) => f !== null && f !== undefined && String(f).trim() !== '')
           .map((f) => String(f).trim());
-        return [...new Set(cleaned.length > 0 ? cleaned : ['My_Flipbooks'])];
+        return [...new Set(cleaned.length > 0 ? cleaned : ['default'])];
       },
-      default: ['My_Flipbooks']
+      default: ['default']
     },
     flipbookName: {
       type: String,
@@ -110,5 +110,9 @@ const flipbookSchema = new mongoose.Schema(
     strict: true
   }
 );
+
+flipbookSchema.index({ userEmail: 1, trash: 1, updatedAt: -1 });
+flipbookSchema.index({ 'Visibility.shareId': 1 }, { sparse: true });
+flipbookSchema.index({ 'share.shareId': 1 }, { sparse: true });
 
 module.exports = mongoose.models.Flipbook || mongoose.model('Flipbook', flipbookSchema);

@@ -54,14 +54,14 @@ const getAuthUser = (req) => {
 };
 
 /**
- * Builds user query for UserFolder and UserSettings collections
+ * Builds user query for UserFolder and pageEditorSettings collections
  */
 const getUserQuery = (req) => {
   const { objectId, customUserId, emailId } = getAuthUser(req);
   const conds = [];
 
   if (objectId) {
-    conds.push({ userId: objectId });
+    conds.push({ userObjectID: objectId });
   }
   if (customUserId) {
     conds.push({ userID: customUserId });

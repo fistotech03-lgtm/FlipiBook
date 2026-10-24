@@ -103,10 +103,12 @@ export const clearEditorState = async () => {
   }
 };
 
+export const getCustomizedEditorKey = (v_id) => v_id ? `customized_editor_${v_id}` : CUSTOMIZED_EDITOR_KEY;
+export const getPageEditorKey = (v_id) => v_id ? `page_editor_${v_id}` : PAGE_EDITOR_KEY;
+
 /**
- * Cleans the editor store if the currently stored book is different
- * from the newly opened book's v_id.
- * Ensures the previous opened book's data is wiped completely.
+ * Cleans the active pointer if the currently stored book is different
+ * from the newly opened book's v_id, while safely preserving book-specific state.
  * @param {string} activeVId
  */
 export const ensureCleanBook = async (activeVId) => {
@@ -116,16 +118,11 @@ export const ensureCleanBook = async (activeVId) => {
     return new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      const pageReq = store.get(PAGE_EDITOR_KEY);
-      pageReq.onsuccess = () => {
-        const val = pageReq.result;
-        if (val && val.v_id && val.v_id !== activeVId) {
-          store.delete(PAGE_EDITOR_KEY);
-        }
-      };
       const custReq = store.get(CUSTOMIZED_EDITOR_KEY);
       custReq.onsuccess = () => {
         const val = custReq.result;
+        // If the legacy single-key pointer belongs to a different book, clear just the pointer
+        // while book-specific keys (customized_editor_${val.v_id}) remain intact
         if (val && val.v_id && val.v_id !== activeVId) {
           store.delete(CUSTOMIZED_EDITOR_KEY);
         }
@@ -195,8 +192,8 @@ const safeClone = (obj) => {
 };
 
 /**
- * Clears old and legacy editor keys from IndexedDB.
- * Maintains ONLY 'page_editor' and 'customized_editor'.
+ * Clears old legacy temporary editor keys from IndexedDB.
+ * Preserves book-specific states (e.g. customized_editor_<v_id>).
  */
 export const cleanupLegacyEditorKeys = async () => {
   try {
@@ -208,8 +205,14 @@ export const cleanupLegacyEditorKeys = async () => {
       req.onsuccess = () => {
         const keys = req.result || [];
         keys.forEach((k) => {
-          if (typeof k === 'string' && k !== PAGE_EDITOR_KEY && k !== CUSTOMIZED_EDITOR_KEY) {
-            store.delete(k);
+          if (typeof k === 'string') {
+            const isKnown = k === PAGE_EDITOR_KEY || 
+              k === CUSTOMIZED_EDITOR_KEY || 
+              k.startsWith('customized_editor_') || 
+              k.startsWith('page_editor_');
+            if (!isKnown) {
+              store.delete(k);
+            }
           }
         });
       };
@@ -236,25 +239,31 @@ export const savePageEditorState = async (data) => {
       pages: sanitizedPages,
       timestamp: data.timestamp || Date.now()
     };
-    await saveToDB(PAGE_EDITOR_KEY, rawPayload);
+    const payload = safeClone(rawPayload);
+    const bookKey = getPageEditorKey(data.v_id);
+    await saveToDB(bookKey, payload);
+    await saveToDB(PAGE_EDITOR_KEY, payload);
   } catch (err) {
     console.error("[dbUtils] Save Page Editor Error:", err);
   }
 };
 
 /**
- * Retrieves the latest Page Editor state
+ * Retrieves the latest Page Editor state for a given book or the active fallback
  */
-export const getPageEditorState = async () => {
+export const getPageEditorState = async (v_id) => {
+  if (v_id) {
+    const bookData = await getFromDB(getPageEditorKey(v_id));
+    if (bookData && bookData.v_id === v_id) return bookData;
+  }
   const data = await getFromDB(PAGE_EDITOR_KEY);
-  if (data) return data;
+  if (data && (!v_id || data.v_id === v_id)) return data;
   return await getFromDB('editor_autosave');
 };
 
 /**
  * Saves the latest Customized Editor state for instant quick-load caching.
- * Also keeps page_editor synchronized with the active book pages, so
- * both 'customized_editor' and 'page_editor' exist for the active book.
+ * Saves both to the book-specific key and the active book pointer.
  */
 export const saveCustomizedEditorState = async (data) => {
   try {
@@ -281,30 +290,38 @@ export const saveCustomizedEditorState = async (data) => {
       timestamp: data.timestamp || Date.now()
     };
     const payload = safeClone(rawPayload);
+    const bookKey = getCustomizedEditorKey(data.v_id);
 
+    await saveToDB(bookKey, payload);
     await saveToDB(CUSTOMIZED_EDITOR_KEY, payload);
 
     // Keep page_editor synchronized for this book
     if (payload.v_id && sanitizedPages.length > 0) {
-      await saveToDB(PAGE_EDITOR_KEY, {
+      const pagePayload = {
         v_id: payload.v_id,
         pageName: payload.bookName,
         bookName: payload.bookName,
         activePageIndex: payload.targetPage || 0,
         pages: sanitizedPages,
         timestamp: payload.timestamp
-      });
+      };
+      await saveToDB(getPageEditorKey(payload.v_id), pagePayload);
+      await saveToDB(PAGE_EDITOR_KEY, pagePayload);
     }
-
-    await cleanupLegacyEditorKeys();
   } catch (err) {
     console.error("[dbUtils] Save Customized Editor Error:", err);
   }
 };
 
 /**
- * Retrieves the latest Customized Editor state
+ * Retrieves the latest Customized Editor state for a given book or the active fallback
  */
-export const getCustomizedEditorState = async () => {
-  return await getFromDB(CUSTOMIZED_EDITOR_KEY);
+export const getCustomizedEditorState = async (v_id) => {
+  if (v_id) {
+    const bookData = await getFromDB(getCustomizedEditorKey(v_id));
+    if (bookData && bookData.v_id === v_id) return bookData;
+  }
+  const data = await getFromDB(CUSTOMIZED_EDITOR_KEY);
+  if (data && (!v_id || data.v_id === v_id)) return data;
+  return null;
 };

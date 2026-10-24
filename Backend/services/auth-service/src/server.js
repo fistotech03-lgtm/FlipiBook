@@ -57,18 +57,10 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found on auth-service' });
 });
 
-const startServer = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[Auth Service] Running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error(`[Auth Service] Fatal startup error:`, err);
-    process.exit(1);
-  }
-};
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Auth Service] Running on port ${PORT}`);
+});
 
-startServer();
+connectDB();
 
 module.exports = app;

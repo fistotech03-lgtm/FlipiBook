@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Icon } from "@iconify/react";
+import { ArrowRight } from "lucide-react";
 import { clearSession } from "../../utils/authUtils";
 import { useAuth } from "../../context/AuthContext";
 
@@ -70,7 +71,13 @@ const SettingsLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, logout } = useAuth();
-  const [user, setUser] = useState(defaultProfile);
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user_profile');
+      if (stored) return { ...defaultProfile, ...JSON.parse(stored) };
+    } catch (e) {}
+    return defaultProfile;
+  });
 
   const handleLogout = async () => {
     try {
@@ -99,21 +106,43 @@ const SettingsLayout = () => {
   };
 
   useEffect(() => {
+    const handleProfileUpdate = (e) => {
+      if (e?.detail) {
+        setUser(prev => ({
+          ...defaultProfile,
+          ...prev,
+          ...e.detail
+        }));
+      }
+    };
+    window.addEventListener('profileUpdate', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdate', handleProfileUpdate);
+  }, []);
+
+  useEffect(() => {
     if (authUser) {
       const email = authUser.emailId || authUser.email || "";
+      let localProfile = {};
+      try {
+        const stored = localStorage.getItem('user_profile');
+        if (stored) localProfile = JSON.parse(stored);
+      } catch (e) {}
+
       setUser((prev) => ({
         ...defaultProfile,
         ...prev,
+        ...localProfile,
         ...authUser,
         name:
+          localProfile.name ||
           authUser.name ||
           authUser.userName ||
           (email ? email.split("@")[0] : prev.name),
         email,
         emailId: email,
-        picture: authUser.picture || prev.picture,
+        picture: localProfile.picture !== undefined ? localProfile.picture : (authUser.picture || prev.picture),
         avatarBgColor:
-          authUser.avatarBgColor || prev.avatarBgColor || "#E8D4C8",
+          localProfile.avatarBgColor || authUser.avatarBgColor || prev.avatarBgColor || "#E8D4C8",
       }));
     }
   }, [authUser]);
@@ -139,6 +168,63 @@ const SettingsLayout = () => {
           id: "notifications",
           label: "Notifications",
           icon: "basil:notification-on-outline",
+        },
+        {
+          path: "shelf",
+          to: "/my-flipbooks?tab=shelf",
+          id: "shelf",
+          label: "My Shelf",
+          icon: "bi:bookshelf",
+        },
+      ],
+    },
+    {
+      title: "System & Billing",
+      items: [
+        {
+          path: "virtual-stall",
+          to: "#",
+          id: "virtual-stall",
+          label: "Virtual Stall",
+          icon: "icon-park-outline:booth",
+        },
+        {
+          path: "billing",
+          id: "billing",
+          label: "Billing and Invoice",
+          icon: "tdesign:bill",
+        },
+        {
+          path: "support",
+          to: "#",
+          id: "support",
+          label: "Support",
+          icon: "griddy-icons:customer-support",
+        },
+      ],
+    },
+    {
+      title: "System & Billing",
+      items: [
+        {
+          path: "virtual-stall",
+          to: "#",
+          id: "virtual-stall",
+          label: "Virtual Stall",
+          icon: "icon-park-outline:booth",
+        },
+        {
+          path: "billing",
+          id: "billing",
+          label: "Billing and Invoice",
+          icon: "tdesign:bill",
+        },
+        {
+          path: "support",
+          to: "#",
+          id: "support",
+          label: "Support",
+          icon: "griddy-icons:customer-support",
         },
       ],
     },
@@ -173,10 +259,12 @@ const SettingsLayout = () => {
                     : location.pathname === `/settings/${item.path}` ||
                       location.pathname.startsWith(`/settings/${item.path}/`);
 
+                  const destination = item.to || `/settings/${item.path}`;
+
                   return (
                     <Link
                       key={item.id || item.path}
-                      to={`/settings/${item.path}`}
+                      to={destination}
                       className={`
                         flex items-center gap-[1vw] px-[0.75vw] py-[0.4vw] rounded-[0.5vw] text-[0.8125vw] font-semibold transition-colors
                         ${
@@ -186,11 +274,28 @@ const SettingsLayout = () => {
                         }
                       `}
                     >
-                      <Icon
-                        icon={item.icon}
-                        className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
-                        style={{ strokeWidth: "1.2px" }}
-                      />
+                      {item.id === "shelf" ? (
+                        <svg
+                          viewBox="0 0 24 20"
+                          fill="currentColor"
+                          className="w-[1.05vw] h-[0.9vw] flex-shrink-0 text-gray-700"
+                        >
+                          {/* Shelf 1: solid background with 4 vertical cutout lines on the right */}
+                          <path d="M 0 0 L 24 0 L 24 5.2 L 0 5.2 Z M 13.5 1.5 L 14.7 1.5 L 14.7 5.2 L 13.5 5.2 Z M 16 1.5 L 17.2 1.5 L 17.2 5.2 L 16 5.2 Z M 18.5 1.5 L 19.7 1.5 L 19.7 5.2 L 18.5 5.2 Z M 21 1.5 L 22.2 1.5 L 22.2 5.2 L 21 5.2 Z" fillRule="evenodd" />
+
+                          {/* Shelf 2: solid background with 3 vertical cutout lines + 1 diagonal leaning cutout line on the left */}
+                          <path d="M 0 6.6 L 24 6.6 L 24 11.8 L 0 11.8 Z M 2.4 7.8 L 3.6 7.8 L 3.6 11.8 L 2.4 11.8 Z M 4.8 7.8 L 6.0 7.8 L 6.0 11.8 L 4.8 11.8 Z M 7.2 7.8 L 8.4 7.8 L 8.4 11.8 L 7.2 11.8 Z M 9.2 11.8 L 10.4 11.8 L 13.0 7.8 L 11.7 7.8 Z" fillRule="evenodd" />
+
+                          {/* Shelf 3: solid background with 2 vertical cutout lines on the left, and 2 horizontal cutout lines on the right */}
+                          <path d="M 0 13.2 L 24 13.2 L 24 18.4 L 0 18.4 Z M 2.4 14.4 L 3.6 14.4 L 3.6 18.4 L 2.4 18.4 Z M 4.8 14.4 L 6.0 14.4 L 6.0 18.4 L 4.8 18.4 Z M 14.0 15.0 L 19.0 15.0 L 18.0 16.2 L 13.0 16.2 Z M 12.0 16.8 L 17.5 16.8 L 17.5 18.0 L 12.0 18.0 Z" fillRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <Icon
+                          icon={item.icon}
+                          className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
+                          style={{ strokeWidth: "1.2px" }}
+                        />
+                      )}
                       {item.label}
                     </Link>
                   );
@@ -200,24 +305,90 @@ const SettingsLayout = () => {
           ))}
         </div>
 
-        {/* Log Out Button */}
-        <div className="p-[0.5vw] mb-[0.5vw]">
-          <button
-            onClick={handleLogout}
-            className="w-full relative overflow-hidden bg-transparent border-2 border-red-600 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white active:scale-[0.98] rounded-[0.8vw] py-[0.65vw] flex items-center justify-center gap-[0.5vw] transition-all duration-200 cursor-pointer font-semibold text-[0.85vw] shadow-xs hover:shadow-md hover:shadow-red-500/20 group"
-          >
-            <Icon
-              icon="lucide:log-out"
-              className="w-[1.05vw] h-[1.05vw] transition-transform group-hover:-translate-x-0.5"
-            />
-            <span>Log Out</span>
-          </button>
+        {/* Upgrade Profile Button with Crown matching screenshot */}
+        <div className="p-[0.75vw] mb-[0.5vw]">
+          <div className="relative">
+            {/* 3D Gold Crown */}
+            <div className="absolute -top-[1.2vw] -right-[0.5vw] w-[2.6vw] h-[2.1vw] rotate-[16deg] z-20 select-none pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)]">
+              <svg viewBox="0 0 68 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                <defs>
+                  <linearGradient id="goldGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFF7C2" />
+                    <stop offset="20%" stopColor="#FAD04C" />
+                    <stop offset="50%" stopColor="#E5A620" />
+                    <stop offset="80%" stopColor="#FCE082" />
+                    <stop offset="100%" stopColor="#A86B06" />
+                  </linearGradient>
+                  <linearGradient id="goldShine" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#7A4B00" />
+                    <stop offset="35%" stopColor="#FFDE6A" />
+                    <stop offset="65%" stopColor="#CF8B13" />
+                    <stop offset="100%" stopColor="#FFFDF2" />
+                  </linearGradient>
+                  <radialGradient id="crownVelvet" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stopColor="#8A151B" />
+                    <stop offset="70%" stopColor="#5E0B10" />
+                    <stop offset="100%" stopColor="#3B0508" />
+                  </radialGradient>
+                  <radialGradient id="rubyGem" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stopColor="#FF6B6B" />
+                    <stop offset="40%" stopColor="#DC2626" />
+                    <stop offset="100%" stopColor="#7F1D1D" />
+                  </radialGradient>
+                  <radialGradient id="blueGem" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stopColor="#60A5FA" />
+                    <stop offset="50%" stopColor="#2563EB" />
+                    <stop offset="100%" stopColor="#1E3A8A" />
+                  </radialGradient>
+                  <radialGradient id="emeraldGem" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stopColor="#34D399" />
+                    <stop offset="50%" stopColor="#059669" />
+                    <stop offset="100%" stopColor="#064E3B" />
+                  </radialGradient>
+                  <radialGradient id="pearlSphere" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="60%" stopColor="#FFF3D6" />
+                    <stop offset="100%" stopColor="#D4A747" />
+                  </radialGradient>
+                </defs>
+
+                <path d="M 12 40 C 14 26, 54 26, 56 40 Z" fill="url(#crownVelvet)" opacity="0.9" />
+                <path d="M 10 40 Q 34 20 34 11 Q 34 20 58 40" stroke="url(#goldGradMain)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                <path d="M 7 42 Q 34 47 61 42 L 59 50 Q 34 54 9 50 Z" fill="url(#goldShine)" stroke="#7A4B00" strokeWidth="0.8" />
+                <circle cx="16" cy="46.5" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
+                <circle cx="28" cy="48" r="2" fill="url(#blueGem)" stroke="#FFEAA7" strokeWidth="0.5" />
+                <circle cx="40" cy="48" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
+                <circle cx="52" cy="46.5" r="2" fill="url(#emeraldGem)" stroke="#FFEAA7" strokeWidth="0.5" />
+                <path d="M 7 42 L 3 19 L 20 30 L 34 11 L 48 30 L 65 19 L 61 42 Q 34 47 7 42 Z" fill="url(#goldGradMain)" stroke="#8A5A00" strokeWidth="0.9" />
+                <path d="M 10 40 L 7 24 L 20 32 L 34 15 L 48 32 L 61 24 L 58 40 Q 34 44 10 40 Z" fill="url(#goldShine)" opacity="0.6" />
+                <circle cx="3" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
+                <circle cx="20" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
+                <circle cx="34" cy="10" r="4.1" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
+                <circle cx="48" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
+                <circle cx="65" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
+                <polygon points="34,22 38.5,28 34,34 29.5,28" fill="url(#rubyGem)" stroke="#FFF3B0" strokeWidth="0.8" />
+                <circle cx="20" cy="36" r="1.6" fill="url(#blueGem)" />
+                <circle cx="48" cy="36" r="1.6" fill="url(#emeraldGem)" />
+              </svg>
+            </div>
+
+            <button
+              onClick={() => navigate('/settings/profile')}
+              className="w-full relative overflow-hidden py-[0.62vw] px-[1vw] rounded-[0.75vw] text-[0.82vw] font-medium text-white flex items-center justify-center gap-[0.5vw] shadow-[0_4px_14px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)] active:scale-[0.99] transition-all cursor-pointer group"
+              style={{
+                background: 'radial-gradient(ellipse at 50% 30%, #25282d 0%, #15171a 70%, #0d0e10 100%)'
+              }}
+            >
+              <span className="tracking-wide font-medium">Upgrade Profile</span>
+              <ArrowRight className="w-[0.9vw] h-[0.9vw] transition-transform group-hover:translate-x-[0.2vw]" />
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-white p-[1vw] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <Outlet context={{ user, setUser }} />
+        <Outlet key={location.pathname} context={{ user, setUser }} />
       </main>
     </div>
   );

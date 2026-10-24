@@ -211,6 +211,26 @@ export default function ConverterWorkspace({
       const newName = `${baseName}_converted.${targetFormat.toLowerCase()}`;
       const blobUrl = URL.createObjectURL(convertedBlob);
 
+      let convertedDimensions = null;
+      if (mediaConfig.id === 'image') {
+        try {
+          const img = new Image();
+          const dUrl = URL.createObjectURL(convertedBlob);
+          await new Promise((resolve) => {
+            img.onload = () => {
+              convertedDimensions = `${img.naturalWidth} × ${img.naturalHeight} px`;
+              URL.revokeObjectURL(dUrl);
+              resolve();
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(dUrl);
+              resolve();
+            };
+            img.src = dUrl;
+          });
+        } catch (_e) {}
+      }
+
       const result = {
         originalName: fileItem.name,
         newName,
@@ -219,7 +239,8 @@ export default function ConverterWorkspace({
         savedPercent,
         targetFormat,
         blobUrl,
-        blob: convertedBlob
+        blob: convertedBlob,
+        dimensions: convertedDimensions
       };
 
       setConvertedResult(result);
@@ -562,6 +583,12 @@ export default function ConverterWorkspace({
                 <>
                   <span className="text-slate-300">→</span>
                   <span className="text-emerald-700 font-semibold font-mono">{convertedResult.newSize}</span>
+                  {convertedResult.dimensions && convertedResult.dimensions !== fileDetails?.dimensions && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-emerald-700 font-medium">{convertedResult.dimensions}</span>
+                    </>
+                  )}
                   {convertedResult.savedPercent > 0 && (
                     <span className="text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded text-2xs font-medium">
                       -{convertedResult.savedPercent}%

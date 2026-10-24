@@ -97,6 +97,16 @@ export default function ThreePreviewCanvas({
     const normalizeAndCenterModel = (object) => {
       if (!isMounted || !object) return;
       loadedObject = object;
+
+      // Ensure all meshes have vertex normals calculated so lighting reflects properly
+      object.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          if (!child.geometry.attributes.normal) {
+            child.geometry.computeVertexNormals();
+          }
+        }
+      });
+
       scene.add(object);
 
       const box = new THREE.Box3().setFromObject(object);
@@ -176,6 +186,38 @@ export default function ThreePreviewCanvas({
           if (!isMounted) return;
           const loader = new FBXLoader();
           const object = loader.parse(buffer, '');
+
+          // Ensure FBX meshes have clean, visible gray clay materials and valid normals
+          object.traverse((child) => {
+            if (child.isMesh) {
+              if (child.geometry && !child.geometry.attributes.normal) {
+                child.geometry.computeVertexNormals();
+              }
+
+              // Replace missing, untextured, black, or flat materials with a clean studio gray material
+              const isDarkOrMissing = !child.material ||
+                (Array.isArray(child.material) && child.material.length === 0) ||
+                (!child.material.map && (
+                  !child.material.color ||
+                  (child.material.color.r < 0.15 && child.material.color.g < 0.15 && child.material.color.b < 0.15)
+                ));
+
+              if (isDarkOrMissing) {
+                child.material = new THREE.MeshStandardMaterial({
+                  color: 0x94a3b8, // Clean slate-gray
+                  roughness: 0.45,
+                  metalness: 0.15,
+                  side: THREE.DoubleSide
+                });
+              } else if (child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((m) => {
+                  m.side = THREE.DoubleSide;
+                });
+              }
+            }
+          });
+
           normalizeAndCenterModel(object);
         } catch (err) {
           console.error('Error loading FBX preview:', err);
@@ -279,7 +321,7 @@ export default function ThreePreviewCanvas({
         container.replaceChildren();
       }
     };
-  }, [blobUrl, format, autoRotate]);
+  }, [blobUrl, format]);
 
   return (
     <div className={`relative w-full h-full min-h-[200px] rounded-xl overflow-hidden ${className}`}>

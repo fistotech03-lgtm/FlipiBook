@@ -355,6 +355,8 @@ export default function Home() {
     }
   };
 
+  const [isPreloaderDone, setIsPreloaderDone] = useState(false);
+
   return (
     <div className="bg-white text-[#1a1a1a] font-poppins overflow-x-hidden scroll-smooth">
       
@@ -367,6 +369,7 @@ export default function Home() {
         page4={page4}
         page5={page5}
         page6={page6}
+        isPreloaderDone={isPreloaderDone}
       />
 
       {/* 2. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
@@ -445,7 +448,7 @@ export default function Home() {
       />
 
       {/* Modern Homepage Preloader */}
-      <HomePreloader />
+      <HomePreloader onFinish={() => setIsPreloaderDone(true)} />
 
     </div>
   );

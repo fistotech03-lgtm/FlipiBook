@@ -27,6 +27,8 @@ const loadImage = (file) => {
  */
 const getQualityAndScale = (compressionPreset) => {
   switch (compressionPreset) {
+    case 'Original Quality (Format Only)':
+      return { quality: 1.0, maxDimension: Infinity };
     case 'High Quality (85%)':
       return { quality: 0.85, maxDimension: 3840 };
     case 'Balanced (70%)':
@@ -34,6 +36,9 @@ const getQualityAndScale = (compressionPreset) => {
     case 'Maximum Compression (50%)':
       return { quality: 0.50, maxDimension: 1920 };
     default:
+      if (compressionPreset?.includes('Original')) {
+        return { quality: 1.0, maxDimension: Infinity };
+      }
       return { quality: 0.80, maxDimension: 2560 };
   }
 };

@@ -54,42 +54,56 @@ export default function InteractiveDemo() {
       <div className="w-full mx-auto flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8 lg:gap-[4.2vw]">
         
         {/* Left Column: Heading, Subtitle & Description (Left-aligned like About Us) */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        <div
           className="w-full lg:w-[24%] flex flex-col text-left items-start shrink-0"
         >
           {/* Header Tag */}
-          <div className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]"
+          >
             <span className="text-[11px] lg:text-[0.82vw] font-bold tracking-[0.22em] text-[#2c2f35] uppercase">
               INTERACTIVE DEMO
             </span>
             <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#9ca0a6]"></div>
-          </div>
+          </motion.div>
 
           {/* Title */}
-          <h2 className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left">
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left"
+          >
             Experience <br className="hidden lg:inline" />
             <span className="text-[#ED5B43]">Flipibooks</span> <br className="hidden lg:inline" />
             in Action
-          </h2>
+          </motion.h2>
 
           {/* Thin Divider Line */}
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-32 sm:w-full max-w-[220px] lg:max-w-[15.5vw] h-[1px] bg-[#d2d4d8] mt-3 sm:mt-5 lg:mt-[1.4vw] mb-3 sm:mb-4 lg:mb-[1.2vw] origin-left self-start"
           ></motion.div>
 
           {/* Description */}
-          <p className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]">
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
+          >
             Explore our handpicked demo books. Flip, zoom, and interact to discover how immersive and engaging digital reading can be.
-          </p>
-        </motion.div>
+          </motion.p>
+        </div>
 
         {/* Right Column: 5 Standing Books with Staggered Entrance */}
         <div className="w-full lg:flex-1 flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-6 md:gap-4 lg:gap-[2.5vw] overflow-visible pb-2 sm:pb-3 lg:pb-0 px-2 sm:px-4 lg:px-2">

@@ -7,8 +7,10 @@
 /**
  * Maps compression preset to target dimensions and bitrate
  */
-const getPresetConfig = (compressionPreset) => {
+const getPresetConfig = (compressionPreset, origW = 1920, origH = 1080) => {
   switch (compressionPreset) {
+    case 'Original Resolution & Quality (Format Only)':
+      return { maxWidth: Infinity, maxHeight: Infinity, videoBitsPerSecond: 8000000, fps: 30 };
     case '1080p Web-Optimized':
       return { maxWidth: 1920, maxHeight: 1080, videoBitsPerSecond: 2500000, fps: 30 };
     case '720p HD Compact':
@@ -16,6 +18,9 @@ const getPresetConfig = (compressionPreset) => {
     case '480p Mobile Saver':
       return { maxWidth: 854, maxHeight: 480, videoBitsPerSecond: 600000, fps: 24 };
     default:
+      if (compressionPreset?.includes('Original')) {
+        return { maxWidth: Infinity, maxHeight: Infinity, videoBitsPerSecond: 8000000, fps: 30 };
+      }
       return { maxWidth: 1280, maxHeight: 720, videoBitsPerSecond: 1500000, fps: 30 };
   }
 };

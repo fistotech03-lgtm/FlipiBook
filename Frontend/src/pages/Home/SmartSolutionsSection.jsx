@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import exampleSvg from '../../assets/Home/example svg.svg';
+import SmartOrbitVisual from './SmartOrbitVisual';
 import PumpImage from '../../assets/Home/Pump-image.png';
 
 // Smart Solutions for Modern Industries Section Component
@@ -25,19 +25,25 @@ const SmartSolutionsSection = () => {
       <div className="relative w-full flex justify-center pointer-events-none select-none z-0 lg:-mt-[1.2vw]">
         <div className="relative w-full flex flex-col sm:flex-row items-center justify-center">
           <motion.h2
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -25 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false }}
-            transition={{ duration: 0.8 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
             className="text-xl sm:text-5xl md:text-6xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
           >
             IT STARTS WITH A CLICK
           </motion.h2>
 
           {/* 3D Model Viewer in Rage Italic / #EC5137 */}
-          <span className="sm:absolute static mt-1 sm:mt-2 md:mt-3 lg:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-3 md:-bottom-4 lg:bottom-auto font-rage italic text-lg sm:text-3xl md:text-4xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap">
+          <motion.span
+            initial={{ opacity: 0, scale: 0.85, y: 15 }}
+            whileInView={{ opacity: 1, scale: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="sm:absolute static mt-1 sm:mt-2 md:mt-3 lg:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-3 md:-bottom-4 lg:bottom-auto font-rage italic text-lg sm:text-3xl md:text-4xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap"
+          >
             3D Model Viewer
-          </span>
+          </motion.span>
         </div>
       </div>
 
@@ -49,19 +55,23 @@ const SmartSolutionsSection = () => {
         {/* CENTER 3D MODEL & CIRCULAR ORBIT NAVIGATION */}
         <div className="relative w-full lg:w-[50vw] flex items-center justify-center min-h-[190px] sm:min-h-[260px] lg:h-[26vw] py-1 sm:py-2 lg:py-0">
 
-          {/* Exact Figma Vector Orbit (Arc + Dashed lines + Orange Badges + Labels) with drop shadow */}
-          <img
-            src={exampleSvg}
-            alt="IDC Industry Categories Orbit"
+          {/* Lively Animated Vector Orbit with Moving Lines, Popping Badges & Floating Icons */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 1.1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute w-[88vw] sm:w-[72vw] md:w-[68vw] lg:w-[37.5vw] h-auto lg:top-[6.1vw] pointer-events-none top-[-3vw] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-[52%] z-10 select-none drop-shadow-[0_10px_20px_rgba(236,81,55,0.18)]"
-          />
+          >
+            <SmartOrbitVisual />
+          </motion.div>
 
           {/* Center 3D Motor Image */}
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: false }}
-            transition={{ duration: 0.8 }}
+            initial={{ scale: 0.88, opacity: 0, y: 20 }}
+            whileInView={{ scale: 1, opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 1.0, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-20 w-[58vw] sm:w-[33vw] md:w-[31vw] lg:w-[25.5vw] flex flex-col items-center justify-center pt-4 sm:pt-6 md:pt-8 lg:pt-[2.2vw] lg:-mt-[4.55vw]"
           >
             <img
@@ -76,39 +86,53 @@ const SmartSolutionsSection = () => {
         </div>
 
         {/* RIGHT SIDE TEXT CONTENT */}
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+        <div
           className="w-full lg:w-[33vw] flex flex-col justify-center space-y-2.5 sm:space-y-2.5 lg:space-y-[0.8vw] text-center lg:text-left items-center lg:items-start z-10 px-4 lg:px-0 mt-6 sm:mt-6 lg:mt-0"
         >
           {/* Main Heading */}
-          <h2 className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans">
+          <motion.h2
+            initial={{ opacity: 0, x: 35 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans"
+          >
             Smart Solutions for <br className="hidden sm:block" />
             Modern Industries
-          </h2>
+          </motion.h2>
 
           {/* Thin Black Accent Line under heading */}
-          <div className="w-10 lg:w-[2.2vw] h-[2.5px] lg:h-[0.2vw] bg-gray-900 rounded-full my-1 lg:my-[0.2vw]" />
+          <motion.div
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="w-10 lg:w-[2.2vw] h-[2.5px] lg:h-[0.2vw] bg-gray-900 rounded-full my-1 lg:my-[0.2vw] origin-left"
+          />
 
           {/* Description */}
-          <p className="text-xs sm:text-base lg:text-[1.05vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]">
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="text-xs sm:text-base lg:text-[1.05vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
+          >
             Turn static pages into immersive, interactive digital experiences that engage, respond and feel alive with every interaction.
-          </p>
-        </motion.div>
+          </motion.p>
+        </div>
       </div>
 
-      {/* 3. BOTTOM FEATURE CARDS (Inverted Colors on Hover) */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false }}
-        transition={{ duration: 0.8, delay: 0.4 }}
+      {/* 3. BOTTOM FEATURE CARDS (Individual Animated on Scroll with Delays) */}
+      <div
         className="relative z-10 w-full max-w-xl lg:max-w-none lg:w-[88vw] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-3.5 lg:gap-[1.5vw] mt-6 sm:mt-6 lg:mt-0 mb-4 sm:mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
       >
         {/* CARD 1: Immersive 3D */}
         <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
@@ -127,6 +151,10 @@ const SmartSolutionsSection = () => {
 
         {/* CARD 2: Interactive Elements */}
         <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
@@ -145,6 +173,10 @@ const SmartSolutionsSection = () => {
 
         {/* CARD 3: Publish Anywhere */}
         <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }}
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
@@ -160,7 +192,7 @@ const SmartSolutionsSection = () => {
             </p>
           </div>
         </motion.div>
-      </motion.div>
+      </div>
     </section>
   );
 };

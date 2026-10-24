@@ -183,26 +183,49 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
     <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-white py-12 lg:py-[3.5vw] px-6 sm:px-10 lg:px-[4.5vw] font-poppins relative">
       
       {/* Top Header Tag */}
-      <div className="w-full flex items-center gap-3 lg:gap-[0.6vw] mb-4 lg:mb-[1.2vw]">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: false, amount: 0.2 }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full flex items-center gap-3 lg:gap-[0.6vw] mb-4 lg:mb-[1.2vw]"
+      >
         <span className="text-xs lg:text-[0.8vw] font-bold tracking-[0.25em] text-[#35363A] uppercase">
           EXPLORE
         </span>
         <div className="w-8 lg:w-[2.2vw] h-[1.5px] lg:h-[0.1vw] bg-[#35363A]/25"></div>
-      </div>
+      </motion.div>
 
       {/* Main Center Title */}
       <div className="w-full text-center mb-6 sm:mb-8 lg:mb-[2.6vw]">
-        <h2 className="text-2xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap">
-          <span>Disc</span>
-          <span className="inline-flex self-center items-center justify-center text-[#EC5137] mx-[0.02em] translate-y-[0.05em]">
-            <Icon icon="weui:discover-outlined" className="w-[0.8em] h-[0.8em]" />
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="text-2xl sm:text-4xl lg:text-[2.6vw] font-bold text-[#0D0F11] tracking-tight inline-flex items-baseline justify-center flex-wrap gap-x-2"
+        >
+          {/* Keep Discover as a single unbreakable word on all screen sizes */}
+          <span className="inline-flex items-baseline whitespace-nowrap">
+            <span>Disc</span>
+            <span className="inline-flex self-center items-center justify-center text-[#EC5137] mx-[0.02em] translate-y-[0.05em]">
+              <Icon icon="weui:discover-outlined" className="w-[0.8em] h-[0.8em]" />
+            </span>
+            <span>ver.</span>
           </span>
-          <span>ver.&nbsp;&nbsp;Read.&nbsp;&nbsp;Get Inspired</span>
-        </h2>
-        <p className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6]">
+          <span className="whitespace-nowrap">Read.</span>
+          <span className="whitespace-nowrap">Get Inspired</span>
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6]"
+        >
           Dive into interactive flipbooks created by our community <br className="hidden sm:inline" />
           click any book to start reading
-        </p>
+        </motion.p>
       </div>
 
       {/* Slider Area with Left/Right Arrow Buttons */}

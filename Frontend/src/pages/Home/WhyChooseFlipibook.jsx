@@ -8,7 +8,13 @@ export default function WhyChooseFlipibook() {
     <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
       
       {/* Top Header Tag Row with Sub-Labels */}
-      <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.2 }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]"
+      >
         <div className="flex items-center gap-3">
           <span className="text-sm sm:text-[15px] lg:text-[0.85vw] font-semibold tracking-[0.28em] text-[#35363A] uppercase">
             WHY FLIPIBOOK
@@ -27,17 +33,29 @@ export default function WhyChooseFlipibook() {
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Title Row: Why Choose Flipibook ? */}
       <div className="w-full max-w-[1920px] mx-auto mb-2 lg:mb-[0.5vw]">
-        <h2 className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]">
+        <motion.h2
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]"
+        >
           Why Choose <br />
           <span className="text-[#EC5137]">Flipibook ?</span>
-        </h2>
-        <p className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal">
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal"
+        >
           From product catalogues to marketing brochures, create stunning digital experiences that drive engagement and business growth.
-        </p>
+        </motion.p>
       </div>
 
       {/* 
@@ -187,7 +205,11 @@ export default function WhyChooseFlipibook() {
         */}
 
         {/* Node 1: 100+ Happy Clients */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(285.9 / 1920) * 100}%`,
@@ -210,10 +232,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Trusted by businesses across various industries
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 2: 500+ Flipbooks Created */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(735.4 / 1920) * 100}%`,
@@ -236,10 +262,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             From Product catalogues to brand stories
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 3: 1M+ Page Views */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.54, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(1192.9 / 1920) * 100}%`,
@@ -262,10 +292,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Read, share and explore FlipiBooks across the globe.
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 4: Global Reach */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.85, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(1621.9 / 1920) * 100}%`,
@@ -300,7 +334,7 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Share Everywhere, <br className="hidden sm:inline" /><br className="sm:hidden" />Anytime.
           </p>
-        </div>
+        </motion.div>
 
       </div>
 

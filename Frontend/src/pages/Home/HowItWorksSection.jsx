@@ -69,7 +69,7 @@ export default function HowItWorksSection() {
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false, amount: 0.2 }}
-        transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
         className="text-center w-full mb-7 sm:mb-9 md:mb-11 lg:mb-[3.2vw] space-y-2 sm:space-y-2.5 lg:space-y-[0.7vw]"
       >
         <h2 className="text-2xl sm:text-4xl lg:text-[3vw] font-semibold text-[#1b222c] tracking-tight leading-tight">
@@ -138,7 +138,7 @@ export default function HowItWorksSection() {
               initial={{ opacity: 0, y: 35, scale: 0.95 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.65, delay: idx * 0.12, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.85, delay: 0.15 + idx * 0.15, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center group w-full justify-start lg:justify-end max-w-[340px] sm:max-w-none mx-auto sm:mx-0"
             >
               {cardBox}

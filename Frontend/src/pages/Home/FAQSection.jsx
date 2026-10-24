@@ -44,7 +44,7 @@ export default function FAQSection() {
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false, amount: 0.2 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
         className="text-center w-full max-w-xl lg:max-w-[60vw] mb-8 lg:mb-[3.5vw] space-y-2"
       >
         <h2 className="text-2xl sm:text-4xl lg:text-[2.8vw] font-bold text-[#1b222c] tracking-tight leading-tight">
@@ -63,10 +63,10 @@ export default function FAQSection() {
           return (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 22 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.5, delay: (index % 4) * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.75, delay: (index % 4) * 0.12, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => toggleFAQ(index)}
               className={`bg-white border rounded-xl p-4 lg:p-[1.2vw] cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md ${
                 isOpen ? 'border-[#ea7233]/50 ring-1 ring-[#ea7233]/20' : 'border-gray-200 hover:border-gray-300'

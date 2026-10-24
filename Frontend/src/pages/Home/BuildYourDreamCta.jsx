@@ -32,7 +32,7 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
           initial={{ opacity: 0, x: -35 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col text-center md:text-left items-center md:items-start"
         >
           <div className="flex items-center gap-3.5 mb-2 sm:mb-2.5 lg:mb-[0.6vw]">
@@ -42,8 +42,8 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
             <motion.div
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
-              viewport={{ once: false }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="hidden sm:block w-24 md:w-32 lg:w-[8vw] h-[1.5px] lg:h-[0.1vw] bg-[#d1d5db] origin-left"
             />
           </div>
@@ -63,7 +63,7 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
           initial={{ opacity: 0, x: 35 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
           className="flex flex-col items-center md:items-end text-center md:text-right space-y-4 lg:space-y-[1vw] max-w-[420px] lg:max-w-[28vw]"
         >
           <p className="text-xs sm:text-[15px] lg:text-[1.05vw] text-[#444444] font-normal leading-relaxed">

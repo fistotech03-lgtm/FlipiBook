@@ -33,7 +33,7 @@ const MEDIA_CONVERTERS = [
     accentBg: 'bg-[#ea543a]',
     accentHover: 'hover:bg-[#d4452e]',
     defaultOutput: 'WEBP',
-    compressionLevels: ['High Quality (85%)', 'Balanced (70%)', 'Maximum Compression (50%)'],
+    compressionLevels: ['Original Quality (Format Only)', 'High Quality (85%)', 'Balanced (70%)', 'Maximum Compression (50%)'],
     maxSize: MAX_FILE_SIZES.image
   },
   {
@@ -50,7 +50,7 @@ const MEDIA_CONVERTERS = [
     accentBg: 'bg-indigo-600',
     accentHover: 'hover:bg-indigo-700',
     defaultOutput: 'MP4',
-    compressionLevels: ['1080p Web-Optimized', '720p HD Compact', '480p Mobile Saver'],
+    compressionLevels: ['Original Resolution & Quality (Format Only)', '1080p Web-Optimized', '720p HD Compact', '480p Mobile Saver'],
     maxSize: MAX_FILE_SIZES.video
   },
   {
@@ -67,7 +67,7 @@ const MEDIA_CONVERTERS = [
     accentBg: 'bg-emerald-600',
     accentHover: 'hover:bg-emerald-700',
     defaultOutput: 'GLB',
-    compressionLevels: ['Draco + Meshopt (High)', 'Texture Only (70%)', 'Lossless Optimization'],
+    compressionLevels: ['Original Quality (Lossless)', 'Draco + Meshopt (High)', 'Texture Only (70%)', 'Lossless Optimization'],
     maxSize: MAX_FILE_SIZES.threed
   }
 ];

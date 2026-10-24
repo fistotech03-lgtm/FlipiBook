@@ -210,6 +210,7 @@ export function exportToFbx(scene) {
   
   let geomIdCounter = 2000;
   let modelIdCounter = 1000;
+  let matIdCounter = 3000;
 
   const objectEntries = [];
   const connectionEntries = [];
@@ -224,6 +225,7 @@ export function exportToFbx(scene) {
 
       const currentGeomId = geomIdCounter++;
       const currentModelId = modelIdCounter++;
+      const currentMatId = matIdCounter++;
 
       const matrix = child.matrixWorld || new THREE.Matrix4();
       const vertices = [];
@@ -261,8 +263,21 @@ export function exportToFbx(scene) {
 \t\tVersion: 232
 \t}`);
 
+      // Add a default gray Lambert/Phong material to FBX
+      objectEntries.push(`\tMaterial: ${currentMatId}, "Material::${child.name || 'Mesh'}_Mat", "" {
+\t\tVersion: 102
+\t\tShadingModel: "phong"
+\t\tMultiLayer: 0
+\t\tProperties70:  {
+\t\t\tP: "DiffuseColor", "Color", "", "A",0.58,0.64,0.72
+\t\t\tP: "SpecularColor", "Color", "", "A",0.2,0.2,0.2
+\t\t\tP: "Shininess", "Number", "", "A",20
+\t\t}
+\t}`);
+
       // Geometry -> Model connection, Model -> Root (0) connection
       connectionEntries.push(`\tC: "OO",${currentGeomId},${currentModelId}`);
+      connectionEntries.push(`\tC: "OO",${currentMatId},${currentModelId}`);
       connectionEntries.push(`\tC: "OO",${currentModelId},0`);
     }
   });
@@ -282,10 +297,13 @@ Definitions:  {
 \tVersion: 100
 \tCount: ${objectEntries.length}
 \tObjectType: "Model" {
-\t\tCount: ${objectEntries.length / 2}
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
 \t}
 \tObjectType: "Geometry" {
-\t\tCount: ${objectEntries.length / 2}
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
+\t}
+\tObjectType: "Material" {
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
 \t}
 }
 

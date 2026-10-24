@@ -42,15 +42,17 @@ export default function AboutUsSection() {
           <div className="w-full max-w-full lg:max-w-[31vw] flex flex-col items-start lg:items-end justify-start lg:justify-start h-full flex-1 lg:gap-[1vw]">
             
             {/* Top Container: Headline & Divider */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            <div
               className="w-full flex flex-col items-start lg:items-end"
             >
               {/* Headline Group: 'We Transform' in 1 line on mobile & tab, 'Digital Ideas' in another line, all left-aligned */}
-              <div className="flex flex-col items-start lg:items-end w-full">
+              <motion.div
+                initial={{ opacity: 0, y: -25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.2 }}
+                transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-start lg:items-end w-full"
+              >
                 {/* Line 1: 'We Transform' side-by-side on mobile/tablet, stacked on desktop */}
                 <div className="flex flex-row lg:flex-col items-baseline lg:items-end justify-start gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-0">
                   <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block">
@@ -68,24 +70,24 @@ export default function AboutUsSection() {
                 <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] block mt-0.5 sm:mt-1.5 md:mt-2.5 lg:mt-0">
                   Digital Ideas
                 </span>
-              </div>
+              </motion.div>
 
               {/* Subtle Separator Line beneath Headline */}
               <motion.div
                 initial={{ scaleX: 0 }}
                 whileInView={{ scaleX: 1 }}
-                viewport={{ once: false }}
-                transition={{ duration: 0.7, delay: 0.15 }}
+                viewport={{ once: false, amount: 0.2 }}
+                transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className="w-full max-w-[260px] sm:max-w-[360px] md:max-w-[460px] lg:max-w-full h-[1px] bg-[#c2c5c9] mt-3 sm:mt-5 md:mt-7 lg:mt-[2.2vw] mb-3 sm:mb-5 md:mb-7 lg:mb-[1.8vw] origin-left lg:origin-right"
               ></motion.div>
-            </motion.div>
+            </div>
 
             {/* Bottom/Narrative Paragraphs Container: Full width and justify alignment on mobile & tablet */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.75, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full max-w-full lg:max-w-[22vw] flex flex-col items-start lg:items-end space-y-2.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.6vw] text-xs sm:text-[14px] md:text-[16px] lg:text-[0.94vw] text-[#2b2e34] font-normal leading-[1.65] sm:leading-[1.75] md:leading-[1.85] text-justify lg:text-right pb-1 sm:pb-2 lg:pb-[1vw]"
             >
               <p>

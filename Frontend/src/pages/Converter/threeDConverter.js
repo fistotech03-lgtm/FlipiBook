@@ -101,6 +101,13 @@ const load3DModel = async (file, onProgress) => {
  * Optimizes meshes and textures safely without blowing call stack or memory
  */
 const optimizeScene = async (scene, compressionPreset, onProgress) => {
+  // If Original Quality / Lossless preset selected, preserve mesh geometries and textures intact
+  if (compressionPreset?.includes('Original')) {
+    onProgress?.(50, 'Preserving original 3D geometry & texture quality...');
+    await yieldToMain();
+    return;
+  }
+
   onProgress?.(50, `Applying ${compressionPreset} compression...`);
   await yieldToMain();
 

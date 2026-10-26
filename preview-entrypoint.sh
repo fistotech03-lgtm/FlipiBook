@@ -1,8 +1,12 @@
 #!/bin/sh
 set -e
 
-# Ensure storage directory exists
-mkdir -p /app/storage
+# Ensure runtime directories exist (in Docker Swarm /run is tmpfs and may be empty)
+mkdir -p /app/storage /run/nginx /var/log/nginx
+
+# Test Nginx configuration
+echo "[Preview Entrypoint] Testing Nginx configuration..."
+nginx -t
 
 # Start Nginx in background
 echo "[Preview Entrypoint] Starting Nginx on port 80..."

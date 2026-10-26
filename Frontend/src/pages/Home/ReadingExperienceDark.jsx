@@ -7,36 +7,36 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
   const features = [
     {
       id: "models",
-      title: "3D Models",
-      desc: "Import realistic 3D models into your flipbook pages.",
+      title: "3D Product Models",
+      desc: "Add your 3D models to catalogue pages so customers can explore product shapes and details.",
       icon: "lucide:box",
       iconClass: "w-[1.37rem] h-[1.37rem] lg:w-[1.81vw] lg:h-[1.81vw]"
     },
     {
       id: "rotate",
-      title: "360° Rotate",
-      desc: "Rotate and explore every model from every angle.",
+      title: "360° Product View",
+      desc: "Let customers rotate and zoom in on models to examine them from different angles.",
       icon: "teenyicons:360-outline",
       iconClass: "w-[1.37rem] h-[1.37rem] lg:w-[1.81vw] lg:h-[1.81vw]"
     },
     {
       id: "texture",
-      title: "Texture Editor",
-      desc: "Apply materials, textures, and realistic surface finishes.",
+      title: "Materials & Textures",
+      desc: "Customize model surfaces to showcase product colors, materials, and finishes.",
       icon: "streamline-flex:texture",
       iconClass: "w-[1.37rem] h-[1.37rem] lg:w-[1.81vw] lg:h-[1.81vw]"
     },
     {
       id: "lighting",
-      title: "Lighting",
-      desc: "Adjust lights, shadows, reflections, and scene ambience.",
+      title: "Lighting & Shadows",
+      desc: "Adjust lighting to highlight product details and give models a realistic appearance.",
       icon: "entypo:light-up",
       iconClass: "w-[1.37rem] h-[1.37rem] lg:w-[1.81vw] lg:h-[1.81vw]"
     },
     {
       id: "background",
-      title: "Background Color",
-      desc: "Customize popup backgrounds to match your brand style.",
+      title: "Branded Backgrounds",
+      desc: "Choose 3D viewer background colors that complement your products and brand.",
       customIcon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-[1.37rem] h-[1.37rem] lg:w-[1.81vw] lg:h-[1.81vw]">
           <path d="M12 4L3 8.5L12 13L21 8.5L12 4Z" />
@@ -65,7 +65,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
           className="flex items-center justify-start gap-3 sm:gap-4 lg:gap-[1vw]"
         >
           <span className="text-xs lg:text-[0.72vw] font-bold tracking-[0.25em] text-[#d1d5db] uppercase">
-            3D EXPERIENCE
+            INTERACTIVE 3D CATALOGUES
           </span>
           <div className="w-10 lg:w-[2.6vw] h-[1.5px] lg:h-[0.1vw] bg-[#6b7280]"></div>
         </motion.div>
@@ -79,18 +79,18 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
           
           {/* Left Column: Headings, Copy, Orange CTA (Left-aligned & justified copy on mobile/tab) */}
           <div
-            className="w-full lg:w-[23vw] flex flex-col justify-start text-left items-start space-y-3.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.4vw] z-20 relative pointer-events-auto"
+            className="w-full lg:w-[25vw] flex flex-col justify-start text-left items-start space-y-3.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.4vw] z-20 relative pointer-events-auto"
           >
             <motion.h2
               initial={{ opacity: 0, x: -35 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.95, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-[3vw] lg:leading-[4.5vw] font-bold text-white leading-[1.08] sm:leading-[1.12] tracking-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.8vw] lg:leading-[4vw] font-bold text-white leading-[1.08] sm:leading-[1.12] tracking-tight"
             >
-              Not Just Pages. <br />
-              A <span className="text-[#EC5137]">3D</span> Reading <br className="hidden sm:inline" />
-              Experience.
+              Give Customers <br />
+              a <span className="text-[#EC5137]">Closer Look</span> <br />
+              at Your Products
             </motion.h2>
 
             <motion.p
@@ -98,12 +98,12 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xs sm:text-[14px] md:text-[15.5px] lg:text-[0.95vw] text-[#A6ABB3] lg:text-[#D9D9D9] font-normal leading-[1.65] sm:leading-[1.75] text-justify lg:text-left w-full max-w-full sm:max-w-[560px] md:max-w-[620px] lg:max-w-none lg:w-[13vw]"
+              className="text-xs sm:text-[14px] md:text-[15px] lg:text-[0.92vw] text-[#A6ABB3] lg:text-[#D9D9D9] font-normal leading-[1.65] sm:leading-[1.75] text-justify lg:text-left w-full max-w-full sm:max-w-[560px] md:max-w-[620px] lg:max-w-none lg:w-[15vw]"
             >
-              Transform static flipbooks into immersive experiences with realistic 3D objects, interactive hotspots, videos, audio, and smooth page transitions.
+              Bring 3D product models into your FlipiBook catalogue. Let customers rotate products, inspect details, and discover features through clickable hotspots, videos, and audio.
             </motion.p>
 
-            {/* Orange CTA Button */}
+            {/* Orange CTA Button: Explore a 3D Catalogue */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -115,7 +115,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
                 onClick={() => onOpenCreateModal && onOpenCreateModal()}
                 className="inline-flex items-center gap-2.5 lg:gap-[0.55vw] px-5 sm:px-6 py-3 sm:py-3.5 lg:px-[1.65vw] lg:py-[0.85vw] bg-[#EA6229] hover:bg-[#d8551f] text-white rounded-lg lg:rounded-[0.5vw] font-semibold text-xs sm:text-[15px] lg:text-[0.88vw] shadow-md shadow-orange-900/30 transition-all duration-300 active:scale-95 cursor-pointer group"
               >
-                <span>Bring Your Products into 3D</span>
+                <span>Explore a 3D Catalogue</span>
                 <Icon icon="lucide:arrow-right" className="w-4 h-4 lg:w-[0.95vw] lg:h-[0.95vw] group-hover:translate-x-1 transition-transform" />
               </button>
             </motion.div>

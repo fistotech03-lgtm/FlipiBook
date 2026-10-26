@@ -15,7 +15,7 @@ const SmartSolutionsSection = () => {
       <div className="w-full flex items-center justify-between pointer-events-none select-none z-10 pt-1 lg:pt-[0.4vw]">
         <div className="flex items-center gap-3 lg:gap-[0.6vw]">
           <span className="text-xs lg:text-[0.68vw] font-bold tracking-[0.25em] text-[#35363A] uppercase">
-            FEATURES
+            INTERACTIVE 3D PRODUCT VIEWER
           </span>
           <div className="w-8 lg:w-[2.4vw] h-[1.5px] lg:h-[0.1vw] bg-[#35363A]/40"></div>
         </div>
@@ -31,7 +31,7 @@ const SmartSolutionsSection = () => {
             transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
             className="text-xl sm:text-5xl md:text-6xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
           >
-            IT STARTS WITH A CLICK
+            EXPLORE EVERY ANGLE
           </motion.h2>
 
           {/* 3D Model Viewer in Rage Italic / #EC5137 */}
@@ -97,8 +97,8 @@ const SmartSolutionsSection = () => {
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans"
           >
-            Smart Solutions for <br className="hidden sm:block" />
-            Modern Industries
+            Let Customers Explore <br className="hidden sm:block" />
+            <span className="text-[#EC5137]">Every Angle</span>
           </motion.h2>
 
           {/* Thin Black Accent Line under heading */}
@@ -116,9 +116,9 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xs sm:text-base lg:text-[1.05vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
+            className="text-xs sm:text-base lg:text-[1.02vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
           >
-            Turn static pages into immersive, interactive digital experiences that engage, respond and feel alive with every interaction.
+            Bring your products into focus with FlipiBook’s interactive 3D digital catalogues. Let customers rotate models, zoom in on details, and click hotspots to understand product features before making an inquiry.
           </motion.p>
         </div>
       </div>
@@ -127,7 +127,7 @@ const SmartSolutionsSection = () => {
       <div
         className="relative z-10 w-full max-w-xl lg:max-w-none lg:w-[88vw] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-3.5 lg:gap-[1.5vw] mt-6 sm:mt-6 lg:mt-0 mb-4 sm:mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
       >
-        {/* CARD 1: Immersive 3D */}
+        {/* CARD 1: 3D Product Models */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -141,15 +141,15 @@ const SmartSolutionsSection = () => {
           </div>
           <div className="text-left min-w-0 flex-1">
             <h3 className="text-xs sm:text-[17px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 sm:mb-1 transition-colors duration-300">
-              Immersive 3D
+              3D Product Models
             </h3>
             <p className="text-[10.5px] sm:text-[14px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.4] transition-colors duration-300 max-w-[200px] sm:max-w-none lg:max-w-[15.5vw]">
-              Add depth with realistic models and smooth page-turn effects.
+              Add your 3D models to catalogue pages so customers can explore shapes and details.
             </p>
           </div>
         </motion.div>
 
-        {/* CARD 2: Interactive Elements */}
+        {/* CARD 2: 360° Product View */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -159,19 +159,19 @@ const SmartSolutionsSection = () => {
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
           <div className="w-9 h-9 sm:w-12 sm:h-12 lg:w-[2.5vw] lg:h-[2.5vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg sm:rounded-xl lg:rounded-[0.5vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
-            <Icon icon="mdi:cursor-default-click-outline" className="w-4.5 h-4.5 sm:w-6 sm:h-6 lg:w-[1.35vw] lg:h-[1.35vw]" />
+            <Icon icon="teenyicons:360-outline" className="w-4.5 h-4.5 sm:w-6 sm:h-6 lg:w-[1.35vw] lg:h-[1.35vw]" />
           </div>
           <div className="text-left min-w-0 flex-1">
             <h3 className="text-xs sm:text-[17px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 sm:mb-1 transition-colors duration-300">
-              Interactive Elements
+              360° Product View
             </h3>
             <p className="text-[10.5px] sm:text-[14px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.4] transition-colors duration-300 max-w-[200px] sm:max-w-none lg:max-w-[15.5vw]">
-              Engage your users with rich interactive digital content.
+              Let customers rotate and zoom in on models to examine from different angles.
             </p>
           </div>
         </motion.div>
 
-        {/* CARD 3: Publish Anywhere */}
+        {/* CARD 3: Hotspots & Inquiries */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -181,14 +181,14 @@ const SmartSolutionsSection = () => {
           className="group bg-white hover:bg-[#1C1D21] p-2.5 sm:p-4 lg:p-[0.75vw] w-full sm:w-full lg:w-[27vw] rounded-xl lg:rounded-[0.75vw] border border-gray-100/80 hover:border-[#1C1D21] shadow-sm hover:shadow-xl hover:shadow-black/10 flex items-center gap-2.5 lg:gap-[0.75vw] transition-all duration-300"
         >
           <div className="w-9 h-9 sm:w-12 sm:h-12 lg:w-[2.5vw] lg:h-[2.5vw] bg-[#1C1D21] text-white group-hover:bg-white group-hover:text-[#1C1D21] rounded-lg sm:rounded-xl lg:rounded-[0.5vw] flex items-center justify-center shadow-sm shrink-0 transition-colors duration-300">
-            <Icon icon="clarity:world-line" className="w-4.5 h-4.5 sm:w-6 sm:h-6 lg:w-[1.35vw] lg:h-[1.35vw]" />
+            <Icon icon="mdi:cursor-default-click-outline" className="w-4.5 h-4.5 sm:w-6 sm:h-6 lg:w-[1.35vw] lg:h-[1.35vw]" />
           </div>
           <div className="text-left min-w-0 flex-1">
             <h3 className="text-xs sm:text-[17px] lg:text-[0.92vw] font-bold text-gray-900 group-hover:text-white mb-0.5 sm:mb-1 transition-colors duration-300">
-              Publish Anywhere
+              Interactive Hotspots
             </h3>
             <p className="text-[10.5px] sm:text-[14px] lg:text-[0.72vw] text-gray-500 group-hover:text-gray-300 leading-[1.4] transition-colors duration-300 max-w-[200px] sm:max-w-none lg:max-w-[15.5vw]">
-              Share and publish seamlessly across all platforms & devices.
+              Click hotspots to understand product features before making an inquiry.
             </p>
           </div>
         </motion.div>

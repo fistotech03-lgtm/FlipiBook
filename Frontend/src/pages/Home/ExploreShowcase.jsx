@@ -213,18 +213,18 @@ export default function ExploreShowcase({ navigate, onOpenCreateModal }) {
             </span>
             <span>ver.</span>
           </span>
-          <span className="whitespace-nowrap">Read.</span>
-          <span className="whitespace-nowrap">Get Inspired</span>
+          <span className="whitespace-nowrap text-[#EC5137]">Explore.</span>
+          <span className="whitespace-nowrap">Get Inspired.</span>
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6]"
+          className="text-xs sm:text-sm lg:text-[0.92vw] text-[#717680] font-normal mt-2 sm:mt-3 lg:mt-[1vw] leading-[1.6] max-w-2xl mx-auto"
         >
-          Dive into interactive flipbooks created by our community <br className="hidden sm:inline" />
-          click any book to start reading
+          Explore interactive digital catalogues created with FlipiBook. Find fresh ideas for showcasing your products with videos, 3D models, and clickable content. <br className="hidden sm:inline" />
+          <span className="text-[#35363A] font-medium">Click any catalogue to explore.</span>
         </motion.p>
       </div>
 

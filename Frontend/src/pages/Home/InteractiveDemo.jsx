@@ -66,7 +66,7 @@ export default function InteractiveDemo() {
             className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]"
           >
             <span className="text-[11px] lg:text-[0.82vw] font-bold tracking-[0.22em] text-[#2c2f35] uppercase">
-              INTERACTIVE DEMO
+              INTERACTIVE CATALOGUE DEMO
             </span>
             <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#9ca0a6]"></div>
           </motion.div>
@@ -79,9 +79,9 @@ export default function InteractiveDemo() {
             transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left"
           >
-            Experience <br className="hidden lg:inline" />
-            <span className="text-[#ED5B43]">Flipibooks</span> <br className="hidden lg:inline" />
-            in Action
+            See Your Products <br className="hidden lg:inline" />
+            <span className="text-[#ED5B43]">Come to Life</span> <br className="hidden lg:inline" />
+            with FlipiBook
           </motion.h2>
 
           {/* Thin Divider Line */}
@@ -101,8 +101,28 @@ export default function InteractiveDemo() {
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
           >
-            Explore our handpicked demo books. Flip, zoom, and interact to discover how immersive and engaging digital reading can be.
+            Explore our interactive digital catalogue demos. Turn the pages, watch product videos, and rotate 3D models to see products from different angles. Discover how FlipiBook helps customers understand what you sell.
           </motion.p>
+
+          {/* CTA Button: Explore Demo Catalogues */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-4 sm:mt-5 lg:mt-[1.5vw]"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('explore-section') || document.querySelector('[class*="ExploreShowcase"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-[#ED5B43] hover:bg-[#d84e37] text-white rounded-lg text-xs sm:text-sm lg:text-[0.82vw] font-medium shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <span>Explore Demo Catalogues</span>
+            </button>
+          </motion.div>
         </div>
 
         {/* Right Column: 5 Standing Books with Staggered Entrance */}

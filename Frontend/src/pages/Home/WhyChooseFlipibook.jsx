@@ -26,35 +26,35 @@ export default function WhyChooseFlipibook() {
           <div className="w-[2px] h-[36px] lg:h-[2.4vw] bg-[#EC5137] rounded-full mt-0.5"></div>
           <div className="flex flex-col">
             <span className="text-[13px] sm:text-[14px] lg:text-[0.78vw] font-semibold text-[#35363A] uppercase tracking-wider leading-snug">
-              FEATURED FLIPBOOK
+              YOUR CATALOGUE.
             </span>
-            <span className="text-[11.5px] sm:text-[12px] lg:text-[0.68vw] font-medium text-[#35363A] uppercase tracking-wider leading-snug">
-              LEADING THE INDUSTRY REVOLUTION
+            <span className="text-[11.5px] sm:text-[12px] lg:text-[0.68vw] font-medium text-[#EC5137] uppercase tracking-wider leading-snug">
+              MORE INTERACTIVE.
             </span>
           </div>
         </div>
       </motion.div>
 
-      {/* Main Title Row: Why Choose Flipibook ? */}
+      {/* Main Title Row: Give Customers More Reasons to Choose You */}
       <div className="w-full max-w-[1920px] mx-auto mb-2 lg:mb-[0.5vw]">
         <motion.h2
           initial={{ opacity: 0, x: -30 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]"
+          className="text-[30px] sm:text-[42px] lg:text-[2.8vw] font-semibold tracking-tight text-[#35363A] leading-[1.25] lg:max-w-[32vw]"
         >
-          Why Choose <br />
-          <span className="text-[#EC5137]">Flipibook ?</span>
+          Give Customers <br />
+          <span className="text-[#EC5137]">More Reasons</span> to Choose You
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal"
+          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[500px] lg:max-w-[30vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal"
         >
-          From product catalogues to marketing brochures, create stunning digital experiences that drive engagement and business growth.
+          Create interactive digital catalogues that help customers understand your products. FlipiBook brings videos, 3D models, and enquiry links together in one shareable catalogue.
         </motion.p>
       </div>
 

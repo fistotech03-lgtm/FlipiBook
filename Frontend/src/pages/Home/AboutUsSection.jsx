@@ -45,7 +45,7 @@ export default function AboutUsSection() {
             <div
               className="w-full flex flex-col items-start lg:items-end"
             >
-              {/* Headline Group: 'We Transform' in 1 line on mobile & tab, 'Digital Ideas' in another line, all left-aligned */}
+              {/* Headline Group: 'We Make' & 'Your Products Interactive' */}
               <motion.div
                 initial={{ opacity: 0, y: -25 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -53,22 +53,23 @@ export default function AboutUsSection() {
                 transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col items-start lg:items-end w-full"
               >
-                {/* Line 1: 'We Transform' side-by-side on mobile/tablet, stacked on desktop */}
+                {/* Line 1: 'We Make' */}
                 <div className="flex flex-row lg:flex-col items-baseline lg:items-end justify-start gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-0">
-                  <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block">
+                  <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.5vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block">
                     We
                   </span>
                   
                   <h2
-                    className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block lg:my-[0.15vw] text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
+                    className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.5vw] font-bold tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block lg:my-[0.15vw] text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
                   >
-                    Transform
+                    Make
                   </h2>
                 </div>
 
-                {/* Line 2: 'Digital Ideas' */}
-                <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] block mt-0.5 sm:mt-1.5 md:mt-2.5 lg:mt-0">
-                  Digital Ideas
+                {/* Line 2: 'Your Products Interactive' */}
+                <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.2vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] block mt-0.5 sm:mt-1.5 md:mt-2.5 lg:mt-0">
+                  Your Products <br className="hidden lg:inline" />
+                  <span className="text-[#EC5137]">Interactive</span>
                 </span>
               </motion.div>
 
@@ -88,14 +89,28 @@ export default function AboutUsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-full lg:max-w-[22vw] flex flex-col items-start lg:items-end space-y-2.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.6vw] text-xs sm:text-[14px] md:text-[16px] lg:text-[0.94vw] text-[#2b2e34] font-normal leading-[1.65] sm:leading-[1.75] md:leading-[1.85] text-justify lg:text-right pb-1 sm:pb-2 lg:pb-[1vw]"
+              className="w-full max-w-full lg:max-w-[24vw] flex flex-col items-start lg:items-end space-y-2.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.4vw] text-xs sm:text-[14px] md:text-[15px] lg:text-[0.9vw] text-[#2b2e34] font-normal leading-[1.65] sm:leading-[1.75] md:leading-[1.8] text-justify lg:text-right pb-1 sm:pb-2 lg:pb-[1vw]"
             >
               <p>
-                Flipibook by FIST-O Tech Pvt Ltd transforms static catalogues into Interactive Digital Experiences through IDC, AR/VR/MR, 2D/3D Animation, 3D Website design, Custom web and Mobile app development.
+                FlipiBook by Fisto Tech Pvt Ltd turns static PDFs into interactive digital catalogues. Combine product videos, 3D models, and clickable links to help customers explore your products and understand how they work.
               </p>
               <p>
-                We help businesses showcase products, simplify ideas, and engage audiences through innovative digital solutions.
+                Based in Coimbatore, Fisto Tech creates 3D animations, AR/VR experiences, 3D websites, and custom applications for businesses in India and worldwide. We help you explain complex products clearly and make it easier for customers to take the next step.
               </p>
+
+              {/* Button: Discover FlipiBook */}
+              <div className="pt-2 sm:pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('why-choose-flipibook') || document.querySelector('[class*="WhyChooseFlipibook"]');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0D0F11] hover:bg-[#EC5137] text-white rounded-lg text-xs sm:text-sm lg:text-[0.85vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+                >
+                  <span>Discover FlipiBook</span>
+                </button>
+              </div>
             </motion.div>
 
           </div>

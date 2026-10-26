@@ -271,15 +271,18 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
         <div
           className="lg:col-span-3 flex flex-col justify-start text-center lg:text-left items-center lg:items-start py-1 h-full"
         >
-          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUE - expanded line height */}
+          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUES THAT BRING YOUR PRODUCTS TO LIFE */}
           <motion.h1
             initial={{ opacity: 0, x: -35 }}
             animate={isPreloaderDone ? { opacity: 1, x: 0 } : { opacity: 0, x: -35 }}
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.35vw] font-semibold text-[#35363A] leading-[1.3] sm:leading-[1.25] lg:leading-[1.55] tracking-tight"
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.6vw] font-semibold text-[#35363A] leading-[1.3] sm:leading-[1.25] lg:leading-[1.4] tracking-tight"
           >
             INTERACTIVE <br className="inline sm:hidden lg:inline" />DIGITAL <br className="hidden sm:inline" />
-            <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUE</span>
+            <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUES</span>
+            <span className="block text-base sm:text-xl md:text-2xl lg:text-[1.35vw] font-medium text-[#4B596C] tracking-normal mt-1 lg:mt-[0.3vw]">
+              THAT BRINGS YOUR PRODUCTS TO LIFE.
+            </span>
           </motion.h1>
 
           {/* Bottom Sub-group: Divider + Description */}
@@ -299,7 +302,7 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
               transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
               className="text-xs sm:text-sm md:text-base lg:text-[0.92vw] font-light text-[#555555] leading-[160%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-center sm:text-justify lg:text-left"
             >
-              Transform your products and ideas into immersive digital catalogues with interactive content, rich visuals, and engaging page-turn experiences.
+              Turn your PDF into an interactive digital catalogue with FlipiBook. Add product videos, 3D models, and clickable links so customers can see how your products work, explore the details, and contact your team. Share your catalogue through a single link.
             </motion.p>
           </div>
         </div>

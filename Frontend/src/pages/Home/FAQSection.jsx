@@ -7,28 +7,28 @@ export default function FAQSection() {
 
   const faqs = [
     {
-      question: "What files can I upload?",
-      answer: "You can upload PDF files, Microsoft Word (.docx), PowerPoint (.pptx), and high-resolution images (.jpg, .png). Our system automatically converts them into smooth, interactive flipbooks."
+      question: "1. How do I create a digital catalogue with FlipiBook?",
+      answer: "Upload your PDF or start with a ready-made template. Customize your pages, add interactive content, and publish your catalogue to share with customers."
     },
     {
-      question: "Can I customise page layouts?",
-      answer: "Yes! You can fully customize backgrounds, toolbar branding, add hot-spots, clickable links, video embeds, and 3D product widgets using our drag-and-drop editor."
+      question: "2. Can I alter the layout of my catalog?",
+      answer: "Yes. Edit page layouts, organize your content, and personalize colors, backgrounds, and branding to match your business."
     },
     {
-      question: "Can I add 3D models and videos?",
-      answer: "Absolutely. Flipibook supports interactive GLTF/GLB 3D models, YouTube/Vimeo embeds, self-hosted MP4 videos, and audio tracks directly on your flipbook pages."
+      question: "3. Can I add videos and 3D product models?",
+      answer: "Yes. Add product videos, audio, 3D models, and clickable hotspots to help customers understand your products. Custom 3D modeling and animation are charged separately."
     },
     {
-      question: "Does Flipibook support 360° views?",
-      answer: "Yes, you can integrate 360-degree interactive product spin views so buyers can inspect products from every angle."
+      question: "4. Can customers rotate products and view them in AR?",
+      answer: "Customers can rotate and zoom in on interactive 3D models. AR lets them visualize products in their surroundings using a compatible device and an AR-ready model."
     },
     {
-      question: "Can I share my catalogue online?",
-      answer: "You can instantly share your flipbook via a short web URL, QR code, or embed it seamlessly directly into your website or e-commerce store."
+      question: "5. How can I share my digital catalogue?",
+      answer: "Share your catalogue link through WhatsApp, email, or social media. You can also use a QR code or embed the catalogue on your website."
     },
     {
-      question: "Can I track catalogue engagement?",
-      answer: "Yes! Our real-time analytics dashboard gives you insights on total reads, page views, time spent per page, button clicks, and visitor locations."
+      question: "6. Can I track catalogue views and collect enquiries?",
+      answer: "FlipiBook offers viewer statistics to help you understand catalogue engagement. Lead capture forms give interested customers a way to share their details and contact your team."
     }
   ];
 
@@ -49,10 +49,10 @@ export default function FAQSection() {
       >
         <h2 className="text-2xl sm:text-4xl lg:text-[2.8vw] font-bold text-[#1b222c] tracking-tight leading-tight">
           Common Questions About <br />
-          <span className="text-[#ea7233]">Flipibook</span>
+          <span className="text-[#ea7233]">FlipiBook</span>
         </h2>
         <p className="text-xs sm:text-sm lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed">
-          Turn static PDFs into engaging digital catalogue experiences.
+          Learn how to create, customize, and share your interactive digital catalogue.
         </p>
       </motion.div>
 
@@ -107,6 +107,33 @@ export default function FAQSection() {
           );
         })}
       </div>
+
+      {/* Bottom Still Have Questions CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+        transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-10 sm:mt-12 lg:mt-[3.5vw] flex flex-col items-center text-center space-y-3"
+      >
+        <h4 className="text-base sm:text-lg lg:text-[1.1vw] font-semibold text-[#1b222c]">
+          Still have questions?
+        </h4>
+        <p className="text-xs sm:text-sm lg:text-[0.88vw] text-gray-500 max-w-md">
+          Let’s discuss how FlipiBook can work for your products.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            const footerEl = document.querySelector('footer');
+            if (footerEl) footerEl.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="inline-flex items-center gap-2 px-6 py-2.5 sm:px-7 sm:py-3 bg-[#ea7233] hover:bg-[#d86122] text-white rounded-lg text-xs sm:text-sm font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer mt-1"
+        >
+          <span>Contact Our Team</span>
+          <Icon icon="lucide:arrow-right" className="w-4 h-4" />
+        </button>
+      </motion.div>
 
     </motion.section>
   );

@@ -41,8 +41,8 @@ export default function ArIntegrationSection() {
             className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
           >
             <h2 className="text-[26px] sm:text-[44px] md:text-[48px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
-              <span className="block">See Products</span>
-              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Real Space</span>
+              <span className="block">See Your Products</span>
+              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Your Space</span>
             </h2>
           </motion.div>
 
@@ -61,10 +61,27 @@ export default function ArIntegrationSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[3.2vw] text-left"
+            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[2vw] text-left"
           >
-            Bring your products to life with AR. Scan the QR code from your flipbook and view 3D models in your space.
+            Help customers visualize your products in their own surroundings. Scan the QR code in your FlipiBook catalogue to place and explore a 3D product model using augmented reality.
           </motion.p>
+
+          {/* CTA Button: Try the AR Experience */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-6 sm:mb-7 lg:mb-[2.6vw]"
+          >
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 bg-[#EC5137] hover:bg-[#d8442c] text-white rounded-lg text-xs sm:text-sm lg:text-[0.88vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+            >
+              <span>Try the AR Experience</span>
+              <Icon icon="lucide:arrow-right" className="w-4 h-4 lg:w-[1vw] lg:h-[1vw]" />
+            </button>
+          </motion.div>
 
           {/* 5. Three Circular Badges Row: For Tablet (sm to lg), icon is placed to the RIGHT of text (flex-row-reverse). Mobile & Desktop keep standard vertical stack */}
           <div className="flex items-start justify-start gap-4 sm:gap-6 md:gap-8 lg:gap-[2.6vw] w-full">

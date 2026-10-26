@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Flipbook Backend Microservices & API Gateway",
   "scripts": {
-    "dev": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,gray\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:myflipibook\" \"npm run dev:page-editor\" \"npm run dev:pdf-editor\" \"npm run dev:customized-editor\" \"npm run dev:threed-editor\" \"npm run dev:user\"",
-    "start": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,gray\" \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:myflipibook\" \"npm run start:page-editor\" \"npm run start:pdf-editor\" \"npm run start:customized-editor\" \"npm run start:threed-editor\" \"npm run start:user\"",
+    "dev": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,PAYMENT,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,yellow,gray\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:myflipibook\" \"npm run dev:page-editor\" \"npm run dev:pdf-editor\" \"npm run dev:customized-editor\" \"npm run dev:threed-editor\" \"npm run dev:payment\" \"npm run dev:user\"",
+    "start": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,PAYMENT,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,yellow,gray\" \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:myflipibook\" \"npm run start:page-editor\" \"npm run start:pdf-editor\" \"npm run start:customized-editor\" \"npm run start:threed-editor\" \"npm run start:payment\" \"npm run start:user\"",
     "start:gateway": "node api-gateway/src/server.js",
     "start:auth": "node services/auth-service/src/server.js",
     "start:myflipibook": "node services/myflipibook-service/src/server.js",
@@ -24,10 +24,8 @@
     "dev:payment": "node --watch services/payment-services/src/server.js",
     "dev:user": "node --watch services/user-service/src/server.js"
   },
-  "devDependencies": {
-    "concurrently": "^10.0.5"
-  },
   "dependencies": {
+    "concurrently": "^10.0.5",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

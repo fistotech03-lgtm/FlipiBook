@@ -11,6 +11,7 @@ import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
 import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import { queryClient } from '../../queryClient';
 import {
   createDefaultLogoSettings,
   createDefaultWatermarkSettings,
@@ -128,6 +129,14 @@ const CustomizedEditor = () => {
     return Boolean(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
   });
   const [tocOpenTrigger, setTocOpenTrigger] = useState(0);
+
+  // Invalidate queries on unmount so returning to MyFlipbooks refetches latest data
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+      queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
+    };
+  }, []);
 
   // Customization Settings States
   const [logoSettings, setLogoSettings] = useState(() => createDefaultLogoSettings(currentBook, location.state));

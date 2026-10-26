@@ -28,11 +28,13 @@ export default function ConverterWorkspace({
   onFileSelect
 }) {
   const localFileInputRef = useRef(null);
+  const localFolderInputRef = useRef(null);
   const [targetFormat, setTargetFormat] = useState(mediaConfig.defaultOutput || mediaConfig.formats[0]);
   const [compressionSetting, setCompressionSetting] = useState(mediaConfig.compressionLevels[0]);
 
   // Dynamic file metadata (resolution, duration, vertex/polygon counts)
   const [fileDetails, setFileDetails] = useState(null);
+  const [detectedAnimations, setDetectedAnimations] = useState([]);
 
   // 3D Auto Rotate toggle state
   const [autoRotate3D, setAutoRotate3D] = useState(true);
@@ -67,6 +69,7 @@ export default function ConverterWorkspace({
     setProcessStatus('');
     setErrorMessage(null);
     setViewMode('original');
+    setDetectedAnimations([]);
   }, [fileItem]);
 
   // Extract detailed media metadata based on file type
@@ -283,7 +286,7 @@ export default function ConverterWorkspace({
     <div className="w-full h-[93vh] max-h-[93vh] flex flex-col font-poppins text-slate-800 overflow-hidden bg-[#F1F5F9]">
 
       {/* 1. Header Toolbar */}
-      <header className="shrink-0 h-14 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between z-10 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <header className="shrink-0 h-14 bg-white border-b border-slate-200/80 px-6 sm:px-8 relative flex items-center justify-between z-10 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -306,7 +309,7 @@ export default function ConverterWorkspace({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5">
           {/* Hidden File Input for Change File */}
           <input
             ref={localFileInputRef}
@@ -324,19 +327,19 @@ export default function ConverterWorkspace({
           <button
             type="button"
             onClick={() => localFileInputRef.current?.click()}
-            className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+            className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-sm font-medium flex items-center gap-2 cursor-pointer transition-all shadow-xs hover:border-slate-300"
           >
-            <Replace className="w-3.5 h-3.5 text-slate-500" />
-            <span>Change File</span>
+            <Replace className="w-4 h-4 text-slate-500" />
+            <span>{mediaConfig.id === 'threed' ? 'Change File / Zip' : 'Change File'}</span>
           </button>
 
           {convertedResult && (
             <button
               type="button"
               onClick={handleDownloadFile}
-              className="px-4 py-1.5 rounded-lg bg-[#ea543a] hover:bg-[#d8482f] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-98"
+              className="px-5 py-2 rounded-xl bg-[#ea543a] hover:bg-[#d8482f] text-white text-sm font-medium flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:shadow active:scale-98"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Download</span>
             </button>
           )}
@@ -453,6 +456,9 @@ export default function ConverterWorkspace({
                         format={fileItem.ext}
                         autoRotate={autoRotate3D}
                         className="w-full h-full"
+                        onAnimationsDetected={(anims) => {
+                          if (anims && anims.length > 0) setDetectedAnimations(anims);
+                        }}
                       />
                     )}
                   </div>
@@ -517,6 +523,9 @@ export default function ConverterWorkspace({
                   format={fileItem.ext}
                   autoRotate={autoRotate3D}
                   className="w-full h-full"
+                  onAnimationsDetected={(anims) => {
+                    if (anims && anims.length > 0) setDetectedAnimations(anims);
+                  }}
                 />
               )}
             </div>
@@ -696,6 +705,19 @@ export default function ConverterWorkspace({
                   );
                 })}
               </div>
+
+              {/* Warning banner when source model contains animations but a format that only exports static meshes is chosen */}
+              {mediaConfig.id === 'threed' && detectedAnimations.length > 0 && ['USDZ', 'OBJ', 'FBX'].includes(targetFormat) && (
+                <div className="mt-2.5">
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-800 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="font-semibold text-amber-900">Static Export:</strong> This model has{' '}
+                      <strong className="font-semibold">{detectedAnimations.length} animation clip(s)</strong>. {targetFormat} exports static meshes only. To keep full animations, select <strong className="font-semibold underline cursor-pointer" onClick={() => setTargetFormat('GLB')}>GLB</strong>.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. Compression Level - Modern 2x2 Grid Tiles */}

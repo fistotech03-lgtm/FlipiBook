@@ -77,7 +77,7 @@ export default function InteractiveDemo() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl sm:text-3xl lg:text-[2.6vw] font-bold text-[#202227] leading-[1.12] lg:leading-[3.5vw] tracking-tight text-left"
+            className="text-[32px] xs:text-[36px] sm:text-[44px] md:text-[48px] lg:text-[2.6vw] font-bold text-[#202227] leading-[1.25] sm:leading-[1.2] md:leading-[1.18] lg:leading-[3.5vw] tracking-tight text-left"
           >
             <span className="whitespace-nowrap">See Your Products</span> <br />
             <span className="text-[#ED5B43]">Come to Life</span> <br />

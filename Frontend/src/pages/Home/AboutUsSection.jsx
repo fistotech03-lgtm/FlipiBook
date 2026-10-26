@@ -13,7 +13,7 @@ export default function AboutUsSection() {
     >
       {/* Top Header Tag: Aligned to the left margin on mobile/tablet, standard on desktop */}
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-[4.5vw] mb-2 sm:mb-4 md:mb-6 lg:mb-[1.2vw] flex items-center justify-start gap-3 relative z-30">
-        <span className="text-[11px] sm:text-xs lg:text-[0.82vw] font-bold tracking-[0.25em] text-[#222428] uppercase">
+        <span className="text-[11px] sm:text-xs lg:text-[0.82vw] font-semibold tracking-[0.05em] text-[#222428] uppercase">
           ABOUT US
         </span>
         <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#8d9095]"></div>
@@ -55,19 +55,19 @@ export default function AboutUsSection() {
               >
                 {/* Line 1: 'We Make' in a single line on all screen sizes */}
                 <div className="flex items-baseline justify-start lg:justify-end gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-[0.8vw]">
-                  <span className="text-3xl sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] inline-block">
+                  <span className="text-[34px] sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] inline-block">
                     We
                   </span>
                   
                   <h2
-                    className="text-3xl sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold tracking-tight leading-[1.08] inline-block text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
+                    className="text-[34px] sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold tracking-tight leading-[1.08] inline-block text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
                   >
                     Make
                   </h2>
                 </div>
 
                 {/* Line 2: 'Your Products Interactive' */}
-                <span className="text-2xl sm:text-4xl md:text-5xl lg:text-[3.4vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] block mt-0.5 sm:mt-1 lg:mt-[0.2vw]">
+                <span className="text-[34px] sm:text-4xl md:text-5xl lg:text-[3.4vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] block mt-0.5 sm:mt-1 lg:mt-[0.2vw]">
                   Your Products <span className="text-[#EC5137]">Interactive</span>
                 </span>
               </motion.div>
@@ -88,24 +88,24 @@ export default function AboutUsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-full lg:max-w-[26vw] flex flex-col items-start lg:items-end text-xs sm:text-[13px] md:text-[14px] lg:text-[0.88vw] text-[#2b2e34] font-normal leading-[1.55] sm:leading-[1.65] lg:leading-[1.5vw] text-justify lg:text-right pb-1 sm:pb-2"
+              className="w-full max-w-full lg:max-w-[26vw] flex flex-col items-start lg:items-end text-xs sm:text-[13.5px] md:text-[14.5px] lg:text-[0.88vw] text-[#2b2e34] font-normal leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw] text-justify lg:text-right pb-1 sm:pb-2 mt-2 sm:mt-3 md:mt-4 lg:mt-0"
             >
-              <p className="leading-[1.55] sm:leading-[1.65] lg:leading-[1.5vw]">
+              <p className="leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw]">
                 FlipiBook by Fisto Tech Pvt Ltd turns static PDFs into interactive digital catalogues. Combine product videos, 3D models, and clickable links to help customers explore your products and understand how they work.
               </p>
-              <p className="mt-2.5 sm:mt-3 lg:mt-[1.5vw] leading-[1.55] sm:leading-[1.65] lg:leading-[1.5vw]">
+              <p className="mt-3.5 sm:mt-4 md:mt-5 lg:mt-[1.5vw] leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw]">
                 Based in Coimbatore, Fisto Tech creates 3D animations, AR/VR experiences, 3D websites, and custom applications for businesses in India and worldwide. We help you explain complex products clearly and make it easier for customers to take the next step.
               </p>
 
               {/* Button: Discover FlipiBook */}
-              <div className="pt-1.5 sm:pt-2 lg:mt-[1vw]">
+              <div className="pt-4 sm:pt-4 md:pt-5 lg:mt-[1vw]">
                 <button
                   type="button"
                   onClick={() => {
                     const el = document.getElementById('why-choose-flipibook') || document.querySelector('[class*="WhyChooseFlipibook"]');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-[#0D0F11] hover:bg-[#EC5137] text-white rounded-lg text-xs sm:text-sm lg:text-[0.8vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 bg-[#0D0F11] hover:bg-[#EC5137] text-white rounded-lg text-xs sm:text-sm lg:text-[0.8vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
                 >
                   <span>Discover FlipiBook</span>
                 </button>

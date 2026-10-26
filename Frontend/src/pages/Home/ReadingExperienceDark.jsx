@@ -64,7 +64,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="flex items-center justify-start gap-3 sm:gap-4 lg:gap-[1vw]"
         >
-          <span className="text-xs lg:text-[0.72vw] font-bold tracking-[0.25em] text-[#d1d5db] uppercase">
+          <span className="text-xs lg:text-[0.72vw] font-semibold tracking-[0.05em] lg:tracking-[0.25em] text-[#d1d5db] uppercase">
             INTERACTIVE 3D CATALOGUES
           </span>
           <div className="w-10 lg:w-[2.6vw] h-[1.5px] lg:h-[0.1vw] bg-[#6b7280]"></div>
@@ -86,7 +86,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.95, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.8vw] lg:leading-[4vw] font-bold text-white leading-[1.08] sm:leading-[1.12] tracking-tight"
+              className="text-[34px] sm:text-[45px] lg:text-[2.8vw] lg:leading-[4vw] font-semibold text-white leading-[1.08] sm:leading-[1.12] tracking-tight"
             >
               Give Customers <br />
               a <span className="text-[#EC5137]">Closer Look</span> <br />
@@ -169,7 +169,7 @@ export default function ReadingExperienceDark({ onOpenCreateModal }) {
                 
                 {/* Title & Description */}
                 <div className="flex flex-col min-w-0">
-                  <h4 className="text-[13.7px] sm:text-[15px] md:text-[16px] lg:text-[1.1vw] font-bold text-white leading-tight mb-1 lg:mb-[0.29vw] group-hover:text-[#EA6229] transition-colors">
+                  <h4 className="text-[13.7px] sm:text-[15px] md:text-[16px] lg:text-[1.1vw] font-medium text-white leading-tight mb-1 lg:mb-[0.29vw] group-hover:text-[#EA6229] transition-colors">
                     {item.title}
                   </h4>
                   <p className="text-[11.7px] sm:text-[12.5px] md:text-[13px] lg:text-[0.8vw] text-[#9ca3af] lg:text-[#a0a5ad] font-normal leading-relaxed max-w-[240px] sm:max-w-none">

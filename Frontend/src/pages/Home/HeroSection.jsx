@@ -300,7 +300,7 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
               initial={{ opacity: 0, y: 20 }}
               animate={isPreloaderDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xs sm:text-sm md:text-[15px] lg:text-[0.85vw] font-light text-[#555555] leading-[165%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-center sm:text-justify lg:text-left"
+              className="text-xs sm:text-sm md:text-[15px] lg:text-[0.85vw] font-light text-[#555555] leading-[165%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-justify lg:text-left"
             >
               Turn your PDF into an interactive digital catalogue with FlipiBook. Add product videos, 3D models, and clickable links so customers can see how your products work, explore the details, and contact your team. Share your catalogue through a single link.
             </motion.p>

@@ -9,23 +9,179 @@ import JSZip from 'jszip';
 import { GLTFLoader } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import { FBXLoader } from 'three-stdlib';
+import { STLLoader } from 'three-stdlib';
 import { OBJExporter } from 'three-stdlib';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
 import { USDLoader } from 'three/examples/jsm/loaders/USDLoader.js';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { exportToFbx } from './threeDExportHelpers';
+import { unpackZipArchive, createVirtualLoadingManager } from './archiveModelHandler';
 
 // Non-blocking tick to let UI and GC breathe
 const yieldToMain = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /**
- * Loads a 3D model file from memory into a THREE.Scene or THREE.Group
+ * Loads a 3D model file (or unpacked archive / folder) from memory into a THREE.Scene or THREE.Group
+ * Captures all animations (gltf.animations, fbx.animations) and preserves textures/materials.
  */
 const load3DModel = async (file, onProgress) => {
   const ext = file.name.split('.').pop()?.toLowerCase();
-  const buffer = await file.arrayBuffer();
 
-  onProgress?.(20, `Parsing .${ext} geometry...`);
+  // Handle Archive packages (.zip, .rar, etc.)
+  if (ext === 'zip' || ext === 'rar' || ext === '7z' || ext === 'tar' || ext === 'gz') {
+    onProgress?.(15, `Extracting 3D package archive (${file.name})...`);
+    await yieldToMain();
+
+    const { primaryEntry, urlMap, revokeAll } = await unpackZipArchive(file);
+    const basePath = primaryEntry.path.includes('/') ? primaryEntry.path.substring(0, primaryEntry.path.lastIndexOf('/')) : '';
+    const manager = createVirtualLoadingManager(urlMap, basePath);
+
+    try {
+      const primaryExt = primaryEntry.ext.toLowerCase();
+      onProgress?.(30, `Loading packaged model: ${primaryEntry.name}...`);
+      await yieldToMain();
+
+      let loadedRoot = null;
+
+      if (primaryExt === 'glb' || primaryExt === 'gltf') {
+        const loader = new GLTFLoader(manager);
+        loadedRoot = await new Promise((resolve, reject) => {
+          loader.load(
+            primaryEntry.objectUrl,
+            (gltf) => {
+              const root = gltf.scene || gltf.scenes[0];
+              if (gltf.animations && gltf.animations.length > 0) {
+                root.animations = gltf.animations;
+              }
+              resolve(root);
+            },
+            undefined,
+            (err) => reject(new Error(`Failed to load archive GLTF: ${err.message || 'Parser failed'}`))
+          );
+        });
+      } else if (primaryExt === 'fbx') {
+        const loader = new FBXLoader(manager);
+        loader.setPath(basePath ? (basePath.endsWith('/') ? basePath : `${basePath}/`) : '');
+        const resp = await fetch(primaryEntry.objectUrl);
+        const buffer = await resp.arrayBuffer();
+        const obj = loader.parse(buffer, basePath ? (basePath.endsWith('/') ? basePath : `${basePath}/`) : '');
+
+        // Find texture images in archive
+        const imageEntries = Array.from(urlMap.entries()).filter(([key]) =>
+          /\.(png|jpe?g|webp|bmp|tga)$/i.test(key)
+        );
+
+        const textureCache = new Map();
+        const getTexture = (url) => {
+          if (textureCache.has(url)) return textureCache.get(url);
+          const tex = new THREE.TextureLoader().load(url);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          textureCache.set(url, tex);
+          return tex;
+        };
+
+        obj.traverse((child) => {
+          if (child.isMesh) {
+            const mats = Array.isArray(child.material) ? child.material : (child.material ? [child.material] : []);
+            
+            mats.forEach((mat) => {
+              // Strip shader VFX vertex colors that darken models to black
+              if (mat.vertexColors) {
+                mat.vertexColors = false;
+              }
+
+              // Auto-bind diffuse textures if unmapped
+              if (!mat.map && imageEntries.length > 0) {
+                const matName = (mat.name || '').toLowerCase();
+                const meshName = (child.name || '').toLowerCase();
+
+                let matchedEntry = imageEntries.find(([path]) => {
+                  const lower = path.toLowerCase();
+                  return (matName && lower.includes(matName)) || (meshName && lower.includes(meshName));
+                });
+
+                if (!matchedEntry) {
+                  matchedEntry = imageEntries.find(([path]) => {
+                    const lower = path.toLowerCase();
+                    return lower.includes('diff') || lower.includes('basecolor') || lower.includes('color') || lower.includes('albedo');
+                  });
+                }
+
+                if (!matchedEntry && imageEntries.length > 0) {
+                  matchedEntry = imageEntries.find(([path]) => {
+                    const lower = path.toLowerCase();
+                    return !lower.includes('normal') && !lower.includes('rough') && !lower.includes('metal') && !lower.includes('bump');
+                  }) || imageEntries[0];
+                }
+
+                if (matchedEntry) {
+                  mat.map = getTexture(matchedEntry[1]);
+                }
+              }
+
+              if (mat.map) {
+                if (mat.color) {
+                  mat.color.setHex(0xffffff);
+                }
+                mat.needsUpdate = true;
+              }
+            });
+          }
+        });
+
+        loadedRoot = obj;
+      } else if (primaryExt === 'obj') {
+        // Look for corresponding .mtl in urlMap
+        const mtlFileName = primaryEntry.name.replace(/\.obj$/i, '.mtl');
+        const mtlUrl = urlMap.get(mtlFileName) || urlMap.get(mtlFileName.toLowerCase());
+
+        if (mtlUrl) {
+          const mtlLoader = new MTLLoader(manager);
+          const materials = await new Promise((resolve, reject) => {
+            mtlLoader.load(mtlUrl, resolve, undefined, reject);
+          });
+          materials.preload();
+
+          const objLoader = new OBJLoader(manager);
+          objLoader.setMaterials(materials);
+          loadedRoot = await new Promise((resolve, reject) => {
+            objLoader.load(primaryEntry.objectUrl, resolve, undefined, reject);
+          });
+        } else {
+          const objLoader = new OBJLoader(manager);
+          loadedRoot = await new Promise((resolve, reject) => {
+            objLoader.load(primaryEntry.objectUrl, resolve, undefined, reject);
+          });
+        }
+      } else if (primaryExt === 'stl') {
+        const loader = new STLLoader(manager);
+        const geom = await new Promise((resolve, reject) => {
+          loader.load(primaryEntry.objectUrl, resolve, undefined, reject);
+        });
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0xdadada,
+          roughness: 0.45,
+          metalness: 0.15,
+          side: THREE.DoubleSide
+        });
+        loadedRoot = new THREE.Mesh(geom, mat);
+      } else {
+        throw new Error(`Unsupported primary model format in archive: .${primaryExt}`);
+      }
+
+      // Store cleanup on root so converter can safely revoke all archive URLs after export
+      loadedRoot._revokeArchive = revokeAll;
+      return loadedRoot;
+    } catch (archiveErr) {
+      revokeAll();
+      throw archiveErr;
+    }
+  }
+
+  // Handle direct standalone 3D files
+  const buffer = await file.arrayBuffer();
+  onProgress?.(20, `Parsing .${ext} geometry & animations...`);
   await yieldToMain();
 
   if (ext === 'glb' || ext === 'gltf') {
@@ -34,7 +190,14 @@ const load3DModel = async (file, onProgress) => {
       loader.parse(
         buffer,
         '',
-        (gltf) => resolve(gltf.scene || gltf.scenes[0]),
+        (gltf) => {
+          const root = gltf.scene || gltf.scenes[0];
+          // Preserve animation tracks
+          if (gltf.animations && gltf.animations.length > 0) {
+            root.animations = gltf.animations;
+          }
+          resolve(root);
+        },
         (err) => reject(new Error(`Failed to parse GLTF/GLB: ${err.message}`))
       );
     });
@@ -51,6 +214,19 @@ const load3DModel = async (file, onProgress) => {
     const loader = new FBXLoader();
     const object = loader.parse(buffer, '');
     return object;
+  }
+
+  if (ext === 'stl') {
+    const loader = new STLLoader();
+    const geom = loader.parse(buffer);
+    geom.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xdadada,
+      roughness: 0.45,
+      metalness: 0.15,
+      side: THREE.DoubleSide
+    });
+    return new THREE.Mesh(geom, mat);
   }
 
   if (ext === 'usdz') {
@@ -238,6 +414,12 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
     const isBinary = fmt === 'GLB';
     const exporter = new GLTFExporter();
 
+    // Collect animations from scene root or child objects
+    const animations = [];
+    if (scene.animations && Array.isArray(scene.animations)) {
+      animations.push(...scene.animations);
+    }
+
     return new Promise((resolve, reject) => {
       exporter.parse(
         scene,
@@ -255,7 +437,8 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
         {
           binary: isBinary,
           embedImages: true,
-          truncateDrawRange: true
+          truncateDrawRange: true,
+          animations: animations.length > 0 ? animations : undefined
         }
       );
     });
@@ -279,12 +462,13 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
 
   // Fallback to GLB export
   const exporter = new GLTFExporter();
+  const animations = scene.animations && Array.isArray(scene.animations) ? scene.animations : undefined;
   return new Promise((resolve, reject) => {
     exporter.parse(
       scene,
       (result) => resolve(new Blob([result], { type: 'model/gltf-binary' })),
       (err) => reject(new Error(`Export error: ${err.message}`)),
-      { binary: true }
+      { binary: true, animations }
     );
   });
 };
@@ -341,6 +525,11 @@ export async function convertAndCompress3D(file, targetFormat, compressionPreset
     return outputBlob;
   } finally {
     // Memory safeguard: explicitly release Three.js scene from RAM
+    if (scene?._revokeArchive) {
+      try {
+        scene._revokeArchive();
+      } catch (_e) {}
+    }
     disposeScene(scene);
     scene = null;
   }

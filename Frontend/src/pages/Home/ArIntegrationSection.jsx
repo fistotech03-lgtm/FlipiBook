@@ -40,7 +40,7 @@ export default function ArIntegrationSection() {
             transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
           >
-            <h2 className="text-[26px] sm:text-[44px] md:text-[48px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
+            <h2 className="text-[34px] xs:text-[36px] sm:text-[45px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
               <span className="block">See Your Products</span>
               <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Your Space</span>
             </h2>

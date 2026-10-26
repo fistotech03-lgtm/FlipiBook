@@ -48,7 +48,7 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
             />
           </div>
 
-          <h2 className="text-2xl sm:text-4xl lg:text-[2.8vw] font-extrabold tracking-tight leading-tight">
+          <h2 className="text-[34px] sm:text-4xl lg:text-[2.8vw] font-extrabold tracking-tight leading-tight">
             <span className="text-[#000000]">I</span>
             <span className="text-[#454545]">nteractive </span>
             <span className="text-[#000000]">D</span>

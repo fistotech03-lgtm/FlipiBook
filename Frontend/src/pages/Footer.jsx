@@ -39,74 +39,87 @@ export default function Footer() {
             <div className="flex-1 flex flex-col justify-start lg:pl-[1.75vw]">
 
               {/* Horizontal Social Links Bar */}
-              <div className="grid grid-cols-2 gap-y-3.5 gap-x-6 sm:flex sm:flex-wrap sm:items-center sm:gap-x-7 lg:gap-[3.2vw] text-xs sm:text-sm md:text-sm lg:text-[0.9vw] font-normal text-white pb-5 sm:pb-6 lg:pb-[1vw] border-b border-white/10 lg:border-b-0">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 sm:gap-x-8 lg:gap-x-8 xl:gap-x-12 gap-y-3.5 text-xs sm:text-sm md:text-sm lg:text-[0.9vw] font-normal text-white pb-5 sm:pb-6 lg:pb-[1.1vw] border-b border-white/10 lg:border-b-0">
 
                 {/* Facebook */}
-                <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group py-1">
-                  <Icon icon="fa6-brands:facebook-f" className="text-sm sm:text-base lg:text-[1vw]" />
-                  <span className="font-medium">Facebook</span>
-                  <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </a>
-
-                {/* Vertical Divider 1 */}
-                <div className="w-[1px] h-4 sm:h-5 lg:h-[2.3vw] bg-white/20 lg:bg-white/80 shrink-0 hidden sm:block" />
-
-                {/* Instagram */}
-                <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group py-1">
-                  <Icon icon="mdi:instagram" className="text-base sm:text-lg lg:text-[1.15vw]" />
-                  <span className="font-medium">Instagram</span>
-                  <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </a>
-
-                {/* Vertical Divider 2 */}
-                <div className="w-[1px] h-4 sm:h-5 lg:h-[2.3vw] bg-white/20 lg:bg-white/80 shrink-0 hidden sm:block" />
-
-                {/* LinkedIn */}
-                <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group py-1">
-                  <Icon icon="fa6-brands:linkedin-in" className="text-sm sm:text-base lg:text-[1vw]" />
-                  <span className="font-medium">Linked in</span>
-                  <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </a>
-
-                {/* Vertical Divider 3 */}
-                <div className="w-[1px] h-4 sm:h-5 lg:h-[2.3vw] bg-white/20 lg:bg-white/80 shrink-0 hidden sm:block" />
-
-                {/* YouTube */}
-                <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group py-1">
-                  <Icon icon="fa6-brands:youtube" className="text-sm sm:text-base lg:text-[1.1vw]" />
-                  <span className="font-medium">YouTube</span>
-                  <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </a>
-              </div>
-
-              {/* 3 Link Columns */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 sm:gap-x-10 gap-y-6 sm:gap-y-6 lg:flex lg:items-start text-[13px] sm:text-sm lg:text-[0.74vw] text-[#C5CAD0] pt-6 sm:pt-7 lg:pt-0">
-
-                {/* Column 1: Main Pages */}
-                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw] lg:pl-[9.8vw]">
-                  <Link to="/" className="hover:text-white underline underline-offset-4 transition-colors">Home</Link>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Features</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Templates</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Explore</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Pricing</a>
+                <div className="flex items-center justify-between relative py-1">
+                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                    <Icon icon="fa6-brands:facebook-f" className="text-sm sm:text-base lg:text-[1vw] shrink-0" />
+                    <span className="font-medium whitespace-nowrap">Facebook</span>
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                  </a>
+                  {/* Vertical Divider 1 */}
+                  <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
                 </div>
 
-                {/* Column 2: Contact Info - Shifted slightly right to center precisely under divider */}
-                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw] lg:pl-[4.6vw]">
-                  <a href="mailto:info@flipibook-o.com" className="hover:text-white underline underline-offset-4 transition-colors break-all sm:break-normal">
+                {/* Instagram */}
+                <div className="flex items-center justify-between relative py-1">
+                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                    <Icon icon="mdi:instagram" className="text-base sm:text-lg lg:text-[1.15vw] shrink-0" />
+                    <span className="font-medium whitespace-nowrap">Instagram</span>
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                  </a>
+                  {/* Vertical Divider 2 */}
+                  <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
+                </div>
+
+                {/* LinkedIn */}
+                <div className="flex items-center justify-between relative py-1">
+                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                    <Icon icon="fa6-brands:linkedin-in" className="text-sm sm:text-base lg:text-[1vw] shrink-0" />
+                    <span className="font-medium whitespace-nowrap">Linked in</span>
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                  </a>
+                  {/* Vertical Divider 3 */}
+                  <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
+                </div>
+
+                {/* YouTube */}
+                <div className="flex items-center justify-between relative py-1">
+                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                    <Icon icon="fa6-brands:youtube" className="text-sm sm:text-base lg:text-[1.1vw] shrink-0" />
+                    <span className="font-medium whitespace-nowrap">YouTube</span>
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                  </a>
+                </div>
+
+              </div>
+
+              {/* 4 Link Columns - Perfectly aligned underneath social tabs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 sm:gap-x-8 lg:gap-x-8 xl:gap-x-12 gap-y-6 text-[13px] sm:text-sm lg:text-[0.76vw] text-[#C5CAD0] pt-6 sm:pt-7 lg:pt-0">
+
+                {/* Column 1: Nav Links Part 1 (aligned under Facebook) */}
+                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw]">
+                  <Link to="/home" className="hover:text-white  transition-colors">Home</Link>
+                  <Link to="/explore" className="hover:text-white  transition-colors">Explore</Link>
+                  <Link to="/features" className="hover:text-white  transition-colors">Features</Link>
+                  <Link to="/converter" className="hover:text-white  transition-colors">Converter</Link>
+                </div>
+
+                {/* Column 2: Nav Links Part 2 (aligned under Instagram) */}
+                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw]">
+                  <Link to="/pricing" className="hover:text-white  transition-colors">Pricing</Link>
+                  <Link to="/forum" className="hover:text-white  transition-colors">Forum</Link>
+                  <Link to="/help" className="hover:text-white  transition-colors">Help</Link>
+                  
+                </div>
+
+                {/* Column 3: Contact Info (aligned under LinkedIn) */}
+                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw]">
+                  <a href="mailto:info@flipibook-o.com" className="hover:text-white  transition-colors break-words sm:break-normal">
                     info@flipibook-o.com
                   </a>
-                  <a href="tel:+917530025147" className="hover:text-white underline underline-offset-4 transition-colors whitespace-nowrap">
+                  <a href="tel:+917530025147" className="hover:text-white  transition-colors whitespace-nowrap">
                     +91 75300 25147
                   </a>
                 </div>
 
-                {/* Column 3: Resource Links - Aligned straight under the vertical divider line before YouTube */}
-                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw] lg:pl-[6.65vw] col-span-2 sm:col-span-1 pt-1 sm:pt-0">
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Documentation</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Tutorials</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">Help Center</a>
-                  <a href="#" className="hover:text-white underline underline-offset-4 transition-colors">FAQs</a>
+                {/* Column 4: Resource Links (aligned under YouTube) */}
+                <div className="flex flex-col space-y-2.5 sm:space-y-3 lg:space-y-[0.48vw]">
+                  <a href="#" className="hover:text-white  transition-colors">Documentation</a>
+                  <a href="#" className="hover:text-white  transition-colors">Tutorials</a>
+                  <a href="#" className="hover:text-white  transition-colors">Help Center</a>
+                  <a href="#" className="hover:text-white  transition-colors">FAQs</a>
                 </div>
 
               </div>

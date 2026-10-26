@@ -76,7 +76,8 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
   const videoUrl = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.src = videoUrl;
-  video.muted = true;
+  video.muted = false;
+  video.volume = 1.0;
   video.playsInline = true;
   video.crossOrigin = 'anonymous';
 
@@ -123,30 +124,46 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
     return file;
   }
 
+  // Determine best codec/container
+  const { mime, ext } = getSupportedMimeType(targetFormat);
+
   // Audio capture
   const combinedStream = canvasStream;
+  let audioContext = null;
+  let hasAudioTrack = false;
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
     const sourceNode = audioContext.createMediaElementSource(video);
     const destinationNode = audioContext.createMediaStreamDestination();
     sourceNode.connect(destinationNode);
     destinationNode.stream.getAudioTracks().forEach((track) => {
       combinedStream.addTrack(track);
+      hasAudioTrack = true;
     });
-  } catch (_err) {
-    // Proceed without audio track if restricted
+  } catch (err) {
+    console.warn('Unable to extract audio track:', err);
+    // Proceed without audio track if restricted or silent
   }
 
-  const { mime } = getSupportedMimeType(targetFormat);
+  // Audio bitrates: 128 kbps standard if audio present
+  const audioBitsPerSecond = hasAudioTrack ? 128000 : 0;
 
   let recorder;
   try {
     recorder = new MediaRecorder(combinedStream, {
       mimeType: mime,
-      videoBitsPerSecond: config.videoBitsPerSecond
+      videoBitsPerSecond: config.videoBitsPerSecond,
+      ...(hasAudioTrack ? { audioBitsPerSecond } : {})
     });
   } catch (_e) {
-    recorder = new MediaRecorder(combinedStream);
+    try {
+      recorder = new MediaRecorder(combinedStream, { mimeType: mime });
+    } catch (_e2) {
+      recorder = new MediaRecorder(combinedStream);
+    }
   }
 
   const chunks = [];
@@ -154,16 +171,23 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
     if (e.data && e.data.size > 0) chunks.push(e.data);
   };
 
+  const cleanup = () => {
+    URL.revokeObjectURL(videoUrl);
+    if (audioContext && audioContext.state !== 'closed') {
+      audioContext.close().catch(() => {});
+    }
+  };
+
   return new Promise((resolve, reject) => {
     recorder.onstop = () => {
-      URL.revokeObjectURL(videoUrl);
+      cleanup();
       const outputBlob = new Blob(chunks, { type: mime });
       onProgress?.(100, 'Video processing complete!');
       resolve(outputBlob);
     };
 
     recorder.onerror = (e) => {
-      URL.revokeObjectURL(videoUrl);
+      cleanup();
       reject(new Error(`Recording error: ${e?.error?.message || 'Encoder failed'}`));
     };
 
@@ -201,7 +225,7 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
         animId = requestAnimationFrame(renderLoop);
       })
       .catch((err) => {
-        URL.revokeObjectURL(videoUrl);
+        cleanup();
         reject(new Error(`Video playback error: ${err.message}`));
       });
   });

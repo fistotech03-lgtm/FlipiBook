@@ -13,11 +13,11 @@ const SmartSolutionsSection = () => {
 
       {/* Top FEATURES Tag */}
       <div className="w-full flex items-center justify-between pointer-events-none select-none z-10 pt-1 lg:pt-[0.4vw]">
-        <div className="flex items-center gap-3 lg:gap-[0.6vw]">
-          <span className="text-xs lg:text-[0.68vw] font-bold tracking-[0.25em] text-[#35363A] uppercase">
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-[0.6vw]">
+          <span className="text-[10px] sm:text-xs lg:text-[0.68vw] font-bold tracking-[0.16em] sm:tracking-[0.25em] text-[#35363A] uppercase">
             INTERACTIVE 3D PRODUCT VIEWER
           </span>
-          <div className="w-8 lg:w-[2.4vw] h-[1.5px] lg:h-[0.1vw] bg-[#35363A]/40"></div>
+          <div className="w-6 sm:w-8 lg:w-[2.4vw] h-[1.5px] lg:h-[0.1vw] bg-[#35363A]/40"></div>
         </div>
       </div>
 
@@ -29,7 +29,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xl sm:text-5xl md:text-6xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-tight w-full"
+            className="text-[34px] mt-2 sm:mt-0 xs:text-[34px] sm:text-6xl md:text-7xl lg:text-[6.2vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 text-center leading-[1.15] sm:leading-tight w-full "
           >
             EXPLORE EVERY ANGLE
           </motion.h2>
@@ -40,7 +40,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="sm:absolute static mt-1 sm:mt-2 md:mt-3 lg:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-3 md:-bottom-4 lg:bottom-auto font-rage italic text-lg sm:text-3xl md:text-4xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap"
+            className="sm:absolute static -mt-1 sm:mt-2 md:mt-3 lg:mt-0 left-[62%] sm:left-[61%] lg:left-[61vw] lg:top-[5.5vw] sm:-bottom-3 md:-bottom-4 lg:bottom-auto font-rage italic text-2xl xs:text-3xl sm:text-4xl lg:text-[2.2vw] text-[#EC5137] tracking-wide pointer-events-none select-none z-20 whitespace-nowrap"
           >
             3D Model Viewer
           </motion.span>
@@ -95,9 +95,9 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl sm:text-4xl lg:text-[2.7vw] font-bold text-gray-900 leading-[1.15] tracking-tight font-sans"
+            className="text-2xl sm:text-[45px] lg:text-[2.7vw] font-bold text-gray-900 leading-[1.2] sm:leading-[1.15] tracking-tight font-sans text-center lg:text-left"
           >
-            Let Customers Explore <br className="hidden sm:block" />
+            Let Customers Explore <br className="block" />
             <span className="text-[#EC5137]">Every Angle</span>
           </motion.h2>
 
@@ -116,7 +116,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xs sm:text-[15px] lg:text-[0.96vw] text-gray-700 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
+            className="text-xs sm:text-[15px] lg:text-[0.96vw] text-gray-700 font-normal leading-relaxed w-full max-w-md lg:w-[28vw] text-justify lg:text-left"
           >
             Bring your products into focus with FlipiBook’s interactive 3D digital catalogues. Let customers rotate models, zoom in on details, and click hotspots to understand product features before making an inquiry.
           </motion.p>

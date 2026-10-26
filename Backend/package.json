@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Flipbook Backend Microservices & API Gateway",
   "scripts": {
-    "dev": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED\" -c \"cyan,magenta,blue,yellow,green,red,white\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:myflipibook\" \"npm run dev:page-editor\" \"npm run dev:pdf-editor\" \"npm run dev:customized-editor\" \"npm run dev:threed-editor\"",
-    "start": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED\" -c \"cyan,magenta,blue,yellow,green,red,white\" \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:myflipibook\" \"npm run start:page-editor\" \"npm run start:pdf-editor\" \"npm run start:customized-editor\" \"npm run start:threed-editor\"",
+    "dev": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,gray\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:myflipibook\" \"npm run dev:page-editor\" \"npm run dev:pdf-editor\" \"npm run dev:customized-editor\" \"npm run dev:threed-editor\" \"npm run dev:user\"",
+    "start": "concurrently -n \"GATEWAY,AUTH,FLIPBOOK,PAGE_ED,PDF_ED,CUSTOM_ED,THREED_ED,USER\" -c \"cyan,magenta,blue,yellow,green,red,white,gray\" \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:myflipibook\" \"npm run start:page-editor\" \"npm run start:pdf-editor\" \"npm run start:customized-editor\" \"npm run start:threed-editor\" \"npm run start:user\"",
     "start:gateway": "node api-gateway/src/server.js",
     "start:auth": "node services/auth-service/src/server.js",
     "start:myflipibook": "node services/myflipibook-service/src/server.js",
@@ -13,6 +13,7 @@
     "start:customized-editor": "node services/customized-editor-service/src/server.js",
     "start:threed-editor": "node services/threed-editor-service/src/server.js",
     "start:payment": "node services/payment-services/src/server.js",
+    "start:user": "node services/user-service/src/server.js",
     "dev:gateway": "node --watch api-gateway/src/server.js",
     "dev:auth": "node --watch services/auth-service/src/server.js",
     "dev:myflipibook": "node --watch services/myflipibook-service/src/server.js",
@@ -20,7 +21,8 @@
     "dev:pdf-editor": "node --watch services/pdf-editor-service/src/server.js",
     "dev:customized-editor": "node --watch services/customized-editor-service/src/server.js",
     "dev:threed-editor": "node --watch services/threed-editor-service/src/server.js",
-    "dev:payment": "node --watch services/payment-services/src/server.js"
+    "dev:payment": "node --watch services/payment-services/src/server.js",
+    "dev:user": "node --watch services/user-service/src/server.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

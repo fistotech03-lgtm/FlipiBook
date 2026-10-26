@@ -18,6 +18,7 @@ const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127
 const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
 const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://127.0.0.1:5008';
 
 // Global Middleware
 const allowedOrigins = [
@@ -838,6 +839,42 @@ app.use(
   })
 );
 
+// Proxy /api/user and /api/users requests to User Service (port 5008)
+app.use(
+  ['/api/user', '/api/users'],
+  createProxyMiddleware({
+    target: USER_SERVICE_URL,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to user-service:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'User Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
@@ -853,6 +890,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /hdri -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /textures -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/payment -> ${PAYMENT_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/user -> ${USER_SERVICE_URL}`);
 });
 
 module.exports = app;

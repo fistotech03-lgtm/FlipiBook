@@ -63,12 +63,12 @@ export default function InteractiveDemo() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]"
+            className="flex items-center justify-start gap-2.5 sm:gap-3 mb-2.5 sm:mb-3.5 lg:mb-[1.1vw]"
           >
-            <span className="text-[11px] lg:text-[0.82vw] font-bold tracking-[0.22em] text-[#2c2f35] uppercase">
+            <span className="text-[9.5px] sm:text-[10px] lg:text-[0.7vw] font-medium tracking-[0.2em] text-[#2c2f35] uppercase">
               INTERACTIVE CATALOGUE DEMO
             </span>
-            <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#9ca0a6]"></div>
+            <div className="w-6 sm:w-8 lg:w-[2.2vw] h-[1.5px] bg-[#9ca0a6]"></div>
           </motion.div>
 
           {/* Title */}
@@ -77,10 +77,10 @@ export default function InteractiveDemo() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left"
+            className="text-2xl sm:text-3xl lg:text-[2.6vw] font-bold text-[#202227] leading-[1.12] lg:leading-[3.5vw] tracking-tight text-left"
           >
-            See Your Products <br className="hidden lg:inline" />
-            <span className="text-[#ED5B43]">Come to Life</span> <br className="hidden lg:inline" />
+            <span className="whitespace-nowrap">See Your Products</span> <br />
+            <span className="text-[#ED5B43]">Come to Life</span> <br />
             with FlipiBook
           </motion.h2>
 
@@ -99,7 +99,7 @@ export default function InteractiveDemo() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
+            className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
           >
             Explore our interactive digital catalogue demos. Turn the pages, watch product videos, and rotate 3D models to see products from different angles. Discover how FlipiBook helps customers understand what you sell.
           </motion.p>

@@ -271,36 +271,36 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
         <div
           className="lg:col-span-3 flex flex-col justify-start text-center lg:text-left items-center lg:items-start py-1 h-full"
         >
-          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUES THAT BRING YOUR PRODUCTS TO LIFE */}
+          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUES (Increased size) */}
           <motion.h1
             initial={{ opacity: 0, x: -35 }}
             animate={isPreloaderDone ? { opacity: 1, x: 0 } : { opacity: 0, x: -35 }}
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.6vw] font-semibold text-[#35363A] leading-[1.3] sm:leading-[1.25] lg:leading-[1.4] tracking-tight"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.2vw] font-semibold text-[#35363A] leading-[1.25] sm:leading-[1.2] lg:leading-[1.3] tracking-tight"
           >
             INTERACTIVE <br className="inline sm:hidden lg:inline" />DIGITAL <br className="hidden sm:inline" />
             <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUES</span>
-            <span className="block text-base sm:text-xl md:text-2xl lg:text-[1.35vw] font-medium text-[#4B596C] tracking-normal mt-1 lg:mt-[0.3vw]">
+            <span className="block text-sm sm:text-base md:text-lg lg:text-[1.08vw] font-medium text-[#4B596C] tracking-normal mt-2 lg:mt-[0.6vw] leading-snug">
               THAT BRINGS YOUR PRODUCTS TO LIFE.
             </span>
           </motion.h1>
 
           {/* Bottom Sub-group: Divider + Description */}
-          <div className="pt-3 sm:pt-4 md:pt-4 flex flex-col items-center lg:items-start w-full">
+          <div className="pt-3 sm:pt-3.5 md:pt-4 flex flex-col items-center lg:items-start w-full">
             {/* Thin Horizontal Rule */}
             <motion.div
               initial={{ scaleX: 0 }}
               animate={isPreloaderDone ? { scaleX: 1 } : { scaleX: 0 }}
               transition={{ duration: 0.85, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-[200px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-3 sm:mb-4 lg:mb-[1.5vw] origin-left"
+              className="w-full max-w-[200px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-3 sm:mb-3.5 lg:mb-[1.2vw] origin-left"
             ></motion.div>
 
-            {/* Description Paragraph: font weight light & #555555, line height 160% */}
+            {/* Description Paragraph (Slightly increased to fill well while staying secondary) */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={isPreloaderDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xs sm:text-sm md:text-base lg:text-[0.92vw] font-light text-[#555555] leading-[160%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-center sm:text-justify lg:text-left"
+              className="text-xs sm:text-sm md:text-[15px] lg:text-[0.85vw] font-light text-[#555555] leading-[165%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-center sm:text-justify lg:text-left"
             >
               Turn your PDF into an interactive digital catalogue with FlipiBook. Add product videos, 3D models, and clickable links so customers can see how your products work, explore the details, and contact your team. Share your catalogue through a single link.
             </motion.p>

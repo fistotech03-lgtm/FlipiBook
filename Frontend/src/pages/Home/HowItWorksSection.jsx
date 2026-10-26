@@ -73,7 +73,8 @@ export default function HowItWorksSection() {
         className="text-center w-full mb-7 sm:mb-9 md:mb-11 lg:mb-[3.2vw] space-y-2 sm:space-y-2.5 lg:space-y-[0.7vw]"
       >
         <h2 className="text-2xl sm:text-4xl lg:text-[3vw] font-semibold text-[#1b222c] tracking-tight leading-tight">
-          Create Your Interactive Digital Catalogue in <span className="text-[#ea543a]">4 Simple Steps</span>
+          Create Your Interactive Digital Catalogue in <br />
+          <span className="text-[#ea543a]">4 Simple Steps</span>
         </h2>
         <p className="text-xs sm:text-base lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed max-w-2xl mx-auto">
           Turn your PDF into a product experience customers can explore. Create, customize, share, and track your catalogue with FlipiBook.

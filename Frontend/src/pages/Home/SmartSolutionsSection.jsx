@@ -116,7 +116,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xs sm:text-base lg:text-[1.02vw] text-gray-500 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
+            className="text-xs sm:text-[15px] lg:text-[0.96vw] text-gray-700 font-normal leading-relaxed w-full max-w-md lg:w-[28vw]"
           >
             Bring your products into focus with FlipiBook’s interactive 3D digital catalogues. Let customers rotate models, zoom in on details, and click hotspots to understand product features before making an inquiry.
           </motion.p>

@@ -5,7 +5,7 @@ import exploreArrowIcon from '../../assets/Home/explore-arrow-icon.png';
 
 export default function WhyChooseFlipibook() {
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] pt-6 pb-10 sm:pt-7 sm:pb-12 lg:pt-[1.8vw] lg:pb-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden ">
       
       {/* Top Header Tag Row with Sub-Labels */}
       <motion.div
@@ -13,7 +13,7 @@ export default function WhyChooseFlipibook() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]"
+        className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-2 sm:mb-2.5 lg:mb-[0.5vw]"
       >
         <div className="flex items-center gap-3">
           <span className="text-sm sm:text-[15px] lg:text-[0.85vw] font-semibold tracking-[0.28em] text-[#35363A] uppercase">
@@ -42,17 +42,18 @@ export default function WhyChooseFlipibook() {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[30px] sm:text-[42px] lg:text-[2.8vw] font-semibold tracking-tight text-[#35363A] leading-[1.25] lg:max-w-[32vw]"
+          className="text-[30px] sm:text-[42px] lg:text-[2.8vw] font-semibold tracking-tight text-[#35363A] leading-[1.2] lg:max-w-[40vw]"
         >
           Give Customers <br />
-          <span className="text-[#EC5137]">More Reasons</span> to Choose You
+          <span className="text-[#EC5137]">More Reasons</span> <br />
+          to Choose You
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[500px] lg:max-w-[30vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal"
+          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[500px] lg:max-w-[30vw] mt-2 sm:mt-3 lg:mt-[0.6vw] leading-[1.65] font-normal"
         >
           Create interactive digital catalogues that help customers understand your products. FlipiBook brings videos, 3D models, and enquiry links together in one shareable catalogue.
         </motion.p>
@@ -63,7 +64,7 @@ export default function WhyChooseFlipibook() {
         Figma artboard coordinate reference: X: 0 to 1920, Y: 340 to 920 (~580px relative height)
         Aspect ratio lock ensures SVG and cards NEVER detach or stretch out of alignment on desktop screens (>= 992px)!
       */}
-      <div className="w-full max-w-[1920px] mx-auto relative hidden min-[992px]:block mt-0 lg:-mt-[1.5vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
+      <div className="w-full max-w-[1920px] mx-auto relative hidden min-[992px]:block mt-0 lg:-mt-[3.8vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
         
         {/* Background SVG Wave and Accent Dots directly from Figma:
             Bounding box transformed to (0, 340) coordinate space:

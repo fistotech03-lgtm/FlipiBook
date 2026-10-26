@@ -15,15 +15,9 @@ const connectDB = async () => {
     console.log(`[Auth Service] MongoDB Connected: ${conn.connection.host}`);
     return conn;
   } catch (error) {
-    console.error(`[Auth Service] Database connection error: ${error.message}. Retrying in 5s...`);
-    setTimeout(connectDB, 5000);
+    console.error(`[Auth Service] Database connection error: ${error.message}`);
     return null;
   }
 };
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('[Auth Service] MongoDB disconnected. Reconnecting in 3s...');
-  setTimeout(connectDB, 3000);
-});
 
 module.exports = connectDB;

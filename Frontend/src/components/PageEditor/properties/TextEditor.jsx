@@ -11,23 +11,122 @@ import {
   ArrowLeftRight, ArrowUpDown, Maximize
 } from 'lucide-react';
 
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather',
-  'Designer_Signature', 'Public Sans', 'Lora', 'Cabin',
-  'Allura', 'Parisienne', 'Satisfy'
+const systemFonts = new Set([
+  'arial', 'times new roman', 'courier new', 'georgia', 'verdana',
+  'helvetica', 'sans-serif', 'serif', 'monospace', 'system-ui'
+]);
+
+export const loadGoogleFont = (font) => {
+  if (!font || typeof document === 'undefined') return;
+  const clean = font.replace(/['"]/g, '').split(',')[0].trim();
+  if (!clean || systemFonts.has(clean.toLowerCase()) || clean === 'Designer_Signature') return;
+
+  const fontId = `google-font-${clean.toLowerCase().replace(/\s+/g, '-')}`;
+  if (!document.getElementById(fontId)) {
+    const link = document.createElement('link');
+    link.id = fontId;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${clean.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
+    document.head.appendChild(link);
+  }
+};
+
+export const fontFamilies = [
+  'Outfit',
+  'Inter',
+  'Poppins',
+  'Roboto',
+  'Montserrat',
+  'Open Sans',
+  'Lato',
+  'Playfair Display',
+  'Oswald',
+  'Merriweather',
+  'Arial',
+  'Times New Roman',
+  'Courier New',
+  'Georgia',
+  'Verdana',
+  'Helvetica',
+  'Public Sans',
+  'Lora',
+  'Cabin',
+  'Raleway',
+  'Ubuntu',
+  'Allura',
+  'Parisienne',
+  'Satisfy',
+  'Bangers',
+  'Designer_Signature'
 ];
 
-const fontWeights = [
-  { name: 'Thin', value: '50' },
-  { name: 'Extra Light', value: '100' },
-  { name: 'Light', value: '200' },
-  { name: 'Regular', value: '400' },
-  { name: 'Medium', value: '500' },
-  { name: 'Semi Bold', value: '600' },
-  { name: 'Bold', value: '800' }
+export const fontWeights = [
+  { name: 'Thin', value: 'thin' },
+  { name: 'Light', value: 'light' },
+  { name: 'Regular', value: 'normal' },
+  { name: 'Medium', value: 'medium' },
+  { name: 'Semi Bold', value: 'semibold' },
+  { name: 'Bold', value: 'bold' },
+  { name: 'Extra Bold', value: 'extrabold' },
+  { name: 'Black', value: 'black' }
 ];
+
+export const normalizeToTailwindWeight = (weight) => {
+  if (!weight) return 'normal';
+  const w = weight.toString().toLowerCase().trim();
+  const map = {
+    '100': 'thin',
+    'thin': 'thin',
+    '200': 'light',
+    'extra light': 'light',
+    'extralight': 'light',
+    '300': 'light',
+    'light': 'light',
+    '400': 'normal',
+    'normal': 'normal',
+    'regular': 'normal',
+    '500': 'medium',
+    'medium': 'medium',
+    '600': 'semibold',
+    'semi bold': 'semibold',
+    'semibold': 'semibold',
+    '700': 'bold',
+    'bold': 'bold',
+    '800': 'extrabold',
+    'extra bold': 'extrabold',
+    'extrabold': 'extrabold',
+    '900': 'black',
+    'black': 'black'
+  };
+  return map[w] || 'normal';
+};
+
+export const weightToNumeric = (weight) => {
+  if (!weight) return '400';
+  const w = weight.toString().toLowerCase().trim();
+  const map = {
+    'thin': '100',
+    '100': '100',
+    'light': '300',
+    '300': '300',
+    'normal': '400',
+    'regular': '400',
+    '400': '400',
+    'medium': '500',
+    '500': '500',
+    'semibold': '600',
+    'semi bold': '600',
+    '600': '600',
+    'bold': '700',
+    '700': '700',
+    'extrabold': '800',
+    'extra bold': '800',
+    '800': '800',
+    'black': '900',
+    '900': '900'
+  };
+  return map[w] || '400';
+};
 
 
 
@@ -951,7 +1050,11 @@ const TextEditor = ({
   activePageIndex
 }) => {
   const [isScrollable, setIsScrollable] = useState(false);
-  const [sizingMode, setSizingMode] = useState('auto-height'); // 'auto-width' | 'auto-height' | 'fixed'
+  const [sizingMode, setSizingMode] = useState('auto-width'); // 'auto-width' | 'auto-height' | 'fixed'
+
+  // DSA (Direct State Access) debounced commit refs
+  const pendingCommitRef = useRef(null);
+  const commitTimerRef = useRef(null);
 
   // Refs
   const [activePanel, setActivePanel] = useState(null);
@@ -962,9 +1065,9 @@ const TextEditor = ({
   const [showStrokePositionDropdown, setShowStrokePositionDropdown] = useState(false);
 
   const [textContent, setTextContent] = useState('SIPPER GLASS');
-  const [fontFamily, setFontFamily] = useState('Poppins');
+  const [fontFamily, setFontFamily] = useState('Outfit');
   const [fontSize, setFontSize] = useState(24);
-  const [fontWeight, setFontWeight] = useState('600');
+  const [fontWeight, setFontWeight] = useState('normal');
   const [textAlign, setTextAlign] = useState('left');
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineHeight, setLineHeight] = useState(1.2);
@@ -982,6 +1085,27 @@ const TextEditor = ({
   const styleRef = useRef(null);
   const caseRef = useRef(null);
   const listRef = useRef(null);
+  const isUpdatingRef = useRef(false);
+  const updateTimeoutRef = useRef(null);
+
+  const availableFontFamilies = useMemo(() => {
+    if (fontFamily && !fontFamilies.some(f => f.toLowerCase() === fontFamily.toLowerCase())) {
+      return [fontFamily, ...fontFamilies];
+    }
+    return fontFamilies;
+  }, [fontFamily]);
+
+  useEffect(() => {
+    if (fontFamily) {
+      loadGoogleFont(fontFamily);
+    }
+  }, [fontFamily]);
+
+  useEffect(() => {
+    if (showFontDropdown) {
+      fontFamilies.slice(0, 15).forEach(f => loadGoogleFont(f));
+    }
+  }, [showFontDropdown]);
 
   const selectedLayerId = useMemo(() => {
     if (!selectedElement) return null;
@@ -1049,13 +1173,15 @@ const TextEditor = ({
     return props;
   }, [selectedLayerId, pages, activePageIndex]);
 
-  const updateElementAttributeLocal = (pageIdx, elId, attribute, value, skipLiveUpdate = false) => {
+  const updateElementAttributeLocal = (pageIdx, elId, attribute, value, skipLiveUpdate = false, immediate = false) => {
     const liveEl = document.getElementById(elId);
     const styleProp = STYLE_MAP[attribute];
     let finalVal = value;
     if (attribute === 'fontSize') {
       const ptVal = parsePtValue(value);
       finalVal = `${ptVal}pt`;
+    } else if (attribute === 'fontWeight') {
+      finalVal = weightToNumeric(value);
     } else if (attribute === 'letterSpacing' && !value?.toString().includes('px') && !value?.toString().includes('em')) {
       finalVal = `${value}px`;
     }
@@ -1140,13 +1266,39 @@ const TextEditor = ({
                 const liveProp = styleProp === 'fill' ? 'color' : styleProp;
                 const cssPropName = liveProp.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
                 liveEl.firstElementChild.style.setProperty(cssPropName, applyVal, 'important');
+                if (attribute === 'fontWeight') {
+                  const twWeight = normalizeToTailwindWeight(value);
+                  liveEl.setAttribute('data-font-weight', twWeight);
+                  liveEl.firstElementChild.setAttribute('data-font-weight', twWeight);
+                }
 
-                // Clear inline style from children to prevent overrides
+                // Clear inline style and attributes from children, or propagate whole-element formatting
                 Array.from(liveEl.firstElementChild.querySelectorAll('*')).forEach(child => {
                   if (child.style) {
-                    child.style.removeProperty(cssPropName);
-                    const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
-                    child.style.removeProperty(camelProp);
+                    if (attribute === 'fontFamily') {
+                      child.style.fontFamily = applyVal;
+                      child.removeAttribute('face');
+                      child.removeAttribute('font-family');
+                    } else if (attribute === 'fontSize') {
+                      child.style.fontSize = `${parsePtValue(value)}pt`;
+                      child.removeAttribute('size');
+                      child.removeAttribute('font-size');
+                    } else if (attribute === 'fontWeight') {
+                      child.style.fontWeight = finalVal;
+                      child.setAttribute('data-font-weight', normalizeToTailwindWeight(value));
+                    } else if (attribute === 'fill' || attribute === 'color') {
+                      child.style.color = applyVal;
+                      child.removeAttribute('color');
+                    } else {
+                      child.style.removeProperty(cssPropName);
+                      const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
+                      child.style.removeProperty(camelProp);
+                    }
+                  }
+                  if (child.tagName && child.tagName.toLowerCase() === 'font') {
+                    if (attribute === 'fontFamily') child.removeAttribute('face');
+                    if (attribute === 'fontSize') child.removeAttribute('size');
+                    if (attribute === 'fill' || attribute === 'color') child.removeAttribute('color');
                   }
                 });
 
@@ -1314,7 +1466,7 @@ const TextEditor = ({
             const rx = liveEl.getAttribute('rx') || '0';
             liveEl.firstElementChild.style.borderRadius = `${rx}px`;
           } else {
-            const currentSizingMode = liveEl.getAttribute('data-sizing-mode') || 'auto-height';
+            const currentSizingMode = liveEl.getAttribute('data-sizing-mode') || 'auto-width';
             liveEl.firstElementChild.classList.remove('flipbook-text-scrollbar');
             liveEl.firstElementChild.style.borderRadius = '0';
             // liveEl.firstElementChild.style.border = 'none';
@@ -1368,8 +1520,9 @@ const TextEditor = ({
       }
     }
 
-    // Functional State Update (State of Truth)
-    setPages(prevPages => {
+    const executeCommit = () => {
+      window.__skipCanvasUpdateForPage = pageIdx;
+      setPages(prevPages => {
       const newPages = [...prevPages];
       const page = { ...newPages[pageIdx] };
       if (!page || !page.html) return prevPages;
@@ -1749,7 +1902,7 @@ const TextEditor = ({
 
               targetDiv.style.setProperty('overflow-y', 'visible', 'important');
               targetDiv.classList.remove('flipbook-text-scrollbar');
-              targetDiv.style.setProperty('height', mode === 'fixed' ? '100%' : 'auto', 'important');
+              targetDiv.style.setProperty('height', '100%', 'important');
               targetDiv.style.setProperty('width', mode === 'fixed' ? '100%' : 'calc(100% + 4px)', 'important');
               targetDiv.style.setProperty('overflow-x', 'visible', 'important');
               if (mode !== 'fixed') {
@@ -1804,7 +1957,7 @@ const TextEditor = ({
                 targetDiv.style.setProperty('overflow-y', 'visible', 'important');
                 targetDiv.style.setProperty('overflow-x', 'visible', 'important');
                 targetDiv.classList.remove('flipbook-text-scrollbar');
-                targetDiv.style.setProperty('height', mode === 'fixed' ? '100%' : 'auto', 'important');
+                targetDiv.style.setProperty('height', '100%', 'important');
                 targetDiv.style.setProperty('width', mode === 'fixed' ? '100%' : 'calc(100% + 4px)', 'important');
                 if (mode !== 'fixed') {
                   targetDiv.style.display = 'flex';
@@ -1834,9 +1987,30 @@ const TextEditor = ({
 
                 Array.from(element.firstElementChild.querySelectorAll('*')).forEach(child => {
                   if (child.style) {
-                    child.style.removeProperty(cssPropName);
-                    const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
-                    child.style.removeProperty(camelProp);
+                    if (attribute === 'fontFamily') {
+                      child.style.fontFamily = value;
+                      child.removeAttribute('face');
+                      child.removeAttribute('font-family');
+                    } else if (attribute === 'fontSize') {
+                      child.style.fontSize = finalVal;
+                      child.removeAttribute('size');
+                      child.removeAttribute('font-size');
+                    } else if (attribute === 'fontWeight') {
+                      child.style.fontWeight = finalVal;
+                      child.setAttribute('data-font-weight', normalizeToTailwindWeight(value));
+                    } else if (attribute === 'fill' || attribute === 'color') {
+                      child.style.color = value;
+                      child.removeAttribute('color');
+                    } else {
+                      child.style.removeProperty(cssPropName);
+                      const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
+                      child.style.removeProperty(camelProp);
+                    }
+                  }
+                  if (child.tagName && child.tagName.toLowerCase() === 'font') {
+                    if (attribute === 'fontFamily') child.removeAttribute('face');
+                    if (attribute === 'fontSize') child.removeAttribute('size');
+                    if (attribute === 'fill' || attribute === 'color') child.removeAttribute('color');
                   }
                 });
 
@@ -1864,9 +2038,30 @@ const TextEditor = ({
 
                   Array.from(liveEl.firstElementChild.querySelectorAll('*')).forEach(child => {
                     if (child.style) {
-                      child.style.removeProperty(cssPropName);
-                      const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
-                      child.style.removeProperty(camelProp);
+                      if (attribute === 'fontFamily') {
+                        child.style.fontFamily = value;
+                        child.removeAttribute('face');
+                        child.removeAttribute('font-family');
+                      } else if (attribute === 'fontSize') {
+                        child.style.fontSize = finalVal;
+                        child.removeAttribute('size');
+                        child.removeAttribute('font-size');
+                      } else if (attribute === 'fontWeight') {
+                        child.style.fontWeight = finalVal;
+                        child.setAttribute('data-font-weight', normalizeToTailwindWeight(value));
+                      } else if (attribute === 'fill' || attribute === 'color') {
+                        child.style.color = value;
+                        child.removeAttribute('color');
+                      } else {
+                        child.style.removeProperty(cssPropName);
+                        const camelProp = cssPropName.replace(/-([a-z])/g, g => g[1].toUpperCase());
+                        child.style.removeProperty(camelProp);
+                      }
+                    }
+                    if (child.tagName && child.tagName.toLowerCase() === 'font') {
+                      if (attribute === 'fontFamily') child.removeAttribute('face');
+                      if (attribute === 'fontSize') child.removeAttribute('size');
+                      if (attribute === 'fill' || attribute === 'color') child.removeAttribute('color');
                     }
                   });
 
@@ -1981,7 +2176,7 @@ const TextEditor = ({
             } else {
               element.firstElementChild.style.setProperty('overflow-y', 'visible', 'important');
               element.firstElementChild.classList.remove('flipbook-text-scrollbar');
-              element.firstElementChild.style.setProperty('height', mode === 'fixed' ? '100%' : 'auto', 'important');
+              element.firstElementChild.style.setProperty('height', '100%', 'important');
               element.firstElementChild.style.setProperty('overflow-x', 'visible', 'important');
             }
           }
@@ -2034,12 +2229,41 @@ const TextEditor = ({
       }
       return newPages;
     });
+    };
+
+    pendingCommitRef.current = { pageIdx, elId, attribute, value, skipLiveUpdate, flush: executeCommit };
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+
+    if (immediate) {
+      pendingCommitRef.current = null;
+      executeCommit();
+    } else {
+      commitTimerRef.current = setTimeout(() => {
+        pendingCommitRef.current = null;
+        executeCommit();
+      }, 120);
+    }
   };
 
-  const updateStyle = useCallback((property, value) => {
-    if (property === 'fontFamily') setFontFamily(value.replace(/['"]/g, '').split(',')[0]);
+  const updateStyle = useCallback((property, value, immediate = false) => {
+    isUpdatingRef.current = true;
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    updateTimeoutRef.current = setTimeout(() => {
+      isUpdatingRef.current = false;
+    }, 250);
+    if (property === 'fontFamily') {
+      const cleanFf = value.replace(/['"]/g, '').split(',')[0].trim();
+      setFontFamily(cleanFf);
+      loadGoogleFont(cleanFf);
+    }
     if (property === 'fontSize') setFontSize(parsePtValue(value));
-    if (property === 'fontWeight') setFontWeight(value.toString());
+    if (property === 'fontWeight') {
+      const twWeight = normalizeToTailwindWeight(value);
+      setFontWeight(twWeight);
+    }
     if (property === 'fontStyle') setFontStyle(value);
     if (property === 'textDecorationLine' || property === 'textDecoration') setTextDecoration(value);
     if (property === 'textAlign') setTextAlign(value);
@@ -2249,6 +2473,8 @@ const TextEditor = ({
             if (property === 'fontSize') {
               const ptVal = parsePtValue(adjustedValue);
               finalVal = `${ptVal}pt`;
+            } else if (property === 'fontWeight') {
+              finalVal = weightToNumeric(adjustedValue);
             } else if (property === 'letterSpacing' && !adjustedValue.toString().includes('px') && !adjustedValue.toString().includes('em')) {
               finalVal = `${adjustedValue}px`;
             }
@@ -2257,6 +2483,24 @@ const TextEditor = ({
               if (el.firstElementChild) {
                 const div = el.firstElementChild;
                 div.style[styleProp] = finalVal;
+                if (property === 'fontFamily') {
+                  const clean = adjustedValue.replace(/['"]/g, '').split(',')[0].trim();
+                  el.setAttribute('font-family', clean);
+                  div.style.fontFamily = finalVal;
+                }
+                if (property === 'fontSize') {
+                  const ptVal = parsePtValue(adjustedValue);
+                  el.setAttribute('font-size', `${ptVal}pt`);
+                  div.style.fontSize = `${ptVal}pt`;
+                }
+                if (property === 'fontWeight') {
+                  const twWeight = normalizeToTailwindWeight(adjustedValue);
+                  el.setAttribute('data-font-weight', twWeight);
+                  el.setAttribute('font-weight', twWeight);
+                  div.setAttribute('data-font-weight', twWeight);
+                  div.setAttribute('font-weight', twWeight);
+                  div.style.fontWeight = finalVal;
+                }
                 if (property === 'textAlign') {
                   el.setAttribute('data-text-align', finalVal);
                   if (finalVal === 'justify') {
@@ -2267,15 +2511,50 @@ const TextEditor = ({
                     div.style.removeProperty('text-justify');
                   }
                 }
+
+                // Propagate property to all child nodes (spans, divs) so ALL text in the element updates
+                const cssPropName = styleProp.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+                Array.from(div.querySelectorAll('*')).forEach(child => {
+                  if (child.style) {
+                    if (property === 'fontFamily') {
+                      child.style.fontFamily = finalVal;
+                      child.removeAttribute('font-family');
+                    } else if (property === 'fontSize') {
+                      child.style.fontSize = `${parsePtValue(adjustedValue)}pt`;
+                      child.removeAttribute('font-size');
+                    } else if (property === 'fontWeight') {
+                      child.style.fontWeight = finalVal;
+                      child.setAttribute('data-font-weight', normalizeToTailwindWeight(adjustedValue));
+                    } else if (property === 'fill' || property === 'color') {
+                      child.style.color = finalVal;
+                    } else {
+                      child.style.removeProperty(cssPropName);
+                      child.style.removeProperty(styleProp);
+                    }
+                  }
+                });
               }
             } else {
               // SVG text element — set both CSS style and SVG presentation attribute
               el.style[styleProp] = finalVal;
               const svgAttrName = SVG_ATTR_MAP[property] || property;
-              if (property === 'textAlign') {
+              if (property === 'fontFamily') {
+                const clean = adjustedValue.replace(/['"]/g, '').split(',')[0].trim();
+                el.setAttribute('font-family', clean);
+                el.style.fontFamily = finalVal;
+              } else if (property === 'fontSize') {
+                const ptVal = parsePtValue(adjustedValue);
+                el.setAttribute('font-size', `${ptVal}pt`);
+                el.style.fontSize = `${ptVal}pt`;
+              } else if (property === 'textAlign') {
                 const anchorVal = TEXT_ALIGN_TO_ANCHOR[value] || 'start';
                 el.setAttribute('text-anchor', anchorVal);
                 el.setAttribute('data-text-align', finalVal);
+              } else if (property === 'fontWeight') {
+                const twWeight = normalizeToTailwindWeight(adjustedValue);
+                el.setAttribute('font-weight', twWeight);
+                el.setAttribute('data-font-weight', twWeight);
+                el.style.fontWeight = finalVal;
               } else {
                 el.setAttribute(svgAttrName, finalVal);
               }
@@ -2284,8 +2563,21 @@ const TextEditor = ({
               if (elTag === 'text' || elTag === 'g') {
                 Array.from(el.querySelectorAll('tspan')).forEach(child => {
                   child.style[styleProp] = finalVal;
-                  if (property === 'textAlign') {
+                  if (property === 'fontFamily') {
+                    const clean = adjustedValue.replace(/['"]/g, '').split(',')[0].trim();
+                    child.setAttribute('font-family', clean);
+                    child.style.fontFamily = finalVal;
+                  } else if (property === 'fontSize') {
+                    const ptVal = parsePtValue(adjustedValue);
+                    child.setAttribute('font-size', `${ptVal}pt`);
+                    child.style.fontSize = `${ptVal}pt`;
+                  } else if (property === 'textAlign') {
                     child.setAttribute('text-anchor', TEXT_ALIGN_TO_ANCHOR[value] || 'start');
+                  } else if (property === 'fontWeight') {
+                    const twWeight = normalizeToTailwindWeight(adjustedValue);
+                    child.setAttribute('font-weight', twWeight);
+                    child.setAttribute('data-font-weight', twWeight);
+                    child.style.fontWeight = finalVal;
                   } else {
                     child.setAttribute(svgAttrName, finalVal);
                   }
@@ -2304,7 +2596,7 @@ const TextEditor = ({
           }
         }
 
-        updateElementAttributeLocal(activePageIndex, selectedLayerId, property, adjustedValue);
+        updateElementAttributeLocal(activePageIndex, selectedLayerId, property, property === 'fontWeight' ? normalizeToTailwindWeight(adjustedValue) : adjustedValue, false, immediate);
       }
     }
   }, [selectedLayerId, activePageIndex, updateElementAttributeLocal, textContent, onUpdate]);
@@ -2325,13 +2617,23 @@ const TextEditor = ({
         newValue = Math.round(newValue);
       }
 
-      updateStyle(property, newValue);
+      updateStyle(property, newValue, false); // Debounced 60fps
     };
 
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       document.body.style.cursor = 'default';
+      // Flush pending commit immediately on mouse up
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current);
+        commitTimerRef.current = null;
+      }
+      if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
+        const task = pendingCommitRef.current;
+        pendingCommitRef.current = null;
+        task.flush();
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -2370,7 +2672,7 @@ const TextEditor = ({
 
       if (mode === 'auto-width') {
         // Single line, no wrap — grow width to fit content
-        div.style.setProperty('white-space', 'nowrap', 'important');
+        div.style.setProperty('white-space', 'pre', 'important');
         div.style.setProperty('overflow', 'visible', 'important');
         div.style.setProperty('height', 'auto', 'important');
         div.style.setProperty('min-height', '0px', 'important');
@@ -2382,6 +2684,7 @@ const TextEditor = ({
         liveEl.setAttribute('height', newH);
         // Fix div back to 100%
         div.style.setProperty('width', '100%', 'important');
+        div.style.setProperty('height', '100%', 'important');
 
       } else if (mode === 'auto-height') {
         // Wrap text, grow height
@@ -2543,19 +2846,20 @@ const TextEditor = ({
 
 
   // --- CONSOLIDATED SYNCHRONIZATION EFFECT ---
-  // This effect handles both the initial load of properties and real-time sync from canvas
+  // High-performance direct access sync: debounced, non-clobbering, and loop-free
   useEffect(() => {
     if (!selectedLayerId) return;
 
     const syncFromCanvas = () => {
+      if (isUpdatingRef.current) return;
       const el = document.getElementById(selectedLayerId);
       if (!el) return;
 
-      // Update text content
+      // Update text content with diffing to prevent re-render thrashing
       const content = getDeepContent(el);
-      setTextContent(content);
+      setTextContent(prev => prev === content ? prev : content);
 
-      // Update styles: if a sub-range or word is selected, reflect the selected character style (Vector-Studio style)
+      // Reflect active character or element style
       const targetEl = el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild : el;
       let activeStyleTarget = targetEl;
       if (window.__savedTextSelection && window.__savedTextSelection.elementId === el.id) {
@@ -2572,15 +2876,19 @@ const TextEditor = ({
       const tspanStyle = firstTspanEl ? window.getComputedStyle(firstTspanEl) : null;
 
       const ff = el.getAttribute('font-family') || (el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild.style.fontFamily : '') || getDeepStyle(el, 'fontFamily') || style.fontFamily;
-      const fs = el.getAttribute('font-size') || getDeepStyle(el, 'fontSize') || style.fontSize;
+      const fs = el.getAttribute('font-size') || (el.tagName.toLowerCase() === 'foreignobject' && el.firstElementChild ? el.firstElementChild.style.fontSize : '') || getDeepStyle(el, 'fontSize') || style.fontSize;
 
       if (ff) {
         const cleanFf = ff.replace(/['"]/g, '').split(',')[0].trim();
-        if (cleanFf) setFontFamily(cleanFf);
+        if (cleanFf) {
+          setFontFamily(prev => prev.toLowerCase() === cleanFf.toLowerCase() ? prev : cleanFf);
+          loadGoogleFont(cleanFf);
+        }
       }
       if (fs) {
         let fontSizeVal;
-        const rawAttr = el.getAttribute('font-size') || el.style.fontSize || '';
+        const innerDiv = el.tagName.toLowerCase() === 'foreignobject' ? el.firstElementChild : null;
+        const rawAttr = el.getAttribute('font-size') || (innerDiv && innerDiv.style.fontSize) || el.style.fontSize || '';
         if (rawAttr.includes('pt')) {
           fontSizeVal = parseFloat(rawAttr) || 12;
         } else if (rawAttr.includes('px')) {
@@ -2602,22 +2910,26 @@ const TextEditor = ({
             }
           }
         }
-        setFontSize(fontSizeVal);
+        if (fontSizeVal && !isNaN(fontSizeVal)) {
+          setFontSize(prev => Number(prev) === Number(fontSizeVal) ? prev : fontSizeVal);
+        }
       }
 
-      const rawWeight = style.fontWeight || el.getAttribute('font-weight') || (tspanStyle ? tspanStyle.fontWeight : null);
-      const normalizedWeight = rawWeight === 'bold' ? '700' : (rawWeight === 'normal' ? '400' : rawWeight);
-      if (normalizedWeight) setFontWeight(normalizedWeight.toString());
+      const innerDivEl = el.tagName.toLowerCase() === 'foreignobject' ? el.firstElementChild : null;
+      const rawWeight = el.getAttribute('data-font-weight') || (innerDivEl && (innerDivEl.getAttribute('data-font-weight') || innerDivEl.style.fontWeight)) || el.getAttribute('font-weight') || style.fontWeight || (tspanStyle ? tspanStyle.fontWeight : null);
+      const normalizedWeight = normalizeToTailwindWeight(rawWeight);
+      if (normalizedWeight) {
+        setFontWeight(prev => prev === normalizedWeight ? prev : normalizedWeight);
+      }
 
       const fontStyleVal = style.fontStyle || el.getAttribute('font-style') || (tspanStyle ? tspanStyle.fontStyle : null);
-      if (fontStyleVal && fontStyleVal !== 'normal') setFontStyle(fontStyleVal);
-      else setFontStyle('normal');
+      const targetFontStyle = (fontStyleVal && fontStyleVal !== 'normal') ? fontStyleVal : 'normal';
+      setFontStyle(prev => prev === targetFontStyle ? prev : targetFontStyle);
 
       const textDeco = style.textDecorationLine && style.textDecorationLine !== 'none' ? style.textDecorationLine : (style.textDecoration && !style.textDecoration.includes('none') ? style.textDecoration : el.getAttribute('text-decoration'));
-      if (textDeco && !textDeco.includes('none')) setTextDecoration(textDeco);
-      else setTextDecoration('none');
+      const targetDeco = (textDeco && !textDeco.includes('none')) ? textDeco : 'none';
+      setTextDecoration(prev => prev === targetDeco ? prev : targetDeco);
 
-      // Alignment detection: check explicit data-text-align, style.textAlign, SVG text-anchor (middle -> center, end -> right), and template geometry
       const dataAlign = el.getAttribute('data-text-align') || el.getAttribute('data-align') || firstTspanEl?.getAttribute('data-text-align');
       let rawAnchor = el.getAttribute('text-anchor') || el.style?.textAnchor || firstTspanEl?.getAttribute('text-anchor') || firstTspanEl?.style?.textAnchor;
       if (!rawAnchor && style && style.getPropertyValue) {
@@ -2640,51 +2952,39 @@ const TextEditor = ({
       } else if (rawAnchor === 'end') {
         alignVal = 'right';
       }
-      setTextAlign(alignVal);
+      setTextAlign(prev => prev === alignVal ? prev : alignVal);
 
-      const textTransformVal = style.textTransform || el.getAttribute('text-transform');
-      if (textTransformVal) setTextTransform(textTransformVal);
-      else setTextTransform('none');
+      const textTransformVal = style.textTransform || el.getAttribute('text-transform') || 'none';
+      setTextTransform(prev => prev === textTransformVal ? prev : textTransformVal);
 
-      // Sync Letter Spacing
       let ls = style.letterSpacing;
       if (el.tagName.toLowerCase() === 'text' || el.tagName.toLowerCase() === 'tspan') {
         ls = el.getAttribute('letter-spacing') || ls;
       }
-      if (ls && ls !== 'normal') {
-        setLetterSpacing(parseFloat(ls));
-      } else {
-        setLetterSpacing(0);
-      }
+      const targetLs = (ls && ls !== 'normal') ? parseFloat(ls) : 0;
+      setLetterSpacing(prev => prev === targetLs ? prev : targetLs);
 
-      // Sync Line Height
       const lh = calculateLineHeightMultiplier();
-      setLineHeight(lh);
+      setLineHeight(prev => prev === lh ? prev : lh);
 
-      // Sync sizing mode
-      const storedMode = el.getAttribute('data-sizing-mode');
-      if (storedMode) setSizingMode(storedMode);
-      else setSizingMode('auto-height');
-
-      // Sync Effects
-      syncTextEffect(null, el);
+      const storedMode = el.getAttribute('data-sizing-mode') || 'auto-width';
+      setSizingMode(prev => prev === storedMode ? prev : storedMode);
     };
 
     // Initial sync
     syncFromCanvas();
 
-    // 2. Observer for DOM changes (like when MainEditor finishes editing and swaps fo for text)
+    // 2. Observer for DOM changes
     const el = document.getElementById(selectedLayerId);
     let observer = null;
     if (el) {
       observer = new MutationObserver(() => {
+        if (isUpdatingRef.current) return;
         if (el.getAttribute('data-editing') === 'true') return;
         if (el.getAttribute('data-dragging') === 'true' || document.body.classList.contains('dragging-active')) return;
-        // Optimization: only sync if relevant nodes changed
         syncFromCanvas();
       });
 
-      // Observe the element itself (for internal text changes) and direct parent childList (for replacement)
       observer.observe(el, {
         attributes: true,
         attributeFilter: ['data-sizing-mode'],
@@ -2698,26 +2998,22 @@ const TextEditor = ({
     }
 
     // Debounced and optimized selectionchange listener:
-    // When typing (selection is collapsed), skip re-renders completely for 0ms typing latency!
-    // When selecting a character range, debounce so React doesn't freeze the UI.
+    // Only runs when user is genuinely editing active text inside canvas
     let selectionTimeout = null;
     const handleSelectionChange = () => {
+      if (isUpdatingRef.current) return;
       const activeEl = document.activeElement;
       const isEditing = activeEl && (activeEl.isContentEditable || activeEl.getAttribute('contenteditable') === 'true');
       if (isEditing) {
         const sel = window.getSelection();
-        if (!sel || sel.isCollapsed) {
-          // Caret movement / typing: do not trigger React re-renders!
-          return;
-        }
-        // Sub-range selected: debounce sync so dragging selection stays 60fps
+        if (!sel || sel.isCollapsed) return;
+        const targetElement = document.getElementById(selectedLayerId);
+        if (!targetElement || !targetElement.contains(sel.anchorNode)) return;
         if (selectionTimeout) clearTimeout(selectionTimeout);
         selectionTimeout = setTimeout(() => {
           syncFromCanvas();
         }, 120);
-        return;
       }
-      syncFromCanvas();
     };
 
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -2726,8 +3022,17 @@ const TextEditor = ({
       if (selectionTimeout) clearTimeout(selectionTimeout);
       document.removeEventListener('selectionchange', handleSelectionChange);
       observer?.disconnect();
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current);
+        commitTimerRef.current = null;
+      }
+      if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
+        const task = pendingCommitRef.current;
+        pendingCommitRef.current = null;
+        task.flush();
+      }
     };
-  }, [selectedLayerId, selectedElement, getDeepContent, getDeepStyle]);
+  }, [selectedLayerId]);
 
   // Reset panels when selectedElement or closePanelsSignal changes
   useEffect(() => {
@@ -2778,16 +3083,37 @@ const TextEditor = ({
         <div className="relative flex-[1.5]" ref={dropdownRef}>
           <button
             onClick={() => setShowFontDropdown(!showFontDropdown)}
-            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white"
+            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white hover:border-indigo-500 transition-colors cursor-pointer"
           >
-            <span className="text-[0.85vw] truncate" style={{ fontFamily: `'${fontFamily}'` }}>{fontFamily === 'Designer_Signature' ? 'Designer Signature' : fontFamily}</span>
+            <span className="text-[0.85vw] truncate" style={{ fontFamily: `'${fontFamily}', sans-serif` }}>
+              {fontFamily === 'Designer_Signature' ? 'Designer Signature' : (fontFamily || 'Outfit')}
+            </span>
             <ChevronDown size="1vw" className="text-gray-500" />
           </button>
           {showFontDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[12vw] overflow-y-auto">
-              {fontFamilies.map(font => (
-                <div key={font} onClick={() => { updateStyle('fontFamily', font); setShowFontDropdown(false); }} className="px-[0.75vw] py-[0.4vw] hover:bg-gray-100 cursor-pointer text-[0.85vw]" style={{ fontFamily: `'${font}'` }}>{font === 'Designer_Signature' ? 'Designer Signature' : font}</div>
-              ))}
+            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto [&::-webkit-scrollbar]:w-[0.3vw] [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {availableFontFamilies.map(font => {
+                const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
+                return (
+                  <div
+                    key={font}
+                    onClick={() => {
+                      loadGoogleFont(font);
+                      updateStyle('fontFamily', font);
+                      setShowFontDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.45vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.85vw] flex items-center justify-between transition-colors ${
+                      isSelected ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'
+                    }`}
+                    style={{ fontFamily: `'${font}', sans-serif` }}
+                  >
+                    <span>{font === 'Designer_Signature' ? 'Designer Signature' : font}</span>
+                    {isSelected && (
+                      <span className="text-indigo-600 font-bold ml-1 text-[0.85vw]">✓</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2856,15 +3182,24 @@ const TextEditor = ({
         <div className="relative flex-1" ref={weightRef}>
           <button
             onClick={() => setShowWeightDropdown(!showWeightDropdown)}
-            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white"
+            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white hover:border-indigo-500 transition-colors"
           >
-            <span className="text-[0.85vw] truncate">{fontWeights.find(w => w.value === fontWeight.toString())?.name || 'Regular'}</span>
+            <span className="text-[0.85vw] truncate text-gray-700 font-medium">{fontWeights.find(w => w.value === fontWeight)?.name || 'Regular'}</span>
             <ChevronDown size="1vw" className="text-gray-500" />
           </button>
           {showWeightDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[12vw] overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto py-1">
               {fontWeights.map(w => (
-                <div key={w.value} onClick={() => { updateStyle('fontWeight', w.value); setShowWeightDropdown(false); }} className="px-[0.75vw] py-[0.4vw] hover:bg-gray-100 cursor-pointer text-[0.85vw]">{w.name}</div>
+                <div
+                  key={w.value}
+                  onClick={() => {
+                    updateStyle('fontWeight', w.value);
+                    setShowWeightDropdown(false);
+                  }}
+                  className={`px-[0.75vw] py-[0.4vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.85vw] transition-colors ${fontWeight === w.value ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'}`}
+                >
+                  {w.name}
+                </div>
               ))}
             </div>
           )}
@@ -2946,7 +3281,7 @@ const TextEditor = ({
           </button>
           {activePanel === 'style' && (
             <div className="absolute top-[3.5vw] left-0 z-50 p-[0.5vw] bg-white border border-gray-100 rounded-[1vw] flex gap-[0.4vw] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in-95 duration-200">
-              <button onClick={() => updateStyle('fontWeight', fontWeight === '700' ? '400' : '700')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold transition-all ${fontWeight === '700' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>B</button>
+              <button onClick={() => updateStyle('fontWeight', ['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'normal' : 'bold')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold transition-all ${['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>B</button>
               <button onClick={() => updateStyle('fontStyle', fontStyle === 'italic' ? 'normal' : 'italic')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center italic transition-all ${fontStyle === 'italic' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>I</button>
               <button onClick={() => updateStyle('textDecoration', textDecoration === 'underline' ? 'none' : 'underline')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center underline transition-all ${textDecoration === 'underline' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>U</button>
               <button onClick={() => updateStyle('textDecoration', textDecoration === 'line-through' ? 'none' : 'line-through')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textDecoration === 'line-through' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><span className="line-through">S</span></button>

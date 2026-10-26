@@ -432,8 +432,9 @@ export const TYPOGRAPHY_ITEMS = [
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', String(cx));
       t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '28');
+      t.setAttribute('font-size', '28pt');
       t.setAttribute('font-weight', 'bold');
+      t.setAttribute('data-font-weight', 'bold');
       t.setAttribute('fill', '#111827');
       t.setAttribute('text-anchor', 'middle');
       t.textContent = 'Add a Heading';
@@ -456,8 +457,9 @@ export const TYPOGRAPHY_ITEMS = [
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', String(cx));
       t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '18');
-      t.setAttribute('font-weight', '600');
+      t.setAttribute('font-size', '18pt');
+      t.setAttribute('font-weight', 'semibold');
+      t.setAttribute('data-font-weight', 'semibold');
       t.setAttribute('fill', '#4b5563');
       t.setAttribute('text-anchor', 'middle');
       t.textContent = 'Add a subheading';
@@ -480,7 +482,9 @@ export const TYPOGRAPHY_ITEMS = [
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', String(cx));
       t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '14');
+      t.setAttribute('font-size', '14pt');
+      t.setAttribute('font-weight', 'normal');
+      t.setAttribute('data-font-weight', 'normal');
       t.setAttribute('fill', '#6b7280');
       t.setAttribute('text-anchor', 'middle');
       t.textContent = 'Add a little bit of body text';
@@ -513,6 +517,9 @@ export const TYPOGRAPHY_ITEMS = [
       fo.setAttribute('data-sizing-mode', 'auto-height');
       fo.setAttribute('data-text-align', 'left');
       fo.setAttribute('data-list-type', 'disc');
+      fo.setAttribute('font-size', '14pt');
+      fo.setAttribute('font-weight', 'normal');
+      fo.setAttribute('data-font-weight', 'normal');
       fo.setAttribute('x', String(cx - 90));
       fo.setAttribute('y', String(cy - 40));
       fo.setAttribute('width', '200');
@@ -524,7 +531,9 @@ export const TYPOGRAPHY_ITEMS = [
       div.style.minHeight = '100%';
       div.style.color = '#1f2937';
       div.style.fontFamily = "'Inter', sans-serif";
-      div.style.fontSize = '14px';
+      div.style.fontSize = '14pt';
+      div.style.fontWeight = 'normal';
+      div.setAttribute('data-font-weight', 'normal');
       div.style.lineHeight = '1.6';
       div.style.textAlign = 'left';
       div.style.padding = '0px';
@@ -559,6 +568,9 @@ export const TYPOGRAPHY_ITEMS = [
       fo.setAttribute('data-sizing-mode', 'auto-height');
       fo.setAttribute('data-text-align', 'left');
       fo.setAttribute('data-list-type', 'decimal');
+      fo.setAttribute('font-size', '14pt');
+      fo.setAttribute('font-weight', 'normal');
+      fo.setAttribute('data-font-weight', 'normal');
       fo.setAttribute('x', String(cx - 90));
       fo.setAttribute('y', String(cy - 40));
       fo.setAttribute('width', '200');
@@ -570,7 +582,9 @@ export const TYPOGRAPHY_ITEMS = [
       div.style.minHeight = '100%';
       div.style.color = '#1f2937';
       div.style.fontFamily = "'Inter', sans-serif";
-      div.style.fontSize = '14px';
+      div.style.fontSize = '14pt';
+      div.style.fontWeight = 'normal';
+      div.setAttribute('data-font-weight', 'normal');
       div.style.lineHeight = '1.6';
       div.style.textAlign = 'left';
       div.style.padding = '0px';

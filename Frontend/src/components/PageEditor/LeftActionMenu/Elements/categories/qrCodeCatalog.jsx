@@ -39,6 +39,14 @@ const MiniQRMatrix = ({ x = 12, y = 12, size = 36 }) => {
 
 export const FrameVectorThumbnail = ({ frameId }) => {
   switch (frameId) {
+     case 'frame-none':
+    default:
+      return (
+        <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
+          <rect x="2" y="2" width="56" height="56" rx="3" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+          <MiniQRMatrix x="12" y="12" size="36" />
+        </svg>
+      );
     case 'frame-bottom-bar':
       return (
         <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
@@ -78,39 +86,12 @@ export const FrameVectorThumbnail = ({ frameId }) => {
           <text x="30" y="70" fill="#ffffff" fontSize="4.8" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
         </svg>
       );
-    case 'frame-bottom-pointer':
-      return (
-        <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
-          <rect x="5" y="4" width="50" height="51" rx="4" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
-          <MiniQRMatrix x="12" y="11" size="36" />
-          <polygon points="26,57 30,53 34,57" fill="#000000" />
-          <rect x="13" y="57" width="34" height="9.5" rx="2" fill="#000000" />
-          <text x="30" y="63.5" fill="#ffffff" fontSize="4.2" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
-        </svg>
-      );
     case 'frame-simple-text':
       return (
         <svg viewBox="0 0 60 70" className="w-full h-full p-[0.2vw]">
           <rect x="5" y="4" width="50" height="51" rx="4" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
           <MiniQRMatrix x="12" y="11" size="36" />
           <text x="30" y="64" fill="#000000" fontSize="5.5" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
-        </svg>
-      );
-    case 'frame-top-header':
-      return (
-        <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
-          <rect x="3" y="3" width="54" height="66" rx="4" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
-          <path d="M 3 7 A 4 4 0 0 1 7 3 L 53 3 A 4 4 0 0 1 57 7 L 57 17 L 3 17 Z" fill="#000000" />
-          <text x="30" y="12.5" fill="#ffffff" fontSize="5.2" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
-          <MiniQRMatrix x="12" y="24" size="36" />
-        </svg>
-      );
-    case 'frame-none':
-    default:
-      return (
-        <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
-          <rect x="2" y="2" width="56" height="56" rx="3" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-          <MiniQRMatrix x="12" y="12" size="36" />
         </svg>
       );
   }

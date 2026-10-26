@@ -42,6 +42,7 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', uniqueId);
   g.setAttribute('data-type', 'qrcode');
+  g.setAttribute('data-name', 'QR Code');
   g.setAttribute('cursor', 'pointer');
   g.setAttribute('data-qr-url', url);
   g.setAttribute('data-qr-frame', frameId);

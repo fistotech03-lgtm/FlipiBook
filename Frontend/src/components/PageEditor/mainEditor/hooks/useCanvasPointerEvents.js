@@ -1789,17 +1789,24 @@ export const useCanvasPointerEvents = ({
 
   // ── Helper: set single selection and clear multi-selection ───────────────────
   const setSingleSelection = (id) => {
-    if (id) {
-      const el = document.getElementById(id);
-      const isFreeFrame = el ? (
-        el.getAttribute('data-name') === 'Free Frame' ||
-        el.getAttribute('data-type') === 'free-frame' ||
-        (el.id && el.id.startsWith('free-frame'))
-      ) : id.startsWith('free-frame');
+    let resolvedId = id;
+    if (resolvedId) {
+      const el = document.getElementById(resolvedId);
+      const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
+      if (buttonParent && buttonParent.id) {
+        resolvedId = buttonParent.id;
+      }
+      const finalEl = document.getElementById(resolvedId) || el;
+      const isFreeFrame = finalEl ? (
+        finalEl.getAttribute('data-name') === 'Free Frame' ||
+        finalEl.getAttribute('data-type') === 'free-frame' ||
+        (finalEl.id && finalEl.id.startsWith('free-frame'))
+      ) : resolvedId.startsWith('free-frame');
       if (isFreeFrame && activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation') {
         return;
       }
     }
+    id = resolvedId;
 
     if (setSelectedLayerId) {
       setSelectedLayerId(id);
@@ -2526,6 +2533,17 @@ export const useCanvasPointerEvents = ({
       }
     }
 
+    // Check if double click targets a compound element (button, audio, qr, map, embed, etc.)
+    const compoundParent = (directTextEl || e.target)?.closest?.(
+      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    );
+    if (compoundParent) {
+      if (compoundParent.id) {
+        setSingleSelection(compoundParent.id);
+      }
+      return;
+    }
+
     if (directTextEl && directTextEl.getAttribute('data-locked') !== 'true' && directTextEl.getAttribute('data-type') !== 'video' && !directTextEl.querySelector('video, iframe')) {
       const isModuleWithoutTextEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
       if (!isModuleWithoutTextEdit) {
@@ -2548,6 +2566,15 @@ export const useCanvasPointerEvents = ({
     // Text editing on double-click
     // 1. First check if we directly hit text
     let target = getDraggableElement(e.target, e.currentTarget);
+    const targetCompound = target?.closest?.(
+      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    );
+    if (targetCompound) {
+      if (targetCompound.id) {
+        setSingleSelection(targetCompound.id);
+      }
+      return;
+    }
 
     // 2. Proactively check if we are double-clicking while a text is selected
     const selIdContext = selectedLayerIdRef.current;

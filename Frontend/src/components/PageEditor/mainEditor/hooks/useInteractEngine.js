@@ -271,7 +271,19 @@ export const useInteractEngine = ({
                       const isMainPageFrame = topFrames.length === 1 && selEl.id === topFrames[0].id;
 
                       if (!isMainPageFrame) {
-                        const isChildOfSelected = target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
+                        const isCompoundGroup = selEl.getAttribute('data-is-image-group') === 'true' ||
+                          selEl.getAttribute('data-is-video-group') === 'true' ||
+                          selEl.getAttribute('data-is-gif-group') === 'true' ||
+                          selEl.getAttribute('data-is-element-button') === 'true' ||
+                          selEl.getAttribute('data-type') === 'button' ||
+                          (selEl.id && selEl.id.startsWith('button-')) ||
+                          selEl.getAttribute('data-type') === 'qrcode' ||
+                          selEl.getAttribute('data-type') === 'map' ||
+                          selEl.getAttribute('data-type') === 'embed-frame' ||
+                          selEl.getAttribute('data-type') === 'slideshow' ||
+                          selEl.getAttribute('data-type') === 'audio-frame';
+
+                        const isChildOfSelected = !isCompoundGroup && target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
                         elementToDrag = isChildOfSelected ? target : selEl;
                         break; // Found it!
                       }
@@ -328,6 +340,12 @@ export const useInteractEngine = ({
                   }
                 }
               }
+            }
+
+            // If dragging an element inside a button, always target the root button!
+            const buttonParent = elementToDrag?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
+            if (buttonParent) {
+              elementToDrag = buttonParent;
             }
 
             // Safety check for metadata-based 'locked' or 'hidden'
@@ -653,17 +671,21 @@ export const useInteractEngine = ({
 
               // Prevent Chromium foreignObject compositor ghosting trails by ensuring an active SVG shape
               if (target.querySelector && (target.querySelector('foreignObject') || target.tagName?.toLowerCase() === 'foreignobject')) {
-                const parent = target.tagName?.toLowerCase() === 'foreignobject' ? target.parentElement : target;
                 const foEl = target.tagName?.toLowerCase() === 'foreignobject' ? target : target.querySelector('foreignObject');
-                if (parent && foEl) {
-                  let dmgRect = parent.querySelector('.video-damage-rect');
+                const foParent = foEl ? foEl.parentElement : null;
+                if (foParent && foEl) {
+                  let dmgRect = foParent.querySelector('.video-damage-rect');
                   if (!dmgRect) {
                     dmgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     dmgRect.setAttribute('class', 'video-damage-rect');
                     dmgRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
                     dmgRect.setAttribute('stroke', 'none');
                     dmgRect.setAttribute('pointer-events', 'none');
-                    parent.insertBefore(dmgRect, foEl);
+                    try {
+                      foParent.insertBefore(dmgRect, foEl);
+                    } catch {
+                      foParent.appendChild(dmgRect);
+                    }
                   }
                   dmgRect.setAttribute('x', foEl.getAttribute('x') || '0');
                   dmgRect.setAttribute('y', foEl.getAttribute('y') || '0');

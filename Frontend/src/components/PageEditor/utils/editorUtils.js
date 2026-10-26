@@ -346,24 +346,89 @@ export const parseLayersFromSVG = (element) => {
         locked: child.getAttribute('data-locked') === 'true'
       };
 
-      // VIRTUAL EFFECT LAYERS FOR IMAGE/VIDEO/GIF GROUP
-      const isGroup = child.getAttribute('data-is-image-group') === 'true' ||
+      const isPageRoot = child.getAttribute('data-type') === 'frame' || 
+                         child.getAttribute('data-name')?.startsWith('Page ') ||
+                         child.getAttribute('data-name')?.startsWith('Slide ') ||
+                         child.getAttribute('data-name')?.startsWith('PDF Page ');
+
+      const isEmbedGroup = !isPageRoot && (child.getAttribute('data-type') === 'embed-frame' || Array.from(child.children).some(c => c.getAttribute('data-type') === 'embed-frame'));
+
+      const lowerId = (id || '').toLowerCase();
+      const isAudioFrame = !isPageRoot && (
+                           child.getAttribute('data-type') === 'audio-frame' || 
+                           child.getAttribute('data-type') === 'audio' ||
+                           child.getAttribute('data-interaction') === 'audio' ||
+                           (lowerId.startsWith('audio-') && !lowerId.startsWith('page'))
+      );
+
+      const isButton = !isPageRoot && (
+                       child.getAttribute('data-type') === 'button' || 
+                       child.getAttribute('data-is-element-button') === 'true' ||
+                       lowerId.startsWith('button-')
+      );
+
+      const isQRCode = !isPageRoot && (
+                       child.getAttribute('data-type') === 'qrcode' || 
+                       child.getAttribute('data-type') === 'qr-code' || 
+                       lowerId.startsWith('qrcode-')
+      );
+
+      const isMap = !isPageRoot && (
+                    child.getAttribute('data-type') === 'map' || 
+                    lowerId.startsWith('map-')
+      );
+
+      const isSlideshow = !isPageRoot && (
+                          child.getAttribute('data-type') === 'slideshow' || 
+                          child.getAttribute('data-is-slideshow') === 'true' || 
+                          lowerId.startsWith('slideshow-')
+      );
+
+      const isImageFrame = !isPageRoot && (
+                           child.getAttribute('data-type') === 'image-frame' || 
+                           child.getAttribute('data-is-image-frame') === 'true' || 
+                           lowerId.startsWith('image-frame-') || 
+                           lowerId.startsWith('imageframe-')
+      );
+
+      const isShape = !isPageRoot && (
+                      child.getAttribute('data-type') === 'shape' || 
+                      child.getAttribute('data-shape-type') === 'shape' || 
+                      child.getAttribute('data-is-element-shape') === 'true' || 
+                      lowerId.startsWith('shape-')
+      );
+
+      const isTable = !isPageRoot && (
+                      child.getAttribute('data-type') === 'table' || 
+                      child.getAttribute('data-type') === 'table-frame' || 
+                      lowerId.startsWith('table-')
+      );
+
+      const isDecorator = !isPageRoot && (
+                          child.getAttribute('data-type') === 'decorator' || 
+                          child.getAttribute('data-type') === 'animated-decorator' || 
+                          child.getAttribute('data-is-animated-decorator') === 'true' || 
+                          lowerId.startsWith('decorator-')
+      );
+
+      const isTypography = !isPageRoot && (
+                           child.getAttribute('data-typography-type') === 'motion-graphic' ||
+                           child.getAttribute('data-typography-type') === 'kinetic' ||
+                           child.getAttribute('data-is-element-typography') === 'true' ||
+                           (lowerId.startsWith('typography-') && child.getAttribute('data-type') === 'text')
+      );
+
+      const isGroup = !isPageRoot && (
+        child.getAttribute('data-is-image-group') === 'true' ||
         child.getAttribute('data-is-video-group') === 'true' ||
-        child.getAttribute('data-is-gif-group') === 'true';
+        child.getAttribute('data-is-gif-group') === 'true' ||
+        isEmbedGroup || isAudioFrame || isButton || isQRCode ||
+        isMap || isSlideshow || isImageFrame || isShape || isTable || isDecorator || isTypography
+      );
 
       const isPdfVector = child.getAttribute('data-type') === 'pdf-vector-layer';
 
-      const isTypography = child.getAttribute('data-is-element-typography') === 'true' ||
-        child.getAttribute('data-typography-type') === 'kinetic' ||
-        child.getAttribute('data-typography-type') === 'motion-graphic' ||
-        (child.id && child.id.startsWith('typography-')) ||
-        (child.getAttribute('data-type') === 'text' && child.tagName.toLowerCase() === 'g');
-
-      if (isTypography) {
-        layer.type = 'text';
-      }
-
-      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector && !isTypography) {
+      if (child.tagName.toLowerCase() === 'g' && child.children.length > 0 && !isGroup && !isPdfVector) {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
@@ -389,6 +454,78 @@ export const parseLayersFromSVG = (element) => {
         } else if (child.getAttribute('data-is-gif-group') === 'true') {
           coreName = 'GIF';
           coreType = 'image';
+        } else if (isEmbedGroup) {
+          coreName = 'Embed Frame';
+          coreType = 'embed-frame';
+        } else if (isAudioFrame) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('audio-') || customName.toLowerCase() === 'audio' || [
+            'Clean Glassmorphism', 'Neon Cyberpunk', 'Vinyl Retro', 'Minimalist Capsule', 'Modern Gradient', 'Floating Card'
+          ].includes(customName);
+          coreName = isDefault ? 'Audio' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'audio-frame';
+        } else if (isButton) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('button-') || customName.toLowerCase() === 'button' || [
+            'Solid Pill', 'White Pill Badge', 'Rect Badge', 'App Icon', 'Blue Primary',
+            'Social Badge', 'Angled Slice', 'Slanted Border', 'Like Chevron', 'Upload Ribbon'
+          ].includes(customName);
+          coreName = isDefault ? 'Button' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'button';
+        } else if (isQRCode) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('qrcode-') || customName.toLowerCase() === 'qr code' || customName === 'SCAN ME';
+          coreName = isDefault ? 'QR Code' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'qrcode';
+        } else if (isMap) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('map-') || customName.toLowerCase() === 'map' || [
+            'Google Maps Location', 'Quick Actions', 'Pin Callout', 'Photo Gallery', 'Location Carousel', 'Map Only'
+          ].includes(customName);
+          coreName = isDefault ? 'Map' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'map';
+        } else if (isSlideshow) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('slideshow-') || customName.toLowerCase() === 'slideshow' || [
+            'Flat Gallery', '3D Coverflow'
+          ].includes(customName);
+          coreName = isDefault ? 'Slideshow' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'slideshow';
+        } else if (isImageFrame) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('image-frame-') || customName.startsWith('imageframe-') || customName.toLowerCase() === 'image frame';
+          coreName = isDefault ? 'Image Frame' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'image-frame';
+        } else if (isShape) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('shape-') || customName.toLowerCase() === 'shape';
+          if (!isDefault) {
+            coreName = customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          } else {
+            coreName = 'Shape';
+          }
+          coreType = 'shape';
+        } else if (isTable) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('table-') || customName.toLowerCase() === 'table' || [
+            'Standard Grid', 'Accent Header', 'Zebra Striped', 'Minimal Borderless', 'Dark Slate', 'Pricing Matrix'
+          ].includes(customName);
+          coreName = isDefault ? 'Table' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'table';
+        } else if (isDecorator) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('decorator-') || customName.toLowerCase() === 'decorator';
+          coreName = isDefault ? 'Decorator' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'decorator';
+        } else if (isTypography) {
+          const customName = child.getAttribute('data-name');
+          const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
+            'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
+            'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
+            'Paragraph Text', 'Bullet List', 'Numbered List'
+          ].includes(customName);
+          coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          coreType = 'text';
         } else if (isText) {
           const customName = child.getAttribute('data-name');
           coreName = customName ? customName.replace(/^tpl-[a-z0-9]{4}-/, '') : 'Text';

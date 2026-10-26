@@ -234,6 +234,8 @@ export function createTableElementNode(config = {}, cx = 200, cy = 200) {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', uniqueId);
   g.setAttribute('data-type', 'table-frame');
+  g.setAttribute('data-name', 'Table');
+  g.setAttribute('data-table-title', merged.name || 'Table');
   g.setAttribute('data-scrollable', 'false');
   g.setAttribute('data-rows', String(merged.rows));
   g.setAttribute('data-cols', String(merged.cols));

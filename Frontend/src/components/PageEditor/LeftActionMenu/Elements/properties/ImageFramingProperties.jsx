@@ -148,24 +148,16 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
   const activeEffects = [];
   if (selectedElementProps?.['data-effect-drop-shadow'] === 'true') activeEffects.push('Drop Shadow');
-  if (selectedElementProps?.['data-effect-inner-shadow'] === 'true') activeEffects.push('Inner Shadow');
-  if (selectedElementProps?.['data-effect-blur'] === 'true') activeEffects.push('Blur');
 
   const handleSetActiveEffects = (updater) => {
     const currentActive = [];
     if (selectedElementProps?.['data-effect-drop-shadow'] === 'true') currentActive.push('Drop Shadow');
-    if (selectedElementProps?.['data-effect-inner-shadow'] === 'true') currentActive.push('Inner Shadow');
-    if (selectedElementProps?.['data-effect-blur'] === 'true') currentActive.push('Blur');
 
     const next = typeof updater === 'function' ? updater(currentActive) : updater;
     const updates = {};
     const hasDropShadow = next.includes('Drop Shadow');
-    const hasInnerShadow = next.includes('Inner Shadow');
-    const hasBlur = next.includes('Blur');
 
     if ((selectedElementProps?.['data-effect-drop-shadow'] === 'true') !== hasDropShadow) updates['data-effect-drop-shadow'] = hasDropShadow ? 'true' : 'false';
-    if ((selectedElementProps?.['data-effect-inner-shadow'] === 'true') !== hasInnerShadow) updates['data-effect-inner-shadow'] = hasInnerShadow ? 'true' : 'false';
-    if ((selectedElementProps?.['data-effect-blur'] === 'true') !== hasBlur) updates['data-effect-blur'] = hasBlur ? 'true' : 'false';
 
     if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
@@ -178,38 +170,23 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       spread: parseInt(selectedElementProps?.['data-effect-drop-shadow-spread'] || 0),
       color: selectedElementProps?.['data-effect-drop-shadow-color'] || '#000000',
       opacity: parseInt(selectedElementProps?.['data-effect-drop-shadow-opacity'] || 35),
-    },
-    'Inner Shadow': {
-      x: parseInt(selectedElementProps?.['data-effect-inner-shadow-x'] || 2),
-      y: parseInt(selectedElementProps?.['data-effect-inner-shadow-y'] || 2),
-      blur: parseInt(selectedElementProps?.['data-effect-inner-shadow-blur'] || 0),
-      spread: parseInt(selectedElementProps?.['data-effect-inner-shadow-spread'] || 0),
-      color: selectedElementProps?.['data-effect-inner-shadow-color'] || '#000000',
-      opacity: parseInt(selectedElementProps?.['data-effect-inner-shadow-opacity'] || 35),
-    },
-    'Blur': {
-      blur: parseFloat(selectedElementProps?.['data-effect-blur-value'] !== undefined ? selectedElementProps?.['data-effect-blur-value'] : (selectedElementProps?.['data-effect-blur-blur'] || 0.3)),
-      spread: parseInt(selectedElementProps?.['data-effect-blur-spread'] || 0),
-      clipContent: selectedElementProps?.['data-effect-blur-clip'] === 'true'
     }
   };
 
   const handleSetEffectSettings = (updater) => {
     const next = typeof updater === 'function' ? updater(effectSettings) : updater;
+    if (!next) return;
     const updates = {};
-    ['Drop Shadow', 'Inner Shadow'].forEach(type => {
-      const prefix = type === 'Drop Shadow' ? 'drop-shadow' : 'inner-shadow';
-      if (effectSettings[type].x !== next[type].x) updates[`data-effect-${prefix}-x`] = next[type].x.toString();
-      if (effectSettings[type].y !== next[type].y) updates[`data-effect-${prefix}-y`] = next[type].y.toString();
-      if (effectSettings[type].blur !== next[type].blur) updates[`data-effect-${prefix}-blur`] = next[type].blur.toString();
-      if (effectSettings[type].spread !== next[type].spread) updates[`data-effect-${prefix}-spread`] = next[type].spread.toString();
-      if (effectSettings[type].color !== next[type].color) updates[`data-effect-${prefix}-color`] = next[type].color;
-      if (effectSettings[type].opacity !== next[type].opacity) updates[`data-effect-${prefix}-opacity`] = next[type].opacity.toString();
-    });
-
-    if (effectSettings['Blur'].blur !== next['Blur'].blur) updates[`data-effect-blur-value`] = next['Blur'].blur.toString();
-    if (effectSettings['Blur'].spread !== next['Blur'].spread) updates[`data-effect-blur-spread`] = next['Blur'].spread.toString();
-    if (effectSettings['Blur'].clipContent !== next['Blur'].clipContent) updates[`data-effect-blur-clip`] = next['Blur'].clipContent ? 'true' : 'false';
+    if (next['Drop Shadow'] && effectSettings['Drop Shadow']) {
+      const type = 'Drop Shadow';
+      const prefix = 'drop-shadow';
+      if (next[type].x !== undefined && effectSettings[type].x !== next[type].x) updates[`data-effect-${prefix}-x`] = next[type].x.toString();
+      if (next[type].y !== undefined && effectSettings[type].y !== next[type].y) updates[`data-effect-${prefix}-y`] = next[type].y.toString();
+      if (next[type].blur !== undefined && effectSettings[type].blur !== next[type].blur) updates[`data-effect-${prefix}-blur`] = next[type].blur.toString();
+      if (next[type].spread !== undefined && effectSettings[type].spread !== next[type].spread) updates[`data-effect-${prefix}-spread`] = next[type].spread.toString();
+      if (next[type].color !== undefined && effectSettings[type].color !== next[type].color) updates[`data-effect-${prefix}-color`] = next[type].color;
+      if (next[type].opacity !== undefined && effectSettings[type].opacity !== next[type].opacity) updates[`data-effect-${prefix}-opacity`] = next[type].opacity.toString();
+    }
 
     if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
@@ -1222,6 +1199,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         setActiveColorPicker={setActiveColorPicker}
         showDetailedPicker={showDetailedPicker}
         setShowDetailedPicker={setShowDetailedPicker}
+        hideBlur={true}
+        hideInnerShadow={true}
       />
     </div>
   );

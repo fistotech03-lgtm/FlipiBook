@@ -26,21 +26,22 @@
     "concurrently": "^10.0.5"
   },
   "dependencies": {
+    "adm-zip": "^0.6.1",
+    "append-field": "^1.0.0",
     "bcryptjs": "^3.0.3",
+    "busboy": "^1.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
+    "flipibook": "file:..",
     "http-proxy-middleware": "^3.0.7",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.2",
-    "append-field": "^1.0.0",
-    "busboy": "^1.6.0",
-    "streamsearch": "^1.1.0",
     "multer": "^2.4.0",
     "nanoid": "^6.0.2",
     "nodemailer": "^10.0.12",
     "pdf-lib": "^1.17.1",
-    "adm-zip": "^0.6.1"
+    "streamsearch": "^1.1.0"
   }
 }

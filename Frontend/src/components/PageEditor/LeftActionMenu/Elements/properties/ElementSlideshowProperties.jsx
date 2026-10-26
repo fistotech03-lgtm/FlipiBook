@@ -14,6 +14,7 @@ export default function ElementSlideshowProperties({
   effectiveFolder,
   effectiveBook,
   effectiveVId,
+  currentPageVId,
   onDeleteLayer
 }) {
   const getSelectedElement = () => {
@@ -45,10 +46,11 @@ export default function ElementSlideshowProperties({
   };
 
   return (
-    <div className="custom-scrollbar h-full overflow-y-auto">
+    <div className="custom-scrollbar h-full overflow-y-auto overflow-x-hidden">
       <SlideshowEditor
         selectedElement={el}
         activePageIndex={activePageIndex}
+        currentPageVId={currentPageVId || selectedElementProps?.pageVId || ''}
         onUpdate={handleUpdate}
         isOpen={true}
         flipbookName={effectiveBook}

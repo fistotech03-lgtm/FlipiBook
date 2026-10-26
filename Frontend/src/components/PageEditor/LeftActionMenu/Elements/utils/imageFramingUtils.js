@@ -45,7 +45,8 @@ export const createImageFrameNode = (frameName, rawSvg, cx, cy) => {
   g.setAttribute('data-type', 'image-frame');
   g.setAttribute('data-is-image-frame', 'true');
   g.setAttribute('data-frame-type', frameName);
-  g.setAttribute('data-name', `${frameName} Frame`);
+  g.setAttribute('data-name', 'Image Frame');
+  g.setAttribute('data-frame-title', `${frameName} Frame`);
   g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
   g.setAttribute('cursor', 'pointer');
   g.innerHTML = svgEl.innerHTML;

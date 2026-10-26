@@ -153,7 +153,8 @@ export function createSlideshowElementNode(styleId = 'coverflow', cx = 200, cy =
   const el = doc.querySelector(`g#slideshow-${uniqueId}`) || doc.firstElementChild?.firstElementChild;
   if (el) {
     el.setAttribute('transform', `translate(${Math.round(cx - 110)}, ${Math.round(cy - 75)})`);
-    el.setAttribute('data-name', styleId === 'flat' ? 'Flat Gallery' : '3D Coverflow');
+    el.setAttribute('data-name', 'Slideshow');
+    el.setAttribute('data-slideshow-title', styleId === 'flat' ? 'Flat Gallery' : '3D Coverflow');
     el.setAttribute('data-type', 'slideshow');
     el.setAttribute('data-is-slideshow', 'true');
     return document.importNode(el, true);

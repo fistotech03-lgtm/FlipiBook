@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { getVisualBBox, getCanvasBounds } from '../mainEditor/utils/geometryUtils';
 import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, ChevronRight, Upload, Link, Check, FileText, Video } from 'lucide-react';
 import { Icon } from '@iconify/react';
@@ -619,6 +619,33 @@ const RightSidebar = ({
           }
         });
 
+        // For shapes added as SVGs wrapped in a <g>, extract inner shape properties
+        if (el.tagName.toLowerCase() === 'g') {
+          const innerShape = el.querySelector('path, polygon, rect, circle, ellipse, line');
+          if (innerShape) {
+            props.innerTagName = innerShape.tagName.toLowerCase();
+            Array.from(innerShape.attributes).forEach(attr => {
+              if (['data-shape-type', 'data-shape-id', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked'].includes(attr.name)) {
+                props[attr.name] = attr.value;
+              }
+            });
+            const innerD = innerShape.getAttribute('d') || '';
+            const isInnerDiamond = props['data-shape-type'] === 'diamond' ||
+              props['data-shape-id'] === 'rounded-diamond' ||
+              (innerD && (innerD.includes('50 12') || innerD.includes('50 88') || innerD.includes('85 43') || innerD.includes('15 57')));
+            if (isInnerDiamond) {
+              props['data-shape-type'] = 'diamond';
+              if (props['data-tl'] === undefined) {
+                props['data-tl'] = '17';
+                props['data-tr'] = '17';
+                props['data-bl'] = '17';
+                props['data-br'] = '17';
+                props.rx = '17';
+              }
+            }
+          }
+        }
+
         // Add a flag for image detection
         const dataType = el.getAttribute('data-type');
         const dataName = el.getAttribute('data-name');
@@ -707,6 +734,10 @@ const RightSidebar = ({
         const isQRCode = el.getAttribute('data-type') === 'qrcode' ||
           (el.getAttribute('id') && el.getAttribute('id').startsWith('qrcode-')) ||
           !!qrParent;
+        if (isQRCode) {
+          props.qrcodeId = qrParent ? qrParent.id : selectedLayerId;
+          props.isQRCode = true;
+        }
 
         const mapParent = el?.closest?.('[data-type="map"], g[id^="map-"]');
         const isMap = el.getAttribute('data-type') === 'map' ||
@@ -730,8 +761,10 @@ const RightSidebar = ({
         const isAudio = el.getAttribute('data-type') === 'audio-frame' ||
           (el.getAttribute('id') && el.getAttribute('id').startsWith('audio-')) ||
           !!audioParent;
-
-        props.isAudio = isAudio;
+        if (isAudio) {
+          props.audioId = audioParent ? audioParent.id : selectedLayerId;
+          props.isAudio = true;
+        }
 
         props.isMap = isMap;
         props.isEmbed = isEmbed;
@@ -759,17 +792,18 @@ const RightSidebar = ({
           !isAudio;
 
         if (isElementButton) {
+          props.buttonId = buttonParent ? buttonParent.id : (el.id?.startsWith('button-') ? el.id : selectedLayerId);
           props.isText = false;
           props.isShape = false;
           props.isElementShape = false;
         }
 
-        props.isImage = isImage;
-        props.isText = isText;
-        props.isVideo = isVideo;
-        props.isGif = isGif;
-        props.isIcon = isIcon;
-        props.isPdfBackground = isPdfBackground;
+        props.isImage = isElementButton ? false : isImage;
+        props.isText = isElementButton ? false : isText;
+        props.isVideo = isElementButton ? false : isVideo;
+        props.isGif = isElementButton ? false : isGif;
+        props.isIcon = isElementButton ? false : isIcon;
+        props.isPdfBackground = isElementButton ? false : isPdfBackground;
 
         return props;
       }
@@ -987,7 +1021,7 @@ const RightSidebar = ({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+            <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
               {isPdfProject ? (
                 <InteractionPanel
                   selectedElementProps={selectedElementProps}
@@ -1005,7 +1039,7 @@ const RightSidebar = ({
                   flipbookName={effectiveBook}
                 />
               ) : (
-                <div className="flex flex-col p-[1.5vw] gap-[1.5vw]">
+                <div className="flex flex-col p-[1.5vw] gap-[1.5vw] overflow-x-hidden">
                   {selectedElementProps ? (
                     <div className="flex flex-col gap-[1.5vw]">
                       {(selectedElementProps?.isUserGroup || (multiSelectedIds && multiSelectedIds.size > 1)) ? (
@@ -1122,15 +1156,47 @@ const RightSidebar = ({
                       ) : selectedElementProps?.isQRCode ? (
                         <ElementQRCodeProperties
                           selectedElement={(() => {
+                            const targetId = selectedElementProps?.qrcodeId || selectedLayerId;
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            const el = editorDoc.getElementById(selectedLayerId);
+                            const el = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null);
                             return el?.closest?.('[data-type="qrcode"], g[id^="qrcode-"]') || el;
                           })()}
                           selectedElementProps={selectedElementProps}
-                          selectedLayerId={selectedLayerId}
+                          selectedLayerId={selectedElementProps?.qrcodeId || selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
-                          onUpdate={() => {}}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            const targetId = selectedElementProps?.qrcodeId || selectedLayerId;
+                            if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
+                              updateElementAttribute(activePageIndex, targetId, '__dom_sync__', newHtml);
+                            } else {
+                              const svgRoot = (() => {
+                                const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                                const el = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null);
+                                if (!el) return null;
+                                const container = el.closest('.page-svg-container');
+                                if (container) {
+                                  const canvasContent = container.querySelector('[id^="canvas-content-"]');
+                                  return canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+                                }
+                                let node = el;
+                                let lastSvg = null;
+                                while (node) {
+                                  if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+                                  node = node.parentElement;
+                                }
+                                return lastSvg;
+                              })();
+                              if (svgRoot) {
+                                const cloneSvg = svgRoot.cloneNode(true);
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+                                const serializer = new XMLSerializer();
+                                const html = serializer.serializeToString(cloneSvg);
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
+                              }
+                            }
+                          }}
                         />
                       ) : selectedElementProps?.isMap ? (
                         <ElementMapProperties
@@ -1142,8 +1208,35 @@ const RightSidebar = ({
                           selectedElementProps={selectedElementProps}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
-                          updateElementAttribute={updateElementAttribute}
-                          onUpdate={() => {}}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            const svgRoot = (() => {
+                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                              const el = editorDoc.getElementById(selectedLayerId);
+                              if (!el) return null;
+                              const container = el.closest('.page-svg-container');
+                              if (container) {
+                                const canvasContent = container.querySelector('[id^="canvas-content-"]');
+                                return canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+                              }
+                              let node = el;
+                              let lastSvg = null;
+                              while (node) {
+                                if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+                                node = node.parentElement;
+                              }
+                              return lastSvg;
+                            })();
+                            if (svgRoot) {
+                              const cloneSvg = svgRoot.cloneNode(true);
+                              cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
+                              const serializer = new XMLSerializer();
+                              const html = serializer.serializeToString(cloneSvg);
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                            } else if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                            }
+                          }}
                         />
                       ) : selectedElementProps?.isEmbed ? (
                         <ElementEmbedProperties
@@ -1169,8 +1262,8 @@ const RightSidebar = ({
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
                           effectiveFolder={effectiveFolder}
-                          effectiveBook={effectiveBook}
-                          effectiveVId={effectiveVId}
+                          flipbookName={effectiveBook}
+                          flipbookVId={effectiveVId}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
                       ) : selectedElementProps?.isDecorator ? (
@@ -1187,26 +1280,90 @@ const RightSidebar = ({
                       ) : selectedElementProps?.isAudio ? (
                         <ElementAudioProperties
                           selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            const base = editorDoc.getElementById(selectedLayerId);
-                            return base?.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || base;
+                            const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+                            const rawEl = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || document.getElementById(selectedLayerId);
+                            return rawEl?.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || rawEl;
                           })()}
                           selectedElementProps={selectedElementProps}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            if (typeof newHtml === 'string') {
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                            } else {
+                              const svgRoot = (() => {
+                                const el = document.getElementById(selectedLayerId);
+                                if (!el) return null;
+                                const container = el.closest('.page-svg-container');
+                                if (container) return container.querySelector('svg');
+
+                                let node = el;
+                                let lastSvg = null;
+                                while (node) {
+                                  if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+                                  node = node.parentElement;
+                                }
+                                return lastSvg;
+                              })();
+                              if (svgRoot) {
+                                const cloneSvg = svgRoot.cloneNode(true);
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
+                                const serializer = new XMLSerializer();
+                                const html = serializer.serializeToString(cloneSvg);
+                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                              } else {
+                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', null);
+                              }
+                            }
+                          }}
                         />
-                      ) : selectedElementProps?.isElementButton ? (
+                      ) : (selectedElementProps?.isButton || selectedElementProps?.isElementButton) ? (
                         <ElementButtonProperties
                           selectedElement={(() => {
+                            const targetId = selectedElementProps?.buttonId || selectedLayerId;
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            const base = editorDoc.getElementById(selectedLayerId);
+                            const base = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null);
                             return base?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]') || base;
                           })()}
                           selectedElementProps={selectedElementProps}
-                          selectedLayerId={selectedLayerId}
+                          selectedLayerId={selectedElementProps?.buttonId || selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            const targetId = selectedElementProps?.buttonId || selectedLayerId;
+                            if (typeof newHtml === 'string') {
+                              updateElementAttribute(activePageIndex, targetId, '__dom_sync__', newHtml);
+                            } else {
+                              const svgRoot = (() => {
+                                const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                                const el = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null);
+                                if (!el) return null;
+                                const container = el.closest('.page-svg-container');
+                                if (container) {
+                                  const canvasContent = container.querySelector('[id^="canvas-content-"]');
+                                  return canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+                                }
+                                let node = el;
+                                let lastSvg = null;
+                                while (node) {
+                                  if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+                                  node = node.parentElement;
+                                }
+                                return lastSvg;
+                              })();
+                              if (svgRoot) {
+                                const cloneSvg = svgRoot.cloneNode(true);
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
+                                const serializer = new XMLSerializer();
+                                const html = serializer.serializeToString(cloneSvg);
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
+                              }
+                            }
+                            window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+                          }}
                         />
                       ) : selectedElementProps?.isImageFrame ? (
                         <ImageFramingProperties

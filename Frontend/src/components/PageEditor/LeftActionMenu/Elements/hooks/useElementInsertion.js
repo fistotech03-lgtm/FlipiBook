@@ -49,10 +49,37 @@ export function useElementInsertion({
       }
       const finalId = el.getAttribute('id') || uniqueId;
       if (!el.getAttribute('data-name')) {
-        el.setAttribute('data-name', item.name || 'Element');
+        const defaultNamesByCategory = {
+          buttons: 'Button',
+          text: 'Typography',
+          shapes: 'Shape',
+          tables: 'Table',
+          'qr-code': 'QR Code',
+          'google-maps': 'Map',
+          slideshow: 'Slideshow',
+          masking: 'Image Frame',
+          decorators: 'Decorator',
+          audio: 'Audio',
+          embeds: 'Embed Frame'
+        };
+        const defaultName = defaultNamesByCategory[item.category] || item.name || 'Element';
+        el.setAttribute('data-name', defaultName);
       }
       if (!el.getAttribute('data-type')) {
-        el.setAttribute('data-type', 'shape');
+        const defaultTypeByCategory = {
+          buttons: 'button',
+          text: 'text',
+          shapes: 'shape',
+          tables: 'table-frame',
+          'qr-code': 'qrcode',
+          'google-maps': 'map',
+          slideshow: 'slideshow',
+          masking: 'image-frame',
+          decorators: 'decorator',
+          audio: 'audio-frame',
+          embeds: 'embed-frame'
+        };
+        el.setAttribute('data-type', defaultTypeByCategory[item.category] || 'shape');
       }
 
       // Target the page frame group rather than the root SVG

@@ -44,13 +44,36 @@ const extractIconSvg = (key, IconComp) => {
 export const IconsModal = ({
   isOpen = false,
   onClose,
+  onSelect,
   isRulerEnabled = true,
   activePageIndex = 0,
   dragConstraintsRef,
+  position = 'left',
+  style: customStyle = {},
+  className: customClassName = '',
 }) => {
   const dragControls = useDragControls();
+  const modalRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [rulerActive, setRulerActive] = useState(Boolean(isRulerEnabled));
+  const isRight = position === 'right';
+
+  // Close modal when clicking outside if docked to right side
+  useEffect(() => {
+    if (!isOpen || !isRight) return;
+    const handleOutsideClick = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        if (onClose) onClose();
+      }
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }, 50);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen, isRight, onClose]);
 
   // Sync with prop
   useEffect(() => {
@@ -100,10 +123,20 @@ export const IconsModal = ({
     }
   };
 
-  // Click to add icon to page center
+  // Click to add icon to page center or select for target component
   const handleAddIcon = (item) => {
     const IconComp = icons[item.key];
     const svgData = extractIconSvg(item.key, IconComp);
+
+    if (onSelect) {
+      onSelect({
+        name: item.key,
+        displayName: item.name,
+        html: svgData.html,
+        viewBox: svgData.viewBox,
+      });
+      return;
+    }
 
     window.dispatchEvent(
       new CustomEvent('add-icon-to-editor', {
@@ -145,9 +178,26 @@ export const IconsModal = ({
 
   const displayedIcons = filteredIcons.slice(0, visibleCount);
 
+  const defaultPosition = isRight
+    ? {
+        right: '24.5vw',
+        top: '8vh',
+        left: 'auto',
+      }
+    : {
+        left: rulerActive ? '6.2vw' : '5vw',
+        top: rulerActive ? '2.2vw' : '1vw',
+        right: 'auto',
+      };
+
+  const defaultClasses = isRight
+    ? 'fixed z-[5000] bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[right,top] duration-300 ease-in-out'
+    : 'absolute z-50 bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[left,top] duration-300 ease-in-out';
+
   return (
     <AnimatePresence>
       <motion.div
+        ref={modalRef}
         drag
         dragListener={false}
         dragControls={dragControls}
@@ -158,14 +208,14 @@ export const IconsModal = ({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="absolute z-50 bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[left,top] duration-300 ease-in-out"
+        className={`${defaultClasses} ${customClassName}`.trim()}
         style={{
           width: '21.5vw',
           minWidth: '310px',
           height: '68vh',
           maxHeight: '640px',
-          left: rulerActive ? '6.2vw' : '5vw',
-          top: rulerActive ? '2.2vw' : '1vw',
+          ...defaultPosition,
+          ...customStyle,
         }}
         onClick={(e) => e.stopPropagation()}
       >

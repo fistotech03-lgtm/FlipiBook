@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Undo2, Redo2, RotateCcw, Plus, Minus } from 'lucide-react';
 import { Icon } from '@iconify/react';
+import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
 const TopToolbar = ({ 
   zoom, 
@@ -17,6 +18,7 @@ const TopToolbar = ({
   onFlipV,
   onAlign,
   hasSelection,
+  selectedLayerId,
   hideTools = false
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -284,6 +286,71 @@ const TopToolbar = ({
                 <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.2vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
                   Flip Vertical
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Thin Vertical Divider */}
+          <div className="w-[1px] h-[1.8vw] bg-gray-200 mx-[0.2vw]" />
+
+          {/* Mask Option */}
+          {(() => {
+            const doc = typeof document !== 'undefined' ? (document.getElementById('main-flipbook-editor')?.contentDocument || document) : null;
+            const el = doc && selectedLayerId ? doc.getElementById(selectedLayerId) : null;
+            const isMaskActive = el && (
+              el.getAttribute('data-type') === 'mask-group' ||
+              el.closest('[data-type="mask-group"]') !== null ||
+              el.getAttribute('data-mask-enabled') === 'true' ||
+              (el.getAttribute('fill') && el.getAttribute('fill').includes('url(#pattern-')) ||
+              el.querySelector('[data-mask-enabled="true"]') !== null ||
+              el.querySelector('[fill*="url(#pattern-"]') !== null
+            );
+            return (
+              <div className="relative group/tt flex items-center justify-center">
+                <button
+                  onClick={() => {
+                    if (hasSelection) {
+                      window.dispatchEvent(new CustomEvent('trigger-mask'));
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center px-[0.5vw] py-[0.2vw] ${
+                    isMaskActive ? 'bg-[#EEF2FF] text-[#4F46E5]' : 'hover:bg-[#F3F4F6] text-[#374151] hover:text-black'
+                  } rounded-[0.4vw] cursor-pointer transition-colors group select-none`}
+                >
+                  <MaskIcon size="1.15vw" className={`${isMaskActive ? 'text-[#4F46E5]' : 'text-[#374151] group-hover:text-black'} transition-colors`} />
+                  <span className={`text-[0.6vw] ${isMaskActive ? 'text-[#4F46E5] font-semibold' : 'text-[#4B5563] group-hover:text-black font-medium'} leading-tight mt-[0.15vw] transition-colors`}>
+                    Mask
+                  </span>
+                </button>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.35vw] hidden group-hover/tt:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
+                  <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
+                  <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.2vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
+                    {isMaskActive ? 'Unmask' : 'Use as Mask'}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Flatten Option */}
+          <div className="relative group/tt flex items-center justify-center">
+            <button
+              onClick={() => {
+                if (hasSelection) {
+                  window.dispatchEvent(new CustomEvent('trigger-flatten'));
+                }
+              }}
+              className="flex flex-col items-center justify-center px-[0.5vw] py-[0.2vw] hover:bg-[#F3F4F6] rounded-[0.4vw] cursor-pointer transition-colors group select-none"
+            >
+              <FlattenIcon size="1.15vw" className="text-[#374151] group-hover:text-black transition-colors" />
+              <span className="text-[0.6vw] text-[#4B5563] font-medium leading-tight mt-[0.15vw] group-hover:text-black transition-colors">
+                Flatten
+              </span>
+            </button>
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.35vw] hidden group-hover/tt:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
+              <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
+              <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.2vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
+                Flatten Selection
               </div>
             </div>
           </div>

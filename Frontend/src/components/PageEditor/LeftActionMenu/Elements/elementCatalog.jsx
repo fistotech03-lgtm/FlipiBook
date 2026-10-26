@@ -68,7 +68,7 @@ export function createSvgIconGroup(name, iconName, cx, cy, size = 44) {
 
 // Rich Element Catalog with items, render previews, and SVG insert generators
 export const ELEMENT_ITEMS = [
-  // --- Professional SVG Vector Shapes (33 Curated Shapes) ---
+  // --- Professional SVG Vector Shapes (20 Curated Pure-Code Shapes) ---
   ...SHAPE_ITEMS,
 
   // --- Professional Typography & Kinetic Motion Graphics ---

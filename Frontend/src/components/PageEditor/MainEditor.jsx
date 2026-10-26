@@ -1282,6 +1282,7 @@ const getDraggableElement = (target, canvasRoot) => {
         onFlipH={() => handleFlip('h')}
         onFlipV={() => handleFlip('v')}
         onAlign={handleAlign}
+        selectedLayerId={selectedLayerId}
         hideTools={isPdfProject}
 
         hasSelection={(() => {

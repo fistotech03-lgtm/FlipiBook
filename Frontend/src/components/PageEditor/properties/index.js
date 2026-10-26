@@ -1,4 +1,4 @@
-﻿/**
+/**
  * properties/index.js
  * Central barrel file for editor properties and panels.
  */
@@ -8,9 +8,10 @@ export { default as PageProperties, getDocumentInfo } from './PageProperties';
 export { default as TextEditor } from './TextEditor';
 export { default as VideoEditor } from './VideoEditor';
 export { default as ShapeProperties } from './ShapeProperties';
-export { default as ElementShapesProperties } from '../LeftActionMenu/Elements/properties/ElementShapesProperties';
+export { default as ElementShapesProperties, ShapeAppearanceControls } from '../LeftActionMenu/Elements/properties/ElementShapesProperties';
 export { default as TextElementEditor } from '../LeftActionMenu/Elements/properties/TextElementEditor';
 export { default as ElementButtonProperties } from '../LeftActionMenu/Elements/properties/ElementButtonProperties';
+export { default as ButtonEditor } from '../LeftActionMenu/Elements/properties/ElementButtonProperties';
 export { default as ImageFramingProperties } from '../LeftActionMenu/Elements/properties/ImageFramingProperties';
 export { default as ElementTableProperties } from '../LeftActionMenu/Elements/properties/ElementTableProperties';
 export { default as ElementQRCodeProperties } from '../LeftActionMenu/Elements/properties/ElementQRCodeProperties';

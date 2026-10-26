@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+let backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
+        backendUrl = '';
+    }
+}
 
 const api = axios.create({
     baseURL: backendUrl,
@@ -22,6 +27,8 @@ export const flipbookApi = {
 
     // Flipbooks API
     getBooks: (emailId) => api.get('/api/flipbook/list', { params: { emailId } }),
+    getPreview: (v_id, emailId, signal) =>
+        api.get(`/api/flipbook/preview/${v_id}`, { params: { emailId }, signal }),
     saveBook: (payload) => api.post('/api/flipbook/save', payload),
     savePagesBatch: (payload) => api.post('/api/flipbook/save-pages-batch', payload),
     renamePage: (payload) => api.post('/api/flipbook/rename-page', payload),

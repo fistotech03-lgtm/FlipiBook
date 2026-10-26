@@ -3,7 +3,12 @@
  * Resolves backend uploads and local asset URLs.
  */
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
+let BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  if (BACKEND_URL.includes('localhost') || BACKEND_URL.includes('127.0.0.1')) {
+    BACKEND_URL = '';
+  }
+}
 
 /**
  * Build the base URL for a flipbook's folder using the backend uploads directory.
@@ -29,6 +34,11 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
     folder = folder.slice(6);
   } else if (folder === 'books') {
     folder = '';
+  }
+
+  const lowerFolder = folder.toLowerCase();
+  if (!lowerFolder || lowerFolder === 'my flipbooks' || lowerFolder === 'my_flipbooks' || lowerFolder === 'all flipbook' || lowerFolder === 'all flipbooks' || lowerFolder === 'recent' || lowerFolder === 'recent book') {
+    folder = 'default';
   }
 
   const segments = [email, 'books', folder, book].filter(Boolean);

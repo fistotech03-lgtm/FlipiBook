@@ -11,7 +11,8 @@ const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGO_URI;
     if (!mongoURI) {
-      throw new Error('MONGO_URI is not defined in environment variables');
+      console.warn('[Auth Service] Warning: MONGO_URI is not defined in environment variables.');
+      return null;
     }
 
     const conn = await mongoose.connect(mongoURI, {
@@ -22,7 +23,7 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     console.error(`[Auth Service] Database connection error: ${error.message}`);
-    throw error;
+    return null;
   }
 };
 

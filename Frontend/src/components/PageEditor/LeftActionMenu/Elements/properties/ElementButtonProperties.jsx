@@ -358,6 +358,7 @@ export const ButtonEditor = ({
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     let textWasHidden = false;
     let cleanFF = 'Poppins';
+    let parsedFs = 14;
     if (textEl) {
       setButtonText(textEl.textContent || 'Button');
 
@@ -371,7 +372,7 @@ export const ButtonEditor = ({
       setFontWeight(fw);
 
       const fs = textEl.getAttribute('font-size') || textEl.style.fontSize;
-      let parsedFs = fs ? parseInt(fs) : 14;
+      parsedFs = fs ? parseInt(fs) : 14;
       if (!parsedFs || parsedFs <= 0 || parsedFs === 12 || parsedFs === 13) {
         parsedFs = 14;
         textWasHidden = true;
@@ -408,6 +409,14 @@ export const ButtonEditor = ({
 
     const savedIconName = el.getAttribute('data-icon-name') || iconEl?.getAttribute('data-icon-name') || 'Check';
     setIconName(savedIconName);
+
+    const existingSvg = iconEl?.querySelector('svg');
+    const savedIconHtml = existingSvg ? existingSvg.innerHTML : '';
+    const savedIconViewBox = existingSvg ? (existingSvg.getAttribute('viewBox') || '0 0 24 24') : '0 0 24 24';
+    if (savedIconHtml) {
+      setIconHtml(savedIconHtml);
+      setIconViewBox(savedIconViewBox);
+    }
 
     const savedPlacement = el.getAttribute('data-icon-placement') || 'Left';
     setIconPlacement(savedPlacement);
@@ -558,8 +567,8 @@ export const ButtonEditor = ({
         cleanFF,
         currentHasIcon,
         savedIconName,
-        iconHtml,
-        iconViewBox,
+        savedIconHtml || iconHtml,
+        savedIconViewBox || iconViewBox,
         savedPaddingW !== null ? (parseInt(savedPaddingW, 10) || 0) : 0,
         savedPaddingH !== null ? (parseInt(savedPaddingH, 10) || 0) : 0,
         parseInt(savedIconGap) || 4,

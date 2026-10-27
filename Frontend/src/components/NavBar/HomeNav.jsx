@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import ProfileModal from '../Settings/ProfileModal';
 import { Bell, ArrowRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -63,11 +64,53 @@ export default function HomeNav() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal, setUser: setAuthUser } = useAuth();
   const isLoggedIn = isAuthenticated || verifyToken();
 
   const cookieUser = useMemo(() => getInitialUser(), []);
   const activeUser = user || cookieUser;
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const currentEmail = (activeUser?.emailId || activeUser?.email || cookieUser?.emailId || cookieUser?.email || '').trim();
+
+  // If active user is missing picture or full name, fetch latest profile from backend
+  useEffect(() => {
+    if (!isLoggedIn || !currentEmail) return;
+
+    let isMounted = true;
+    const fetchLatestProfile = async () => {
+      try {
+        const res = await axios.get(`${backendUrl}/api/profile`, {
+          params: { emailId: currentEmail },
+          withCredentials: true,
+        });
+        const p = res.data?.profile || (res.data?.emailId ? res.data : null);
+        if (p && isMounted) {
+          const updatedUser = {
+            ...(activeUser || {}),
+            ...p,
+            name: p.name || p.displayName || activeUser?.name || currentEmail.split('@')[0],
+            displayName: p.displayName || p.name || activeUser?.displayName || '',
+            picture: p.picture || activeUser?.picture || null,
+            avatarBgColor: p.avatarBgColor || activeUser?.avatarBgColor || '#E8D4C8',
+          };
+          if (setAuthUser) {
+            setAuthUser(updatedUser);
+          }
+        }
+      } catch (err) {
+        // Silent fallback
+      }
+    };
+
+    if (!activeUser?.picture || !activeUser?.name) {
+      fetchLatestProfile();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn, currentEmail, backendUrl]);
 
   // Reset image load error if user's picture updates
   useEffect(() => {

@@ -39,6 +39,7 @@ const userFolderSchema = new mongoose.Schema(
     },
     userID: {
       type: String,
+      alias: 'userId',
       trim: true,
       index: true
     },
@@ -54,8 +55,5 @@ const userFolderSchema = new mongoose.Schema(
     toObject: { virtuals: true }
   }
 );
-
-userFolderSchema.index({ userObjectID: 1 });
-userFolderSchema.index({ userID: 1 });
 
 module.exports = (mongoose.models.userFolder || mongoose.models.UserFolder) || mongoose.model('userFolder', userFolderSchema, 'UserFolders');

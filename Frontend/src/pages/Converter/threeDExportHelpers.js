@@ -5,7 +5,8 @@ import * as THREE from 'three';
 
 /**
  * Generates an ISO-10303-21 STEP (AP214) ADVANCED_BREP representation
- * Fully compliant with OpenCASCADE / occt-import-js and industry CAD software
+ * Fully compliant with OpenCASCADE / occt-import-js and industry CAD software.
+ * Optimized and safe for browser memory and WASM parser limits.
  */
 export function exportToStep(scene) {
   const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
@@ -51,7 +52,7 @@ DATA;
 
   const vertexCache = new Map();
   const getVertexPoint = (v) => {
-    const key = `${v.x.toFixed(4)},${v.y.toFixed(4)},${v.z.toFixed(4)}`;
+    const key = `${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)}`;
     if (vertexCache.has(key)) return vertexCache.get(key);
 
     const cpId = nextId();
@@ -99,6 +100,20 @@ DATA;
 
   const faceIds = [];
 
+  // Count total triangles across meshes
+  let totalTris = 0;
+  scene.traverse((child) => {
+    if (child.isMesh && child.geometry && child.geometry.attributes.position) {
+      const geom = child.geometry;
+      totalTris += geom.index ? Math.floor(geom.index.count / 3) : Math.floor(geom.attributes.position.count / 3);
+    }
+  });
+
+  // Safe boundary for client-side OpenCASCADE STEP parser in browser
+  const MAX_STEP_FACES = 650;
+  const sampleStride = totalTris > MAX_STEP_FACES ? Math.ceil(totalTris / MAX_STEP_FACES) : 1;
+  let triCounter = 0;
+
   scene.traverse((child) => {
     if (child.isMesh && child.geometry) {
       const geom = child.geometry;
@@ -110,6 +125,10 @@ DATA;
       const matrix = child.matrixWorld || new THREE.Matrix4();
 
       const addTri = (i1, i2, i3) => {
+        triCounter++;
+        if (sampleStride > 1 && triCounter % sampleStride !== 0) return;
+        if (faceIds.length >= MAX_STEP_FACES) return;
+
         const v1 = new THREE.Vector3(posAttr.getX(i1), posAttr.getY(i1), posAttr.getZ(i1)).applyMatrix4(matrix);
         const v2 = new THREE.Vector3(posAttr.getX(i2), posAttr.getY(i2), posAttr.getZ(i2)).applyMatrix4(matrix);
         const v3 = new THREE.Vector3(posAttr.getX(i3), posAttr.getY(i3), posAttr.getZ(i3)).applyMatrix4(matrix);
@@ -210,6 +229,7 @@ export function exportToFbx(scene) {
   
   let geomIdCounter = 2000;
   let modelIdCounter = 1000;
+  let matIdCounter = 3000;
 
   const objectEntries = [];
   const connectionEntries = [];
@@ -224,6 +244,7 @@ export function exportToFbx(scene) {
 
       const currentGeomId = geomIdCounter++;
       const currentModelId = modelIdCounter++;
+      const currentMatId = matIdCounter++;
 
       const matrix = child.matrixWorld || new THREE.Matrix4();
       const vertices = [];
@@ -261,8 +282,21 @@ export function exportToFbx(scene) {
 \t\tVersion: 232
 \t}`);
 
+      // Add a default gray Lambert/Phong material to FBX
+      objectEntries.push(`\tMaterial: ${currentMatId}, "Material::${child.name || 'Mesh'}_Mat", "" {
+\t\tVersion: 102
+\t\tShadingModel: "phong"
+\t\tMultiLayer: 0
+\t\tProperties70:  {
+\t\t\tP: "DiffuseColor", "Color", "", "A",0.85,0.85,0.85
+\t\t\tP: "SpecularColor", "Color", "", "A",0.2,0.2,0.2
+\t\t\tP: "Shininess", "Number", "", "A",20
+\t\t}
+\t}`);
+
       // Geometry -> Model connection, Model -> Root (0) connection
       connectionEntries.push(`\tC: "OO",${currentGeomId},${currentModelId}`);
+      connectionEntries.push(`\tC: "OO",${currentMatId},${currentModelId}`);
       connectionEntries.push(`\tC: "OO",${currentModelId},0`);
     }
   });
@@ -282,10 +316,13 @@ Definitions:  {
 \tVersion: 100
 \tCount: ${objectEntries.length}
 \tObjectType: "Model" {
-\t\tCount: ${objectEntries.length / 2}
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
 \t}
 \tObjectType: "Geometry" {
-\t\tCount: ${objectEntries.length / 2}
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
+\t}
+\tObjectType: "Material" {
+\t\tCount: ${Math.floor(objectEntries.length / 3)}
 \t}
 }
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Flipbook = require('../models/flipbook');
 const FlipbookAsset = require('../models/flipbookAsset');
 const InteractionThreedModel = require('../models/interactionThreedModel');
@@ -141,7 +142,7 @@ const savePage = async (req, res) => {
             userID: doc.userID || 'default',
             book_v_id: doc.book_v_id || doc.v_id,
             flipbookName: doc.flipbookName,
-            folder_id: doc.folder_id || 'fol_default',
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
             assets: { images: [], video: [], gif: [] }
           });
         }
@@ -353,7 +354,7 @@ const savePagesBatch = async (req, res) => {
             userID: doc.userID || 'default',
             book_v_id: doc.book_v_id || doc.v_id,
             flipbookName: doc.flipbookName,
-            folder_id: doc.folder_id || 'fol_default',
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
             assets: { images: [], video: [], gif: [] }
           });
         }

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const pageSchema = new mongoose.Schema(
   {
@@ -25,18 +26,18 @@ const flipbookSchema = new mongoose.Schema(
     userObjectID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
-      required: true,
-      index: true
+      required: true
     },
     userID: {
-      type: String, // e.g. "FLIPI0001"
+      type: String, // sequence ID e.g. "FLIP001"
+      alias: 'userId',
       trim: true,
       index: true
     },
     folder_id: {
       type: String, // fol_v_id of single folder
       required: true,
-      default: 'fol_default',
+      default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
       trim: true,
       index: true
     },
@@ -53,11 +54,21 @@ const flipbookSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    book_v_id: {
+    v_id: {
       type: String,
       required: true,
       unique: true,
-      index: true
+      trim: true,
+      default: function () {
+        return this.book_v_id;
+      }
+    },
+    book_v_id: {
+      type: String,
+      trim: true,
+      default: function () {
+        return this.v_id;
+      }
     },
     isPublished: {
       type: Boolean,
@@ -65,8 +76,7 @@ const flipbookSchema = new mongoose.Schema(
     },
     trash: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     },
     isFavorite: {
       type: [mongoose.Schema.Types.ObjectId],
@@ -76,24 +86,67 @@ const flipbookSchema = new mongoose.Schema(
     trashedAt: {
       type: Date,
       default: null
+    },
+    viewers: {
+      type: [String],
+      default: []
+    },
+    viewsCount: {
+      type: Number,
+      default: 0
+    },
+    bookRating: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
+    averageRating: {
+      type: Number,
+      default: 0
+    },
+    totalRatings: {
+      type: Number,
+      default: 0
+    },
+    addedToShelfCount: {
+      type: Number,
+      default: 0
     }
   },
   {
     timestamps: true,
+    versionKey: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }
 );
 
-// Virtual for backward-compatibility with v_id
-flipbookSchema.virtual('v_id')
-  .get(function () { return this.book_v_id; })
-  .set(function (val) { this.book_v_id = val; });
+// Pre-validate hook to ensure required fields are always populated
+flipbookSchema.pre('validate', async function () {
+  if (!this.userObjectID && this.userID) {
+    try {
+      const UserModel = mongoose.models.user || (mongoose.modelNames().includes('user') ? mongoose.model('user') : null);
+      if (UserModel) {
+        const found = await UserModel.findOne({ userID: this.userID }).select('_id').lean();
+        if (found) {
+          this.userObjectID = found._id;
+        }
+      }
+    } catch (_) {}
+  }
+  if (!this.v_id && this.book_v_id) {
+    this.v_id = this.book_v_id;
+  }
+  if (!this.book_v_id && this.v_id) {
+    this.book_v_id = this.v_id;
+  }
+  if (!this.folder_id || this.folder_id === 'fol_default') {
+    this.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
+  }
+});
 
 // Indexes
 flipbookSchema.index({ userObjectID: 1, trash: 1, updatedAt: -1 });
 flipbookSchema.index({ userObjectID: 1, folder_id: 1, trash: 1 });
 flipbookSchema.index({ isFavorite: 1, trash: 1 });
-flipbookSchema.index({ book_v_id: 1 });
 
 module.exports = (mongoose.models.flipbook || mongoose.models.Flipbook) || mongoose.model('flipbook', flipbookSchema, 'flipbooks');

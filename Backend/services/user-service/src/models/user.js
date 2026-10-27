@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Counter = require('./Counter');
+const Counter = require('./counter');
 
 const userSchema = new mongoose.Schema(
   {
@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      default: '',
+      required: false,
       select: false // Exclude from normal queries for security
     },
     name: {

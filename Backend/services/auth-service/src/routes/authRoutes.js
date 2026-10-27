@@ -9,6 +9,8 @@ const {
   googleLogin,
   forgotPassword,
   resetPassword,
+  sendAddPasswordOtp,
+  setPasswordWithOtp,
   logout,
   getLoginLogs,
   verifySession
@@ -26,6 +28,8 @@ router.post('/login', authLimiter, login);
 router.post('/google-login', authLimiter, googleLogin);
 router.post('/forgot-password', otpLimiter, forgotPassword);
 router.post('/reset-password', otpVerifyLimiter, resetPassword);
+router.post('/send-add-password-otp', otpLimiter, sendAddPasswordOtp);
+router.post('/set-password-otp', otpVerifyLimiter, setPasswordWithOtp);
 router.post('/logout', logout);
 
 // Session Verification Endpoint (reads HttpOnly cookie)

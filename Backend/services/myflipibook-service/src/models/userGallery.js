@@ -262,10 +262,6 @@ const userGallerySchema = new mongoose.Schema(
   }
 );
 
-userGallerySchema.index({ userObjectID: 1 });
-userGallerySchema.index({ userID: 1 });
-userGallerySchema.index({ emailId: 1 });
-
 module.exports =
   (mongoose.models.userGallery || mongoose.models.UserGallery) ||
   mongoose.model('userGallery', userGallerySchema, 'userGallery');

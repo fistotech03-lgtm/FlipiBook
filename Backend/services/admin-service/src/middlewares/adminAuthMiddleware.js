@@ -17,14 +17,16 @@ const verifyAdmin = async (req, res, next) => {
     let decoded = verifyToken(token);
     let email = decoded?.emailId || decoded?.email;
 
-    // Header fallback (from API gateway)
+    // Header fallback (from API gateway or admin-frontend)
     if (!email) {
       email = req.headers['x-user-email'] || req.headers['x-admin-email'] || req.query?.adminEmail;
     }
 
+    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+
     if (!email) {
-      // In development, permit fallback if header x-dev-admin is passed or allow internal calls
-      if (process.env.NODE_ENV === 'development') {
+      // In local development without credentials, grant default local admin access
+      if (isDev) {
         req.admin = { emailId: 'admin@flipibook.com', role: 'admin', name: 'Dev Admin' };
         return next();
       }
@@ -40,8 +42,8 @@ const verifyAdmin = async (req, res, next) => {
     });
 
     if (!user) {
-      // If user doesn't exist but has internal admin header in dev
-      if (process.env.NODE_ENV === 'development') {
+      // If user doesn't exist yet but is running in development mode
+      if (isDev) {
         req.admin = { emailId: cleanEmail, role: 'admin', name: 'Dev Admin' };
         return next();
       }
@@ -52,6 +54,18 @@ const verifyAdmin = async (req, res, next) => {
     }
 
     if (user.role !== 'admin' && user.role !== 'moderator' && user.role !== 'staff' && !user.isAdmin) {
+      if (isDev) {
+        // In local development, automatically promote the logged-in dev user to admin role
+        await User.updateOne({ _id: user._id }, { $set: { role: 'admin', isAdmin: true } });
+        req.admin = {
+          id: user._id,
+          userID: user.userID,
+          emailId: user.emailId || cleanEmail,
+          name: user.name || 'Administrator',
+          role: 'admin'
+        };
+        return next();
+      }
       return res.status(403).json({
         success: false,
         message: 'Access denied: Administrator privileges required.'

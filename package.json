@@ -15,7 +15,8 @@
     "build": "npm --prefix Frontend run build && npm --prefix Admin_Frontend run build",
     "build:frontend": "npm --prefix Frontend run build",
     "build:admin": "npm --prefix Admin_Frontend run build",
-    "install:all": "npm install && npm --prefix Backend install && npm --prefix Frontend install && npm --prefix Admin_Frontend install"
+    "install:backend": "npm --prefix Backend run install:all",
+    "install:all": "npm install && npm run install:backend && npm --prefix Frontend install && npm --prefix Admin_Frontend install"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

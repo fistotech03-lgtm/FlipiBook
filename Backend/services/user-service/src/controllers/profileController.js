@@ -27,32 +27,64 @@ const getProfile = async (req, res) => {
       return res.status(400).json({ success: false, message: 'emailId is required' });
     }
 
+    // Look up User record for latest name, picture, and password
+    const userDoc = await User.findOne({
+      emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+    }).select('+password').lean();
+
     let profile = await Profile.findOne({ emailId });
 
     if (!profile) {
-      // Look up User record for initial name / picture
-      const user = await User.findOne({
-        emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      }).lean();
-
-      const defaultName = user?.name || emailId.split('@')[0];
+      const defaultName = userDoc?.name || emailId.split('@')[0];
       const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
 
       profile = new Profile({
         emailId,
-        name: formattedName,
-        displayName: formattedName,
-        picture: user?.picture || null,
-        avatarBgColor: user?.avatarBgColor || '#E8D4C8'
+        name: userDoc?.name || formattedName,
+        displayName: userDoc?.name || formattedName,
+        picture: userDoc?.picture || null,
+        avatarBgColor: userDoc?.avatarBgColor || '#E8D4C8'
       });
       await profile.save();
+    } else {
+      // Auto-heal profile if user signed up with Google but Profile had null picture or fallback name
+      let shouldUpdate = false;
+      if (userDoc?.picture && (!profile.picture || profile.picture === 'null')) {
+        profile.picture = userDoc.picture;
+        shouldUpdate = true;
+      }
+      if (userDoc?.name && (!profile.name || profile.name.toLowerCase() === emailId.split('@')[0].toLowerCase())) {
+        profile.name = userDoc.name;
+        if (!profile.displayName || profile.displayName.toLowerCase() === emailId.split('@')[0].toLowerCase()) {
+          profile.displayName = userDoc.name;
+        }
+        shouldUpdate = true;
+      }
+      if (shouldUpdate) {
+        await profile.save();
+      }
     }
+
+    const hasPassword = Boolean(userDoc?.password && typeof userDoc.password === 'string' && userDoc.password.trim() !== '');
 
     const profileObj = profile.toObject ? profile.toObject() : profile;
 
+    // Ensure picture and name from userDoc take priority if profile is missing them
+    if (userDoc?.picture && !profileObj.picture) {
+      profileObj.picture = userDoc.picture;
+    }
+    if (userDoc?.name && (!profileObj.name || profileObj.name.toLowerCase() === emailId.split('@')[0].toLowerCase())) {
+      profileObj.name = userDoc.name;
+      profileObj.displayName = userDoc.name;
+    }
+
     return res.status(200).json({
       success: true,
-      profile: profileObj,
+      hasPassword,
+      profile: {
+        ...profileObj,
+        hasPassword
+      },
       ...profileObj
     });
   } catch (error) {

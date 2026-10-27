@@ -7,8 +7,10 @@
 /**
  * Maps compression preset to target dimensions and bitrate
  */
-const getPresetConfig = (compressionPreset) => {
+const getPresetConfig = (compressionPreset, origW = 1920, origH = 1080) => {
   switch (compressionPreset) {
+    case 'Original Resolution & Quality (Format Only)':
+      return { maxWidth: Infinity, maxHeight: Infinity, videoBitsPerSecond: 8000000, fps: 30 };
     case '1080p Web-Optimized':
       return { maxWidth: 1920, maxHeight: 1080, videoBitsPerSecond: 2500000, fps: 30 };
     case '720p HD Compact':
@@ -16,6 +18,9 @@ const getPresetConfig = (compressionPreset) => {
     case '480p Mobile Saver':
       return { maxWidth: 854, maxHeight: 480, videoBitsPerSecond: 600000, fps: 24 };
     default:
+      if (compressionPreset?.includes('Original')) {
+        return { maxWidth: Infinity, maxHeight: Infinity, videoBitsPerSecond: 8000000, fps: 30 };
+      }
       return { maxWidth: 1280, maxHeight: 720, videoBitsPerSecond: 1500000, fps: 30 };
   }
 };
@@ -71,7 +76,8 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
   const videoUrl = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.src = videoUrl;
-  video.muted = true;
+  video.muted = false;
+  video.volume = 1.0;
   video.playsInline = true;
   video.crossOrigin = 'anonymous';
 
@@ -118,30 +124,46 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
     return file;
   }
 
+  // Determine best codec/container
+  const { mime, ext } = getSupportedMimeType(targetFormat);
+
   // Audio capture
   const combinedStream = canvasStream;
+  let audioContext = null;
+  let hasAudioTrack = false;
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
     const sourceNode = audioContext.createMediaElementSource(video);
     const destinationNode = audioContext.createMediaStreamDestination();
     sourceNode.connect(destinationNode);
     destinationNode.stream.getAudioTracks().forEach((track) => {
       combinedStream.addTrack(track);
+      hasAudioTrack = true;
     });
-  } catch (_err) {
-    // Proceed without audio track if restricted
+  } catch (err) {
+    console.warn('Unable to extract audio track:', err);
+    // Proceed without audio track if restricted or silent
   }
 
-  const { mime } = getSupportedMimeType(targetFormat);
+  // Audio bitrates: 128 kbps standard if audio present
+  const audioBitsPerSecond = hasAudioTrack ? 128000 : 0;
 
   let recorder;
   try {
     recorder = new MediaRecorder(combinedStream, {
       mimeType: mime,
-      videoBitsPerSecond: config.videoBitsPerSecond
+      videoBitsPerSecond: config.videoBitsPerSecond,
+      ...(hasAudioTrack ? { audioBitsPerSecond } : {})
     });
   } catch (_e) {
-    recorder = new MediaRecorder(combinedStream);
+    try {
+      recorder = new MediaRecorder(combinedStream, { mimeType: mime });
+    } catch (_e2) {
+      recorder = new MediaRecorder(combinedStream);
+    }
   }
 
   const chunks = [];
@@ -149,16 +171,23 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
     if (e.data && e.data.size > 0) chunks.push(e.data);
   };
 
+  const cleanup = () => {
+    URL.revokeObjectURL(videoUrl);
+    if (audioContext && audioContext.state !== 'closed') {
+      audioContext.close().catch(() => {});
+    }
+  };
+
   return new Promise((resolve, reject) => {
     recorder.onstop = () => {
-      URL.revokeObjectURL(videoUrl);
+      cleanup();
       const outputBlob = new Blob(chunks, { type: mime });
       onProgress?.(100, 'Video processing complete!');
       resolve(outputBlob);
     };
 
     recorder.onerror = (e) => {
-      URL.revokeObjectURL(videoUrl);
+      cleanup();
       reject(new Error(`Recording error: ${e?.error?.message || 'Encoder failed'}`));
     };
 
@@ -196,7 +225,7 @@ export async function convertAndCompressVideo(file, targetFormat, compressionPre
         animId = requestAnimationFrame(renderLoop);
       })
       .catch((err) => {
-        URL.revokeObjectURL(videoUrl);
+        cleanup();
         reject(new Error(`Video playback error: ${err.message}`));
       });
   });

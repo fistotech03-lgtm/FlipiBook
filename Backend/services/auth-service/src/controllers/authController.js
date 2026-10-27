@@ -649,6 +649,13 @@ const login = async (req, res) => {
     }
 
     // Compare password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password not yet added. Please sign in with Google or use 'Forgot Password' to set one.",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res
@@ -767,15 +774,11 @@ const googleLogin = async (req, res) => {
     }
 
     if (!user) {
-      // Auto-register google user with a secure random password hash
-      const randomPassword = crypto.randomBytes(32).toString("hex") + "!FliPi";
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(randomPassword, salt);
-
+      // For Google sign up, leave password empty (user can add password later via OTP)
       user = new User({
         name: verifiedName,
         emailId: cleanEmail,
-        password: hashedPassword,
+        password: "",
         picture: verifiedPicture,
       });
 
@@ -896,6 +899,129 @@ const forgotPassword = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: error.message || "Failed to send OTP" });
+  }
+};
+
+/**
+ * 4b. Send OTP to Add Password for Google or passwordless accounts
+ * POST /api/auth/send-add-password-otp
+ */
+const sendAddPasswordOtp = async (req, res) => {
+  try {
+    const emailId = req.body?.emailId || req.user?.emailId || req.user?.email;
+
+    if (!emailId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No account found with this email" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.otp = {
+      code: hashOtp(otp),
+      expiresAt,
+    };
+
+    await user.save();
+
+    await sendOtpEmail(cleanEmail, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your email to add password",
+    });
+  } catch (error) {
+    console.error("[Send Add Password OTP Error]:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: error.message || "Failed to send OTP" });
+  }
+};
+
+/**
+ * 4c. Set Initial Password with OTP
+ * POST /api/auth/set-password-otp
+ */
+const setPasswordWithOtp = async (req, res) => {
+  try {
+    const emailId = req.body?.emailId || req.user?.emailId || req.user?.email;
+    const { otp, password } = req.body;
+
+    if (!emailId || !otp || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (!user.otp || !user.otp.code) {
+      return res.status(400).json({
+        success: false,
+        message: "No OTP requested or code has already been used",
+      });
+    }
+
+    if (new Date() > new Date(user.otp.expiresAt)) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    if (!safeCompare(user.otp.code, hashOtp(otp))) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid OTP code" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    user.otp = {
+      code: null,
+      expiresAt: null,
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been added successfully",
+    });
+  } catch (error) {
+    console.error("[Set Password With OTP Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to set password",
+    });
   }
 };
 
@@ -1287,6 +1413,8 @@ module.exports = {
   googleLogin,
   forgotPassword,
   resetPassword,
+  sendAddPasswordOtp,
+  setPasswordWithOtp,
   logout,
   getLoginLogs,
   verifySession,

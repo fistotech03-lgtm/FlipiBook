@@ -120,6 +120,7 @@ const SettingsLayout = () => {
           const merged = {
             ...defaultProfile,
             ...p,
+            hasPassword: p.hasPassword !== undefined ? Boolean(p.hasPassword) : (res.data?.hasPassword !== undefined ? Boolean(res.data.hasPassword) : false),
             email: p.emailId || currentEmail,
             emailId: p.emailId || currentEmail,
             name: p.name || p.displayName || (currentEmail ? currentEmail.split('@')[0] : 'User'),

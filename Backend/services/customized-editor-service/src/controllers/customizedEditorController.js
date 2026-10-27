@@ -4,11 +4,11 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
-const CustomizedSettings = require('../models/CustomizedSettings');
-const Lead = require('../models/Lead');
-const UserGallery = require('../models/UserGallery');
-const EditorPreset = require('../models/EditorPreset');
-const Flipbook = require('../models/Flipbook');
+const CustomizedSettings = require('../models/customizedSettings');
+const Lead = require('../models/lead');
+const UserGallery = require('../models/userGallery');
+const EditorPreset = require('../models/editorPreset');
+const Flipbook = require('../models/flipbook');
 
 const { getAuthUser, getUserQuery, getUserStorageFolder } = require('../utils/userHelper');
 const {

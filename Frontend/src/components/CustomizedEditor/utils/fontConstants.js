@@ -2,6 +2,7 @@
  * Standard font families supported across CustomizedEditor panels.
  */
 export const fontFamilies = [
+  'Outfit',
   'Arial',
   'Times New Roman',
   'Courier New',

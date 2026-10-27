@@ -45,14 +45,26 @@ const getCustomizedAssetUploadDir = (userFolder, folderName = 'default', bookNam
 
   let targetDir;
   if (typeFolder === 'Logo' || typeFolder === 'Company_Logo' || typeFolder === 'Preloader') {
-    targetDir = path.join(root, cleanUser, 'Gallery', 'userdetails', 'Company_logo');
+    targetDir = path.join(root, cleanUser, 'userdetails', 'company_logo');
+    if (!fs.existsSync(targetDir) && fs.existsSync(path.join(root, cleanUser, 'userdetails', 'Company_logo'))) {
+      targetDir = path.join(root, cleanUser, 'userdetails', 'Company_logo');
+    }
   } else if (typeFolder === 'Profile') {
-    targetDir = path.join(root, cleanUser, 'Gallery', 'userdetails', 'Profile');
+    targetDir = path.join(root, cleanUser, 'userdetails', 'profile');
+    if (!fs.existsSync(targetDir) && fs.existsSync(path.join(root, cleanUser, 'userdetails', 'Profile'))) {
+      targetDir = path.join(root, cleanUser, 'userdetails', 'Profile');
+    }
   } else if (typeFolder === 'Video') {
-    targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Videos');
+    targetDir = path.join(root, cleanUser, 'gallery', 'customizationGallery', 'videos');
+    if (!fs.existsSync(targetDir) && fs.existsSync(path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Videos'))) {
+      targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Videos');
+    }
   } else {
     // Images, Background, Watermark, Texture, Transparent_Sheet, Gallery_Image, Audio, Other
-    targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Images');
+    targetDir = path.join(root, cleanUser, 'gallery', 'customizationGallery', 'images');
+    if (!fs.existsSync(targetDir) && fs.existsSync(path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Images'))) {
+      targetDir = path.join(root, cleanUser, 'Gallery', 'CustomizationGallery', 'Images');
+    }
   }
 
   if (!fs.existsSync(targetDir)) {

@@ -9,16 +9,16 @@ export default function HowItWorksSection() {
   const steps = [
     {
       number: "01",
-      title: "Upload & Select",
-      desc: "Upload your PDF orr choose from professionally designed templates.",
+      title: "Upload Your Content",
+      desc: "Upload your PDF or choose a ready-made template to start building your digital catalogue.",
       image: workImg1,
       textPosition: "bottom",
       imgClass: "w-[80%] h-auto max-h-[85%] object-contain drop-shadow-md"
     },
     {
       number: "02",
-      title: "Page Layouts",
-      desc: "Upload your PDF orr choose from professionally designed templates.",
+      title: "Make It Interactive",
+      desc: "Customize your pages with product videos, 3D models, and clickable links that help customers explore.",
       image: workImg2,
       textPosition: "top",
       imgClass: "w-[98%] max-w-none h-auto object-contain drop-shadow-md"
@@ -26,15 +26,15 @@ export default function HowItWorksSection() {
     {
       number: "03",
       title: "Publish & Share",
-      desc: "Upload your PDF orr choose from professionally designed templates.",
+      desc: "Publish your catalogue and share it through a link, QR code, or website embed.",
       image: workImg3,
       textPosition: "bottom",
       imgClass: "w-[100%] max-w-none h-auto object-contain drop-shadow-md"
     },
     {
       number: "04",
-      title: "Analyse Performance",
-      desc: "Upload your PDF orr choose from professionally designed templates.",
+      title: "Track & Improve",
+      desc: "Review catalogue views and viewer activity to understand engagement and refine your content.",
       image: workImg4,
       textPosition: "top",
       imgClass: "w-[76%] h-auto max-h-[88%] object-contain drop-shadow-md"
@@ -45,7 +45,7 @@ export default function HowItWorksSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="relative w-full bg-white font-poppins py-10 lg:py-[3vw] px-6 sm:px-10 lg:px-[6vw] flex flex-col items-center justify-between border-t border-gray-100"
     >
@@ -53,7 +53,7 @@ export default function HowItWorksSection() {
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: false, amount: 0.3 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 0.6 }}
         className="w-full text-left mb-6 lg:mb-[1.5vw]"
       >
@@ -68,15 +68,16 @@ export default function HowItWorksSection() {
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
-        transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+        transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
         className="text-center w-full mb-7 sm:mb-9 md:mb-11 lg:mb-[3.2vw] space-y-2 sm:space-y-2.5 lg:space-y-[0.7vw]"
       >
         <h2 className="text-2xl sm:text-4xl lg:text-[3vw] font-semibold text-[#1b222c] tracking-tight leading-tight">
-          Create Your <span className="text-[#ea543a]">Flipbook</span> in 4 Simple Steps
+          Create Your Interactive Digital Catalogue <br />
+          <span className="text-[#ea543a]">in 4 Simple Steps</span>
         </h2>
-        <p className="text-xs sm:text-base lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed">
-          From upload to publish, everything you need in one simple process.
+        <p className="text-xs sm:text-base lg:text-[0.9vw] text-gray-500 font-normal leading-relaxed max-w-2xl mx-auto">
+          Turn your PDF into a product experience customers can explore. Create, customize, share, and track your catalogue with FlipiBook.
         </p>
       </motion.div>
 
@@ -137,8 +138,8 @@ export default function HowItWorksSection() {
               key={idx}
               initial={{ opacity: 0, y: 35, scale: 0.95 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.65, delay: idx * 0.12, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.85, delay: 0.15 + idx * 0.15, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center group w-full justify-start lg:justify-end max-w-[340px] sm:max-w-none mx-auto sm:mx-0"
             >
               {cardBox}

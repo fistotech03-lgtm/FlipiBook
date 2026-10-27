@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const Flipbook = require('../models/Flipbook');
-const FlipbookAsset = require('../models/FlipbookAsset');
-const InteractionThreedModel = require('../models/InteractionThreedModel');
+const crypto = require('crypto');
+const Flipbook = require('../models/flipbook');
+const FlipbookAsset = require('../models/flipbookAsset');
+const InteractionThreedModel = require('../models/interactionThreedModel');
 const { getAuthUser } = require('../utils/userHelper');
 const {
   generateId,
@@ -55,7 +56,7 @@ const savePage = async (req, res) => {
     }
 
     // Locate the flipbook document
-    const doc = await Flipbook.findOne({ v_id });
+    const doc = await Flipbook.findOne({ $or: [{ book_v_id: v_id }, { v_id }] });
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
@@ -132,7 +133,40 @@ const savePage = async (req, res) => {
     // Save extracted assets to database
     if (newFlipbookAssets.length > 0) {
       try {
-        await FlipbookAsset.insertMany(newFlipbookAssets);
+        let assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (!assetDoc) {
+          assetDoc = new FlipbookAsset({
+            userObjectID: doc.userObjectID || doc.userId,
+            userID: doc.userID || 'default',
+            book_v_id: doc.book_v_id || doc.v_id,
+            flipbookName: doc.flipbookName,
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
+            assets: { images: [], video: [], gif: [] }
+          });
+        }
+        for (const item of newFlipbookAssets) {
+          let cat = 'images';
+          const t = (item.assetType || '').toLowerCase();
+          if (t.includes('video')) cat = 'video';
+          else if (t.includes('gif')) cat = 'gif';
+
+          if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+          const exists = assetDoc.assets[cat].some(a => a.convertedName === item.convertedName);
+          if (!exists) {
+            assetDoc.assets[cat].push({
+              originalName: item.originalName || '',
+              convertedName: item.convertedName || item.fileName,
+              page_v_id: item.page_v_id || 'global',
+              url: item.url,
+              size: item.size || 0,
+              timestamp: new Date()
+            });
+          }
+        }
+        assetDoc.markModified('assets');
+        await assetDoc.save();
       } catch (assetErr) {
         console.error('[Page Controller] Error inserting page assets:', assetErr.message);
       }
@@ -156,7 +190,7 @@ const savePage = async (req, res) => {
         pageNumber: resolvedPageNumber,
         name: pageName || `Page ${resolvedPageNumber}`,
         fileName: svgFileName,
-        v_id: newPageVId,
+        page_v_id: newPageVId,
         size: pageSize,
         hide: 0
       });
@@ -202,7 +236,7 @@ const savePagesBatch = async (req, res) => {
       });
     }
 
-    const doc = await Flipbook.findOne({ v_id });
+    const doc = await Flipbook.findOne({ $or: [{ book_v_id: v_id }, { v_id }] });
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
@@ -302,7 +336,7 @@ const savePagesBatch = async (req, res) => {
           pageNumber: result.pageNumber,
           name: result.pageName,
           fileName: result.fileName,
-          v_id: result.pageVId || `page_${generateId(9)}`,
+          page_v_id: result.pageVId || `page_${generateId(9)}`,
           size: result.pageSize,
           hide: 0
         });
@@ -311,7 +345,40 @@ const savePagesBatch = async (req, res) => {
 
     if (newFlipbookAssets.length > 0) {
       try {
-        await FlipbookAsset.insertMany(newFlipbookAssets);
+        let assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (!assetDoc) {
+          assetDoc = new FlipbookAsset({
+            userObjectID: doc.userObjectID || doc.userId,
+            userID: doc.userID || 'default',
+            book_v_id: doc.book_v_id || doc.v_id,
+            flipbookName: doc.flipbookName,
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
+            assets: { images: [], video: [], gif: [] }
+          });
+        }
+        for (const item of newFlipbookAssets) {
+          let cat = 'images';
+          const t = (item.assetType || '').toLowerCase();
+          if (t.includes('video')) cat = 'video';
+          else if (t.includes('gif')) cat = 'gif';
+
+          if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+          const exists = assetDoc.assets[cat].some(a => a.convertedName === item.convertedName);
+          if (!exists) {
+            assetDoc.assets[cat].push({
+              originalName: item.originalName || '',
+              convertedName: item.convertedName || item.fileName,
+              page_v_id: item.page_v_id || 'global',
+              url: item.url,
+              size: item.size || 0,
+              timestamp: new Date()
+            });
+          }
+        }
+        assetDoc.markModified('assets');
+        await assetDoc.save();
       } catch (assetErr) {
         console.error('[Page Controller] Error inserting batch assets:', assetErr.message);
       }
@@ -400,26 +467,33 @@ const savePagesBatch = async (req, res) => {
         }
 
         // Clean up unreferenced FlipbookAssets
-        const allAssets = await FlipbookAsset.find({ flipbook_v_id: doc.v_id });
-        for (const asset of allAssets) {
-          if (asset.isGallery) continue;
-          const fNameLower = (asset.fileName || '').toLowerCase();
-          const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
-          if (!isReferenced) {
-            const diskAssetPath = path.join(bookDir, 'assets', asset.assetType || 'Image', asset.fileName);
-            if (fs.existsSync(diskAssetPath)) {
-              try {
-                fs.unlinkSync(diskAssetPath);
-              } catch (e) {}
+        const assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (assetDoc && assetDoc.assets) {
+          for (const cat of ['images', 'video', 'gif']) {
+            if (!Array.isArray(assetDoc.assets[cat])) continue;
+            const kept = [];
+            for (const asset of assetDoc.assets[cat]) {
+              const fNameLower = (asset.convertedName || asset.fileName || '').toLowerCase();
+              const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
+              if (isReferenced) {
+                kept.push(asset);
+              } else {
+                const subFolder = cat === 'images' ? 'Image' : cat;
+                const diskAssetPath = path.join(bookDir, 'assets', subFolder, asset.convertedName || asset.fileName);
+                if (fs.existsSync(diskAssetPath)) {
+                  try {
+                    fs.unlinkSync(diskAssetPath);
+                  } catch (e) {}
+                }
+                console.log(`[Page Controller] Cleaned up unreferenced asset: ${asset.convertedName || asset.fileName}`);
+              }
             }
-            await FlipbookAsset.deleteOne({ _id: asset._id });
-            if (asset.assetType === '3D_Model' || fNameLower.endsWith('.glb')) {
-              await InteractionThreedModel.deleteMany({
-                $or: [{ fileName: asset.fileName }, { v_id: asset.file_v_id }, { url: asset.url }]
-              }).catch(() => {});
-            }
-            console.log(`[Page Controller] Cleaned up unreferenced asset: ${asset.fileName}`);
+            assetDoc.assets[cat] = kept;
           }
+          assetDoc.markModified('assets');
+          await assetDoc.save();
         }
       }
     } catch (assetCleanErr) {

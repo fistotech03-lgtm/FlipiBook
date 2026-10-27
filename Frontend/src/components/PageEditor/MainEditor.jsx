@@ -390,6 +390,10 @@ const MainEditor = ({
     tempDiv.querySelectorAll('.slideshow-transition-clone').forEach(el => el.remove());
     tempDiv.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
     cleanTrimViewFromHtml(tempDiv);
+    tempDiv.querySelectorAll('.video-damage-rect, [class*="damage-rect"], [id="multi-selection-bounds"], [data-is-dummy="true"], rect[fill="rgba(0,0,0,0.001)"]').forEach(el => el.remove());
+    try {
+      targetSvg.querySelectorAll('.video-damage-rect, [class*="damage-rect"], [id="multi-selection-bounds"], [data-is-dummy="true"], rect[fill="rgba(0,0,0,0.001)"]').forEach(el => el.remove());
+    } catch (e) {}
     // Ensure all style attributes use single quotes rather than double quotes inside attribute values
     tempDiv.querySelectorAll('[style]').forEach(el => {
       const st = el.getAttribute('style');

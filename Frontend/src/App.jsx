@@ -61,7 +61,8 @@ const Profile = lazy(() => import("./components/Settings/Profile/Profile"));
 const Account = lazy(() => import("./components/Settings/Account"));
 const Notifications = lazy(() => import("./components/Settings/Notifications"));
 const Billing = lazy(() => import("./components/Settings/Billing"));
-const Support = lazy(() => import("./components/Settings/Support"));
+const Tickets = lazy(() => import("./components/Settings/Tickets/Tickets"));
+const TicketDetailsPage = lazy(() => import("./components/Settings/Tickets/TicketDetailsPage"));
 
 function SettingsIndexRedirect() {
   const { isLoading } = useAuth();
@@ -301,7 +302,31 @@ export default function App() {
                     path="support"
                     element={
                       <Suspense fallback={null}>
-                        <Support />
+                        <Tickets />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="support/:ticketId"
+                    element={
+                      <Suspense fallback={null}>
+                        <TicketDetailsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="tickets"
+                    element={
+                      <Suspense fallback={null}>
+                        <Tickets />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="tickets/:ticketId"
+                    element={
+                      <Suspense fallback={null}>
+                        <TicketDetailsPage />
                       </Suspense>
                     }
                   />

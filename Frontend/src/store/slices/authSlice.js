@@ -79,6 +79,10 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action) => {
+      if (typeof action.payload === 'function') {
+        console.error("Redux setUser action received a function updater instead of plain object payload!");
+        return;
+      }
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
       if (action.payload) {

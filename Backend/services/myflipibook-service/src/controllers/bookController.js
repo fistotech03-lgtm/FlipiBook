@@ -2,16 +2,17 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
-const Flipbook = require("../models/Flipbook");
-const FlipbookAsset = require("../models/FlipbookAsset");
-const UserGallery = require("../models/UserGallery");
-const InteractionThreedModel = require("../models/InteractionThreedModel");
+const Flipbook = require("../models/flipbook");
+const FlipbookAsset = require("../models/flipbookAsset");
+const UserGallery = require("../models/userGallery");
+const InteractionThreedModel = require("../models/interactionThreedModel");
+const User = require("../models/user");
 const {
   deleteBookStorage,
   getStorageRoot,
   initFlipbookStorage,
 } = require("../utils/storageHelper");
-const { getAuthUser, getFlipbookUserQuery } = require("../utils/userHelper");
+const { getAuthUser, resolveAuthUser, getFlipbookUserQuery } = require("../utils/userHelper");
 const {
   processAndSaveBase64Assets,
   normalizeToRelativeAssetPaths,
@@ -101,21 +102,42 @@ const enforceRecentLimit = async (userQuery) => {
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
-const formatBook = (doc, settingsDoc = null) => {
-  const primaryFolder = resolveFolder(doc.folderName);
-  const displayFolder = primaryFolder === "default" ? "My Flipbooks" : primaryFolder;
+const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = null) => {
+  let displayFolder = null;
+  if (folderMap && doc.folder_id && folderMap.has(doc.folder_id)) {
+    displayFolder = folderMap.get(doc.folder_id);
+  } else if (doc.folderName) {
+    const resolved = resolveFolder(doc.folderName);
+    if (resolved && resolved !== "default" && resolved !== "fol_default") {
+      displayFolder = resolved;
+    }
+  }
+
+  if (!displayFolder || displayFolder === "default" || displayFolder === "fol_default") {
+    displayFolder = "My Flipbooks";
+  }
+
+  const primaryFolder = doc.folder_id || displayFolder;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
   const s = settingsDoc || doc.Customized_Settings || {};
+  const bookVId = doc.book_v_id || doc.v_id;
+
+  const isFav = Array.isArray(doc.isFavorite)
+    ? (currentUserId ? doc.isFavorite.some(u => String(u) === String(currentUserId)) : doc.isFavorite.length > 0)
+    : Boolean(doc.isFavorite);
 
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
-    userId: doc.userId ? doc.userId.toString() : null,
-    userID: doc.userID || (doc.userId ? doc.userId.toString() : null),
-    v_id: doc.v_id,
+    userObjectID: doc.userObjectID ? doc.userObjectID.toString() : null,
+    userId: doc.userID || (doc.userId && !mongoose.Types.ObjectId.isValid(doc.userId) ? doc.userId : null),
+    userID: doc.userID || (doc.userId && !mongoose.Types.ObjectId.isValid(doc.userId) ? doc.userId : null),
+    book_v_id: bookVId,
+    v_id: bookVId,
     title: doc.flipbookName,
     realName: doc.flipbookName,
     flipbookName: doc.flipbookName,
+    folder_id: doc.folder_id || primaryFolder,
     folder: displayFolder,
     folderName: displayFolder,
     actualFolder: displayFolder,
@@ -134,13 +156,13 @@ const formatBook = (doc, settingsDoc = null) => {
     fileSize: doc.fileSize || 0,
     trash: Boolean(doc.trash),
     trashedAt: doc.trashedAt,
-    isFavorite: Boolean(doc.isFavorite),
+    isFavorite: isFav,
     isPublished: Boolean(doc.isPublished),
     createdAt: doc.createdAt,
     lastUpdated: mtime,
     updatedAt: doc.updatedAt || mtime,
     mtime: mtime,
-    allFolders: Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName],
+    allFolders: doc.folder_id ? [doc.folder_id] : (Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName]),
     width: s?.FlipbookInfo?.width || s?.width || null,
     height: s?.FlipbookInfo?.height || s?.height || null,
     orientation: s?.FlipbookInfo?.orientation || s?.orientation || null,
@@ -218,7 +240,20 @@ exports.getBooks = async (req, res) => {
       console.warn("[Book Controller] Failed to fetch customizedsettings in getBooks:", e.message);
     }
 
-    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}));
+    // Load user's folders to map generated fol_v_id -> human-readable display name
+    const UserFolder = require("../models/userFolder");
+    const userFolderDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
+    const folderMap = new Map();
+    if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+      for (const f of userFolderDoc.folders) {
+        if (!f) continue;
+        const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
+        if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
+        if (f._id) folderMap.set(f._id.toString(), name);
+      }
+    }
+
+    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, null, folderMap));
 
     const hasRecentTag = (doc) => {
       if (doc.trash) return false;
@@ -244,7 +279,7 @@ exports.getBooks = async (req, res) => {
     );
 
     const recentBooks = recentDocs.map((doc) => {
-      const base = formatBook(doc, settingsMap.get(doc.v_id) || {});
+      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, null, folderMap);
       return {
         ...base,
         id: `Recent_${doc.v_id || doc._id.toString()}`,
@@ -285,9 +320,11 @@ exports.toggleFavorite = async (req, res) => {
         .json({ success: false, message: "Authentication required" });
     }
 
+    const { objectId } = getAuthUser(req);
+    const isFav = Boolean(isFavorite);
     const query = { ...userQuery };
     if (v_id) {
-      query.v_id = v_id;
+      query.$or = [{ book_v_id: v_id }, { v_id: v_id }];
     } else if (bookName) {
       query.flipbookName = bookName;
     } else {
@@ -299,9 +336,13 @@ exports.toggleFavorite = async (req, res) => {
         });
     }
 
+    const updateOp = objectId
+      ? (isFav ? { $addToSet: { isFavorite: objectId } } : { $pull: { isFavorite: objectId } })
+      : { $set: { isFavorite: isFav } };
+
     const updated = await Flipbook.findOneAndUpdate(
       query,
-      { $set: { isFavorite: Boolean(isFavorite) } },
+      updateOp,
       { returnDocument: "after" },
     );
 
@@ -314,8 +355,8 @@ exports.toggleFavorite = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Favorite status updated",
-      isFavorite: updated.isFavorite,
-      book: formatBook(updated),
+      isFavorite: isFav,
+      book: formatBook(updated, null, objectId),
     });
   } catch (err) {
     console.error("[Book Controller] Error toggling favorite:", err);
@@ -599,7 +640,7 @@ exports.renameBook = async (req, res) => {
  */
 exports.duplicateBook = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName } = req.body;
 
@@ -622,27 +663,29 @@ exports.duplicateBook = async (req, res) => {
 
     const cloneData = existing.toObject();
     delete cloneData._id;
-    cloneData.v_id = crypto.randomBytes(8).toString("hex");
+    delete cloneData.createdAt;
+    delete cloneData.updatedAt;
+    const newVId = crypto.randomBytes(8).toString("hex");
+    cloneData.v_id = newVId;
+    cloneData.book_v_id = newVId;
     if (objectId) {
-      cloneData.userId = objectId;
+      cloneData.userObjectID = objectId;
     }
     if (customUserId) {
       cloneData.userID = customUserId;
     }
-    if (emailId) {
-      cloneData.userEmail = emailId;
+    if (!cloneData.folder_id || cloneData.folder_id === 'fol_default') {
+      cloneData.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
     }
+    delete cloneData.userId;
+    delete cloneData.userEmail;
+    delete cloneData.folderName;
+    delete cloneData.lastUpdated;
+
     cloneData.flipbookName = `${cloneData.flipbookName} Copy`;
     cloneData.trash = false;
     cloneData.trashedAt = null;
     cloneData.isPublished = false;
-
-    const cloneFolders = (Array.isArray(existing.folderName) ? existing.folderName.flat(Infinity) : [existing.folderName])
-      .filter((f) => f && typeof f === "string" && f.trim() && f.trim() !== "Trash")
-      .map((f) => f.trim());
-    if (!cloneFolders.includes("Recent Book")) cloneFolders.push("Recent Book");
-    cloneData.folderName = [...new Set(cloneFolders.length > 0 ? cloneFolders : ["default"])];
-    cloneData.lastUpdated = new Date();
 
     const duplicated = await Flipbook.create(cloneData);
     if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
@@ -965,7 +1008,7 @@ exports.saveChunk = async (req, res) => {
  */
 exports.saveBook = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const {
       flipbookName,
@@ -1102,30 +1145,73 @@ exports.saveBook = async (req, res) => {
     }));
 
     const physicalFolder = targetFolder || "default";
+    let bookFolderId = req.body.folder_id;
+    if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
+      try {
+        const UserFolder = require("../models/userFolder");
+        let userFolderDoc = await UserFolder.findOne(userQuery);
+        let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
+        if (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== "fol_default") {
+          bookFolderId = defaultItem.fol_v_id;
+        } else {
+          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+          if (userFolderDoc) {
+            if (defaultItem) {
+              defaultItem.fol_v_id = bookFolderId;
+              defaultItem.isDefault = true;
+            } else {
+              userFolderDoc.folders.unshift({ fol_v_id: bookFolderId, name: 'default', isDefault: true });
+            }
+            await userFolderDoc.save().catch(() => {});
+          } else if (objectId || customUserId) {
+            await UserFolder.create({
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId ? { userID: customUserId } : {}),
+              folders: [{ fol_v_id: bookFolderId, name: 'default', isDefault: true }]
+            }).catch(() => {});
+          }
+        }
+      } catch (_) {
+        if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
+          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+        }
+      }
+    }
+
     if (book) {
       book.flipbookName = safeName;
-      const existingFolders = (Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName])
-        .filter((f) => typeof f === "string" && f.trim() && f.trim() !== "Trash")
-        .map((f) => f.trim());
-      if (!existingFolders.includes(physicalFolder)) existingFolders.unshift(physicalFolder);
-      if (!existingFolders.includes("Recent Book")) existingFolders.push("Recent Book");
-      book.folderName = [...new Set(existingFolders)];
+      if (objectId && !book.userObjectID) {
+        book.userObjectID = objectId;
+      }
+      if (customUserId && !book.userID) {
+        book.userID = customUserId;
+      }
+      if (bookFolderId) {
+        book.folder_id = bookFolderId;
+      }
 
+      if (!book.v_id) book.v_id = resolvedVId;
+      if (!book.book_v_id) book.book_v_id = resolvedVId;
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
-      book.lastUpdated = new Date();
       await book.save();
     } else {
+      if (!objectId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unable to identify user account. Please ensure you are logged in.",
+        });
+      }
+
       book = await Flipbook.create({
-        ...(objectId ? { userId: objectId } : {}),
-        ...(customUserId ? { userID: customUserId } : {}),
-        userEmail: emailId,
+        userObjectID: objectId,
+        userID: customUserId || undefined,
         v_id: resolvedVId,
+        book_v_id: resolvedVId,
         flipbookName: finalFlipbookName,
-        folderName: physicalFolder === "Recent Book" ? ["Recent Book"] : [physicalFolder, "Recent Book"],
+        folder_id: bookFolderId,
         pages: mongoPages,
         fileSize: fileSize || 0,
-        lastUpdated: new Date(),
       });
     }
 
@@ -1462,11 +1548,27 @@ exports.saveBook = async (req, res) => {
       );
     }
 
+    let folderMap = new Map();
+    try {
+      const UserFolder = require("../models/userFolder");
+      if (!userFolderDoc) {
+        userFolderDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
+      }
+      if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+        for (const f of userFolderDoc.folders) {
+          if (!f) continue;
+          const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
+          if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
+          if (f._id) folderMap.set(f._id.toString(), name);
+        }
+      }
+    } catch (_) {}
+
     res.status(200).json({
       success: true,
       message: "Flipbook saved successfully",
       v_id: resolvedVId,
-      book: formatBook(book),
+      book: formatBook(book, null, null, folderMap),
       pages: safePages,
     });
   } catch (err) {

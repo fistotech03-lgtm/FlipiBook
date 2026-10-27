@@ -651,27 +651,6 @@ export const useInteractEngine = ({
               const nextMatrix = translation.multiply(dragState.initialMatrix);
               target.setAttribute('transform', matrixToTransform(nextMatrix));
 
-              // Prevent Chromium foreignObject compositor ghosting trails by ensuring an active SVG shape
-              if (target.querySelector && (target.querySelector('foreignObject') || target.tagName?.toLowerCase() === 'foreignobject')) {
-                const parent = target.tagName?.toLowerCase() === 'foreignobject' ? target.parentElement : target;
-                const foEl = target.tagName?.toLowerCase() === 'foreignobject' ? target : target.querySelector('foreignObject');
-                if (parent && foEl) {
-                  let dmgRect = parent.querySelector('.video-damage-rect');
-                  if (!dmgRect) {
-                    dmgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    dmgRect.setAttribute('class', 'video-damage-rect');
-                    dmgRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
-                    dmgRect.setAttribute('stroke', 'none');
-                    dmgRect.setAttribute('pointer-events', 'none');
-                    parent.insertBefore(dmgRect, foEl);
-                  }
-                  dmgRect.setAttribute('x', foEl.getAttribute('x') || '0');
-                  dmgRect.setAttribute('y', foEl.getAttribute('y') || '0');
-                  dmgRect.setAttribute('width', foEl.getAttribute('width') || '100%');
-                  dmgRect.setAttribute('height', foEl.getAttribute('height') || '100%');
-                }
-              }
-
               // Batch overlay highlight and smart guides rendering via RAF for 60fps smoothness
               const highlightType = currentFrameIdRef.current && target.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';
 

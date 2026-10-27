@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const Texture = require('../models/Texture');
-const TextureCategory = require('../models/TextureCategory');
+const Texture = require('../models/texture');
+const TextureCategory = require('../models/textureCategory');
 const {
   getUserTextureDir,
   getTempChunkDir,

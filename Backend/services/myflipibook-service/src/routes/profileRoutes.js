@@ -1,6 +1,6 @@
 const express = require('express');
-const Profile = require('../models/Profile');
-const Flipbook = require('../models/Flipbook');
+const Profile = require('../models/profile');
+const Flipbook = require('../models/flipbook');
 
 const router = express.Router();
 

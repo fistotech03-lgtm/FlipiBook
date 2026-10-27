@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
-const PageEditorSettings = require('../models/PageEditorSettings');
-const User = require('../models/User');
-const Flipbook = require('../models/Flipbook');
+const PageEditorSettings = require('../models/pageEditorSettings');
+const User = require('../models/user');
+const Flipbook = require('../models/flipbook');
 const { calculateUserStorage } = require('../utils/storageHelper');
 const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 

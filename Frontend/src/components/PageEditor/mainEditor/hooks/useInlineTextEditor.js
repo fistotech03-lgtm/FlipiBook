@@ -124,6 +124,23 @@ export const useInlineTextEditor = ({
     // 5. Make exact text directly editable in-place on the page
     foTarget.setAttribute('data-editing', 'true');
     div.setAttribute('contenteditable', 'true');
+    const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
+    if (!isScrollable) {
+      div.style.setProperty('display', 'flex', 'important');
+      div.style.setProperty('flex-direction', 'column', 'important');
+      div.style.setProperty('justify-content', 'center', 'important');
+      div.style.setProperty('height', '100%', 'important');
+    }
+    const initSizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-width';
+    if (initSizingMode === 'auto-width') {
+      div.style.setProperty('white-space', 'pre', 'important');
+      div.style.setProperty('width', 'max-content', 'important');
+      div.style.setProperty('overflow-wrap', 'normal', 'important');
+    } else {
+      div.style.setProperty('white-space', 'pre-wrap', 'important');
+      div.style.setProperty('width', '100%', 'important');
+      div.style.setProperty('overflow-wrap', 'break-word', 'important');
+    }
     div.setAttribute('spellcheck', 'false');
     div.style.outline = 'none';
     div.style.userSelect = 'text';
@@ -146,8 +163,10 @@ export const useInlineTextEditor = ({
       if (div.style.textAlign !== detectedAlign) {
         div.style.textAlign = detectedAlign;
       }
-      // Zero-lag measurement without expensive overlay highlight recalculations during typing
-      editCacheManager.scheduleInputMeasurement(null);
+      // Real-time selection box growth as you type
+      editCacheManager.scheduleInputMeasurement((el, highlightType) => {
+        drawOverlayHighlight(el, highlightType);
+      });
     };
 
     div.addEventListener('input', handleInput);
@@ -206,6 +225,7 @@ export const useInlineTextEditor = ({
 
     const cleanup = () => {
       isEditingTextRef.current = false;
+      window.__savedTextSelection = null;
       clearSmartGuides();
       editCacheManager.endSession((el, highlightType) => drawOverlayHighlight(el, highlightType));
 
@@ -292,7 +312,7 @@ export const useInlineTextEditor = ({
       }
 
       // Auto-grow height and width while maintaining exact alignment
-      const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-height';
+      const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-width';
       const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
 
       if (!isScrollable) {
@@ -301,6 +321,8 @@ export const useInlineTextEditor = ({
         const oldMinHeight = div.style.minHeight;
 
         if (sizingMode === 'auto-width') {
+          div.style.whiteSpace = 'pre';
+          div.style.overflowWrap = 'normal';
           div.style.width = 'max-content';
         }
 

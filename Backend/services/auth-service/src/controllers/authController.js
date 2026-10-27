@@ -1,9 +1,9 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const User = require("../models/User");
-const LoginLog = require("../models/LoginLog");
-const SignupOtp = require("../models/SignupOtp");
+const User = require("../models/user");
+const LoginLog = require("../models/loginLog");
+const SignupOtp = require("../models/signupOtp");
 const {
   generateToken,
   generateRefreshToken,

@@ -50,9 +50,21 @@ export function normalizeStylePatch(attribute, value) {
       patch.fontFamily = `'${ff.replace(/["']/g, '')}', sans-serif`;
       break;
     }
-    case 'fontWeight':
-      patch.fontWeight = String(value) === 'bold' ? '700' : (String(value) === 'normal' ? '400' : String(value));
+    case 'fontWeight': {
+      const wMap = {
+        'thin': '100', '100': '100',
+        'light': '300', '300': '300',
+        'normal': '400', 'regular': '400', '400': '400',
+        'medium': '500', '500': '500',
+        'semibold': '600', 'semi bold': '600', '600': '600',
+        'bold': '700', '700': '700',
+        'extrabold': '800', 'extra bold': '800', '800': '800',
+        'black': '900', '900': '900'
+      };
+      const wStr = String(value).toLowerCase().trim();
+      patch.fontWeight = wMap[wStr] || (wStr === 'bold' ? '700' : (wStr === 'normal' ? '400' : String(value)));
       break;
+    }
     case 'fontStyle':
       patch.fontStyle = value;
       break;

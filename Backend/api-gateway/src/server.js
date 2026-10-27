@@ -18,6 +18,7 @@ const PDF_EDITOR_SERVICE_URL = process.env.PDF_EDITOR_SERVICE_URL || 'http://127
 const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5005';
 const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://127.0.0.1:5008';
 
 // Global Middleware
 const allowedOrigins = [
@@ -86,7 +87,9 @@ const storageStaticMiddleware = async (req, res, next) => {
     relPath,
     relPath.replace(/^(?:testing|production)[/\\]/i, ''),
     relPath.replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/'),
-    relPath.replace(/^(?:testing|production)[/\\]/i, '').replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/')
+    relPath.replace(/^(?:testing|production)[/\\]/i, '').replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/'),
+    relPath.replace(/\/Gallery\//g, '/gallery/').replace(/\/Images\//g, '/images/').replace(/\/Videos\//g, '/videos/').replace(/\/Profile\//g, '/profile/').replace(/\/Company_logo\//g, '/company_logo/').replace(/\/CustomizationGallery\//g, '/customizationGallery/').replace(/\/3DGallery\//g, '/3dGallery/'),
+    relPath.replace(/\/gallery\//g, '/Gallery/').replace(/\/images\//g, '/Images/').replace(/\/videos\//g, '/Videos/').replace(/\/profile\//g, '/Profile/').replace(/\/company_logo\//g, '/Company_logo/').replace(/\/customizationGallery\//g, '/CustomizationGallery/').replace(/\/3dGallery\//g, '/3DGallery/')
   ];
 
   for (const candRel of new Set(candidateRelPaths)) {
@@ -848,6 +851,42 @@ app.use(
   })
 );
 
+// Proxy /api/user and /api/users requests to User Service (port 5008)
+app.use(
+  ['/api/user', '/api/users'],
+  createProxyMiddleware({
+    target: USER_SERVICE_URL,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to user-service:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'User Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
@@ -863,6 +902,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /hdri -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /textures -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/payment -> ${PAYMENT_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/user -> ${USER_SERVICE_URL}`);
 });
 
 module.exports = app;

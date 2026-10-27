@@ -1,11 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
-const Flipbook = require("../models/Flipbook");
-const FlipbookAsset = require("../models/FlipbookAsset");
-const UserGallery = require("../models/UserGallery");
-const ThreedModel = require("../models/ThreedModel");
-const InteractionThreedModel = require("../models/InteractionThreedModel");
+const Flipbook = require("../models/flipbook");
+const FlipbookAsset = require("../models/flipbookAsset");
+const UserGallery = require("../models/userGallery");
+const ThreedModel = require("../models/threedModel");
+const InteractionThreedModel = require("../models/interactionThreedModel");
 const { getAuthUser } = require("../utils/userHelper");
 const {
   generateId,
@@ -194,19 +194,27 @@ const uploadAsset = async (req, res) => {
 
     if (isGallery) {
       const galleryFolderMap = {
-        image: 'Images',
-        video: 'Videos',
+        image: 'images',
+        video: 'videos',
         gif: 'gifs',
         audio: 'audio',
-        '3d': '3D_Models',
-        '3d_model': '3D_Models'
+        '3d': '3d_models',
+        '3d_model': '3d_models'
       };
-      const gallerySub = galleryFolderMap[assetType] || 'Images';
-      targetDir = path.join(storageRoot, userFolder, 'Gallery', 'pageEditorgallery', gallerySub);
+      const gallerySub = galleryFolderMap[assetType] || 'images';
+      targetDir = path.join(storageRoot, userFolder, 'gallery', 'pageEditorgallery', gallerySub);
       if (!fs.existsSync(targetDir)) {
-        targetDir = path.join(storageRoot, userFolder, gallerySub);
+        const legacyTargetDir = path.join(storageRoot, userFolder, 'Gallery', 'pageEditorgallery', gallerySub === 'images' ? 'Images' : (gallerySub === 'videos' ? 'Videos' : gallerySub));
+        if (fs.existsSync(legacyTargetDir)) {
+          targetDir = legacyTargetDir;
+          relativeUrlBase = `/storage/${userFolder}/Gallery/pageEditorgallery/${gallerySub === 'images' ? 'Images' : (gallerySub === 'videos' ? 'Videos' : gallerySub)}`;
+        } else {
+          fs.mkdirSync(targetDir, { recursive: true });
+          relativeUrlBase = `/storage/${userFolder}/gallery/pageEditorgallery/${gallerySub}`;
+        }
+      } else {
+        relativeUrlBase = `/storage/${userFolder}/gallery/pageEditorgallery/${gallerySub}`;
       }
-      relativeUrlBase = `/storage/${userFolder}/Gallery/pageEditorgallery/${gallerySub}`;
     } else {
       targetDir = path.join(
         storageRoot,
@@ -315,22 +323,37 @@ const uploadAsset = async (req, res) => {
         await userGallery.save();
       }
     } else {
-      // 2. In-page flipbook assets strictly stored in FlipbookAsset
-      const newAsset = new FlipbookAsset({
-        flipbook_v_id: dbDoc?.v_id || v_id || 'Untitled',
-        file_v_id,
-        page_v_id: finalPageVId,
-        assetType: subFolder,
-        fileName: uniqueFilename,
-        originalName: file.originalname,
-        userEmail: emailId,
-        isGallery: false,
-        flipbookName: safeFlipbookName,
-        folderName: safeFolderName,
-        url: assetSavedUrl,
-        size: file.size
+      // 2. In-page flipbook assets strictly stored in FlipbookAsset.assets
+      let cat = 'images';
+      const subLower = subFolder.toLowerCase();
+      if (subLower.includes('video')) cat = 'video';
+      else if (subLower.includes('gif')) cat = 'gif';
+
+      const bookVId = dbDoc?.book_v_id || dbDoc?.v_id || v_id || 'Untitled';
+      let assetDoc = await FlipbookAsset.findOne({
+        $or: [{ book_v_id: bookVId }, { flipbook_v_id: bookVId }]
       });
-      await newAsset.save();
+      if (!assetDoc) {
+        assetDoc = new FlipbookAsset({
+          userObjectID: dbDoc?.userObjectID || userObjectID || new mongoose.Types.ObjectId(),
+          userID: userFolder || 'default',
+          book_v_id: bookVId,
+          flipbookName: safeFlipbookName,
+          folder_id: dbDoc?.folder_id || safeFolderName || 'fol_default',
+          assets: { images: [], video: [], gif: [] }
+        });
+      }
+      if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+      assetDoc.assets[cat].push({
+        originalName: file.originalname,
+        convertedName: uniqueFilename,
+        page_v_id: finalPageVId,
+        url: assetSavedUrl,
+        size: file.size,
+        timestamp: new Date()
+      });
+      assetDoc.markModified('assets');
+      await assetDoc.save();
     }
 
     return res.status(200).json({
@@ -583,12 +606,14 @@ const getGalleryAssets = async (req, res) => {
 
     // 3. Scan physical gallery folders on disk
     const storageRoot = getStorageRoot();
-    const gallerySubfolders = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
+    const gallerySubfolders = ['images', 'videos', 'gifs', 'audio', '3d_models', 'Images', 'Videos', '3D_Models'];
 
     for (const uDir of candidateDirs) {
       for (const sub of gallerySubfolders) {
         const checkPaths = [
+          { dir: path.join(storageRoot, uDir, 'gallery', 'pageEditorgallery', sub), urlPrefix: `/storage/${uDir}/gallery/pageEditorgallery/${sub}` },
           { dir: path.join(storageRoot, uDir, 'Gallery', 'pageEditorgallery', sub), urlPrefix: `/storage/${uDir}/Gallery/pageEditorgallery/${sub}` },
+          { dir: path.join(storageRoot, uDir, 'gallery', sub), urlPrefix: `/storage/${uDir}/gallery/${sub}` },
           { dir: path.join(storageRoot, uDir, 'Gallery', sub), urlPrefix: `/storage/${uDir}/Gallery/${sub}` },
           { dir: path.join(storageRoot, uDir, sub), urlPrefix: `/storage/${uDir}/${sub}` }
         ];
@@ -781,13 +806,15 @@ const deleteGalleryAsset = async (req, res) => {
 
     // 3. Delete file from disk across gallery locations ONLY (never touches books)
     if (targetName) {
-      const subs = ['Images', 'Videos', 'gifs', 'audio', '3D_Models'];
+      const subs = ['images', 'videos', 'gifs', 'audio', '3d_models', 'Images', 'Videos', '3D_Models'];
       for (const uDir of candidateDirs) {
         for (const sub of subs) {
-          const p0 = path.join(storageRoot, uDir, 'Gallery', 'pageEditorgallery', sub, targetName);
-          const p1 = path.join(storageRoot, uDir, sub, targetName);
-          const p2 = path.join(storageRoot, uDir, 'Gallery', sub, targetName);
-          [p0, p1, p2].forEach(p => {
+          const p0 = path.join(storageRoot, uDir, 'gallery', 'pageEditorgallery', sub, targetName);
+          const p1 = path.join(storageRoot, uDir, 'Gallery', 'pageEditorgallery', sub, targetName);
+          const p2 = path.join(storageRoot, uDir, sub, targetName);
+          const p3 = path.join(storageRoot, uDir, 'gallery', sub, targetName);
+          const p4 = path.join(storageRoot, uDir, 'Gallery', sub, targetName);
+          [p0, p1, p2, p3, p4].forEach(p => {
             if (fs.existsSync(p)) {
               try { fs.unlinkSync(p); } catch (e) {}
             }
@@ -926,23 +953,37 @@ const useGalleryAsset = async (req, res) => {
     const relativeUrl = `/storage/${userFolder}/books/${safeFolderName}/${safeFlipbookName}/assets/${subFolder}/${newFileName}`;
     const svgRelativePath = `../assets/${subFolder}/${newFileName}`;
 
-    // Create a NEW FlipbookAsset document for this flipbook (isGallery: false)
-    const newAsset = new FlipbookAsset({
-      flipbook_v_id: v_id || 'flipbook_asset',
-      file_v_id: newFileVId,
-      page_v_id: page_v_id || 'global',
-      assetType: subFolder,
-      fileName: newFileName,
-      originalName: sourceFileName,
-      userEmail: emailId,
-      isGallery: false,
-      flipbookName: safeFlipbookName,
-      folderName: safeFolderName,
-      url: svgRelativePath,
-      size: fileSize
-    });
+    // Add to FlipbookAsset document for this flipbook
+    let cat = 'images';
+    const subLower = subFolder.toLowerCase();
+    if (subLower.includes('video')) cat = 'video';
+    else if (subLower.includes('gif')) cat = 'gif';
 
-    await newAsset.save();
+    const bookVId = dbDoc?.book_v_id || dbDoc?.v_id || v_id || 'flipbook_asset';
+    let assetDoc = await FlipbookAsset.findOne({
+      $or: [{ book_v_id: bookVId }, { flipbook_v_id: bookVId }]
+    });
+    if (!assetDoc) {
+      assetDoc = new FlipbookAsset({
+        userObjectID: dbDoc?.userObjectID || new mongoose.Types.ObjectId(),
+        userID: userFolder || 'default',
+        book_v_id: bookVId,
+        flipbookName: safeFlipbookName,
+        folder_id: dbDoc?.folder_id || safeFolderName || 'fol_default',
+        assets: { images: [], video: [], gif: [] }
+      });
+    }
+    if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+    assetDoc.assets[cat].push({
+      originalName: sourceFileName,
+      convertedName: newFileName,
+      page_v_id: page_v_id || 'global',
+      url: svgRelativePath,
+      size: fileSize,
+      timestamp: new Date()
+    });
+    assetDoc.markModified('assets');
+    await assetDoc.save();
 
     return res.status(200).json({
       success: true,

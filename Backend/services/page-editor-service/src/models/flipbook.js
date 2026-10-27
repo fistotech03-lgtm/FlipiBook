@@ -94,6 +94,5 @@ flipbookSchema.virtual('v_id')
 flipbookSchema.index({ userObjectID: 1, trash: 1, updatedAt: -1 });
 flipbookSchema.index({ userObjectID: 1, folder_id: 1, trash: 1 });
 flipbookSchema.index({ isFavorite: 1, trash: 1 });
-flipbookSchema.index({ book_v_id: 1 });
 
 module.exports = (mongoose.models.flipbook || mongoose.models.Flipbook) || mongoose.model('flipbook', flipbookSchema, 'flipbooks');

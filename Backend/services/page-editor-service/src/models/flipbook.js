@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const pageSchema = new mongoose.Schema(
   {
@@ -37,7 +38,7 @@ const flipbookSchema = new mongoose.Schema(
     folder_id: {
       type: String, // fol_v_id of single folder
       required: true,
-      default: 'fol_default',
+      default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
       trim: true,
       index: true
     },
@@ -124,8 +125,8 @@ flipbookSchema.pre('validate', async function () {
       }
     } catch (_) {}
   }
-  if (!this.folder_id) {
-    this.folder_id = 'fol_default';
+  if (!this.folder_id || this.folder_id === 'fol_default') {
+    this.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
   }
 });
 

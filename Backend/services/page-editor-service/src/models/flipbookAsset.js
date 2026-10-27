@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const flipbookMediaItemSchema = new mongoose.Schema(
   {
@@ -62,7 +63,7 @@ const flipbookAssetSchema = new mongoose.Schema(
     },
     folder_id: {
       type: String,
-      default: 'fol_default',
+      default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
       trim: true
     },
     assets: {

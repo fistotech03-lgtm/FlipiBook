@@ -102,9 +102,22 @@ const enforceRecentLimit = async (userQuery) => {
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
-const formatBook = (doc, settingsDoc = null, currentUserId = null) => {
-  const primaryFolder = doc.folder_id || resolveFolder(doc.folderName);
-  const displayFolder = primaryFolder === "default" || primaryFolder === "fol_default" ? "My Flipbooks" : primaryFolder;
+const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = null) => {
+  let displayFolder = null;
+  if (folderMap && doc.folder_id && folderMap.has(doc.folder_id)) {
+    displayFolder = folderMap.get(doc.folder_id);
+  } else if (doc.folderName) {
+    const resolved = resolveFolder(doc.folderName);
+    if (resolved && resolved !== "default" && resolved !== "fol_default") {
+      displayFolder = resolved;
+    }
+  }
+
+  if (!displayFolder || displayFolder === "default" || displayFolder === "fol_default") {
+    displayFolder = "My Flipbooks";
+  }
+
+  const primaryFolder = doc.folder_id || displayFolder;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
   const s = settingsDoc || doc.Customized_Settings || {};
   const bookVId = doc.book_v_id || doc.v_id;
@@ -227,7 +240,20 @@ exports.getBooks = async (req, res) => {
       console.warn("[Book Controller] Failed to fetch customizedsettings in getBooks:", e.message);
     }
 
-    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}));
+    // Load user's folders to map generated fol_v_id -> human-readable display name
+    const UserFolder = require("../models/userFolder");
+    const userFolderDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
+    const folderMap = new Map();
+    if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+      for (const f of userFolderDoc.folders) {
+        if (!f) continue;
+        const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
+        if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
+        if (f._id) folderMap.set(f._id.toString(), name);
+      }
+    }
+
+    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, null, folderMap));
 
     const hasRecentTag = (doc) => {
       if (doc.trash) return false;
@@ -253,7 +279,7 @@ exports.getBooks = async (req, res) => {
     );
 
     const recentBooks = recentDocs.map((doc) => {
-      const base = formatBook(doc, settingsMap.get(doc.v_id) || {});
+      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, null, folderMap);
       return {
         ...base,
         id: `Recent_${doc.v_id || doc._id.toString()}`,
@@ -648,8 +674,8 @@ exports.duplicateBook = async (req, res) => {
     if (customUserId) {
       cloneData.userID = customUserId;
     }
-    if (!cloneData.folder_id) {
-      cloneData.folder_id = 'fol_default';
+    if (!cloneData.folder_id || cloneData.folder_id === 'fol_default') {
+      cloneData.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
     }
     delete cloneData.userId;
     delete cloneData.userEmail;
@@ -1119,7 +1145,38 @@ exports.saveBook = async (req, res) => {
     }));
 
     const physicalFolder = targetFolder || "default";
-    const bookFolderId = req.body.folder_id || (targetFolder && targetFolder !== "default" && targetFolder !== "Recent Book" ? targetFolder : "fol_default");
+    let bookFolderId = req.body.folder_id;
+    if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
+      try {
+        const UserFolder = require("../models/userFolder");
+        let userFolderDoc = await UserFolder.findOne(userQuery);
+        let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
+        if (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== "fol_default") {
+          bookFolderId = defaultItem.fol_v_id;
+        } else {
+          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+          if (userFolderDoc) {
+            if (defaultItem) {
+              defaultItem.fol_v_id = bookFolderId;
+              defaultItem.isDefault = true;
+            } else {
+              userFolderDoc.folders.unshift({ fol_v_id: bookFolderId, name: 'default', isDefault: true });
+            }
+            await userFolderDoc.save().catch(() => {});
+          } else if (objectId || customUserId) {
+            await UserFolder.create({
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId ? { userID: customUserId } : {}),
+              folders: [{ fol_v_id: bookFolderId, name: 'default', isDefault: true }]
+            }).catch(() => {});
+          }
+        }
+      } catch (_) {
+        if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
+          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+        }
+      }
+    }
 
     if (book) {
       book.flipbookName = safeName;
@@ -1129,7 +1186,7 @@ exports.saveBook = async (req, res) => {
       if (customUserId && !book.userID) {
         book.userID = customUserId;
       }
-      if (bookFolderId && bookFolderId !== "fol_default") {
+      if (bookFolderId) {
         book.folder_id = bookFolderId;
       }
 
@@ -1488,11 +1545,27 @@ exports.saveBook = async (req, res) => {
       );
     }
 
+    let folderMap = new Map();
+    try {
+      const UserFolder = require("../models/userFolder");
+      if (!userFolderDoc) {
+        userFolderDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
+      }
+      if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+        for (const f of userFolderDoc.folders) {
+          if (!f) continue;
+          const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
+          if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
+          if (f._id) folderMap.set(f._id.toString(), name);
+        }
+      }
+    } catch (_) {}
+
     res.status(200).json({
       success: true,
       message: "Flipbook saved successfully",
       v_id: resolvedVId,
-      book: formatBook(book),
+      book: formatBook(book, null, null, folderMap),
       pages: safePages,
     });
   } catch (err) {

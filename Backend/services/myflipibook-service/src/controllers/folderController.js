@@ -62,8 +62,10 @@ exports.getFolders = async (req, res) => {
       });
     }
 
-    // Ensure default folder item exists
-    const defaultFolId = (defaultItem && defaultItem.fol_v_id) ? defaultItem.fol_v_id : 'fol_default';
+    // Ensure default folder item exists with a generated unique fol_v_id
+    const defaultFolId = (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default')
+      ? defaultItem.fol_v_id
+      : ('fol_' + crypto.randomBytes(6).toString('hex'));
     if (!defaultItem) {
       defaultItem = {
         fol_v_id: defaultFolId,
@@ -72,7 +74,7 @@ exports.getFolders = async (req, res) => {
       };
     } else {
       defaultItem.isDefault = true;
-      if (!defaultItem.fol_v_id) defaultItem.fol_v_id = defaultFolId;
+      defaultItem.fol_v_id = defaultFolId;
     }
 
     const defaultStoredName = String(defaultItem.name || 'default').trim();
@@ -211,11 +213,12 @@ exports.createFolder = async (req, res) => {
       userFolderDoc.folders.push({ fol_v_id: newFolId, name: safeFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
+      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
       await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
         folders: [
-          { fol_v_id: 'fol_default', name: 'default', isDefault: true },
+          { fol_v_id: defaultFolId, name: 'default', isDefault: true },
           { fol_v_id: newFolId, name: safeFolderName, isDefault: false }
         ]
       });
@@ -361,7 +364,8 @@ exports.renameFolder = async (req, res) => {
       message: 'Folder renamed successfully',
       oldName,
       newName: safeNewName,
-      id: targetFolder._id ? targetFolder._id.toString() : String(folderId),
+      id: targetFolder.fol_v_id || (targetFolder._id ? targetFolder._id.toString() : String(folderId)),
+      fol_v_id: targetFolder.fol_v_id,
       isDefault
     });
   } catch (err) {
@@ -395,15 +399,17 @@ exports.reorderFolders = async (req, res) => {
       })
       .map((f) => {
         const name = typeof f === 'string' ? f.trim() : String(f.name).trim();
-        const rawId = typeof f === 'object' ? (f._id || f.id) : null;
+        const rawId = typeof f === 'object' ? (f.fol_v_id || f._id || f.id) : null;
         const matched = existingFolders.find(
-          (ex) => (rawId && (ex._id?.toString() === String(rawId) || String(ex.id) === String(rawId))) || ex.name === name
+          (ex) => (rawId && (ex.fol_v_id === String(rawId) || ex._id?.toString() === String(rawId) || String(ex.id) === String(rawId))) || ex.name === name
         );
         const mongoId = (rawId && mongoose.Types.ObjectId.isValid(rawId) && /^[0-9a-fA-F]{24}$/.test(String(rawId)))
           ? new mongoose.Types.ObjectId(rawId)
           : (matched?._id || new mongoose.Types.ObjectId());
+        const fol_v_id = matched?.fol_v_id || (rawId && String(rawId).startsWith('fol_') ? String(rawId) : ('fol_' + crypto.randomBytes(6).toString('hex')));
         return {
           _id: mongoId,
+          fol_v_id,
           name: (matched?.isDefault && matched?.name === 'default') ? 'default' : name,
           isDefault: Boolean(matched?.isDefault || f.isDefault)
         };
@@ -428,7 +434,8 @@ exports.reorderFolders = async (req, res) => {
     }
 
     const formattedFolders = (currentDoc.folders || []).map((f) => ({
-      id: f._id ? f._id.toString() : String(f.id),
+      id: f.fol_v_id || (f._id ? f._id.toString() : String(f.id)),
+      fol_v_id: f.fol_v_id || (f._id ? f._id.toString() : String(f.id)),
       name: (f.isDefault && f.name === 'default') ? 'My Flipbooks' : f.name,
       isDefault: Boolean(f.isDefault)
     }));
@@ -498,18 +505,26 @@ exports.deleteFolder = async (req, res) => {
     }
 
     // 2. Cascade delete all books in this custom folder
-    if (resolvedName && flipQuery) {
+    if ((resolvedName || folderId) && flipQuery) {
       const folderBooks = await Flipbook.find({
         ...flipQuery,
-        $or: [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }]
+        $or: [
+          ...(folderId ? [{ folder_id: String(folderId) }] : []),
+          ...(resolvedName ? [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }] : [])
+        ]
       }).select('v_id').lean();
       const folderVIds = folderBooks.map(b => b.v_id).filter(Boolean);
 
       await Flipbook.deleteMany({
         ...flipQuery,
-        $or: [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }]
+        $or: [
+          ...(folderId ? [{ folder_id: String(folderId) }] : []),
+          ...(resolvedName ? [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }] : [])
+        ]
       });
-      deleteFolderStorage(customUserId || rawId, emailId, resolvedName);
+      if (resolvedName) {
+        deleteFolderStorage(customUserId || rawId, emailId, resolvedName);
+      }
 
       if (folderVIds.length > 0) {
         try {
@@ -558,11 +573,12 @@ exports.duplicateFolder = async (req, res) => {
       userFolderDoc.folders.push({ fol_v_id: newFolVId, name: newFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
+      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
       userFolderDoc = await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
         folders: [
-          { fol_v_id: 'fol_default', name: 'default', isDefault: true },
+          { fol_v_id: defaultFolId, name: 'default', isDefault: true },
           { fol_v_id: newFolVId, name: newFolderName, isDefault: false }
         ]
       });
@@ -617,7 +633,8 @@ exports.duplicateFolder = async (req, res) => {
       success: true,
       message: 'Folder duplicated',
       folder: newFolderName,
-      id: newId.toString()
+      id: newFolVId,
+      fol_v_id: newFolVId
     });
   } catch (err) {
     console.error('[Folder Controller] Error duplicating folder:', err);

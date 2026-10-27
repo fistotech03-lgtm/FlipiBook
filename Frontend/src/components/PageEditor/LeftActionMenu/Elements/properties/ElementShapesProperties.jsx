@@ -5,7 +5,7 @@ import { handleScrubHelper } from '../../../properties/Color';
 import CornerRadius from '../../../properties/CornerRadius';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../../ColorPicker';
-import ImageAdjustModal from './ImageAdjustModal';
+import { getShapeCornerDefaults, buildCornerRadiusPath } from '../utils/shapeElementUtils';
 import { 
   ChevronDown, 
   ChevronLeft, 
@@ -13,7 +13,6 @@ import {
   Upload, 
   Plus, 
   GripVertical, 
-  SquarePen, 
   Trash2, 
   ArrowRightLeft,
   Link2,
@@ -46,7 +45,7 @@ const PropertyRow = ({ label, children, className = '' }) => (
 );
 
 // PropertySlider using PropertyRow with signature #E05638 styling
-const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false, unit = '' }) => {
+const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false, unit = '', onPointerUp }) => {
   const [localVal, setLocalVal] = useState(value);
   const isFocused = useRef(false);
 
@@ -61,7 +60,7 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
 
   return (
     <PropertyRow label={label} className={disabled ? 'opacity-40 pointer-events-none' : ''}>
-      <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]">
+      <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]" onPointerUp={onPointerUp}>
         <div className="flex-1 flex items-center relative">
           <ElementSlider
             min={min}
@@ -470,26 +469,98 @@ const ElementShapesProperties = ({
   const [activePopup, setActivePopup] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
-  const shapeType = selectedElementProps['data-shape-type'] ||
+  const isCircleShape = Boolean(
+    selectedElementProps['data-shape-id'] === 'true-circle' ||
+    selectedElementProps['data-shape-title'] === 'Circle' ||
+    selectedElementProps['data-name'] === 'Circle' ||
+    selectedElementProps.name === 'Circle'
+  );
+
+  const isDiamondShape = Boolean(
+    !isCircleShape &&
+    (
+      selectedElementProps['data-shape-id'] === 'rounded-diamond' ||
+      selectedElementProps['data-shape-title'] === 'Diamond' ||
+      selectedElementProps['data-name'] === 'Diamond' ||
+      selectedElementProps.name === 'Diamond' ||
+      selectedElementProps['data-shape-type'] === 'diamond' ||
+      (selectedElementProps.d && (
+        selectedElementProps.d.includes('50 10 L 90') ||
+        selectedElementProps.d.includes('50,10 L 90') ||
+        selectedElementProps.d.includes('50 12') ||
+        selectedElementProps.d.includes('50 88') ||
+        selectedElementProps.d.includes('85 43') ||
+        selectedElementProps.d.includes('15 57')
+      )) ||
+      (() => {
+        try {
+          const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+          const el = doc.getElementById(selectedLayerId);
+          if (!el) return false;
+          const title = el.getAttribute('data-shape-title') || el.getAttribute('data-name');
+          if (title === 'Diamond') return true;
+          const id = el.getAttribute('data-shape-id') || el.querySelector('[data-shape-id]')?.getAttribute('data-shape-id');
+          if (id === 'rounded-diamond') return true;
+          const sType = el.getAttribute('data-shape-type') || el.querySelector('[data-shape-type]')?.getAttribute('data-shape-type');
+          if (sType === 'diamond') return true;
+          return false;
+        } catch (e) {
+          return false;
+        }
+      })()
+    )
+  );
+
+  const isSquareShape = Boolean(
+    !isDiamondShape &&
+    !isCircleShape &&
+    (
+      selectedElementProps['data-shape-id'] === 'sharp-square' ||
+      selectedElementProps['data-shape-title'] === 'Square' ||
+      selectedElementProps['data-name'] === 'Square' ||
+      selectedElementProps.name === 'Square' ||
+      selectedElementProps['data-shape-type'] === 'square' ||
+      (selectedElementProps['data-shape-type'] === 'polygon' && parseInt(selectedElementProps['data-count']) === 4) ||
+      (selectedElementProps['data-shape-type'] === 'rectangle' && (
+        (selectedElementProps.d && (selectedElementProps.d.includes('14 14') || selectedElementProps.d.includes('14,14'))) ||
+        selectedElementProps['data-shape-title'] === 'Square'
+      )) ||
+      (() => {
+        try {
+          const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+          const el = doc.getElementById(selectedLayerId);
+          if (!el) return false;
+          const title = el.getAttribute('data-shape-title') || el.getAttribute('data-name');
+          if (title === 'Square') return true;
+          const id = el.getAttribute('data-shape-id') || el.querySelector('[data-shape-id]')?.getAttribute('data-shape-id');
+          if (id === 'sharp-square') return true;
+          return false;
+        } catch (e) {
+          return false;
+        }
+      })()
+    )
+  );
+
+  const is4SidedShape = isSquareShape || isDiamondShape;
+
+  const rawShapeType = selectedElementProps['data-shape-type'] ||
     selectedElementProps.innerTagName ||
     (selectedElementProps.tagName?.toLowerCase() === 'rect' ? 'rectangle' :
       (selectedElementProps.tagName?.toLowerCase() === 'circle' || selectedElementProps.tagName?.toLowerCase() === 'ellipse' ? 'ellipse' :
         (selectedElementProps.tagName?.toLowerCase() === 'line' ? 'line' :
           (selectedElementProps.tagName?.toLowerCase() === 'polygon' ? 'polygon' : 'vector-path'))));
 
+  const shapeType = is4SidedShape ? 'polygon' : rawShapeType;
+
   // --- IMAGE MASKING STATE ---
   const [slotImage, setSlotImage] = useState(null);
   const [slotOriginalImage, setSlotOriginalImage] = useState(null);
   const [slotImageName, setSlotImageName] = useState('Image Name .jpg');
   const [slotImageMeta, setSlotImageMeta] = useState('1920 X 1080 • 24MB');
+  const [slotRotation, setSlotRotation] = useState(0);
   const [framePadding, setFramePadding] = useState(0);
   const [isMaskEnabled, setIsMaskEnabled] = useState(false);
-  const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [slotCropData, setSlotCropData] = useState(null);
-  const [slotFixType, setSlotFixType] = useState('Fill All');
-  const [slotOpacity, setSlotOpacity] = useState(100);
-  const [slotFilters, setSlotFilters] = useState(null);
-  const [shapeAspectRatio, setShapeAspectRatio] = useState(1);
   const fileInputRef = useRef(null);
   const adjustStateRef = useRef({ isAdjusting: false, slotId: null, isPanning: false, startX: 0, startY: 0, matrix: null, rotateStr: '', imgNode: null, bbox: null, startMatrix: null, path: null });
 
@@ -545,14 +616,32 @@ const ElementShapesProperties = ({
         if (!enabled) {
           setSlotImage(null);
           setSlotOriginalImage(null);
-          setSlotCropData(null);
-          setSlotFilters(null);
+          setSlotRotation(0);
         }
       }
     };
     window.addEventListener('shape-mask-toggled', handleShapeMaskToggled);
     return () => window.removeEventListener('shape-mask-toggled', handleShapeMaskToggled);
   }, [selectedLayerId]);
+
+  const syncDomChanges = useCallback(() => {
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const selectedElement = doc.getElementById(selectedLayerId);
+    if (!selectedElement) return;
+
+    window.__skipCanvasUpdateForPage = activePageIndex;
+    let svgRoot = selectedElement;
+    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
+      svgRoot = svgRoot.parentElement;
+    }
+    if (svgRoot) {
+      const cloneSvg = svgRoot.cloneNode(true);
+      cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
+      const serializer = new XMLSerializer();
+      const html = serializer.serializeToString(cloneSvg);
+      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+    }
+  }, [selectedLayerId, activePageIndex, updateElementAttribute]);
 
   useEffect(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -571,19 +660,6 @@ const ElementShapesProperties = ({
     }
 
     const listeners = [];
-
-    const syncDomChanges = () => {
-      window.__skipCanvasUpdateForPage = activePageIndex;
-      let root = selectedElement;
-      while (root && root.tagName?.toLowerCase() !== 'svg') root = root.parentElement;
-      if (root) {
-        const cloneSvg = root.cloneNode(true);
-        cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
-        const serializer = new XMLSerializer();
-        const html = serializer.serializeToString(cloneSvg);
-        updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
-      }
-    };
 
     const updateAdjustTransform = () => {
         if (!adjustStateRef.current.matrix) return;
@@ -630,7 +706,7 @@ const ElementShapesProperties = ({
         
         ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         ghost.id = 'ghost-layer';
-        ghost.style.pointerEvents = 'none';
+        ghost.style.cursor = 'grab';
         
         let combinedTransform = path.getAttribute('transform') || '';
         const pt = pattern.getAttribute('patternTransform');
@@ -648,12 +724,14 @@ const ElementShapesProperties = ({
         
         const ghostImg = imgNode.cloneNode(true);
         ghostImg.setAttribute('opacity', '0.4');
+        ghostImg.style.pointerEvents = 'auto';
         
         const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         outline.setAttribute('fill', 'none');
         outline.setAttribute('stroke', '#f59e0b');
         outline.setAttribute('vector-effect', 'non-scaling-stroke');
         outline.setAttribute('stroke-dasharray', '5,5');
+        outline.style.pointerEvents = 'none';
         
         let iw = imgNode.getAttribute('width');
         let ih = imgNode.getAttribute('height');
@@ -675,9 +753,43 @@ const ElementShapesProperties = ({
             selectedElement.appendChild(ghost);
         }
 
+        path.style.cursor = 'grab';
+
+        ghost.addEventListener('pointerdown', (e) => {
+            if (adjustStateRef.current.isAdjusting) {
+                e.preventDefault();
+                e.stopPropagation();
+                adjustStateRef.current.isPanning = true;
+                adjustStateRef.current.startX = e.clientX;
+                adjustStateRef.current.startY = e.clientY;
+                adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
+                ghost.style.cursor = 'grabbing';
+                if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grabbing';
+            }
+        });
+        ghost.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            exitAdjustMode();
+        });
+
         const highlightId = `highlight-${patternId}`;
         let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) {
+        if (!highlight) {
+            highlight = path.cloneNode(true);
+            highlight.setAttribute('data-highlight-id', highlightId);
+            highlight.setAttribute('pointer-events', 'none');
+            highlight.setAttribute('fill', 'none');
+            highlight.setAttribute('stroke', '#f59e0b');
+            highlight.setAttribute('stroke-width', '2');
+            highlight.setAttribute('vector-effect', 'non-scaling-stroke');
+            highlight.setAttribute('stroke-dasharray', '8,4');
+            if (path.parentNode) {
+                path.parentNode.insertBefore(highlight, path.nextSibling);
+            } else {
+                selectedElement.appendChild(highlight);
+            }
+        } else {
             highlight.setAttribute('stroke', '#f59e0b');
             highlight.setAttribute('stroke-dasharray', '8,4');
         }
@@ -685,15 +797,15 @@ const ElementShapesProperties = ({
 
     const exitAdjustMode = () => {
         adjustStateRef.current.isAdjusting = false;
+        if (adjustStateRef.current.path) {
+            adjustStateRef.current.path.style.cursor = '';
+        }
         const ghost = selectedElement.querySelector('#ghost-layer');
         if (ghost) ghost.remove();
         if (adjustStateRef.current.slotId) {
             const highlightId = `highlight-${adjustStateRef.current.slotId}`;
             const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-            if (highlight) {
-                highlight.setAttribute('stroke', '#2563eb');
-                highlight.setAttribute('stroke-dasharray', '4,5');
-            }
+            if (highlight) highlight.remove();
         }
         adjustStateRef.current.slotId = null;
         syncDomChanges();
@@ -703,7 +815,7 @@ const ElementShapesProperties = ({
     const handleOutsideClick = (e) => {
       if (!adjustStateRef.current.isAdjusting) return;
       const target = e.target;
-      if (target && (target.closest?.('#ghost-layer') || target.closest?.(`#${selectedLayerId}`))) {
+      if (target && (target.closest?.('#ghost-layer') || target.closest?.(`#${selectedLayerId}`) || target.closest?.('[data-image-slots]'))) {
         return;
       }
       exitAdjustMode();
@@ -775,6 +887,9 @@ const ElementShapesProperties = ({
     const handlePointerUp = (e) => {
         if (adjustStateRef.current.isPanning) {
             adjustStateRef.current.isPanning = false;
+            if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grab';
+            const ghost = selectedElement?.querySelector('#ghost-layer');
+            if (ghost) ghost.style.cursor = 'grab';
         }
     };
 
@@ -791,7 +906,7 @@ const ElementShapesProperties = ({
       
       listeners.forEach(({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
         shapeEl.removeEventListener('dblclick', handleDoubleClick);
-        shapeEl.removeEventListener('pointerdown', handlePointerDown);
+        if (handlePointerDown) shapeEl.removeEventListener('pointerdown', handlePointerDown);
         shapeEl.removeEventListener('wheel', handleWheel);
       });
       listeners.length = 0;
@@ -823,28 +938,49 @@ const ElementShapesProperties = ({
                 if (savedOrig) setSlotOriginalImage(savedOrig);
                 else setSlotOriginalImage(newHref);
 
-                const savedCrop = shapeEl.getAttribute('data-slot-crop-data') || selectedElement.getAttribute('data-slot-crop-data');
-                if (savedCrop) {
-                  try { setSlotCropData(JSON.parse(savedCrop)); } catch (e) {}
+                const tf = imgNode.getAttribute('transform') || '';
+                const rMatch = tf.match(/rotate\(([-0-9.]+)/);
+                if (rMatch) {
+                  setSlotRotation(parseFloat(rMatch[1]));
                 }
 
-                const savedFix = shapeEl.getAttribute('data-slot-fix-type') || selectedElement.getAttribute('data-slot-fix-type');
-                if (savedFix) setSlotFixType(savedFix);
-
-                const savedOp = shapeEl.getAttribute('data-slot-opacity') || selectedElement.getAttribute('data-slot-opacity');
-                if (savedOp !== null && savedOp !== undefined) setSlotOpacity(parseFloat(savedOp));
-
-                const savedFilters = shapeEl.getAttribute('data-slot-filters') || selectedElement.getAttribute('data-slot-filters');
-                if (savedFilters) {
-                  try { setSlotFilters(JSON.parse(savedFilters)); } catch (e) {}
+                // Seamless upgrade from legacy objectBoundingBox to userSpaceOnUse if needed
+                const pcu = pattern.getAttribute('patternContentUnits');
+                if (pcu !== 'userSpaceOnUse') {
+                  try {
+                    const b = shapeEl.getBBox();
+                    if (b.width && b.height) {
+                      const imgW = parseFloat(imgNode.getAttribute('width')) || b.width;
+                      const imgH = parseFloat(imgNode.getAttribute('height')) || b.height;
+                      let m = [1, 0, 0, 1, 0, 0];
+                      const mMatch = tf.match(/matrix\(([^)]+)\)/);
+                      if (mMatch) {
+                        m = mMatch[1].split(/[ ,]+/).map(parseFloat);
+                        m[0] = m[0] * b.width;
+                        m[2] = m[2] * b.width;
+                        m[1] = m[1] * b.height;
+                        m[3] = m[3] * b.height;
+                        m[4] = b.x + m[4] * b.width;
+                        m[5] = b.y + m[5] * b.height;
+                      } else {
+                        const scale = Math.max(b.width / imgW, b.height / imgH);
+                        const finalW = imgW * scale;
+                        const finalH = imgH * scale;
+                        m = [scale, 0, 0, scale, b.x + (b.width - finalW) / 2, b.y + (b.height - finalH) / 2];
+                      }
+                      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+                      pattern.removeAttribute('patternTransform');
+                      pattern.removeAttribute('viewBox');
+                      imgNode.removeAttribute('preserveAspectRatio');
+                      imgNode.removeAttribute('x');
+                      imgNode.removeAttribute('y');
+                      imgNode.setAttribute('width', imgW);
+                      imgNode.setAttribute('height', imgH);
+                      let rotStr = rMatch ? rMatch[0] + ' ' : '';
+                      imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
+                    }
+                  } catch (e) {}
                 }
-
-                try {
-                  const b = shapeEl.getBBox();
-                  if (b.width && b.height) {
-                    setShapeAspectRatio(b.width / b.height);
-                  }
-                } catch (e) {}
                 
                 foundImage = true;
 
@@ -867,6 +1003,9 @@ const ElementShapesProperties = ({
                       adjustStateRef.current.startX = e.clientX;
                       adjustStateRef.current.startY = e.clientY;
                       adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
+                      shapeEl.style.cursor = 'grabbing';
+                      const ghost = selectedElement?.querySelector('#ghost-layer');
+                      if (ghost) ghost.style.cursor = 'grabbing';
                   }
                 };
       
@@ -898,9 +1037,9 @@ const ElementShapesProperties = ({
                 };
 
                 shapeEl.addEventListener('dblclick', handleDoubleClick);
-                // Only listen for wheel/pointer interactions when actively adjusting
+                shapeEl.addEventListener('pointerdown', handlePointerDown);
                 shapeEl.addEventListener('wheel', handleWheel, { passive: false });
-                listeners.push({ shapeEl, handleDoubleClick, handlePointerDown: null, handleWheel });
+                listeners.push({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
 
                 break;
               }
@@ -939,7 +1078,7 @@ const ElementShapesProperties = ({
       window.removeEventListener('pointerdown', handleOutsideClick);
       listeners.forEach(({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
         shapeEl.removeEventListener('dblclick', handleDoubleClick);
-        shapeEl.removeEventListener('pointerdown', handlePointerDown);
+        if (handlePointerDown) shapeEl.removeEventListener('pointerdown', handlePointerDown);
         shapeEl.removeEventListener('wheel', handleWheel);
       });
       const ghost = selectedElement?.querySelector('#ghost-layer');
@@ -976,27 +1115,15 @@ const ElementShapesProperties = ({
       shapeEl.removeAttribute('data-slot-image-name');
       shapeEl.removeAttribute('data-slot-image-meta');
       shapeEl.removeAttribute('data-slot-original-url');
-      shapeEl.removeAttribute('data-slot-crop-data');
-      shapeEl.removeAttribute('data-slot-fix-type');
-      shapeEl.removeAttribute('data-slot-opacity');
-      shapeEl.removeAttribute('data-slot-filters');
     }
 
     selectedElement.removeAttribute('data-mask-enabled');
     selectedElement.removeAttribute('data-slot-image-name');
     selectedElement.removeAttribute('data-slot-image-meta');
     selectedElement.removeAttribute('data-slot-original-url');
-    selectedElement.removeAttribute('data-slot-crop-data');
-    selectedElement.removeAttribute('data-slot-fix-type');
-    selectedElement.removeAttribute('data-slot-opacity');
-    selectedElement.removeAttribute('data-slot-filters');
     setSlotImage(null);
     setSlotOriginalImage(null);
-    setSlotCropData(null);
-    setSlotFixType('Fill All');
-    setSlotOpacity(100);
-    setSlotFilters(null);
-    setShowAdjustModal(false);
+    setSlotRotation(0);
     setIsMaskEnabled(false);
 
     window.__skipCanvasUpdateForPage = activePageIndex;
@@ -1011,6 +1138,11 @@ const ElementShapesProperties = ({
   };
 
   const handleDeleteImage = () => {
+    handleRemoveMask();
+  };
+
+  const updateRotation = (angle, skipSync = false) => {
+    setSlotRotation(angle);
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const selectedElement = doc.getElementById(selectedLayerId);
     if (!selectedElement) return;
@@ -1019,65 +1151,61 @@ const ElementShapesProperties = ({
     if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
       shapeEl = selectedElement;
     }
+    if (!shapeEl) return;
+
+    const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
+    if (!patternMatch || !patternMatch[1]) return;
+    const patternId = patternMatch[1];
 
     let svgRoot = selectedElement;
     while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
       svgRoot = svgRoot.parentElement;
     }
+    const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
+    if (!pattern) return;
 
-    if (shapeEl) {
-      const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
-      if (patternMatch && patternMatch[1]) {
-        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
-        if (pat) pat.remove();
-      }
-      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
-      shapeEl.setAttribute('fill', origFill);
-      shapeEl.removeAttribute('data-pattern-id');
-      shapeEl.removeAttribute('data-masked-image-url');
-      shapeEl.removeAttribute('data-slot-image-name');
-      shapeEl.removeAttribute('data-slot-image-meta');
-      shapeEl.removeAttribute('data-slot-original-url');
-      shapeEl.removeAttribute('data-slot-crop-data');
-      shapeEl.removeAttribute('data-slot-fix-type');
-      shapeEl.removeAttribute('data-slot-opacity');
-      shapeEl.removeAttribute('data-slot-filters');
+    let bbox = { x: 0, y: 0, width: 100, height: 100 };
+    try { bbox = shapeEl.getBBox(); } catch(e) {}
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+
+    const pcu = pattern.getAttribute('patternContentUnits');
+    const imgNode = pattern.querySelector('image, img');
+    if (!imgNode) return;
+
+    let tf = imgNode.getAttribute('transform') || '';
+    let m = [1, 0, 0, 1, 0, 0];
+    const mMatch = tf.match(/matrix\(([^)]+)\)/);
+    if (mMatch) {
+      m = mMatch[1].split(/[ ,]+/).map(parseFloat);
     }
 
-    selectedElement.removeAttribute('data-slot-image-name');
-    selectedElement.removeAttribute('data-slot-image-meta');
-    selectedElement.removeAttribute('data-slot-original-url');
-    selectedElement.removeAttribute('data-slot-crop-data');
-    selectedElement.removeAttribute('data-slot-fix-type');
-    selectedElement.removeAttribute('data-slot-opacity');
-    selectedElement.removeAttribute('data-slot-filters');
-    setSlotImage(null);
-    setSlotOriginalImage(null);
-    setSlotCropData(null);
-    setSlotFixType('Fill All');
-    setSlotOpacity(100);
-    setSlotFilters(null);
-    setShowAdjustModal(false);
-
-    window.__skipCanvasUpdateForPage = activePageIndex;
-    if (svgRoot) {
-      const cloneSvg = svgRoot.cloneNode(true);
-      cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
-      const serializer = new XMLSerializer();
-      const html = serializer.serializeToString(cloneSvg);
-      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+    if (pcu !== 'userSpaceOnUse') {
+      m[0] = m[0] * bbox.width;
+      m[2] = m[2] * bbox.width;
+      m[1] = m[1] * bbox.height;
+      m[3] = m[3] * bbox.height;
+      m[4] = bbox.x + m[4] * bbox.width;
+      m[5] = bbox.y + m[5] * bbox.height;
+      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+      pattern.removeAttribute('patternTransform');
     }
+
+    const matrixStr = `matrix(${m.join(' ')})`;
+    if (angle !== 0) {
+      imgNode.setAttribute('transform', `rotate(${angle}, ${cx}, ${cy}) ${matrixStr}`.trim());
+    } else {
+      imgNode.setAttribute('transform', matrixStr);
+    }
+
+    if (!skipSync) syncDomChanges();
   };
 
   const applyImageMask = useCallback((
     dataUrl,
     name = null,
     sizeStr = null,
-    originalDataUrl = null,
-    cropData = null,
-    fixType = 'Fill All',
-    opacity = 100,
-    filters = null
+    originalDataUrl = null
   ) => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const selectedElement = doc.getElementById(selectedLayerId);
@@ -1110,19 +1238,20 @@ const ElementShapesProperties = ({
       defs.appendChild(pattern);
     }
     pattern.setAttribute('patternUnits', 'objectBoundingBox');
-    pattern.removeAttribute('patternContentUnits');
+    pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
     pattern.setAttribute('width', '1');
     pattern.setAttribute('height', '1');
-    pattern.setAttribute('preserveAspectRatio', 'none');
+    pattern.removeAttribute('patternTransform');
+    pattern.removeAttribute('viewBox');
 
     shapeEl.setAttribute('fill', `url(#${patternId})`);
 
     const img = new window.Image();
     img.onload = () => {
-      const imgW = img.width;
-      const imgH = img.height;
+      const imgW = img.naturalWidth || img.width;
+      const imgH = img.naturalHeight || img.height;
 
-      const dims = `${img.naturalWidth || imgW} X ${img.naturalHeight || imgH}`;
+      const dims = `${imgW} X ${imgH}`;
       const meta = `${dims} • ${sizeStr || '24MB'}`;
       if (name) setSlotImageName(name);
       setSlotImageMeta(meta);
@@ -1134,19 +1263,11 @@ const ElementShapesProperties = ({
         if (name) shapeEl.setAttribute('data-slot-image-name', name);
         shapeEl.setAttribute('data-slot-image-meta', meta);
         shapeEl.setAttribute('data-slot-original-url', origToSave);
-        if (cropData) shapeEl.setAttribute('data-slot-crop-data', JSON.stringify(cropData));
-        if (fixType) shapeEl.setAttribute('data-slot-fix-type', fixType);
-        if (opacity !== undefined) shapeEl.setAttribute('data-slot-opacity', opacity.toString());
-        if (filters) shapeEl.setAttribute('data-slot-filters', JSON.stringify(filters));
       }
       if (selectedElement) {
         if (name) selectedElement.setAttribute('data-slot-image-name', name);
         selectedElement.setAttribute('data-slot-image-meta', meta);
         selectedElement.setAttribute('data-slot-original-url', origToSave);
-        if (cropData) selectedElement.setAttribute('data-slot-crop-data', JSON.stringify(cropData));
-        if (fixType) selectedElement.setAttribute('data-slot-fix-type', fixType);
-        if (opacity !== undefined) selectedElement.setAttribute('data-slot-opacity', opacity.toString());
-        if (filters) selectedElement.setAttribute('data-slot-filters', JSON.stringify(filters));
       }
 
       let bbox = { width: 100, height: 100, x: 0, y: 0 };
@@ -1158,31 +1279,12 @@ const ElementShapesProperties = ({
       const slotW = bbox.width;
       const slotH = bbox.height;
 
-      if (slotW && slotH) {
-        setShapeAspectRatio(slotW / slotH);
-      }
+      const scale = Math.max(slotW / imgW, slotH / imgH);
+      const finalW = imgW * scale;
+      const finalH = imgH * scale;
 
-      let scaleX, scaleY;
-      if (fixType === 'Fit') {
-        const fitScale = Math.min(slotW / imgW, slotH / imgH);
-        scaleX = fitScale;
-        scaleY = fitScale;
-      } else if (fixType === 'Stretch') {
-        scaleX = slotW / imgW;
-        scaleY = slotH / imgH;
-      } else {
-        const coverScale = Math.max(slotW / imgW, slotH / imgH);
-        scaleX = coverScale;
-        scaleY = coverScale;
-      }
-
-      const finalW = imgW * scaleX;
-      const finalH = imgH * scaleY;
-
-      const tx_user = (slotW - finalW) / 2;
-      const ty_user = (slotH - finalH) / 2;
-
-      pattern.setAttribute('viewBox', `0 0 ${slotW} ${slotH}`);
+      const tx_user = bbox.x + (slotW - finalW) / 2;
+      const ty_user = bbox.y + (slotH - finalH) / 2;
 
       let imageNode = pattern.querySelector('image, img');
       if (!imageNode) {
@@ -1190,27 +1292,18 @@ const ElementShapesProperties = ({
         pattern.appendChild(imageNode);
       }
 
-      imageNode.setAttribute('x', '0');
-      imageNode.setAttribute('y', '0');
-      imageNode.setAttribute('width', slotW);
-      imageNode.setAttribute('height', slotH);
+      imageNode.setAttribute('width', imgW);
+      imageNode.setAttribute('height', imgH);
+      imageNode.removeAttribute('preserveAspectRatio');
+      imageNode.removeAttribute('x');
+      imageNode.removeAttribute('y');
 
-      // SVG's native preserveAspectRatio guarantees 100% full coverage without distortion or clipping gaps
-      const par = fixType === 'Fit' ? 'xMidYMid meet' : (fixType === 'Stretch' ? 'none' : 'xMidYMid slice');
-      imageNode.setAttribute('preserveAspectRatio', par);
-      
       const existingTf = imageNode.getAttribute('transform') || '';
       let rotateStr = '';
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
 
-      if (rotateStr) {
-        imageNode.setAttribute('transform', rotateStr.trim());
-      } else {
-        imageNode.removeAttribute('transform');
-      }
-      imageNode.setAttribute('opacity', ((opacity !== undefined ? opacity : 100) / 100).toString());
-
+      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${tx_user} ${ty_user})`);
       imageNode.setAttribute('href', dataUrl);
       imageNode.setAttribute('xlink:href', dataUrl);
 
@@ -1256,43 +1349,11 @@ const ElementShapesProperties = ({
     reader.onload = async (event) => {
       const dataUrl = event.target.result;
       setSlotOriginalImage(dataUrl);
-      setSlotCropData(null);
-      setSlotFilters(null);
-      setSlotOpacity(100);
-      setSlotFixType('Fill All');
-      applyImageMask(dataUrl, name, sizeStr, dataUrl, null, 'Fill All', 100, null);
+      applyImageMask(dataUrl, name, sizeStr, dataUrl);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
-
-  const handleSaveAdjustedImage = useCallback(({
-    croppedUrl,
-    originalUrl,
-    cropData,
-    fixType,
-    opacity: adjustedOpacity,
-    filters
-  }) => {
-    setSlotCropData(cropData);
-    setSlotFixType(fixType || 'Fill All');
-    setSlotOpacity(adjustedOpacity !== undefined ? adjustedOpacity : 100);
-    setSlotFilters(filters);
-    const orig = originalUrl || slotOriginalImage || slotImage;
-    if (orig) setSlotOriginalImage(orig);
-
-    applyImageMask(
-      croppedUrl,
-      slotImageName,
-      slotImageMeta,
-      orig,
-      cropData,
-      fixType || 'Fill All',
-      adjustedOpacity !== undefined ? adjustedOpacity : 100,
-      filters
-    );
-    setShowAdjustModal(false);
-  }, [slotImageName, slotImageMeta, slotOriginalImage, slotImage, applyImageMask]);
 
   const colorsOnPage = React.useMemo(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -1309,38 +1370,48 @@ const ElementShapesProperties = ({
     return Array.from(colors).slice(0, 12);
   }, [selectedElementProps, activePageIndex]);
 
-  const isDiamond = shapeType === 'diamond' ||
-    selectedElementProps['data-shape-id'] === 'rounded-diamond' ||
-    (selectedElementProps.d && (selectedElementProps.d.includes('50 12') || selectedElementProps.d.includes('50 88') || selectedElementProps.d.includes('85 43') || selectedElementProps.d.includes('15 57')));
-
   const hasShapeParameters = shapeType === 'polygon' || shapeType === 'star' || Boolean(selectedElementProps?.['data-count']) || Boolean(selectedElementProps?.['data-ratio']);
 
-  const isRectangularShape = Boolean(
-    !['polygon', 'star', 'circle', 'ellipse', 'line', 'vector-path'].includes(shapeType) &&
-    !hasShapeParameters &&
-    (
-      shapeType === 'rect' ||
-      shapeType === 'rectangle' ||
-      shapeType === 'square' ||
-      shapeType === 'diamond' ||
-      isDiamond ||
-      selectedElementProps?.innerTagName === 'rect' ||
-      selectedElementProps?.tagName?.toLowerCase() === 'rect' ||
-      (() => {
-        try {
-          const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-          const el = doc.getElementById(selectedLayerId);
-          if (!el) return false;
-          const inner = el.querySelector('rect, [data-shape-type="rectangle"], [data-shape-type="diamond"]');
-          return Boolean(inner) || el.tagName?.toLowerCase() === 'rect';
-        } catch (e) {
-          return false;
-        }
-      })()
-    )
+  const CORNER_RADIUS_SHAPE_IDS = [
+    'true-circle',
+    'squircle-superellipse',
+    'stadium-pill-capsule',
+    'arch-tombstone',
+    'diagonal-leaf',
+    'reverse-curved-petal'
+  ];
+
+  const CORNER_RADIUS_SHAPE_TITLES = [
+    'circle',
+    'squircle',
+    'capsule',
+    'arch',
+    'leaf',
+    'reverse leaf'
+  ];
+
+  const currentShapeId = (selectedElementProps['data-shape-id'] || '').toLowerCase().trim();
+  const currentShapeTitle = (selectedElementProps['data-shape-title'] || selectedElementProps['data-name'] || selectedElementProps.name || '').toLowerCase().trim();
+
+  const isCornerRadiusShape = Boolean(
+    CORNER_RADIUS_SHAPE_IDS.includes(currentShapeId) ||
+    CORNER_RADIUS_SHAPE_TITLES.includes(currentShapeTitle) ||
+    (() => {
+      try {
+        const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+        const el = doc.getElementById(selectedLayerId);
+        if (!el) return false;
+        const id = (el.getAttribute('data-shape-id') || el.querySelector('[data-shape-id]')?.getAttribute('data-shape-id') || '').toLowerCase().trim();
+        if (CORNER_RADIUS_SHAPE_IDS.includes(id)) return true;
+        const title = (el.getAttribute('data-shape-title') || el.getAttribute('data-name') || el.querySelector('[data-shape-title]')?.getAttribute('data-shape-title') || '').toLowerCase().trim();
+        return CORNER_RADIUS_SHAPE_TITLES.includes(title);
+      } catch (e) {
+        return false;
+      }
+    })()
   );
 
-  const shouldHideCornerRadius = hideCornerRadius || hasShapeParameters || !isRectangularShape;
+  const shouldHideCornerRadius = hideCornerRadius || !isCornerRadiusShape;
 
   if (!selectedElementProps) return null;
 
@@ -1368,35 +1439,50 @@ const ElementShapesProperties = ({
             let cx = parseFloat(targetShape.getAttribute('data-cx') || el.getAttribute('data-cx') || 0);
             let cy = parseFloat(targetShape.getAttribute('data-cy') || el.getAttribute('data-cy') || 0);
             let rx = parseFloat(targetShape.getAttribute('data-rx') || el.getAttribute('data-rx') || 0);
-            const count = parseInt(attribute === 'data-count' ? value : (targetShape.getAttribute('data-count') || el.getAttribute('data-count') || (sType === 'polygon' ? 3 : 5)));
-            const cr = parseFloat(attribute === 'data-radius' ? value : (targetShape.getAttribute('data-radius') || el.getAttribute('data-radius') || 0));
-            const ratioVal = parseFloat(attribute === 'data-ratio' ? value : (targetShape.getAttribute('data-ratio') || el.getAttribute('data-ratio') || 40));
+            const defaultCount = is4SidedShape ? 4 : (sType === 'polygon' ? 3 : 5);
+            const count = parseInt(attribute === 'data-count' ? value : (targetShape.getAttribute('data-count') || el.getAttribute('data-count') || defaultCount));
+            const isStarFish = targetShape.getAttribute('data-shape-id') === 'star-fish' || 
+                               el.getAttribute('data-shape-id') === 'star-fish' ||
+                               targetShape.getAttribute('data-shape-title') === 'Star Fish' ||
+                               el.getAttribute('data-shape-title') === 'Star Fish' ||
+                               selectedElementProps['data-shape-id'] === 'star-fish' ||
+                               selectedElementProps['data-shape-title'] === 'Star Fish';
+            const defaultRatio = isStarFish ? 20 : 40;
+            const defaultRadius = isStarFish ? 25 : 0;
+            const cr = parseFloat(attribute === 'data-radius' ? value : (targetShape.getAttribute('data-radius') || el.getAttribute('data-radius') || defaultRadius));
+            const ratioVal = parseFloat(attribute === 'data-ratio' ? value : (targetShape.getAttribute('data-ratio') || el.getAttribute('data-ratio') || defaultRatio));
 
             if (!cx && !cy) { cx = 50; cy = 50; }
-            if (!rx || rx <= 0) { rx = 42; }
+            if (!rx || rx <= 0) { rx = (count === 4) ? (isSquareShape ? 50.91 : 40) : 42; }
 
             targetShape.setAttribute('data-cx', cx.toString());
             targetShape.setAttribute('data-cy', cy.toString());
             targetShape.setAttribute('data-rx', rx.toString());
+            targetShape.setAttribute('data-shape-type', sType);
             if (el !== targetShape) {
               el.setAttribute('data-cx', cx.toString());
               el.setAttribute('data-cy', cy.toString());
               el.setAttribute('data-rx', rx.toString());
+              el.setAttribute('data-shape-type', sType);
             }
 
             const pts = [];
             if (sType === 'polygon') {
+              const startAngle = (count === 4 && isSquareShape) ? (-3 * Math.PI / 4) : (-Math.PI / 2);
+              const effectiveRx = (count === 4) ? (isSquareShape ? 50.91 : 40) : (rx > 45 ? 42 : rx);
               for (let i = 0; i < count; i++) {
-                const angle = (i * 2 * Math.PI) / count - Math.PI / 2;
-                pts.push({ x: cx + rx * Math.cos(angle), y: cy + rx * Math.sin(angle) });
+                const angle = (i * 2 * Math.PI) / count + startAngle;
+                pts.push({ x: cx + effectiveRx * Math.cos(angle), y: cy + effectiveRx * Math.sin(angle) });
               }
             } else if (sType === 'star') {
               const ratio = ratioVal / 100;
               const ri = rx * ratio;
               const sides = count * 2;
+              const starAngleDeg = parseFloat(targetShape.getAttribute('data-angle') || el.getAttribute('data-angle') || selectedElementProps['data-angle'] || (isStarFish ? 25 : 0)) || (isStarFish ? 25 : 0);
+              const starStartAngle = -Math.PI / 2 + (starAngleDeg * Math.PI / 180);
               for (let i = 0; i < sides; i++) {
                 const r = (i % 2 === 0) ? rx : ri;
-                const angle = (Math.PI / count) * i - Math.PI / 2;
+                const angle = (Math.PI / count) * i + starStartAngle;
                 pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
               }
             }
@@ -1572,13 +1658,31 @@ const ElementShapesProperties = ({
     }
   };
 
+  const shapeCornerId = selectedElementProps['data-shape-id'] || (() => {
+    try {
+      const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const el = doc.getElementById(selectedLayerId);
+      return el?.getAttribute('data-shape-id') || el?.querySelector('[data-shape-id]')?.getAttribute('data-shape-id');
+    } catch (e) { return null; }
+  })();
+  const shapeCornerTitle = selectedElementProps['data-shape-title'] || selectedElementProps['data-name'] || selectedElementProps.name || (() => {
+    try {
+      const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const el = doc.getElementById(selectedLayerId);
+      return el?.getAttribute('data-shape-title') || el?.getAttribute('data-name');
+    } catch (e) { return null; }
+  })();
+  const cornerShapeDefaults = getShapeCornerDefaults(shapeCornerId, shapeCornerTitle);
+
   const radius = {
-    tl: parseInt(selectedElementProps['data-tl'] !== undefined ? selectedElementProps['data-tl'] : (selectedElementProps.rx || 0)),
-    tr: parseInt(selectedElementProps['data-tr'] !== undefined ? selectedElementProps['data-tr'] : (selectedElementProps.rx || 0)),
-    bl: parseInt(selectedElementProps['data-bl'] !== undefined ? selectedElementProps['data-bl'] : (selectedElementProps.rx || 0)),
-    br: parseInt(selectedElementProps['data-br'] !== undefined ? selectedElementProps['data-br'] : (selectedElementProps.rx || 0))
+    tl: parseInt(selectedElementProps['data-tl'] !== undefined ? selectedElementProps['data-tl'] : (cornerShapeDefaults ? cornerShapeDefaults.tl : (selectedElementProps.rx || 0))),
+    tr: parseInt(selectedElementProps['data-tr'] !== undefined ? selectedElementProps['data-tr'] : (cornerShapeDefaults ? cornerShapeDefaults.tr : (selectedElementProps.rx || 0))),
+    bl: parseInt(selectedElementProps['data-bl'] !== undefined ? selectedElementProps['data-bl'] : (cornerShapeDefaults ? cornerShapeDefaults.bl : (selectedElementProps.rx || 0))),
+    br: parseInt(selectedElementProps['data-br'] !== undefined ? selectedElementProps['data-br'] : (cornerShapeDefaults ? cornerShapeDefaults.br : (selectedElementProps.rx || 0)))
   };
-  const isRadiusLinked = selectedElementProps['data-corner-linked'] !== 'false';
+  const isRadiusLinked = selectedElementProps['data-corner-linked'] !== undefined
+    ? selectedElementProps['data-corner-linked'] !== 'false'
+    : (cornerShapeDefaults ? cornerShapeDefaults.linked : true);
 
   const handleSetRadius = (updater) => {
     const next = typeof updater === 'function' ? updater(radius) : updater;
@@ -1601,56 +1705,36 @@ const ElementShapesProperties = ({
           const inner = el.querySelector('path, polygon, rect, circle, ellipse, line');
           if (inner) target = inner;
         }
-        const sType = target.getAttribute('data-shape-type') || (target.tagName.toLowerCase() === 'rect' ? 'rectangle' : null);
-        const pD = target.getAttribute('d') || '';
-        const isDia = sType === 'diamond' || target.getAttribute('data-shape-id') === 'rounded-diamond' || (pD && (pD.includes('50 12') || pD.includes('50 88') || pD.includes('85 43') || pD.includes('15 57')));
 
-        if (isDia) {
-          target.setAttribute('data-shape-type', 'diamond');
-          let x = parseFloat(target.getAttribute('x') || 0);
-          let y = parseFloat(target.getAttribute('y') || 0);
-          let w = parseFloat(target.getAttribute('width') || 0);
-          let h = parseFloat(target.getAttribute('height') || 0);
-          if (!w || !h) {
-            try {
-              const bbox = target.getBBox();
-              if (bbox && bbox.width > 0 && bbox.height > 0) {
-                x = bbox.x; y = bbox.y; w = bbox.width; h = bbox.height;
-              }
-            } catch (e) {}
-          }
-          if (!w || !h) { x = 10; y = 10; w = 80; h = 80; }
-          const cx = x + w / 2;
-          const cy = y + h / 2;
-          const pts = [
-            { x: cx, y, r: next.tl || 0 },
-            { x: x + w, y: cy, r: next.tr || 0 },
-            { x: cx, y: y + h, r: next.br || 0 },
-            { x, y: cy, r: next.bl || 0 }
-          ];
-          const cornerPoints = pts.map((curr, i) => {
-            const prev = pts[(i + pts.length - 1) % pts.length];
-            const nextPt = pts[(i + 1) % pts.length];
-            const d1 = { x: curr.x - prev.x, y: curr.y - prev.y };
-            const d2 = { x: nextPt.x - curr.x, y: nextPt.y - curr.y };
-            const l1 = Math.hypot(d1.x, d1.y) || 1;
-            const l2 = Math.hypot(d2.x, d2.y) || 1;
-            const limit = Math.max(0, Math.min(curr.r, l1 / 2, l2 / 2));
-            return {
-              limit,
-              q: { x: curr.x, y: curr.y },
-              p1: { x: curr.x - (d1.x / l1) * limit, y: curr.y - (d1.y / l1) * limit },
-              p2: { x: curr.x + (d2.x / l2) * limit, y: curr.y + (d2.y / l2) * limit }
-            };
-          });
-          let pathData = '';
-          cornerPoints.forEach((cp, i) => {
-            if (i === 0) pathData += `M ${cp.p1.x.toFixed(2)} ${cp.p1.y.toFixed(2)}`;
-            else pathData += ` L ${cp.p1.x.toFixed(2)} ${cp.p1.y.toFixed(2)}`;
-            if (cp.limit > 0) pathData += ` Q ${cp.q.x.toFixed(2)} ${cp.q.y.toFixed(2)}, ${cp.p2.x.toFixed(2)} ${cp.p2.y.toFixed(2)}`;
-          });
-          pathData += ' Z';
-          target.setAttribute('d', pathData);
+        // Apply corner attributes to both el and target
+        el.setAttribute('data-tl', updates['data-tl']);
+        el.setAttribute('data-tr', updates['data-tr']);
+        el.setAttribute('data-bl', updates['data-bl']);
+        el.setAttribute('data-br', updates['data-br']);
+        el.setAttribute('rx', updates['rx']);
+        el.setAttribute('ry', updates['ry']);
+        if (target !== el) {
+          target.setAttribute('data-tl', updates['data-tl']);
+          target.setAttribute('data-tr', updates['data-tr']);
+          target.setAttribute('data-bl', updates['data-bl']);
+          target.setAttribute('data-br', updates['data-br']);
+          target.setAttribute('rx', updates['rx']);
+          target.setAttribute('ry', updates['ry']);
+        }
+
+        if (isCornerRadiusShape || cornerShapeDefaults) {
+          const defaults = cornerShapeDefaults || getShapeCornerDefaults(
+            target.getAttribute('data-shape-id') || el.getAttribute('data-shape-id'),
+            target.getAttribute('data-shape-title') || el.getAttribute('data-shape-title')
+          );
+          let x = parseFloat(target.getAttribute('x') || el.getAttribute('x') || (defaults ? defaults.x : 10));
+          let y = parseFloat(target.getAttribute('y') || el.getAttribute('y') || (defaults ? defaults.y : 10));
+          let w = parseFloat(target.getAttribute('width') || el.getAttribute('width') || (defaults ? defaults.w : 80));
+          let h = parseFloat(target.getAttribute('height') || el.getAttribute('height') || (defaults ? defaults.h : 80));
+
+          const newPathData = buildCornerRadiusPath(x, y, w, h, next.tl || 0, next.tr || 0, next.br || 0, next.bl || 0);
+          target.setAttribute('d', newPathData);
+          updates['d'] = newPathData;
         }
 
         window.__skipCanvasUpdateForPage = activePageIndex;
@@ -1673,6 +1757,7 @@ const ElementShapesProperties = ({
   const handleSetIsRadiusLinked = (val) => {
     if (val) {
       const maxR = Math.max(radius.tl || 0, radius.tr || 0, radius.bl || 0, radius.br || 0);
+      handleSetRadius({ tl: maxR, tr: maxR, bl: maxR, br: maxR });
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'data-corner-linked': 'true',
         'data-tl': maxR.toString(),
@@ -1765,11 +1850,11 @@ const ElementShapesProperties = ({
 
       <SectionHeader title="Element Shape Properties" />
 
-      {/* Image Masking Section (Shown at the top of the properties when Mask option is clicked or image is present) */}
+      {/* Image Slots / Masking Section */}
       {(isMaskEnabled || slotImage) && (
-        <div className="flex flex-col gap-[0.35vw]">
+        <div className="flex flex-col gap-[0.5vw]" data-image-slots="true">
           <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw]">
-            <span className="text-[0.8vw] font-medium text-gray-700">Mask Image</span>
+            <span className="text-[0.8vw] font-semibold text-gray-800">Image Slots</span>
             <button
               type="button"
               onClick={handleRemoveMask}
@@ -1779,108 +1864,71 @@ const ElementShapesProperties = ({
             </button>
           </div>
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileChange}
-          />
-
-          <div className="pl-[0.5vw] pr-[0.2vw]">
-            {!slotImage ? (
-              /* BEFORE UPLOAD: Dashed Add Images Box */
+          <div className="pl-[0.5vw] pr-[0.2vw] flex flex-col gap-[0.5vw]">
+            <div className="flex flex-col gap-[0.35vw]">
+              <span className="text-[0.8vw] text-gray-600 font-medium flex items-center justify-between">
+                Image
+                {slotImage && (
+                  <span className="text-[0.6vw] text-green-600 bg-green-50 px-[0.3vw] py-[0.1vw] rounded font-medium">
+                    Filled
+                  </span>
+                )}
+              </span>
               <div
+                className={`border border-dashed rounded-[0.5vw] flex flex-col items-center justify-center cursor-pointer transition-colors relative overflow-hidden group ${
+                  slotImage
+                    ? 'border-gray-300 hover:border-[#4c5add] bg-gray-50 h-[5vw]'
+                    : 'border-[#4c5add] bg-blue-50/30 hover:bg-blue-50 p-[1vw]'
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const files = e.dataTransfer.files;
+                  if (files && files.length > 0) {
+                    handleFileChange({ target: { files } });
+                  }
+                }}
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const files = e.dataTransfer.files;
-                  if (files && files.length > 0) {
-                    handleFileChange({ target: { files: files } });
-                  }
-                }}
-                className="w-full h-[4.2vw] border-[1.5px] border-dashed border-gray-300 rounded-[0.6vw] bg-gray-50 hover:bg-gray-100/80 hover:border-[#E05638] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-[#E05638] cursor-pointer transition-all select-none shadow-2xs group"
               >
-                <Plus size="1.15vw" strokeWidth={1.8} className="text-gray-400 group-hover:text-[#E05638] transition-colors" />
-                <span className="text-[0.8vw] font-medium text-gray-600 group-hover:text-[#E05638] transition-colors">
-                  Add Images
-                </span>
-              </div>
-            ) : (
-              /* AFTER UPLOAD: Card with Drag Grip, Thumbnail, Name, Resolution/Size, Edit Pen, and Trash */
-              <div 
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const files = e.dataTransfer.files;
-                  if (files && files.length > 0) {
-                    handleFileChange({ target: { files: files } });
-                  }
-                }}
-                className="w-full bg-gray-50 rounded-[0.6vw] p-[0.5vw] flex items-center justify-between select-none border border-gray-200 transition-all shadow-2xs"
-              >
-                <div className="flex items-center gap-[0.8vw] min-w-0 flex-1">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="relative group/thumb w-[4vw] h-[3vw] rounded-[0.35vw] overflow-hidden bg-black shrink-0 border border-gray-200 shadow-2xs cursor-pointer"
-                    title="Click to replace image"
-                  >
-                    <img src={slotImage} alt={slotImageName || 'Mask'} className="w-full h-full object-cover transition-transform duration-200 group-hover/thumb:scale-105" />
-                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-all duration-200">
-                      <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                      <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                {slotImage ? (
+                  <>
+                    <img src={slotImage} alt={slotImageName || 'Mask'} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Upload size="1.2vw" className="text-white mb-[0.2vw]" />
+                      <span className="text-[0.65vw] text-white font-medium">Replace</span>
                     </div>
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1 justify-center ml-[0.2vw]">
-                    <span className="text-[0.78vw] font-medium text-gray-800 truncate" title={slotImageName}>
-                      {slotImageName || 'Image Name .jpg'}
+                  </>
+                ) : (
+                  <>
+                    <Upload size="1vw" className="text-[#4c5add] mb-[0.2vw]" />
+                    <span className="text-[0.6vw] text-[#4c5add] font-semibold text-center leading-tight">
+                      Drop on Slot<br />or Click
                     </span>
-                    <span className="text-[0.65vw] text-gray-400 font-medium mt-[0.1vw]">
-                      {slotImageMeta || '1920 X 1080 • 24MB'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-[0.5vw] shrink-0 ml-[0.5vw]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                        const el = doc.getElementById(selectedLayerId);
-                        const s = el?.querySelector('path, polygon, rect, circle, ellipse') || el;
-                        if (s) {
-                          const b = s.getBBox();
-                          if (b.width && b.height) {
-                            setShapeAspectRatio(b.width / b.height);
-                          }
-                        }
-                      } catch (e) {}
-                      setShowAdjustModal(true);
-                    }}
-                    className="text-gray-400 hover:text-gray-700 transition-colors p-[0.2vw] cursor-pointer"
-                    title="Adjust Image"
-                  >
-                    <SquarePen size="1vw" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteImage}
-                    className="text-gray-400 hover:text-red-500 transition-colors p-[0.2vw] cursor-pointer"
-                    title="Delete Image"
-                  >
-                    <Trash2 size="1vw" strokeWidth={1.5} />
-                  </button>
-                </div>
+                  </>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
               </div>
+            </div>
+
+            {slotImage && (
+              <PropertySlider
+                label="Rotation"
+                value={slotRotation}
+                onChange={(val) => updateRotation(val, true)}
+                onPointerUp={syncDomChanges}
+                min={-180}
+                max={180}
+              />
             )}
           </div>
         </div>
@@ -1891,7 +1939,7 @@ const ElementShapesProperties = ({
           <SectionHeader title="Shape Parameters" />
           <PropertySlider
             label={shapeType === 'polygon' ? "Sides" : "Points"}
-            value={parseInt(selectedElementProps['data-count'] || (shapeType === 'polygon' ? 3 : 5))}
+            value={parseInt(selectedElementProps['data-count'] || (shapeType === 'polygon' ? (is4SidedShape ? 4 : 3) : 5))}
             onChange={(val) => updateAttr('data-count', val.toString())}
             min={3}
             max={shapeType === 'polygon' ? 50 : 24}
@@ -1900,7 +1948,11 @@ const ElementShapesProperties = ({
             label="Ratio"
             value={
               shapeType === 'star'
-                ? Math.round(parseFloat(selectedElementProps['data-ratio'] || 40))
+                ? Math.round(parseFloat(
+                    selectedElementProps['data-ratio'] !== undefined
+                      ? selectedElementProps['data-ratio']
+                      : ((selectedElementProps['data-shape-id'] === 'star-fish' || selectedElementProps['data-shape-title'] === 'Star Fish') ? 20 : 40)
+                  ))
                 : 0
             }
             onChange={(val) => updateAttr('data-ratio', val)}
@@ -1909,27 +1961,14 @@ const ElementShapesProperties = ({
           <PropertySlider
             label="Corner"
             value={Math.round(parseFloat(
-              selectedElementProps['data-radius'] || 0
+              selectedElementProps['data-radius'] !== undefined
+                ? selectedElementProps['data-radius']
+                : ((selectedElementProps['data-shape-id'] === 'star-fish' || selectedElementProps['data-shape-title'] === 'Star Fish') ? 25 : 0)
             ))}
             onChange={(val) => updateAttr('data-radius', val)}
             max={50}
           />
         </div>
-      )}
-
-      {/* Image Adjust / Crop Modal */}
-      {showAdjustModal && (slotOriginalImage || slotImage) && (
-        <ImageAdjustModal
-          isOpen={showAdjustModal}
-          onClose={() => setShowAdjustModal(false)}
-          imageSrc={slotOriginalImage || slotImage}
-          initialFixType={slotFixType || 'Fill All'}
-          initialOpacity={slotOpacity !== undefined ? slotOpacity : 100}
-          initialFilters={slotFilters || null}
-          initialCrop={slotCropData || null}
-          frameAspectRatio={shapeAspectRatio || 1}
-          onSave={handleSaveAdjustedImage}
-        />
       )}
 
       <ShapeAppearanceControls

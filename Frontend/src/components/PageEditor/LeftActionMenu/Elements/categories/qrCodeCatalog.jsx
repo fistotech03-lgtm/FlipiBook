@@ -136,7 +136,7 @@ export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
           text: frame.defaultText,
           textColor: defaultTextColor,
           fontFamily: defaultFontFamily,
-          url: 'https://example.com'
+          url: 'https://'
         },
         cx,
         cy
@@ -148,7 +148,7 @@ export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
           text: frame.defaultText,
           textColor: defaultTextColor,
           fontFamily: defaultFontFamily,
-          url: 'https://example.com'
+          url: 'https://'
         },
         isDrag
       )

@@ -45,8 +45,11 @@ export const generateShapeSvg = (shape, overrides = {}) => {
   const fillRuleAttr = shape.fillRule ? ` fill-rule="${shape.fillRule}"` : '';
 
   let extraAttrs = ' data-is-element-shape="true"';
+  if (shape.id) {
+    extraAttrs += ` data-shape-id="${shape.id}"`;
+  }
   if (shape.shapeType === 'star') {
-    extraAttrs += ` data-shape-type="star" data-count="${shape.count || 5}" data-radius="${shape.radius || 0}" data-cx="${shape.cx || 50}" data-cy="${shape.cy || 50}" data-rx="${shape.rx || 50}" data-ratio="${shape.ratio || 40}"`;
+    extraAttrs += ` data-shape-type="star" data-count="${shape.count || 5}" data-radius="${shape.radius || 0}" data-cx="${shape.cx || 50}" data-cy="${shape.cy || 50}" data-rx="${shape.rx || 50}" data-ratio="${shape.ratio || 40}"${shape.angle ? ` data-angle="${shape.angle}"` : ''}`;
   } else if (shape.shapeType === 'polygon') {
     extraAttrs += ` data-shape-type="polygon" data-count="${shape.count || 3}" data-radius="${shape.radius || 0}" data-cx="${shape.cx || 50}" data-cy="${shape.cy || 50}" data-rx="${shape.rx || 50}"`;
   } else if (shape.shapeType === 'rectangle') {
@@ -55,17 +58,19 @@ export const generateShapeSvg = (shape, overrides = {}) => {
     const rw = shape.rectWidth !== undefined ? shape.rectWidth : ((shape.width || 100) - 28);
     const rh = shape.rectHeight !== undefined ? shape.rectHeight : ((shape.height || 100) - 28);
     extraAttrs += ` data-shape-type="rectangle" x="${rx}" y="${ry}" width="${rw}" height="${rh}"`;
-  } else if (shape.shapeType === 'diamond') {
-    const rx = shape.x !== undefined ? shape.x : 10;
-    const ry = shape.y !== undefined ? shape.y : 10;
-    const rw = shape.rectWidth !== undefined ? shape.rectWidth : ((shape.width || 100) - 20);
-    const rh = shape.rectHeight !== undefined ? shape.rectHeight : ((shape.height || 100) - 20);
-    const r = shape.radius !== undefined ? shape.radius : 17;
-    extraAttrs += ` data-shape-type="diamond" data-shape-id="${shape.id || 'rounded-diamond'}" x="${rx}" y="${ry}" width="${rw}" height="${rh}" data-tl="${r}" data-tr="${r}" data-bl="${r}" data-br="${r}" rx="${r}" ry="${r}"`;
   } else if (shape.shapeType === 'ellipse') {
     extraAttrs += ' data-shape-type="ellipse"';
   } else {
-    extraAttrs += ' data-shape-type="vector-path"';
+    extraAttrs += ` data-shape-type="${shape.shapeType || 'vector-path'}"`;
+  }
+
+  if (shape.tl !== undefined) {
+    const rx = shape.x !== undefined ? shape.x : 10;
+    const ry = shape.y !== undefined ? shape.y : 10;
+    const rw = shape.rectWidth !== undefined ? shape.rectWidth : 80;
+    const rh = shape.rectHeight !== undefined ? shape.rectHeight : 80;
+    const isLinked = shape.cornerLinked !== undefined ? String(shape.cornerLinked) : 'false';
+    extraAttrs += ` x="${rx}" y="${ry}" width="${rw}" height="${rh}" data-tl="${shape.tl}" data-tr="${shape.tr || 0}" data-bl="${shape.bl || 0}" data-br="${shape.br || 0}" data-corner-linked="${isLinked}" rx="${Math.max(shape.tl, shape.tr || 0, shape.bl || 0, shape.br || 0)}"`;
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${shape.viewBox || '0 0 100 100'}" width="${shape.width || 100}" height="${shape.height || 100}">
@@ -80,10 +85,19 @@ export const SHAPES_DATA = [
   {
     id: 'true-circle',
     name: 'Circle',
-    shapeType: 'ellipse',
+    shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 10,
+    y: 10,
+    rectWidth: 80,
+    rectHeight: 80,
+    tl: 40,
+    tr: 40,
+    bl: 40,
+    br: 40,
+    cornerLinked: true,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -102,6 +116,15 @@ export const SHAPES_DATA = [
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 10,
+    y: 10,
+    rectWidth: 80,
+    rectHeight: 80,
+    tl: 25,
+    tr: 25,
+    bl: 25,
+    br: 25,
+    cornerLinked: true,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -116,18 +139,15 @@ export const SHAPES_DATA = [
   {
     id: 'rounded-diamond',
     name: 'Diamond',
-    shapeType: 'diamond',
-    viewBox: '0 0 100 100',
-    width: 100,
-    height: 100,
-    x: 10,
-    y: 10,
-    rectWidth: 80,
-    rectHeight: 80,
+    shapeType: 'polygon',
+    count: 4,
     radius: 0,
     cx: 50,
     cy: 50,
-    rx: 50,
+    rx: 40,
+    viewBox: '0 0 100 100',
+    width: 100,
+    height: 100,
     d: 'M 50 10 L 90 50 L 50 90 L 10 50 Z',
     fill: '#fdf9ddff',
     stroke: '#baae0eff',
@@ -269,6 +289,15 @@ export const SHAPES_DATA = [
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 32,
+    y: 14,
+    rectWidth: 36,
+    rectHeight: 72,
+    tl: 18,
+    tr: 18,
+    bl: 18,
+    br: 18,
+    cornerLinked: true,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -287,6 +316,15 @@ export const SHAPES_DATA = [
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 20,
+    y: 16,
+    rectWidth: 60,
+    rectHeight: 72,
+    tl: 30,
+    tr: 30,
+    bl: 0,
+    br: 0,
+    cornerLinked: false,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -305,6 +343,15 @@ export const SHAPES_DATA = [
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 15,
+    y: 15,
+    rectWidth: 70,
+    rectHeight: 70,
+    tl: 0,
+    tr: 70,
+    bl: 70,
+    br: 0,
+    cornerLinked: false,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -323,6 +370,15 @@ export const SHAPES_DATA = [
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
+    x: 15,
+    y: 15,
+    rectWidth: 70,
+    rectHeight: 70,
+    tl: 70,
+    tr: 0,
+    bl: 0,
+    br: 70,
+    cornerLinked: false,
     cx: 50,
     cy: 50,
     rx: 50,
@@ -455,14 +511,16 @@ export const SHAPES_DATA = [
   {
     id: 'sharp-square',
     name: 'Square',
-    shapeType: 'rectangle',
+    shapeType: 'polygon',
+    count: 4,
+    radius: 0,
+    cx: 50,
+    cy: 50,
+    rx: 50.91,
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
-    cx: 50,
-    cy: 50,
-    rx: 50,
-    d: 'M 14 14 H 86 V 86 H 14 Z',
+    d: 'M 14 14 L 86 14 L 86 86 L 14 86 Z',
     fill: '#fdedf5ff',
     stroke: '#7e0e48ff',
     strokeWidth: '2.5',
@@ -478,13 +536,14 @@ export const SHAPES_DATA = [
     count: 5,
     ratio: 20,
     radius: 25,
+    angle: 25,
     cx: 50,
     cy: 50,
-    rx: 50,
+    rx: 42,
     viewBox: '0 0 100 100',
     width: 100,
     height: 100,
-    d: 'M 46.7 17.4 Q 50.0 8.0, 53.3 17.4 L 56.6 27.0 Q 59.9 36.4, 69.9 36.6 L 79.9 36.8 Q 89.9 37.0, 82.0 43.1 L 73.9 49.2 Q 66.0 55.2, 68.9 64.8 L 71.8 74.4 Q 74.7 84.0, 66.5 78.3 L 58.2 72.5 Q 50.0 66.8, 41.8 72.5 L 33.5 78.3 Q 25.3 84.0, 28.2 74.4 L 31.1 64.8 Q 34.0 55.2, 26.1 49.2 L 18.0 43.1 Q 10.1 37.0, 20.1 36.8 L 30.1 36.6 Q 40.1 36.4, 43.4 27.0 Z',
+    d: 'M 61.6 28.4 Q 73.5 15.2, 65.7 31.2 L 65.7 31.2 Q 57.9 47.1, 74.1 54.4 L 74.1 54.4 Q 90.4 61.6, 72.8 59.1 L 72.8 59.1 Q 55.2 56.6, 53.3 74.3 L 53.3 74.3 Q 51.5 92.0, 48.4 74.5 L 48.4 74.5 Q 45.3 57.0, 27.9 60.7 L 27.9 60.7 Q 10.5 64.4, 26.2 56.0 L 26.2 56.0 Q 41.9 47.7, 33.0 32.3 L 33.0 32.3 Q 24.1 16.9, 36.9 29.3 L 36.9 29.3 Q 49.7 41.6, 61.6 28.4 Z',
     fill: '#FFFFDF',
     stroke: '#FFFF00',
     strokeWidth: '2.5',
@@ -559,6 +618,24 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   g.setAttribute('data-type', 'shape');
   g.setAttribute('data-name', 'Shape');
   g.setAttribute('data-shape-title', shapeData.name || 'Shape');
+  if (shapeData.id) {
+    g.setAttribute('data-shape-id', shapeData.id);
+  }
+  if (shapeData.shapeType) {
+    g.setAttribute('data-shape-type', shapeData.shapeType);
+  }
+  if (shapeData.tl !== undefined) {
+    g.setAttribute('data-tl', String(shapeData.tl));
+    g.setAttribute('data-tr', String(shapeData.tr || 0));
+    g.setAttribute('data-bl', String(shapeData.bl || 0));
+    g.setAttribute('data-br', String(shapeData.br || 0));
+    g.setAttribute('data-corner-linked', shapeData.cornerLinked !== undefined ? String(shapeData.cornerLinked) : 'false');
+    g.setAttribute('x', String(shapeData.x !== undefined ? shapeData.x : 10));
+    g.setAttribute('y', String(shapeData.y !== undefined ? shapeData.y : 10));
+    g.setAttribute('width', String(shapeData.rectWidth !== undefined ? shapeData.rectWidth : 80));
+    g.setAttribute('height', String(shapeData.rectHeight !== undefined ? shapeData.rectHeight : 80));
+    g.setAttribute('rx', String(Math.max(shapeData.tl, shapeData.tr || 0, shapeData.bl || 0, shapeData.br || 0)));
+  }
 
   // Default styling: Clean fill and stroke matching shape definition
   g.setAttribute('fill', shapeData.fill || '#d8e9feff');
@@ -569,7 +646,7 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   const primaryChild = svgRoot.querySelector('path, polygon, rect, circle, ellipse, line, g');
   if (primaryChild) {
     Array.from(primaryChild.attributes).forEach((attr) => {
-      if (attr.name.startsWith('data-')) {
+      if (attr.name.startsWith('data-') || ['x', 'y', 'width', 'height', 'rx', 'ry'].includes(attr.name)) {
         g.setAttribute(attr.name, attr.value);
       }
     });
@@ -586,6 +663,73 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   g.innerHTML = svgRoot.innerHTML;
 
   return g;
+};
+
+/**
+ * Returns default corner radius geometry for the 6 corner-radius shapes.
+ */
+export const getShapeCornerDefaults = (id, title) => {
+  const normId = (id || '').toLowerCase().trim();
+  const normTitle = (title || '').toLowerCase().trim();
+  if (normId === 'true-circle' || normTitle === 'circle') {
+    return { tl: 40, tr: 40, bl: 40, br: 40, linked: true, x: 10, y: 10, w: 80, h: 80 };
+  }
+  if (normId === 'squircle-superellipse' || normTitle === 'squircle') {
+    return { tl: 25, tr: 25, bl: 25, br: 25, linked: true, x: 10, y: 10, w: 80, h: 80 };
+  }
+  if (normId === 'stadium-pill-capsule' || normTitle === 'capsule') {
+    return { tl: 18, tr: 18, bl: 18, br: 18, linked: true, x: 32, y: 14, w: 36, h: 72 };
+  }
+  if (normId === 'arch-tombstone' || normTitle === 'arch') {
+    return { tl: 30, tr: 30, bl: 0, br: 0, linked: false, x: 20, y: 16, w: 60, h: 72 };
+  }
+  if (normId === 'diagonal-leaf' || normTitle === 'leaf') {
+    return { tl: 0, tr: 70, bl: 70, br: 0, linked: false, x: 15, y: 15, w: 70, h: 70 };
+  }
+  if (normId === 'reverse-curved-petal' || normTitle === 'reverse leaf') {
+    return { tl: 70, tr: 0, bl: 0, br: 70, linked: false, x: 15, y: 15, w: 70, h: 70 };
+  }
+  return null;
+};
+
+/**
+ * Generates an SVG path data string for a 4-corner rounded shape (Circle, Squircle, Capsule, Arch, Leaf, Reverse Leaf).
+ */
+export const buildCornerRadiusPath = (x, y, w, h, tl, tr, br, bl) => {
+  let scale = 1;
+  const maxTop = (tl || 0) + (tr || 0);
+  const maxBottom = (bl || 0) + (br || 0);
+  const maxLeft = (tl || 0) + (bl || 0);
+  const maxRight = (tr || 0) + (br || 0);
+  if (maxTop > w && maxTop > 0) scale = Math.min(scale, w / maxTop);
+  if (maxBottom > w && maxBottom > 0) scale = Math.min(scale, w / maxBottom);
+  if (maxLeft > h && maxLeft > 0) scale = Math.min(scale, h / maxLeft);
+  if (maxRight > h && maxRight > 0) scale = Math.min(scale, h / maxRight);
+
+  const ctl = Math.max(0, (tl || 0) * scale);
+  const ctr = Math.max(0, (tr || 0) * scale);
+  const cbr = Math.max(0, (br || 0) * scale);
+  const cbl = Math.max(0, (bl || 0) * scale);
+
+  let d = `M ${(x + ctl).toFixed(2)} ${y.toFixed(2)}`;
+  d += ` L ${(x + w - ctr).toFixed(2)} ${y.toFixed(2)}`;
+  if (ctr > 0) {
+    d += ` A ${ctr.toFixed(2)} ${ctr.toFixed(2)} 0 0 1 ${(x + w).toFixed(2)} ${(y + ctr).toFixed(2)}`;
+  }
+  d += ` L ${(x + w).toFixed(2)} ${(y + h - cbr).toFixed(2)}`;
+  if (cbr > 0) {
+    d += ` A ${cbr.toFixed(2)} ${cbr.toFixed(2)} 0 0 1 ${(x + w - cbr).toFixed(2)} ${(y + h).toFixed(2)}`;
+  }
+  d += ` L ${(x + cbl).toFixed(2)} ${(y + h).toFixed(2)}`;
+  if (cbl > 0) {
+    d += ` A ${cbl.toFixed(2)} ${cbl.toFixed(2)} 0 0 1 ${x.toFixed(2)} ${(y + h - cbl).toFixed(2)}`;
+  }
+  d += ` L ${x.toFixed(2)} ${(y + ctl).toFixed(2)}`;
+  if (ctl > 0) {
+    d += ` A ${ctl.toFixed(2)} ${ctl.toFixed(2)} 0 0 1 ${(x + ctl).toFixed(2)} ${y.toFixed(2)}`;
+  }
+  d += ' Z';
+  return d;
 };
 
 export default SHAPES_DATA;

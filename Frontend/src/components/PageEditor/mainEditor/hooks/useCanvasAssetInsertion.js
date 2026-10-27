@@ -253,11 +253,11 @@ export const useCanvasAssetInsertion = ({
             const slotH = bbox.height;
 
             pattern.setAttribute('patternUnits', 'objectBoundingBox');
-            pattern.removeAttribute('patternContentUnits');
+            pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
             pattern.setAttribute('width', '1');
             pattern.setAttribute('height', '1');
-            pattern.setAttribute('viewBox', `0 0 ${slotW} ${slotH}`);
-            pattern.setAttribute('preserveAspectRatio', 'none');
+            pattern.removeAttribute('patternTransform');
+            pattern.removeAttribute('viewBox');
 
             let imageNode = pattern.querySelector('image, img');
             if (!imageNode) {
@@ -265,14 +265,32 @@ export const useCanvasAssetInsertion = ({
               pattern.appendChild(imageNode);
             }
 
-            imageNode.setAttribute('x', '0');
-            imageNode.setAttribute('y', '0');
-            imageNode.setAttribute('width', slotW);
-            imageNode.setAttribute('height', slotH);
-            imageNode.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            imageNode.removeAttribute('preserveAspectRatio');
+            imageNode.removeAttribute('x');
+            imageNode.removeAttribute('y');
             imageNode.setAttribute('href', dataUrl);
             imageNode.setAttribute('xlink:href', dataUrl);
             imageNode.setAttribute('opacity', '1');
+
+            const tempImg = new window.Image();
+            tempImg.onload = () => {
+              const imgW = tempImg.naturalWidth || tempImg.width || slotW;
+              const imgH = tempImg.naturalHeight || tempImg.height || slotH;
+              const scale = Math.max(slotW / imgW, slotH / imgH);
+              const finalW = imgW * scale;
+              const finalH = imgH * scale;
+              const tx = bbox.x + (slotW - finalW) / 2;
+              const ty = bbox.y + (slotH - finalH) / 2;
+              imageNode.setAttribute('width', imgW);
+              imageNode.setAttribute('height', imgH);
+              imageNode.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${tx} ${ty})`);
+              if (saveModifiedPageHtml) {
+                saveModifiedPageHtml(pageIdx, svg);
+              } else if (updatePageHtml) {
+                updatePageHtml(pageIdx, svg.outerHTML);
+              }
+            };
+            tempImg.src = dataUrl;
 
             // Set pattern fill on both target node and group
             targetNode.setAttribute('fill', `url(#${patternId})`);

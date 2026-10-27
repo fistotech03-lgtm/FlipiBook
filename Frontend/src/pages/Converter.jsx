@@ -186,6 +186,7 @@ export default function Converter() {
         fileItem={activeFileItem}
         onBack={() => setActiveWorkspaceMediaId(null)}
         onFileSelect={(files) => handleSelectFile(activeWorkspaceMediaId, files)}
+        onDropMedia={(dataTransfer) => handleDropMedia(activeWorkspaceMediaId, dataTransfer)}
       />
     );
   }
@@ -224,22 +225,22 @@ export default function Converter() {
       />
 
       {/* Main Header / Title Section */}
-      <section className="w-full pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center bg-gradient-to-b from-white via-slate-50 to-[#F8FAFC]">
-        <div className="max-w-4xl mx-auto flex flex-col items-center">
+      <section className="w-full pt-8 sm:pt-12 lg:pt-[3vw] pb-6 sm:pb-8 lg:pb-[2vw] px-4 sm:px-6 lg:px-[2vw] text-center bg-gradient-to-b from-white via-slate-50 to-[#F8FAFC]">
+        <div className="max-w-4xl lg:max-w-[60vw] mx-auto flex flex-col items-center">
           
           {/* Main Headline */}
-          <h1 className="text-3xl sm:text-5xl font-semibold text-[#35363A] tracking-tight leading-tight mb-3">
+          <h1 className="text-2xl sm:text-4xl lg:text-[2.6vw] font-semibold text-[#35363A] tracking-tight leading-tight mb-2 sm:mb-3 lg:mb-[0.8vw]">
             Convert &amp; Compress <span className="text-[#EC5137]">Your Media</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm sm:text-base text-gray-500 max-w-xl leading-relaxed">
+          <p className="text-xs sm:text-sm lg:text-[0.9vw] text-gray-500 max-w-xl lg:max-w-[40vw] leading-relaxed">
             Convert or compress your 3D models, videos, and images with live interactive previews.
           </p>
 
           {sizeWarning && (
-            <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2 max-w-lg text-left shadow-xs">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+            <div className="mt-4 lg:mt-[1vw] p-3 lg:p-[0.8vw] rounded-xl lg:rounded-[0.8vw] bg-amber-50 border border-amber-200 text-amber-800 text-xs lg:text-[0.8vw] font-semibold flex items-center gap-2 max-w-lg lg:max-w-[35vw] text-left shadow-xs">
+              <AlertCircle className="w-4 h-4 lg:w-[1.1vw] lg:h-[1.1vw] shrink-0 text-amber-600" />
               <span>{sizeWarning}</span>
             </div>
           )}
@@ -247,19 +248,19 @@ export default function Converter() {
       </section>
 
       {/* 3 Main Converter Cards Section */}
-      <section className="w-full py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-7 items-stretch">
+      <section className="w-full py-6 sm:py-8 lg:py-[1.8vw] px-4 sm:px-6 lg:px-[3vw]">
+        <div className="max-w-6xl lg:max-w-[78vw] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-[1.6vw] items-stretch">
           {MEDIA_CONVERTERS.map((media) => {
             const isDragging = dragOverMediaId === media.id;
 
             return (
               <div
                 key={media.id}
-                className="bg-white rounded-2xl border border-gray-200 hover:border-gray-300 transition-all duration-300 flex flex-col justify-between p-6 sm:p-7 shadow-xs hover:shadow-md relative overflow-hidden group"
+                className="bg-white rounded-2xl lg:rounded-[1.2vw] border border-gray-200 hover:border-gray-300 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 lg:p-[1.5vw] shadow-xs hover:shadow-md relative overflow-hidden group"
               >
                 {/* Top Subtle Gradient Light */}
                 <div
-                  className={`absolute top-0 left-0 right-0 h-28 bg-gradient-to-b ${media.gradient} pointer-events-none transition-opacity`}
+                  className={`absolute top-0 left-0 right-0 h-28 lg:h-[7vw] bg-gradient-to-b ${media.gradient} pointer-events-none transition-opacity`}
                 />
 
                 {/* Card Top Area */}
@@ -287,34 +288,34 @@ export default function Converter() {
                     onClick={() => {
                       fileInputRefs[media.id]?.current?.click();
                     }}
-                    className={`w-full h-48 sm:h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 transition-all duration-200 cursor-pointer relative overflow-hidden ${
+                    className={`w-full h-44 sm:h-48 lg:h-[13vw] rounded-2xl lg:rounded-[1vw] border-2 border-dashed flex flex-col items-center justify-center p-3 sm:p-4 lg:p-[1vw] transition-all duration-200 cursor-pointer relative overflow-hidden ${
                       isDragging
                         ? 'border-gray-900 bg-gray-100 scale-[1.02]'
                         : 'border-gray-200 bg-gray-50/70 hover:bg-white hover:border-[#ea543a]'
                     }`}
                   >
                     {/* Badge Icon */}
-                    <div className={`absolute top-3 left-3 p-1.5 rounded-lg border shadow-2xs ${media.badgeColor}`}>
-                      <Icon icon={media.badgeIcon} className="w-4 h-4" />
+                    <div className={`absolute top-2.5 sm:top-3 lg:top-[0.8vw] left-2.5 sm:left-3 lg:left-[0.8vw] p-1.5 lg:p-[0.4vw] rounded-lg lg:rounded-[0.5vw] border shadow-2xs ${media.badgeColor}`}>
+                      <Icon icon={media.badgeIcon} className="w-3.5 h-3.5 lg:w-[1vw] lg:h-[1vw]" />
                     </div>
 
                     {/* Max Size Indicator */}
-                    <div className="absolute top-3 right-3 text-[10px] font-medium text-gray-500 bg-white/90 px-2 py-0.5 rounded-md border border-gray-200">
+                    <div className="absolute top-2.5 sm:top-3 lg:top-[0.8vw] right-2.5 sm:right-3 lg:right-[0.8vw] text-[10px] lg:text-[0.65vw] font-medium text-gray-500 bg-white/90 px-2 lg:px-[0.5vw] py-0.5 lg:py-[0.15vw] rounded-md lg:rounded-[0.35vw] border border-gray-200">
                       Max {media.maxSize.label}
                     </div>
 
                     {/* Empty State Prompt */}
                     <div className="flex flex-col items-center text-center">
-                      <div className="w-14 h-14 rounded-2xl bg-white border border-gray-200/80 shadow-xs flex items-center justify-center mb-3 text-gray-800 group-hover:scale-110 group-hover:text-[#ea543a] group-hover:border-[#ea543a]/40 transition-all duration-300">
-                        <Icon icon={media.icon} className="w-8 h-8" />
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-[3.6vw] lg:h-[3.6vw] rounded-2xl lg:rounded-[0.9vw] bg-white border border-gray-200/80 shadow-xs flex items-center justify-center mb-2.5 lg:mb-[0.7vw] text-gray-800 group-hover:scale-110 group-hover:text-[#ea543a] group-hover:border-[#ea543a]/40 transition-all duration-300">
+                        <Icon icon={media.icon} className="w-7 h-7 sm:w-8 sm:h-8 lg:w-[2vw] lg:h-[2vw]" />
                       </div>
-                      <p className="text-sm font-medium text-gray-800 mb-0.5">
+                      <p className="text-xs sm:text-sm lg:text-[0.85vw] font-medium text-gray-800 mb-0.5">
                         {isDragging ? 'Drop file to upload' : `Drop ${media.title} here`}
                       </p>
-                      <p className="text-xs text-gray-400 font-normal">or click to browse</p>
+                      <p className="text-[11px] sm:text-xs lg:text-[0.7vw] text-gray-400 font-normal">or click to browse</p>
                       {media.supportedInputs && (
-                        <div className="mt-2.5 px-2.5 py-1 rounded-md bg-white border border-gray-300 shadow-2xs">
-                          <p className="text-[11px] font-semibold text-gray-700 tracking-wide uppercase">
+                        <div className="mt-2 sm:mt-2.5 lg:mt-[0.6vw] px-2 sm:px-2.5 lg:px-[0.6vw] py-1 lg:py-[0.25vw] rounded-md lg:rounded-[0.4vw] bg-white border border-gray-300 shadow-2xs">
+                          <p className="text-[10px] sm:text-[11px] lg:text-[0.65vw] font-semibold text-gray-700 tracking-wide uppercase">
                             {media.supportedInputs}
                           </p>
                         </div>
@@ -323,40 +324,28 @@ export default function Converter() {
                   </div>
 
                   {/* Title & Tagline */}
-                  <div className="text-center mt-6 mb-0">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">
+                  <div className="text-center mt-4 sm:mt-5 lg:mt-[1.3vw] mb-0">
+                    <h2 className="text-base sm:text-lg lg:text-[1.1vw] font-semibold text-gray-900 tracking-tight">
                       {media.title}
                     </h2>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed px-1 font-normal whitespace-nowrap">
+                    <p className="text-xs lg:text-[0.75vw] text-gray-500 mt-1 lg:mt-[0.3vw] leading-relaxed px-1 font-normal">
                       {media.tagline}
                     </p>
                   </div>
 
-                  {/* Format Pills */}
-                  {/* <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
-                    {media.formats.map((fmt) => (
-                      <span
-                        key={fmt}
-                        className="px-2.5 py-1 rounded-lg bg-gray-100 text-[10px] font-medium text-gray-600 border border-gray-200/60"
-                      >
-                        {fmt}
-                      </span>
-                    ))}
-                  </div> */}
-
                 </div>
 
                 {/* Bottom Trigger Action Button */}
-                <div className="mt-6 pt-3 flex flex-col gap-2">
+                <div className="mt-4 sm:mt-5 lg:mt-[1.3vw] pt-2 lg:pt-[0.6vw] flex flex-col gap-2 lg:gap-[0.5vw]">
                   {media.id === 'threed' && (
                     <button
                       type="button"
                       onClick={() => {
                         fileInputRefs.threedFolder?.current?.click();
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 font-medium text-xs sm:text-sm border border-slate-200/80 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 lg:py-[0.6vw] px-3 lg:px-[0.8vw] rounded-xl lg:rounded-[0.7vw] text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 font-medium text-xs sm:text-sm lg:text-[0.8vw] border border-slate-200/80 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 lg:gap-[0.4vw] cursor-pointer"
                     >
-                      <FolderUp className="w-3.5 h-3.5 text-slate-500" />
+                      <FolderUp className="w-3.5 h-3.5 lg:w-[0.9vw] lg:h-[0.9vw] text-slate-500" />
                       <span>Upload 3D Model Folder</span>
                     </button>
                   )}
@@ -366,10 +355,10 @@ export default function Converter() {
                     onClick={() => {
                       fileInputRefs[media.id]?.current?.click();
                     }}
-                    className="w-full py-3 px-4 rounded-xl text-white font-medium text-xs sm:text-sm shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer bg-[#1e232d] hover:bg-[#ea543a]"
+                    className="w-full py-2.5 sm:py-3 lg:py-[0.7vw] px-4 lg:px-[1vw] rounded-xl lg:rounded-[0.7vw] text-white font-medium text-xs sm:text-sm lg:text-[0.8vw] shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 lg:gap-[0.5vw] cursor-pointer bg-[#1e232d] hover:bg-[#ea543a]"
                   >
                     <span>Choose {media.title} File {media.id === 'threed' && ('/ Zip')}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-[1vw] lg:h-[1vw]" />
                   </button>
                 </div>
 
@@ -379,37 +368,37 @@ export default function Converter() {
         </div>
       </section>
 
-      {/* Feature Highlights Section (Minimal without cards) */}
-      <section className="w-full pb-14 pt-4 px-4 sm:px-6 lg:px-8 mt-auto">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-center">
+      {/* Feature Highlights Section */}
+      <section className="w-full pb-10 sm:pb-14 lg:pb-[3vw] pt-3 sm:pt-4 lg:pt-[1vw] px-4 sm:px-6 lg:px-[3vw] mt-auto">
+        <div className="max-w-4xl lg:max-w-[65vw] mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-7 lg:gap-[2vw] text-center">
           
           <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2.5 text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <Zap className="w-5 h-5 stroke-[2]" />
+            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
+              <Zap className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
             </div>
-            <h4 className="font-medium text-xs sm:text-sm text-gray-900 mb-0.5 tracking-tight">Instant Processing</h4>
-            <p className="text-xs text-gray-500 font-normal leading-relaxed">
+            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Instant Processing</h4>
+            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
               Fast, high-fidelity in-browser conversion
             </p>
           </div>
 
           <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2.5 text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <ShieldCheck className="w-5 h-5 stroke-[2]" />
+            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
+              <ShieldCheck className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
             </div>
-            <h4 className="font-medium text-xs sm:text-sm text-gray-900 mb-0.5 tracking-tight">Lossless Quality</h4>
-            <p className="text-xs text-gray-500 font-normal leading-relaxed">
-              Crisp texture resolution & mesh fidelity
+            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Lossless Quality</h4>
+            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
+              Crisp texture resolution &amp; mesh fidelity
             </p>
           </div>
 
           <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2.5 text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <Layers className="w-5 h-5 stroke-[2]" />
+            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
+              <Layers className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
             </div>
-            <h4 className="font-medium text-xs sm:text-sm text-gray-900 mb-0.5 tracking-tight">Web Optimized</h4>
-            <p className="text-xs text-gray-500 font-normal leading-relaxed">
-              Ultra-compact assets ready for web & mobile
+            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Web Optimized</h4>
+            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
+              Ultra-compact assets ready for web &amp; mobile
             </p>
           </div>
 

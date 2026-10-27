@@ -18,7 +18,7 @@ export default function MainLayout({ children }) {
 
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col font-sans relative">
-      <header className="w-full flex-none bg-white z-[100]" style={{ height: '7vh' }}>
+      <header className="w-full flex-none bg-white z-[100] h-16 lg:h-[7vh]">
         <HomeNav />
       </header>
       <main

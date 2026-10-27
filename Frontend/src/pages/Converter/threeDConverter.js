@@ -15,11 +15,105 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
 import { USDLoader } from 'three/examples/jsm/loaders/USDLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
+import { WebIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { resample, prune, dedup, quantize } from '@gltf-transform/functions';
 import { exportToFbx } from './threeDExportHelpers';
 import { unpackZipArchive, createVirtualLoadingManager } from './archiveModelHandler';
 
 // Non-blocking tick to let UI and GC breathe
 const yieldToMain = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Converts any material (MeshPhongMaterial, MeshLambertMaterial, etc.) to THREE.MeshStandardMaterial.
+ * Standardizing materials is required for GLTFExporter / USDZExporter and eliminates shader artifacts.
+ */
+const standardizeToMeshStandard = (mat) => {
+  if (!mat) {
+    return new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.5,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
+  }
+
+  if (mat.isMeshStandardMaterial) {
+    mat.side = THREE.DoubleSide;
+    mat.vertexColors = false;
+    if (mat.map && mat.color) {
+      mat.color.setHex(0xffffff);
+    }
+    return mat;
+  }
+
+  const standardMat = new THREE.MeshStandardMaterial({
+    name: mat.name || '',
+    color: mat.map ? new THREE.Color(0xffffff) : (mat.color ? mat.color.clone() : new THREE.Color(0xffffff)),
+    map: mat.map || null,
+    normalMap: mat.normalMap || mat.bumpMap || null,
+    roughnessMap: mat.roughnessMap || null,
+    metalnessMap: mat.metalnessMap || null,
+    roughness: 0.5,
+    metalness: 0.1,
+    opacity: typeof mat.opacity === 'number' ? mat.opacity : 1.0,
+    transparent: mat.transparent || (mat.opacity < 0.99),
+    alphaTest: mat.alphaTest || 0,
+    side: THREE.DoubleSide,
+    vertexColors: false
+  });
+
+  if (mat.emissive) {
+    standardMat.emissive = mat.emissive.clone();
+    if (mat.emissiveIntensity) standardMat.emissiveIntensity = mat.emissiveIntensity;
+  }
+
+  return standardMat;
+};
+
+/**
+ * Normalizes all meshes in a scene hierarchy:
+ * 1. Converts non-standard materials to MeshStandardMaterial (crucial for USDZ & GLTF exporters).
+ * 2. Neutralizes / strips misleading vertex colors when diffuse textures are present.
+ * 3. Ensures computed vertex normals exist on all meshes.
+ */
+const normalizeSceneMaterials = (root) => {
+  if (!root) return;
+  root.traverse((child) => {
+    if (child.isMesh) {
+      if (child.geometry) {
+        if (!child.geometry.attributes.normal) {
+          child.geometry.computeVertexNormals();
+        }
+        // If geometry has a color attribute and materials have a texture map or default vertex colors,
+        // remove the color attribute to avoid multiplying textures with black/dark VFX vertex colors
+        if (child.geometry.attributes.color) {
+          const hasMap = Array.isArray(child.material)
+            ? child.material.some((m) => m && m.map)
+            : Boolean(child.material && child.material.map);
+          if (hasMap) {
+            child.geometry.deleteAttribute('color');
+          }
+        }
+      }
+
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map((m) => standardizeToMeshStandard(m));
+        } else {
+          child.material = standardizeToMeshStandard(child.material);
+        }
+      } else {
+        child.material = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.5,
+          metalness: 0.1,
+          side: THREE.DoubleSide
+        });
+      }
+    }
+  });
+};
 
 /**
  * Loads a 3D model file (or unpacked archive / folder) from memory into a THREE.Scene or THREE.Group
@@ -339,9 +433,97 @@ const load3DModel = async (file, onProgress) => {
 };
 
 /**
+ * Downscales and re-compresses binary texture bytes using an offscreen HTML5 Canvas.
+ * Directly produces a Uint8Array containing compressed JPEG or PNG data.
+ */
+const compressBinaryTexture = async (uint8Array, currentMimeType = 'image/png', maxDimension = 1024, quality = 0.75) => {
+  if (!uint8Array || uint8Array.length === 0) return null;
+
+  try {
+    const blob = new Blob([uint8Array], { type: currentMimeType });
+    let imageSource;
+
+    if (typeof createImageBitmap !== 'undefined') {
+      try {
+        imageSource = await createImageBitmap(blob);
+      } catch (_e) {}
+    }
+
+    if (!imageSource) {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Image decode failed'));
+        img.src = url;
+      });
+      URL.revokeObjectURL(url);
+      imageSource = img;
+    }
+
+    const srcWidth = imageSource.width;
+    const srcHeight = imageSource.height;
+    if (!srcWidth || !srcHeight) return null;
+
+    let targetWidth = srcWidth;
+    let targetHeight = srcHeight;
+    if (targetWidth > maxDimension || targetHeight > maxDimension) {
+      if (targetWidth >= targetHeight) {
+        targetHeight = Math.round((targetHeight * maxDimension) / targetWidth);
+        targetWidth = maxDimension;
+      } else {
+        targetWidth = Math.round((targetWidth * maxDimension) / targetHeight);
+        targetHeight = maxDimension;
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+
+    ctx.drawImage(imageSource, 0, 0, targetWidth, targetHeight);
+
+    // Detect if image has transparency
+    let hasAlpha = false;
+    try {
+      const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+      const step = Math.max(1, Math.floor(imgData.length / (4 * 1000)));
+      for (let p = 3; p < imgData.length; p += 4 * step) {
+        if (imgData[p] < 240) {
+          hasAlpha = true;
+          break;
+        }
+      }
+    } catch (_e) {}
+
+    const outMime = hasAlpha ? 'image/png' : 'image/jpeg';
+    const outBlob = await new Promise((resolve) => canvas.toBlob(resolve, outMime, quality));
+    if (!outBlob) return null;
+
+    const outBuf = await outBlob.arrayBuffer();
+    // Only return compressed if it actually saved space or changed resolution
+    if (outBuf.byteLength < uint8Array.byteLength || targetWidth < srcWidth || outMime !== currentMimeType) {
+      return {
+        imageBytes: new Uint8Array(outBuf),
+        mimeType: outMime
+      };
+    }
+  } catch (err) {
+    console.warn('compressBinaryTexture failed, keeping original:', err);
+  }
+
+  return null;
+};
+
+/**
  * Optimizes meshes and textures safely without blowing call stack or memory
  */
 const optimizeScene = async (scene, compressionPreset, onProgress) => {
+  // Always normalize materials and remove darkening vertex colors so textures display vividly across all presets
+  normalizeSceneMaterials(scene);
+
   // If Original Quality / Lossless preset selected, preserve mesh geometries and textures intact
   if (compressionPreset?.includes('Original')) {
     onProgress?.(50, 'Preserving original 3D geometry & texture quality...');
@@ -366,26 +548,15 @@ const optimizeScene = async (scene, compressionPreset, onProgress) => {
 
     if (geom) {
       // Remove redundant vertex attributes to save memory & storage
-      if (geom.attributes.color && !isTextureOnly) {
+      if (geom.attributes.color && (!isTextureOnly || child.material?.map || Array.isArray(child.material))) {
         geom.deleteAttribute('color');
       }
 
       if (!geom.attributes.normal) {
         geom.computeVertexNormals();
       }
-
-      // Quantize coordinates slightly for high compression presets
-      if (isMeshOpt && geom.attributes.position) {
-        const positions = geom.attributes.position.array;
-        const len = positions.length;
-        for (let j = 0; j < len; j++) {
-          positions[j] = Math.round(positions[j] * 1000) / 1000;
-        }
-        geom.attributes.position.needsUpdate = true;
-      }
     }
 
-    // Material texture downscaling for memory economy
     if (child.material) {
       const materials = Array.isArray(child.material) ? child.material : [child.material];
       materials.forEach((mat) => {
@@ -405,10 +576,17 @@ const optimizeScene = async (scene, compressionPreset, onProgress) => {
 /**
  * Exports THREE 3D scene to specified target format
  */
-const export3DModel = async (scene, targetFormat, onProgress) => {
+const export3DModel = async (scene, targetFormat, compressionPreset, onProgress) => {
   const fmt = (targetFormat || 'GLB').toUpperCase();
   onProgress?.(75, `Encoding to ${fmt}...`);
   await yieldToMain();
+
+  // Ensure materials are standardized and colors calibrated for export
+  normalizeSceneMaterials(scene);
+
+  const isMeshOpt = compressionPreset?.includes('Draco') || compressionPreset?.includes('Meshopt');
+  const isTextureOnly = compressionPreset?.includes('Texture Only');
+  const maxTextureSize = isTextureOnly ? 1024 : (isMeshOpt ? 1024 : 2048);
 
   if (fmt === 'GLB' || fmt === 'GLTF') {
     const isBinary = fmt === 'GLB';
@@ -420,7 +598,7 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
       animations.push(...scene.animations);
     }
 
-    return new Promise((resolve, reject) => {
+    const rawBlob = await new Promise((resolve, reject) => {
       exporter.parse(
         scene,
         (result) => {
@@ -437,11 +615,84 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
         {
           binary: isBinary,
           embedImages: true,
+          maxTextureSize: maxTextureSize,
           truncateDrawRange: true,
           animations: animations.length > 0 ? animations : undefined
         }
       );
     });
+
+    // If original preset or non-binary format, return uncompressed export directly
+    if (!isBinary || compressionPreset?.includes('Original')) {
+      return rawBlob;
+    }
+
+    // Step 4: Preset-specific Binary Optimization Pipeline via @gltf-transform
+    // Distinctly differentiates presets so that file sizes scale predictably:
+    // - Original: Untouched 100%
+    // - Lossless: Light buffer deduplication & animation resampling (geometry & textures 100% untouched)
+    // - Texture Only: Downscales and compresses textures (geometry untouched)
+    // - Draco + Meshopt: Full quantization + texture compression (highest reduction)
+    try {
+      const isLossless = compressionPreset?.includes('Lossless');
+      onProgress?.(85, 'Applying preset-specific compression...');
+      await yieldToMain();
+
+      const io = new WebIO().registerExtensions(ALL_EXTENSIONS);
+      const rawArrayBuffer = await rawBlob.arrayBuffer();
+      const doc = await io.readBinary(new Uint8Array(rawArrayBuffer));
+
+      // 1. Resample animations, deduplicate shared accessors and prune unused buffers
+      await doc.transform(
+        resample(),
+        prune(),
+        dedup()
+      );
+
+      // 2. Geometry Quantization: ONLY applied for Draco + Meshopt
+      // (Keeps geometry raw 32-bit floats for "Lossless" and "Texture Only")
+      if (isMeshOpt) {
+        await doc.transform(
+          quantize({
+            quantizePosition: 14,
+            quantizeNormal: 10,
+            quantizeTexcoord: 12,
+            quantizeColor: 8,
+            quantizeWeight: 8
+          })
+        );
+      }
+
+      // 3. Texture Compression: Applied for "Texture Only" and "Draco + Meshopt"
+      // (Leaves textures 100% untouched for "Lossless")
+      if (isTextureOnly || isMeshOpt) {
+        const targetDim = isTextureOnly ? 1024 : 1024;
+        const quality = isTextureOnly ? 0.70 : 0.78;
+
+        const textures = doc.getRoot().listTextures();
+        for (const tex of textures) {
+          const imgBytes = tex.getImage();
+          if (imgBytes && imgBytes.byteLength > 0) {
+            const compressed = await compressBinaryTexture(
+              imgBytes,
+              tex.getMimeType() || 'image/png',
+              targetDim,
+              quality
+            );
+            if (compressed) {
+              tex.setImage(compressed.imageBytes);
+              tex.setMimeType(compressed.mimeType);
+            }
+          }
+        }
+      }
+
+      const optimizedBytes = await io.writeBinary(doc);
+      return new Blob([optimizedBytes], { type: 'model/gltf-binary' });
+    } catch (transformErr) {
+      console.warn('Binary quantization skipped, returning raw GLB:', transformErr);
+      return rawBlob;
+    }
   }
 
   if (fmt === 'OBJ') {
@@ -455,6 +706,8 @@ const export3DModel = async (scene, targetFormat, onProgress) => {
   }
 
   if (fmt === 'USDZ') {
+    // USDZExporter requires MeshStandardMaterial on all meshes and ignores SkinnedMesh bone transforms if not converted
+    normalizeSceneMaterials(scene);
     const exporter = new USDZExporter();
     const arrayBuffer = await exporter.parseAsync(scene);
     return new Blob([arrayBuffer], { type: 'model/vnd.usdz+zip' });
@@ -519,7 +772,7 @@ export async function convertAndCompress3D(file, targetFormat, compressionPreset
     await optimizeScene(scene, compressionPreset, onProgress);
 
     // Step 3: Export to target format
-    const outputBlob = await export3DModel(scene, targetFormat, onProgress);
+    const outputBlob = await export3DModel(scene, targetFormat, compressionPreset, onProgress);
 
     onProgress?.(100, 'Optimization complete!');
     return outputBlob;

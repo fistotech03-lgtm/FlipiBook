@@ -362,15 +362,55 @@ export async function unpackZipArchive(archiveFile) {
 }
 
 /**
+ * Safe TGALoader subclass that validates magic headers before parsing.
+ * If a model references a ".tga" texture path that was actually saved as a PNG/JPEG/WEBP inside the archive,
+ * this prevents three-stdlib's TGALoader from throwing `Invalid type "78"` or attempting to allocate giant corrupt textures.
+ */
+class SafeTGALoader extends TGALoader {
+  parse(buffer) {
+    if (buffer && buffer.byteLength >= 4) {
+      const bytes = new Uint8Array(buffer.slice(0, 4));
+      // Check for PNG magic: 0x89 'P' 'N' 'G' (where 'N' is 78 ASCII!)
+      const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+      // Check for JPEG magic: 0xFF 0xD8 0xFF
+      const isJpg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+      // Check for GIF magic: 'G' 'I' 'F'
+      const isGif = bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
+      // Check for WebP magic: 'R' 'I' 'F' 'F'
+      const isWebp = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+
+      if (isPng || isJpg || isGif || isWebp) {
+        // Return 1x1 neutral fallback DataTexture image to prevent corrupt TGA parsing and GPU memory out-of-range errors
+        return {
+          width: 1,
+          height: 1,
+          data: new Uint8Array([255, 255, 255, 255])
+        };
+      }
+    }
+
+    try {
+      return super.parse(buffer);
+    } catch (_e) {
+      return {
+        width: 1,
+        height: 1,
+        data: new Uint8Array([255, 255, 255, 255])
+      };
+    }
+  }
+}
+
+/**
  * Builds a Three.js LoadingManager from a virtual URL map
  * Accurately maps relative paths from glTF / obj / fbx referencing subfolders (e.g., textures/..., scene.bin)
  */
 export function createVirtualLoadingManager(urlMap, basePath = '') {
   const manager = new THREE.LoadingManager();
 
-  // Register TGALoader so FBXLoader can parse .tga textures
+  // Register SafeTGALoader so FBXLoader parses valid TGAs and safely ignores non-TGA files
   try {
-    manager.addHandler(/\.tga$/i, new TGALoader(manager));
+    manager.addHandler(/\.tga$/i, new SafeTGALoader(manager));
   } catch (_e) {}
 
   manager.setURLModifier((rawUrl) => {

@@ -194,17 +194,21 @@ export default function ThreePreviewCanvas({
       // Fit camera
       const finalMaxDim = Math.max(size.x, size.y, size.z) || 1;
       const fov = camera.fov * (Math.PI / 180);
-      let cameraZ = Math.abs(finalMaxDim / 2 / Math.tan(fov / 2)) * 1.8;
-      cameraZ = Math.max(cameraZ, 2.5);
+      const aspect = camera.aspect || (width / height) || 1;
+      // In wide modals or split views, fit both vertically and horizontally so the model stays prominently sized
+      const distV = (finalMaxDim / 2) / Math.tan(fov / 2);
+      const distH = (finalMaxDim / 2) / (Math.tan(fov / 2) * aspect);
+      let cameraDist = Math.max(distV, distH) * 1.35;
+      cameraDist = Math.max(cameraDist, 1.8);
 
-      camera.near = Math.max(0.01, cameraZ / 100);
-      camera.far = Math.max(5000, cameraZ * 100);
+      camera.near = Math.max(0.01, cameraDist / 100);
+      camera.far = Math.max(5000, cameraDist * 100);
       camera.updateProjectionMatrix();
 
-      camera.position.set(cameraZ * 0.8, cameraZ * 0.7, cameraZ);
+      camera.position.set(cameraDist * 0.75, cameraDist * 0.55, cameraDist);
       controls.target.set(0, size.y / 2, 0);
-      controls.maxDistance = cameraZ * 10;
-      controls.minDistance = cameraZ * 0.05;
+      controls.maxDistance = cameraDist * 10;
+      controls.minDistance = cameraDist * 0.05;
       controls.update();
 
       setIsLoading(false);
@@ -323,6 +327,11 @@ export default function ThreePreviewCanvas({
                     mat.vertexColors = false;
                   }
 
+                  // If mesh has vertex colors and diffuse texture, delete vertex color attribute so it doesn't darken the texture
+                  if (mat.map && child.geometry && child.geometry.attributes.color) {
+                    child.geometry.deleteAttribute('color');
+                  }
+
                   // If material has a map, reset diffuse color to clean white so texture displays accurately
                   if (mat.map) {
                     if (mat.color) {
@@ -407,7 +416,24 @@ export default function ThreePreviewCanvas({
       loader.load(
         blobUrl,
         (gltf) => {
-          normalizeAndCenterModel(gltf.scene || gltf.scenes[0], gltf.animations);
+          const root = gltf.scene || gltf.scenes[0];
+          // Ensure double-sided materials and clean vertex color blending
+          root.traverse((child) => {
+            if (child.isMesh && child.material) {
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach((mat) => {
+                mat.side = THREE.DoubleSide;
+                if (mat.map) {
+                  mat.vertexColors = false;
+                  if (mat.color) mat.color.setHex(0xffffff);
+                  if (child.geometry?.attributes?.color) {
+                    child.geometry.deleteAttribute('color');
+                  }
+                }
+              });
+            }
+          });
+          normalizeAndCenterModel(root, gltf.animations);
         },
         undefined,
         (err) => {
@@ -472,7 +498,26 @@ export default function ThreePreviewCanvas({
           if (!isMounted) return;
           const manager = new THREE.LoadingManager();
           try {
-            manager.addHandler(/\.tga$/i, new TGALoader(manager));
+            class SafeTGALoaderStandalone extends TGALoader {
+              parse(buffer) {
+                if (buffer && buffer.byteLength >= 4) {
+                  const bytes = new Uint8Array(buffer.slice(0, 4));
+                  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+                  const isJpg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+                  const isGif = bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
+                  const isWebp = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+                  if (isPng || isJpg || isGif || isWebp) {
+                    return { width: 1, height: 1, data: new Uint8Array([255, 255, 255, 255]) };
+                  }
+                }
+                try {
+                  return super.parse(buffer);
+                } catch (_e) {
+                  return { width: 1, height: 1, data: new Uint8Array([255, 255, 255, 255]) };
+                }
+              }
+            }
+            manager.addHandler(/\.tga$/i, new SafeTGALoaderStandalone(manager));
           } catch (_e) {}
           const loader = new FBXLoader(manager);
           const object = loader.parse(buffer, '');

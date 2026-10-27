@@ -12,13 +12,7 @@ const connectDB = async () => {
     console.log(`[Payment Service] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`[Payment Service] Database connection error: ${error.message}`);
-    setTimeout(connectDB, 5000);
   }
 };
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('[Payment Service] MongoDB disconnected. Reconnecting in 3s...');
-  setTimeout(connectDB, 3000);
-});
 
 module.exports = connectDB;

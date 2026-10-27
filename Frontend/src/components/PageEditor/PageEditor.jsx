@@ -29,6 +29,7 @@ import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
 import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
+import { queryClient } from "../../queryClient";
 
 import {
   parseLayersFromSVG,
@@ -180,10 +181,12 @@ const PageEditor = () => {
     });
   }, []);
 
-  // Cleanup cache manager on unmount
+  // Cleanup cache manager and invalidate books cache on unmount
   useEffect(() => {
     return () => {
       pageCacheManager.destroy();
+      queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
+      queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     };
   }, []);
 

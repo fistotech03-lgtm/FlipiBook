@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { clearSession } from "../../utils/authUtils";
-const resolveUploadsPath = (path) => path || "";
+import { resolveUploadsPath } from "../../utils/assetUtils";
 
 const defaultColors = [
   "#4c5add",
@@ -314,8 +314,8 @@ export default function ProfileModal({
                 }}
               />
             ) : (
-              <span className="text-[1.2vw] font-bold text-white drop-shadow-sm">
-                {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+              <span className="text-[1.2vw] font-bold text-white drop-shadow-sm select-none">
+                {(user.displayName || user.name) ? (user.displayName || user.name).trim().charAt(0).toUpperCase() : "U"}
               </span>
             )}
           </div>
@@ -323,7 +323,7 @@ export default function ProfileModal({
           {/* User Details */}
           <div className="flex flex-col min-w-0 pr-[2vw]">
             <h3 className="text-[0.95vw] font-bold text-gray-900 truncate leading-tight">
-              {user.name}
+              {user.displayName || user.name || "User"}
             </h3>
             <p className="text-[0.65vw] text-gray-500 font-normal truncate mt-[0.1vw]">
               {user.email}

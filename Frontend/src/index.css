@@ -232,7 +232,7 @@ select:-webkit-autofill:focus {
 .custom-scrollbar,
 .custom-scrollbar-wrapper {
   scrollbar-width: thin;
-  scrollbar-color: var(--custom-scrollbar-thumb, #9ca3af) var(--custom-scrollbar-track, transparent);
+  scrollbar-color: var(--custom-scrollbar-thumb, #cbd5e1) var(--custom-scrollbar-track, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar,
@@ -249,13 +249,45 @@ select:-webkit-autofill:focus {
 
 .custom-scrollbar::-webkit-scrollbar-thumb,
 .custom-scrollbar-wrapper::-webkit-scrollbar-thumb {
-  background: var(--custom-scrollbar-thumb, #9ca3af);
+  background: var(--custom-scrollbar-thumb, #cbd5e1);
   border-radius: var(--custom-scrollbar-radius, 1vw);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover,
 .custom-scrollbar-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--custom-scrollbar-thumb-hover, #6b7280);
+  background: var(--custom-scrollbar-thumb-hover, #94a3b8);
+}
+
+/* Hide OS default scrollbar stepper arrows everywhere */
+.custom-scrollbar::-webkit-scrollbar-button,
+.custom-scrollbar-wrapper::-webkit-scrollbar-button,
+textarea::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Textarea custom scrollbar */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+textarea::-webkit-scrollbar {
+  width: 0.35vw;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Sidebar Folder Row 3-Dots Menu hover state */

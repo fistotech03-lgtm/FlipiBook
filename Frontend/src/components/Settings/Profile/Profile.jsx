@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useOutletContext, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Pencil, Info, Phone, User, Building, MapPin, BarChart2, MoreVertical, Globe, BookOpen, Check, X } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import ThumbnailPopup from '../Thumbnail_Popup';
 import AvatarPopup from '../AvatarPopup';
+import ImageCropModal from '../ImageCropModal';
 import EditProfile from './EditProfile';
 import Activity from '../Activity';
-const resolveUploadsPath = (path) => path || '';
+import { useAuth } from '../../../context/AuthContext';
+import { resolveUploadsPath } from '../../../utils/assetUtils';
+import { getInitialUser } from '../../../utils/authUtils';
 
 const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl = '', title, imageUrl }) => {
   const containerRef = useRef(null);
@@ -181,23 +184,42 @@ const defaultProfile = {
 };
 
 const Profile = () => {
+  const { user: authUser, setUser: setAuthUser } = useAuth();
   const context = useOutletContext();
   const navigate = useNavigate();
-  const [localUser, setLocalUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('user_profile');
-      if (stored) return { ...defaultProfile, ...JSON.parse(stored) };
-    } catch (e) {}
-    return defaultProfile;
-  });
-  const user = context?.user ? { ...defaultProfile, ...context.user } : localUser;
-  const setUser = context?.setUser || setLocalUser;
+  const [localProfileData, setLocalProfileData] = useState({});
+
+  const effectiveAuthUser = context?.user || authUser || getInitialUser();
+  const user = useMemo(() => ({
+    ...defaultProfile,
+    ...(effectiveAuthUser || {}),
+    ...localProfileData
+  }), [effectiveAuthUser, localProfileData]);
+
+  const setUser = useCallback((updater) => {
+    setLocalProfileData(prev => {
+      const currentFull = { ...defaultProfile, ...(effectiveAuthUser || {}), ...prev };
+      const nextChanges = typeof updater === 'function' ? updater(currentFull) : updater;
+      const merged = { ...currentFull, ...nextChanges };
+
+      // Defer parent context and Redux sync to next microtick to avoid React render conflict
+      setTimeout(() => {
+        if (context?.setUser) {
+          context.setUser(cPrev => ({ ...cPrev, ...nextChanges }));
+        }
+        if (setAuthUser) {
+          setAuthUser(merged);
+        }
+      }, 0);
+
+      return { ...prev, ...nextChanges };
+    });
+  }, [effectiveAuthUser, context?.setUser, setAuthUser]);
 
   useEffect(() => {
     const handleProfileUpdate = (e) => {
       if (e?.detail) {
-        setLocalUser(prev => ({
-          ...defaultProfile,
+        setLocalProfileData(prev => ({
           ...prev,
           ...e.detail
         }));
@@ -216,9 +238,37 @@ const Profile = () => {
     type: 'gradient',
     value: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
   });
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeout = useRef(null);
+  const [cropModal, setCropModal] = useState({
+    isOpen: false,
+    imageSrc: null,
+    cropType: 'avatar', // 'avatar' | 'banner'
+    title: ''
+  });
+
+  const handleStartCrop = (fileOrSrc, cropType = 'avatar') => {
+    setIsAvatarPopupOpen(false);
+    setIsColorPickerOpen(false);
+    setCropModal({
+      isOpen: true,
+      imageSrc: fileOrSrc,
+      cropType,
+      title: cropType === 'avatar' ? 'Crop Profile Avatar' : 'Crop Banner Image'
+    });
+  };
+
+  const handleCropComplete = (croppedFile, croppedDataUrl) => {
+    if (cropModal.cropType === 'avatar') {
+      handleSelectAvatar(croppedFile);
+    } else if (cropModal.cropType === 'banner') {
+      handleBannerBgChange({
+        type: 'media',
+        file: croppedFile,
+        value: `url(${croppedDataUrl})`
+      });
+    }
+    setCropModal(prev => ({ ...prev, isOpen: false, imageSrc: null }));
+  };
+
   const [isChildScrollable, setIsChildScrollable] = useState(true);
 
   useEffect(() => {
@@ -232,9 +282,16 @@ const Profile = () => {
 
   const { useremail } = useParams();
   const rawRouteEmail = useremail ? decodeURIComponent(useremail).trim() : '';
-  const storedUserStr = typeof window !== 'undefined' ? (localStorage.getItem('user') || localStorage.getItem('user_profile')) : null;
-  const storedUser = storedUserStr ? (() => { try { return JSON.parse(storedUserStr); } catch (e) { return null; } })() : null;
-  const fallbackEmail = storedUser?.emailId || storedUser?.email || '';
+  const initialCookieUser = useMemo(() => getInitialUser(), []);
+  const fallbackEmail = (
+    authUser?.emailId ||
+    authUser?.email ||
+    context?.user?.emailId ||
+    context?.user?.email ||
+    initialCookieUser?.emailId ||
+    initialCookieUser?.email ||
+    ''
+  ).trim();
   const ownEmail = (user?.emailId || user?.email || fallbackEmail).trim();
   const effectiveEmail = ownEmail || rawRouteEmail;
 
@@ -242,57 +299,57 @@ const Profile = () => {
   useEffect(() => {
     if (!effectiveEmail) return;
 
+    let isMounted = true;
     const fetchUserProfile = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/profile`, {
-          params: { emailId: effectiveEmail }
+          params: { emailId: effectiveEmail },
+          withCredentials: true
         });
         const p = res.data?.profile || (res.data?.emailId ? res.data : null);
-        if (p) {
-            setUser(prev => {
-              const updated = {
-                ...defaultProfile,
-                ...prev,
-                ...p,
-                about: p.about !== undefined ? p.about : prev.about,
-                mobile: p.mobile !== undefined ? p.mobile : prev.mobile,
-                countryCode: p.countryCode || prev.countryCode || '+91',
-                displayName: p.displayName || prev.displayName || '',
-                address1: p.address1 !== undefined ? p.address1 : prev.address1,
-                address2: p.address2 !== undefined ? p.address2 : prev.address2,
-                city: p.city !== undefined ? p.city : prev.city,
-                state: p.state !== undefined ? p.state : prev.state,
-                pincode: p.pincode !== undefined ? p.pincode : prev.pincode,
-                country: p.country !== undefined ? p.country : prev.country,
-                companyName: p.companyName !== undefined ? p.companyName : prev.companyName,
-                industryType: p.industryType !== undefined ? p.industryType : (prev.industryType || prev.industry),
-                companyEmail: p.companyEmail !== undefined ? p.companyEmail : prev.companyEmail,
-                website: p.website !== undefined ? p.website : prev.website,
-                email: p.emailId || prev.email || effectiveEmail,
-                emailId: p.emailId || prev.emailId || effectiveEmail,
-                name: p.name || prev.name || (effectiveEmail.split('@')[0]),
-                picture: p.picture || prev.picture || null,
-                company_logo_url: p.company_logo_url || p.companyLogo || prev.company_logo_url || prev.companyLogo || '',
-                companyLogo: p.company_logo_url || p.companyLogo || prev.company_logo_url || prev.companyLogo || '',
-                avatarBgColor: p.avatarBgColor || prev.avatarBgColor || '#E8D4C8',
-                services: p.services || prev.services || [],
-                followers: p.followers || prev.followers || [],
-                following: p.following || prev.following || [],
-                visibilitySettings: {
-                  showInExplore: true,
-                  showContact: true,
-                  showAddress: true,
-                  showSocial: true,
-                  ...(prev.visibilitySettings || {}),
-                  ...(p.visibilitySettings || {})
-                },
-                socials: {
-                  ...defaultProfile.socials,
-                  ...(p.socials || prev.socials || {})
-                }
-              };
-              return updated;
-            });
+        if (p && isMounted) {
+          const updated = {
+            ...defaultProfile,
+            ...(effectiveAuthUser || {}),
+            ...p,
+            about: p.about !== undefined ? p.about : (user.about || ''),
+            mobile: p.mobile !== undefined ? p.mobile : (user.mobile || ''),
+            countryCode: p.countryCode || user.countryCode || '+91',
+            displayName: p.displayName || p.name || user.displayName || '',
+            address1: p.address1 !== undefined ? p.address1 : (user.address1 || ''),
+            address2: p.address2 !== undefined ? p.address2 : (user.address2 || ''),
+            city: p.city !== undefined ? p.city : (user.city || ''),
+            state: p.state !== undefined ? p.state : (user.state || ''),
+            pincode: p.pincode !== undefined ? p.pincode : (user.pincode || ''),
+            country: p.country !== undefined ? p.country : (user.country || 'INDIA'),
+            companyName: p.companyName !== undefined ? p.companyName : (user.companyName || ''),
+            industryType: p.industryType !== undefined ? p.industryType : (user.industryType || user.industry || ''),
+            companyEmail: p.companyEmail !== undefined ? p.companyEmail : (user.companyEmail || ''),
+            website: p.website !== undefined ? p.website : (user.website || ''),
+            email: p.emailId || effectiveEmail,
+            emailId: p.emailId || effectiveEmail,
+            name: p.name || user.name || (effectiveEmail.split('@')[0]),
+            picture: p.picture || user.picture || null,
+            company_logo_url: p.company_logo_url || p.companyLogo || user.company_logo_url || user.companyLogo || '',
+            companyLogo: p.company_logo_url || p.companyLogo || user.company_logo_url || user.companyLogo || '',
+            avatarBgColor: p.avatarBgColor || user.avatarBgColor || '#E8D4C8',
+            services: p.services || user.services || [],
+            followers: p.followers || user.followers || [],
+            following: p.following || user.following || [],
+            visibilitySettings: {
+              showInExplore: true,
+              showContact: true,
+              showAddress: true,
+              showSocial: true,
+              ...(user.visibilitySettings || {}),
+              ...(p.visibilitySettings || {})
+            },
+            socials: {
+              ...defaultProfile.socials,
+              ...(p.socials || user.socials || {})
+            }
+          };
+          setUser(updated);
           if (p.bannerBg) {
             setBannerBg(p.bannerBg);
           }
@@ -303,6 +360,10 @@ const Profile = () => {
     };
 
     fetchUserProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [effectiveEmail, backendUrl]);
 
   // 2. Banner update handler connected to backend
@@ -459,36 +520,10 @@ const Profile = () => {
 
 
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const container = document.getElementById('profile-container');
-      const scrollTop = container?.scrollTop || 0;
-      const maxScroll = window.innerWidth * 0.15; // 15vw scroll distance for full effect
-      const progress = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
-      setScrollProgress(progress);
 
-      setIsScrolling(true);
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-      scrollTimeout.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
-    };
-
-    const container = document.getElementById('profile-container');
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    handleScroll();
-
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
 
   return (
-    <div id="profile-container" className="flex flex-col flex-1 h-full min-h-0 bg-transparent relative overflow-y-auto hide-scrollbar">
+    <div id="profile-container" className="flex flex-col flex-1 h-full min-h-0 bg-transparent relative overflow-hidden">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
@@ -498,33 +533,52 @@ const Profile = () => {
           scrollbar-width: none;
         }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 0.1vw;
+          width: 0.35vw;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
+          background: transparent;
           border-radius: 1vw;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background-color: #cbd5e1;
           border-radius: 1vw;
         }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: #94a3b8;
+        }
+        .custom-scrollbar::-webkit-scrollbar-button {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
       `}</style>
 
-      {/* Dummy spacer to create 15vw scroll area */}
-      <div style={{ height: `calc(100% + 15vw)` }} className="w-full absolute top-0 left-0 pointer-events-none z-[-1]"></div>
-
-      {/* Sticky wrapper for actual content */}
-      <div className="sticky top-0 h-full flex flex-col w-full min-h-0 pointer-events-auto">
+      {/* Main content wrapper */}
+      <div className="h-full flex flex-col w-full min-h-0 pointer-events-auto">
 
         {/* Top right menu icon - Moved outside banner wrapper to avoid stacking context issues */}
         <div className="sticky top-0 z-[60] w-full pointer-events-none" style={{ height: 0 }}>
-          <div className="absolute top-[1vw] right-[1vw] pointer-events-auto">
+          <div className="absolute top-[1vw] right-[1vw] pointer-events-auto flex items-center gap-[0.4vw]">
+            {(bannerBg.type === 'image' || bannerBg.type === 'media') && bannerBg.value && (
+              <button
+                onClick={() => {
+                  const rawSrc = bannerBg.file || bannerBg.value.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                  handleStartCrop(rawSrc, 'banner');
+                }}
+                className="bg-white/80 hover:bg-white text-gray-800 px-[0.6vw] py-[0.35vw] rounded-[0.4vw] transition-colors relative z-50 shadow-sm flex items-center gap-[0.3vw] text-[0.75vw] font-medium cursor-pointer"
+                title="Crop Banner"
+              >
+                <Icon icon="solar:crop-bold" className="w-[1vw] h-[1vw] text-gray-700" />
+                <span>Crop Banner</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 setIsColorPickerOpen(!isColorPickerOpen);
                 if (!isColorPickerOpen) setIsAvatarPopupOpen(false);
               }}
-              className="bg-white/60 text-gray-800 p-[0.4vw] rounded-[0.4vw] transition-colors relative z-50 hover:bg-white/80 shadow-sm"
+              className="bg-white/60 text-gray-800 p-[0.4vw] rounded-[0.4vw] transition-colors relative z-50 hover:bg-white/80 shadow-sm cursor-pointer"
+              title="Edit Banner"
             >
               <Icon icon="mdi:edit-outline" className="w-[1.2vw] h-[1.2vw]" />
             </button>
@@ -535,45 +589,39 @@ const Profile = () => {
               onClose={() => setIsColorPickerOpen(false)}
               bannerBg={bannerBg}
               setBannerBg={handleBannerBgChange}
+              onStartCrop={handleStartCrop}
             />
           </div>
         </div>
 
-        {/* Top Banner Wrapper */}
+        {/* Top Banner Wrapper (Fixed default height of 14vw, no scroll resize) */}
         <div 
-          className="relative w-full rounded-[1vw] z-[05] flex-shrink-0 overflow-hidden"
+          className="relative w-full rounded-[1vw] z-[05] flex-shrink-0 overflow-hidden h-[9.5vw]"
           style={{ 
-            height: `${14 - (8 * scrollProgress)}vw`,
             background: bannerBg.type === 'solid' ? bannerBg.value : undefined,
             backgroundImage: bannerBg.type === 'gradient' ? bannerBg.value : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            willChange: 'height'
           }}
         >
-          {/* Parallax Image Banner (Only used for actual images to maintain high FPS) */}
+          {/* Static Image Banner */}
           {(bannerBg.type === 'image' || bannerBg.type === 'media') && (
             <div
-              className="absolute top-0 inset-x-0 w-full"
+              className="absolute inset-0 w-full h-full"
               style={{
-                height: `14vw`,
-                transform: `translateY(-${scrollProgress * 4}vw)`,
                 backgroundImage: bannerBg.value ? `url(${resolveUploadsPath(bannerBg.value.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, ''))})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                willChange: 'transform'
               }}
             ></div>
           )}
           
-          {/* Faint wavy overlay could go here, using a CSS radial gradient as a placeholder for the texture */}
           <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 30% 150%, rgba(255,255,255,0.4) 0%, transparent 50%), radial-gradient(circle at 70% -50%, rgba(255,255,255,0.4) 0%, transparent 50%)' }}></div>
         </div>
 
         {/* Main Content Area */}
         <div 
-          className="flex flex-col md:flex-row relative bg-white border-2 border-gray-200 rounded-[1vw] shadow-sm flex-1 min-h-0 min-w-0 w-full z-[40]"
-          style={{ marginTop: `${1 - 0.35 * scrollProgress}vw`, willChange: 'margin-top' }}
+          className="flex flex-col md:flex-row relative bg-white border-2 border-gray-200 rounded-[1vw] shadow-sm flex-1 min-h-0 min-w-0 w-full z-[40] mt-[1vw]"
         >
 
           {/* Left Column (Avatar + Info) */}
@@ -583,13 +631,11 @@ const Profile = () => {
               {/* Top border eraser for container */}
               <div
                 className="absolute top-[-0.2vw] left-[calc(50%-7.5vw)] w-[15vw] h-[0.4vw] bg-white z-10 pointer-events-none"
-                style={{ transform: `scaleX(${1 - (0.30 * scrollProgress)})`, transformOrigin: 'center', willChange: 'transform' }}
               ></div>
 
-              {/* Avatar Wrapper */}
+              {/* Avatar Wrapper (Fixed default size, no scroll scaling) */}
               <div
                 className="relative flex justify-center items-center z-[70] w-[12vw] h-[12vw] mt-[-6vw]"
-                style={{ transform: `scale(${1 - (0.30 * scrollProgress)})`, transformOrigin: 'center', willChange: 'transform' }}
               >
                 {/* Left Smooth Corner */}
                 <svg className="absolute top-[3.19vw] -left-[1vw] w-[1.5vw] h-[2vw] z-10 pointer-events-none" viewBox="0 0 10 10">
@@ -652,37 +698,28 @@ const Profile = () => {
                   >
                     <Icon icon="solar:camera-bold" className="w-[1.1vw] h-[1.1vw] text-gray-700" />
                   </button>
-                  <div 
-                    className="absolute top-0 left-0"
-                    style={{ transform: `scale(${1 / (1 - (0.30 * scrollProgress))})`, transformOrigin: 'top left', willChange: 'transform' }}
-                  >
+                  <div className="absolute top-0 left-0">
                     <AvatarPopup
                       isOpen={isAvatarPopupOpen}
                       onClose={() => setIsAvatarPopupOpen(false)}
                       onSelectAvatar={handleSelectAvatar}
                       onSelectColor={handleSelectColor}
                       currentAvatar={user.picture}
+                      onStartCrop={handleStartCrop}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Name and Email */}
-              <div 
-                className="flex flex-col items-center w-full"
-                style={{ 
-                  transform: `translateY(-${scrollProgress * 1.8}vw)`, 
-                  transition: 'transform 0.05s linear',
-                  willChange: 'transform' 
-                }}
-              >
-                <h1 className="text-[1.5vw] font-bold text-gray-900 mt-[0.3vw] truncate max-w-[18vw]">
+              <div className="flex flex-col items-center w-full">
+                <h1 className="text-[1.25vw] font-semibold text-gray-900 mt-[0.3vw] truncate max-w-[18vw]">
                   {user.displayName && user.displayName.trim() !== '' ? user.displayName.trim() : (user.name || '')}
                 </h1>
                 {user.visibilitySettings?.showContact !== false && (
-                  <div className="flex items-center gap-[0.4vw] text-[0.8vw] text-gray-500 mt-[0.2vw] truncate max-w-[18vw]">
-                    <Icon icon="mdi:check-decagram" className="w-[1vw] h-[1vw] text-[#22c55e] flex-shrink-0" />
-                    <span className="truncate font-medium">{user.email}</span>
+                  <div className="flex items-center gap-[0.4vw] text-[0.75vw] text-gray-500 mt-[0.2vw] truncate max-w-[18vw]">
+                    <Icon icon="mdi:check-decagram" className="w-[0.95vw] h-[0.95vw] text-[#22c55e] flex-shrink-0" />
+                    <span className="truncate font-normal">{user.email}</span>
                   </div>
                 )}
 
@@ -690,31 +727,31 @@ const Profile = () => {
                 <div className="flex items-center justify-center gap-[1.5vw] mt-[1.2vw] w-full px-[1vw]">
                   {/* Flipbooks */}
                   <div className="flex flex-col items-center">
-                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                    <span className="text-[1.05vw] font-semibold text-gray-900 leading-none">
                       {flipbooks?.length || 0}
                     </span>
-                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Flipbooks</span>
+                    <span className="text-[0.7vw] text-gray-400 font-normal mt-[0.35vw]">Flipbooks</span>
                   </div>
 
                   <div className="w-[1px] h-[1.8vw] bg-gray-200"></div>
 
                   {/* Followers */}
                   <div className="flex flex-col items-center">
-                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                    <span className="text-[1.05vw] font-semibold text-gray-900 leading-none">
                       {(() => {
                         const count = Array.isArray(user.followers) ? user.followers.length : (typeof user.followers === 'number' ? user.followers : 0);
                         if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
                         return count;
                       })()}
                     </span>
-                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Followers</span>
+                    <span className="text-[0.7vw] text-gray-400 font-normal mt-[0.35vw]">Followers</span>
                   </div>
 
                   <div className="w-[1px] h-[1.8vw] bg-gray-200"></div>
 
                   {/* Views */}
                   <div className="flex flex-col items-center">
-                    <span className="text-[1.2vw] font-bold text-gray-900 leading-none">
+                    <span className="text-[1.05vw] font-semibold text-gray-900 leading-none">
                       {(() => {
                         const totalViews = (flipbooks || []).reduce((acc, b) => {
                           const v = Number(b.viewsCount !== undefined ? b.viewsCount : (b.views !== undefined ? b.views : 0));
@@ -725,7 +762,7 @@ const Profile = () => {
                         return viewsVal;
                       })()}
                     </span>
-                    <span className="text-[0.75vw] text-gray-400 font-medium mt-[0.35vw]">Views</span>
+                    <span className="text-[0.7vw] text-gray-400 font-normal mt-[0.35vw]">Views</span>
                   </div>
                 </div>
               </div>
@@ -733,50 +770,45 @@ const Profile = () => {
               {/* Info Cards Container */}
               <div 
                 id="left-scroll-container" 
-                className="w-full pb-[2vw] flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar rounded-b-[1vw]"
-                style={{
-                  marginTop: `${1.2 - (scrollProgress * 1.8)}vw`,
-                  transition: 'margin-top 0.05s linear',
-                  willChange: 'margin-top'
-                }}
+                className="w-full pb-[2vw] flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar rounded-b-[1vw] mt-[1.2vw]"
               >
 
                 {/* Full Name (above About) */}
                 {user.name && user.name.trim() !== '' && (
-                  <div className="px-[1.2vw] py-[0.9vw] border-b border-gray-100 bg-white">
-                    <h3 className="flex items-center gap-[0.55vw] text-[0.9vw] font-semibold text-[#374151] mb-[0.3vw]">
-                      <Icon icon="solar:user-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
+                  <div className="px-[1.2vw] py-[0.8vw] border-b border-gray-100 bg-white">
+                    <h3 className="flex items-center gap-[0.55vw] text-[0.82vw] font-medium text-[#374151] mb-[0.25vw]">
+                      <Icon icon="solar:user-bold" className="w-[1.05vw] h-[1.05vw] text-[#4b5563]" />
                       <span>Full Name</span>
                     </h3>
-                    <p className="text-[0.82vw] font-medium text-[#22262e] pl-[1.65vw]">
+                    <p className="text-[0.78vw] font-normal text-[#22262e] pl-[1.6vw]">
                       {user.name}
                     </p>
                   </div>
                 )}
 
                 {/* About */}
-                <div className="px-[1.2vw] py-[1vw] border-b border-gray-100 bg-white">
-                  <h3 className="flex items-center gap-[0.55vw] text-[0.9vw] font-semibold text-[#374151] mb-[0.6vw]">
-                    <Icon icon="ix:about-filled" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                <div className="px-[1.2vw] py-[0.9vw] border-b border-gray-100 bg-white">
+                  <h3 className="flex items-center gap-[0.55vw] text-[0.82vw] font-medium text-[#374151] mb-[0.5vw]">
+                    <Icon icon="ix:about-filled" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
                     <span>About</span>
                   </h3>
-                  <p className="text-[0.78vw] text-[#555962] leading-[1.65] font-normal whitespace-pre-wrap">
+                  <p className="text-[0.74vw] text-[#555962] leading-[1.6] font-normal whitespace-pre-wrap">
                     {user.about || 'No about info provided yet.'}
                   </p>
                 </div>
 
                 {/* Contact Number */}
                 {user.visibilitySettings?.showContact !== false && (
-                  <div className="px-[1.2vw] py-[1.2vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
-                    <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.6vw]">
-                      <Icon icon="mdi:call" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                  <div className="px-[1.2vw] py-[1vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
+                    <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.5vw]">
+                      <Icon icon="mdi:call" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
                       <span>Contact Number</span>
                     </h3>
-                    <div className="flex flex-col gap-[0.3vw] text-[0.82vw] text-[#4b5563] font-normal tracking-wide pl-[0.1vw]">
+                    <div className="flex flex-col gap-[0.25vw] text-[0.75vw] text-[#4b5563] font-normal tracking-wide pl-[0.1vw]">
                       {user.mobile || user.contact1 ? (
                         <div>
                           {user.contact1Label && user.contact1Label !== 'Contact 1' && (
-                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact1Label}:</span>
+                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact1Label}:</span>
                           )}
                           <span>{(user.contact1CountryCode || user.countryCode || '+91')} {(user.contact1 || user.mobile)}</span>
                         </div>
@@ -786,7 +818,7 @@ const Profile = () => {
                       {user.contact2 && (
                         <div>
                           {user.contact2Label && user.contact2Label !== 'Contact 2' && (
-                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact2Label}:</span>
+                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact2Label}:</span>
                           )}
                           <span>{(user.contact2CountryCode || '+91')} {user.contact2}</span>
                         </div>
@@ -794,7 +826,7 @@ const Profile = () => {
                       {user.contact3 && (
                         <div>
                           {user.contact3Label && user.contact3Label !== 'Contact 3' && (
-                            <span className="font-semibold text-gray-700 mr-[0.3vw]">{user.contact3Label}:</span>
+                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact3Label}:</span>
                           )}
                           <span>{(user.contact3CountryCode || '+91')} {user.contact3}</span>
                         </div>
@@ -804,19 +836,19 @@ const Profile = () => {
                 )}
 
                 {/* Professional Details Section matching screenshot */}
-                <div className="px-[1.2vw] py-[1.2vw] border-b border-gray-100 bg-white">
-                  <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.8vw]">
-                    <Icon icon="material-symbols-light:home-work-rounded" className="w-[1.3vw] h-[1.3vw] text-[#4b5563]" />
+                <div className="px-[1.2vw] py-[1vw] border-b border-gray-100 bg-white">
+                  <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.7vw]">
+                    <Icon icon="material-symbols-light:home-work-rounded" className="w-[1.2vw] h-[1.2vw] text-[#4b5563]" />
                     <span>Professional Details</span>
                   </h3>
-                  <div className="text-[0.78vw] flex flex-col gap-[0.55vw] text-[#555962]">
+                  <div className="text-[0.74vw] flex flex-col gap-[0.45vw] text-[#555962]">
                     <div>
-                      <span className="font-semibold text-[#22262e]">Profile : </span>
+                      <span className="font-medium text-[#22262e]">Profile : </span>
                       <span>{user.profileType || 'Individual'}</span>
                     </div>
                     {(user.agencyName || user.businessName || user.companyName) && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">
+                        <span className="font-medium text-[#22262e]">
                           {user.profileType === 'Company'
                             ? 'Company / Organization : '
                             : (user.profileType === 'Agency'
@@ -827,30 +859,30 @@ const Profile = () => {
                       </div>
                     )}
                     <div>
-                      <span className="font-semibold text-[#22262e]">Industry Type : </span>
+                      <span className="font-medium text-[#22262e]">Industry Type : </span>
                       <span>{user.industryType || user.industry || 'Software Development'}</span>
                     </div>
                     {user.profileType === 'Freelancer' && user.experience && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">Experience : </span>
+                        <span className="font-medium text-[#22262e]">Experience : </span>
                         <span>{user.experience}</span>
                       </div>
                     )}
                     {user.profileType === 'Agency' && user.teamSize && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">Team Size : </span>
+                        <span className="font-medium text-[#22262e]">Team Size : </span>
                         <span>{user.teamSize}</span>
                       </div>
                     )}
                     {user.profileType === 'Company' && user.companySize && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">Company Size : </span>
+                        <span className="font-medium text-[#22262e]">Company Size : </span>
                         <span>{user.companySize}</span>
                       </div>
                     )}
                     {(user.businessEmail || user.companyEmail) && user.visibilitySettings?.showContact !== false && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">
+                        <span className="font-medium text-[#22262e]">
                           {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') ? 'Business Gmail : ' : 'Company Gmail : '}
                         </span>
                         <span>{user.businessEmail || user.companyEmail}</span>
@@ -858,27 +890,27 @@ const Profile = () => {
                     )}
                     {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') && Array.isArray(user.specialization) && user.specialization.length > 0 && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">Specialization : </span>
+                        <span className="font-medium text-[#22262e]">Specialization : </span>
                         <span>{user.specialization.join(', ')}</span>
                       </div>
                     )}
-                    <div>
-                      <span className="font-semibold text-[#22262e]">Service/Expertise : </span>
-                      <span>
-                        {((Array.isArray(user.services) && user.services.length > 0)
-                          ? user.services
-                          : ((Array.isArray(user.specialization) && user.specialization.length > 0)
-                              ? user.specialization
-                              : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs'])
-                        ).join(', ')}
-                      </span>
-                    </div>
+                    {((Array.isArray(user.services) && user.services.length > 0) || (Array.isArray(user.skills) && user.skills.length > 0)) && (
+                      <div>
+                        <span className="font-medium text-[#22262e]">Service/Expertise : </span>
+                        <span>
+                          {((Array.isArray(user.services) && user.services.length > 0)
+                            ? user.services
+                            : user.skills
+                          ).join(', ')}
+                        </span>
+                      </div>
+                    )}
                     {user.visibilitySettings?.showContact !== false && Boolean(
                       (user.website && user.website.trim() !== '') ||
                       (user.socials?.website && typeof user.socials.website === 'string' && user.socials.website.trim() !== '')
                     ) && (
                       <div>
-                        <span className="font-semibold text-[#22262e]">
+                        <span className="font-medium text-[#22262e]">
                           {user.profileType === 'Company'
                             ? 'Company Website : '
                             : (user.profileType === 'Agency'
@@ -905,12 +937,12 @@ const Profile = () => {
 
                 {/* Address */}
                 {user.visibilitySettings?.showAddress !== false && (
-                  <div className="px-[1.2vw] py-[1.2vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
-                    <h3 className="flex items-center gap-[0.6vw] text-[0.92vw] font-semibold text-[#374151] mb-[0.7vw]">
-                      <Icon icon="carbon:location-company-filled" className="w-[1.25vw] h-[1.25vw] text-[#4b5563]" />
+                  <div className="px-[1.2vw] py-[1vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
+                    <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.6vw]">
+                      <Icon icon="carbon:location-company-filled" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
                       <span>Address</span>
                     </h3>
-                    <div className="text-[0.8vw] flex flex-col gap-[0.35vw] text-[#4b5563] leading-[1.5] font-normal pl-[0.1vw]">
+                    <div className="text-[0.74vw] flex flex-col gap-[0.3vw] text-[#4b5563] leading-[1.5] font-normal pl-[0.1vw]">
                       {(user.address1 || user.address2) ? (
                         <div>{[user.address1, user.address2].filter(Boolean).join(', ')}</div>
                       ) : null}
@@ -960,22 +992,17 @@ const Profile = () => {
           {/* Right Column (Buttons + Catalog) */}
           <div className="flex-1 relative h-full min-w-0">
             <div className="flex flex-col h-full w-full z-[45]">
-              {/* Header Area */}
-              <div className="pt-[1vw] pl-[1vw] pr-[1vw] pb-0 relative flex-shrink-0 z-[60]">
+              {/* Header Area: Title on Left, Action Buttons on Right in the SAME LINE */}
+              <div className="pt-[1.2vw] pl-[1.5vw] pr-[1.5vw] pb-[0.8vw] relative flex-shrink-0 z-[60] flex items-center justify-between border-b border-gray-100">
+                <div>
+                  <h2 className="text-[1.15vw] font-medium text-gray-800 tracking-tight leading-none">Edit Profile</h2>
+                  <p className="text-[0.72vw] text-gray-400 mt-[0.35vw]">Only your actions and activities will appear here.</p>
+                </div>
 
-                {/* Buttons Row with permanent sticky Cancel & Save Changes */}
-                <div className="flex justify-between items-center w-full relative z-[60]">
-                  <div className="flex items-center gap-[0.6vw]">
-                    <button
-                      type="button"
-                      className="px-[1.1vw] py-[0.55vw] text-[0.85vw] font-semibold rounded-[0.6vw] transition-all bg-white text-gray-900 border border-gray-200 shadow-sm cursor-default"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-
-                  {activeTab === 'Edit Profile' && editProfileActions && (
-                    <div className="flex items-center gap-[0.8vw]">
+                {/* Action Buttons: Hidden until user types/makes changes */}
+                <div className="flex items-center gap-[0.8vw] min-h-[2.4vw]">
+                  {activeTab === 'Edit Profile' && editProfileActions?.isEdited && (
+                    <div className="flex items-center gap-[0.8vw] transition-all duration-200">
                       <button
                         type="button"
                         disabled={editProfileActions.isSaving}
@@ -995,7 +1022,10 @@ const Profile = () => {
                         ) : (
                           <Check className="w-[1vw] h-[1vw] text-white" strokeWidth={2.5} />
                         )}
-                        {editProfileActions.isSaving ? 'Saving...' : 'Save Changes'}
+                        {editProfileActions.isSaving
+                          ? (editProfileActions.isAlreadySaved ? 'Updating...' : 'Saving...')
+                          : (editProfileActions.isAlreadySaved ? 'Update Changes' : 'Save Changes')
+                        }
                       </button>
                     </div>
                   )}
@@ -1003,7 +1033,7 @@ const Profile = () => {
               </div>
 
               {/* Content Area */}
-              <div id="main-scroll-container" className={`flex-1 pl-[1.5vw] pb-[2vw] custom-scrollbar ${isChildScrollable ? 'overflow-y-auto pr-[1.5vw]' : 'overflow-hidden pr-[1.8vw]'}`}>
+              <div id="main-scroll-container" className={`flex-1 pl-[1.5vw] pt-[1.2vw] pb-[2vw] custom-scrollbar ${isChildScrollable ? 'overflow-y-auto pr-[1.5vw]' : 'overflow-hidden pr-[1.8vw]'}`}>
                 {activeTab === 'Edit Profile' && (
                   <EditProfile
                     user={user}
@@ -1128,6 +1158,16 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      {/* Image Crop Modal for Avatar & Banner */}
+      <ImageCropModal
+        isOpen={cropModal.isOpen}
+        onClose={() => setCropModal(prev => ({ ...prev, isOpen: false, imageSrc: null }))}
+        imageSrc={cropModal.imageSrc}
+        cropType={cropModal.cropType}
+        title={cropModal.title}
+        aspectRatio={cropModal.cropType === 'banner' ? 8.38 : 1}
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 };

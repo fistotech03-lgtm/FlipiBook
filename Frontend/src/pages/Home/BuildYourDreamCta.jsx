@@ -11,13 +11,13 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
   };
 
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.2 }} transition={{ duration: 0.8 }} className="relative w-full bg-transparent font-poppins pt-12 pb-8 sm:pt-14 sm:pb-10 lg:pt-[4vw] lg:pb-[2.5vw] px-6 sm:px-12 lg:px-[4.5vw] overflow-hidden flex items-center justify-center min-h-[200px] lg:min-h-[12vw]">
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="relative w-full bg-transparent font-poppins pt-12 pb-8 sm:pt-14 sm:pb-10 lg:pt-[4vw] lg:pb-[2.5vw] px-6 sm:px-12 lg:px-[4.5vw] overflow-hidden flex items-center justify-center min-h-[200px] lg:min-h-[12vw]">
       
       {/* Watermark IDC in background - Centered horizontally and vertically */}
       <motion.span
         initial={{ opacity: 0, scale: 0.85 }}
         whileInView={{ opacity: 0.64, scale: 1 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
         transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
         style={idcGradientStyle}
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[26vw] sm:text-[22vw] md:text-[19vw] lg:text-[17vw] font-black select-none pointer-events-none z-0 tracking-tighter leading-none inline-block whitespace-nowrap"
@@ -31,8 +31,8 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
         <motion.div
           initial={{ opacity: 0, x: -35 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col text-center md:text-left items-center md:items-start"
         >
           <div className="flex items-center gap-3.5 mb-2 sm:mb-2.5 lg:mb-[0.6vw]">
@@ -42,13 +42,13 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
             <motion.div
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
-              viewport={{ once: false }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="hidden sm:block w-24 md:w-32 lg:w-[8vw] h-[1.5px] lg:h-[0.1vw] bg-[#d1d5db] origin-left"
             />
           </div>
 
-          <h2 className="text-2xl sm:text-4xl lg:text-[2.8vw] font-extrabold tracking-tight leading-tight">
+          <h2 className="text-[34px] sm:text-4xl lg:text-[2.8vw] font-extrabold tracking-tight leading-tight">
             <span className="text-[#000000]">I</span>
             <span className="text-[#454545]">nteractive </span>
             <span className="text-[#000000]">D</span>
@@ -62,8 +62,8 @@ export default function BuildYourDreamCta({ onOpenCreateModal }) {
         <motion.div
           initial={{ opacity: 0, x: 35 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
           className="flex flex-col items-center md:items-end text-center md:text-right space-y-4 lg:space-y-[1vw] max-w-[420px] lg:max-w-[28vw]"
         >
           <p className="text-xs sm:text-[15px] lg:text-[1.05vw] text-[#444444] font-normal leading-relaxed">

@@ -14,6 +14,10 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    displayName: {
+      type: String,
+      default: ''
+    },
     picture: {
       type: String,
       default: null
@@ -39,6 +43,10 @@ const profileSchema = new mongoose.Schema(
     mobile: {
       type: String,
       default: ''
+    },
+    countryCode: {
+      type: String,
+      default: '+91'
     },
     company_logo_url: {
       type: String,
@@ -99,6 +107,12 @@ const profileSchema = new mongoose.Schema(
       facebook: { type: String, default: '' },
       whatsapp: { type: String, default: '' }
     },
+    visibilitySettings: {
+      showInExplore: { type: Boolean, default: true },
+      showContact: { type: Boolean, default: true },
+      showAddress: { type: Boolean, default: true },
+      showSocial: { type: Boolean, default: true }
+    },
     followers: {
       type: [String],
       default: []
@@ -109,7 +123,8 @@ const profileSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    strict: false
   }
 );
 

@@ -19,6 +19,7 @@ const CUSTOMIZED_EDITOR_SERVICE_URL = process.env.CUSTOMIZED_EDITOR_SERVICE_URL 
 const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http://127.0.0.1:5006';
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://127.0.0.1:5008';
+const ADMIN_SERVICE_URL = process.env.ADMIN_SERVICE_URL || 'http://127.0.0.1:5009';
 
 // Global Middleware
 const allowedOrigins = [
@@ -527,11 +528,51 @@ app.use(
   })
 );
 
-// Proxy /api/profile requests to MyFlipibook Service
+// Proxy Bookshelf endpoints to MyFlipibook Service
+['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf'].forEach((shelfEndpoint) => {
+  app.use(
+    `/api/profile${shelfEndpoint}`,
+    createProxyMiddleware({
+      target: `${MYFLIPIBOOK_SERVICE_URL}/api/profile${shelfEndpoint}`,
+      changeOrigin: true,
+      xfwd: true,
+      timeout: 300000,
+      proxyTimeout: 300000,
+      cookieDomainRewrite: '',
+      cookiePathRewrite: '/',
+      on: {
+        proxyReq: (proxyReq, req) => {
+          const clientIp =
+            req.headers['cf-connecting-ip'] ||
+            req.headers['x-real-ip'] ||
+            (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+            req.socket?.remoteAddress ||
+            req.ip;
+
+          if (clientIp) {
+            proxyReq.setHeader('x-client-ip', clientIp);
+            proxyReq.setHeader('x-real-ip', clientIp);
+          }
+        },
+        error: (err, req, res) => {
+          console.error('[API Gateway] Proxy error to myflipibook-service for shelf:', err.message);
+          if (!res.headersSent) {
+            res.status(502).json({
+              success: false,
+              message: 'Bookshelf Service unavailable. Please ensure myflipibook service is running.'
+            });
+          }
+        }
+      }
+    })
+  );
+});
+
+// Proxy /api/profile requests to User Service
 app.use(
   '/api/profile',
   createProxyMiddleware({
-    target: `${MYFLIPIBOOK_SERVICE_URL}/api/profile`,
+    target: `${USER_SERVICE_URL}/api/profile`,
     changeOrigin: true,
     xfwd: true,
     timeout: 300000,
@@ -553,11 +594,11 @@ app.use(
         }
       },
       error: (err, req, res) => {
-        console.error('[API Gateway] Proxy error to myflipibook-service for profile:', err.message);
+        console.error('[API Gateway] Proxy error to user-service for profile:', err.message);
         if (!res.headersSent) {
           res.status(502).json({
             success: false,
-            message: 'Profile Service unavailable. Please ensure myflipibook service is running.'
+            message: 'Profile Service unavailable. Please ensure user-service is running.'
           });
         }
       }
@@ -849,11 +890,11 @@ app.use(
   })
 );
 
-// Proxy /api/user and /api/users requests to User Service (port 5008)
+// Proxy /api/user requests to User Service (port 5008)
 app.use(
-  ['/api/user', '/api/users'],
+  '/api/user',
   createProxyMiddleware({
-    target: USER_SERVICE_URL,
+    target: `${USER_SERVICE_URL}/api/user`,
     changeOrigin: true,
     xfwd: true,
     cookieDomainRewrite: '',
@@ -873,11 +914,155 @@ app.use(
         }
       },
       error: (err, req, res) => {
-        console.error('[API Gateway] Proxy error to user-service:', err.message);
+        console.error('[API Gateway] Proxy error to user-service (/api/user):', err.message);
         if (!res.headersSent) {
           res.status(502).json({
             success: false,
             message: 'User Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/users requests to User Service (port 5008)
+app.use(
+  '/api/users',
+  createProxyMiddleware({
+    target: `${USER_SERVICE_URL}/api/users`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to user-service (/api/users):', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'User Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/forum requests to User Service (port 5008)
+app.use(
+  '/api/forum',
+  createProxyMiddleware({
+    target: `${USER_SERVICE_URL}/api/forum`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to user-service (/api/forum):', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Forum Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/tickets requests to User Service (port 5008)
+app.use(
+  '/api/tickets',
+  createProxyMiddleware({
+    target: `${USER_SERVICE_URL}/api/tickets`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to user-service (/api/tickets):', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Support Ticket Service unavailable. Please ensure user service is running.'
+          });
+        }
+      }
+    }
+  })
+);
+
+// Proxy /api/admin requests to Admin Service (port 5009)
+app.use(
+  '/api/admin',
+  createProxyMiddleware({
+    target: `${ADMIN_SERVICE_URL}/api/admin`,
+    changeOrigin: true,
+    xfwd: true,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to admin-service:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Admin Service unavailable. Please ensure admin service is running.'
           });
         }
       }
@@ -901,6 +1086,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /textures -> ${THREED_EDITOR_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/payment -> ${PAYMENT_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/user -> ${USER_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/forum -> ${USER_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/admin -> ${ADMIN_SERVICE_URL}`);
 });
 
 module.exports = app;

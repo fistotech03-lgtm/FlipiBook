@@ -3,13 +3,17 @@ import { useOutletContext } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 import { getAvatarColor } from './SettingsLayout';
+import { useAuth } from '../../context/AuthContext';
+import { getInitialUser } from '../../utils/authUtils';
 
 const Account = () => {
   const context = useOutletContext();
-  const user = context?.user || {};
+  const { user: authUser } = useAuth();
+  const initUser = getInitialUser();
+  const user = context?.user || authUser || initUser || {};
 
-  const userEmail = user?.emailId || user?.email || 'luffyonepiece@gmail.com';
-  const userName = user?.name || (userEmail ? userEmail.split('@')[0] : 'Luffy');
+  const userEmail = user?.emailId || user?.email || (authUser?.emailId || authUser?.email || initUser?.emailId || initUser?.email || '');
+  const userName = user?.displayName || user?.name || authUser?.displayName || authUser?.name || (userEmail ? userEmail.split('@')[0] : 'User');
   const avatarSrc = user?.picture && user.picture !== 'color_only'
     ? (user.picture.startsWith('blob:') || user.picture.startsWith('data:') ? user.picture : resolveUploadsPath(user.picture))
     : null;

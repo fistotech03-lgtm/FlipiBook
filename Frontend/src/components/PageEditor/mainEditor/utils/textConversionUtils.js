@@ -106,74 +106,78 @@ export const convertTextToForeignObject = (el) => {
     } else if (rawAlign && ['left', 'center', 'right', 'justify'].includes(rawAlign)) {
       finalAlign = rawAlign;
     } else {
-      // Multi-line tspan geometry analysis: detect centered/right lines in templates exported without text-anchor
+      // Accurate Line-by-Line Geometric Analysis:
+      // Group tspans by baseline Y coordinate so multi-word tspans on the same line are accurately combined
       if (tspans.length > 1) {
-        const linePositions = [];
-        tspans.forEach(t => {
-          const xAttr = t.getAttribute('x');
-          if (xAttr !== null && xAttr !== '') {
-            const lx = parseFloat(xAttr);
-            let lw = 0;
-            try {
-              lw = t.getComputedTextLength ? t.getComputedTextLength() : (t.getBBox ? t.getBBox().width : 0);
-            } catch (e) {}
-            if (!isNaN(lx) && lw > 0) {
-              linePositions.push({ startX: lx, width: lw, midX: lx + lw / 2, endX: lx + lw });
-            }
+        const lines = [];
+        let curLine = [];
+        let lastY = null;
+
+        tspans.forEach((t, i) => {
+          const y = t.getAttribute('y');
+          const dy = t.getAttribute('dy');
+          const isNewLine = i > 0 && (dy || (y !== null && lastY !== null && Math.abs(parseFloat(y) - parseFloat(lastY)) > 2));
+          if (isNewLine) {
+            if (curLine.length > 0) lines.push(curLine);
+            curLine = [];
           }
+          curLine.push(t);
+          if (y !== null) lastY = parseFloat(y);
         });
+        if (curLine.length > 0) lines.push(curLine);
 
-        if (linePositions.length > 1) {
-          const first = linePositions[0];
-          const isCentered = linePositions.every(l => Math.abs(l.midX - first.midX) < 4);
-          const isRight = linePositions.every(l => Math.abs(l.endX - first.endX) < 4);
-          const isSameLeft = linePositions.every(l => Math.abs(l.startX - first.startX) < 4);
+        if (lines.length > 1) {
+          const lineBounds = [];
+          lines.forEach(lineTspans => {
+            const first = lineTspans[0];
+            const last = lineTspans[lineTspans.length - 1];
+            const startX = parseFloat(first.getAttribute('x'));
+            let lastW = 0;
+            try {
+              lastW = last.getComputedTextLength ? last.getComputedTextLength() : (last.getBBox ? last.getBBox().width : 0);
+            } catch (e) {}
+            const endX = parseFloat(last.getAttribute('x')) + lastW;
+            if (!isNaN(startX) && !isNaN(endX) && endX >= startX) {
+              lineBounds.push({ startX, endX, midX: (startX + endX) / 2 });
+            }
+          });
 
-          if (isCentered && !isSameLeft) {
-            finalAlign = 'center';
-          } else if (isRight && !isSameLeft) {
-            finalAlign = 'right';
-          }
-        }
-      }
+          if (lineBounds.length > 1) {
+            const first = lineBounds[0];
+            const isSameLeft = lineBounds.every(l => Math.abs(l.startX - first.startX) < 3);
+            const isCentered = lineBounds.every(l => Math.abs(l.midX - first.midX) < 3);
+            const isRight = lineBounds.every(l => Math.abs(l.endX - first.endX) < 3);
 
-      // Container or page centering check for templates
-      if (finalAlign === 'left') {
-        const svgRoot = el.ownerSVGElement;
-        const viewBox = svgRoot?.viewBox?.baseVal;
-        const svgW = viewBox && viewBox.width > 0 ? viewBox.width : (parseFloat(svgRoot?.getAttribute('width')) || 0);
-        const textMidX = bbox.x + bbox.width / 2;
-
-        if (svgW > 0 && Math.abs(textMidX - (svgW / 2)) < 5) {
-          finalAlign = 'center';
-        } else {
-          const parentGroup = el.parentElement;
-          if (parentGroup && parentGroup.tagName.toLowerCase() !== 'svg') {
-            const siblingRect = Array.from(parentGroup.children).find(c =>
-              c !== el && (c.tagName.toLowerCase() === 'rect' || c.getAttribute('data-type') === 'shape')
-            );
-            if (siblingRect) {
-              try {
-                const sBBox = siblingRect.getBBox();
-                const sMidX = sBBox.x + sBBox.width / 2;
-                if (Math.abs(textMidX - sMidX) < 4 && bbox.width < sBBox.width * 0.95) {
-                  finalAlign = 'center';
-                }
-              } catch (e) {}
+            if (isSameLeft) {
+              finalAlign = 'left';
+            } else if (isCentered && !isSameLeft) {
+              finalAlign = 'center';
+            } else if (isRight && !isSameLeft) {
+              finalAlign = 'right';
             }
           }
         }
       }
     }
 
+    const isParagraph = tspans.length > 1 || (el.textContent && el.textContent.includes('\n'));
+    const defaultSizing = isParagraph ? 'auto-height' : 'auto-width';
+    const sizingMode = el.getAttribute('data-sizing-mode') || defaultSizing;
+
+    // Buffer width prevents subpixel font kerning from wrapping lines prematurely
+    const widthBuffer = isParagraph ? 8 : 4;
+    const foWidth = Math.max(Math.ceil(bbox.width) + widthBuffer, 10);
+    const foHeight = Math.max(Math.ceil(bbox.height) + 4, 10);
+
     fo.setAttribute('data-auto-wrap', 'true');
     fo.setAttribute('data-type', 'text');
+    fo.setAttribute('data-sizing-mode', sizingMode);
+    fo.setAttribute('data-text-align', finalAlign);
     fo.setAttribute('x', bbox.x);
     fo.setAttribute('y', bbox.y);
-    fo.setAttribute('width', Math.max(Math.ceil(bbox.width) + 2, 10));
-    fo.setAttribute('height', Math.max(Math.ceil(bbox.height) + 2, 10));
+    fo.setAttribute('width', foWidth);
+    fo.setAttribute('height', foHeight);
     fo.setAttribute('overflow', 'visible');
-    fo.setAttribute('data-text-align', finalAlign);
 
     // Preserve transform if any
     const transform = el.getAttribute('transform');
@@ -181,7 +185,8 @@ export const convertTextToForeignObject = (el) => {
 
     const div = document.createElement('div');
     const isScrollable = el.getAttribute('data-scrollable') === 'true';
-    div.style.width = '100%';
+    div.style.width = sizingMode === 'auto-width' ? 'max-content' : '100%';
+    div.style.height = '100%';
     div.style.minHeight = '100%';
     if (isScrollable) {
       div.style.overflowY = 'auto';
@@ -198,17 +203,11 @@ export const convertTextToForeignObject = (el) => {
       div.style.textAlignLast = 'left';
       div.style.textJustify = 'inter-word';
     }
-    div.style.lineHeight = el.getAttribute('data-line-height') || '1.2';
     div.style.letterSpacing = el.style.letterSpacing || el.getAttribute('letter-spacing') || comp.letterSpacing || 'normal';
     div.style.wordSpacing = 'normal';
     div.style.wordBreak = 'normal';
-    div.style.overflowWrap = 'break-word';
-
-    // Auto-width for single-line text (point text), auto-height for paragraphs
-    const defaultSizing = tspans.length > 1 ? 'auto-height' : 'auto-width';
-    const sizingMode = el.getAttribute('data-sizing-mode') || defaultSizing;
-    fo.setAttribute('data-sizing-mode', sizingMode);
-    div.style.whiteSpace = sizingMode === 'auto-width' ? 'nowrap' : 'pre-wrap';
+    div.style.overflowWrap = sizingMode === 'auto-width' ? 'normal' : 'break-word';
+    div.style.whiteSpace = sizingMode === 'auto-width' ? 'pre' : 'pre-wrap';
     div.style.padding = '0px';
     div.style.margin = '0';
     div.style.boxSizing = 'border-box';
@@ -218,7 +217,9 @@ export const convertTextToForeignObject = (el) => {
     div.style.pointerEvents = 'none';
 
     if (!isScrollable) {
-      div.style.display = 'block';
+      div.style.display = 'flex';
+      div.style.flexDirection = 'column';
+      div.style.justifyContent = 'center';
     }
 
     const escapeHtml = (str) => {
@@ -263,10 +264,15 @@ export const convertTextToForeignObject = (el) => {
         linesData.push(currentLineTspans);
       }
 
-      // Preserve exact line height from SVG baseline spacing
+      // Preserve proportional line-height ratio
       if (!el.hasAttribute('data-line-height') && lineHeights.length > 0) {
         const avgPx = lineHeights.reduce((a, b) => a + b, 0) / lineHeights.length;
-        div.style.lineHeight = `${avgPx.toFixed(2)}px`;
+        const ratio = parseFloat((avgPx / fontSize).toFixed(2));
+        div.style.lineHeight = String(ratio);
+        fo.setAttribute('data-line-height', String(ratio));
+      } else {
+        const lh = el.getAttribute('data-line-height') || '1.2';
+        div.style.lineHeight = lh;
       }
 
       let htmlContent = '';
@@ -280,7 +286,7 @@ export const convertTextToForeignObject = (el) => {
           }
           lineText += str;
         });
-        htmlContent += (i > 0 ? '<br/>' : '') + escapeHtml(lineText);
+        htmlContent += (i > 0 ? '<br/>' : '') + escapeHtml(lineText.trimEnd());
       }
       div.innerHTML = htmlContent;
     } else {

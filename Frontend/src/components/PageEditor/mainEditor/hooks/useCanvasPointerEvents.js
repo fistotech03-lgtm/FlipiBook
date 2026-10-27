@@ -618,14 +618,16 @@ export const useCanvasPointerEvents = ({
         // Scale the local x,y,width,height inversely so it renders at the mouse cursor
         fo.setAttribute('x', pt.x / ptToMmScale);
         fo.setAttribute('y', pt.y / ptToMmScale);
-        fo.setAttribute('width', '170');
-        fo.setAttribute('height', '30');
+        fo.setAttribute('width', '190');
+        fo.setAttribute('height', '38');
         fo.setAttribute('transform', `matrix(${ptToMmScale} 0 0 ${ptToMmScale} 0 0)`);
         fo.setAttribute('fill', '#000000');
         fo.setAttribute('stroke', 'none');
         fo.setAttribute('stroke-width', '0');
         fo.setAttribute('font-family', "'Outfit', sans-serif");
-        fo.setAttribute('font-size', '24');
+        fo.setAttribute('font-size', '24pt');
+        fo.setAttribute('font-weight', 'normal');
+        fo.setAttribute('data-font-weight', 'normal');
         fo.setAttribute('letter-spacing', '0');
         fo.setAttribute('data-auto-wrap', 'false');
         fo.setAttribute('data-sizing-mode', 'auto-width');
@@ -633,19 +635,24 @@ export const useCanvasPointerEvents = ({
 
         const div = document.createElement('div');
         div.style.width = 'max-content'; // Allows scrollWidth to perfectly match text
+        div.style.height = '100%';
         div.style.minHeight = '100%';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.justifyContent = 'center';
         div.style.color = '#000000';
         div.style.fontFamily = "'Outfit', sans-serif";
-        div.style.fontSize = '24px';
+        div.style.fontSize = '24pt';
         div.style.fontWeight = 'normal';
+        div.setAttribute('data-font-weight', 'normal');
         div.style.fontStyle = 'normal';
         div.style.textDecoration = 'none';
         div.style.textAlign = 'left';
         div.style.lineHeight = '1.2';
         div.style.letterSpacing = '0px';
         div.style.wordBreak = 'normal';
-        div.style.overflowWrap = 'anywhere';
-        div.style.whiteSpace = 'nowrap'; // Auto-width defaults to no wrapping
+        div.style.overflowWrap = 'normal';
+        div.style.whiteSpace = 'pre'; // 'pre' ensures text never automatically wraps or breaks down unless user presses Enter
         div.style.padding = '0px';
         div.style.margin = '0';
         div.style.boxSizing = 'border-box';

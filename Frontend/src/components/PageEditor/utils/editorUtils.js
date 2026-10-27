@@ -309,6 +309,23 @@ export const parseLayersFromSVG = (element) => {
       if (child.classList.contains('svg-drop-shadow-caster')) return false;
       if (child.classList.contains('internal-crop-rect')) return false;
       if (child.classList.contains('internal-crop-pattern')) return false;
+      if (child.classList.contains('video-damage-rect')) return false;
+      if (child.classList.contains('internal-hit-rect')) return false;
+      if (child.getAttribute('data-is-dummy') === 'true') return false;
+      if (child.getAttribute('data-hit-rect') === 'true') return false;
+      if (child.getAttribute('id') === 'multi-selection-bounds') return false;
+      if (Array.from(child.classList).some(cls => cls.includes('damage-rect'))) return false;
+
+      // Filter out invisible dummy/compositor helper rects
+      if (child.tagName.toLowerCase() === 'rect') {
+        const fill = child.getAttribute('fill');
+        const stroke = child.getAttribute('stroke');
+        const pe = child.getAttribute('pointer-events');
+        const name = child.getAttribute('data-name');
+        if (fill === 'rgba(0,0,0,0.001)' || ((fill === 'transparent' || fill === 'none') && (!stroke || stroke === 'none') && !name && pe === 'none')) {
+          return false;
+        }
+      }
 
       const isEffectNode = Array.from(child.classList).some(cls =>
         cls.includes('-stroke-overlay') ||
@@ -577,6 +594,13 @@ export const applyStyleToActiveTextSelection = (elementId, attribute, value) => 
 
   const fo = document.getElementById(elementId);
   if (!fo) return false;
+
+  // If text is NOT actively in inline edit mode, styles must apply to the entire element!
+  if (fo.getAttribute('data-editing') !== 'true') {
+    window.__savedTextSelection = null;
+    return false;
+  }
+
   const contentDiv = fo.querySelector('[contenteditable="true"]') || fo.querySelector('.flipbook-text-scrollbar') || fo.firstElementChild;
   if (!contentDiv) return false;
 

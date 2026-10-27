@@ -128,7 +128,7 @@ export class EditCacheManager {
     const pageIndex = container ? container.getAttribute('data-page-index') : null;
     const overlay = pageIndex !== null ? document.getElementById(`highlight-overlay-${pageIndex}`) : null;
     const parentGroup = foTarget.closest('g');
-    const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-height';
+    const sizingMode = foTarget.getAttribute('data-sizing-mode') || 'auto-width';
 
     const currentX = parseFloat(foTarget.getAttribute('x')) || 0;
     const currentY = parseFloat(foTarget.getAttribute('y')) || 0;
@@ -167,19 +167,61 @@ export class EditCacheManager {
     const isScrollable = foTarget.getAttribute('data-scrollable') === 'true';
     if (isScrollable) return;
 
-    // Read Phase: single scrollHeight/scrollWidth read
-    const contentH = div.scrollHeight;
-    const contentW = div.scrollWidth;
+    const isAutoWidth = sizingMode === 'auto-width';
+    if (isAutoWidth) {
+      if (div.style.whiteSpace !== 'pre') {
+        div.style.setProperty('white-space', 'pre', 'important');
+      }
+      if (div.style.width !== 'max-content') {
+        div.style.setProperty('width', 'max-content', 'important');
+      }
+      div.style.setProperty('overflow-wrap', 'normal', 'important');
+    } else {
+      if (div.style.whiteSpace !== 'pre-wrap') {
+        div.style.setProperty('white-space', 'pre-wrap', 'important');
+      }
+      if (div.style.width !== '100%') {
+        div.style.setProperty('width', '100%', 'important');
+      }
+      div.style.setProperty('overflow-wrap', 'break-word', 'important');
+    }
+
+    let contentH = div.scrollHeight;
+    let contentW = div.scrollWidth;
+
+    // Use Range measurement as ground truth for true rendered text bounds
+    try {
+      if (div.firstChild) {
+        const range = document.createRange();
+        range.selectNodeContents(div);
+        const rect = range.getBoundingClientRect();
+        if (rect && rect.width > 0) {
+          const ctm = foTarget.getScreenCTM();
+          if (ctm) {
+            const scaleX = Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b);
+            const scaleY = Math.sqrt(ctm.c * ctm.c + ctm.d * ctm.d);
+            if (scaleX > 0) {
+              const textW = rect.width / scaleX;
+              contentW = Math.max(contentW, textW);
+            }
+            if (scaleY > 0) {
+              const textH = rect.height / scaleY;
+              contentH = Math.max(contentH, textH);
+            }
+          }
+        }
+      }
+    } catch (e) {}
 
     let targetW = this.session.currentW;
     let targetH = this.session.currentH;
     let targetX = this.session.currentX;
     let dimensionChanged = false;
 
-    if (sizingMode === 'auto-width') {
+    if (isAutoWidth) {
       const widthDiff = contentW - this.session.currentW;
-      if (Math.abs(widthDiff) > 3) {
-        targetW = Math.max(contentW + 4, 10);
+      if (Math.abs(widthDiff) > 2) {
+        targetW = Math.max(Math.ceil(contentW) + 4, 10);
         const align = div.style.textAlign || foTarget.getAttribute('data-text-align') || 'left';
         if (align === 'center') {
           targetX = this.session.currentX - (widthDiff / 2);
@@ -192,7 +234,7 @@ export class EditCacheManager {
 
     if (sizingMode !== 'fixed') {
       if (Math.abs(contentH - this.session.currentH) > 2) {
-        targetH = Math.max(contentH + 2, 10);
+        targetH = Math.max(Math.ceil(contentH) + 2, 10);
         dimensionChanged = true;
       }
     }
@@ -214,12 +256,11 @@ export class EditCacheManager {
       this.session.isDirty = true;
     }
 
-    // Overlay Redraw: Throttled to 10fps during typing, or instantaneous when forced
-    const now = performance.now();
-    const shouldSyncOverlay = forceOverlay || (dimensionChanged && (now - this.lastOverlaySync > this.overlaySyncThrottleMs));
+    // Real-time overlay sync: redraw immediately whenever dimension changes or forced
+    const shouldSyncOverlay = forceOverlay || dimensionChanged;
 
     if (shouldSyncOverlay && typeof onRedrawOverlay === 'function') {
-      this.lastOverlaySync = now;
+      this.lastOverlaySync = performance.now();
       this.syncOverlayHighlight(onRedrawOverlay);
     }
   }
@@ -231,6 +272,9 @@ export class EditCacheManager {
     if (!this.session || !this.session.isActive) return;
     const { foTarget, overlay, parentGroup } = this.session;
 
+    const isChild = !!(overlay?.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`) || document.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`));
+    const highlightType = isChild ? 'child-selected' : 'selected';
+
     if (overlay) {
       const oldSel = overlay.querySelector(`[id="overlay-poly-selected-${foTarget.id}"]`);
       if (oldSel) oldSel.remove();
@@ -238,7 +282,6 @@ export class EditCacheManager {
       if (oldChildSel) oldChildSel.remove();
     }
 
-    const highlightType = document.querySelector(`[id="overlay-poly-child-selected-${foTarget.id}"]`) ? 'child-selected' : 'selected';
     if (typeof redrawCallback === 'function') {
       redrawCallback(foTarget, highlightType);
 

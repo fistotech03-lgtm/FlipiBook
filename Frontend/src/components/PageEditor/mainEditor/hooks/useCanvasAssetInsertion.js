@@ -733,17 +733,7 @@ export const useCanvasAssetInsertion = ({
       videoGroup.setAttribute('data-name', 'Video Group');
       videoGroup.setAttribute('data-is-video-group', 'true');
 
-      // Concrete SVG graphic shape covering bounds to prevent Chromium compositor trailing glitch
-      const boundsRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      boundsRect.setAttribute('class', 'video-damage-rect');
-      boundsRect.setAttribute('x', initialX.toString());
-      boundsRect.setAttribute('y', initialY.toString());
-      boundsRect.setAttribute('width', displayWidth.toString());
-      boundsRect.setAttribute('height', displayHeight.toString());
-      boundsRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
-      boundsRect.setAttribute('stroke', 'none');
-      boundsRect.setAttribute('pointer-events', 'none');
-      videoGroup.appendChild(boundsRect);
+
 
       const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
       fo.id = foId;

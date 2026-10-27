@@ -1,4 +1,4 @@
-const Plan = require('../models/Plan');
+const Plan = require('../models/plan');
 const { DEFAULT_PLANS } = require('../config/defaultPlans');
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getVisualBBox, getCanvasBounds } from '../mainEditor/utils/geometryUtils';
 import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, ChevronRight, Upload, Link, Check, FileText, Video } from 'lucide-react';
 import { Icon } from '@iconify/react';
@@ -495,7 +495,7 @@ const RightSidebar = ({
     });
   };
 
-  const selectedElementProps = (() => {
+  const selectedElementProps = useMemo(() => {
     if (!selectedLayerId) return null;
     const page = pages[activePageIndex];
     if (page && page.html) {
@@ -820,7 +820,19 @@ const RightSidebar = ({
       }
     }
     return null;
-  })();
+  }, [selectedLayerId, activePageIndex, pages[activePageIndex]?.html]);
+
+  const selectedTextElement = useMemo(() => {
+    if (!selectedLayerId) return null;
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const el = editorDoc.getElementById(selectedLayerId);
+    if (!el) return null;
+    const tag = el.tagName?.toLowerCase();
+    if (tag === 'foreignobject') {
+      return el.querySelector('[contenteditable], div, p, span') || el;
+    }
+    return el;
+  }, [selectedLayerId]);
 
   const isDimensionDisabled = !selectedElementProps || selectedElementProps.isPdfBackground || activeTopTool === 'interaction' || activeTopTool === 'animation';
 
@@ -1414,17 +1426,7 @@ const RightSidebar = ({
                         />
                       ) : selectedElementProps?.isText ? (
                         <TextEditor
-                          selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            const el = editorDoc.getElementById(selectedLayerId);
-                            if (!el) return null;
-                            const tag = el.tagName?.toLowerCase();
-                            // foreignObject wraps the actual HTML text container â€” drill into it
-                            if (tag === 'foreignobject') {
-                              return el.querySelector('[contenteditable], div, p, span') || el;
-                            }
-                            return el;
-                          })()}
+                          selectedElement={selectedTextElement}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
                             if (typeof newHtml === 'string') {

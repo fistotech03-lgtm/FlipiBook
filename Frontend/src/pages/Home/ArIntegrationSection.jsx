@@ -8,7 +8,7 @@ export default function ArIntegrationSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
       className="relative w-full bg-white font-poppins overflow-hidden"
     >
@@ -22,8 +22,8 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.3 }}
-            transition={{ duration: 0.6 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="flex items-center gap-2.5 sm:gap-4 mb-2.5 sm:mb-4 lg:mb-[2.2vw]"
           >
             <span className="text-[10px] sm:text-[13px] lg:text-[0.82vw] font-semibold tracking-[0.22em] text-[#35363A] uppercase">
@@ -36,13 +36,13 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ opacity: 0, x: -35 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
           >
-            <h2 className="text-[26px] sm:text-[44px] md:text-[48px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
-              <span className="block">See Products</span>
-              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Real Space</span>
+            <h2 className="text-[34px] xs:text-[36px] sm:text-[45px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
+              <span className="block">See Your Products</span>
+              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Your Space</span>
             </h2>
           </motion.div>
 
@@ -50,8 +50,8 @@ export default function ArIntegrationSection() {
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-20 sm:w-36 lg:w-[12vw] h-[1px] bg-[#d2d5d8] mb-2 sm:mb-3.5 lg:mb-[1.8vw] origin-left"
           ></motion.div>
 
@@ -59,12 +59,29 @@ export default function ArIntegrationSection() {
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[3.2vw] text-left"
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[2vw] text-left"
           >
-            Bring your products to life with AR. Scan the QR code from your flipbook and view 3D models in your space.
+            Help customers visualize your products in their own surroundings. Scan the QR code in your FlipiBook catalogue to place and explore a 3D product model using augmented reality.
           </motion.p>
+
+          {/* CTA Button: Try the AR Experience */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-6 sm:mb-7 lg:mb-[2.6vw]"
+          >
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 bg-[#EC5137] hover:bg-[#d8442c] text-white rounded-lg text-xs sm:text-sm lg:text-[0.88vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+            >
+              <span>Try the AR Experience</span>
+              <Icon icon="lucide:arrow-right" className="w-4 h-4 lg:w-[1vw] lg:h-[1vw]" />
+            </button>
+          </motion.div>
 
           {/* 5. Three Circular Badges Row: For Tablet (sm to lg), icon is placed to the RIGHT of text (flex-row-reverse). Mobile & Desktop keep standard vertical stack */}
           <div className="flex items-start justify-start gap-4 sm:gap-6 md:gap-8 lg:gap-[2.6vw] w-full">
@@ -73,8 +90,8 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: 0.25 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.85, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >
               <div
@@ -97,8 +114,8 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: 0.35 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >
               <div
@@ -121,8 +138,8 @@ export default function ArIntegrationSection() {
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: 0.45 }}
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.85, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
             >
               <div

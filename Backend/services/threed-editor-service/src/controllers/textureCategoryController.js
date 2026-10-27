@@ -1,5 +1,5 @@
-const TextureCategory = require('../models/TextureCategory');
-const Texture = require('../models/Texture');
+const TextureCategory = require('../models/textureCategory');
+const Texture = require('../models/texture');
 
 /**
  * GET /api/textures/categories/get

@@ -79,21 +79,21 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, step = 1, 
 };
 
 const fontFamilies = [
-  'Inter', 'Poppins', 'Roboto', 'Bangers', 'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
+  'Outfit', 'Inter', 'Poppins', 'Roboto', 'Bangers', 'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
   'Helvetica', 'Open Sans', 'Lato', 'Montserrat',
   'Playfair Display', 'Oswald', 'Merriweather',
   'Public Sans', 'Lora', 'Cabin', 'Satisfy'
 ];
 
 const fontWeights = [
-  { name: 'Thin', value: '100' },
-  { name: 'Light', value: '300' },
-  { name: 'Regular', value: '400' },
-  { name: 'Medium', value: '500' },
-  { name: 'Semi Bold', value: '600' },
-  { name: 'Bold', value: '700' },
-  { name: 'Extra Bold', value: '800' },
-  { name: 'Black', value: '900' }
+  { name: 'Thin', value: 'thin' },
+  { name: 'Light', value: 'light' },
+  { name: 'Regular', value: 'normal' },
+  { name: 'Medium', value: 'medium' },
+  { name: 'Semi Bold', value: 'semibold' },
+  { name: 'Bold', value: 'bold' },
+  { name: 'Extra Bold', value: 'extrabold' },
+  { name: 'Black', value: 'black' }
 ];
 
 const fontSizes = [14, 16, 18, 20, 24, 28, 32, 34, 36, 40, 48, 50, 56, 64, 72, 84, 96];
@@ -313,7 +313,22 @@ const extractElementProperties = (selectedElement, selectedTextId) => {
     const fwMatch = styleTag?.textContent?.match(/font-weight:\s*([^;}\s]+)/i);
     if (fwMatch) fontWeight = fwMatch[1];
   }
-  fontWeight = fontWeight || '800';
+  const normalizeWeight = (w) => {
+    if (!w) return 'normal';
+    const s = String(w).toLowerCase().trim();
+    const map = {
+      '100': 'thin', 'thin': 'thin',
+      '200': 'light', '300': 'light', 'light': 'light',
+      '400': 'normal', 'normal': 'normal', 'regular': 'normal',
+      '500': 'medium', 'medium': 'medium',
+      '600': 'semibold', 'semibold': 'semibold', 'semi bold': 'semibold',
+      '700': 'bold', 'bold': 'bold',
+      '800': 'extrabold', 'extrabold': 'extrabold', 'extra bold': 'extrabold',
+      '900': 'black', 'black': 'black'
+    };
+    return map[s] || 'normal';
+  };
+  fontWeight = normalizeWeight(fontWeight);
 
   // Font Size extraction
   let fontSize = parseInt(selectedElement.getAttribute('data-font-size'), 10) || 0;
@@ -758,29 +773,38 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
 
     selectedElement.setAttribute('data-font-weight', val);
 
+    const numericVal = {
+      thin: '100', light: '300', normal: '400', medium: '500',
+      semibold: '600', bold: '700', extrabold: '800', black: '900'
+    }[val] || val;
+
     const texts = getTargetTexts();
     texts.forEach(text => {
       text.setAttribute('font-weight', val);
-      text.style.fontWeight = val;
+      text.setAttribute('data-font-weight', val);
+      text.style.fontWeight = numericVal;
       const div = text.querySelector('div');
-      if (div) div.style.fontWeight = val;
+      if (div) {
+        div.style.fontWeight = numericVal;
+        div.setAttribute('data-font-weight', val);
+      }
     });
 
     const spans = Array.from(selectedElement.querySelectorAll('span.slide, span.char, .motion-text-content, .motion-text-subcontent, .cyber-text, .flipi-text-a, .flipi-text-b, .box-title-a, .box-title-b, .yt-title-text'));
     spans.forEach(span => {
-      span.style.fontWeight = val;
+      span.style.fontWeight = numericVal;
     });
 
     const kineticContainer = selectedElement.querySelector('.kinetic-container');
     if (kineticContainer) {
-      kineticContainer.style.fontWeight = val;
+      kineticContainer.style.fontWeight = numericVal;
     }
 
     if (isMotionGraphic) {
       const styleTag = selectedElement.querySelector('style');
       if (styleTag) {
         let currentCss = styleTag.innerHTML;
-        currentCss = currentCss.replace(/font-weight:\s*[^;]+;/g, `font-weight: ${val} !important;`);
+        currentCss = currentCss.replace(/font-weight:\s*[^;]+;/g, `font-weight: ${numericVal} !important;`);
         styleTag.innerHTML = currentCss;
       }
     }

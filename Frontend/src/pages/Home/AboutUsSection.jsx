@@ -7,13 +7,13 @@ export default function AboutUsSection() {
     <motion.section
       initial={{ opacity: 0, y: 35 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.8 }}
-      className="w-full bg-[#E2E2E2] font-poppins relative overflow-hidden select-none pt-6 sm:pt-8 md:pt-10 lg:pt-[3.5vw] pb-0"
+      className="w-full bg-[#E2E2E2] font-poppins relative overflow-hidden pt-6 sm:pt-8 md:pt-10 lg:pt-[3.5vw] pb-0"
     >
       {/* Top Header Tag: Aligned to the left margin on mobile/tablet, standard on desktop */}
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-[4.5vw] mb-2 sm:mb-4 md:mb-6 lg:mb-[1.2vw] flex items-center justify-start gap-3 relative z-30">
-        <span className="text-[11px] sm:text-xs lg:text-[0.82vw] font-bold tracking-[0.25em] text-[#222428] uppercase">
+        <span className="text-[11px] sm:text-xs lg:text-[0.82vw] font-semibold tracking-[0.05em] text-[#222428] uppercase">
           ABOUT US
         </span>
         <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#8d9095]"></div>
@@ -26,7 +26,7 @@ export default function AboutUsSection() {
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.96 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
           className="w-full order-2 lg:order-1 lg:absolute lg:inset-x-0 lg:bottom-0 lg:top-[1.5vw] flex items-end justify-center lg:justify-start pointer-events-none z-0 mt-6 sm:mt-8 md:mt-12 lg:mt-0"
         >
@@ -42,58 +42,74 @@ export default function AboutUsSection() {
           <div className="w-full max-w-full lg:max-w-[31vw] flex flex-col items-start lg:items-end justify-start lg:justify-start h-full flex-1 lg:gap-[1vw]">
             
             {/* Top Container: Headline & Divider */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            <div
               className="w-full flex flex-col items-start lg:items-end"
             >
-              {/* Headline Group: 'We Transform' in 1 line on mobile & tab, 'Digital Ideas' in another line, all left-aligned */}
-              <div className="flex flex-col items-start lg:items-end w-full">
-                {/* Line 1: 'We Transform' side-by-side on mobile/tablet, stacked on desktop */}
-                <div className="flex flex-row lg:flex-col items-baseline lg:items-end justify-start gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-0">
-                  <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block">
+              {/* Headline Group: 'We Make' on single line & 'Your Products Interactive' */}
+              <motion.div
+                initial={{ opacity: 0, y: -25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+                transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-start lg:items-end w-full"
+              >
+                {/* Line 1: 'We Make' in a single line on all screen sizes */}
+                <div className="flex items-baseline justify-start lg:justify-end gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-[0.8vw]">
+                  <span className="text-[34px] sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] inline-block">
                     We
                   </span>
                   
                   <h2
-                    className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold tracking-tight leading-[1.08] lg:leading-[0.98] inline-block lg:block lg:my-[0.15vw] text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
+                    className="text-[34px] sm:text-5xl md:text-5xl lg:text-[3.8vw] font-bold tracking-tight leading-[1.08] inline-block text-[#8E9298] lg:text-transparent lg:[-webkit-text-stroke:0.07vw_#878c92]"
                   >
-                    Transform
+                    Make
                   </h2>
                 </div>
 
-                {/* Line 2: 'Digital Ideas' */}
-                <span className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.8vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] lg:leading-[0.98] block mt-0.5 sm:mt-1.5 md:mt-2.5 lg:mt-0">
-                  Digital Ideas
+                {/* Line 2: 'Your Products Interactive' */}
+                <span className="text-[34px] sm:text-4xl md:text-5xl lg:text-[3.4vw] font-bold text-[#0D0F11] tracking-tight leading-[1.08] block mt-0.5 sm:mt-1 lg:mt-[0.2vw]">
+                  Your Products <span className="text-[#EC5137]">Interactive</span>
                 </span>
-              </div>
+              </motion.div>
 
               {/* Subtle Separator Line beneath Headline */}
               <motion.div
                 initial={{ scaleX: 0 }}
                 whileInView={{ scaleX: 1 }}
-                viewport={{ once: false }}
-                transition={{ duration: 0.7, delay: 0.15 }}
-                className="w-full max-w-[260px] sm:max-w-[360px] md:max-w-[460px] lg:max-w-full h-[1px] bg-[#c2c5c9] mt-3 sm:mt-5 md:mt-7 lg:mt-[2.2vw] mb-3 sm:mb-5 md:mb-7 lg:mb-[1.8vw] origin-left lg:origin-right"
+                viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+                transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full max-w-[260px] sm:max-w-[360px] md:max-w-[460px] lg:max-w-full h-[1px] bg-[#c2c5c9] mt-2.5 sm:mt-3.5 md:mt-4 lg:mt-[1.2vw] mb-2.5 sm:mb-3.5 md:mt-4 lg:mb-[1vw] origin-left lg:origin-right"
               ></motion.div>
-            </motion.div>
+            </div>
 
             {/* Bottom/Narrative Paragraphs Container: Full width and justify alignment on mobile & tablet */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.75, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-full lg:max-w-[22vw] flex flex-col items-start lg:items-end space-y-2.5 sm:space-y-4 md:space-y-5 lg:space-y-[1.6vw] text-xs sm:text-[14px] md:text-[16px] lg:text-[0.94vw] text-[#2b2e34] font-normal leading-[1.65] sm:leading-[1.75] md:leading-[1.85] text-justify lg:text-right pb-1 sm:pb-2 lg:pb-[1vw]"
+              viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+              transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-full lg:max-w-[26vw] flex flex-col items-start lg:items-end text-xs sm:text-[13.5px] md:text-[14.5px] lg:text-[0.88vw] text-[#2b2e34] font-normal leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw] text-justify lg:text-right pb-1 sm:pb-2 mt-2 sm:mt-3 md:mt-4 lg:mt-0"
             >
-              <p>
-                Flipibook by FIST-O Tech Pvt Ltd transforms static catalogues into Interactive Digital Experiences through IDC, AR/VR/MR, 2D/3D Animation, 3D Website design, Custom web and Mobile app development.
+              <p className="leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw]">
+                FlipiBook by Fisto Tech Pvt Ltd turns static PDFs into interactive digital catalogues. Combine product videos, 3D models, and clickable links to help customers explore your products and understand how they work.
               </p>
-              <p>
-                We help businesses showcase products, simplify ideas, and engage audiences through innovative digital solutions.
+              <p className="mt-3.5 sm:mt-4 md:mt-5 lg:mt-[1.5vw] leading-[1.6] sm:leading-[1.7] md:leading-[1.75] lg:leading-[1.5vw]">
+                Based in Coimbatore, Fisto Tech creates 3D animations, AR/VR experiences, 3D websites, and custom applications for businesses in India and worldwide. We help you explain complex products clearly and make it easier for customers to take the next step.
               </p>
+
+              {/* Button: Discover FlipiBook */}
+              <div className="pt-4 sm:pt-4 md:pt-5 lg:mt-[1vw]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('why-choose-flipibook') || document.querySelector('[class*="WhyChooseFlipibook"]');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 bg-[#0D0F11] hover:bg-[#EC5137] text-white rounded-lg text-xs sm:text-sm lg:text-[0.8vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+                >
+                  <span>Discover FlipiBook</span>
+                </button>
+              </div>
             </motion.div>
 
           </div>

@@ -79,16 +79,11 @@ const processAndCopyGalleryAssets = ({
       const relativePath = `../assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
-        flipbook_v_id: flipbook_v_id,
-        file_v_id: generateId(16),
+        book_v_id: flipbook_v_id,
         assetType: subfolder,
-        fileName: assetFileName,
+        convertedName: assetFileName,
         originalName: fileName,
         page_v_id: pageVId || 'global',
-        userEmail: userEmail || '',
-        isGallery: false,
-        flipbookName: flipbookName,
-        folderName: folderName,
         url: relativePath,
         size: fileSize
       });
@@ -263,16 +258,11 @@ const processAndSaveBase64Assets = ({
       const relativeAssetUrl = `../assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
-        flipbook_v_id: flipbook_v_id,
-        file_v_id: generateId(16),
+        book_v_id: flipbook_v_id,
         assetType: subfolder,
-        fileName: assetFileName,
+        convertedName: assetFileName,
         originalName: assetFileName,
-        page_v_id: pageVId,
-        userEmail: userEmail || '',
-        isGallery: false,
-        flipbookName: flipbookName,
-        folderName: physicalFolderName,
+        page_v_id: pageVId || 'global',
         url: relativeAssetUrl,
         size: buffer.length
       });

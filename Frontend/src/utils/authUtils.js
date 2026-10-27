@@ -49,12 +49,14 @@ export const getInitialUser = () => {
  */
 export const setClientUserCookie = (user) => {
   try {
-    if (!user) return;
+    if (!user || typeof user !== "object") return;
     const safeData = {
-      name: user.name || "",
+      name: user.name || user.displayName || user.userName || "",
+      displayName: user.displayName || user.name || "",
       emailId: user.emailId || user.email || "",
       email: user.emailId || user.email || "",
       picture: user.picture || "",
+      avatarBgColor: user.avatarBgColor || "",
     };
     const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
     document.cookie = `flipibook_user=${encodeURIComponent(

@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ProfileModal from '../Settings/ProfileModal';
 import { Bell, ArrowRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { verifyToken } from '../../utils/authUtils';
+import { verifyToken, getInitialUser } from '../../utils/authUtils';
+import { resolveUploadsPath } from '../../utils/assetUtils';
 
 const FlipibookLogo = '/Login/logo.svg';
 
@@ -65,10 +66,13 @@ export default function HomeNav() {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const isLoggedIn = isAuthenticated || verifyToken();
 
+  const cookieUser = useMemo(() => getInitialUser(), []);
+  const activeUser = user || cookieUser;
+
   // Reset image load error if user's picture updates
   useEffect(() => {
     setImageLoadError(false);
-  }, [user?.picture]);
+  }, [activeUser?.picture]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -86,30 +90,41 @@ export default function HomeNav() {
   const navLinks = isMyFlipbooksPage ? MY_FLIPBOOKS_NAV_LINKS : DEFAULT_NAV_LINKS;
 
   const userInitial = useMemo(() => {
-    if (typeof user?.name === 'string' && user.name.trim().length > 0) {
-      return user.name.trim().charAt(0).toUpperCase();
-    }
-    if (typeof user?.emailId === 'string' && user.emailId.trim().length > 0) {
-      return user.emailId.trim().charAt(0).toUpperCase();
-    }
-    if (typeof user?.email === 'string' && user.email.trim().length > 0) {
-      return user.email.trim().charAt(0).toUpperCase();
-    }
-    return '';
-  }, [user?.name, user?.emailId, user?.email]);
+    const candidate = (
+      activeUser?.displayName ||
+      activeUser?.name ||
+      activeUser?.userName ||
+      activeUser?.emailId ||
+      activeUser?.email ||
+      ''
+    ).trim();
 
-  const hasValidPicture = typeof user?.picture === 'string' && 
-                          user.picture.length > 0 && 
-                          user.picture !== 'color_only' && 
+    if (candidate.length > 0) {
+      return candidate.charAt(0).toUpperCase();
+    }
+    return isLoggedIn ? 'U' : '';
+  }, [activeUser, isLoggedIn]);
+
+  const pictureCandidate = activeUser?.picture;
+  const hasValidPicture = typeof pictureCandidate === 'string' && 
+                          pictureCandidate.length > 0 && 
+                          pictureCandidate !== 'color_only' && 
                           !imageLoadError;
 
+  const resolvedPictureUrl = useMemo(() => {
+    if (!hasValidPicture || !pictureCandidate) return null;
+    return pictureCandidate.startsWith('blob:') || pictureCandidate.startsWith('data:')
+      ? pictureCandidate
+      : resolveUploadsPath(pictureCandidate);
+  }, [hasValidPicture, pictureCandidate]);
+
   const avatarBgColor = useMemo(() => {
-    if (!user) return '#f3f4f6';
+    if (!activeUser && !isLoggedIn) return '#f3f4f6';
     if (hasValidPicture) return '#ffffff';
-    return (user?.avatarBgColor && user?.avatarBgColor !== '#E8D4C8' && user?.avatarBgColor !== '#ffffff') 
-      ? user.avatarBgColor 
-      : getAvatarColor(user?.name || user?.emailId || user?.email || 'User');
-  }, [user, hasValidPicture]);
+    return (activeUser?.avatarBgColor && activeUser?.avatarBgColor !== '#E8D4C8' && activeUser?.avatarBgColor !== '#ffffff') 
+      ? activeUser.avatarBgColor 
+      : getAvatarColor(activeUser?.displayName || activeUser?.name || activeUser?.emailId || activeUser?.email || 'User');
+  }, [activeUser, hasValidPicture, isLoggedIn]);
 
   return (
     <>
@@ -185,23 +200,23 @@ export default function HomeNav() {
                   className="w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-full border border-gray-100 overflow-hidden group p-[0.1vw] shadow-xs flex-shrink-0 relative"
                   style={{ backgroundColor: avatarBgColor }}
                 >
-                  {!user ? (
+                  {!activeUser ? (
                     <div className="w-full h-full rounded-full flex items-center justify-center bg-gray-100 text-gray-400">
                       <svg className="w-[1.2vw] h-[1.2vw]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                       </svg>
                     </div>
-                  ) : hasValidPicture ? (
+                  ) : hasValidPicture && resolvedPictureUrl ? (
                     <img 
-                      src={user.picture} 
-                      alt={user.name || 'User avatar'} 
+                      src={resolvedPictureUrl} 
+                      alt={activeUser.displayName || activeUser.name || 'User avatar'} 
                       className="w-full h-full object-cover rounded-full transition-all duration-300" 
                       referrerPolicy="no-referrer"
                       onError={() => setImageLoadError(true)}
                     />
                   ) : (
                     <div
-                      className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-[0.9vw] transition-all duration-300"
+                      className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-[0.9vw] transition-all duration-300 select-none"
                       style={{ backgroundColor: avatarBgColor }}
                     >
                       {userInitial}

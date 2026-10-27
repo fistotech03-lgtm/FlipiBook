@@ -812,7 +812,7 @@ export default function FlipbooksSidebar({
                             {/* Database/Storage Icon Centered Inside */}
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="relative flex items-center justify-center">
-                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                         <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
                                         <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
                                         <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />

@@ -15,7 +15,7 @@ import {
 import axios from "axios";
 import { getPageEditorState, savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
 import Layer from "./panels/Layer";
-import MainEditor from "./MainEditor";
+import MainEditor from "./MainEditor.jsx";
 import RightSidebar from "./panels/RightSidebar";
 import TooltipCustomization from "./modals/TooltipCustomization";
 import TemplateModal from "./modals/TemplateModal";

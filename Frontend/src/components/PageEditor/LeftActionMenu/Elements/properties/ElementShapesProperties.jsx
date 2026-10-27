@@ -1313,17 +1313,17 @@ const ElementShapesProperties = ({
     selectedElementProps['data-shape-id'] === 'rounded-diamond' ||
     (selectedElementProps.d && (selectedElementProps.d.includes('50 12') || selectedElementProps.d.includes('50 88') || selectedElementProps.d.includes('85 43') || selectedElementProps.d.includes('15 57')));
 
+  const hasShapeParameters = shapeType === 'polygon' || shapeType === 'star' || Boolean(selectedElementProps?.['data-count']) || Boolean(selectedElementProps?.['data-ratio']);
+
   const isRectangularShape = Boolean(
-    !['polygon', 'star', 'circle', 'ellipse', 'line'].includes(shapeType) &&
+    !['polygon', 'star', 'circle', 'ellipse', 'line', 'vector-path'].includes(shapeType) &&
+    !hasShapeParameters &&
     (
       shapeType === 'rect' ||
       shapeType === 'rectangle' ||
       shapeType === 'square' ||
-      shapeType === 'shape' ||
       shapeType === 'diamond' ||
       isDiamond ||
-      selectedElementProps?.['data-type'] === 'shape' ||
-      selectedElementProps?.isElementShape ||
       selectedElementProps?.innerTagName === 'rect' ||
       selectedElementProps?.tagName?.toLowerCase() === 'rect' ||
       (() => {
@@ -1331,8 +1331,8 @@ const ElementShapesProperties = ({
           const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
           const el = doc.getElementById(selectedLayerId);
           if (!el) return false;
-          const inner = el.querySelector('rect, [data-shape-type="rectangle"], [data-shape-type="diamond"], [data-shape-type="shape"]') || (['rect', 'g'].includes(el.tagName?.toLowerCase()) ? el : null);
-          return Boolean(inner);
+          const inner = el.querySelector('rect, [data-shape-type="rectangle"], [data-shape-type="diamond"]');
+          return Boolean(inner) || el.tagName?.toLowerCase() === 'rect';
         } catch (e) {
           return false;
         }
@@ -1340,7 +1340,7 @@ const ElementShapesProperties = ({
     )
   );
 
-  const shouldHideCornerRadius = hideCornerRadius || !isRectangularShape;
+  const shouldHideCornerRadius = hideCornerRadius || hasShapeParameters || !isRectangularShape;
 
   if (!selectedElementProps) return null;
 
@@ -1942,7 +1942,7 @@ const ElementShapesProperties = ({
         setRadius={handleSetRadius}
         isRadiusLinked={isRadiusLinked}
         setIsRadiusLinked={handleSetIsRadiusLinked}
-        hideCornerRadius={hideCornerRadius}
+        hideCornerRadius={shouldHideCornerRadius}
         activeEffects={activeEffects}
         setActiveEffects={handleSetActiveEffects}
         effectSettings={effectSettings}

@@ -218,7 +218,15 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     const enterAdjustMode = (patternId, path) => {
         const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
         if (!pattern) return;
-        const imgNode = pattern.querySelector('image, img');
+        let imgNode = pattern.querySelector('image, img');
+        if (!imgNode) {
+          const useNode = pattern.querySelector('use');
+          if (useNode) {
+            const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+            const targetId = href.replace('#', '');
+            imgNode = selectedElement.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
+          }
+        }
         if (!imgNode) return; // Cannot adjust empty slot
 
         adjustStateRef.current.isAdjusting = true;
@@ -561,6 +569,16 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             const imgNode = pattern.querySelector('image, img');
             if (imgNode) {
               currentImage = imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href');
+            } else {
+              const useNode = pattern.querySelector('use');
+              if (useNode) {
+                const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+                const targetId = href.replace('#', '');
+                const refImg = svgRoot.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
+                if (refImg) {
+                  currentImage = refImg.getAttribute('href') || refImg.getAttribute('xlink:href');
+                }
+              }
             }
           }
           if (slot.currentImage !== currentImage) {

@@ -28,16 +28,16 @@ export const DEFAULT_FRAME_IMAGE =
  */
 export function getRoundedRectPath(x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
-  if (r <= 0) return `M ${x},${y} h ${w} v ${h} h ${-w} Z`;
-  return `M ${x + r},${y} ` +
-         `h ${w - 2 * r} ` +
-         `a ${r},${r} 0 0 1 ${r},${r} ` +
-         `v ${h - 2 * r} ` +
-         `a ${r},${r} 0 0 1 ${-r},${r} ` +
-         `h ${-(w - 2 * r)} ` +
-         `a ${r},${r} 0 0 1 ${-r},${-r} ` +
-         `v ${-(h - 2 * r)} ` +
-         `a ${r},${r} 0 0 1 ${r},${-r} Z`;
+  if (r <= 0) return `M ${x.toFixed(2)},${y.toFixed(2)} h ${w.toFixed(2)} v ${h.toFixed(2)} h ${(-w).toFixed(2)} Z`;
+  return `M ${(x + r).toFixed(2)},${y.toFixed(2)} ` +
+         `h ${(w - 2 * r).toFixed(2)} ` +
+         `a ${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${r.toFixed(2)},${r.toFixed(2)} ` +
+         `v ${(h - 2 * r).toFixed(2)} ` +
+         `a ${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${(-r).toFixed(2)},${r.toFixed(2)} ` +
+         `h ${(-(w - 2 * r)).toFixed(2)} ` +
+         `a ${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${(-r).toFixed(2)},${(-r).toFixed(2)} ` +
+         `v ${(-(h - 2 * r)).toFixed(2)} ` +
+         `a ${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${r.toFixed(2)},${(-r).toFixed(2)} Z`;
 }
 
 export const THREE_GRID_SHAPES = [
@@ -49,27 +49,19 @@ export const THREE_GRID_SHAPES = [
     name: 'Staggered 3-Columns',
     description: '3 vertical staggered slits with high-center elevation',
     slotCount: 3,
-    getSlots: (gap = 16, r = 16, cw = 1000, ch = 1000) => {
-      const padX = cw * 0.06;
-      const totalW = cw - 2 * padX;
-      const colW = (totalW - 2 * gap) / 3;
-
-      // Slot 1 (Left): starts lower down
-      const h1 = ch * 0.72;
+    getSlots: (gap = 3, r = 2.5, cw = 84, ch = 90) => {
+      const colW = (cw - 2 * gap) / 3;
+      const h1 = ch * 0.78;
       const y1 = ch * 0.20;
-
-      // Slot 2 (Center): tallest, extends closest to top
-      const h2 = ch * 0.90;
-      const y2 = ch * 0.04;
-
-      // Slot 3 (Right): medium-high elevation
-      const h3 = ch * 0.76;
-      const y3 = ch * 0.08;
+      const h2 = ch * 0.98;
+      const y2 = ch * 0.02;
+      const h3 = ch * 0.82;
+      const y3 = ch * 0.07;
 
       return [
-        { d: getRoundedRectPath(padX, y1, colW, h1, r) },
-        { d: getRoundedRectPath(padX + colW + gap, y2, colW, h2, r) },
-        { d: getRoundedRectPath(padX + 2 * (colW + gap), y3, colW, h3, r) }
+        { d: getRoundedRectPath(0, y1, colW, h1, r) },
+        { d: getRoundedRectPath(colW + gap, y2, colW, h2, r) },
+        { d: getRoundedRectPath(2 * (colW + gap), y3, colW, h3, r) }
       ];
     }
   },
@@ -82,30 +74,23 @@ export const THREE_GRID_SHAPES = [
     name: 'Diamond S-Curve (4)',
     description: '4-pane zigzag diamonds with uniform diagonal edge gaps',
     slotCount: 4,
-    getSlots: (gap = 16, r = 16, cw = 1000, ch = 1000) => {
-      const minDim = Math.min(cw, ch);
-      const S = minDim * 0.26;
-      const actualGap = Math.max(14, gap * 1.1);
-      const step = (S + actualGap) / Math.SQRT2;
-
-      const cx = cw / 2;
-      const cy = ch / 2;
-      const x0 = cx + step / 2;
-      const y0 = cy - 1.5 * step;
+    getSlots: (gap = 2.5, r = 2.5, S = 28) => {
+      const step = (S + gap) / Math.SQRT2;
+      const halfDiag = (S * Math.SQRT2) / 2;
+      const cx = halfDiag + step / 2;
+      const cy = halfDiag + 1.5 * step;
+      const half = S / 2;
 
       const offsets = [
-        { x: x0,        y: y0 },
-        { x: x0 - step, y: y0 + step },
-        { x: x0,        y: y0 + 2 * step },
-        { x: x0 - step, y: y0 + 3 * step }
+        { x: cx + step / 2, y: cy - 1.5 * step },
+        { x: cx - step / 2, y: cy - 0.5 * step },
+        { x: cx + step / 2, y: cy + 0.5 * step },
+        { x: cx - step / 2, y: cy + 1.5 * step }
       ];
 
-      const half = S / 2;
-      const cornerR = Math.min(r, S * 0.22);
-
       return offsets.map(p => ({
-        d: getRoundedRectPath(-half, -half, S, S, cornerR),
-        transform: `translate(${p.x}, ${p.y}) rotate(45)`
+        d: getRoundedRectPath(-half, -half, S, S, r),
+        transform: `translate(${p.x.toFixed(2)}, ${p.y.toFixed(2)}) rotate(45)`
       }));
     }
   },
@@ -118,23 +103,17 @@ export const THREE_GRID_SHAPES = [
     name: 'Arch Horseshoe (6)',
     description: '6-segment radial arch canopy with central circular dome cutout',
     slotCount: 6,
-    getSlots: (gap = 16, r = 16, cw = 1000, ch = 1000) => {
+    getSlots: (gap = 0.035, rOut = 42, rIn = 20, cx = 45, cy = 48) => {
       const slots = [];
-      const cx = cw / 2;
-      const cy = ch * 0.58;
-      const rOut = Math.min(cw, ch) * 0.45;
-      const rIn = Math.min(cw, ch) * 0.21;
       const count = 6;
-
       const startAngle = Math.PI * 0.85;
       const endAngle = Math.PI * 2.15;
       const totalAngle = endAngle - startAngle;
       const step = totalAngle / count;
-      const angularGap = Math.max(0.015, (gap / rOut) * 0.65);
 
       for (let i = 0; i < count; i++) {
-        const a1 = startAngle + i * step + angularGap / 2;
-        const a2 = startAngle + (i + 1) * step - angularGap / 2;
+        const a1 = startAngle + i * step + gap / 2;
+        const a2 = startAngle + (i + 1) * step - gap / 2;
 
         const x1 = cx + rOut * Math.cos(a1), y1 = cy + rOut * Math.sin(a1);
         const x2 = cx + rOut * Math.cos(a2), y2 = cy + rOut * Math.sin(a2);
@@ -142,7 +121,7 @@ export const THREE_GRID_SHAPES = [
         const x4 = cx + rIn * Math.cos(a1),  y4 = cy + rIn * Math.sin(a1);
 
         slots.push({
-          d: `M ${x1},${y1} A ${rOut},${rOut} 0 0 1 ${x2},${y2} L ${x3},${y3} A ${rIn},${rIn} 0 0 0 ${x4},${y4} Z`
+          d: `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${rOut},${rOut} 0 0 1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${x3.toFixed(2)},${y3.toFixed(2)} A ${rIn},${rIn} 0 0 0 ${x4.toFixed(2)},${y4.toFixed(2)} Z`
         });
       }
       return slots;
@@ -626,32 +605,32 @@ const RAW_PRESETS = [
   {
     "id": "frame-staggered-3-columns",
     "name": "Staggered 3-Columns",
-    "width": 100,
-    "height": 100,
-    "viewBox": "0 0 1000 1000",
-    "innerSvg": "<path d=\"M 76,200 h 250.66666666666669 a 16,16 0 0 1 16,16 v 688 a 16,16 0 0 1 -16,16 h -250.66666666666669 a 16,16 0 0 1 -16,-16 v -688 a 16,16 0 0 1 16,-16 Z\" fill=\"url(#pattern0_staggered_triptych)\"/>\n<path d=\"M 374.6666666666667,40 h 250.66666666666669 a 16,16 0 0 1 16,16 v 868 a 16,16 0 0 1 -16,16 h -250.66666666666669 a 16,16 0 0 1 -16,-16 v -868 a 16,16 0 0 1 16,-16 Z\" fill=\"url(#pattern1_staggered_triptych)\"/>\n<path d=\"M 673.3333333333334,80 h 250.66666666666669 a 16,16 0 0 1 16,16 v 728 a 16,16 0 0 1 -16,16 h -250.66666666666669 a 16,16 0 0 1 -16,-16 v -728 a 16,16 0 0 1 16,-16 Z\" fill=\"url(#pattern2_staggered_triptych)\"/>\n<defs>\n<pattern id=\"pattern0_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_triptych\" transform=\"matrix(0.00203124 0 0 0.00079745 -0.773585 0)\"/>\n</pattern>\n<pattern id=\"pattern1_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_triptych\" transform=\"matrix(0.00253904 0 0 0.00079745 -1.091981 0)\"/>\n</pattern>\n<pattern id=\"pattern2_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_triptych\" transform=\"matrix(0.00214408 0 0 0.00079745 -0.844340 0)\"/>\n</pattern>\n<image id=\"image0_staggered_triptych\" width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\"/>\n</defs>"
+    "width": 84,
+    "height": 90,
+    "viewBox": "0 0 84 90",
+    "innerSvg": "<path d=\"M 2.50,18.00 h 21.00 a 2.50,2.50 0 0 1 2.50,2.50 v 65.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -21.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -65.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" fill=\"url(#pattern0_staggered_triptych)\"/>\n<path d=\"M 31.50,2.00 h 21.00 a 2.50,2.50 0 0 1 2.50,2.50 v 83.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -21.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -83.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" fill=\"url(#pattern1_staggered_triptych)\"/>\n<path d=\"M 60.50,6.00 h 21.00 a 2.50,2.50 0 0 1 2.50,2.50 v 69.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -21.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -69.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" fill=\"url(#pattern2_staggered_triptych)\"/>\n<defs>\n<pattern id=\"pattern0_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00214698 0 0 0.00079745 -0.846154 0)\"/>\n</pattern>\n<pattern id=\"pattern1_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00269906 0 0 0.00079745 -1.192308 0)\"/>\n</pattern>\n<pattern id=\"pattern2_staggered_triptych\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00226966 0 0 0.00079745 -0.923077 0)\"/>\n</pattern>\n</defs>"
   },
   {
     "id": "frame-diamond-s-curve--4-",
     "name": "Diamond S-Curve (4)",
-    "width": 100,
-    "height": 100,
-    "viewBox": "0 0 1000 1000",
-    "innerSvg": "<path d=\"M -114,-130 h 228 a 16,16 0 0 1 16,16 v 228 a 16,16 0 0 1 -16,16 h -228 a 16,16 0 0 1 -16,-16 v -228 a 16,16 0 0 1 16,-16 Z\" transform=\"translate(598.1464212286928, 205.5607363139216) rotate(45)\" fill=\"url(#pattern0_staggered_diamonds)\"/>\n<path d=\"M -114,-130 h 228 a 16,16 0 0 1 16,16 v 228 a 16,16 0 0 1 -16,16 h -228 a 16,16 0 0 1 -16,-16 v -228 a 16,16 0 0 1 16,-16 Z\" transform=\"translate(401.8535787713072, 401.8535787713072) rotate(45)\" fill=\"url(#pattern1_staggered_diamonds)\"/>\n<path d=\"M -114,-130 h 228 a 16,16 0 0 1 16,16 v 228 a 16,16 0 0 1 -16,16 h -228 a 16,16 0 0 1 -16,-16 v -228 a 16,16 0 0 1 16,-16 Z\" transform=\"translate(598.1464212286928, 598.1464212286928) rotate(45)\" fill=\"url(#pattern2_staggered_diamonds)\"/>\n<path d=\"M -114,-130 h 228 a 16,16 0 0 1 16,16 v 228 a 16,16 0 0 1 -16,16 h -228 a 16,16 0 0 1 -16,-16 v -228 a 16,16 0 0 1 16,-16 Z\" transform=\"translate(401.8535787713072, 794.4392636860784) rotate(45)\" fill=\"url(#pattern3_staggered_diamonds)\"/>\n<defs>\n<pattern id=\"pattern0_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_diamonds\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern1_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_diamonds\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern2_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_diamonds\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern3_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_staggered_diamonds\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<image id=\"image0_staggered_diamonds\" width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\"/>\n</defs>"
+    "width": 61,
+    "height": 104,
+    "viewBox": "0 0 61 104",
+    "innerSvg": "<path d=\"M -11.50,-14.00 h 23.00 a 2.50,2.50 0 0 1 2.50,2.50 v 23.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -23.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -23.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" transform=\"translate(41.37, 19.80) rotate(45)\" fill=\"url(#pattern0_staggered_diamonds)\"/>\n<path d=\"M -11.50,-14.00 h 23.00 a 2.50,2.50 0 0 1 2.50,2.50 v 23.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -23.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -23.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" transform=\"translate(19.80, 41.37) rotate(45)\" fill=\"url(#pattern1_staggered_diamonds)\"/>\n<path d=\"M -11.50,-14.00 h 23.00 a 2.50,2.50 0 0 1 2.50,2.50 v 23.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -23.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -23.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" transform=\"translate(41.37, 62.93) rotate(45)\" fill=\"url(#pattern2_staggered_diamonds)\"/>\n<path d=\"M -11.50,-14.00 h 23.00 a 2.50,2.50 0 0 1 2.50,2.50 v 23.00 a 2.50,2.50 0 0 1 -2.50,2.50 h -23.00 a 2.50,2.50 0 0 1 -2.50,-2.50 v -23.00 a 2.50,2.50 0 0 1 2.50,-2.50 Z\" transform=\"translate(19.80, 84.50) rotate(45)\" fill=\"url(#pattern3_staggered_diamonds)\"/>\n<defs>\n<pattern id=\"pattern0_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern1_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern2_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern3_staggered_diamonds\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n</defs>"
   },
   {
     "id": "frame-arch-horseshoe--6-",
     "name": "Arch Horseshoe (6)",
-    "width": 100,
-    "height": 100,
-    "viewBox": "0 0 1000 1000",
-    "innerSvg": "<path d=\"M 96.71313555321672,779.6489543290469 A 450,450 0 0 1 58.78185051255264,491.53223998047326 L 294.0981969058579,538.7150453242209 A 210,210 0 0 0 311.7994632581678,673.1695120202219 Z\" fill=\"url(#pattern0_radial_horseshoe)\"/>\n<path d=\"M 60.94408397549057,481.35973132701366 A 450,450 0 0 1 212.78366233510394,233.58005920795438 L 365.9657090897152,418.33736096371206 A 210,210 0 0 0 295.1072391885623,533.9678746192731 Z\" fill=\"url(#pattern1_radial_horseshoe)\"/>\n<path d=\"M 220.8658004623063,227.0352727984693 A 450,450 0 0 1 494.8001157259761,130.0300441101242 L 497.57338733878885,370.0140205847246 A 210,210 0 0 0 369.73737354907627,415.28312730595235 Z\" fill=\"url(#pattern2_radial_horseshoe)\"/>\n<path d=\"M 505.1998842740237,130.0300441101242 A 450,450 0 0 1 779.1341995376936,227.03527279846924 L 630.2626264509237,415.2831273059523 A 210,210 0 0 0 502.42661266121104,370.0140205847246 Z\" fill=\"url(#pattern3_radial_horseshoe)\"/>\n<path d=\"M 787.216337664896,233.58005920795426 A 450,450 0 0 1 939.0559160245093,481.3597313270133 L 704.8927608114377,533.9678746192728 A 210,210 0 0 0 634.0342909102848,418.33736096371194 Z\" fill=\"url(#pattern4_radial_horseshoe)\"/>\n<path d=\"M 941.2181494874472,491.5322399804729 A 450,450 0 0 1 903.2868644467833,779.6489543290468 L 688.2005367418323,673.1695120202219 A 210,210 0 0 0 705.901803094142,538.7150453242207 Z\" fill=\"url(#pattern5_radial_horseshoe)\"/>\n<defs>\n<pattern id=\"pattern0_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern1_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern2_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern3_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern4_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern5_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<use xlink:href=\"#image0_radial_horseshoe\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<image id=\"image0_radial_horseshoe\" width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\"/>\n</defs>"
+    "width": 90,
+    "height": 70,
+    "viewBox": "0 0 90 70",
+    "innerSvg": "<path d=\"M 7.25,66.41 A 42,42 0 0 1 3.77,39.99 L 25.37,44.18 A 20,20 0 0 0 27.02,56.77 Z\" fill=\"url(#pattern0_radial_horseshoe)\"/>\n<path d=\"M 4.08,38.55 A 42,42 0 0 1 18.00,15.83 L 32.14,32.68 A 20,20 0 0 0 25.51,43.50 Z\" fill=\"url(#pattern1_radial_horseshoe)\"/>\n<path d=\"M 19.14,14.90 A 42,42 0 0 1 44.27,6.01 L 44.65,28.00 A 20,20 0 0 0 32.69,32.24 Z\" fill=\"url(#pattern2_radial_horseshoe)\"/>\n<path d=\"M 45.73,6.01 A 42,42 0 0 1 70.86,14.90 L 57.31,32.24 A 20,20 0 0 0 45.35,28.00 Z\" fill=\"url(#pattern3_radial_horseshoe)\"/>\n<path d=\"M 72.00,15.83 A 42,42 0 0 1 85.92,38.55 L 64.49,43.50 A 20,20 0 0 0 57.86,32.68 Z\" fill=\"url(#pattern4_radial_horseshoe)\"/>\n<path d=\"M 86.23,39.99 A 42,42 0 0 1 82.75,66.41 L 62.98,56.77 A 20,20 0 0 0 64.63,44.18 Z\" fill=\"url(#pattern5_radial_horseshoe)\"/>\n<defs>\n<pattern id=\"pattern0_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern1_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern2_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern3_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern4_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n<pattern id=\"pattern5_radial_horseshoe\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\n<image width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\" href=\"__FRAME_IMAGE__\" transform=\"matrix(0.00079745 0 0 0.00079745 0 0)\"/>\n</pattern>\n</defs>"
   }
 ];
 
 export const IMAGE_FRAMING_PRESETS = RAW_PRESETS.map((p) => ({
   ...p,
-  innerSvg: p.innerSvg.replace('__FRAME_IMAGE__', DEFAULT_FRAME_IMAGE)
+  innerSvg: p.innerSvg.replace(/__FRAME_IMAGE__/g, DEFAULT_FRAME_IMAGE)
 }));
 
 export const getFrameSvg = (preset) => {

@@ -1,5 +1,6 @@
 export { default as ElementShapesProperties, ShapeAppearanceControls } from './ElementShapesProperties';
-export { default as TextElementEditor } from './TextElementEditor';
+export { default as TextElementEditor } from './TextElementproperties';
+export { default as TextElementproperties } from './TextElementproperties';
 export { default as ElementButtonProperties } from './ElementButtonProperties';
 export { default as ButtonEditor } from './ElementButtonProperties';
 export { default as ImageFramingProperties } from './ImageFramingProperties';

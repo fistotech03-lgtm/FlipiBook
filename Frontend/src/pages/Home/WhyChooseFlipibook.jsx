@@ -1,43 +1,114 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import exploreArrowIcon from '../../assets/Home/explore-arrow-icon.png';
 
-export default function WhyChooseFlipibook() {
+// Animated Counter Component that smoothly counts up to target number when in view
+function AnimatedCounter({ end, duration = 2, suffix = '+' }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: false, margin: '-50px' });
+
+  useEffect(() => {
+    if (!isInView) {
+      setCount(0);
+      return;
+    }
+
+    let start = 0;
+    const finalVal = parseInt(end, 10);
+    const totalFrames = Math.round(duration * 60);
+    let frame = 0;
+
+    const timer = setInterval(() => {
+      frame++;
+      // easeOutExpo progress curve
+      const progress = 1 - Math.pow(2, -10 * (frame / totalFrames));
+      const current = Math.round(start + (finalVal - start) * progress);
+
+      if (frame >= totalFrames) {
+        setCount(finalVal);
+        clearInterval(timer);
+      } else {
+        setCount(current);
+      }
+    }, 1000 / 60);
+
+    return () => clearInterval(timer);
+  }, [isInView, end, duration]);
+
   return (
-    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.15 }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] py-10 lg:py-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden select-none">
-      
+    <span ref={ref}>
+      {count}
+      {suffix}
+    </span>
+  );
+}
+
+export default function WhyChooseFlipibook() {
+  // Continuous sequential active step for 4 milestone nodes (0, 1, 2, 3)
+  const [activeNode, setActiveNode] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveNode((prev) => (prev + 1) % 4);
+    }, 2200);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-50px 0px -50px 0px" }} transition={{ duration: 0.8 }} className="w-full bg-[#FAFAFA] text-[#1C1D21] pt-6 pb-10 sm:pt-7 sm:pb-12 lg:pt-[1.8vw] lg:pb-[3.2vw] px-6 sm:px-10 lg:px-[5vw] font-poppins relative overflow-hidden ">
+
       {/* Top Header Tag Row with Sub-Labels */}
-      <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-4 lg:mb-[1.2vw]">
-        <div className="flex items-center gap-3">
-          <span className="text-sm sm:text-[15px] lg:text-[0.85vw] font-semibold tracking-[0.28em] text-[#35363A] uppercase">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-[1920px] mx-auto flex items-center justify-between mb-3 sm:mb-2.5 lg:mb-[0.5vw]"
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <span className="text-[11px] md:text-[13px] lg:text-[0.85vw] font-semibold tracking-[0.22em] sm:tracking-[0.28em] text-[#35363A] uppercase">
             WHY FLIPIBOOK
           </span>
-          <div className="w-12 lg:w-[3vw] h-[1.5px] bg-[#35363A]/40"></div>
+          <div className="w-8 sm:w-12 lg:w-[3vw] h-[1.5px] bg-[#35363A]/40"></div>
         </div>
 
         <div className="hidden sm:flex items-start text-left gap-3">
           <div className="w-[2px] h-[36px] lg:h-[2.4vw] bg-[#EC5137] rounded-full mt-0.5"></div>
           <div className="flex flex-col">
             <span className="text-[13px] sm:text-[14px] lg:text-[0.78vw] font-semibold text-[#35363A] uppercase tracking-wider leading-snug">
-              FEATURED FLIPBOOK
+              YOUR CATALOGUE.
             </span>
-            <span className="text-[11.5px] sm:text-[12px] lg:text-[0.68vw] font-medium text-[#35363A] uppercase tracking-wider leading-snug">
-              LEADING THE INDUSTRY REVOLUTION
+            <span className="text-[11.5px] sm:text-[12px] lg:text-[0.68vw] font-medium text-[#EC5137] uppercase tracking-wider leading-snug">
+              MORE INTERACTIVE.
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Main Title Row: Why Choose Flipibook ? */}
-      <div className="w-full max-w-[1920px] mx-auto mb-2 lg:mb-[0.5vw]">
-        <h2 className="text-[32px] sm:text-[44px] lg:text-[3.1vw] font-semibold tracking-tight text-[#35363A] leading-[1.3] lg:max-w-[26vw]">
-          Why Choose <br />
-          <span className="text-[#EC5137]">Flipibook ?</span>
-        </h2>
-        <p className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[480px] lg:max-w-[28vw] mt-3 sm:mt-4 lg:mt-[1vw] leading-[1.65] font-normal">
-          From product catalogues to marketing brochures, create stunning digital experiences that drive engagement and business growth.
-        </p>
+      {/* Main Title Row: Give Customers More Reasons to Choose You */}
+      <div className="w-full max-w-[1920px] mx-auto mb-4 sm:mb-6 lg:mb-[0.5vw]">
+        <motion.h2
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="text-[34px] sm:text-[42px] lg:text-[2.8vw] font-semibold tracking-tight text-[#35363A] leading-[1.15] sm:leading-[1.2] lg:max-w-[40vw]"
+        >
+          Give Customers <br />
+          <span className="text-[#EC5137]">More Reasons</span> <br />
+          to Choose You
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="text-[13px] sm:text-[15.5px] lg:text-[0.88vw] text-[#69707D] max-w-[500px] sm:max-w-[620px] lg:max-w-[30vw] mt-3.5 sm:mt-4 lg:mt-[0.6vw] leading-[1.65] font-normal text-justify sm:text-left"
+        >
+          Create interactive digital catalogues that help customers understand your products. FlipiBook brings videos, 3D models, and enquiry links together in one shareable catalogue.
+        </motion.p>
       </div>
 
       {/* 
@@ -45,8 +116,8 @@ export default function WhyChooseFlipibook() {
         Figma artboard coordinate reference: X: 0 to 1920, Y: 340 to 920 (~580px relative height)
         Aspect ratio lock ensures SVG and cards NEVER detach or stretch out of alignment on desktop screens (>= 992px)!
       */}
-      <div className="w-full max-w-[1920px] mx-auto relative hidden min-[992px]:block mt-0 lg:-mt-[1.5vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
-        
+      <div className="w-full max-w-[1920px] mx-auto relative hidden min-[992px]:block mt-0 lg:-mt-[3.8vw] mb-0 lg:-mb-[1.5vw]" style={{ aspectRatio: '1920 / 580' }}>
+
         {/* Background SVG Wave and Accent Dots directly from Figma:
             Bounding box transformed to (0, 340) coordinate space:
             viewBox="32 340 1920 580"
@@ -157,7 +228,7 @@ export default function WhyChooseFlipibook() {
           }}
           initial={{ opacity: 0, scale: 0.2, x: -120, y: 80, rotate: -25 }}
           whileInView={{ opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }}
-          viewport={{ once: false, amount: 0.3 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
           transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
         >
           <motion.img
@@ -187,7 +258,11 @@ export default function WhyChooseFlipibook() {
         */}
 
         {/* Node 1: 100+ Happy Clients */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.85, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(285.9 / 1920) * 100}%`,
@@ -195,14 +270,27 @@ export default function WhyChooseFlipibook() {
             width: '14.5vw',
           }}
         >
-          <div 
-            style={{ filter: 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))' }}
-            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-8 lg:mb-[2.2vw] transition-transform duration-300 hover:scale-105 z-10"
+          <div
+            style={{
+              filter: activeNode === 0
+                ? 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))'
+                : 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))',
+            }}
+            className={`w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full flex items-center justify-center border-2 mb-8 lg:mb-[2.2vw] z-10 transition-all duration-500 ${
+              activeNode === 0
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
           >
-            <Icon icon="mdi:account-group" className="w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] text-[#697689]" />
+            <Icon
+              icon="mdi:account-group"
+              className={`w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] transition-all duration-500 ${
+                activeNode === 0 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold text-[#051B2E] leading-none mb-2.5 lg:mb-[0.6vw]">
-            100+
+          <h3 className={`text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold leading-none mb-2.5 lg:mb-[0.6vw] transition-colors duration-500 ${activeNode === 0 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={100} duration={1.8} suffix="+" />
           </h3>
           <h4 className="text-lg sm:text-xl lg:text-[1.15vw] font-semibold text-[#051B2E] mb-2.5 lg:mb-[0.55vw] leading-snug">
             Happy Clients
@@ -210,10 +298,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Trusted by businesses across various industries
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 2: 500+ Flipbooks Created */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.85, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(735.4 / 1920) * 100}%`,
@@ -221,14 +313,27 @@ export default function WhyChooseFlipibook() {
             width: '14.5vw',
           }}
         >
-          <div 
-            style={{ filter: 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))' }}
-            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-8 lg:mb-[2.2vw] transition-transform duration-300 hover:scale-105 z-10"
+          <div
+            style={{
+              filter: activeNode === 1
+                ? 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))'
+                : 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))',
+            }}
+            className={`w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full flex items-center justify-center border-2 mb-8 lg:mb-[2.2vw] z-10 transition-all duration-500 ${
+              activeNode === 1
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
           >
-            <Icon icon="basil:book-open-outline" className="w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] text-[#697689]" />
+            <Icon
+              icon="basil:book-open-outline"
+              className={`w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] transition-all duration-500 ${
+                activeNode === 1 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold text-[#051B2E] leading-none mb-2.5 lg:mb-[0.6vw]">
-            500+
+          <h3 className={`text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold leading-none mb-2.5 lg:mb-[0.6vw] transition-colors duration-500 ${activeNode === 1 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={500} duration={2} suffix="+" />
           </h3>
           <h4 className="text-lg sm:text-xl lg:text-[1.15vw] font-semibold text-[#051B2E] mb-2.5 lg:mb-[0.55vw] leading-snug">
             Flipibooks Created
@@ -236,10 +341,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             From Product catalogues to brand stories
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 3: 1M+ Page Views */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.85, delay: 0.54, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(1192.9 / 1920) * 100}%`,
@@ -247,14 +356,27 @@ export default function WhyChooseFlipibook() {
             width: '14.5vw',
           }}
         >
-          <div 
-            style={{ filter: 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))' }}
-            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-8 lg:mb-[2.2vw] transition-transform duration-300 hover:scale-105 z-10"
+          <div
+            style={{
+              filter: activeNode === 2
+                ? 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))'
+                : 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))',
+            }}
+            className={`w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full flex items-center justify-center border-2 mb-8 lg:mb-[2.2vw] z-10 transition-all duration-500 ${
+              activeNode === 2
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
           >
-            <Icon icon="mdi:eye-outline" className="w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] text-[#697689]" />
+            <Icon
+              icon="mdi:eye-outline"
+              className={`w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] transition-all duration-500 ${
+                activeNode === 2 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold text-[#051B2E] leading-none mb-2.5 lg:mb-[0.6vw]">
-            1M+
+          <h3 className={`text-4xl sm:text-[42px] lg:text-[2.4vw] font-bold leading-none mb-2.5 lg:mb-[0.6vw] transition-colors duration-500 ${activeNode === 2 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={1} duration={1.5} suffix="M+" />
           </h3>
           <h4 className="text-lg sm:text-xl lg:text-[1.15vw] font-semibold text-[#051B2E] mb-2.5 lg:mb-[0.55vw] leading-snug">
             Page Views
@@ -262,10 +384,14 @@ export default function WhyChooseFlipibook() {
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Read, share and explore FlipiBooks across the globe.
           </p>
-        </div>
+        </motion.div>
 
         {/* Node 4: Global Reach */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 35, scale: 0.9 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+          transition={{ duration: 0.85, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="absolute flex flex-col items-center text-center -translate-x-1/2"
           style={{
             left: `${(1621.9 / 1920) * 100}%`,
@@ -273,68 +399,155 @@ export default function WhyChooseFlipibook() {
             width: '14.5vw',
           }}
         >
-          <div 
-            style={{ filter: 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))' }}
-            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-8 lg:mb-[2.2vw] transition-transform duration-300 hover:scale-105 z-10"
+          <div
+            style={{
+              filter: activeNode === 3
+                ? 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))'
+                : 'drop-shadow(0px 3.15079px 11.973px rgba(0, 0, 0, 0.18))',
+            }}
+            className={`w-20 h-20 sm:w-24 sm:h-24 lg:w-[5.4vw] lg:h-[5.4vw] rounded-full flex items-center justify-center border-2 mb-8 lg:mb-[2.2vw] z-10 transition-all duration-500 ${
+              activeNode === 3
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
           >
             <svg
               viewBox="0 0 26 26"
-              className="w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw]"
+              className={`w-10 h-10 lg:w-[2.4vw] lg:h-[2.4vw] overflow-visible transition-all duration-500 ${activeNode === 3 ? 'scale-110' : ''}`}
               fill="none"
             >
-              {/* Globe in #697689 */}
               <path
-                fill="#697689"
+                fill={activeNode === 3 ? "#EC5137" : "#697689"}
+                className="transition-colors duration-500"
                 d="M13 2C6.383 2 1 7.383 1 14s5.383 12 12 12s12-5.383 12-12c0-2.01-.498-3.896-1.375-5.563c-.133.264-.267.515-.406.782c-.263.508-.54 1.021-.782 1.531c.25.715.422 1.471.5 2.25h-1.312c-.072.335-.125.65-.125.969V15h1.438a9.9 9.9 0 0 1-1.282 4H18.72c.22-.938.347-1.975.437-3.031h-1.97a19 19 0 0 1-.53 3.031H9.343a19.2 19.2 0 0 1-.594-4h7.75v-1.031a4.7 4.7 0 0 0-.125-.969H8.75a19.2 19.2 0 0 1 .594-4h5.344a31 31 0 0 1-.97-2h-3.687c.827-1.887 1.92-3 2.969-3c0-.695.125-1.348.344-1.969C13.229 2.027 13.116 2 13 2M8.875 4.906a12.4 12.4 0 0 0-1 2.094h-2a10 10 0 0 1 3-2.094M4.344 9H7.28a21.4 21.4 0 0 0-.531 4H3.062a9.9 9.9 0 0 1 1.282-4m-1.282 6H6.75c.059 1.425.243 2.77.531 4H4.344a9.9 9.9 0 0 1-1.282-4m2.813 6h2c.288.776.625 1.473 1 2.094a10 10 0 0 1-3-2.094m4.156 0h5.938c-.827 1.887-1.92 3-2.969 3s-2.143-1.113-2.969-3m8.094 0h2a10 10 0 0 1-3 2.094c.375-.62.712-1.317 1-2.094"
               />
-              {/* Location pin in #EC5137 */}
               <path
-                fill="#EC5137"
+                fill={activeNode === 3 ? "#EC5137" : "#EC5137"}
+                className="transition-colors duration-500"
                 d="M19 0c-2.209 0-4 1.793-4 4c0 2.665 3.5 6.306 3.5 9.969h1C19.501 10.306 23 6.77 23 4c0-2.207-1.791-4-4-4m0 1.938a2.063 2.063 0 1 1-.002 4.126A2.063 2.063 0 0 1 19 1.937z"
               />
             </svg>
           </div>
-          <h4 className="text-2xl sm:text-[25px] lg:text-[1.35vw] font-semibold text-[#051B2E] mb-2.5 lg:mb-[0.55vw] leading-snug">
+          <h4 className={`text-2xl sm:text-[25px] lg:text-[1.35vw] font-semibold mb-2.5 lg:mb-[0.55vw] leading-snug transition-colors duration-500 ${activeNode === 3 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
             Global Reach
           </h4>
           <p className="text-xs sm:text-[14px] lg:text-[0.78vw] text-[#4B596C] font-normal leading-[1.55] lg:max-w-[12vw]">
             Share Everywhere, <br className="hidden sm:inline" /><br className="sm:hidden" />Anytime.
           </p>
-        </div>
+        </motion.div>
 
       </div>
 
       {/* Responsive Grid layout for Mobile and Tablet (< 992px) */}
-      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-7 min-[992px]:hidden mt-8 max-w-2xl sm:max-w-3xl mx-auto">
-        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
-            <Icon icon="mdi:account-group" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-7 min-[992px]:hidden mt-8 sm:mt-12 max-w-2xl sm:max-w-3xl mx-auto">
+        {/* Mobile Node 1 */}
+        <div className={`flex flex-col items-center text-center p-4 sm:p-5 rounded-2xl border transition-all duration-500 ${
+          activeNode === 0
+            ? 'bg-white border-[#EC5137]/30 shadow-[0_6px_20px_rgba(236,81,55,0.12)]'
+            : 'bg-white/80 border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]'
+        }`}>
+          <div
+            style={{ filter: activeNode === 0 ? 'drop-shadow(0px 3px 10px rgba(236, 81, 55, 0.25))' : 'none' }}
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center border-2 mb-3 transition-all duration-500 ${
+              activeNode === 0
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
+          >
+            <Icon
+              icon="mdi:account-group"
+              className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-500 ${
+                activeNode === 0 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">100+</h3>
+          <h3 className={`text-2xl sm:text-3xl font-bold transition-colors duration-500 ${activeNode === 0 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={100} duration={1.8} suffix="+" />
+          </h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Happy Clients</h4>
           <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Trusted by businesses across various industries</p>
         </div>
-        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
-            <Icon icon="basil:book-open-outline" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
+
+        {/* Mobile Node 2 */}
+        <div className={`flex flex-col items-center text-center p-4 sm:p-5 rounded-2xl border transition-all duration-500 ${
+          activeNode === 1
+            ? 'bg-white border-[#EC5137]/30 shadow-[0_6px_20px_rgba(236,81,55,0.12)]'
+            : 'bg-white/80 border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]'
+        }`}>
+          <div
+            style={{ filter: activeNode === 1 ? 'drop-shadow(0px 3px 10px rgba(236, 81, 55, 0.25))' : 'none' }}
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center border-2 mb-3 transition-all duration-500 ${
+              activeNode === 1
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
+          >
+            <Icon
+              icon="basil:book-open-outline"
+              className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-500 ${
+                activeNode === 1 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">500+</h3>
+          <h3 className={`text-2xl sm:text-3xl font-bold transition-colors duration-500 ${activeNode === 1 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={500} duration={2} suffix="+" />
+          </h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Flipibooks Created</h4>
           <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">From Product catalogues to brand stories</p>
         </div>
-        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
-            <Icon icon="mdi:eye-outline" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
+
+        {/* Mobile Node 3 */}
+        <div className={`flex flex-col items-center text-center p-4 sm:p-5 rounded-2xl border transition-all duration-500 ${
+          activeNode === 2
+            ? 'bg-white border-[#EC5137]/30 shadow-[0_6px_20px_rgba(236,81,55,0.12)]'
+            : 'bg-white/80 border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]'
+        }`}>
+          <div
+            style={{ filter: activeNode === 2 ? 'drop-shadow(0px 3px 10px rgba(236, 81, 55, 0.25))' : 'none' }}
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center border-2 mb-3 transition-all duration-500 ${
+              activeNode === 2
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
+          >
+            <Icon
+              icon="mdi:eye-outline"
+              className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-500 ${
+                activeNode === 2 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-[#051B2E]">1M+</h3>
+          <h3 className={`text-2xl sm:text-3xl font-bold transition-colors duration-500 ${activeNode === 2 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            <AnimatedCounter end={1} duration={1.5} suffix="M+" />
+          </h3>
           <h4 className="text-sm sm:text-base font-semibold text-[#051B2E] mb-1">Page Views</h4>
           <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Read, share and explore FlipiBooks across the globe.</p>
         </div>
-        <div className="flex flex-col items-center text-center p-4 sm:p-5 bg-white/80 rounded-2xl border border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F5F6F8] flex items-center justify-center border border-white mb-3 shadow-xs">
-            <Icon icon="mdi:earth" className="w-8 h-8 sm:w-10 sm:h-10 text-[#697689]" />
+
+        {/* Mobile Node 4 */}
+        <div className={`flex flex-col items-center text-center p-4 sm:p-5 rounded-2xl border transition-all duration-500 ${
+          activeNode === 3
+            ? 'bg-white border-[#EC5137]/30 shadow-[0_6px_20px_rgba(236,81,55,0.12)]'
+            : 'bg-white/80 border-gray-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)]'
+        }`}>
+          <div
+            style={{ filter: activeNode === 3 ? 'drop-shadow(0px 3px 10px rgba(236, 81, 55, 0.25))' : 'none' }}
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center border-2 mb-3 transition-all duration-500 ${
+              activeNode === 3
+                ? 'bg-white border-[#EC5137]/30 scale-105'
+                : 'bg-[#F5F6F8] border-white'
+            }`}
+          >
+            <Icon
+              icon="mdi:earth"
+              className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-500 ${
+                activeNode === 3 ? 'text-[#EC5137] scale-110 drop-shadow-sm' : 'text-[#697689]'
+              }`}
+            />
           </div>
-          <h4 className="text-lg sm:text-xl font-semibold text-[#051B2E] mb-1 mt-1">Global Reach</h4>
+          <h4 className={`text-lg sm:text-xl font-semibold mb-1 mt-1 transition-colors duration-500 ${activeNode === 3 ? 'text-[#EC5137]' : 'text-[#051B2E]'}`}>
+            Global Reach
+          </h4>
           <p className="text-xs sm:text-sm text-[#4B596C] leading-snug">Share Everywhere, <br />Anytime.</p>
         </div>
       </div>

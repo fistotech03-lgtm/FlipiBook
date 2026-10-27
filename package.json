@@ -3,15 +3,19 @@
   "version": "1.0.0",
   "description": "FlipiBook - Monorepo root to run Frontend and Backend",
   "scripts": {
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"green,blue\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently -n \"BACKEND,FRONTEND,ADMIN\" -c \"green,blue,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:admin\"",
+    "dev:admin": "npm --prefix Admin_Frontend run dev",
+    "dev:all": "concurrently -n \"BACKEND,FRONTEND,ADMIN\" -c \"green,blue,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:admin\"",
     "dev:backend": "npm --prefix Backend run dev",
     "dev:frontend": "npm --prefix Frontend run dev",
-    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"green,blue\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start": "concurrently -n \"BACKEND,FRONTEND,ADMIN\" -c \"green,blue,magenta\" \"npm run start:backend\" \"npm run start:frontend\" \"npm run start:admin\"",
     "start:backend": "npm --prefix Backend run start",
     "start:frontend": "npm --prefix Frontend run preview",
-    "build": "npm --prefix Frontend run build",
+    "start:admin": "npm --prefix Admin_Frontend run preview",
+    "build": "npm --prefix Frontend run build && npm --prefix Admin_Frontend run build",
     "build:frontend": "npm --prefix Frontend run build",
-    "install:all": "npm install && npm --prefix Backend install && npm --prefix Frontend install"
+    "build:admin": "npm --prefix Admin_Frontend run build",
+    "install:all": "npm install && npm --prefix Backend install && npm --prefix Frontend install && npm --prefix Admin_Frontend install"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

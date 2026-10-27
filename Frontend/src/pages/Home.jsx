@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import CreateFlipbookModal from '../components/CreateFlipbookModal';
 import AlertModal from '../components/AlertModal';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
-import HomePreloader from './Home/HomePreloader';
 import Footer from './Footer';
 import { convertPdfWithInkscape, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 
@@ -443,9 +442,6 @@ export default function Home() {
         showCancel={alertState.showCancel}
         onConfirm={alertState.onConfirm}
       />
-
-      {/* Modern Homepage Preloader */}
-      <HomePreloader />
 
     </div>
   );

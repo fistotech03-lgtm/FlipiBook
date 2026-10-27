@@ -254,9 +254,8 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
       {/* Top Tag: IDC and line first */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: false, amount: 0.3 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.85, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
         className="w-full flex items-center gap-3 mb-6"
       >
         <span className="text-[11px] lg:text-[0.85vw] font-semibold tracking-[0.28em] text-[#35363A] uppercase">
@@ -269,43 +268,50 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
       <div className="w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-stretch">
         
         {/* Left Column (col-span-3) - Expands to fill height in the row */}
-        <motion.div
-          initial={{ opacity: 0, x: -35 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        <div
           className="lg:col-span-3 flex flex-col justify-start text-center lg:text-left items-center lg:items-start py-1 h-full"
         >
-          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUE - expanded line height */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.35vw] font-semibold text-[#35363A] leading-[1.3] sm:leading-[1.25] lg:leading-[1.55] tracking-tight">
+          {/* Main Headline: INTERACTIVE DIGITAL CATALOGUES (Increased size) */}
+          <motion.h1
+            initial={{ opacity: 0, x: -35 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.2vw] font-semibold text-[#35363A] leading-[1.25] sm:leading-[1.2] lg:leading-[1.3] tracking-tight"
+          >
             INTERACTIVE <br className="inline sm:hidden lg:inline" />DIGITAL <br className="hidden sm:inline" />
-            <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUE</span>
-          </h1>
+            <span className="text-[#EC5137] font-semibold tracking-normal">CATALOGUES</span>
+            <span className="block text-sm sm:text-base md:text-lg lg:text-[1.08vw] font-medium text-[#4B596C] tracking-normal mt-2 lg:mt-[0.6vw] leading-snug">
+              THAT BRINGS YOUR PRODUCTS TO LIFE.
+            </span>
+          </motion.h1>
 
           {/* Bottom Sub-group: Divider + Description */}
-          <div className="pt-3 sm:pt-4 md:pt-4 flex flex-col items-center lg:items-start w-full">
+          <div className="pt-3 sm:pt-3.5 md:pt-4 flex flex-col items-center lg:items-start w-full">
             {/* Thin Horizontal Rule */}
             <motion.div
               initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: false }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="w-full max-w-[200px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-3 sm:mb-4 lg:mb-[1.5vw] origin-left"
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.85, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-[200px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[19vw] h-[1px] bg-gray-200 mb-3 sm:mb-3.5 lg:mb-[1.2vw] origin-left"
             ></motion.div>
 
-            {/* Description Paragraph: font weight light & #555555, line height 160% */}
-            <p className="text-xs sm:text-sm md:text-base lg:text-[0.92vw] font-light text-[#555555] leading-[160%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-center sm:text-justify lg:text-left">
-              Transform your products and ideas into immersive digital catalogues with interactive content, rich visuals, and engaging page-turn experiences.
-            </p>
+            {/* Description Paragraph (Slightly increased to fill well while staying secondary) */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="text-xs sm:text-sm md:text-[15px] lg:text-[0.85vw] font-light text-[#555555] leading-[165%] max-w-[290px] sm:max-w-[500px] md:max-w-[560px] lg:max-w-[20vw] text-justify lg:text-left"
+            >
+              Turn your PDF into an interactive digital catalogue with FlipiBook. Add product videos, 3D models, and clickable links so customers can see how your products work, explore the details, and contact your team. Share your catalogue through a single link.
+            </motion.p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Center Column: Interactive Flipbook with Page Turning (col-span-6) - Centered */}
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
           className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-2 sm:my-4 lg:my-0 px-1 sm:px-2 w-full"
         >
           <div className="relative mx-auto w-full max-w-[340px] xs:max-w-[400px] sm:max-w-[640px] lg:max-w-[48vw] h-[340px] xs:h-[390px] sm:h-[420px] md:h-[460px] lg:h-[30vw] flex items-center justify-center group drop-shadow-[0_22px_40px_rgba(0,0,0,0.22)]">
@@ -370,44 +376,63 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
         </motion.div>
 
         {/* Right Column: Content Pitch & Rating Box (col-span-3) - Right Aligned with Balanced Gap */}
-        <motion.div
-          initial={{ opacity: 0, x: 35 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+        <div
           className="lg:col-span-3 flex flex-col justify-start lg:justify-between text-center lg:text-right items-center lg:items-end py-1 h-full gap-5 lg:gap-0 lg:pl-[1.5vw]"
         >
           
           {/* Top Block: Pitch Heading, Subtext, Bullets & Line */}
           <div className="flex flex-col items-center lg:items-end w-full">
             {/* YOUR - Gradient Fill: #17202C (Dark Slate) top to #C3C3C3 (Light Silver) bottom */}
-            <h2
+            <motion.h2
+              initial={{ opacity: 0, x: 35 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="text-4xl sm:text-5xl md:text-6xl lg:text-[3.35vw] font-bold tracking-tight uppercase bg-clip-text text-transparent inline-block leading-none"
               style={{
                 backgroundImage: 'linear-gradient(to bottom, #17202C 0%, #17202C 43%, #C3C3C3 50%, #C3C3C3 100%)'
               }}
             >
               YOUR
-            </h2>
+            </motion.h2>
 
             {/* CONTENT. STORY. - #35363A semibold */}
-            <div className="text-sm sm:text-lg md:text-xl lg:text-[0.95vw] font-semibold text-[#35363A] tracking-wider uppercase mt-1.5 sm:mt-2.5 leading-[1.6]">
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.85, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="text-sm sm:text-lg md:text-xl lg:text-[0.95vw] font-semibold text-[#35363A] tracking-wider uppercase mt-1.5 sm:mt-2.5 leading-[1.6]"
+            >
               CONTENT.<br />STORY.
-            </div>
+            </motion.div>
 
             {/* Interactive, Imm..... - #555555 & medium */}
-            <div className="text-[11.5px] xs:text-xs sm:text-base md:text-lg lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-2 sm:gap-4 lg:gap-[0.8vw] flex-wrap justify-center lg:justify-end mt-3.5 sm:mt-4 lg:mt-[0.9vw]">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="text-[11.5px] xs:text-xs sm:text-base md:text-lg lg:text-[0.72vw] font-medium text-[#555555] tracking-wider uppercase flex items-center gap-2 sm:gap-4 lg:gap-[0.8vw] flex-wrap justify-center lg:justify-end mt-3.5 sm:mt-4 lg:mt-[0.9vw]"
+            >
               <span className="whitespace-nowrap">• INTERACTIVE</span>
               <span className="whitespace-nowrap">• IMMERSIVE</span>
               <span className="whitespace-nowrap">• INTELLIGENT</span>
-            </div>
+            </motion.div>
 
             {/* Red Accent Line aligned precisely under INTELLIGENT (slightly increased width) */}
-            <div className="w-24 sm:w-36 md:w-44 lg:w-[5.4vw] h-[2px] bg-[#EC5137] mt-2.5 sm:mt-3.5 self-center lg:self-end"></div>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.85, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="w-24 sm:w-36 md:w-44 lg:w-[5.4vw] h-[2px] bg-[#EC5137] mt-2.5 sm:mt-3.5 self-center lg:self-end origin-right"
+            ></motion.div>
           </div>
 
           {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 (Desktop only) */}
-          <div className="w-full hidden lg:flex items-center justify-end my-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.85, delay: 0.68, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full hidden lg:flex items-center justify-end my-auto"
+          >
             <div className="relative flex items-center gap-[2.5vw]">
               {/* Connecting Red Line */}
               <div className="absolute left-[0.92vw] right-[0.92vw] top-1/2 -translate-y-1/2 h-[2px] bg-[#EC5137] z-0"></div>
@@ -431,10 +456,15 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
                 );
               })}
             </div>
-          </div>
+          </motion.div>
 
           {/* Bottom Block: Customer Reviews with Orange Rings */}
-          <div className="flex flex-col items-center lg:items-end w-full mt-4 sm:mt-6 lg:mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.85, delay: 0.78, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center lg:items-end w-full mt-4 sm:mt-6 lg:mt-0"
+          >
             {/* Overlapping individual circular avatars matching design */}
             <div className="flex items-center justify-center lg:justify-end -space-x-2.5 lg:-space-x-[0.6vw] mb-1.5">
               <img
@@ -468,18 +498,17 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
             <span className="text-xs sm:text-sm md:text-base lg:text-[0.75vw] font-medium text-[#35363A] tracking-tight">
               Trusted by 10,000+ Customer
             </span>
-          </div>
+          </motion.div>
 
-        </motion.div>
+        </div>
 
       </div>
 
       {/* Center Bottom Action Buttons with Smooth Hover Color Animations */}
       <motion.div
         initial={{ opacity: 0, y: 25 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.3 }}
-        transition={{ duration: 0.7, delay: 0.3 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.85, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
         className="w-full flex items-center justify-center gap-3.5 sm:gap-5 lg:gap-[1.1vw] mt-7 sm:mt-9 lg:mt-[2.2vw] z-20"
       >
         {/* View Live Demo Button */}

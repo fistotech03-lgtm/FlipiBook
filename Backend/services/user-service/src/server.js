@@ -43,15 +43,34 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'user-service', port: PORT });
 });
 
-// Routes
+const forumRoutes = require('./routes/forumRoutes');
+const forumAdminRoutes = require('./routes/forumAdminRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+
+// Profile Routes
+app.use('/api/profile', profileRoutes);
+app.use('/profile', profileRoutes);
+
+// Support Ticket Routes
+app.use('/api/tickets', ticketRoutes);
+app.use('/tickets', ticketRoutes);
+
+// Forum Routes
+app.use('/api/forum', forumRoutes);
+app.use('/forum', forumRoutes);
+app.use('/api/admin/forum', forumAdminRoutes);
+app.use('/api/user/forum', forumRoutes);
+
+// User Routes
 app.use('/api/user', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/', userRoutes);

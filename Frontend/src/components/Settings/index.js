@@ -5,3 +5,6 @@ export { default as Profile } from "./Profile";
 export { default as Account } from "./Account";
 export { default as Notifications } from "./Notifications";
 export { default as Billing } from "./Billing";
+export { default as Tickets } from "./Tickets/Tickets";
+export { default as Support } from "./Tickets/Tickets";
+export { default as TicketDetailsPage } from "./Tickets/TicketDetailsPage";

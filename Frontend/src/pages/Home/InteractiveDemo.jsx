@@ -46,7 +46,7 @@ export default function InteractiveDemo() {
     <motion.section
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
-      viewport={{ once: false, amount: 0.15 }}
+      viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
       transition={{ duration: 0.6 }}
       id="interactive-demo-section"
       className="w-full bg-[#f6f6f6] pt-8 pb-10 sm:pt-10 sm:pb-14 lg:pt-[2.6vw] lg:pb-[3.5vw] px-6 sm:px-8 md:px-10 lg:px-[4.2vw] font-poppins select-none [--book-shadow:2px_4px_7px_rgba(0,0,0,0.18)] sm:[--book-shadow:4px_7px_12px_rgba(0,0,0,0.22)] lg:[--book-shadow:8px_14px_20px_rgba(0,0,0,0.28)] [--book-shadow-hover:4px_6px_10px_rgba(0,0,0,0.24)] sm:[--book-shadow-hover:6px_10px_16px_rgba(0,0,0,0.28)] lg:[--book-shadow-hover:10px_18px_24px_rgba(0,0,0,0.36)]"
@@ -54,42 +54,76 @@ export default function InteractiveDemo() {
       <div className="w-full mx-auto flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8 lg:gap-[4.2vw]">
         
         {/* Left Column: Heading, Subtitle & Description (Left-aligned like About Us) */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        <div
           className="w-full lg:w-[24%] flex flex-col text-left items-start shrink-0"
         >
           {/* Header Tag */}
-          <div className="flex items-center justify-start gap-3 mb-3 sm:mb-4 lg:mb-[1.3vw]">
-            <span className="text-[11px] lg:text-[0.82vw] font-bold tracking-[0.22em] text-[#2c2f35] uppercase">
-              INTERACTIVE DEMO
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="flex items-center justify-start gap-2.5 sm:gap-3 mb-2.5 sm:mb-3.5 lg:mb-[1.1vw]"
+          >
+            <span className="text-[9.5px] sm:text-[10px] lg:text-[0.7vw] font-medium tracking-[0.2em] text-[#2c2f35] uppercase">
+              INTERACTIVE CATALOGUE DEMO
             </span>
-            <div className="w-8 sm:w-10 lg:w-[2.8vw] h-[1.5px] bg-[#9ca0a6]"></div>
-          </div>
+            <div className="w-6 sm:w-8 lg:w-[2.2vw] h-[1.5px] bg-[#9ca0a6]"></div>
+          </motion.div>
 
           {/* Title */}
-          <h2 className="text-2xl sm:text-4xl lg:text-[3.2vw] font-bold text-[#202227] leading-[1.08] tracking-tight text-left">
-            Experience <br className="hidden lg:inline" />
-            <span className="text-[#ED5B43]">Flipibooks</span> <br className="hidden lg:inline" />
-            in Action
-          </h2>
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[32px] xs:text-[36px] sm:text-[44px] md:text-[48px] lg:text-[2.6vw] font-bold text-[#202227] leading-[1.25] sm:leading-[1.2] md:leading-[1.18] lg:leading-[3.5vw] tracking-tight text-left"
+          >
+            <span className="whitespace-nowrap">See Your Products</span> <br />
+            <span className="text-[#ED5B43]">Come to Life</span> <br />
+            with FlipiBook
+          </motion.h2>
 
           {/* Thin Divider Line */}
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
-            viewport={{ once: false }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-32 sm:w-full max-w-[220px] lg:max-w-[15.5vw] h-[1px] bg-[#d2d4d8] mt-3 sm:mt-5 lg:mt-[1.4vw] mb-3 sm:mb-4 lg:mb-[1.2vw] origin-left self-start"
           ></motion.div>
 
           {/* Description */}
-          <p className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify lg:text-left w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]">
-            Explore our handpicked demo books. Flip, zoom, and interact to discover how immersive and engaging digital reading can be.
-          </p>
-        </motion.div>
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[12px] sm:text-[13.5px] md:text-[14px] lg:text-[0.82vw] text-[#6d7178] font-normal leading-[165%] text-justify w-full max-w-full sm:max-w-[480px] lg:max-w-[17vw]"
+          >
+            Explore our interactive digital catalogue demos. Turn the pages, watch product videos, and rotate 3D models to see products from different angles. Discover how FlipiBook helps customers understand what you sell.
+          </motion.p>
+
+          {/* CTA Button: Explore Demo Catalogues */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
+            transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-4 sm:mt-5 lg:mt-[1.5vw]"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('explore-section') || document.querySelector('[class*="ExploreShowcase"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-[#ED5B43] hover:bg-[#d84e37] text-white rounded-lg text-xs sm:text-sm lg:text-[0.82vw] font-medium shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <span>Explore Demo Catalogues</span>
+            </button>
+          </motion.div>
+        </div>
 
         {/* Right Column: 5 Standing Books with Staggered Entrance */}
         <div className="w-full lg:flex-1 flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-6 md:gap-4 lg:gap-[2.5vw] overflow-visible pb-2 sm:pb-3 lg:pb-0 px-2 sm:px-4 lg:px-2">
@@ -102,7 +136,7 @@ export default function InteractiveDemo() {
                   key={book.id}
                   initial={{ opacity: 0, y: 35, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: false, amount: 0.2 }}
+                  viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                   transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                   onMouseEnter={() => setSelectedBook(idx)}
                   onMouseLeave={() => setSelectedBook(null)}
@@ -150,7 +184,7 @@ export default function InteractiveDemo() {
                   key={book.id}
                   initial={{ opacity: 0, y: 35, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: false, amount: 0.2 }}
+                  viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
                   transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                   onMouseEnter={() => setSelectedBook(idx)}
                   onMouseLeave={() => setSelectedBook(null)}

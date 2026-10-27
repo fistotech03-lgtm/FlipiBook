@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { ArrowRight } from "lucide-react";
-import { clearSession } from "../../utils/authUtils";
+import axios from "axios";
+import { clearSession, getInitialUser } from "../../utils/authUtils";
 import { useAuth } from "../../context/AuthContext";
 
 const defaultColors = [
@@ -70,14 +71,81 @@ const defaultProfile = {
 const SettingsLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, logout, setUser: setAuthUser } = useAuth();
   const [user, setUser] = useState(() => {
+    let base = { ...defaultProfile };
     try {
       const stored = localStorage.getItem('user_profile');
-      if (stored) return { ...defaultProfile, ...JSON.parse(stored) };
+      if (stored) base = { ...base, ...JSON.parse(stored) };
     } catch (e) {}
-    return defaultProfile;
+    const initUser = getInitialUser();
+    if (initUser) {
+      base = {
+        ...base,
+        ...initUser,
+        name: initUser.name || initUser.displayName || base.name,
+        displayName: initUser.displayName || initUser.name || base.displayName,
+        email: initUser.emailId || initUser.email || base.email,
+        emailId: initUser.emailId || initUser.email || base.emailId,
+      };
+    }
+    return base;
   });
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const initialUser = getInitialUser();
+  const currentEmail = (
+    authUser?.emailId ||
+    authUser?.email ||
+    user?.emailId ||
+    user?.email ||
+    initialUser?.emailId ||
+    initialUser?.email ||
+    ''
+  ).trim();
+
+  // Fetch full user profile from backend so all Settings subpages have complete data
+  useEffect(() => {
+    if (!currentEmail) return;
+
+    let isMounted = true;
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(`${backendUrl}/api/profile`, {
+          params: { emailId: currentEmail },
+          withCredentials: true
+        });
+        const p = res.data?.profile || (res.data?.emailId ? res.data : null);
+        if (p && isMounted) {
+          const merged = {
+            ...defaultProfile,
+            ...p,
+            email: p.emailId || currentEmail,
+            emailId: p.emailId || currentEmail,
+            name: p.name || p.displayName || (currentEmail ? currentEmail.split('@')[0] : 'User'),
+            displayName: p.displayName || p.name || '',
+            picture: p.picture || null,
+            avatarBgColor: p.avatarBgColor || '#E8D4C8',
+          };
+          setUser(merged);
+          if (setAuthUser) {
+            setAuthUser(merged);
+          }
+          try {
+            localStorage.setItem('user_profile', JSON.stringify(merged));
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.warn("SettingsLayout profile fetch error:", err);
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentEmail, backendUrl]);
 
   const handleLogout = async () => {
     try {
@@ -120,7 +188,7 @@ const SettingsLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (authUser) {
+    if (authUser && typeof authUser === 'object') {
       const email = authUser.emailId || authUser.email || "";
       let localProfile = {};
       try {
@@ -135,11 +203,18 @@ const SettingsLayout = () => {
         ...authUser,
         name:
           localProfile.name ||
+          authUser.displayName ||
           authUser.name ||
           authUser.userName ||
           (email ? email.split("@")[0] : prev.name),
-        email,
-        emailId: email,
+        displayName:
+          localProfile.displayName ||
+          authUser.displayName ||
+          authUser.name ||
+          prev.displayName ||
+          "",
+        email: email || prev.email,
+        emailId: email || prev.emailId,
         picture: localProfile.picture !== undefined ? localProfile.picture : (authUser.picture || prev.picture),
         avatarBgColor:
           localProfile.avatarBgColor || authUser.avatarBgColor || prev.avatarBgColor || "#E8D4C8",
@@ -189,7 +264,6 @@ const SettingsLayout = () => {
         },
         {
           path: "support",
-          to: "#",
           id: "support",
           label: "Support",
           icon: "griddy-icons:customer-support",
@@ -201,29 +275,28 @@ const SettingsLayout = () => {
   return (
     <div className="flex h-full bg-white font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-[16vw] mt-[1.5vw] flex-shrink-0 border-r border-gray-100 flex flex-col">
+      <aside className="w-[18vw] flex-shrink-0 bg-[#151c28] h-full border-r border-[#1f293d] flex flex-col p-[1.2vw] z-20 select-none text-white">
         {/* Navigation Links */}
-        <div className="flex-1 px-[1vw] pb-[2vw] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex-1 pr-[0.25vw] pb-[1vw] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {sidebarGroups.map((group, index) => (
-            <div key={index} className="mb-[1vw]">
+            <div key={index} className="mb-[1.2vw]">
               {/* Group Title with Line */}
-              <div className="flex items-center gap-[1vw] mb-[0.8vw] px-[0.5vw]">
-                <h4 className="text-[0.95vw] font-semibold text-gray-700 whitespace-nowrap">
+              <div className="flex items-center gap-[0.75vw] mb-[0.6vw] px-[0.3vw]">
+                <h4 className="text-[0.82vw] font-semibold text-gray-300 whitespace-nowrap">
                   {group.title}
                 </h4>
-                <div
-                  className="h-[0.0925vw] bg-gray-200 flex-1"
-                  style={{ marginRight: "-1.5vw" }}
-                >
-                  {" "}
-                </div>
+                <div className="h-[1px] bg-[#243042] flex-1"></div>
               </div>
 
-              <div className="flex flex-col gap-[0.2vw]">
+              <div className="space-y-[0.25vw]">
                 {group.items.map((item) => {
                   const isProfile = item.id === "profile";
+                  const isSupport = item.id === "support";
                   const isActive = isProfile
                     ? location.pathname.startsWith("/settings/profile")
+                    : isSupport
+                    ? location.pathname.startsWith("/settings/support") ||
+                      location.pathname.startsWith("/settings/tickets")
                     : location.pathname === `/settings/${item.path}` ||
                       location.pathname.startsWith(`/settings/${item.path}/`);
 
@@ -234,20 +307,22 @@ const SettingsLayout = () => {
                       key={item.id || item.path}
                       to={destination}
                       className={`
-                        flex items-center gap-[1vw] px-[0.75vw] py-[0.4vw] rounded-[0.5vw] text-[0.8125vw] font-semibold transition-colors
+                        w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.82vw] cursor-pointer select-none
                         ${
                           isActive
-                            ? "bg-[#F2F2F2] text-gray-800"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                            ? "bg-[#2c3749] text-white font-medium shadow-xs"
+                            : "text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal"
                         }
                       `}
                     >
                       <Icon
                         icon={item.icon}
-                        className={`w-[1vw] h-[1vw] flex-shrink-0 text-gray-700 ${item.icon.startsWith("gcp:") ? "grayscale brightness-0 opacity-90" : ""}`}
+                        className={`w-[1.15vw] h-[1.15vw] shrink-0 ${
+                          isActive ? "text-white" : "text-gray-300"
+                        } ${item.icon.startsWith("gcp:") ? "grayscale brightness-200 opacity-90" : ""}`}
                         style={{ strokeWidth: "1.2px" }}
                       />
-                      {item.label}
+                      <span className="truncate">{item.label}</span>
                     </Link>
                   );
                 })}
@@ -256,11 +331,11 @@ const SettingsLayout = () => {
           ))}
         </div>
 
-        {/* Upgrade Profile Button with Crown matching screenshot */}
-        <div className="p-[0.75vw] mb-[0.5vw]">
-          <div className="relative">
+        {/* Upgrade Profile Button with Crown */}
+        <div className="mt-auto pt-[0.6vw] flex-none border-t border-[#243042]">
+          <div className="relative pt-[0.4vw]">
             {/* 3D Gold Crown */}
-            <div className="absolute -top-[1.2vw] -right-[0.5vw] w-[2.6vw] h-[2.1vw] rotate-[16deg] z-20 select-none pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)]">
+            <div className="absolute -top-[0.8vw] -right-[0.3vw] w-[2.4vw] h-[1.9vw] rotate-[16deg] z-20 select-none pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)]">
               <svg viewBox="0 0 68 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
                 <defs>
                   <linearGradient id="goldGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -325,13 +400,13 @@ const SettingsLayout = () => {
 
             <button
               onClick={() => navigate('/settings/profile')}
-              className="w-full relative overflow-hidden py-[0.62vw] px-[1vw] rounded-[0.75vw] text-[0.82vw] font-medium text-white flex items-center justify-center gap-[0.5vw] shadow-[0_4px_14px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)] active:scale-[0.99] transition-all cursor-pointer group"
+              className="w-full relative overflow-hidden py-[0.55vw] px-[0.85vw] rounded-[0.65vw] text-[0.82vw] font-medium text-white flex items-center justify-center gap-[0.5vw] shadow-[0_4px_14px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)] active:scale-[0.99] transition-all cursor-pointer group border border-[#2e3b4e]/60"
               style={{
                 background: 'radial-gradient(ellipse at 50% 30%, #25282d 0%, #15171a 70%, #0d0e10 100%)'
               }}
             >
               <span className="tracking-wide font-medium">Upgrade Profile</span>
-              <ArrowRight className="w-[0.9vw] h-[0.9vw] transition-transform group-hover:translate-x-[0.2vw]" />
+              <ArrowRight className="w-[0.85vw] h-[0.85vw] transition-transform group-hover:translate-x-[0.2vw]" />
             </button>
           </div>
         </div>

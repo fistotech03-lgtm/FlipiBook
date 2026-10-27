@@ -83,7 +83,4 @@ const flipbookAssetSchema = new mongoose.Schema(
   }
 );
 
-flipbookAssetSchema.index({ userObjectID: 1 });
-flipbookAssetSchema.index({ book_v_id: 1 });
-
 module.exports = (mongoose.models.flipbookAsset || mongoose.models.FlipbookAsset) || mongoose.model('flipbookAsset', flipbookAssetSchema, 'flipbookAssets');

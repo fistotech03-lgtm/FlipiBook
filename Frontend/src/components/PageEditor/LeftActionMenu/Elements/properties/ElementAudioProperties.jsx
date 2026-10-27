@@ -15,6 +15,13 @@ import { resolveUploadsPath } from '../../../../../utils/assetUtils';
 import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
 import ColorPicker from '../../../properties/ColorPicker';
 import Effect from '../../../properties/Effect';
+import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
+import {
+  AUDIO_TEMPLATES,
+  getAudioSvgCode,
+  getTemplatePlayIconSvg,
+  getTemplatePauseIconSvg
+} from '../utils/audioElementUtils';
 
 // Helper to sync live SVG filters on the DOM element for Drop Shadow
 const syncLiveFilters = (el) => {
@@ -137,89 +144,11 @@ const PropertyRow = ({ label, children, className = '' }) => (
   </div>
 );
 
-// Toggle Switch
-const Toggle = ({ checked, onChange }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    className={`w-[1.9vw] h-[1.1vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors ${
-      checked ? 'bg-[#E05638]' : 'bg-gray-300'
-    }`}
-  >
-    <div
-      className={`bg-white w-[0.9vw] h-[0.9vw] rounded-full shadow-md transform transition-transform ${
-        checked ? 'translate-x-[0.8vw]' : 'translate-x-0'
-      }`}
-    />
-  </button>
-);
+// Toggle Switch matching exact reference design
+const Toggle = ElementToggle;
 
-// Custom Dropdown matching CustomSelect (h-[2.5vw] rounded-[0.5vw])
-const CustomDropdown = ({ value, options, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const selectedOption = options.find((opt) => String(opt.value) === String(value)) || options[0];
-
-  return (
-    <div ref={containerRef} className="relative w-full">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-[2.5vw] flex items-center justify-between bg-white border ${
-          isOpen ? 'border-2 border-[#E05638] shadow-xs' : 'border border-gray-200 hover:border-gray-300'
-        } rounded-[0.5vw] px-[0.6vw] text-[0.78vw] text-gray-800 transition-colors cursor-pointer shadow-2xs font-medium`}
-      >
-        <span className="truncate font-medium">{selectedOption?.label || value}</span>
-        <ChevronDown
-          className={`w-[0.9vw] h-[0.9vw] text-gray-500 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
-            isOpen ? 'rotate-180 text-[#E05638]' : ''
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.6vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.3vw] max-h-[14vw] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            {options.map((opt) => {
-              const isSelected = String(opt.value) === String(value);
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`px-[0.9vw] py-[0.45vw] text-[0.78vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'text-[#E05638] bg-[#E05638]/10 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#E05638]'
-                  }`}
-                >
-                  <span className="truncate">{opt.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
+// Custom Dropdown matching exact reference design
+const CustomDropdown = ElementDropdown;
 
 // Color Swatch + Hex Input Box
 const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
@@ -426,7 +355,7 @@ const ElementAudioProperties = ({
 
   // Uploaded Audio Metadata State
   const [audioName, setAudioName] = useState('bg music1.mp3');
-  const [audioDurationText, setAudioDurationText] = useState('00:39 Mins');
+  const [audioDurationText, setAudioDurationText] = useState('00:19 Mins');
   const [audioSizeText, setAudioSizeText] = useState('614 kb');
   const [audioFormatText, setAudioFormatText] = useState('MP3');
   const [audioSrc, setAudioSrc] = useState(sampleAudio);
@@ -434,6 +363,24 @@ const ElementAudioProperties = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
+  // Stable references to prevent infinite render loops in async/event callbacks
+  const selectedElementRef = useRef(selectedElement);
+  const onUpdateRef = useRef(onUpdate);
+  const updateElementAttributeRef = useRef(updateElementAttribute);
+  const activePageIndexRef = useRef(activePageIndex);
+  const selectedLayerIdRef = useRef(selectedLayerId);
+  const audioDurationTextRef = useRef(audioDurationText);
+  const isUpdatingDurationRef = useRef(false);
+
+  useEffect(() => {
+    selectedElementRef.current = selectedElement;
+    onUpdateRef.current = onUpdate;
+    updateElementAttributeRef.current = updateElementAttribute;
+    activePageIndexRef.current = activePageIndex;
+    selectedLayerIdRef.current = selectedLayerId;
+    audioDurationTextRef.current = audioDurationText;
+  });
 
   // Audio Properties States
   const [playerStyle, setPlayerStyle] = useState('glassmorphism');
@@ -446,7 +393,7 @@ const ElementAudioProperties = ({
   const [controlSkip, setControlSkip] = useState(true);
   const [skipSeconds, setSkipSeconds] = useState(5);
   const [controlDuration, setControlDuration] = useState(true);
-  const [controlVolume, setControlVolume] = useState(false);
+  const [controlVolume, setControlVolume] = useState(true);
   const [controlLoop, setControlLoop] = useState(true);
   const [controlMute, setControlMute] = useState(true);
 
@@ -491,11 +438,85 @@ const ElementAudioProperties = ({
 
   // Format seconds to mm:ss
   const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds)) return '0:00';
+    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds) || timeInSeconds < 0) return '0:00';
     const m = Math.floor(timeInSeconds / 60);
     const s = Math.floor(timeInSeconds % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
+
+  // Helper to parse "00:19 Mins" or "02:59 Mins" into "0:19" or "2:59"
+  const parseDurationTextToDisplay = (text) => {
+    if (!text) return null;
+    const match = text.match(/(\d+):(\d+)/);
+    if (match) {
+      const m = parseInt(match[1], 10);
+      const s = match[2];
+      return `${m}:${s}`;
+    }
+    return null;
+  };
+
+  // Synchronize audio duration to canvas element & sidebar with strict equality guards
+  const syncDuration = useCallback((dur) => {
+    if (!dur || isNaN(dur) || !isFinite(dur) || dur <= 0) return;
+    const el = selectedElementRef.current;
+    if (!el) return;
+
+    const durationStr = formatTime(dur);
+    const mins = Math.floor(dur / 60);
+    const secs = Math.floor(dur % 60);
+    const formattedMinText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs} Mins`;
+    const durSecStr = Math.round(dur).toString();
+
+    let hasChanged = false;
+
+    // 1. Update canvas total time text if different
+    const totalTimeEl = el.querySelector('.audio-total-time');
+    if (totalTimeEl && durationStr !== '0:00' && totalTimeEl.textContent !== durationStr) {
+      totalTimeEl.textContent = durationStr;
+      hasChanged = true;
+    }
+
+    // 2. Update React state if different
+    if (audioDurationTextRef.current !== formattedMinText) {
+      audioDurationTextRef.current = formattedMinText;
+      setAudioDurationText(formattedMinText);
+      hasChanged = true;
+    }
+
+    // 3. Update DOM attributes on canvas element
+    if (el.getAttribute('data-audio-duration-text') !== formattedMinText) {
+      el.setAttribute('data-audio-duration-text', formattedMinText);
+      hasChanged = true;
+    }
+    if (el.getAttribute('data-audio-duration-seconds') !== durSecStr) {
+      el.setAttribute('data-audio-duration-seconds', durSecStr);
+      hasChanged = true;
+    }
+
+    // 4. Update parent element attribute and onUpdate ONLY if something actually changed
+    if (hasChanged && !isUpdatingDurationRef.current) {
+      isUpdatingDurationRef.current = true;
+      try {
+        if (typeof updateElementAttributeRef.current === 'function') {
+          if (activePageIndexRef.current !== undefined && selectedLayerIdRef.current) {
+            updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-audio-duration-text', formattedMinText);
+            updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-audio-duration-seconds', durSecStr);
+          } else {
+            updateElementAttributeRef.current('data-audio-duration-text', formattedMinText);
+            updateElementAttributeRef.current('data-audio-duration-seconds', durSecStr);
+          }
+        }
+        if (onUpdateRef.current) {
+          onUpdateRef.current();
+        }
+      } finally {
+        setTimeout(() => {
+          isUpdatingDurationRef.current = false;
+        }, 120);
+      }
+    }
+  }, []);
 
   const effectiveSrc = audioSrc || sampleAudio;
 
@@ -504,40 +525,36 @@ const ElementAudioProperties = ({
     if (!selectedElement) return;
     const iconContainer = selectedElement.querySelector('.play-pause-icon');
     if (!iconContainer) return;
-    const isSquare = !selectedElement.querySelector('.play-pause-bg');
+    const tplId = selectedElement.getAttribute('data-audio-template') || playerStyle || 'sunset-vibrant';
+    const filterEl = selectedElement.querySelector('defs filter');
+    const filterId = filterEl ? filterEl.id : '';
+    const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
 
     if (playing) {
-      if (isSquare) {
-        iconContainer.innerHTML = `<rect x="18" y="16" width="4" height="16" fill="${iconColor}" rx="1" /><rect x="26" y="16" width="4" height="16" fill="${iconColor}" rx="1" />`;
-      } else {
-        iconContainer.innerHTML = `<rect x="6" y="4" width="4" height="14" fill="#ffffff" rx="1" /><rect x="14" y="4" width="4" height="14" fill="#ffffff" rx="1" />`;
-      }
+      iconContainer.innerHTML = getTemplatePauseIconSvg(tplId, color, filterId);
     } else {
-      if (isSquare) {
-        iconContainer.innerHTML = `<polygon points="20 16 32 24 20 32" fill="${iconColor}" stroke="${iconColor}" stroke-width="2" stroke-linejoin="round"></polygon>`;
-      } else {
-        iconContainer.innerHTML = `<polygon points="7 4 17 11 7 18 7 4" fill="#ffffff"></polygon>`;
-      }
+      iconContainer.innerHTML = getTemplatePlayIconSvg(tplId, color, filterId);
     }
-  }, [selectedElement, iconColor]);
+  }, [selectedElement, playerStyle, iconColor]);
 
   // Helper to update mute/speaker icon on canvas
   const updateMuteIconOnCanvas = useCallback((muted) => {
     if (!selectedElement) return;
     const volIcon = selectedElement.querySelector('.volume-icon');
     if (!volIcon) return;
+    const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
     if (muted) {
       volIcon.innerHTML = `
         <rect x="-4" y="-4" width="28" height="28" fill="transparent"></rect>
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${iconColor}"></polygon>
-        <line x1="18" y1="8" x2="14" y2="16" stroke="${iconColor}" stroke-width="2" stroke-linecap="round"></line>
-        <line x1="14" y1="8" x2="18" y2="16" stroke="${iconColor}" stroke-width="2" stroke-linecap="round"></line>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${color}"></polygon>
+        <line x1="18" y1="8" x2="14" y2="16" stroke="${color}" stroke-width="2" stroke-linecap="round"></line>
+        <line x1="14" y1="8" x2="18" y2="16" stroke="${color}" stroke-width="2" stroke-linecap="round"></line>
       `;
     } else {
       volIcon.innerHTML = `
         <rect x="-4" y="-4" width="28" height="28" fill="transparent"></rect>
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${iconColor}"></polygon>
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${color}"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
       `;
     }
   }, [selectedElement, iconColor]);
@@ -566,25 +583,35 @@ const ElementAudioProperties = ({
     if (oversizedHitbox) {
       oversizedHitbox.setAttribute('width', '35');
     }
-    const prevEl = selectedElement.querySelector('.prev-icon');
-    if (prevEl) {
-      prevEl.style.pointerEvents = 'all';
-      prevEl.style.cursor = 'pointer';
-      prevEl.style.opacity = '1';
-    }
-    const nextEl = selectedElement.querySelector('.next-icon');
-    if (nextEl) {
-      nextEl.style.pointerEvents = 'all';
-      nextEl.style.cursor = 'pointer';
-      nextEl.style.opacity = '1';
-    }
+    
+    // Ensure all canvas controls have pointer-events and pointer cursor
+    ['.prev-icon', '.next-icon', '.play-pause-btn', '.loop-icon', '.volume-icon', '.volume-slider-part', '.progress-group'].forEach((sel) => {
+      const el = selectedElement.querySelector(sel);
+      if (el) {
+        el.style.pointerEvents = 'all';
+        el.style.cursor = 'pointer';
+      }
+    });
 
     // File info
     const nameAttr = selectedElement.getAttribute('data-filename');
-    if (nameAttr) setAudioName(nameAttr);
+    if (nameAttr) {
+      setAudioName(nameAttr);
+      const titleEl = selectedElement.querySelector('.audio-title');
+      if (titleEl) {
+        titleEl.textContent = nameAttr.replace(/\.[^/.]+$/, '');
+      }
+    }
 
     const durText = selectedElement.getAttribute('data-audio-duration-text');
-    if (durText) setAudioDurationText(durText);
+    if (durText) {
+      setAudioDurationText(durText);
+      const parsedDisplay = parseDurationTextToDisplay(durText);
+      const totalTimeEl = selectedElement.querySelector('.audio-total-time');
+      if (totalTimeEl && parsedDisplay) {
+        totalTimeEl.textContent = parsedDisplay;
+      }
+    }
 
     const sizeText = selectedElement.getAttribute('data-audio-size-text');
     if (sizeText) setAudioSizeText(sizeText);
@@ -615,30 +642,28 @@ const ElementAudioProperties = ({
     const volAttr = selectedElement.getAttribute('data-audio-volume');
     if (volAttr !== null) setDefaultVolume(Math.round(parseFloat(volAttr) * 100));
 
-    // Controls toggles
+    // Controls toggles (defaults to true if null or anything other than 'false')
     const ppAttr = selectedElement.getAttribute('data-control-play-pause');
-    if (ppAttr !== null) setControlPlayPause(ppAttr === 'true');
+    setControlPlayPause(ppAttr !== 'false');
 
     const skipAttr = selectedElement.getAttribute('data-control-skip');
-    if (skipAttr !== null) setControlSkip(skipAttr === 'true');
+    setControlSkip(skipAttr !== 'false');
 
     const skipSecAttr = selectedElement.getAttribute('data-skip-seconds');
     if (skipSecAttr) setSkipSeconds(parseInt(skipSecAttr, 10) || 5);
 
     const durAttr = selectedElement.getAttribute('data-control-duration');
-    if (durAttr !== null) setControlDuration(durAttr === 'true');
+    setControlDuration(durAttr !== 'false');
 
     const volCtrlAttr = selectedElement.getAttribute('data-control-volume');
-    if (volCtrlAttr !== null) setControlVolume(volCtrlAttr === 'true');
+    setControlVolume(volCtrlAttr !== 'false');
 
     const loopAttr = selectedElement.getAttribute('data-control-loop') ?? selectedElement.getAttribute('data-audio-loop');
-    if (loopAttr !== null) {
-      setControlLoop(loopAttr === 'true');
-      setIsLooping(loopAttr === 'true');
-    }
+    setControlLoop(loopAttr !== 'false');
+    setIsLooping(loopAttr === 'true');
 
     const muteAttr = selectedElement.getAttribute('data-control-mute');
-    if (muteAttr !== null) setControlMute(muteAttr === 'true');
+    setControlMute(muteAttr !== 'false');
 
     const audioMutedAttr = selectedElement.getAttribute('data-audio-muted');
     if (audioMutedAttr !== null) setIsMuted(audioMutedAttr === 'true');
@@ -688,35 +713,65 @@ const ElementAudioProperties = ({
     } else {
       if (audioRef.current.src !== effectiveSrc) {
         audioRef.current.src = effectiveSrc;
+        audioRef.current.load();
       }
     }
 
-    audioRef.current.loop = isLooping;
-    audioRef.current.volume = defaultVolume / 100;
-    audioRef.current.playbackRate = parseFloat(playbackSpeed) || 1;
-    audioRef.current.muted = isMuted;
+    const audio = audioRef.current;
+    audio.loop = isLooping;
+    audio.volume = defaultVolume / 100;
+    audio.playbackRate = parseFloat(playbackSpeed) || 1;
+    audio.muted = isMuted;
 
-    audioRef.current.onended = () => {
+    const handleDuration = () => {
+      if (!audio) return;
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        syncDuration(audio.duration);
+      } else if (audio.duration === Infinity) {
+        // Chromium MP3 stream duration fix
+        audio.currentTime = 1e101;
+        const onTime = () => {
+          audio.removeEventListener('timeupdate', onTime);
+          audio.currentTime = 0;
+          if (isFinite(audio.duration) && audio.duration > 0) {
+            syncDuration(audio.duration);
+          }
+        };
+        audio.addEventListener('timeupdate', onTime);
+      }
+    };
+
+    // If metadata already loaded, sync immediately
+    if (audio.readyState >= 1) {
+      handleDuration();
+    }
+
+    audio.addEventListener('loadedmetadata', handleDuration);
+    audio.addEventListener('durationchange', handleDuration);
+    audio.addEventListener('canplay', handleDuration);
+    audio.addEventListener('loadeddata', handleDuration);
+
+    audio.onended = () => {
       setIsPlaying(false);
       updatePlayPauseIconOnCanvas(false);
-      if (!audioRef.current?.loop && selectedElement) {
+      if (!audio?.loop && selectedElement) {
         const curEl = selectedElement.querySelector('.audio-current-time');
         if (curEl) curEl.textContent = '0:00';
         const progressFill = selectedElement.querySelector('.progress-fill');
         const progressKnob = selectedElement.querySelector('.progress-knob');
         if (progressFill && progressKnob) {
           const progressBg = selectedElement.querySelector('.progress-bg');
-          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '160') : 160;
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
           progressFill.setAttribute('width', '0');
           progressKnob.setAttribute('cx', bgX.toString());
         }
       }
     };
 
-    audioRef.current.ontimeupdate = () => {
-      if (!selectedElement || !audioRef.current) return;
-      const curTime = audioRef.current.currentTime;
-      const dur = audioRef.current.duration;
+    audio.ontimeupdate = () => {
+      if (!selectedElement || !audio) return;
+      const curTime = audio.currentTime;
+      const dur = audio.duration;
       const currentTimeStr = formatTime(curTime);
 
       const currentTimeEl = selectedElement.querySelector('.audio-current-time');
@@ -724,39 +779,25 @@ const ElementAudioProperties = ({
 
       const progressFill = selectedElement.querySelector('.progress-fill');
       const progressKnob = selectedElement.querySelector('.progress-knob');
-      if (progressFill && progressKnob && dur) {
+      if (progressFill && progressKnob && dur && isFinite(dur) && dur > 0) {
         const progressBg = selectedElement.querySelector('.progress-bg');
-        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '160') : 160;
-        const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '125') : 125;
-        const ratio = curTime / dur;
+        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+        const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+        const ratio = Math.min(1, Math.max(0, curTime / dur));
         const fillWidth = ratio * maxWidth;
         progressFill.setAttribute('width', fillWidth.toString());
         progressKnob.setAttribute('cx', (bgX + fillWidth).toString());
       }
     };
 
-    audioRef.current.onloadedmetadata = () => {
-      if (!selectedElement || !audioRef.current) return;
-      const dur = audioRef.current.duration;
-      const durationStr = formatTime(dur);
-      const totalTimeEl = selectedElement.querySelector('.audio-total-time');
-      if (totalTimeEl && durationStr !== '0:00' && durationStr !== 'NaN:NaN') {
-        totalTimeEl.textContent = durationStr;
-      }
-
-      const mins = Math.floor(dur / 60);
-      const secs = Math.floor(dur % 60);
-      const formattedMinText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs} Mins`;
-      setAudioDurationText(formattedMinText);
-      updateAttribute('data-audio-duration-text', formattedMinText);
-    };
-
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      audio.removeEventListener('loadedmetadata', handleDuration);
+      audio.removeEventListener('durationchange', handleDuration);
+      audio.removeEventListener('canplay', handleDuration);
+      audio.removeEventListener('loadeddata', handleDuration);
+      audio.pause();
     };
-  }, [effectiveSrc]); // eslint-disable-line
+  }, [effectiveSrc, selectedElement, syncDuration]);
 
   // Sync playback speed & volume to audioRef
   useEffect(() => {
@@ -768,52 +809,122 @@ const ElementAudioProperties = ({
     }
   }, [playbackSpeed, defaultVolume, isLooping, isMuted]);
 
-  // Sync control toggles visibility to SVG element on canvas
+  // Sync control toggles visibility to SVG element on canvas (with strict equality guards)
   useEffect(() => {
     if (!selectedElement) return;
+
+    let hasDomChanges = false;
 
     // Play/Pause button
     const ppBtn = selectedElement.querySelector('.play-pause-btn') || selectedElement.querySelector('.play-pause-icon');
     if (ppBtn) {
-      ppBtn.style.display = controlPlayPause ? '' : 'none';
+      const nextDisplay = controlPlayPause ? '' : 'none';
+      if (ppBtn.style.display !== nextDisplay) {
+        ppBtn.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
     }
 
     // Skip prev/next
     const prevIcon = selectedElement.querySelector('.prev-icon');
     const nextIcon = selectedElement.querySelector('.next-icon');
-    if (prevIcon) prevIcon.style.display = controlSkip ? '' : 'none';
-    if (nextIcon) nextIcon.style.display = controlSkip ? '' : 'none';
+    if (prevIcon) {
+      const nextDisplay = controlSkip ? '' : 'none';
+      if (prevIcon.style.display !== nextDisplay) {
+        prevIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (nextIcon) {
+      const nextDisplay = controlSkip ? '' : 'none';
+      if (nextIcon.style.display !== nextDisplay) {
+        nextIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
 
-    // Duration (time texts and progress bar)
+    // Duration (time texts, separator, and progress bar)
     const curTime = selectedElement.querySelector('.audio-current-time');
     const totTime = selectedElement.querySelector('.audio-total-time');
+    const sepTime = selectedElement.querySelector('.audio-duration-separator');
     const progGroup = selectedElement.querySelector('.progress-group');
-    if (curTime) curTime.style.display = controlDuration ? '' : 'none';
-    if (totTime) totTime.style.display = controlDuration ? '' : 'none';
-    if (progGroup) progGroup.style.display = controlDuration ? '' : 'none';
+    if (curTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (curTime.style.display !== nextDisplay) {
+        curTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (totTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (totTime.style.display !== nextDisplay) {
+        totTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (sepTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (sepTime.style.display !== nextDisplay) {
+        sepTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (progGroup) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (progGroup.style.display !== nextDisplay) {
+        progGroup.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
 
     // Volume control slider
     const volSlider = selectedElement.querySelector('.volume-slider-part');
-    if (volSlider) volSlider.style.display = controlVolume ? '' : 'none';
+    if (volSlider) {
+      const nextDisplay = controlVolume ? '' : 'none';
+      if (volSlider.style.display !== nextDisplay) {
+        volSlider.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
 
     // Loop button
     const loopBtn = selectedElement.querySelector('.loop-icon');
-    if (loopBtn) loopBtn.style.display = controlLoop ? '' : 'none';
+    if (loopBtn) {
+      const nextDisplay = controlLoop ? '' : 'none';
+      if (loopBtn.style.display !== nextDisplay) {
+        loopBtn.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
 
     // Mute / volume icon
     const volIcon = selectedElement.querySelector('.volume-icon');
-    if (volIcon) volIcon.style.display = controlMute ? '' : 'none';
+    if (volIcon) {
+      const nextDisplay = controlMute ? '' : 'none';
+      if (volIcon.style.display !== nextDisplay) {
+        volIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
 
-    // Persist attributes
-    updateAttribute('data-control-play-pause', controlPlayPause.toString());
-    updateAttribute('data-control-skip', controlSkip.toString());
-    updateAttribute('data-skip-seconds', skipSeconds.toString());
-    updateAttribute('data-control-duration', controlDuration.toString());
-    updateAttribute('data-control-volume', controlVolume.toString());
-    updateAttribute('data-control-loop', controlLoop.toString());
-    updateAttribute('data-control-mute', controlMute.toString());
+    // Persist attributes only if changed
+    const syncAttr = (attr, val) => {
+      if (selectedElement.getAttribute(attr) !== val) {
+        selectedElement.setAttribute(attr, val);
+        updateAttribute(attr, val);
+        hasDomChanges = true;
+      }
+    };
 
-    if (onUpdate) onUpdate();
+    syncAttr('data-control-play-pause', controlPlayPause.toString());
+    syncAttr('data-control-skip', controlSkip.toString());
+    syncAttr('data-skip-seconds', skipSeconds.toString());
+    syncAttr('data-control-duration', controlDuration.toString());
+    syncAttr('data-control-volume', controlVolume.toString());
+    syncAttr('data-control-loop', controlLoop.toString());
+    syncAttr('data-control-mute', controlMute.toString());
+
+    if (hasDomChanges && onUpdate) onUpdate();
   }, [
     controlPlayPause,
     controlSkip,
@@ -872,11 +983,11 @@ const ElementAudioProperties = ({
         const curEl = selectedElement.querySelector('.audio-current-time');
         if (curEl) curEl.textContent = formatTime(targetTime);
         const dur = audioRef.current.duration;
-        if (dur) {
+        if (dur && dur > 0) {
           const progressBg = selectedElement.querySelector('.progress-bg');
-          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '160') : 160;
-          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '125') : 125;
-          const ratio = targetTime / dur;
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+          const ratio = Math.min(1, Math.max(0, targetTime / dur));
           const progressFill = selectedElement.querySelector('.progress-fill');
           const progressKnob = selectedElement.querySelector('.progress-knob');
           if (progressFill && progressKnob) {
@@ -897,11 +1008,11 @@ const ElementAudioProperties = ({
         const curEl = selectedElement.querySelector('.audio-current-time');
         if (curEl) curEl.textContent = formatTime(targetTime);
         const dur = audioRef.current.duration;
-        if (dur) {
+        if (dur && dur > 0) {
           const progressBg = selectedElement.querySelector('.progress-bg');
-          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '160') : 160;
-          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '125') : 125;
-          const ratio = targetTime / dur;
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+          const ratio = Math.min(1, Math.max(0, targetTime / dur));
           const progressFill = selectedElement.querySelector('.progress-fill');
           const progressKnob = selectedElement.querySelector('.progress-knob');
           if (progressFill && progressKnob) {
@@ -916,27 +1027,63 @@ const ElementAudioProperties = ({
 
   // Seek on canvas progress bar
   const handleProgressClick = (e, progressGroup) => {
-    if (!audioRef.current || !audioRef.current.duration) return;
-    const bg = progressGroup.querySelector('.progress-bg') || progressGroup.querySelector('rect');
+    if (!audioRef.current || !selectedElement) return;
+    const bg = progressGroup.querySelector('.progress-bg') || progressGroup.querySelector('rect:not([fill="transparent"])');
     if (!bg) return;
     const rect = bg.getBoundingClientRect();
+    if (rect.width <= 0) return;
     const clickX = e.clientX - rect.left;
-    const bgWidth = parseFloat(bg.getAttribute('width') || rect.width.toString()) || 125;
-    const bgX = parseFloat(bg.getAttribute('x') || '160') || 160;
+    const bgWidth = parseFloat(bg.getAttribute('width') || rect.width.toString()) || 100;
+    const bgX = parseFloat(bg.getAttribute('x') || '0') || 0;
     const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-    const newTime = ratio * audioRef.current.duration;
-    audioRef.current.currentTime = newTime;
-    if (selectedElement) {
+    const dur = audioRef.current.duration || 0;
+    if (dur > 0) {
+      const newTime = ratio * dur;
+      audioRef.current.currentTime = newTime;
       const curEl = selectedElement.querySelector('.audio-current-time');
       if (curEl) curEl.textContent = formatTime(newTime);
-      const progressFill = selectedElement.querySelector('.progress-fill');
-      const progressKnob = selectedElement.querySelector('.progress-knob');
-      if (progressFill && progressKnob) {
-        const fillW = ratio * bgWidth;
-        progressFill.setAttribute('width', fillW.toString());
-        progressKnob.setAttribute('cx', (bgX + fillW).toString());
+    }
+    const progressFill = progressGroup.querySelector('.progress-fill');
+    const progressKnob = progressGroup.querySelector('.progress-knob');
+    if (progressFill && progressKnob) {
+      const fillW = ratio * bgWidth;
+      progressFill.setAttribute('width', fillW.toString());
+      progressKnob.setAttribute('cx', (bgX + fillW).toString());
+    }
+    if (onUpdate) onUpdate();
+  };
+
+  // Volume slider interaction on canvas
+  const handleVolumeClick = (e, volSliderPart) => {
+    if (!selectedElement) return;
+    const bg = volSliderPart.querySelector('.volume-bg') || volSliderPart.querySelector('rect:not([fill="transparent"])');
+    if (!bg) return;
+    const rect = bg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const newVolPct = Math.round(ratio * 100);
+    setDefaultVolume(newVolPct);
+    updateAttribute('data-audio-volume', ratio.toString());
+    if (audioRef.current) {
+      audioRef.current.volume = ratio;
+      if (ratio > 0 && isMuted) {
+        setIsMuted(false);
+        audioRef.current.muted = false;
+        updateAttribute('data-audio-muted', 'false');
+        updateMuteIconOnCanvas(false);
       }
     }
+    const volFill = volSliderPart.querySelector('.volume-fill');
+    const volKnob = volSliderPart.querySelector('.volume-knob');
+    if (volFill && volKnob) {
+      const bgX = parseFloat(bg.getAttribute('x') || '0') || 0;
+      const bgWidth = parseFloat(bg.getAttribute('width') || rect.width.toString()) || 50;
+      const fillW = ratio * bgWidth;
+      volFill.setAttribute('width', fillW.toString());
+      volKnob.setAttribute('cx', (bgX + fillW).toString());
+    }
+    if (onUpdate) onUpdate();
   };
 
   // Mute toggle on canvas
@@ -968,6 +1115,7 @@ const ElementAudioProperties = ({
     handlePrev,
     handleNext,
     handleProgressClick,
+    handleVolumeClick,
     handleVolumeIconClick,
     handleLoopIconClick
   });
@@ -978,12 +1126,13 @@ const ElementAudioProperties = ({
       handlePrev,
       handleNext,
       handleProgressClick,
+      handleVolumeClick,
       handleVolumeIconClick,
       handleLoopIconClick
     };
   });
 
-  // Attach canvas click delegation on selectedElement
+  // Attach canvas click and scrub delegation on selectedElement
   useEffect(() => {
     if (!selectedElement) return;
 
@@ -1019,6 +1168,14 @@ const ElementAudioProperties = ({
         return;
       }
 
+      // Volume slider
+      const volSliderPart = target.closest('.volume-slider-part');
+      if (volSliderPart) {
+        e.stopPropagation();
+        actionsRef.current.handleVolumeClick(e, volSliderPart);
+        return;
+      }
+
       // Volume / Mute icon
       if (target.closest('.volume-icon')) {
         e.stopPropagation();
@@ -1034,9 +1191,47 @@ const ElementAudioProperties = ({
       }
     };
 
+    const handlePointerDown = (e) => {
+      const progGroup = e.target.closest('.progress-group');
+      if (progGroup) {
+        e.stopPropagation();
+        actionsRef.current.handleProgressClick(e, progGroup);
+
+        const onPointerMove = (moveEvent) => {
+          actionsRef.current.handleProgressClick(moveEvent, progGroup);
+        };
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        return;
+      }
+
+      const volSliderPart = e.target.closest('.volume-slider-part');
+      if (volSliderPart) {
+        e.stopPropagation();
+        actionsRef.current.handleVolumeClick(e, volSliderPart);
+
+        const onPointerMove = (moveEvent) => {
+          actionsRef.current.handleVolumeClick(moveEvent, volSliderPart);
+        };
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        return;
+      }
+    };
+
     selectedElement.addEventListener('click', handleCanvasClick);
+    selectedElement.addEventListener('pointerdown', handlePointerDown);
     return () => {
       selectedElement.removeEventListener('click', handleCanvasClick);
+      selectedElement.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [selectedElement]);
 
@@ -1062,8 +1257,38 @@ const ElementAudioProperties = ({
       updateAttribute('data-audio-size-text', sizeMb);
       updateAttribute('data-audio-format-text', ext);
 
+      // Update track title on canvas element if present
+      const titleEl = selectedElement.querySelector('.audio-title');
+      if (titleEl) {
+        titleEl.textContent = fileName.replace(/\.[^/.]+$/, '');
+      }
+
       // Temporary local URL for immediate metadata loading & playback
       const localUrl = URL.createObjectURL(file);
+
+      // Immediately probe duration directly from the file
+      const probeAudio = new Audio();
+      probeAudio.preload = 'metadata';
+      const handleProbe = () => {
+        if (isFinite(probeAudio.duration) && probeAudio.duration > 0) {
+          syncDuration(probeAudio.duration);
+        } else if (probeAudio.duration === Infinity) {
+          probeAudio.currentTime = 1e101;
+          const onProbeTime = () => {
+            probeAudio.removeEventListener('timeupdate', onProbeTime);
+            probeAudio.currentTime = 0;
+            if (isFinite(probeAudio.duration) && probeAudio.duration > 0) {
+              syncDuration(probeAudio.duration);
+            }
+          };
+          probeAudio.addEventListener('timeupdate', onProbeTime);
+        }
+      };
+      probeAudio.addEventListener('loadedmetadata', handleProbe);
+      probeAudio.addEventListener('durationchange', handleProbe);
+      probeAudio.addEventListener('canplay', handleProbe);
+      probeAudio.src = localUrl;
+
       setAudioSrc(localUrl);
       updateAttribute('data-audio-src', localUrl);
       updateAttribute('data-interaction', 'audio');
@@ -1127,7 +1352,7 @@ const ElementAudioProperties = ({
       const progressKnob = selectedElement.querySelector('.progress-knob');
       if (progressFill && progressKnob) {
         const progressBg = selectedElement.querySelector('.progress-bg');
-        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '160') : 160;
+        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
         progressFill.setAttribute('width', '0');
         progressKnob.setAttribute('cx', bgX.toString());
       }
@@ -1205,11 +1430,109 @@ const ElementAudioProperties = ({
     setBgColor(newPalette.bg);
     setStrokeColor(newPalette.stroke);
 
-    applyColorsToCanvas(selectedElement, {
-      icon: newPalette.icon,
-      bg: newPalette.bg,
-      stroke: newPalette.stroke
-    });
+    if (selectedElement) {
+      // Re-generate SVG template code while preserving instance state
+      const uniqueId = selectedElement.id ? selectedElement.id.replace(/^audio-/, '') : Date.now();
+      const rawCode = getAudioSvgCode(val, uniqueId);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(
+        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${rawCode}</svg>`,
+        'image/svg+xml'
+      );
+      const newG = doc.querySelector('g[data-type="audio-frame"]') || doc.querySelector('g[id^="audio-"]');
+      if (newG) {
+        selectedElement.innerHTML = newG.innerHTML;
+        selectedElement.setAttribute('data-audio-template', val);
+
+        // Apply colors
+        applyColorsToCanvas(selectedElement, {
+          icon: newPalette.icon,
+          bg: newPalette.bg,
+          stroke: newPalette.stroke
+        });
+
+        // Sync track title text
+        const titleEl = selectedElement.querySelector('.audio-title');
+        if (titleEl && audioName) {
+          titleEl.textContent = audioName.replace(/\.[^/.]+$/, '');
+        }
+
+        // Sync duration text
+        const totTimeEl = selectedElement.querySelector('.audio-total-time');
+        const durAttr = selectedElement.getAttribute('data-audio-duration-text') || audioDurationText;
+        if (totTimeEl) {
+          if (audioRef.current && isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
+            totTimeEl.textContent = formatTime(audioRef.current.duration);
+          } else if (durAttr) {
+            const p = parseDurationTextToDisplay(durAttr);
+            if (p) totTimeEl.textContent = p;
+          }
+        }
+
+        // Sync current time text
+        const curTimeEl = selectedElement.querySelector('.audio-current-time');
+        if (curTimeEl && audioRef.current) {
+          curTimeEl.textContent = formatTime(audioRef.current.currentTime);
+        }
+
+        // Sync volume
+        const volFill = selectedElement.querySelector('.volume-fill');
+        const volKnob = selectedElement.querySelector('.volume-knob');
+        const volBg = selectedElement.querySelector('.volume-bg');
+        if (volFill && volKnob && volBg) {
+          const bgX = parseFloat(volBg.getAttribute('x') || '0');
+          const bgWidth = parseFloat(volBg.getAttribute('width') || '50');
+          const fillW = (defaultVolume / 100) * bgWidth;
+          volFill.setAttribute('width', fillW.toString());
+          volKnob.setAttribute('cx', (bgX + fillW).toString());
+        }
+
+        // Sync progress
+        const progFill = selectedElement.querySelector('.progress-fill');
+        const progKnob = selectedElement.querySelector('.progress-knob');
+        const progBg = selectedElement.querySelector('.progress-bg');
+        if (progFill && progKnob && progBg && audioRef.current && audioRef.current.duration) {
+          const bgX = parseFloat(progBg.getAttribute('x') || '0');
+          const bgWidth = parseFloat(progBg.getAttribute('width') || '100');
+          const ratio = Math.min(1, Math.max(0, audioRef.current.currentTime / audioRef.current.duration));
+          const fillW = ratio * bgWidth;
+          progFill.setAttribute('width', fillW.toString());
+          progKnob.setAttribute('cx', (bgX + fillW).toString());
+        }
+
+        // Sync play/pause icon
+        updatePlayPauseIconOnCanvas(isPlaying);
+
+        // Sync loop opacity
+        updateLoopIconOnCanvas(isLooping);
+
+        // Sync controls visibility
+        const ppBtn = selectedElement.querySelector('.play-pause-btn') || selectedElement.querySelector('.play-pause-icon');
+        if (ppBtn) ppBtn.style.display = controlPlayPause ? '' : 'none';
+        const prevIcon = selectedElement.querySelector('.prev-icon');
+        const nextIcon = selectedElement.querySelector('.next-icon');
+        if (prevIcon) prevIcon.style.display = controlSkip ? '' : 'none';
+        if (nextIcon) nextIcon.style.display = controlSkip ? '' : 'none';
+        const curTime = selectedElement.querySelector('.audio-current-time');
+        const totTime = selectedElement.querySelector('.audio-total-time');
+        const sepTime = selectedElement.querySelector('.audio-duration-separator');
+        const progGroup = selectedElement.querySelector('.progress-group');
+        if (curTime) curTime.style.display = controlDuration ? '' : 'none';
+        if (totTime) totTime.style.display = controlDuration ? '' : 'none';
+        if (sepTime) sepTime.style.display = controlDuration ? '' : 'none';
+        if (progGroup) progGroup.style.display = controlDuration ? '' : 'none';
+        const volSlider = selectedElement.querySelector('.volume-slider-part');
+        if (volSlider) volSlider.style.display = controlVolume ? '' : 'none';
+        const loopBtn = selectedElement.querySelector('.loop-icon');
+        if (loopBtn) loopBtn.style.display = controlLoop ? '' : 'none';
+        const volIcon = selectedElement.querySelector('.volume-icon');
+        if (volIcon) volIcon.style.display = controlMute ? '' : 'none';
+
+        // Re-sync live drop shadow filter if present
+        syncLiveFilters(selectedElement);
+      }
+    }
+
     updateAttribute('data-icon-color', newPalette.icon);
     updateAttribute('data-fill-color', newPalette.bg);
     updateAttribute('data-stroke-color', newPalette.stroke);
@@ -1359,11 +1682,10 @@ const ElementAudioProperties = ({
         <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]">
           <Volume2 className="w-[1vw] h-[1vw] text-[#E05638] shrink-0" />
           <div className="flex-1 flex items-center relative">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
+            <ElementSlider
+              min={0}
+              max={100}
+              step={1}
               value={defaultVolume}
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
@@ -1381,50 +1703,22 @@ const ElementAudioProperties = ({
                 if (selectedElement) {
                   const volFill = selectedElement.querySelector('.volume-fill');
                   const volKnob = selectedElement.querySelector('.volume-knob');
+                  const volBg = selectedElement.querySelector('.volume-bg');
                   if (volFill && volKnob) {
-                    const maxWidth = 75;
-                    const fillW = (val / 100) * maxWidth;
+                    const bgX = volBg ? parseFloat(volBg.getAttribute('x') || '0') : 0;
+                    const bgWidth = volBg ? parseFloat(volBg.getAttribute('width') || '50') : 50;
+                    const fillW = (val / 100) * bgWidth;
                     volFill.setAttribute('width', fillW.toString());
-                    volKnob.setAttribute('cx', (370 + fillW).toString());
+                    volKnob.setAttribute('cx', (bgX + fillW).toString());
                   }
                 }
                 if (onUpdate) onUpdate();
-              }}
-              className="audio-volume-slider w-full h-[0.25vw] rounded-full appearance-none cursor-pointer outline-none transition-all"
-              style={{
-                background: `linear-gradient(to right, #E05638 0%, #E05638 ${defaultVolume}%, #E5E7EB ${defaultVolume}%, #E5E7EB 100%)`
               }}
             />
           </div>
           <span className="text-[0.8vw] text-gray-800 font-medium w-[2.8vw] text-right shrink-0">
             {defaultVolume} %
           </span>
-          <style>{`
-            .audio-volume-slider::-webkit-slider-thumb {
-              -webkit-appearance: none;
-              appearance: none;
-              width: 0.85vw;
-              height: 0.85vw;
-              border-radius: 50%;
-              background: #ffffff;
-              border: 2px solid #E05638;
-              cursor: pointer;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-              transition: transform 0.1s ease;
-            }
-            .audio-volume-slider::-webkit-slider-thumb:hover {
-              transform: scale(1.15);
-            }
-            .audio-volume-slider::-moz-range-thumb {
-              width: 0.85vw;
-              height: 0.85vw;
-              border-radius: 50%;
-              background: #ffffff;
-              border: 2px solid #E05638;
-              cursor: pointer;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-            }
-          `}</style>
         </div>
       </PropertyRow>
 

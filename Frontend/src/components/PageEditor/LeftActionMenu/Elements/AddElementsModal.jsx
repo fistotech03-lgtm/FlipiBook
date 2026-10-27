@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { X, Search } from 'lucide-react';
@@ -19,6 +19,8 @@ export const AddElementsModal = ({
   dragConstraintsRef,
 }) => {
   const dragControls = useDragControls();
+  const modalRef = useRef(null);
+  const [dragBounds, setDragBounds] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('shapes');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -48,47 +50,96 @@ export const AddElementsModal = ({
     return ELEMENT_CATEGORIES.find((c) => c.id === selectedCategory) || ELEMENT_CATEGORIES[0];
   }, [selectedCategory]);
 
+  // Dynamically compute boundary constraints relative to the editor workspace background
+  const calculateDragBounds = () => {
+    const container = dragConstraintsRef?.current || modalRef.current?.parentElement;
+    if (!container || !modalRef.current) return;
+    const cRect = container.getBoundingClientRect();
+    const mRect = modalRef.current.getBoundingClientRect();
+
+    let currentX = 0;
+    let currentY = 0;
+    try {
+      const transform = window.getComputedStyle(modalRef.current).transform;
+      if (transform && transform !== 'none') {
+        const matrix = new DOMMatrixReadOnly(transform);
+        currentX = matrix.m41;
+        currentY = matrix.m42;
+      }
+    } catch {
+      // Fallback if matrix extraction fails
+    }
+
+    const baseLeft = mRect.left - currentX;
+    const baseTop = mRect.top - currentY;
+
+    setDragBounds({
+      left: cRect.left - baseLeft + 10,
+      right: cRect.right - baseLeft - mRect.width - 10,
+      top: cRect.top - baseTop + 10,
+      bottom: cRect.bottom - baseTop - 70, // allows dragging down to reveal canvas while keeping header accessible
+    });
+  };
+
+  const handleHeaderPointerDown = (e) => {
+    // Prevent dragging when clicking interactive controls (search input, close button)
+    if (e.target.closest('button, input, textarea, select, a, [role="button"]')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    calculateDragBounds();
+    dragControls.start(e);
+  };
+
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
       <motion.div
+        ref={modalRef}
         drag
         dragListener={false}
         dragControls={dragControls}
         dragMomentum={false}
-        dragElastic={0}
-        dragConstraints={dragConstraintsRef}
+        dragElastic={0.08}
+        dragConstraints={dragBounds || dragConstraintsRef}
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="absolute z-50 bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[left,top] duration-300 ease-in-out"
+        className="absolute z-50 bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none"
         style={{
           width: '26.5vw',
           minWidth: '380px',
-          height: '78vh',
+          height: '74vh',
+          maxHeight: 'calc(100% - 2.5vw)',
           left: rulerActive ? '6.2vw' : '5vw',
           top: rulerActive ? '2.2vw' : '1vw',
         }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header & Drag Handle */}
-        <div className="px-[1.2vw] pt-[0.6vh] pb-[0.8vh]">
+        {/* Top Header & Drag Handle Area */}
+        <div
+          onPointerDown={handleHeaderPointerDown}
+          className="px-[1.2vw] pt-[0.6vh] pb-[0.8vh] cursor-grab active:cursor-grabbing select-none"
+          style={{ touchAction: 'none' }}
+        >
           {/* Centered Six-Dot Drag Handle */}
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center pointer-events-none">
             <div
-              onPointerDown={(e) => dragControls.start(e)}
-              className="flex items-center justify-center py-[0.1vh] px-[0.6vw] rounded-[0.35vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-grab active:cursor-grabbing select-none"
+              className="flex items-center justify-center py-[0.1vh] px-[0.6vw] rounded-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors"
               title="Drag to move panel"
             >
-              <Icon icon="ph:dots-six-bold" className="w-[1.3vw] h-[1.3vw] text-gray-400 hover:text-gray-600" />
+              <Icon icon="ph:dots-six-bold" className="w-[1.3vw] h-[1.3vw] text-gray-400" />
             </div>
           </div>
 
           {/* Title & Close Row */}
           <div className="flex items-start justify-between mt-[0.3vh]">
-            <div>
+            <div className="pointer-events-none">
               <div className="flex items-center gap-[0.45vw]">
                 <Icon icon="ph:diamonds-four" className="w-[1.2vw] h-[1.2vw] text-gray-900" />
                 <h2 className="text-[1.18vw] font-bold text-gray-900 leading-tight">Add Elements</h2>
@@ -98,7 +149,8 @@ export const AddElementsModal = ({
 
             <button
               onClick={onClose}
-              className="w-[1.7vw] h-[1.7vw] rounded-[0.45vw] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer mt-[-0.2vh]"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="w-[1.7vw] h-[1.7vw] rounded-[0.45vw] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer mt-[-0.2vh] pointer-events-auto"
               title="Close"
             >
               <X size="1.1vw" />
@@ -106,7 +158,7 @@ export const AddElementsModal = ({
           </div>
 
           {/* Search Bar */}
-          <div className="mt-[0.9vh]">
+          <div className="mt-[0.9vh] pointer-events-auto">
             <div className="relative flex items-center">
               <Search size="0.95vw" className="absolute left-[0.75vw] text-gray-400" />
               <input
@@ -114,6 +166,7 @@ export const AddElementsModal = ({
                 placeholder="Search Elements..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="w-full pl-[2.4vw] pr-[0.8vw] py-[0.75vh] text-[0.78vw] bg-[#F4F5F6] rounded-[0.45vw] border border-transparent hover:border-gray-200 focus:border-gray-400 focus:bg-white outline-none transition-all text-gray-800 placeholder-gray-400"
               />
             </div>

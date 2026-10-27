@@ -21,6 +21,7 @@ import NavIconStylesPopup, { NavIconRenderer } from '../../../../CustomizedEdito
 import DotStylesPopup, { DotRenderer } from '../../../../CustomizedEditor/popups/DotStylesPopup';
 import { saveToDB, getFromDB } from '../../../../../utils/dbUtils';
 import ColorPicker from '../../../../ColorPicker';
+import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
 
 // Clean up any lingering debuggers from Vite HMR
 ['my-slideshow-debug', 'my-slideshow-debug2', 'my-slideshow-debug3'].forEach(id => {
@@ -160,12 +161,12 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     bgOpacity: 100,
     strokeColor: '#000000',
     strokeOpacity: 100,
-    strokeAlignment: 'Center',
+    strokeAlignment: 'Outside',
     strokeWidth: 1,
     strokeLineStyle: 'Solid',
     strokeDashLength: 8,
     strokeDashGap: 4,
-    strokeLineCorner: 'Rounded',
+    strokeLineCorner: 'Square',
   });
   const [slideshowImages, setSlideshowImages] = useState([]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -637,10 +638,17 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
 
           if (leftRect) leftRect.removeAttribute('display');
           if (rightRect) rightRect.removeAttribute('display');
+          if (centerRect) {
+            centerRect.removeAttribute('display');
+            centerRect.style.filter = 'none';
+          }
 
           const slideStyle = targetElement.getAttribute('data-style');
+          let baseW = 210;
+          let baseH = 140;
 
           if (slideStyle === 'flat') {
+            baseH = 190;
             if (centerRect) {
               centerRect.setAttribute('x', '50');
               centerRect.setAttribute('y', '0');
@@ -664,6 +672,110 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               rightRect.setAttribute('stroke-width', '1');
               rightRect.setAttribute('style', 'opacity: 0.5; transition: all 0.3s ease;');
             }
+          } else if (slideStyle === 'filmstrip') {
+            baseH = 155;
+            if (centerRect) {
+              centerRect.setAttribute('x', '48');
+              centerRect.setAttribute('y', '0');
+              centerRect.setAttribute('width', '114');
+              centerRect.setAttribute('height', '140');
+              centerRect.setAttribute('rx', '12');
+              centerRect.setAttribute('style', 'transition: all 0.3s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.3);');
+            }
+            if (leftRect) {
+              leftRect.setAttribute('x', '0');
+              leftRect.setAttribute('y', '10');
+              leftRect.setAttribute('width', '42');
+              leftRect.setAttribute('height', '120');
+              leftRect.setAttribute('rx', '8');
+              leftRect.setAttribute('stroke-width', '1');
+              leftRect.setAttribute('style', 'opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;');
+            }
+            if (rightRect) {
+              rightRect.setAttribute('x', '168');
+              rightRect.setAttribute('y', '10');
+              rightRect.setAttribute('width', '42');
+              rightRect.setAttribute('height', '120');
+              rightRect.setAttribute('rx', '8');
+              rightRect.setAttribute('stroke-width', '1');
+              rightRect.setAttribute('style', 'opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;');
+            }
+          } else if (slideStyle === 'stack') {
+            if (centerRect) {
+              centerRect.setAttribute('x', '42');
+              centerRect.setAttribute('y', '0');
+              centerRect.setAttribute('width', '126');
+              centerRect.setAttribute('height', '140');
+              centerRect.setAttribute('rx', '14');
+              centerRect.setAttribute('style', 'transform: perspective(400px) rotateY(0deg) translateZ(30px); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.4);');
+            }
+            if (leftRect) {
+              leftRect.setAttribute('x', '6');
+              leftRect.setAttribute('y', '8');
+              leftRect.setAttribute('width', '82');
+              leftRect.setAttribute('height', '124');
+              leftRect.setAttribute('rx', '10');
+              leftRect.setAttribute('stroke-width', '1');
+              leftRect.setAttribute('style', 'transform: perspective(400px) rotateY(18deg); transform-origin: 100% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;');
+            }
+            if (rightRect) {
+              rightRect.setAttribute('x', '122');
+              rightRect.setAttribute('y', '8');
+              rightRect.setAttribute('width', '82');
+              rightRect.setAttribute('height', '124');
+              rightRect.setAttribute('rx', '10');
+              rightRect.setAttribute('stroke-width', '1');
+              rightRect.setAttribute('style', 'transform: perspective(400px) rotateY(-18deg); transform-origin: 0% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;');
+            }
+          } else if (slideStyle === 'fade') {
+            if (centerRect) {
+              centerRect.setAttribute('x', '5');
+              centerRect.setAttribute('y', '0');
+              centerRect.setAttribute('width', '210');
+              centerRect.setAttribute('height', '140');
+              centerRect.setAttribute('rx', '12');
+              centerRect.setAttribute('style', 'transition: opacity 0.5s ease-in-out;');
+            }
+            if (leftRect) leftRect.setAttribute('display', 'none');
+            if (rightRect) rightRect.setAttribute('display', 'none');
+          } else if (slideStyle === 'pure') {
+            if (centerRect) {
+              centerRect.setAttribute('x', '64');
+              centerRect.setAttribute('y', '0');
+              centerRect.setAttribute('width', '82');
+              centerRect.setAttribute('height', '140');
+              centerRect.setAttribute('rx', '12');
+              centerRect.setAttribute('style', 'transition: all 0.3s ease; box-shadow: 0 0 15px rgba(96,165,250,0.4);');
+            }
+            if (leftRect) {
+              leftRect.setAttribute('x', '0');
+              leftRect.setAttribute('y', '10');
+              leftRect.setAttribute('width', '58');
+              leftRect.setAttribute('height', '120');
+              leftRect.setAttribute('rx', '8');
+              leftRect.setAttribute('stroke-width', '1');
+              leftRect.setAttribute('style', 'opacity: 0.75; transition: all 0.3s ease;');
+            }
+            if (rightRect) {
+              rightRect.setAttribute('x', '152');
+              rightRect.setAttribute('y', '10');
+              rightRect.setAttribute('width', '58');
+              rightRect.setAttribute('height', '120');
+              rightRect.setAttribute('rx', '8');
+              rightRect.setAttribute('stroke-width', '1');
+              rightRect.setAttribute('style', 'opacity: 0.75; transition: all 0.3s ease;');
+            }
+          } else if (slideStyle === 'mono') {
+            if (centerRect) {
+              centerRect.setAttribute('x', '10');
+              centerRect.setAttribute('y', '8');
+              centerRect.setAttribute('width', '190');
+              centerRect.setAttribute('height', '124');
+              centerRect.setAttribute('rx', '8');
+              centerRect.setAttribute('style', 'filter: grayscale(100%) contrast(1.1); transition: all 0.5s ease;');
+            }
+            if (leftRect) leftRect.setAttribute('display', 'none');
+            if (rightRect) rightRect.setAttribute('display', 'none');
           } else {
             // Default 3D Coverflow
             if (centerRect) {
@@ -671,6 +783,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               centerRect.setAttribute('y', '0');
               centerRect.setAttribute('width', '130');
               centerRect.setAttribute('height', '140');
+              centerRect.setAttribute('rx', '12');
               centerRect.setAttribute('style', 'transform: perspective(400px) rotateY(0deg); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease;');
             }
             if (leftRect) {
@@ -678,6 +791,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               leftRect.setAttribute('y', '8');
               leftRect.setAttribute('width', '80');
               leftRect.setAttribute('height', '124');
+              leftRect.setAttribute('rx', '10');
               leftRect.setAttribute('stroke-width', '1');
               leftRect.setAttribute('style', 'transform: perspective(400px) rotateY(25deg); transform-origin: 100% 50%; transform-box: fill-box; transition: all 0.3s ease;');
             }
@@ -686,6 +800,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               rightRect.setAttribute('y', '8');
               rightRect.setAttribute('width', '110');
               rightRect.setAttribute('height', '124');
+              rightRect.setAttribute('rx', '10');
               rightRect.setAttribute('stroke-width', '1');
               rightRect.setAttribute('style', 'transform: perspective(400px) rotateY(-22deg); transform-origin: 0% 50%; transform-box: fill-box; transition: all 0.3s ease;');
             }
@@ -699,8 +814,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             targetElement.appendChild(bboxAnchor);
           }
           const pad = 5; // ~0.2vw padding around frames
-          const baseW = slideStyle === 'flat' ? 210 : 210;
-          const baseH = slideStyle === 'flat' ? 190 : 140;
 
           bboxAnchor.setAttribute('x', (-pad).toString());
           bboxAnchor.setAttribute('y', (-pad).toString());
@@ -2509,19 +2622,13 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       <div className="flex items-center justify-between">
         <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Auto Slide Duration</span>
         <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-        <div className="relative">
-          <select
-            value={slideshowSettings.speed || 3}
-            onChange={(e) => updateSetting('speed', Number(e.target.value))}
-            className="h-[2vw] px-[0.75vw] pr-[1.8vw] border border-gray-200 rounded-[0.4vw] text-[0.75vw] font-medium text-gray-700 bg-white outline-none cursor-pointer appearance-none hover:border-gray-300 shadow-2xs"
-            style={{
-              background: `url("data:image/svg+xml;utf8,<svg fill='%236B7280' viewBox='0 0 24 24' width='14' height='14' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 0.4vw center`
-            }}
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20].map((s) => (
-              <option key={s} value={s}>{s} sec</option>
-            ))}
-          </select>
+        <div className="w-[6.8vw]">
+          <ElementDropdown
+            value={`${slideshowSettings.speed || 3} sec`}
+            onChange={(val) => updateSetting('speed', Number(val.replace ? val.replace(' sec', '') : val))}
+            options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20].map((s) => ({ label: `${s} sec`, value: s }))}
+            buttonClassName="!h-[2vw] !text-[0.75vw]"
+          />
         </div>
       </div>
 
@@ -2529,19 +2636,10 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       <div className="flex items-center justify-between">
         <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Infinity Loop Mode</span>
         <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-        <button
-          type="button"
-          onClick={() => updateSetting('infiniteLoop', !(slideshowSettings.infiniteLoop ?? true))}
-          className={`relative block w-[2.2vw] h-[1.2vw] rounded-[1vw] transition-all duration-200 ease-in-out outline-none shrink-0 cursor-pointer ${
-            (slideshowSettings.infiniteLoop ?? true) ? 'bg-[#EC5137]' : 'bg-[#e5e7eb]'
-          }`}
-        >
-          <div
-            className={`absolute top-[0.12vw] w-[0.96vw] h-[0.96vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.25)] ${
-              (slideshowSettings.infiniteLoop ?? true) ? 'left-[1.1vw]' : 'left-[0.12vw]'
-            }`}
-          />
-        </button>
+        <ElementToggle
+          checked={slideshowSettings.infiniteLoop ?? true}
+          onChange={(checked) => updateSetting('infiniteLoop', checked)}
+        />
       </div>
 
       {/* Slide Effect */}
@@ -2565,23 +2663,13 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         <div className="flex items-center justify-between">
           <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Manual Navigation Button</span>
           <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-          <button
-            type="button"
-            onClick={() => {
-              const next = !(slideshowSettings.showArrows ?? true);
+          <ElementToggle
+            checked={slideshowSettings.showArrows ?? true}
+            onChange={(next) => {
               updateSetting('showArrows', next);
               updateSetting('showNav', next);
             }}
-            className={`relative block w-[2.2vw] h-[1.2vw] rounded-[1vw] transition-all duration-200 ease-in-out outline-none shrink-0 cursor-pointer ${
-              (slideshowSettings.showArrows ?? true) ? 'bg-[#EC5137]' : 'bg-[#e5e7eb]'
-            }`}
-          >
-            <div
-              className={`absolute top-[0.12vw] w-[0.96vw] h-[0.96vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.25)] ${
-                (slideshowSettings.showArrows ?? true) ? 'left-[1.1vw]' : 'left-[0.12vw]'
-              }`}
-            />
-          </button>
+          />
         </div>
 
         {(slideshowSettings.showArrows ?? true) && (
@@ -2595,16 +2683,11 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                 </span>
               </div>
               {/* Range Slider */}
-              <input
-                type="range"
-                min="50"
-                max="200"
+              <ElementSlider
+                min={50}
+                max={200}
                 value={slideshowSettings.navButtonSize || 100}
-                onChange={(e) => updateSetting('navButtonSize', Number(e.target.value))}
-                className="w-full cursor-pointer h-[0.25vw] rounded-full accent-[#EC5137]"
-                style={{
-                  backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${((slideshowSettings.navButtonSize || 100) - 50) / 1.5}%, #e5e7eb ${((slideshowSettings.navButtonSize || 100) - 50) / 1.5}%, #e5e7eb 100%)`
-                }}
+                onChange={(val) => updateSetting('navButtonSize', val)}
               />
               {/* Color Swatch & HEX box */}
               <div className="flex items-center gap-[0.4vw] mt-[0.1vw]">
@@ -2654,19 +2737,10 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         <div className="flex items-center justify-between">
           <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Pagination Dots</span>
           <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-          <button
-            type="button"
-            onClick={() => updateSetting('showDots', !(slideshowSettings.showDots ?? true))}
-            className={`relative block w-[2.2vw] h-[1.2vw] rounded-[1vw] transition-all duration-200 ease-in-out outline-none shrink-0 cursor-pointer ${
-              (slideshowSettings.showDots ?? true) ? 'bg-[#EC5137]' : 'bg-[#e5e7eb]'
-            }`}
-          >
-            <div
-              className={`absolute top-[0.12vw] w-[0.96vw] h-[0.96vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.25)] ${
-                (slideshowSettings.showDots ?? true) ? 'left-[1.1vw]' : 'left-[0.12vw]'
-              }`}
-            />
-          </button>
+          <ElementToggle
+            checked={slideshowSettings.showDots ?? true}
+            onChange={(checked) => updateSetting('showDots', checked)}
+          />
         </div>
 
         {(slideshowSettings.showDots ?? true) && (
@@ -2680,16 +2754,11 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                 </span>
               </div>
               {/* Range Slider */}
-              <input
-                type="range"
-                min="50"
-                max="200"
+              <ElementSlider
+                min={50}
+                max={200}
                 value={slideshowSettings.dotButtonSize || 100}
-                onChange={(e) => updateSetting('dotButtonSize', Number(e.target.value))}
-                className="w-full cursor-pointer h-[0.25vw] rounded-full accent-[#EC5137]"
-                style={{
-                  backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${((slideshowSettings.dotButtonSize || 100) - 50) / 1.5}%, #e5e7eb ${((slideshowSettings.dotButtonSize || 100) - 50) / 1.5}%, #e5e7eb 100%)`
-                }}
+                onChange={(val) => updateSetting('dotButtonSize', val)}
               />
               {/* Color Swatch & HEX box */}
               <div className="flex items-center gap-[0.4vw] mt-[0.1vw]">
@@ -2769,10 +2838,10 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         </div>
       </div>
 
-      {/* ── 5. Stoke Color ── */}
+      {/* ── 5. Stroke Color ── */}
       <div className="space-y-[0.75vw] pt-[0.4vw]">
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-bold text-gray-900 whitespace-nowrap">Stoke Color</span>
+          <span className="text-[0.85vw] font-bold text-gray-900 whitespace-nowrap">Stroke Color</span>
           <div className="h-[0.0925vw] bg-gray-200 flex-1"></div>
         </div>
         {/* Swatch & Hex input row */}
@@ -2796,176 +2865,92 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           </div>
         </div>
 
-        {/* Row 1: Alignment & Stoke Width */}
-        <div className="flex items-center gap-[1vw]">
-          {/* Alignment */}
-          <div className="flex-1 flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-500 font-medium">Alignment</span>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsAlignOpen(!isAlignOpen)}
-                className="w-full h-[2vw] px-[0.6vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-between bg-white text-[0.75vw] text-gray-700 hover:bg-gray-50 shadow-2xs"
-              >
-                <span>{slideshowSettings.strokeAlignment || 'Center'}</span>
-                <ChevronDown size="0.75vw" className="text-gray-400" />
-              </button>
-              {isAlignOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setIsAlignOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-[0.2vw] bg-white border border-gray-200 rounded-[0.4vw] shadow-lg z-40 py-1">
-                    {['Inside', 'Center', 'Outside'].map((pos) => (
-                      <div
-                        key={pos}
-                        onClick={() => {
-                          updateSetting('strokeAlignment', pos);
-                          setIsAlignOpen(false);
-                        }}
-                        className="px-[0.75vw] py-[0.35vw] text-[0.7vw] text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                      >
-                        {pos}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Stoke Width */}
-          <div className="flex-1 flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-500 font-medium">Stoke Width</span>
-            <div className="flex items-center gap-[0.25vw] h-[2vw]">
-              <button
-                type="button"
-                onClick={() => updateSetting('strokeWidth', Math.max(0, (slideshowSettings.strokeWidth || 1) - 1))}
-                className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.3vw] text-gray-600 hover:bg-gray-200 transition-colors"
-              >
-                <Minus size="0.75vw" />
-              </button>
-              <input
-                type="number"
-                value={slideshowSettings.strokeWidth ?? 1}
-                onChange={(e) => updateSetting('strokeWidth', Math.max(0, Number(e.target.value)))}
-                className="flex-1 h-full bg-white border border-gray-200 rounded-[0.4vw] text-center text-[0.75vw] font-medium text-gray-700 outline-none shadow-2xs no-spin"
-              />
-              <button
-                type="button"
-                onClick={() => updateSetting('strokeWidth', (slideshowSettings.strokeWidth || 1) + 1)}
-                className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.3vw] text-gray-600 hover:bg-gray-200 transition-colors"
-              >
-                <Plus size="0.75vw" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Line style & Dash Property */}
-        <div className="flex items-center gap-[1vw]">
-          {/* Line style */}
-          <div className="flex-1 flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-500 font-medium">Line style</span>
-            <div className="flex items-center justify-between gap-[0.3vw] h-[2vw]">
-              {/* Solid */}
-              <button
-                type="button"
-                onClick={() => updateSetting('strokeLineStyle', 'Solid')}
-                className={`flex-1 h-full flex items-center justify-center rounded-[0.4vw] border transition-colors ${
-                  (slideshowSettings.strokeLineStyle || 'Solid') === 'Solid'
-                    ? 'bg-white border-gray-400 shadow-2xs'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-[1.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
-              </button>
-              {/* Dotted */}
-              <button
-                type="button"
-                onClick={() => updateSetting('strokeLineStyle', 'Dotted')}
-                className={`flex-1 h-full flex items-center justify-center rounded-[0.4vw] border transition-colors ${
-                  slideshowSettings.strokeLineStyle === 'Dotted'
-                    ? 'bg-white border-gray-400 shadow-2xs'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex gap-[0.1vw]">
-                  <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
-                  <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
-                  <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
-                </div>
-              </button>
-              {/* Dashed */}
-              <button
-                type="button"
-                onClick={() => updateSetting('strokeLineStyle', 'Dashed')}
-                className={`flex-1 h-full flex items-center justify-center rounded-[0.4vw] border transition-colors ${
-                  slideshowSettings.strokeLineStyle === 'Dashed'
-                    ? 'bg-white border-gray-400 shadow-2xs'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex gap-[0.12vw]">
-                  <div className="w-[0.4vw] h-[0.1vw] bg-gray-700 rounded-full" />
-                  <div className="w-[0.4vw] h-[0.1vw] bg-gray-700 rounded-full" />
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Dash Property */}
-          <div className="flex-1 flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-500 font-medium">Dash Property</span>
-            <div className="flex items-center gap-[0.3vw] h-[2vw]">
-              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.4vw] bg-white h-full px-[0.5vw] shadow-2xs">
-                <span className="text-[0.7vw] text-gray-400 font-medium">L</span>
-                <input
-                  type="number"
-                  value={slideshowSettings.strokeDashLength ?? 8}
-                  onChange={(e) => updateSetting('strokeDashLength', Math.max(1, Number(e.target.value)))}
-                  className="w-[1.8vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium text-center no-spin"
-                />
+        {/* Stroke Settings Grid (Exact match to image) */}
+        <div className="flex flex-col gap-[0.75vw] mt-[0.25vw]">
+          {/* Row 1: Alignment & Stroke Width */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            {/* Alignment */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
+              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs">
+                <span>Outside</span>
               </div>
-              <span className="text-[0.7vw] text-gray-400 font-bold">:</span>
-              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.4vw] bg-white h-full px-[0.5vw] shadow-2xs">
-                <span className="text-[0.7vw] text-gray-400 font-medium">G</span>
-                <input
-                  type="number"
-                  value={slideshowSettings.strokeDashGap ?? 4}
-                  onChange={(e) => updateSetting('strokeDashGap', Math.max(1, Number(e.target.value)))}
-                  className="w-[1.8vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium text-center no-spin"
-                />
+            </div>
+
+            {/* Stroke Width */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+                <button
+                  type="button"
+                  onClick={() => updateSetting('strokeWidth', Math.max(0, (slideshowSettings.strokeWidth || 1) - 1))}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  −
+                </button>
+                <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                  <input
+                    type="number"
+                    value={slideshowSettings.strokeWidth ?? 1}
+                    onChange={(e) => updateSetting('strokeWidth', Math.max(0, Number(e.target.value)))}
+                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateSetting('strokeWidth', (slideshowSettings.strokeWidth || 1) + 1)}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  +
+                </button>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Row 3: Line Corner */}
-        <div className="flex items-center gap-[1vw]">
-          <div className="flex-1 flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-500 font-medium">Line Corner</span>
-            <div className="relative">
+          {/* Row 2: Line style & Line Corner */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            <div className="flex flex-col gap-[0.25vw]">
+              <span className="text-[0.76vw] text-[#546274] font-semibold">Line style</span>
+              <div className="flex items-center h-[2.2vw]">
+                {/* Solid */}
+                <button
+                  type="button"
+                  onClick={() => updateSetting('strokeLineStyle', 'Solid')}
+                  className="w-[2.8vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
+                  title="Solid Line"
+                >
+                  <div className="w-[1.35vw] h-[2.5px] bg-[#243042] rounded-full" />
+                </button>
+              </div>
+            </div>
+
+            {/* Line Corner */}
+            <div className="flex flex-col gap-[0.25vw] relative">
+              <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
               <button
                 type="button"
                 onClick={() => setIsCornerOpen(!isCornerOpen)}
-                className="w-full h-[2vw] px-[0.6vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-between bg-white text-[0.75vw] text-gray-700 hover:bg-gray-50 shadow-2xs"
+                className="w-full h-[2.2vw] px-[0.75vw] border border-[#e2e8f0] hover:border-slate-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] text-slate-800 font-medium shadow-2xs"
               >
-                <span>{slideshowSettings.strokeLineCorner || 'Rounded'}</span>
-                <ChevronDown size="0.75vw" className="text-gray-400" />
+                <span>{slideshowSettings.strokeLineCorner || 'Square'}</span>
               </button>
               {isCornerOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsCornerOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-[0.2vw] bg-white border border-gray-200 rounded-[0.4vw] shadow-lg z-40 py-1">
-                    {['Rounded', 'Square'].map((c) => (
+                  <div className="absolute top-[3.6vw] left-0 right-0 bg-white border border-[#e2e8f0] rounded-[0.45vw] shadow-lg z-40 py-1">
+                    {['Square', 'Rounded'].map((c) => (
                       <div
                         key={c}
                         onClick={() => {
                           updateSetting('strokeLineCorner', c);
                           setIsCornerOpen(false);
                         }}
-                        className="px-[0.75vw] py-[0.35vw] text-[0.7vw] text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                        className={`px-[0.75vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-slate-50 flex items-center justify-between ${
+                          (slideshowSettings.strokeLineCorner || 'Square') === c ? 'font-bold text-slate-900 bg-slate-50/80' : 'text-slate-700'
+                        }`}
                       >
-                        {c}
+                        <span>{c}</span>
+                        {(slideshowSettings.strokeLineCorner || 'Square') === c && <Check size="0.75vw" className="text-slate-900" />}
                       </div>
                     ))}
                   </div>
@@ -2973,7 +2958,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               )}
             </div>
           </div>
-          <div className="flex-1" />
         </div>
       </div>
 

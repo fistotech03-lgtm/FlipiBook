@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { exportTableToExcel, importExcelToTable } from '../utils/tableElementUtils';
 import { TableMatrix } from '../helpers/TableMatrix';
+import { ElementDropdown, ElementSlider } from './ElementUIControls';
 
 const FONT_FAMILIES = [
   'Poppins',
@@ -423,28 +424,24 @@ export default function ElementTableProperties({
           {/* Border Width */}
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Width ({borderWidth}px)</label>
-            <input
-              type="range"
-              min="0"
-              max="6"
-              step="0.5"
+            <ElementSlider
+              min={0}
+              max={6}
+              step={0.5}
               value={borderWidth}
               onChange={(e) => handleBorderWidthChange(e.target.value)}
-              className="accent-blue-600 cursor-pointer"
             />
           </div>
 
           {/* Border Radius */}
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Corner Radius ({borderRadius}px)</label>
-            <input
-              type="range"
-              min="0"
-              max="16"
-              step="1"
+            <ElementSlider
+              min={0}
+              max={16}
+              step={1}
               value={borderRadius}
               onChange={(e) => handleBorderRadiusChange(e.target.value)}
-              className="accent-blue-600 cursor-pointer"
             />
           </div>
         </div>
@@ -473,29 +470,24 @@ export default function ElementTableProperties({
           {/* Font Family */}
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Font</label>
-            <select
+            <ElementDropdown
               value={fontFamily}
-              onChange={(e) => handleFontFamilyChange(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-[0.25vw] px-[0.3vw] py-[0.2vw] text-[0.68vw]"
-            >
-              {FONT_FAMILIES.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
+              onChange={handleFontFamilyChange}
+              options={FONT_FAMILIES}
+              isFont={true}
+              buttonClassName="!h-[2vw] !text-[0.72vw]"
+            />
           </div>
 
           {/* Font Size */}
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Size</label>
-            <select
+            <ElementDropdown
               value={fontSize}
-              onChange={(e) => handleFontSizeChange(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-[0.25vw] px-[0.3vw] py-[0.2vw] text-[0.68vw]"
-            >
-              {FONT_SIZES.map((sz) => (
-                <option key={sz} value={sz}>{sz}px</option>
-              ))}
-            </select>
+              onChange={(val) => handleFontSizeChange(parseInt(val))}
+              options={FONT_SIZES.map((sz) => ({ label: `${sz}px`, value: sz }))}
+              buttonClassName="!h-[2vw] !text-[0.72vw]"
+            />
           </div>
         </div>
 
@@ -550,24 +542,20 @@ export default function ElementTableProperties({
         <div className="grid grid-cols-2 gap-[0.4vw]">
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Padding X ({paddingX}px)</label>
-            <input
-              type="range"
-              min="2"
-              max="20"
+            <ElementSlider
+              min={2}
+              max={20}
               value={paddingX}
               onChange={(e) => handlePaddingChange(parseInt(e.target.value, 10), paddingY)}
-              className="accent-blue-600 cursor-pointer"
             />
           </div>
           <div className="flex flex-col gap-[0.2vw]">
             <label className="text-[0.62vw] text-gray-500">Padding Y ({paddingY}px)</label>
-            <input
-              type="range"
-              min="2"
-              max="20"
+            <ElementSlider
+              min={2}
+              max={20}
               value={paddingY}
               onChange={(e) => handlePaddingChange(paddingX, parseInt(e.target.value, 10))}
-              className="accent-blue-600 cursor-pointer"
             />
           </div>
         </div>

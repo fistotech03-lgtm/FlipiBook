@@ -46,7 +46,7 @@ export default function ElementSlideshowProperties({
   };
 
   return (
-    <div className="custom-scrollbar h-full overflow-y-auto overflow-x-hidden">
+    <div className="w-full">
       <SlideshowEditor
         selectedElement={el}
         activePageIndex={activePageIndex}

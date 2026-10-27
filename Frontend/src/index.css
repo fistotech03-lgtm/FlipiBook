@@ -140,5 +140,49 @@ select:-webkit-autofill:focus {
   padding-right: 2vw !important;
 }
 
+/* Signature Process Dragging Pointer (Slider Range) matching reference */
+.element-slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 0.25vw;
+  min-height: 3.5px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.element-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.85vw;
+  min-width: 13px;
+  height: 0.85vw;
+  min-height: 13px;
+  border-radius: 50%;
+  background: #ffffff !important;
+  border: 2px solid #E05638 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.element-slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.element-slider-input::-moz-range-thumb {
+  width: 0.85vw;
+  min-width: 13px;
+  height: 0.85vw;
+  min-height: 13px;
+  border-radius: 50%;
+  background: #ffffff !important;
+  border: 2px solid #E05638 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.element-slider-input::-moz-range-thumb:hover {
+  transform: scale(1.1);
+}
+
 
 

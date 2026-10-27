@@ -20,7 +20,12 @@ export function ElementGridCard({ item, onInsert }) {
 
   return (
     <button
-      onClick={() => onInsert && onInsert(item)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onInsert) onInsert(item);
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       draggable={true}
       onDragStart={handleDragStart}
       title={`Click to add or drag to place ${item.name}`}

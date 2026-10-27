@@ -2,21 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import Color from '../../../properties/Color';
 import Effect from '../../../properties/Effect';
+import { ElementSlider } from './ElementUIControls';
 
 const PropertySlider = ({ label, value, onChange, onPointerUp, min = 0, max = 100 }) => {
   return (
     <div className="flex items-center gap-[0.5vw] py-[0.4vw]">
       <span className="text-[0.8vw] font-semibold text-gray-600 whitespace-nowrap min-w-[5.5vw]">{label} :</span>
       <div className="flex-grow flex items-center gap-[1vw]">
-        <input
-          type="range"
+        <ElementSlider
           min={min}
           max={max}
-          step="1"
+          step={1}
           value={value || 0}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          onChange={(val) => onChange(val)}
           onPointerUp={onPointerUp}
-          className="flex-grow h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none"
+          className="flex-grow"
         />
         <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-100 rounded-[0.4vw] shadow-sm flex-shrink-0">
           <input

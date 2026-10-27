@@ -53,8 +53,16 @@ const qrcode = typeof qrcodeGenerator === 'function' ? qrcodeGenerator : (qrcode
 
 export const QR_FRAMES = [
   {
+    id: 'frame-none',
+    name: '1. Clean (No Frame)',
+    shortName: 'No Frame',
+    defaultText: '',
+    description: 'Clean QR Code with no surrounding frame',
+    ratio: 1
+  },
+  {
     id: 'frame-bottom-bar',
-    name: '1. Bottom Banner',
+    name: '2. Bottom Banner',
     shortName: 'Bottom Banner',
     defaultText: 'SCAN ME',
     description: 'Thick border box with solid black bottom banner',
@@ -62,7 +70,7 @@ export const QR_FRAMES = [
   },
   {
     id: 'frame-top-bubble',
-    name: '2. Top Speech Bubble',
+    name: '3. Top Speech Bubble',
     shortName: 'Top Bubble',
     defaultText: 'SCAN ME',
     description: 'Border box with top speech bubble pointer',
@@ -70,7 +78,7 @@ export const QR_FRAMES = [
   },
   {
     id: 'frame-curved-arrow',
-    name: '3. Curved Arrow',
+    name: '4. Curved Arrow',
     shortName: 'Curved Arrow',
     defaultText: 'Scan me',
     description: 'Clean QR with curved arrow and script lettering',
@@ -78,19 +86,11 @@ export const QR_FRAMES = [
   },
   {
     id: 'frame-phone',
-    name: '4. Smartphone',
+    name: '5. Smartphone',
     shortName: 'Smartphone',
     defaultText: 'SCAN ME',
     description: 'Smartphone silhouette mockup with screen & speaker',
     ratio: 360 / 260
-  },
-  {
-    id: 'frame-bottom-pointer',
-    name: '5. Bottom Pointer',
-    shortName: 'Bottom Pointer',
-    defaultText: 'SCAN ME',
-    description: 'Border box with black banner and upward pointer',
-    ratio: 317 / 270
   },
   {
     id: 'frame-simple-text',
@@ -99,22 +99,6 @@ export const QR_FRAMES = [
     defaultText: 'SCAN ME',
     description: 'Border box with clean text below',
     ratio: 312 / 270
-  },
-  {
-    id: 'frame-top-header',
-    name: '7. Top Header Card',
-    shortName: 'Top Header',
-    defaultText: 'SCAN ME',
-    description: 'Card with solid black header band across top',
-    ratio: 334 / 278
-  },
-  {
-    id: 'frame-none',
-    name: '8. Clean (No Frame)',
-    shortName: 'No Frame',
-    defaultText: '',
-    description: 'Clean QR Code with no surrounding frame',
-    ratio: 1
   }
 ];
 
@@ -161,14 +145,15 @@ const qrImageCache = new Map();
 export async function preloadDefaultFrames() {
   for (const f of QR_FRAMES) {
     try {
+      const isLightBg = f.id === 'frame-curved-arrow' || f.id === 'frame-simple-text';
       await renderQRWithFrame({
         url: 'https://example.com',
         frame: f.id,
         text: f.defaultText,
-        textColor: '#FFFFFF',
+        textColor: isLightBg ? '#000000' : '#FFFFFF',
         frameBgColor: '#FFFFFF',
         arrowColor: '#000000',
-        fontFamily: 'Poppins',
+        fontFamily: f.id === 'frame-curved-arrow' ? 'Caveat' : 'Poppins',
         fontSize: 24,
         fontWeight: 'Semi Bold'
       });
@@ -589,21 +574,31 @@ export async function renderQRWithFrame({
   dropShadow = false,
   scale = 2
 }) {
-  const cacheKey = JSON.stringify({
-    url, frame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor,
-    qrColor, backdrop, patternStyle, eyeFrame, eyeBall,
-    fontFamily, fontSize, fontWeight, textColor, frameBgColor, arrowColor, dropShadow
-  });
-  if (qrImageCache.has(cacheKey)) {
-    return qrImageCache.get(cacheKey);
-  }
-
   // Alias legacy frame names if needed
   let effectiveFrame = frame;
   if (frame === 'frame-badge') effectiveFrame = 'frame-bottom-bar';
   else if (frame === 'frame-bubble') effectiveFrame = 'frame-top-bubble';
   else if (frame === 'frame-polaroid') effectiveFrame = 'frame-simple-text';
   else if (frame === 'frame-elegant') effectiveFrame = 'frame-top-header';
+
+  // Smart text color fallback: curved arrow and simple text are on light card backgrounds,
+  // so text must be dark (arrowColor or #000000) rather than invisible white.
+  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text');
+  let effectiveTextColor = textColor;
+  if (!effectiveTextColor) {
+    effectiveTextColor = isLightBgFrame ? (arrowColor || '#000000') : '#FFFFFF';
+  } else if (isLightBgFrame && (effectiveTextColor.toUpperCase() === '#FFFFFF' || effectiveTextColor.toUpperCase() === '#FFF')) {
+    effectiveTextColor = arrowColor || '#000000';
+  }
+
+  const cacheKey = JSON.stringify({
+    url, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor,
+    qrColor, backdrop, patternStyle, eyeFrame, eyeBall,
+    fontFamily, fontSize, fontWeight, textColor: effectiveTextColor, frameBgColor, arrowColor, dropShadow
+  });
+  if (qrImageCache.has(cacheKey)) {
+    return qrImageCache.get(cacheKey);
+  }
 
   const baseQRSize = 240;
   const qrImg = await generateStyledQRImage({
@@ -849,11 +844,12 @@ export async function renderQRWithFrame({
     ctx.fill();
 
     // Script text
-    ctx.fillStyle = textColor || '#000000';
+    ctx.fillStyle = effectiveTextColor || arrowColor || '#000000';
     ctx.font = `${safeFontWeight} ${safeFontSize}px "${safeFontFamily}", "Caveat", cursive`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, 88, 280);
+    const textX = labelText.length > 12 ? (totalW / 2) : 88;
+    ctx.fillText(labelText, textX, 280);
 
   } else if (effectiveFrame === 'frame-phone') {
     // Phone body silhouette
@@ -947,7 +943,7 @@ export async function renderQRWithFrame({
     ctx.stroke();
 
     // Clean text underneath
-    ctx.fillStyle = textColor || '#000000';
+    ctx.fillStyle = effectiveTextColor || '#000000';
     ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.75)}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

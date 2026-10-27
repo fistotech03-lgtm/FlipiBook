@@ -2595,20 +2595,32 @@ export const useCanvasPointerEvents = ({
     // ── NODE EDIT MODE: Check if double-clicking a vector/path/shape element ───
     const isModuleWithoutPenEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
     if (!isModuleWithoutPenEdit && target && !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase())) {
+      // Restrict element shapes (which use Element Shape Properties) from entering pen tool node edit mode on double click
+      const isElementShapeTarget = Boolean(
+        target.getAttribute?.('data-is-element-shape') === 'true' ||
+        target.getAttribute?.('data-shape-type') !== null ||
+        target.getAttribute?.('data-type') === 'shape' ||
+        target.closest?.('[data-is-element-shape="true"]') !== null ||
+        target.closest?.('[data-shape-type]') !== null ||
+        target.closest?.('[data-type="shape"]') !== null ||
+        (typeof target.querySelector === 'function' && (
+          target.querySelector('[data-is-element-shape="true"]') !== null ||
+          target.querySelector('[data-shape-type]') !== null ||
+          target.querySelector('[data-type="shape"]') !== null
+        ))
+      );
+
       const tag = target.tagName?.toLowerCase();
-      const dataType = target.getAttribute('data-type') || '';
-      const isVectorOrPath = (
+      const dataType = target.getAttribute?.('data-type') || '';
+      const isVectorOrPath = !isElementShapeTarget && (
         tag === 'path' ||
-        dataType === 'vector-path' ||
-        dataType === 'shape' ||
-        (tag === 'ellipse' || tag === 'circle' || tag === 'rect' || tag === 'line' || tag === 'polyline' || tag === 'polygon')
-      ) && target.getAttribute('data-locked') !== 'true' &&
-        target.getAttribute('data-name') !== 'Overlay' &&
-        target.getAttribute('data-type') !== 'frame' &&
-        target.getAttribute('data-type') !== 'background';
+        dataType === 'vector-path'
+      ) && target.getAttribute?.('data-locked') !== 'true' &&
+        target.getAttribute?.('data-name') !== 'Overlay' &&
+        target.getAttribute?.('data-type') !== 'frame' &&
+        target.getAttribute?.('data-type') !== 'background';
 
       if (isVectorOrPath && target.id) {
-        // For non-path shapes (rect/ellipse/etc.), convert to path first or skip
         if (tag === 'path' || dataType === 'vector-path') {
           const container = target.closest('.page-svg-container');
           const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;

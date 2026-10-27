@@ -9,7 +9,17 @@ export const isElementShape = (el) => {
   return (
     el.getAttribute('data-is-element-shape') === 'true' ||
     el.getAttribute('data-shape-type') !== null ||
-    (typeof el.querySelector === 'function' && el.querySelector('[data-is-element-shape="true"]') !== null)
+    el.getAttribute('data-type') === 'shape' ||
+    (typeof el.closest === 'function' && (
+      el.closest('[data-is-element-shape="true"]') !== null ||
+      el.closest('[data-shape-type]') !== null ||
+      el.closest('[data-type="shape"]') !== null
+    )) ||
+    (typeof el.querySelector === 'function' && (
+      el.querySelector('[data-is-element-shape="true"]') !== null ||
+      el.querySelector('[data-shape-type]') !== null ||
+      el.querySelector('[data-type="shape"]') !== null
+    ))
   );
 };
 
@@ -69,7 +79,7 @@ export const generateShapeSvg = (shape, overrides = {}) => {
 export const SHAPES_DATA = [
   {
     id: 'true-circle',
-    name: 'True Circle',
+    name: 'Circle',
     shapeType: 'ellipse',
     viewBox: '0 0 100 100',
     width: 100,
@@ -78,8 +88,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 50 10 A 40 40 0 1 0 50 90 A 40 40 0 1 0 50 10 Z',
-    fill: '#d8e9feff',
-    stroke: '#1E40AF',
+    fill: '#ffefefff',
+    stroke: '#e32914ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -87,7 +97,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'squircle-superellipse',
-    name: 'Squircle (Superellipse)',
+    name: 'Squircle',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -96,8 +106,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 50 10 C 78 10 90 22 90 50 C 90 78 78 90 50 90 C 22 90 10 78 10 50 C 10 22 22 10 50 10 Z',
-    fill: '#DDD6FE',
-    stroke: '#6D28D9',
+    fill: '#faf0e7ff',
+    stroke: '#ca480cff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -119,8 +129,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 50 10 L 90 50 L 50 90 L 10 50 Z',
-    fill: '#fdddefff',
-    stroke: '#BE185D',
+    fill: '#fdf9ddff',
+    stroke: '#baae0eff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -140,8 +150,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 90.0 50.0 L 70.0 84.6 L 30.0 84.6 L 10.0 50.0 L 30.0 15.4 L 70.0 15.4 Z',
-    fill: '#e1f2fbff',
-    stroke: '#0369A1',
+    fill: '#f0f9dfff',
+    stroke: '#87a402ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -161,8 +171,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50 12 L 85 78 L 15 78 Z',
-    fill: '#f8f4d5ff',
-    stroke: '#A16207',
+    fill: '#daf8d5ff',
+    stroke: '#07b424ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -183,8 +193,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50 8 L 60 36 L 90 37 L 66 55 L 75 84 L 50 67 L 25 84 L 34 55 L 10 37 L 40 36 Z',
-    fill: '#f8e6d1ff',
-    stroke: '#C2410C',
+    fill: '#d1f8f4ff',
+    stroke: '#0cc2a7ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -193,7 +203,7 @@ export const SHAPES_DATA = [
   },
   {
     id: '4-point-sparkle',
-    name: '4-Point Sparkle',
+    name: 'Sparkle',
     shapeType: 'star',
     count: 4,
     ratio: 40,
@@ -205,8 +215,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50 10 C 50 33 67 50 90 50 C 67 50 50 67 50 90 C 50 67 33 50 10 50 C 33 50 50 33 50 10 Z',
-    fill: '#e1f8f3ff',
-    stroke: '#0F766E',
+    fill: '#e1f7f8ff',
+    stroke: '#0dbbc1ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -214,7 +224,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'gemstone-jewel',
-    name: 'Gemstone Jewel',
+    name: 'Gem Stone',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -233,7 +243,7 @@ export const SHAPES_DATA = [
   },
   {
     id: '8-point-spiky-starburst',
-    name: '8-Point Spiky Starburst',
+    name: 'Starburst',
     shapeType: 'star',
     count: 8,
     ratio: 40,
@@ -245,8 +255,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50.0 6.0 Q 58.8 28.8 81.1 18.9 Q 71.2 41.2 94.0 50.0 Q 71.2 58.8 81.1 81.1 Q 58.8 71.2 50.0 94.0 Q 41.2 71.2 18.9 81.1 Q 28.8 58.8 6.0 50.0 Q 28.8 41.2 18.9 18.9 Q 41.2 28.8 50.0 6.0 Z',
-    fill: '#fbe1e4ff',
-    stroke: '#9F1239',
+    fill: '#f0e1fbff',
+    stroke: '#640bbdff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -254,7 +264,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'stadium-pill-capsule',
-    name: 'Stadium Pill (Capsule)',
+    name: 'Capsule',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -263,8 +273,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 32 32 A 18 18 0 0 1 68 32 L 68 68 A 18 18 0 0 1 32 68 Z',
-    fill: '#e6fff3ff',
-    stroke: '#065F46',
+    fill: '#fde6ffff',
+    stroke: '#b40cc4ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -272,7 +282,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'arch-tombstone',
-    name: 'Arch - Tombstone',
+    name: 'Arch',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -281,8 +291,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 20 88 L 20 46 A 30 30 0 0 1 80 46 L 80 88 Z',
-    fill: '#f4ecfcff',
-    stroke: '#7E22CE',
+    fill: '#fcecf5ff',
+    stroke: '#ce228cff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -290,7 +300,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'diagonal-leaf',
-    name: 'Diagonal Leaf',
+    name: 'Leaf',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -308,7 +318,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'reverse-curved-petal',
-    name: 'Reverse Curved Petal',
+    name: 'Reverse Leaf',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -326,7 +336,7 @@ export const SHAPES_DATA = [
   },
   {
     id: '6-point-star',
-    name: '6-Point Star',
+    name: 'Star',
     shapeType: 'star',
     count: 6,
     ratio: 40,
@@ -338,8 +348,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50.0 6.0 Q 62.5 28.3 88.1 28.0 Q 75.0 50.0 88.1 72.0 Q 62.5 71.7 50.0 94.0 Q 37.5 71.7 11.9 72.0 Q 25.0 50.0 11.9 28.0 Q 37.5 28.3 50.0 6.0 Z',
-    fill: '#f7efd0ff',
-    stroke: '#B45309',
+    fill: '#f2fee4ff',
+    stroke: '#8cb409ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -347,7 +357,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'reuleaux-triangle',
-    name: 'Reuleaux Triangle',
+    name: 'ReuleauxTriangle',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -365,7 +375,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'sharp-pentagon',
-    name: 'Sharp Pentagon',
+    name: 'Pentagon',
     shapeType: 'polygon',
     count: 5,
     radius: 0,
@@ -376,8 +386,8 @@ export const SHAPES_DATA = [
     width: 100,
     height: 100,
     d: 'M 50.0 10.0 L 88.0 37.6 L 73.5 82.4 L 26.5 82.4 L 12.0 37.6 Z',
-    fill: '#e8f3d3ff',
-    stroke: '#4D7C0F',
+    fill: '#fff3e2ff',
+    stroke: '#cd8e05ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -386,7 +396,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'sharp-octagon',
-    name: 'Sharp Octagon',
+    name: 'Octagon',
     shapeType: 'polygon',
     count: 8,
     radius: 0,
@@ -407,7 +417,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'swallowtail-ribbon-banner',
-    name: 'Swallowtail Ribbon Banner',
+    name: 'Ribbon Banner',
     shapeType: 'vector-path',
     viewBox: '0 0 100 100',
     width: 100,
@@ -416,8 +426,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 10 24 H 90 L 80 50 L 90 76 H 10 L 20 50 Z',
-    fill: '#d7e3f1ff',
-    stroke: '#1D4ED8',
+    fill: '#fbe8ffff',
+    stroke: '#bb0ecbff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
@@ -435,8 +445,8 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 50 92 C 48 68 30 46 12 36 C 26 12 74 12 88 36 C 70 46 52 68 50 92 Z',
-    fill: '#f3fbe4ff',
-    stroke: '#3F6212',
+    fill: '#e4f7fbff',
+    stroke: '#0f9cb5ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'round',
     strokeLinecap: 'round',
@@ -444,7 +454,7 @@ export const SHAPES_DATA = [
   },
   {
     id: 'sharp-square',
-    name: 'Sharp Square',
+    name: 'Square',
     shapeType: 'rectangle',
     viewBox: '0 0 100 100',
     width: 100,
@@ -453,12 +463,33 @@ export const SHAPES_DATA = [
     cy: 50,
     rx: 50,
     d: 'M 14 14 H 86 V 86 H 14 Z',
-    fill: '#fae1edff',
+    fill: '#fdedf5ff',
     stroke: '#7e0e48ff',
     strokeWidth: '2.5',
     strokeLinejoin: 'miter',
     strokeLinecap: 'square',
     strokeMiterlimit: '4',
+    fillRule: 'evenodd'
+  },
+  {
+    id: 'star-fish',
+    name: 'Star Fish',
+    shapeType: 'star',
+    count: 5,
+    ratio: 20,
+    radius: 25,
+    cx: 50,
+    cy: 50,
+    rx: 50,
+    viewBox: '0 0 100 100',
+    width: 100,
+    height: 100,
+    d: 'M 46.7 17.4 Q 50.0 8.0, 53.3 17.4 L 56.6 27.0 Q 59.9 36.4, 69.9 36.6 L 79.9 36.8 Q 89.9 37.0, 82.0 43.1 L 73.9 49.2 Q 66.0 55.2, 68.9 64.8 L 71.8 74.4 Q 74.7 84.0, 66.5 78.3 L 58.2 72.5 Q 50.0 66.8, 41.8 72.5 L 33.5 78.3 Q 25.3 84.0, 28.2 74.4 L 31.1 64.8 Q 34.0 55.2, 26.1 49.2 L 18.0 43.1 Q 10.1 37.0, 20.1 36.8 L 30.1 36.6 Q 40.1 36.4, 43.4 27.0 Z',
+    fill: '#FFFFDF',
+    stroke: '#FFFF00',
+    strokeWidth: '2.5',
+    strokeLinejoin: 'round',
+    strokeLinecap: 'round',
     fillRule: 'evenodd'
   }
 ].map(shape => ({

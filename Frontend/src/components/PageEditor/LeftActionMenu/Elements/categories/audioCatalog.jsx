@@ -143,9 +143,9 @@ export const AudioPreview = ({ template }) => {
                 <span className="text-[0.38vw]">🔁</span>
               </div>
               <div className="flex items-center gap-[0.2vw] text-[0.38vw] font-mono">
-                <span className="text-[#00f2fe]">1:20</span>
+                <span className="text-[#00f2fe]">0:00</span>
                 <span className="text-gray-500">/</span>
-                <span className="text-gray-400">3:45</span>
+                <span className="text-gray-400">0:19</span>
                 <span>🔊</span>
               </div>
             </div>

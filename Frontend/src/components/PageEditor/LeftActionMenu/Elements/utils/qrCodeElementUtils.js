@@ -19,9 +19,11 @@ export const isElementQRCode = (el) => {
  */
 export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const {
-    frameId = 'frame-bottom-bar',
+    frameId = 'frame-none',
     url = 'https://example.com',
-    text = 'SCAN ME',
+    text,
+    textColor,
+    fontFamily,
     logoSrc = '',
     logoSize = 22,
     logoBg = true,
@@ -31,6 +33,11 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const frameObj = QR_FRAMES.find((f) => f.id === frameId) || QR_FRAMES[0];
   const ratio = frameObj.ratio || 1;
   const height = Math.round(width * ratio);
+
+  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
+  const resolvedTextColor = textColor || (isLightBg ? '#000000' : '#FFFFFF');
+  const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
+  const resolvedText = text !== undefined && text !== null ? text : frameObj.defaultText;
 
   const cached = getCachedFrame(frameId, url);
   const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;
@@ -46,7 +53,9 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   g.setAttribute('cursor', 'pointer');
   g.setAttribute('data-qr-url', url);
   g.setAttribute('data-qr-frame', frameId);
-  g.setAttribute('data-qr-text', text);
+  g.setAttribute('data-qr-text', resolvedText);
+  g.setAttribute('data-qr-text-color', resolvedTextColor);
+  g.setAttribute('data-qr-font-family', resolvedFontFamily);
   g.setAttribute('data-qr-logo-size', String(logoSize));
   g.setAttribute('data-qr-logo-bg', String(logoBg));
   g.setAttribute('data-qr-logo', logoSrc || '');
@@ -75,7 +84,9 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   renderQRWithFrame({
     url,
     frame: frameId,
-    text,
+    text: resolvedText,
+    textColor: resolvedTextColor,
+    fontFamily: resolvedFontFamily,
     logoSrc: logoSrc || null,
     logoSize: Number(logoSize) || 22,
     logoBg: logoBg !== false && logoBg !== 'false'
@@ -98,9 +109,11 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
  */
 export function getQRCodeSvgString(options = {}, isDrag = false) {
   const {
-    frameId = 'frame-bottom-bar',
+    frameId = 'frame-none',
     url = 'https://example.com',
-    text = 'SCAN ME',
+    text,
+    textColor,
+    fontFamily,
     logoSrc = '',
     logoSize = 22,
     logoBg = true,
@@ -110,13 +123,18 @@ export function getQRCodeSvgString(options = {}, isDrag = false) {
   const frameObj = QR_FRAMES.find((f) => f.id === frameId) || QR_FRAMES[0];
   const ratio = frameObj.ratio || 1;
   const height = Math.round(width * ratio);
+  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
+  const resolvedTextColor = textColor || (isLightBg ? '#000000' : '#FFFFFF');
+  const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
+  const resolvedText = text !== undefined && text !== null ? text : frameObj.defaultText;
+
   const cached = getCachedFrame(frameId, url);
   const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;
   const uniqueId = `qrcode-${Date.now()}`;
   const transform = isDrag ? '' : 'transform="translate(80, 120)"';
 
   return `
-    <g id="${uniqueId}" data-type="qrcode" cursor="pointer" data-qr-url="${url}" data-qr-frame="${frameId}" data-qr-text="${text}" data-qr-logo-size="${logoSize}" data-qr-logo-bg="${logoBg}" data-qr-logo="${logoSrc || ''}" ${transform}>
+    <g id="${uniqueId}" data-type="qrcode" cursor="pointer" data-qr-url="${url}" data-qr-frame="${frameId}" data-qr-text="${resolvedText}" data-qr-text-color="${resolvedTextColor}" data-qr-font-family="${resolvedFontFamily}" data-qr-logo-size="${logoSize}" data-qr-logo-bg="${logoBg}" data-qr-logo="${logoSrc || ''}" ${transform}>
       <image x="0" y="0" width="${width}" height="${height}" href="${imgHref}" preserveAspectRatio="none" />
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent" pointer-events="all" />
     </g>

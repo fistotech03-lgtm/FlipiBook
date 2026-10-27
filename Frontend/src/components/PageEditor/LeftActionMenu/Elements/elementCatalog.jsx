@@ -15,17 +15,18 @@ import { Icon } from '@iconify/react';
 // Categories matching editor design
 export const ELEMENT_CATEGORIES = [
   { id: 'all', name: 'All', icon: 'lucide:layout-grid' },
-  { id: 'text', name: 'Text', icon: 'lucide:type' },
   { id: 'shapes', name: 'Shapes', icon: 'lucide:shapes' },
   { id: 'buttons', name: 'Buttons', icon: 'lucide:mouse-pointer-click' },
-  { id: 'tables', name: 'Tables', icon: 'lucide:table' },
   { id: 'masking', name: 'Image Framing & Masking', icon: 'tabler:mask' },
-  { id: 'slideshow', name: 'Slideshow', icon: 'lucide:presentation' },
   { id: 'qr-code', name: 'QR Code', icon: 'lucide:qr-code' },
-  { id: 'google-maps', name: 'Google Maps', icon: 'lucide:map-pin' },
-  { id: 'decorators', name: 'Decorators', icon: 'lucide:sparkles' },
-  { id: 'embeds', name: '3rd-Party Embeds', icon: 'lucide:code-2' },
   { id: 'audio', name: 'Audio', icon: 'lucide:music' },
+  { id: 'embeds', name: '3rd-Party Embeds', icon: 'lucide:code-2' },
+  { id: 'text', name: 'Text', icon: 'lucide:type' },
+  { id: 'slideshow', name: 'Slideshow', icon: 'lucide:presentation' },
+  { id: 'google-maps', name: 'Google Maps', icon: 'lucide:map-pin' },
+  { id: 'tables', name: 'Tables', icon: 'lucide:table' },
+  { id: 'decorators', name: 'Decorators', icon: 'lucide:sparkles' },
+
 ];
 
 /**
@@ -83,7 +84,7 @@ export const ELEMENT_ITEMS = [
   // --- Rich Table & Data Grid Elements ---
   ...TABLE_ITEMS,
 
-  // --- Professional QR Code Presets (8 Custom Vector Frames) ---
+  // --- Professional QR Code Presets (6 Custom Vector Frames) ---
   ...QR_ITEMS,
 
   // --- Google Maps Location Cards ---

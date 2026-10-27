@@ -220,10 +220,28 @@ export const CanvasViewport = ({
                                     const dropPoint = { x: svgP.x, y: svgP.y };
 
                                     let targetShapeId = undefined;
-                                    if (e.target) {
-                                      const leaf = e.target.closest('[data-type="shape"], [data-type="vector-path"], [data-shape-type]');
-                                      if (leaf && leaf.id && !leaf.id.includes('mask') && !leaf.id.includes('clip')) {
-                                        targetShapeId = leaf.id;
+                                    // Use elementsFromPoint to penetrate highlight overlays, selection boxes, and handles
+                                    const elementsUnderCursor = typeof document.elementsFromPoint === 'function'
+                                      ? document.elementsFromPoint(e.clientX, e.clientY)
+                                      : [e.target];
+
+                                    for (const hitEl of elementsUnderCursor) {
+                                      if (!hitEl || typeof hitEl.closest !== 'function') continue;
+                                      if (hitEl.closest?.('#ghost-layer, [id^="highlight-overlay"], .selection-overlay-layer, [data-name="Overlay"], [data-name="Document Shield"]')) {
+                                        continue;
+                                      }
+                                      const sg = hitEl.closest('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]');
+                                      if (sg && sg.id && !sg.id.includes('mask') && !sg.id.includes('clip')) {
+                                        targetShapeId = sg.id;
+                                        break;
+                                      }
+                                    }
+
+                                    // Fallback: check e.target directly
+                                    if (!targetShapeId && e.target) {
+                                      const sg = e.target.closest('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]');
+                                      if (sg && sg.id && !sg.id.includes('mask') && !sg.id.includes('clip')) {
+                                        targetShapeId = sg.id;
                                       }
                                     }
 

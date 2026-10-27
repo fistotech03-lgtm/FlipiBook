@@ -29,7 +29,7 @@ export const getEmbedSvgCode = (isClick = false) => {
   const transform = 'transform="scale(0.25)"';
 
   const defaultBody = `
-    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:12px; border:2px dashed #cbd5e1;">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
@@ -39,7 +39,7 @@ export const getEmbedSvgCode = (isClick = false) => {
     </div>
   `.trim();
 
-  const srcdocHtml = escapeHtml(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:12px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:12px; }</style></head><body>${defaultBody}</body></html>`);
+  const srcdocHtml = escapeHtml(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${defaultBody}</body></html>`);
 
   return `
     <g id="${uniqueId}" 
@@ -52,19 +52,17 @@ export const getEmbedSvgCode = (isClick = false) => {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
-       data-tl="12" data-tr="12" data-bl="12" data-br="12" 
-       rx="12" 
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
        cursor="pointer">
-      <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" rx="12" ry="12" fill="#f8fafc" opacity="1" pointer-events="none" />
+      <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="#f8fafc" opacity="1" pointer-events="none" />
       <g class="embed-content-group" pointer-events="none">
-        <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 12px; overflow: hidden;">
-          <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 12px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowtransparency="true"></iframe>
+        <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
+          <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowtransparency="true"></iframe>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" rx="12" ry="12" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 };
@@ -80,7 +78,7 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
   const y = Math.round(cy - targetH / 2);
 
   const defaultBody = customCode ? customCode : `
-    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:12px; border:2px dashed #cbd5e1;">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
@@ -90,7 +88,7 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
     </div>
   `.trim();
 
-  const srcdocHtml = escapeHtml(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:12px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:12px; }</style></head><body>${defaultBody}</body></html>`);
+  const srcdocHtml = escapeHtml(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${defaultBody}</body></html>`);
 
   const rawSvg = `
     <g id="${uniqueId}" 
@@ -103,19 +101,17 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
-       data-tl="12" data-tr="12" data-bl="12" data-br="12" 
-       rx="12" 
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
        cursor="pointer">
-      <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" rx="12" ry="12" fill="#f8fafc" opacity="1" pointer-events="none" />
+      <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="#f8fafc" opacity="1" pointer-events="none" />
       <g class="embed-content-group" pointer-events="none">
-        <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 12px; overflow: hidden;">
-          <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 12px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowtransparency="true"></iframe>
+        <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
+          <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowtransparency="true"></iframe>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" rx="12" ry="12" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 

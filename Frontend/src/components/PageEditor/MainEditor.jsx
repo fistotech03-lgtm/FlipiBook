@@ -628,6 +628,7 @@ const MainEditor = ({
     nodeEditSelectedHandleSideRef,
     nodeEditSelectedCurveIdxRef,
     paperScopeRef,
+    enterNodeEditMode,
     exitNodeEditMode,
     drawNodeEditOverlay,
     drawOverlayHighlight,
@@ -948,6 +949,15 @@ const getDraggableElement = (target, canvasRoot) => {
     }
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group
+    // Element shapes are single compound elements; always drag/select the whole shape group
+    const shapeGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]') : null;
+    if (shapeGroup) {
+      if (!shapeGroup.id) {
+        shapeGroup.id = `shape-${Date.now()}`;
+      }
+      return shapeGroup;
+    }
+
     const decoratorGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-animated-decorator="true"], [data-type="animated-decorator"], [data-type="decorator"], g[id^="decorator-"]') : null;
     if (decoratorGroup) {
       if (!decoratorGroup.id) {
@@ -1505,10 +1515,36 @@ const getDraggableElement = (target, canvasRoot) => {
           ref={editorContainerRef}
           className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'bg-transparent overflow-visible' : 'overflow-hidden bg-[#e6e7e7]'}`}
           onMouseDown={(e) => {
-            if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
+            if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input') && !e.target.closest('.z-50')) {
               if (handleSvgMouseDown) {
                 handleSvgMouseDown(activePageIndex, e);
               }
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }}
+          onDrop={(e) => {
+            if (e.target.closest('.page-svg-container')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              const rawJson = e.dataTransfer.getData('application/json');
+              if (rawJson) {
+                const data = JSON.parse(rawJson);
+                if (data.type === 'element' || data.elementId) {
+                  window.dispatchEvent(new CustomEvent('add-element-to-editor', {
+                    detail: {
+                      pageIndex: activePageIndex,
+                      elementId: data.elementId,
+                      dropPoint: null
+                    }
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error('Background drop error:', err);
             }
           }}
         >

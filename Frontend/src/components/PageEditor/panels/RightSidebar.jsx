@@ -31,6 +31,7 @@ import {
 import AnimationPanel from './AnimationPanel';
 import InteractionPanel from './InteractionPanel';
 import PopupTemplateSelection from '../modals/PopupTemplateSelection';
+import CustomScrollbar from '../../CustomScrollbar';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useToast } from '../../CustomToast';
@@ -705,7 +706,17 @@ const RightSidebar = ({
 
                 const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
           el.getAttribute('data-shape-type') !== null ||
-          (el.querySelector && el.querySelector('[data-is-element-shape="true"]') !== null);
+          el.getAttribute('data-type') === 'shape' ||
+          (el.closest && (
+            el.closest('[data-is-element-shape="true"]') !== null ||
+            el.closest('[data-shape-type]') !== null ||
+            el.closest('[data-type="shape"]') !== null
+          )) ||
+          (el.querySelector && (
+            el.querySelector('[data-is-element-shape="true"]') !== null ||
+            el.querySelector('[data-shape-type]') !== null ||
+            el.querySelector('[data-type="shape"]') !== null
+          ));
 
         const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
           el.getAttribute('data-typography-type') === 'kinetic' ||
@@ -798,12 +809,12 @@ const RightSidebar = ({
           props.isElementShape = false;
         }
 
-        props.isImage = isElementButton ? false : isImage;
-        props.isText = isElementButton ? false : isText;
-        props.isVideo = isElementButton ? false : isVideo;
-        props.isGif = isElementButton ? false : isGif;
-        props.isIcon = isElementButton ? false : isIcon;
-        props.isPdfBackground = isElementButton ? false : isPdfBackground;
+        props.isImage = (isElementButton || isElementShape) ? false : isImage;
+        props.isText = (isElementButton || isElementShape) ? false : isText;
+        props.isVideo = (isElementButton || isElementShape) ? false : isVideo;
+        props.isGif = (isElementButton || isElementShape) ? false : isGif;
+        props.isIcon = (isElementButton || isElementShape) ? false : isIcon;
+        props.isPdfBackground = (isElementButton || isElementShape) ? false : isPdfBackground;
 
         return props;
       }
@@ -858,7 +869,12 @@ const RightSidebar = ({
 
       <div className={`flex-1 flex flex-col overflow-hidden bg-[#fbfbfb] ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
         {is3DModalOpen ? (
-          <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+          <CustomScrollbar
+            color="#d1d5db"
+            hoverColor="#9ca3af"
+            width="0.12vw"
+            className="flex-1 flex flex-col"
+          >
             <Model3DEditor
               onClose={() => setIs3DModalOpen(false)}
               shadowStrength={shadowStrength} setShadowStrength={setShadowStrength}
@@ -879,10 +895,15 @@ const RightSidebar = ({
               activeHotspotId={activeHotspotId}
               onHotspotClick={onHotspotClick}
             />
-          </div>
+          </CustomScrollbar>
         ) : activeTopTool === 'editor' ? (
           activeMainTool === 'upload' ? (
-            <div className="p-[1.5vw] flex flex-col gap-[0.75vw] overflow-y-auto custom-scrollbar h-full justify-between">
+            <CustomScrollbar
+              color="#d1d5db"
+              hoverColor="#9ca3af"
+              width="0.32vw"
+              className="p-[1.5vw] flex flex-col gap-[0.75vw] h-full justify-between"
+            >
               {/* Top Content */}
               <div className="flex flex-col gap-[0.75vw]">
                 {/* Header */}
@@ -1019,9 +1040,14 @@ const RightSidebar = ({
                   </p>
                 </div>
               </div>
-            </div>
+            </CustomScrollbar>
           ) : (
-            <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <CustomScrollbar
+              color="#d1d5db"
+              hoverColor="#9ca3af"
+              width="0.12vw"
+              className="flex-1 flex flex-col overflow-x-hidden"
+            >
               {isPdfProject ? (
                 <InteractionPanel
                   selectedElementProps={selectedElementProps}
@@ -1561,7 +1587,7 @@ const RightSidebar = ({
                   )}
                 </div>
               )}
-            </div>
+            </CustomScrollbar>
           )
         ) : activeTopTool === 'interaction' ? (
           <InteractionPanel
@@ -1582,7 +1608,12 @@ const RightSidebar = ({
 
         ) : (
           /* Animation Mode */
-          <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-[1.5vw]">
+          <CustomScrollbar
+            color="#d1d5db"
+            hoverColor="#9ca3af"
+            width="0.12vw"
+            className="flex-1 flex flex-col p-[1.5vw]"
+          >
             <AnimationPanel
               selectedElementProps={selectedElementProps}
               flipbookDimensions={flipbookDimensions}
@@ -1599,7 +1630,7 @@ const RightSidebar = ({
                 }
               }}
             />
-          </div>
+          </CustomScrollbar>
         )}
       </div>
 

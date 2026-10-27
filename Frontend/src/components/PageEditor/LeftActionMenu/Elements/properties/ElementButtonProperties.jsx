@@ -17,6 +17,8 @@ import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
+import CornerRadius from '../../../properties/CornerRadius';
+import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
@@ -304,12 +306,12 @@ export const ButtonEditor = ({
   // ─── 4. Stoke Color States ──────────────────────────────────────
   const [strokeColor, setStrokeColor] = useState('#000000');
   const [strokeOpacity, setStrokeOpacity] = useState(100);
-  const [strokeAlignment, setStrokeAlignment] = useState('Center');
+  const [strokeAlignment, setStrokeAlignment] = useState('Outside');
   const [strokeWidth, setStrokeWidth] = useState(1);
   const [lineStyle, setLineStyle] = useState('Solid'); // 'Solid', 'Dashed', 'Dotted'
   const [dashL, setDashL] = useState(8);
   const [dashG, setDashG] = useState(4);
-  const [lineCorner, setLineCorner] = useState('Rounded'); // 'Rounded', 'Square'
+  const [lineCorner, setLineCorner] = useState('Square'); // 'Square', 'Rounded'
 
   // ─── 5. Corner Radius States ────────────────────────────────────
   const [radius, setRadius] = useState(() => {
@@ -421,7 +423,13 @@ export const ButtonEditor = ({
     const savedPlacement = el.getAttribute('data-icon-placement') || 'Left';
     setIconPlacement(savedPlacement);
 
-    const savedIconColor = el.getAttribute('data-icon-color') || '#000000';
+    const existingSvgStroke = existingSvg?.getAttribute('stroke') || existingSvg?.style?.stroke;
+    const existingSvgFill = existingSvg?.getAttribute('fill') || existingSvg?.style?.fill;
+    const detectedIconColor = (existingSvgStroke && existingSvgStroke !== 'none')
+      ? existingSvgStroke
+      : ((existingSvgFill && existingSvgFill !== 'none') ? existingSvgFill : null);
+
+    const savedIconColor = el.getAttribute('data-icon-color') || detectedIconColor || '#ffffff';
     setIconColor(savedIconColor);
 
     const savedIconOpacity = el.getAttribute('data-icon-opacity') || '100';
@@ -933,37 +941,12 @@ export const ButtonEditor = ({
       rectEl.setAttribute('opacity', '0');
     }
 
-    // Update secondary polygon in like-chevron if present
-    const blockPoly = el.querySelector('polygon:not(.btn-main-poly)');
-    if (blockPoly && btnTemplate === 'like-chevron') {
-      blockPoly.setAttribute('points', `${rectX},${rectY} ${rectX + 36},${rectY} ${rectX + 36},${rectY + newButtonHeight} ${rectX},${rectY + newButtonHeight}`);
-    }
-
-    // Update ribbon polygon in upload-ribbon if present
-    const ribbonPoly = el.querySelector('polygon');
-    if (ribbonPoly && btnTemplate === 'upload-ribbon') {
-      ribbonPoly.setAttribute('points', `${rectX},${rectY} ${rectX + 34},${rectY} ${rectX + 42},${rectY + newButtonHeight / 2} ${rectX + 34},${rectY + newButtonHeight} ${rectX},${rectY + newButtonHeight}`);
-    }
-
-    // Update slice polygon in angled-slice if present
-    const slicePoly = el.querySelector('g[clip-path] polygon');
-    if (slicePoly && btnTemplate === 'angled-slice') {
-      slicePoly.setAttribute('points', `${rectX - 5},${rectY - 5} ${rectX + 42},${rectY - 5} ${rectX + 26},${rectY + newButtonHeight + 5} ${rectX - 5},${rectY + newButtonHeight + 5}`);
-    }
-
-    // Update badge block path in rect-badge if present
-    const badgeBlock = el.querySelector('.btn-badge-block');
-    if (badgeBlock && badgeBlock.tagName?.toLowerCase() === 'path') {
-      const badgeRx = Math.min(radTl, radBl, 38 / 2, newButtonHeight / 2);
-      badgeBlock.setAttribute('d', `M ${rectX},${rectY + badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + badgeRx},${rectY} L ${rectX + 38},${rectY} L ${rectX + 38},${rectY + newButtonHeight} L ${rectX + badgeRx},${rectY + newButtonHeight} A ${badgeRx},${badgeRx} 0 0 1 ${rectX},${rectY + newButtonHeight - badgeRx} Z`);
-    }
-
     // Update clipPath & border rect if they exist
     const ownerDoc = el.ownerDocument || document;
     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const svgRoot = el.closest('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
     const clipId = `clip-${el.id || selectedLayerId}`;
-    const clipRect = svgRoot?.querySelector(`#${clipId} rect`);
+    const clipRect = el.querySelector('clipPath rect') || svgRoot?.querySelector(`#${clipId} rect`) || svgRoot?.querySelector(`[id*="${el.id}"] rect`);
     if (clipRect) {
       clipRect.setAttribute('x', rectX.toString());
       clipRect.setAttribute('y', rectY.toString());
@@ -981,9 +964,37 @@ export const ButtonEditor = ({
       borderRect.setAttribute('rx', maxR.toString());
     }
 
-    // Handle icon element inside button
+    // Identify accent shapes
+    const placement = currentPlacement || el.getAttribute('data-icon-placement') || 'Left';
+    const blockPoly = el.querySelector('polygon:not(.btn-main-poly)');
+    const ribbonPoly = el.querySelector('polygon:not(.btn-main-poly)') || (btnTemplate === 'upload-ribbon' ? el.querySelector('polygon') : null);
+    const slicePoly = el.querySelector('g[clip-path] polygon');
+    const badgeBlock = el.querySelector('.btn-badge-block');
+    let badgeCircle = el.querySelector('.btn-badge-circle, .btn-icon-bg');
+    if (!badgeCircle && badgeEl && badgeEl.tagName?.toLowerCase() === 'circle') {
+      badgeCircle = badgeEl;
+    }
+
     let iconWrap = el.querySelector('.btn-icon');
-    if (hasIconVal) {
+
+    if (!hasIconVal) {
+      if (iconWrap) iconWrap.remove();
+      if (blockPoly) blockPoly.setAttribute('display', 'none');
+      if (ribbonPoly) ribbonPoly.setAttribute('display', 'none');
+      if (slicePoly) slicePoly.setAttribute('display', 'none');
+      if (badgeBlock) badgeBlock.setAttribute('display', 'none');
+      if (badgeCircle) badgeCircle.setAttribute('display', 'none');
+      if (badgeEl) badgeEl.setAttribute('display', 'none');
+
+      const centerX = rectX + newButtonWidth / 2;
+      const centerY = rectY + newButtonHeight / 2;
+      textEl.setAttribute('x', centerX.toString());
+      textEl.setAttribute('y', centerY.toString());
+      textEl.setAttribute('text-anchor', 'middle');
+      textEl.setAttribute('dominant-baseline', 'middle');
+      textEl.style.textAnchor = 'middle';
+      textEl.style.dominantBaseline = 'middle';
+    } else {
       if (!iconWrap) {
         iconWrap = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "g");
         iconWrap.setAttribute('class', 'btn-icon');
@@ -999,52 +1010,150 @@ export const ButtonEditor = ({
       }
       iconWrap.innerHTML = svgMarkup;
 
-      const startX = rectX + (newButtonWidth - totalContentWidth) / 2;
       const centerY = rectY + newButtonHeight / 2;
       let iconX, iconY, textX, textY, badgeCenterX;
 
-      if (currentPlacement === 'Left') {
-        const badgeStartX = startX;
-        badgeCenterX = badgeStartX + effectiveIconWidth / 2;
-        iconX = badgeCenterX - iconSize / 2;
-        iconY = centerY - iconSize / 2;
-        textX = startX + effectiveIconWidth + currentIconGap + measuredWidth / 2;
-        textY = centerY;
+      if (btnTemplate === 'like-chevron' && blockPoly) {
+        blockPoly.removeAttribute('display');
+        if (blockPoly.style) blockPoly.style.display = '';
+        const blockW = Math.max(38, iconSize + 16);
+        if (placement === 'Left') {
+          blockPoly.setAttribute('points', `${rectX},${rectY} ${rectX + blockW},${rectY} ${rectX + blockW},${rectY + newButtonHeight} ${rectX},${rectY + newButtonHeight}`);
+          iconX = rectX + (blockW - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + blockW) + (newButtonWidth - 12 - blockW) / 2;
+          textY = centerY;
+        } else {
+          blockPoly.setAttribute('points', `${rectX + newButtonWidth - blockW},${rectY} ${rectX + newButtonWidth - 12},${rectY} ${rectX + newButtonWidth},${rectY + newButtonHeight / 2} ${rectX + newButtonWidth - 12},${rectY + newButtonHeight} ${rectX + newButtonWidth - blockW},${rectY + newButtonHeight}`);
+          iconX = rectX + newButtonWidth - blockW + (blockW - 6 - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = rectX + (newButtonWidth - blockW) / 2;
+          textY = centerY;
+        }
+      } else if (btnTemplate === 'upload-ribbon' && ribbonPoly) {
+        ribbonPoly.removeAttribute('display');
+        if (ribbonPoly.style) ribbonPoly.style.display = '';
+        const ribbonW = Math.max(36, iconSize + 16);
+        if (placement === 'Left') {
+          ribbonPoly.setAttribute('points', `${rectX},${rectY} ${rectX + ribbonW - 8},${rectY} ${rectX + ribbonW},${rectY + newButtonHeight / 2} ${rectX + ribbonW - 8},${rectY} ${rectX},${rectY + newButtonHeight}`);
+          iconX = rectX + (ribbonW - 8 - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + ribbonW) + (newButtonWidth - ribbonW) / 2;
+          textY = centerY;
+        } else {
+          ribbonPoly.setAttribute('points', `${rectX + newButtonWidth},${rectY} ${rectX + newButtonWidth - ribbonW + 8},${rectY} ${rectX + newButtonWidth - ribbonW},${rectY + newButtonHeight / 2} ${rectX + newButtonWidth - ribbonW + 8},${rectY + newButtonHeight} ${rectX + newButtonWidth},${rectY + newButtonHeight}`);
+          iconX = rectX + newButtonWidth - ribbonW + 8 + (ribbonW - 8 - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = rectX + (newButtonWidth - ribbonW) / 2;
+          textY = centerY;
+        }
+      } else if (btnTemplate === 'rect-badge' && badgeBlock) {
+        badgeBlock.removeAttribute('display');
+        if (badgeBlock.style) badgeBlock.style.display = '';
+        const badgeW = Math.max(38, iconSize + 18);
+        if (placement === 'Left') {
+          const badgeRx = Math.min(radTl, radBl, badgeW / 2, newButtonHeight / 2);
+          badgeBlock.setAttribute('d', `M ${rectX},${rectY + badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + badgeRx},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX + badgeRx},${rectY + newButtonHeight} A ${badgeRx},${badgeRx} 0 0 1 ${rectX},${rectY + newButtonHeight - badgeRx} Z`);
+          iconX = rectX + (badgeW - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + badgeW) + (newButtonWidth - badgeW) / 2;
+          textY = centerY;
+        } else {
+          const badgeRx = Math.min(radTr, radBr, badgeW / 2, newButtonHeight / 2);
+          badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth - badgeRx},${rectY} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth},${rectY + badgeRx} L ${rectX + newButtonWidth},${rectY + newButtonHeight - badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth - badgeRx},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
+          iconX = rectX + newButtonWidth - badgeW + (badgeW - iconSize) / 2;
+          iconY = centerY - iconSize / 2;
+          textX = rectX + (newButtonWidth - badgeW) / 2;
+          textY = centerY;
+        }
+      } else if (btnTemplate === 'angled-slice' && slicePoly) {
+        slicePoly.removeAttribute('display');
+        if (slicePoly.style) slicePoly.style.display = '';
+        const sliceW = Math.max(42, iconSize + 22);
+        if (placement === 'Left') {
+          slicePoly.setAttribute('points', `${rectX - 5},${rectY - 5} ${rectX + sliceW},${rectY - 5} ${rectX + sliceW - 16},${rectY + newButtonHeight + 5} ${rectX - 5},${rectY + newButtonHeight + 5}`);
+          iconX = rectX + 12;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + sliceW - 8) + (newButtonWidth - (sliceW - 8)) / 2;
+          textY = centerY;
+        } else {
+          slicePoly.setAttribute('points', `${rectX + newButtonWidth - sliceW + 16},${rectY - 5} ${rectX + newButtonWidth + 5},${rectY - 5} ${rectX + newButtonWidth + 5},${rectY + newButtonHeight + 5} ${rectX + newButtonWidth - sliceW},${rectY + newButtonHeight + 5}`);
+          iconX = rectX + newButtonWidth - 12 - iconSize;
+          iconY = centerY - iconSize / 2;
+          textX = rectX + (newButtonWidth - (sliceW - 8)) / 2;
+          textY = centerY;
+        }
+      } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
+        const circleEl = badgeCircle || badgeEl;
+        const bRadius = Math.max(14, Math.round(newButtonHeight / 2 - 4));
+        if (placement === 'Left') {
+          badgeCenterX = rectX + newButtonHeight / 2;
+          iconX = badgeCenterX - iconSize / 2;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + newButtonHeight) + (newButtonWidth - newButtonHeight - 16) / 2;
+          textY = centerY;
+        } else {
+          badgeCenterX = rectX + newButtonWidth - newButtonHeight / 2;
+          iconX = badgeCenterX - iconSize / 2;
+          iconY = centerY - iconSize / 2;
+          textX = (rectX + 16) + (newButtonWidth - newButtonHeight - 16) / 2;
+          textY = centerY;
+        }
+        circleEl.setAttribute('cx', badgeCenterX.toString());
+        circleEl.setAttribute('cy', centerY.toString());
+        circleEl.setAttribute('r', bRadius.toString());
+        circleEl.removeAttribute('display');
+        if (circleEl.style) circleEl.style.display = '';
       } else {
-        textX = startX + measuredWidth / 2;
-        textY = centerY;
-        const badgeStartX = startX + measuredWidth + currentIconGap;
-        badgeCenterX = badgeStartX + effectiveIconWidth / 2;
-        iconX = badgeCenterX - iconSize / 2;
-        iconY = centerY - iconSize / 2;
+        // Standard buttons (with or without icon background circle)
+        const startX = rectX + (newButtonWidth - totalContentWidth) / 2;
+        if (placement === 'Left') {
+          const badgeStartX = startX;
+          badgeCenterX = badgeStartX + effectiveIconWidth / 2;
+          iconX = badgeCenterX - iconSize / 2;
+          iconY = centerY - iconSize / 2;
+          textX = startX + effectiveIconWidth + currentIconGap + measuredWidth / 2;
+          textY = centerY;
+        } else {
+          textX = startX + measuredWidth / 2;
+          textY = centerY;
+          const badgeStartX = startX + measuredWidth + currentIconGap;
+          badgeCenterX = badgeStartX + effectiveIconWidth / 2;
+          iconX = badgeCenterX - iconSize / 2;
+          iconY = centerY - iconSize / 2;
+        }
+
+        if (hasIconBg) {
+          let circ = el.querySelector('.btn-badge-circle, .btn-icon-bg');
+          if (!circ) {
+            circ = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circ.setAttribute('class', 'btn-badge-circle');
+            circ.setAttribute('stroke', 'none');
+            if (iconWrap) {
+              el.insertBefore(circ, iconWrap);
+            } else {
+              el.appendChild(circ);
+            }
+          }
+          const fillVal = applySvgGradient(currentIconBgColor, 'fill', 'icon-bg');
+          circ.setAttribute('fill', fillVal);
+          circ.setAttribute('data-fill-color', currentIconBgColor);
+          circ.setAttribute('cx', badgeCenterX.toString());
+          circ.setAttribute('cy', centerY.toString());
+          circ.setAttribute('r', badgeRadius.toString());
+          circ.removeAttribute('display');
+          if (circ.style) circ.style.display = '';
+        } else {
+          const circ = el.querySelector('.btn-badge-circle, .btn-icon-bg');
+          if (circ && btnTemplate !== 'white-pill-badge' && btnTemplate !== 'social-badge') {
+            circ.setAttribute('display', 'none');
+          }
+        }
       }
 
       iconWrap.setAttribute('transform', `translate(${iconX}, ${iconY})`);
       textEl.setAttribute('x', textX.toString());
       textEl.setAttribute('y', textY.toString());
-      textEl.setAttribute('text-anchor', 'middle');
-      textEl.setAttribute('dominant-baseline', 'middle');
-      textEl.style.textAnchor = 'middle';
-      textEl.style.dominantBaseline = 'middle';
-
-      // Update badge circle position if present
-      if (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle') {
-        badgeEl.setAttribute('cx', badgeCenterX.toString());
-        badgeEl.setAttribute('cy', centerY.toString());
-        badgeEl.setAttribute('r', badgeRadius.toString());
-        badgeEl.setAttribute('display', (hasIconBg || (currentIconBgColor !== 'none' && currentIconBgColor !== 'transparent')) ? '' : 'none');
-      }
-    } else {
-      if (iconWrap) {
-        iconWrap.remove();
-      }
-      if (badgeEl) {
-        badgeEl.setAttribute('display', 'none');
-      }
-      const centerX = rectX + newButtonWidth / 2;
-      const centerY = rectY + newButtonHeight / 2;
-      textEl.setAttribute('x', centerX.toString());
-      textEl.setAttribute('y', centerY.toString());
       textEl.setAttribute('text-anchor', 'middle');
       textEl.setAttribute('dominant-baseline', 'middle');
       textEl.style.textAnchor = 'middle';
@@ -1189,7 +1298,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-placement', val);
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, val);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, val, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1638,44 +1747,50 @@ export const ButtonEditor = ({
     syncButtonToCanvas(true, activeEffects.includes('Drop Shadow'), next['Drop Shadow']);
   };
 
-  // Render Icon in Preview Card
+  // Helper to dynamically adjust icon markup colors to match color
+  const cleanIconHtml = (html, color = '#ffffff') => {
+    if (!html) return '';
+    return html
+      .replace(/stroke="(?!(?:none))[^"]*"/gi, `stroke="${color}"`)
+      .replace(/fill="(?!(?:none|transparent))[^"]*"/gi, `fill="${color}"`);
+  };
+
+  // Render Icon in Preview Card (Fixed black and white preview, disconnected from button colors)
   const renderIconPreview = () => {
     const IconCmp = LucideIcons[iconName] || LucideIcons.Check;
-    const hasBg = Boolean(iconBgColor && iconBgColor !== 'none' && iconBgColor !== 'transparent');
+
     const iconElement = iconHtml ? (
       <svg
         viewBox={iconViewBox || "0 0 24 24"}
-        className={hasBg ? "w-[1.8vw] h-[1.8vw]" : "w-[2.4vw] h-[2.4vw]"}
-        stroke={iconColor || "#000000"}
+        className="w-[1.8vw] h-[1.8vw]"
+        stroke="#ffffff"
         fill="none"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        dangerouslySetInnerHTML={{ __html: iconHtml }}
+        style={{
+          color: '#ffffff',
+          stroke: '#ffffff'
+        }}
+        dangerouslySetInnerHTML={{ __html: cleanIconHtml(iconHtml, '#ffffff') }}
       />
     ) : (
       <IconCmp
-        size={hasBg ? "1.8vw" : "2.4vw"}
+        size="1.8vw"
         strokeWidth={2.5}
-        style={{ color: iconColor || "#000000" }}
+        color="#ffffff"
+        style={{
+          color: '#ffffff',
+          stroke: '#ffffff'
+        }}
       />
     );
 
-    if (hasBg) {
-      return (
-        <div
-          className="w-[3.2vw] h-[3.2vw] rounded-full flex items-center justify-center shadow-xs"
-          style={{
-            background: iconBgColor,
-            opacity: (iconBgOpacity || 100) / 100
-          }}
-        >
-          {iconElement}
-        </div>
-      );
-    }
-
-    return iconElement;
+    return (
+      <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+        {iconElement}
+      </div>
+    );
   };
 
   return (
@@ -1728,49 +1843,31 @@ export const ButtonEditor = ({
         <div className="w-[5.6vw] shrink-0" />
         <div className="flex-1 min-w-0 grid grid-cols-2 gap-[0.4vw]">
           {/* Font Family Dropdown */}
-          <div className="relative w-full">
-            <select
-              value={fontFamily}
-              onChange={(e) => handleFontFamilyChange(e.target.value)}
-              className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer truncate shadow-2xs font-medium"
-            >
-              {fontFamilies.map(f => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
-            <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
+          <ElementDropdown
+            value={fontFamily}
+            onChange={handleFontFamilyChange}
+            options={fontFamilies}
+            isFont={true}
+          />
 
           {/* Font Size Dropdown */}
-          <div className="relative w-full">
-            <select
-              value={fontSize}
-              onChange={(e) => handleFontSizeChange(parseInt(e.target.value))}
-              className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer text-center shadow-2xs font-medium"
-            >
-              {fontSizes.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
+          <ElementDropdown
+            value={fontSize}
+            onChange={(val) => handleFontSizeChange(parseInt(val))}
+            options={fontSizes}
+          />
         </div>
       </div>
 
       {/* Row 3: Font Weight Dropdown */}
       <div className="flex items-center gap-[0.5vw]">
         <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 min-w-0 relative">
-          <select
+        <div className="flex-1 min-w-0">
+          <ElementDropdown
             value={fontWeight}
-            onChange={(e) => handleFontWeightChange(e.target.value)}
-            className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer shadow-2xs font-medium"
-          >
-            {fontWeights.map(w => (
-              <option key={w.value} value={w.value}>{w.name}</option>
-            ))}
-          </select>
-          <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            onChange={handleFontWeightChange}
+            options={fontWeights.map(w => ({ label: w.name, value: w.value }))}
+          />
         </div>
       </div>
 
@@ -1788,19 +1885,10 @@ export const ButtonEditor = ({
       {/* Row 5: Add Icon Toggle */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
         <span className="text-[0.8vw] font-medium text-gray-900">Add Icon to the button</span>
-        <button
-          type="button"
-          onClick={() => handleToggleIcon(!hasIcon)}
-          className={`w-[1.9vw] h-[1.1vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors ${
-            hasIcon ? 'bg-[#E05638]' : 'bg-gray-300'
-          }`}
-        >
-          <div
-            className={`bg-white w-[0.9vw] h-[0.9vw] rounded-full shadow-md transform transition-transform ${
-              hasIcon ? 'translate-x-[0.8vw]' : 'translate-x-0'
-            }`}
-          />
-        </button>
+        <ElementToggle
+          checked={hasIcon}
+          onChange={handleToggleIcon}
+        />
       </div>
 
       {/* Rows when Icon is enabled */}
@@ -1810,7 +1898,7 @@ export const ButtonEditor = ({
           <PropertyRow label="Icon">
             <div
               onClick={() => setIsIconGalleryOpen(true)}
-              className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-white p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+              className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
               title="Click to change icon"
             >
               {/* Swap Icon button in top-right */}
@@ -1835,17 +1923,11 @@ export const ButtonEditor = ({
 
           {/* Placement Dropdown */}
           <PropertyRow label="Placement">
-            <div className="relative w-full">
-              <select
-                value={iconPlacement}
-                onChange={(e) => handleIconPlacementChange(e.target.value)}
-                className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer shadow-2xs font-medium"
-              >
-                <option value="Left">Left</option>
-                <option value="Right">Right</option>
-              </select>
-              <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <ElementDropdown
+              value={iconPlacement}
+              onChange={handleIconPlacementChange}
+              options={['Left', 'Right']}
+            />
           </PropertyRow>
 
           {/* Icon Color */}
@@ -1916,16 +1998,11 @@ export const ButtonEditor = ({
       <PropertyRow label="Icon Gap">
         <div className="flex items-center gap-[0.6vw] w-full">
           <div className="flex-1 relative flex items-center">
-            <input
-              type="range"
+            <ElementSlider
               min={0}
               max={40}
               value={iconGap}
-              onChange={(e) => handleIconGapChange(parseInt(e.target.value) || 0)}
-              className="button-icon-gap-slider w-full h-[0.25vw] appearance-none cursor-pointer rounded-full outline-none"
-              style={{
-                background: `linear-gradient(to right, #E05638 0%, #E05638 ${(iconGap / 40) * 100}%, #e5e7eb ${(iconGap / 40) * 100}%, #e5e7eb 100%)`
-              }}
+              onChange={(val) => handleIconGapChange(parseInt(val) || 0)}
             />
           </div>
           <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-medium shadow-2xs flex-shrink-0">
@@ -1947,8 +2024,8 @@ export const ButtonEditor = ({
         />
       </div>
 
-      {/* ─── 4. STOKE COLOR SECTION ─────────────────────────────── */}
-      <SectionHeader title="Stoke Color" />
+      {/* ─── 4. STROKE COLOR SECTION ─────────────────────────────── */}
+      <SectionHeader title="Stroke Color" />
 
       {/* Row 1: Swatch, Hex, Format */}
       <div className="pl-[0.5vw]">
@@ -1961,263 +2038,85 @@ export const ButtonEditor = ({
         />
       </div>
 
-      {/* Row 2: Alignment & Stoke Width */}
-      <div className="grid grid-cols-2 gap-[0.6vw] pl-[0.5vw]">
-        {/* Alignment */}
-        <div className="flex flex-col gap-[0.25vw]">
-          <span className="text-[0.72vw] text-gray-500 font-medium">Alignment</span>
-          <div className="relative">
-            <select
-              value={strokeAlignment}
-              onChange={(e) => handleStrokeAlignmentChange(e.target.value)}
-              className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer shadow-2xs font-medium"
-            >
-              <option value="Center">Center</option>
-              <option value="Inside">Inside</option>
-              <option value="Outside">Outside</option>
-            </select>
-            <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Stoke Width */}
-        <div className="flex flex-col gap-[0.25vw]">
-          <span className="text-[0.72vw] text-gray-500 font-medium">Stoke Width</span>
-          <div className="flex items-center gap-[0.3vw] h-[2.5vw]">
-            <button
-              type="button"
-              onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-              className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
-            >
-              <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
-            </button>
-            <div className="flex-1 h-full bg-white border border-gray-200 rounded-[0.5vw] flex items-center justify-center shadow-2xs">
-              <input
-                type="number"
-                value={strokeWidth}
-                onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full text-center text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
-              />
+      {/* Stroke Settings Grid (Exact match to image) */}
+      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
+        {/* Row 1: Alignment & Stroke Width */}
+        <div className="grid grid-cols-2 gap-[0.6vw]">
+          {/* Alignment */}
+          <div className="flex flex-col gap-[0.25vw]">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
+            <div className="w-full h-[2.3vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs">
+              <span>Outside</span>
             </div>
-            <button
-              type="button"
-              onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-              className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
-            >
-              <span className="text-[1vw] leading-none mb-[0.1vw]">+</span>
-            </button>
           </div>
-        </div>
-      </div>
 
-      {/* Row 3: Line Style & Dash Property */}
-      <div className="grid grid-cols-2 gap-[0.6vw] pl-[0.5vw]">
-        {/* Line Style */}
-        <div className="flex flex-col gap-[0.25vw]">
-          <span className="text-[0.72vw] text-gray-500 font-medium">Line style</span>
-          <div className="flex items-center justify-between gap-[0.3vw] h-[2.5vw]">
-            {/* Solid */}
-            <button
-              type="button"
-              onClick={() => handleLineStyleChange('Solid')}
-              className={`flex-1 h-full flex items-center justify-center rounded-[0.5vw] border transition-colors cursor-pointer ${
-                lineStyle === 'Solid' ? 'bg-white border-[#E05638] ring-1 ring-[#E05638]/30 shadow-2xs' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-              }`}
-            >
-              <div className={`w-[1.2vw] h-[0.12vw] rounded-full ${lineStyle === 'Solid' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-            </button>
-
-            {/* Dashed */}
-            <button
-              type="button"
-              onClick={() => handleLineStyleChange('Dashed')}
-              className={`flex-1 h-full flex items-center justify-center rounded-[0.5vw] border transition-colors cursor-pointer ${
-                lineStyle === 'Dashed' ? 'bg-white border-[#E05638] ring-1 ring-[#E05638]/30 shadow-2xs' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex gap-[0.15vw]">
-                <div className={`w-[0.25vw] h-[0.12vw] rounded-full ${lineStyle === 'Dashed' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-                <div className={`w-[0.25vw] h-[0.12vw] rounded-full ${lineStyle === 'Dashed' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-                <div className={`w-[0.25vw] h-[0.12vw] rounded-full ${lineStyle === 'Dashed' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
+          {/* Stroke Width */}
+          <div className="flex flex-col gap-[0.25vw]">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+            <div className="flex items-center gap-[0.3vw] h-[2.3vw]">
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+              >
+                −
+              </button>
+              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                <input
+                  type="number"
+                  value={strokeWidth}
+                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                />
               </div>
-            </button>
-
-            {/* Dotted */}
-            <button
-              type="button"
-              onClick={() => handleLineStyleChange('Dotted')}
-              className={`flex-1 h-full flex items-center justify-center rounded-[0.5vw] border transition-colors cursor-pointer ${
-                lineStyle === 'Dotted' ? 'bg-white border-[#E05638] ring-1 ring-[#E05638]/30 shadow-2xs' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex gap-[0.1vw] items-center">
-                <div className={`w-[0.35vw] h-[0.12vw] rounded-full ${lineStyle === 'Dotted' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-                <div className={`w-[0.12vw] h-[0.12vw] rounded-full ${lineStyle === 'Dotted' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-                <div className={`w-[0.35vw] h-[0.12vw] rounded-full ${lineStyle === 'Dotted' ? 'bg-[#E05638]' : 'bg-gray-400'}`} />
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Dash Property */}
-        <div className="flex flex-col gap-[0.25vw]">
-          <span className="text-[0.72vw] text-gray-500 font-medium">Dash Property</span>
-          <div className="flex items-center gap-[0.3vw] h-[2.5vw]">
-            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] shadow-2xs">
-              <span className="text-[0.72vw] text-gray-400 font-medium">L</span>
-              <input
-                type="number"
-                value={dashL}
-                onChange={(e) => handleDashChange('l', parseInt(e.target.value) || 1)}
-                className="w-[1.8vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-right"
-              />
-            </div>
-            <span className="text-[0.72vw] text-gray-400 font-medium">:</span>
-            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] shadow-2xs">
-              <span className="text-[0.72vw] text-gray-400 font-medium">G</span>
-              <input
-                type="number"
-                value={dashG}
-                onChange={(e) => handleDashChange('g', parseInt(e.target.value) || 1)}
-                className="w-[1.8vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-right"
-              />
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+              >
+                +
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Row 4: Line Corner */}
-      <div className="grid grid-cols-2 gap-[0.6vw] pl-[0.5vw]">
-        <div className="flex flex-col gap-[0.25vw]">
-          <span className="text-[0.72vw] text-gray-500 font-medium">Line Corner</span>
-          <div className="relative">
-            <select
+        {/* Row 2: Line style & Line Corner */}
+        <div className="grid grid-cols-2 gap-[0.6vw]">
+          <div className="flex flex-col gap-[0.25vw]">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Line style</span>
+            <div className="flex items-center h-[2.3vw]">
+              {/* Solid */}
+              <button
+                type="button"
+                onClick={() => handleLineStyleChange('Solid')}
+                className="w-[2.9vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
+                title="Solid Line"
+              >
+                <div className="w-[1.35vw] h-[2.5px] bg-[#243042] rounded-full" />
+              </button>
+            </div>
+          </div>
+
+          {/* Line Corner */}
+          <div className="flex flex-col gap-[0.25vw] relative">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+            <ElementDropdown
               value={lineCorner}
-              onChange={(e) => handleLineCornerChange(e.target.value)}
-              className="w-full h-[2.5vw] px-[0.6vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-700 outline-none hover:border-gray-300 focus:border-[#E05638] transition-colors appearance-none cursor-pointer shadow-2xs font-medium"
-            >
-              <option value="Rounded">Rounded</option>
-              <option value="Square">Square</option>
-            </select>
-            <ChevronDown size="0.85vw" className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              onChange={handleLineCornerChange}
+              options={['Square', 'Rounded']}
+            />
           </div>
         </div>
       </div>
 
       {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
-      <SectionHeader title="Corner Radius" />
-
-      <div className="flex flex-col items-center justify-center py-[0.4vw] pl-[0.5vw]">
-        <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.2vw] relative">
-          {/* Top Left */}
-          <div className="w-[5.2vw] h-[2.6vw] border border-gray-300 rounded-tl-[1vw] rounded-tr-0 rounded-bl-0 rounded-br-0 flex items-center justify-between px-[0.4vw] bg-white hover:border-gray-400 transition-colors shadow-2xs">
-            <button
-              type="button"
-              onClick={() => handleCornerChange('tl', Math.max(0, radius.tl - 1))}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronLeft size="0.9vw" />
-            </button>
-            <input
-              type="number"
-              value={radius.tl}
-              onChange={(e) => handleCornerChange('tl', Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full text-center text-[0.85vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text"
-            />
-            <button
-              type="button"
-              onClick={() => handleCornerChange('tl', radius.tl + 1)}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronRight size="0.9vw" />
-            </button>
-          </div>
-
-          {/* Top Right */}
-          <div className="w-[5.2vw] h-[2.6vw] border border-gray-300 rounded-tr-[1vw] rounded-tl-0 rounded-bl-0 rounded-br-0 flex items-center justify-between px-[0.4vw] bg-white hover:border-gray-400 transition-colors shadow-2xs">
-            <button
-              type="button"
-              onClick={() => handleCornerChange('tr', Math.max(0, radius.tr - 1))}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronLeft size="0.9vw" />
-            </button>
-            <input
-              type="number"
-              value={radius.tr}
-              onChange={(e) => handleCornerChange('tr', Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full text-center text-[0.85vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text"
-            />
-            <button
-              type="button"
-              onClick={() => handleCornerChange('tr', radius.tr + 1)}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronRight size="0.9vw" />
-            </button>
-          </div>
-
-          {/* Center Link Icon */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto">
-            <button
-              type="button"
-              onClick={() => handleToggleRadiusLink(!isRadiusLinked)}
-              className="bg-white p-[0.35vw] rounded-full shadow-sm border border-gray-200 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-              title={isRadiusLinked ? "Unlink corners" : "Link corners"}
-            >
-              {isRadiusLinked ? <Link2 size="1.1vw" className="text-black" /> : <Link2Off size="1.1vw" className="text-gray-400" />}
-            </button>
-          </div>
-
-          {/* Bottom Left */}
-          <div className="w-[5.2vw] h-[2.6vw] border border-gray-300 rounded-bl-[1vw] rounded-tl-0 rounded-tr-0 rounded-br-0 flex items-center justify-between px-[0.4vw] bg-white hover:border-gray-400 transition-colors shadow-2xs">
-            <button
-              type="button"
-              onClick={() => handleCornerChange('bl', Math.max(0, radius.bl - 1))}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronLeft size="0.9vw" />
-            </button>
-            <input
-              type="number"
-              value={radius.bl}
-              onChange={(e) => handleCornerChange('bl', Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full text-center text-[0.85vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text"
-            />
-            <button
-              type="button"
-              onClick={() => handleCornerChange('bl', radius.bl + 1)}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronRight size="0.9vw" />
-            </button>
-          </div>
-
-          {/* Bottom Right */}
-          <div className="w-[5.2vw] h-[2.6vw] border border-gray-300 rounded-br-[1vw] rounded-tl-0 rounded-tr-0 rounded-bl-0 flex items-center justify-between px-[0.4vw] bg-white hover:border-gray-400 transition-colors shadow-2xs">
-            <button
-              type="button"
-              onClick={() => handleCornerChange('br', Math.max(0, radius.br - 1))}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronLeft size="0.9vw" />
-            </button>
-            <input
-              type="number"
-              value={radius.br}
-              onChange={(e) => handleCornerChange('br', Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full text-center text-[0.85vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text"
-            />
-            <button
-              type="button"
-              onClick={() => handleCornerChange('br', radius.br + 1)}
-              className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <ChevronRight size="0.9vw" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <CornerRadius
+        radius={radius}
+        onCornerChange={handleCornerChange}
+        isRadiusLinked={isRadiusLinked}
+        onToggleLinked={handleToggleRadiusLink}
+        className="pl-[0.5vw]"
+      />
 
       {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
       <SectionHeader title="Effects" />

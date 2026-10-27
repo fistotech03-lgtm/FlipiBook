@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Sparkles, Sliders, Type, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import ColorPicker from '../../../properties/ColorPicker';
 import { KINETIC_ANIMATION_KEYFRAMES, calculateKineticDimensions, cleanKeyframesFromCss } from '../utils/kineticTypographyUtils';
+import { ElementSlider, ElementDropdown } from './ElementUIControls';
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 100, step = 1, unit = '', disabled = false }) => {
   const [localVal, setLocalVal] = useState(value);
@@ -48,20 +49,14 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, step = 1, 
         {label} :
       </span>
       <div className="flex-1 min-w-0 flex items-center gap-[1vw]">
-        <input
-          type="range"
+        <ElementSlider
           min={min}
           max={max}
           step={step}
           value={numericVal}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none disabled:cursor-not-allowed"
-          style={{
-            background: disabled
-              ? '#e5e7eb'
-              : `linear-gradient(to right, #6366f1 0%, #6366f1 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`,
-          }}
+          onChange={(val) => onChange(val)}
+          className="flex-1 min-w-0"
         />
         <div className="w-[3.8vw] flex-shrink-0 h-[1.8vw] flex items-center justify-center bg-white border border-gray-100 rounded-[0.4vw] shadow-sm overflow-hidden px-[0.2vw]">
           <input
@@ -1395,20 +1390,11 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
         {/* Animation Preset Selector */}
         <div className="flex flex-col gap-[0.4vw] mb-[0.6vw]">
           <span className="text-[0.8vw] font-semibold text-gray-600">Animation Style :</span>
-          <div className="border border-gray-400 rounded-[0.75vw] bg-white overflow-hidden h-[2.5vw] flex items-center hover:border-indigo-500 focus-within:border-indigo-500 transition-colors">
-            <select
-              value={animationStyle}
-              onChange={(e) => handleAnimationChange(e.target.value)}
-              className="w-full h-full px-[0.75vw] text-[0.85vw] font-semibold text-gray-700 bg-transparent outline-none cursor-pointer appearance-none truncate"
-              style={{ background: 'url("data:image/svg+xml;utf8,<svg fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' width=\'16\' height=\'16\' xmlns=\'http://www.w3.org/2000/svg\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'></path></svg>") no-repeat right 0.75vw center' }}
-            >
-              {ANIMATION_PRESETS.map((anim) => (
-                <option key={anim.id} value={anim.id}>
-                  {anim.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ElementDropdown
+            value={animationStyle}
+            onChange={handleAnimationChange}
+            options={ANIMATION_PRESETS.map((anim) => ({ label: anim.name, value: anim.id }))}
+          />
         </div>
 
         {/* Animation Sliders */}
@@ -1444,44 +1430,28 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
         
         <div className="flex flex-col gap-[0.5vw]">
           {/* Font Family Dropdown */}
-          <div className="border border-gray-400 rounded-[0.75vw] bg-white overflow-hidden h-[2.5vw] flex items-center hover:border-indigo-500 focus-within:border-indigo-500 transition-colors">
-            <select 
-              value={fontFamily} 
-              onChange={handleFontFamilyChange}
-              className="w-full h-full px-[0.75vw] text-[0.85vw] font-semibold text-gray-700 bg-transparent outline-none cursor-pointer appearance-none truncate"
-              style={{ background: 'url("data:image/svg+xml;utf8,<svg fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' width=\'16\' height=\'16\' xmlns=\'http://www.w3.org/2000/svg\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'></path></svg>") no-repeat right 0.75vw center' }}
-            >
-              {fontFamilies.map(font => (
-                <option key={font} value={font}>{font}</option>
-              ))}
-            </select>
-          </div>
+          <ElementDropdown 
+            value={fontFamily} 
+            onChange={handleFontFamilyChange}
+            options={fontFamilies}
+            isFont={true}
+          />
 
           {/* Weight and Size Row */}
           <div className="flex gap-[0.65vw]">
-            <div className="flex-[1.5] border border-gray-400 rounded-[0.75vw] bg-white overflow-hidden h-[2.5vw] flex items-center hover:border-indigo-500 focus-within:border-indigo-500 transition-colors">
-              <select 
+            <div className="flex-[1.5]">
+              <ElementDropdown 
                 value={fontWeight} 
                 onChange={handleFontWeightChange}
-                className="w-full h-full px-[0.75vw] text-[0.85vw] font-semibold text-gray-700 bg-transparent outline-none cursor-pointer appearance-none truncate"
-                style={{ background: 'url("data:image/svg+xml;utf8,<svg fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' width=\'16\' height=\'16\' xmlns=\'http://www.w3.org/2000/svg\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'></path></svg>") no-repeat right 0.75vw center' }}
-              >
-                {fontWeights.map(weight => (
-                  <option key={weight.value} value={weight.value}>{weight.name}</option>
-                ))}
-              </select>
+                options={fontWeights.map(w => ({ label: w.name, value: w.value }))}
+              />
             </div>
-            <div className="flex-[1] border border-gray-400 rounded-[0.75vw] bg-white overflow-hidden h-[2.5vw] flex items-center hover:border-indigo-500 focus-within:border-indigo-500 transition-colors">
-              <select 
+            <div className="flex-[1]">
+              <ElementDropdown 
                 value={fontSize} 
-                onChange={handleFontSizeChange}
-                className="w-full h-full px-[0.75vw] text-[0.85vw] font-semibold text-gray-700 bg-transparent outline-none cursor-pointer appearance-none"
-                style={{ background: 'url("data:image/svg+xml;utf8,<svg fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' width=\'16\' height=\'16\' xmlns=\'http://www.w3.org/2000/svg\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'></path></svg>") no-repeat right 0.75vw center' }}
-              >
-                {fontSizes.map(size => (
-                  <option key={size} value={size}>{size}px</option>
-                ))}
-              </select>
+                onChange={(val) => handleFontSizeChange(parseInt(val))}
+                options={fontSizes.map(s => ({ label: `${s}px`, value: s }))}
+              />
             </div>
           </div>
 

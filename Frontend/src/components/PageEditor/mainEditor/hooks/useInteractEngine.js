@@ -277,6 +277,10 @@ export const useInteractEngine = ({
                           selEl.getAttribute('data-is-element-button') === 'true' ||
                           selEl.getAttribute('data-type') === 'button' ||
                           (selEl.id && selEl.id.startsWith('button-')) ||
+                          selEl.getAttribute('data-is-element-shape') === 'true' ||
+                          selEl.getAttribute('data-type') === 'shape' ||
+                          selEl.getAttribute('data-shape-type') !== null ||
+                          (selEl.id && selEl.id.startsWith('shape-')) ||
                           selEl.getAttribute('data-type') === 'qrcode' ||
                           selEl.getAttribute('data-type') === 'map' ||
                           selEl.getAttribute('data-type') === 'embed-frame' ||

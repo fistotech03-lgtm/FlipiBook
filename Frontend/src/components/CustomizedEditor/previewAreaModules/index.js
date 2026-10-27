@@ -8,6 +8,7 @@ export { default as getSlideshowScript } from './scripts/slideshowScript';
 export { default as getAnimationScript } from './scripts/animationScript';
 export { default as getInteractionScript } from './scripts/interactionScript';
 export { default as getVideoControlsScript } from './scripts/videoControlsScript';
+export { default as getAudioControlsScript } from './scripts/audioControlsScript';
 export { default as sanitizeHtmlForPreview } from './scripts/sanitizeHtml';
 export { default as getIframeContent } from './scripts/iframeContentBuilder';
 

@@ -182,6 +182,9 @@ export const getInteractionScript = (pageNumber) => `  <style>
                             config: configObj
                         }, '*');
                     } else if (type === 'audio' && value) {
+                       if (el.getAttribute('data-type') === 'audio-frame' || (typeof el.closest === 'function' && el.closest('[data-type="audio-frame"]'))) {
+                           return;
+                       }
                        e.preventDefault();
                        e.stopPropagation();
                        try {

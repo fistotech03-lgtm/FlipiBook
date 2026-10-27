@@ -4,6 +4,7 @@ import { handleScrubHelper } from './Color';
 import Color from './Color';
 import CornerRadius from './CornerRadius';
 import Effect from './Effect';
+import { ElementSlider } from '../LeftActionMenu/Elements/properties/ElementUIControls';
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false }) => {
   const [localVal, setLocalVal] = useState(value);
@@ -40,9 +41,9 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
   };
 
   return (
-    <div className={`flex items-center gap-[1vw] py-[0.4vw] transition-opacity duration-200 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-[0.8vw] py-[0.4vw] transition-opacity duration-200 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       <span
-        className="text-[0.8vw] font-semibold text-gray-600 w-[4vw] flex-shrink-0 cursor-ew-resize select-none hover:text-indigo-600 transition-colors"
+        className="text-[0.78vw] font-semibold text-gray-700 w-[4vw] flex-shrink-0 cursor-ew-resize select-none hover:text-[#E05638] transition-colors"
         onPointerDown={(e) => {
           handleScrubHelper(e, value, (v) => {
             const num = parseFloat(v);
@@ -51,23 +52,18 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
           });
         }}
       >{label} :</span>
-      <div className="flex-grow flex items-center gap-[1vw]">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step="1"
-          value={value || 0}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-grow h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none disabled:cursor-not-allowed"
-          style={{
-            background: disabled
-              ? '#e5e7eb'
-              : `linear-gradient(to right, #6366f1 0%, #6366f1 ${((value || 0) - min) / (max - min) * 100}%, #e5e7eb ${((value || 0) - min) / (max - min) * 100}%, #e5e7eb 100%)`,
-          }}
-        />
-        <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-100 rounded-[0.4vw] shadow-sm overflow-hidden">
+      <div className="flex-grow flex items-center gap-[0.8vw]">
+        <div className="flex-1">
+          <ElementSlider
+            min={min}
+            max={max}
+            step={1}
+            value={value || 0}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+        <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs overflow-hidden">
           <input
             type="number"
             min={min}

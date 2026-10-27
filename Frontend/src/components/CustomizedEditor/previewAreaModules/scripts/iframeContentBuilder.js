@@ -4,6 +4,7 @@ import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
 import getVideoControlsScript from './videoControlsScript';
+import getAudioControlsScript from './audioControlsScript';
 
 export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false, baseUrl = null) => {
     let rawCleanHtml = sanitizeHtmlForPreview(html);
@@ -272,6 +273,7 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                 ${getAnimationScript(pageNumber)}
                 ${getInteractionScript(pageNumber)}
                 ${getVideoControlsScript()}
+                ${getAudioControlsScript()}
                 <script>
                     (function() {
                         const isRightPage = ${pageNumber} % 2 !== 0;

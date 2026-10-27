@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { createPortal } from 'react-dom';
 import { handleScrubHelper } from '../../../properties/Color';
-import Color from '../../../properties/Color';
 import CornerRadius from '../../../properties/CornerRadius';
-import Adjustment from '../../../properties/Adjustment';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../../ColorPicker';
 import ImageAdjustModal from './ImageAdjustModal';
@@ -22,6 +20,7 @@ import {
   Link2Off,
   Check
 } from 'lucide-react';
+import { ElementSlider, ElementDropdown } from './ElementUIControls';
 
 // Section Header matching audio/elements exact styling
 const SectionHeader = ({ title }) => (
@@ -64,22 +63,15 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
     <PropertyRow label={label} className={disabled ? 'opacity-40 pointer-events-none' : ''}>
       <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]">
         <div className="flex-1 flex items-center relative">
-          <input
-            type="range"
+          <ElementSlider
             min={min}
             max={max}
-            step="1"
+            step={1}
             value={numVal}
             disabled={disabled}
-            onChange={(e) => {
-              setLocalVal(e.target.value);
-              onChange(e.target.value);
-            }}
-            className="w-full h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none disabled:cursor-not-allowed [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-[0.85vw] [&::-webkit-slider-thumb]:h-[0.85vw] [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#E05638] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md"
-            style={{
-              background: disabled
-                ? '#e5e7eb'
-                : `linear-gradient(to right, #E05638 0%, #E05638 ${pct}%, #e5e7eb ${pct}%, #e5e7eb 100%)`,
+            onChange={(val) => {
+              setLocalVal(val);
+              onChange(val);
             }}
           />
         </div>
@@ -146,37 +138,17 @@ const ShapeAppearanceControls = ({
     }
   };
 
-  // Corner radius update helper
-  const handleCornerChange = (corner, delta) => {
-    const currentVal = parseInt(radius?.[corner] || 0);
-    const nextVal = Math.max(0, currentVal + delta);
-    if (isRadiusLinked) {
-      setRadius({ tl: nextVal, tr: nextVal, bl: nextVal, br: nextVal });
-    } else {
-      setRadius(prev => ({ ...prev, [corner]: nextVal }));
-    }
-  };
-
-  const handleCornerInput = (corner, val) => {
-    const parsed = Math.max(0, parseInt(val) || 0);
-    if (isRadiusLinked) {
-      setRadius({ tl: parsed, tr: parsed, bl: parsed, br: parsed });
-    } else {
-      setRadius(prev => ({ ...prev, [corner]: parsed }));
-    }
-  };
-
   return (
     <div className="flex flex-col gap-[1vw] font-sans select-none text-gray-800">
       
       {/* ===================== 1. FILL COLOR ===================== */}
       <div className="flex flex-col gap-[0.5vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.82vw] font-bold text-gray-800 whitespace-nowrap tracking-tight">Fill Color</span>
+        <div className="flex items-center mt-[0.5vw] gap-[0.5vw]">
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Fill Color</span>
           <div className="h-[1px] flex-1 bg-gray-200"></div>
         </div>
 
-        <div className="flex items-center gap-[0.5vw]">
+        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
           {/* Swatch */}
           <button
             type="button"
@@ -248,15 +220,15 @@ const ShapeAppearanceControls = ({
         </div>
       </div>
 
-      {/* ===================== 2. STOKE COLOR ===================== */}
+      {/* ===================== 2. STROKE COLOR ===================== */}
       <div className="flex flex-col gap-[0.5vw]">
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.82vw] font-bold text-gray-800 whitespace-nowrap tracking-tight">Stoke Color</span>
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Stroke Color</span>
           <div className="h-[1px] flex-1 bg-gray-200"></div>
         </div>
 
         {/* Row 1: Swatch + Hex/Opacity + Format */}
-        <div className="flex items-center gap-[0.5vw]">
+        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
           <button
             type="button"
             onClick={() => setActiveColorPicker(activeColorPicker === 'stroke' ? null : 'stroke')}
@@ -303,400 +275,109 @@ const ShapeAppearanceControls = ({
           </div>
         </div>
 
-        {/* Row 2: Alignment & Stoke Width */}
-        <div className="grid grid-cols-2 gap-[0.75vw] mt-[0.2vw]">
-          {/* Alignment */}
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.7vw] text-gray-400 font-medium">Alignment</span>
-            <button
-              type="button"
-              onClick={() => setIsAlignDropdownOpen(prev => !prev)}
-              className="w-full h-[2.1vw] bg-white border border-gray-200 rounded-[0.45vw] px-[0.6vw] flex items-center justify-between text-[0.75vw] text-gray-700 font-semibold shadow-sm hover:border-gray-300 transition-all cursor-pointer"
-            >
-              <span>{backgroundColor?.strokePosition || 'Center'}</span>
-              <ChevronDown size="0.75vw" className="text-gray-400" />
-            </button>
-
-            {isAlignDropdownOpen && (
-              <div className="absolute top-[3.3vw] left-0 w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-50 py-[0.2vw] animate-in fade-in duration-150">
-                {['Center', 'Inside', 'Outside'].map(pos => (
-                  <div
-                    key={pos}
-                    onClick={() => {
-                      setBackgroundColor(prev => ({ ...prev, strokePosition: pos }));
-                      setIsAlignDropdownOpen(false);
-                    }}
-                    className={`px-[0.6vw] py-[0.3vw] text-[0.72vw] cursor-pointer hover:bg-gray-50 flex items-center justify-between ${
-                      (backgroundColor?.strokePosition || 'Center') === pos ? 'font-bold text-indigo-600 bg-indigo-50/40' : 'text-gray-700'
-                    }`}
-                  >
-                    <span>{pos}</span>
-                    {(backgroundColor?.strokePosition || 'Center') === pos && <Check size="0.7vw" />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Stoke Width Stepper */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-400 font-medium">Stoke Width</span>
-            <div className="flex items-center gap-[0.25vw] h-[2.1vw]">
-              <button
-                type="button"
-                onClick={() => setBackgroundColor(prev => ({
-                  ...prev,
-                  strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
-                }))}
-                className="w-[1.9vw] h-full bg-gray-100 hover:bg-gray-200 active:scale-95 rounded-[0.4vw] flex items-center justify-center text-gray-600 font-bold text-[0.85vw] transition-all cursor-pointer"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={Math.round(parseFloat(backgroundColor?.strokeWeight) || 0)}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    setBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
-                  }
-                }}
-                className="flex-1 h-full bg-white border border-gray-200 rounded-[0.4vw] text-center text-[0.78vw] font-semibold text-gray-800 outline-none shadow-sm no-spin focus:border-indigo-500"
+        {/* Stroke Settings (Exact match to image) */}
+        <div className="flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw]">
+          {/* Row 1: Alignment & Stroke Width */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            {/* Alignment */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Alignment</span>
+              <ElementDropdown
+                value={backgroundColor?.strokePosition || 'Outside'}
+                onChange={(val) => setBackgroundColor(prev => ({ ...prev, strokePosition: val }))}
+                options={['Outside', 'Center', 'Inside']}
+                buttonClassName="!h-[2.2vw]"
               />
-              <button
-                type="button"
-                onClick={() => setBackgroundColor(prev => ({
-                  ...prev,
-                  strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
-                }))}
-                className="w-[1.9vw] h-full bg-gray-100 hover:bg-gray-200 active:scale-95 rounded-[0.4vw] flex items-center justify-center text-gray-600 font-bold text-[0.85vw] transition-all cursor-pointer"
-              >
-                +
-              </button>
             </div>
-          </div>
-        </div>
 
-        {/* Row 3: Line Style & Dash Property */}
-        <div className="grid grid-cols-2 gap-[0.75vw] mt-[0.2vw]">
-          {/* Line style buttons */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-400 font-medium">Line style</span>
-            <div className="flex items-center gap-[0.25vw] h-[2.1vw]">
-              {/* Solid */}
-              <button
-                type="button"
-                onClick={() => setBackgroundColor(prev => ({ ...prev, strokeDashStyle: 'Solid', strokeDasharrayValue: 'none' }))}
-                className={`flex-1 h-full rounded-[0.4vw] border flex items-center justify-center transition-all cursor-pointer ${
-                  (backgroundColor?.strokeDashStyle || 'Solid') === 'Solid'
-                    ? 'border-gray-400 bg-gray-100 shadow-inner'
-                    : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
-                }`}
-                title="Solid Line"
-              >
-                <div className="w-[1.2vw] h-[2px] bg-gray-600 rounded"></div>
-              </button>
-
-              {/* Dotted */}
-              <button
-                type="button"
-                onClick={() => setBackgroundColor(prev => ({ ...prev, strokeDashStyle: 'Dotted', strokeDasharrayValue: '2,6' }))}
-                className={`flex-1 h-full rounded-[0.4vw] border flex items-center justify-center transition-all cursor-pointer ${
-                  backgroundColor?.strokeDashStyle === 'Dotted'
-                    ? 'border-gray-400 bg-gray-100 shadow-inner'
-                    : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
-                }`}
-                title="Dotted Line"
-              >
-                <div className="flex items-center gap-[0.15vw]">
-                  <div className="w-[2.5px] h-[2.5px] rounded-full bg-gray-600"></div>
-                  <div className="w-[2.5px] h-[2.5px] rounded-full bg-gray-600"></div>
-                  <div className="w-[2.5px] h-[2.5px] rounded-full bg-gray-600"></div>
-                  <div className="w-[2.5px] h-[2.5px] rounded-full bg-gray-600"></div>
-                </div>
-              </button>
-
-              {/* Dashed */}
-              <button
-                type="button"
-                onClick={() => setBackgroundColor(prev => ({
-                  ...prev,
-                  strokeDashStyle: 'Dashed',
-                  strokeDasharrayValue: `${prev.strokeDashLength || 8},${prev.strokeDashGap || 4}`
-                }))}
-                className={`flex-1 h-full rounded-[0.4vw] border flex items-center justify-center transition-all cursor-pointer ${
-                  backgroundColor?.strokeDashStyle === 'Dashed'
-                    ? 'border-gray-400 bg-gray-100 shadow-inner'
-                    : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
-                }`}
-                title="Dashed Line"
-              >
-                <div className="flex items-center gap-[0.2vw]">
-                  <div className="w-[0.5vw] h-[2px] bg-gray-600 rounded"></div>
-                  <div className="w-[0.5vw] h-[2px] bg-gray-600 rounded"></div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Dash Property */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.7vw] text-gray-400 font-medium">Dash Property</span>
-            <div className="h-[2.1vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-center px-[0.4vw] text-[0.75vw] text-gray-500 shadow-sm gap-[0.2vw] focus-within:border-indigo-500">
-              <span className="font-semibold text-gray-400 text-[0.7vw]">L</span>
-              <input
-                type="number"
-                min="1"
-                value={backgroundColor?.strokeDashLength || 8}
-                onChange={(e) => {
-                  const len = parseInt(e.target.value) || 1;
-                  const gap = backgroundColor?.strokeDashGap || 4;
-                  setBackgroundColor(prev => ({
+            {/* Stroke Width Stepper */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
+              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+                <button
+                  type="button"
+                  onClick={() => setBackgroundColor(prev => ({
                     ...prev,
-                    strokeDashLength: len,
-                    strokeDasharrayValue: `${len},${gap}`
-                  }));
-                }}
-                className="w-[1.6vw] text-center font-semibold text-gray-800 outline-none bg-transparent no-spin"
-              />
-              <span className="text-gray-300 font-bold">:</span>
-              <span className="font-semibold text-gray-400 text-[0.7vw]">G</span>
-              <input
-                type="number"
-                min="1"
-                value={backgroundColor?.strokeDashGap || 4}
-                onChange={(e) => {
-                  const gap = parseInt(e.target.value) || 1;
-                  const len = backgroundColor?.strokeDashLength || 8;
-                  setBackgroundColor(prev => ({
+                    strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
+                  }))}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  −
+                </button>
+                <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs focus-within:border-indigo-500">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={Math.round(parseFloat(backgroundColor?.strokeWeight) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
+                      }
+                    }}
+                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBackgroundColor(prev => ({
                     ...prev,
-                    strokeDashGap: gap,
-                    strokeDasharrayValue: `${len},${gap}`
-                  }));
-                }}
-                className="w-[1.6vw] text-center font-semibold text-gray-800 outline-none bg-transparent no-spin"
+                    strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
+                  }))}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Line style & Line Corner */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Line style</span>
+              <div className="flex items-center h-[2.2vw]">
+                {/* Solid */}
+                <button
+                  type="button"
+                  onClick={() => setBackgroundColor(prev => ({ ...prev, strokeDashStyle: 'Solid', strokeDasharrayValue: 'none' }))}
+                  className="w-[9.5vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
+                  title="Solid Line"
+                >
+                  <div className="w-[5vw] h-[2.5px] bg-[#243042] rounded-full"></div>
+                </button>
+              </div>
+            </div>
+
+            {/* Line Corner */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Line Corner</span>
+              <ElementDropdown
+                value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
+                onChange={(val) => setBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
+                options={['Square', 'Rounded']}
+                buttonClassName="!h-[2.2vw]"
               />
             </div>
           </div>
-        </div>
-
-        {/* Row 4: Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.75vw] mt-[0.2vw]">
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.7vw] text-gray-400 font-medium">Line Corner</span>
-            <button
-              type="button"
-              onClick={() => setIsCornerDropdownOpen(prev => !prev)}
-              className="w-full h-[2.1vw] bg-white border border-gray-200 rounded-[0.45vw] px-[0.6vw] flex items-center justify-between text-[0.75vw] text-gray-700 font-semibold shadow-sm hover:border-gray-300 transition-all cursor-pointer"
-            >
-              <span>
-                {backgroundColor?.strokeLinecap === 'round' 
-                  ? 'Rounded' 
-                  : (backgroundColor?.strokeLinecap === 'square' ? 'Miter' : 'Bevel')}
-              </span>
-              <ChevronDown size="0.75vw" className="text-gray-400" />
-            </button>
-
-            {isCornerDropdownOpen && (
-              <div className="absolute top-[3.3vw] left-0 w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-50 py-[0.2vw] animate-in fade-in duration-150">
-                {[
-                  { label: 'Rounded', value: 'round' },
-                  { label: 'Miter', value: 'square' },
-                  { label: 'Bevel', value: 'butt' }
-                ].map(opt => (
-                  <div
-                    key={opt.value}
-                    onClick={() => {
-                      setBackgroundColor(prev => ({ ...prev, strokeLinecap: opt.value }));
-                      setIsCornerDropdownOpen(false);
-                    }}
-                    className={`px-[0.6vw] py-[0.3vw] text-[0.72vw] cursor-pointer hover:bg-gray-50 flex items-center justify-between ${
-                      (backgroundColor?.strokeLinecap || 'round') === opt.value ? 'font-bold text-indigo-600 bg-indigo-50/40' : 'text-gray-700'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {(backgroundColor?.strokeLinecap || 'round') === opt.value && <Check size="0.7vw" />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div></div>
         </div>
       </div>
 
       {/* ===================== 3. CORNER RADIUS ===================== */}
       {!hideCornerRadius && (
-        <div className="flex flex-col gap-[0.5vw]">
-          <div className="flex items-center gap-[0.5vw]">
-            <span className="text-[0.82vw] font-bold text-gray-800 whitespace-nowrap tracking-tight">Corner Radius</span>
-            <div className="h-[1px] flex-1 bg-gray-200"></div>
-          </div>
-
-          <div className="relative flex items-center justify-center my-[0.4vw]">
-            <div className="grid grid-cols-2 gap-x-[3.2vw] gap-y-[1.2vw] w-full max-w-[15.5vw]">
-              
-              {/* Top-Left */}
-              <div
-                onPointerDown={(e) => {
-                  if (e.target.tagName === 'INPUT') return;
-                  handleScrubHelper(e, radius?.tl ?? 0, (newVal) => handleCornerInput('tl', parseInt(newVal)));
-                }}
-                className="h-[2.2vw] bg-white border border-gray-200 rounded-tl-[0.9vw] rounded-tr-[0.25vw] rounded-bl-[0.25vw] rounded-br-[0.25vw] flex items-center justify-between px-[0.4vw] shadow-sm hover:border-gray-300 focus-within:border-indigo-500 transition-all cursor-ew-resize select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('tl', -1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronLeft size="0.8vw" />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={radius?.tl ?? 0}
-                  onChange={(e) => handleCornerInput('tl', e.target.value)}
-                  className="w-[2vw] text-center text-[0.78vw] font-semibold text-gray-800 outline-none bg-transparent no-spin cursor-text"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('tl', 1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronRight size="0.8vw" />
-                </button>
-              </div>
-
-              {/* Top-Right */}
-              <div
-                onPointerDown={(e) => {
-                  if (e.target.tagName === 'INPUT') return;
-                  handleScrubHelper(e, radius?.tr ?? 0, (newVal) => handleCornerInput('tr', parseInt(newVal)));
-                }}
-                className="h-[2.2vw] bg-white border border-gray-200 rounded-tr-[0.9vw] rounded-tl-[0.25vw] rounded-bl-[0.25vw] rounded-br-[0.25vw] flex items-center justify-between px-[0.4vw] shadow-sm hover:border-gray-300 focus-within:border-indigo-500 transition-all cursor-ew-resize select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('tr', -1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronLeft size="0.8vw" />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={radius?.tr ?? 0}
-                  onChange={(e) => handleCornerInput('tr', e.target.value)}
-                  className="w-[2vw] text-center text-[0.78vw] font-semibold text-gray-800 outline-none bg-transparent no-spin cursor-text"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('tr', 1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronRight size="0.8vw" />
-                </button>
-              </div>
-
-              {/* Bottom-Left */}
-              <div
-                onPointerDown={(e) => {
-                  if (e.target.tagName === 'INPUT') return;
-                  handleScrubHelper(e, radius?.bl ?? 0, (newVal) => handleCornerInput('bl', parseInt(newVal)));
-                }}
-                className="h-[2.2vw] bg-white border border-gray-200 rounded-bl-[0.9vw] rounded-tl-[0.25vw] rounded-tr-[0.25vw] rounded-br-[0.25vw] flex items-center justify-between px-[0.4vw] shadow-sm hover:border-gray-300 focus-within:border-indigo-500 transition-all cursor-ew-resize select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('bl', -1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronLeft size="0.8vw" />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={radius?.bl ?? 0}
-                  onChange={(e) => handleCornerInput('bl', e.target.value)}
-                  className="w-[2vw] text-center text-[0.78vw] font-semibold text-gray-800 outline-none bg-transparent no-spin cursor-text"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('bl', 1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronRight size="0.8vw" />
-                </button>
-              </div>
-
-              {/* Bottom-Right */}
-              <div
-                onPointerDown={(e) => {
-                  if (e.target.tagName === 'INPUT') return;
-                  handleScrubHelper(e, radius?.br ?? 0, (newVal) => handleCornerInput('br', parseInt(newVal)));
-                }}
-                className="h-[2.2vw] bg-white border border-gray-200 rounded-br-[0.9vw] rounded-tl-[0.25vw] rounded-tr-[0.25vw] rounded-bl-[0.25vw] flex items-center justify-between px-[0.4vw] shadow-sm hover:border-gray-300 focus-within:border-indigo-500 transition-all cursor-ew-resize select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('br', -1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronLeft size="0.8vw" />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={radius?.br ?? 0}
-                  onChange={(e) => handleCornerInput('br', e.target.value)}
-                  className="w-[2vw] text-center text-[0.78vw] font-semibold text-gray-800 outline-none bg-transparent no-spin cursor-text"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCornerChange('br', 1)}
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
-                >
-                  <ChevronRight size="0.8vw" />
-                </button>
-              </div>
-
-            </div>
-
-            {/* Center Link Icon Button */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto">
-              <button
-                type="button"
-                onClick={() => setIsRadiusLinked(!isRadiusLinked)}
-                className={`p-[0.35vw] rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 cursor-pointer bg-white ${
-                  isRadiusLinked ? 'border-gray-800 text-gray-900' : 'border-gray-200 text-gray-400'
-                }`}
-                title={isRadiusLinked ? "Unlink Corners" : "Link All Corners"}
-              >
-                {isRadiusLinked ? (
-                  <Link2 size="1.1vw" className="text-gray-900" />
-                ) : (
-                  <Link2Off size="1.1vw" className="text-gray-400" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CornerRadius
+          radius={radius}
+          setRadius={setRadius}
+          isRadiusLinked={isRadiusLinked}
+          setIsRadiusLinked={setIsRadiusLinked}
+        />
       )}
 
       {/* ===================== 4. EFFECTS ===================== */}
-      <div className="flex flex-col gap-[0.5vw]">
+      <div className="flex flex-col mt-[0.5vw] gap-[0.5vw]">
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.82vw] font-bold text-gray-800 whitespace-nowrap tracking-tight">Effects</span>
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Effects</span>
           <div className="h-[1px] flex-1 bg-gray-200"></div>
         </div>
 
@@ -1018,6 +699,17 @@ const ElementShapesProperties = ({
         syncDomChanges();
     };
 
+    // Auto-exit adjust mode when clicking outside the shape
+    const handleOutsideClick = (e) => {
+      if (!adjustStateRef.current.isAdjusting) return;
+      const target = e.target;
+      if (target && (target.closest?.('#ghost-layer') || target.closest?.(`#${selectedLayerId}`))) {
+        return;
+      }
+      exitAdjustMode();
+    };
+    window.addEventListener('pointerdown', handleOutsideClick);
+
     const handlePointerMove = (e) => {
         if (!adjustStateRef.current.isPanning) return;
         e.preventDefault();
@@ -1206,9 +898,9 @@ const ElementShapesProperties = ({
                 };
 
                 shapeEl.addEventListener('dblclick', handleDoubleClick);
-                shapeEl.addEventListener('pointerdown', handlePointerDown);
+                // Only listen for wheel/pointer interactions when actively adjusting
                 shapeEl.addEventListener('wheel', handleWheel, { passive: false });
-                listeners.push({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
+                listeners.push({ shapeEl, handleDoubleClick, handlePointerDown: null, handleWheel });
 
                 break;
               }
@@ -1244,6 +936,7 @@ const ElementShapesProperties = ({
       if (observer) observer.disconnect();
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointerdown', handleOutsideClick);
       listeners.forEach(({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
         shapeEl.removeEventListener('dblclick', handleDoubleClick);
         shapeEl.removeEventListener('pointerdown', handlePointerDown);
@@ -1414,11 +1107,13 @@ const ElementShapesProperties = ({
     if (!pattern) {
       pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
       pattern.setAttribute('id', patternId);
-      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-      pattern.setAttribute('width', '1');
-      pattern.setAttribute('height', '1');
       defs.appendChild(pattern);
     }
+    pattern.setAttribute('patternUnits', 'objectBoundingBox');
+    pattern.removeAttribute('patternContentUnits');
+    pattern.setAttribute('width', '1');
+    pattern.setAttribute('height', '1');
+    pattern.setAttribute('preserveAspectRatio', 'none');
 
     shapeEl.setAttribute('fill', `url(#${patternId})`);
 
@@ -1487,24 +1182,33 @@ const ElementShapesProperties = ({
       const tx_user = (slotW - finalW) / 2;
       const ty_user = (slotH - finalH) / 2;
 
+      pattern.setAttribute('viewBox', `0 0 ${slotW} ${slotH}`);
+
       let imageNode = pattern.querySelector('image, img');
       if (!imageNode) {
         imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         pattern.appendChild(imageNode);
       }
 
-      imageNode.setAttribute('width', imgW);
-      imageNode.setAttribute('height', imgH);
-      imageNode.removeAttribute('preserveAspectRatio');
-      
-      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+      imageNode.setAttribute('x', '0');
+      imageNode.setAttribute('y', '0');
+      imageNode.setAttribute('width', slotW);
+      imageNode.setAttribute('height', slotH);
+
+      // SVG's native preserveAspectRatio guarantees 100% full coverage without distortion or clipping gaps
+      const par = fixType === 'Fit' ? 'xMidYMid meet' : (fixType === 'Stretch' ? 'none' : 'xMidYMid slice');
+      imageNode.setAttribute('preserveAspectRatio', par);
       
       const existingTf = imageNode.getAttribute('transform') || '';
       let rotateStr = '';
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
-      
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scaleX} 0 0 ${scaleY} ${bbox.x + tx_user} ${bbox.y + ty_user})`);
+
+      if (rotateStr) {
+        imageNode.setAttribute('transform', rotateStr.trim());
+      } else {
+        imageNode.removeAttribute('transform');
+      }
       imageNode.setAttribute('opacity', ((opacity !== undefined ? opacity : 100) / 100).toString());
 
       imageNode.setAttribute('href', dataUrl);
@@ -1769,12 +1473,14 @@ const ElementShapesProperties = ({
     strokeAngle: parseFloat(selectedElementProps['stroke-angle'] || 0),
     strokeRadius: parseFloat(selectedElementProps['stroke-radius'] || 100),
     strokeWeight: parseFloat(selectedElementProps['stroke-width'] || 0),
-    strokeDashStyle: ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) && (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) !== 'none') ? 'Dashed' : 'Solid',
+    strokeDashStyle: ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) && (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) !== 'none') ? (
+      (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray).startsWith('2,') ? 'Dotted' : 'Dashed'
+    ) : 'Solid',
     strokeDasharrayValue: selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray,
-    strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0]) || 10,
-    strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0])) || 10,
-    strokeLinecap: selectedElementProps['stroke-linecap'] || 'butt',
-    strokePosition: selectedElementProps['data-stroke-position'] || 'Center',
+    strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0]) || 8,
+    strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0])) || 4,
+    strokeLinecap: selectedElementProps['stroke-linecap'] === 'round' ? 'round' : 'square',
+    strokePosition: selectedElementProps['data-stroke-position'] || 'Outside',
   };
 
   const handleSetBackgroundColor = (updater) => {
@@ -2063,7 +1769,7 @@ const ElementShapesProperties = ({
       {(isMaskEnabled || slotImage) && (
         <div className="flex flex-col gap-[0.35vw]">
           <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw]">
-            <span className="text-[0.78vw] font-medium text-gray-700">Mask Image</span>
+            <span className="text-[0.8vw] font-medium text-gray-700">Mask Image</span>
             <button
               type="button"
               onClick={handleRemoveMask}
@@ -2107,7 +1813,21 @@ const ElementShapesProperties = ({
               </div>
             ) : (
               /* AFTER UPLOAD: Card with Drag Grip, Thumbnail, Name, Resolution/Size, Edit Pen, and Trash */
-              <div className="w-full bg-gray-50 rounded-[0.6vw] p-[0.5vw] flex items-center justify-between select-none border border-gray-200 transition-all shadow-2xs">
+              <div 
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const files = e.dataTransfer.files;
+                  if (files && files.length > 0) {
+                    handleFileChange({ target: { files: files } });
+                  }
+                }}
+                className="w-full bg-gray-50 rounded-[0.6vw] p-[0.5vw] flex items-center justify-between select-none border border-gray-200 transition-all shadow-2xs"
+              >
                 <div className="flex items-center gap-[0.8vw] min-w-0 flex-1">
                   <div
                     onClick={() => fileInputRef.current?.click()}

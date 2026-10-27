@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import ColorPicker from '../../../properties/ColorPicker';
 import { DEFAULT_MAP_DATA, MAP_TEMPLATES, generateOverlayHtml, escapeXml } from '../utils/mapElementUtils';
 import { MapTemplateThumbnail } from '../categories/mapCatalog';
+import { ElementToggle, ElementDropdown } from './ElementUIControls';
 
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
@@ -29,82 +30,11 @@ const RadioButton = ({ label, checked, onChange }) => (
   </label>
 );
 
-// Toggle Switch matching QRCodeProperties.jsx exact structure & style
-const Toggle = ({ checked, onChange, title = '' }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    title={title}
-    className={`w-[1.9vw] h-[1.1vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors ${
-      checked ? 'bg-[#E05638]' : 'bg-gray-300'
-    }`}
-  >
-    <div
-      className={`bg-white w-[0.9vw] h-[0.9vw] rounded-full shadow-md transform transition-transform ${
-        checked ? 'translate-x-[0.8vw]' : 'translate-x-0'
-      }`}
-    />
-  </button>
-);
+// Toggle Switch matching exact reference design
+const Toggle = ElementToggle;
 
-// Custom Select Dropdown matching property panels
-const CustomSelect = ({ value, onChange, options, className = '' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = options.find((opt) => 
-    String(opt.value).toLowerCase() === String(value).toLowerCase() ||
-    (opt.value === 'Light Theme' && String(value).toLowerCase() === 'light') ||
-    (opt.value === 'Dark Theme' && String(value).toLowerCase() === 'dark')
-  ) || options[0];
-
-  return (
-    <div className={`relative w-full ${className}`}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-[2.5vw] flex items-center justify-between bg-white border ${
-          isOpen ? 'border-2 border-[#EC5137] shadow-xs' : 'border border-gray-200 hover:border-gray-300'
-        } rounded-[0.5vw] px-[0.6vw] text-[0.75vw] text-gray-700 font-medium transition-colors cursor-pointer shadow-2xs`}
-      >
-        <span className="font-medium truncate">{selectedOption?.label || value}</span>
-        <ChevronDown
-          className={`w-[0.9vw] h-[0.9vw] text-gray-500 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
-            isOpen ? 'rotate-180 text-[#EC5137]' : ''
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.6vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.3vw] max-h-[14vw] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            {options.map((opt) => {
-              const isSelected = String(opt.value).toLowerCase() === String(value).toLowerCase() ||
-                                 (opt.value === 'Light Theme' && String(value).toLowerCase() === 'light') ||
-                                 (opt.value === 'Dark Theme' && String(value).toLowerCase() === 'dark');
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`px-[0.9vw] py-[0.45vw] text-[0.78vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer group ${
-                    isSelected
-                      ? 'text-[#EC5137] bg-[#EC5137]/10 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#EC5137]'
-                  }`}
-                >
-                  <span className="truncate">{opt.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
+// Custom Select Dropdown matching exact reference design
+const CustomSelect = ElementDropdown;
 
 const THEME_OPTIONS = [
   { value: 'Light Theme', label: 'Light Theme' },
@@ -272,8 +202,6 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       if (updatedFields.embedCode !== undefined) selectedElement.setAttribute('data-embed-code', updatedFields.embedCode);
 
       const fo = selectedElement.querySelector('foreignObject');
-      const foW = parseFloat(fo?.getAttribute('width') || '240') || 240;
-      const foH = parseFloat(fo?.getAttribute('height') || '230') || 230;
 
       // Rebuild inner foreignObject container with fresh overlay & theme
       const overlayHtml = generateOverlayHtml(nextStyle, {
@@ -291,22 +219,15 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       });
 
       if (fo) {
-        const baseW = 320;
-        const scale = foW < baseW ? (foW / baseW) : 1;
-        const innerW = foW < baseW ? baseW : foW;
-        const innerH = Math.round(foH / scale);
-
         const isDark = String(nextTheme).toLowerCase().includes('dark');
         const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
 
         fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-            <div class="map-stage" style="position: absolute; top: 0; left: 0; width: ${innerW}px; height: ${innerH}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden;">
-              <iframe src="${nextUrl.replace(/&/g, '&amp;')}" width="${innerW}" height="${innerH + 56}" style="position: absolute; top: -56px; left: 0; width: ${innerW}px; height: ${innerH + 56}px; border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
-              <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
-                ${overlayHtml}
-              </div>
+            <iframe src="${nextUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+            <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
+              ${overlayHtml}
             </div>
           </div>
         `;
@@ -497,17 +418,11 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       }
 
       const fo = selectedElement.querySelector('foreignObject');
-      const foW = parseFloat(fo?.getAttribute('width') || '240') || 240;
-      const foH = parseFloat(fo?.getAttribute('height') || '150') || 150;
       const iframe = selectedElement.querySelector('iframe');
       const stage = fo?.querySelector('.map-stage');
 
-      const baseW = 320;
-      const scale = foW < baseW ? (foW / baseW) : 1;
-      const innerW = foW < baseW ? baseW : foW;
-      const innerH = Math.round(foH / scale);
-
       const isDark = String(savedTheme).toLowerCase().includes('dark');
+      const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
 
       if (fo) {
         fo.style.setProperty('overflow', 'hidden', 'important');
@@ -520,31 +435,36 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           rootDiv.style.setProperty('border-radius', '0px', 'important');
         }
 
+        // If an existing map element still has the old .map-stage wrapper, normalize it
         if (stage) {
-          stage.style.setProperty('width', innerW + 'px', 'important');
-          stage.style.setProperty('height', innerH + 'px', 'important');
-          stage.style.setProperty('transform', `scale(${scale})`, 'important');
-          stage.style.setProperty('transform-origin', '0 0', 'important');
-          if (iframe) {
-            iframe.style.removeProperty('transform');
-            iframe.style.setProperty('position', 'absolute', 'important');
-            iframe.style.setProperty('top', '-56px', 'important');
-            iframe.style.setProperty('left', '0', 'important');
-            iframe.style.setProperty('width', innerW + 'px', 'important');
-            iframe.style.setProperty('height', (innerH + 56) + 'px', 'important');
-            iframe.setAttribute('width', innerW.toString());
-            iframe.setAttribute('height', (innerH + 56).toString());
-            iframe.style.setProperty('border', 'none', 'important');
-            iframe.style.setProperty('display', 'block', 'important');
-            iframe.style.setProperty('pointer-events', 'none', 'important');
-            if (isDark) {
-              iframe.style.setProperty('filter', 'invert(90%) hue-rotate(180deg) contrast(95%)', 'important');
-            } else {
-              iframe.style.removeProperty('filter');
-            }
+          stage.style.setProperty('width', '100%', 'important');
+          stage.style.setProperty('height', '100%', 'important');
+          stage.style.removeProperty('transform');
+          stage.style.removeProperty('transform-origin');
+        }
+
+        if (iframe) {
+          iframe.style.removeProperty('transform');
+          iframe.style.setProperty('position', 'absolute', 'important');
+          iframe.style.setProperty('top', '-56px', 'important');
+          iframe.style.setProperty('left', '0', 'important');
+          iframe.style.setProperty('width', '100%', 'important');
+          iframe.style.setProperty('height', 'calc(100% + 56px)', 'important');
+          iframe.removeAttribute('width');
+          iframe.removeAttribute('height');
+          iframe.style.setProperty('border', 'none', 'important');
+          iframe.style.setProperty('display', 'block', 'important');
+          iframe.style.setProperty('pointer-events', 'none', 'important');
+          if (isDark) {
+            iframe.style.setProperty('filter', 'invert(90%) hue-rotate(180deg) contrast(95%)', 'important');
+          } else {
+            iframe.style.removeProperty('filter');
+          }
+          if (stage && onUpdate) {
+            onUpdate(selectedElement.outerHTML);
           }
         } else {
-          // Re-render map stage with theme & overlay
+          // Re-render map root container with theme & overlay
           const effectiveStyle = savedStyle || layoutStyle || 'carousel';
           const overlayHtml = generateOverlayHtml(effectiveStyle, {
             name: savedName || businessName || DEFAULT_MAP_DATA.name,
@@ -562,14 +482,11 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
           fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
           const cleanUrl = (url || defaultUrl).replace(/&amp;/g, '&').replace(/&/g, '&amp;');
-          const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
           fo.innerHTML = `
             <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-              <div class="map-stage" style="position: absolute; top: 0; left: 0; width: ${innerW}px; height: ${innerH}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden;">
-                <iframe src="${cleanUrl}" width="${innerW}" height="${innerH + 56}" style="position: absolute; top: -56px; left: 0; width: ${innerW}px; height: ${innerH + 56}px; border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
-                <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
-                  ${overlayHtml}
-                </div>
+              <iframe src="${cleanUrl}" style="position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+              <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
+                ${overlayHtml}
               </div>
             </div>
           `;
@@ -834,7 +751,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
           {/* Suggestions Dropdown */}
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-[0.6vw] shadow-2xl max-h-[14vw] overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-[0.6vw] shadow-2xl max-h-[14vw] overflow-y-auto custom-scrollbar">
               {suggestions.map((suggestion, index) => {
                 const isDirect = suggestion.isCoordinate || suggestion.isCustomQuery;
                 const parts = suggestion.display_name.split(',');
@@ -1092,7 +1009,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               </div>
 
               {/* Grid */}
-              <div className="grid grid-cols-2 gap-[0.6vw] mb-[0.6vw] max-h-[55vh] overflow-y-auto pr-[0.3vw]">
+              <div className="grid grid-cols-2 gap-[0.6vw] mb-[0.6vw] max-h-[55vh] overflow-y-auto custom-scrollbar pr-[0.3vw]">
                 {MAP_TEMPLATES.map((tmpl) => {
                   const isSelected = tempStyle === tmpl.id;
                   return (

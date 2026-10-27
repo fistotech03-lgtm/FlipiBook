@@ -4,16 +4,13 @@ import {
   ChevronDown,
   Upload,
   Pencil,
-  Trash2,
-  Repeat,
   Check,
-  X
+  Copy
 } from 'lucide-react';
-import { Icon } from '@iconify/react';
-import { renderQRWithFrame, QR_FRAMES } from '../utils/qrFrameRenderer';
-import { FrameVectorThumbnail as FrameThumbnail } from '../categories/qrCodeCatalog';
+import { renderQRWithFrame } from '../utils/qrFrameRenderer';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../properties/ColorPicker';
+import { ElementToggle, ElementSlider } from './ElementUIControls';
 
 // Predefined brand logos (clean inline SVG data URIs)
 const PREDEFINED_LOGOS = [
@@ -337,7 +334,7 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.6vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.3vw] max-h-[14vw] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.6vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.3vw] max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
             {options.map((opt) => {
               const isSelected = String(opt.value) === String(value);
               return (
@@ -526,6 +523,7 @@ const ElementQRCodeProperties = ({
 }) => {
   // Content state
   const [url, setUrl] = useState('https://');
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   // Preview & QR matrix styling
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
@@ -546,8 +544,6 @@ const ElementQRCodeProperties = ({
 
   // Frames & Typography states
   const [frame, setFrame] = useState('frame-curved-arrow');
-  const [tempFrame, setTempFrame] = useState('frame-curved-arrow');
-  const [showFramePicker, setShowFramePicker] = useState(false);
   const [text, setText] = useState('Scan Me');
   const [fontFamily, setFontFamily] = useState('Poppins');
   const [fontSize, setFontSize] = useState(24);
@@ -564,17 +560,16 @@ const ElementQRCodeProperties = ({
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
   const [activeEffects, setActiveEffects] = useState([]);
 
-  // Close color picker or frame gallery on Escape key
+  // Close color picker on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (showFramePicker) setShowFramePicker(false);
         if (activeColorPicker) setActiveColorPicker(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showFramePicker, activeColorPicker]);
+  }, [activeColorPicker]);
 
   const handleToggleColorPicker = (pickerKey) => {
     setActiveColorPicker((prev) => (prev === pickerKey ? null : pickerKey));
@@ -705,14 +700,17 @@ const ElementQRCodeProperties = ({
       setLogoRadius(parseInt(targetEl.getAttribute('data-qr-logo-radius')) || 80);
       setLogoBgColor(targetEl.getAttribute('data-qr-logo-bg-color') || '#FFFFFF');
 
-      const currentFrame = targetEl.getAttribute('data-qr-frame') || 'frame-bottom-bar';
+      const currentFrame = targetEl.getAttribute('data-qr-frame') || 'frame-none';
+      const isLightBg = currentFrame === 'frame-curved-arrow' || currentFrame === 'frame-simple-text';
+      const defaultTextColor = isLightBg ? '#000000' : '#FFFFFF';
+      const defaultFontFamily = currentFrame === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
+
       setFrame(currentFrame);
-      setTempFrame(currentFrame);
-      setText(targetEl.getAttribute('data-qr-text') ?? (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : 'SCAN ME'));
-      setFontFamily(targetEl.getAttribute('data-qr-font-family') || 'Poppins');
+      setText(targetEl.getAttribute('data-qr-text') ?? (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME')));
+      setFontFamily(targetEl.getAttribute('data-qr-font-family') || defaultFontFamily);
       setFontSize(parseInt(targetEl.getAttribute('data-qr-font-size')) || 24);
       setFontWeight(targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold');
-      setTextColor(targetEl.getAttribute('data-qr-text-color') || '#FFFFFF');
+      setTextColor(targetEl.getAttribute('data-qr-text-color') || defaultTextColor);
       setFrameBgColor(targetEl.getAttribute('data-qr-frame-bg') || '#FFFFFF');
       setArrowColor(targetEl.getAttribute('data-qr-arrow-color') || '#000000');
 
@@ -901,12 +899,31 @@ const ElementQRCodeProperties = ({
 
     if (key === 'frame') {
       setFrame(value);
+      const isNewLightBg = value === 'frame-curved-arrow' || value === 'frame-simple-text';
+
       if (value === 'frame-curved-arrow' && (!text || text === 'SCAN ME')) {
         setText('Scan Me');
         overrides.text = 'Scan Me';
       } else if (value !== 'frame-curved-arrow' && text === 'Scan Me') {
         setText('SCAN ME');
         overrides.text = 'SCAN ME';
+      }
+
+      // If switching to light-bg frame and textColor is currently white, auto-switch to black so it remains visible
+      if (isNewLightBg && (!textColor || textColor.toUpperCase() === '#FFFFFF' || textColor.toUpperCase() === '#FFF')) {
+        setTextColor('#000000');
+        overrides.textColor = '#000000';
+      } else if (!isNewLightBg && (textColor === '#000000' || textColor === '#000')) {
+        setTextColor('#FFFFFF');
+        overrides.textColor = '#FFFFFF';
+      }
+
+      if (value === 'frame-curved-arrow' && fontFamily === 'Poppins') {
+        setFontFamily('Caveat');
+        overrides.fontFamily = 'Caveat';
+      } else if (value !== 'frame-curved-arrow' && fontFamily === 'Caveat') {
+        setFontFamily('Poppins');
+        overrides.fontFamily = 'Poppins';
       }
     }
     if (key === 'text') setText(value);
@@ -979,15 +996,35 @@ const ElementQRCodeProperties = ({
         <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
       </div>
 
-      {/* 2. Paste URL */}
+      {/* 2. URL */}
       <PropertyRow label="URL">
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => handleChange('url', e.target.value)}
-          placeholder="https://"
-          className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs"
-        />
+        <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
+          <input
+            type="text"
+            placeholder="e.g. https://..."
+            value={url}
+            onChange={(e) => handleChange('url', e.target.value)}
+            className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (url) {
+                navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 1500);
+              }
+            }}
+            className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#E05638] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
+            title={copiedUrl ? 'Copied!' : 'Copy Link'}
+          >
+            {copiedUrl ? (
+              <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+            ) : (
+              <Copy className="w-[0.85vw] h-[0.85vw]" />
+            )}
+          </button>
+        </div>
       </PropertyRow>
 
       {/* 3. QR Code Preview Card */}
@@ -1059,19 +1096,10 @@ const ElementQRCodeProperties = ({
         <div className="flex items-center justify-between">
           <span className="text-[0.8vw] font-medium text-gray-900">Add logo at center of QR</span>
           {/* Toggle Switch */}
-          <button
-            type="button"
-            onClick={() => handleChange('hasLogo', !hasLogo)}
-            className={`w-[1.9vw] h-[1.1vw] flex items-center rounded-full p-[0.1vw] cursor-pointer transition-colors ${
-              hasLogo ? 'bg-[#E05638]' : 'bg-gray-300'
-            }`}
-          >
-            <div
-              className={`bg-white w-[0.9vw] h-[0.9vw] rounded-full shadow-md transform transition-transform ${
-                hasLogo ? 'translate-x-[0.8vw]' : 'translate-x-0'
-              }`}
-            />
-          </button>
+          <ElementToggle
+            checked={hasLogo}
+            onChange={(checked) => handleChange('hasLogo', checked)}
+          />
         </div>
 
         {hasLogo && (
@@ -1158,14 +1186,14 @@ const ElementQRCodeProperties = ({
             {/* Logo Size */}
             <PropertyRow label="Logo Size">
               <div className="flex items-center gap-[0.4vw]">
-                <input
-                  type="range"
-                  min="20"
-                  max="95"
-                  value={logoSize}
-                  onChange={(e) => handleChange('logoSize', parseInt(e.target.value))}
-                  className="flex-1 accent-[#E05638] cursor-pointer h-[0.3vw] bg-gray-200 rounded-lg appearance-none"
-                />
+                <div className="flex-1">
+                  <ElementSlider
+                    min={20}
+                    max={95}
+                    value={logoSize}
+                    onChange={(e) => handleChange('logoSize', parseInt(e.target.value))}
+                  />
+                </div>
                 <div className="border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] h-[2.5vw] flex items-center justify-center text-[0.8vw] text-gray-700 min-w-[3.2vw] text-center font-mono shadow-2xs">
                   {logoSize} %
                 </div>
@@ -1175,14 +1203,14 @@ const ElementQRCodeProperties = ({
             {/* Corner Radius */}
             <PropertyRow label="Corner Radius">
               <div className="flex items-center gap-[0.4vw]">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={logoRadius}
-                  onChange={(e) => handleChange('logoRadius', parseInt(e.target.value))}
-                  className="flex-1 accent-[#E05638] cursor-pointer h-[0.3vw] bg-gray-200 rounded-lg appearance-none"
-                />
+                <div className="flex-1">
+                  <ElementSlider
+                    min={0}
+                    max={100}
+                    value={logoRadius}
+                    onChange={(e) => handleChange('logoRadius', parseInt(e.target.value))}
+                  />
+                </div>
                 <div className="border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] h-[2.5vw] flex items-center justify-center text-[0.8vw] text-gray-700 min-w-[3.2vw] text-center font-mono shadow-2xs">
                   {logoRadius} %
                 </div>
@@ -1204,113 +1232,95 @@ const ElementQRCodeProperties = ({
       </div>
 
       {/* 12. Frames Section */}
-      <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-        <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">Frames</span>
-        <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
-      </div>
-
-      {/* Frame Style Preview Box */}
-      <PropertyRow label="Frame Style">
-        <div
-          onClick={() => {
-            setTempFrame(frame);
-            setShowFramePicker(true);
-          }}
-          className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-white p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
-          title="Click to change frame style"
-        >
-          {/* Top-right Swap Icon */}
-          <div className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50">
-            <Icon icon="lucide:arrow-right-left" className="w-[0.9vw] h-[0.9vw]" />
+      {frame && frame !== 'frame-none' && (
+        <>
+          <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
+            <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">Frames</span>
+            <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
           </div>
 
-          {/* Centered Frame Thumbnail */}
-          <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
-            <FrameThumbnail frameId={frame} />
+          {/* Frame Text */}
+          <PropertyRow label="Frame Text">
+            <div className="relative w-full">
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => handleChange('text', e.target.value)}
+                placeholder="Scan Me"
+                className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.6vw] text-[0.7vw] text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-medium"
+              />
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.5vw] text-gray-400">
+                <Pencil className="w-[0.8vw] h-[0.8vw]" />
+              </div>
+            </div>
+          </PropertyRow>
+
+          {/* Font Family & Size Dropdowns */}
+          <div className="flex items-center gap-[0.5vw]">
+            <div className="w-[5.6vw] shrink-0" />
+            <div className="flex-1 grid grid-cols-2 gap-[0.4vw]">
+              {/* Font Family */}
+              <CustomSelect
+                value={fontFamily}
+                onChange={(val) => handleChange('fontFamily', val)}
+                options={FONT_FAMILY_OPTIONS}
+              />
+
+              {/* Font Size */}
+              <CustomSelect
+                value={fontSize}
+                onChange={(val) => handleChange('fontSize', parseInt(val))}
+                options={FONT_SIZE_OPTIONS}
+              />
+            </div>
           </div>
-        </div>
-      </PropertyRow>
 
-      {/* Button Text */}
-      <PropertyRow label="Button Text">
-        <div className="relative w-full">
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => handleChange('text', e.target.value)}
-            placeholder="Scan Me"
-            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.6vw] text-[0.7vw] text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-medium"
-          />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.5vw] text-gray-400">
-            <Pencil className="w-[0.8vw] h-[0.8vw]" />
+          {/* Font Weight Dropdown */}
+          <div className="flex items-center gap-[0.5vw]">
+            <div className="w-[5.6vw] shrink-0" />
+            <div className="flex-1">
+              <CustomSelect
+                value={fontWeight}
+                onChange={(val) => handleChange('fontWeight', val)}
+                options={FONT_WEIGHT_OPTIONS}
+              />
+            </div>
           </div>
-        </div>
-      </PropertyRow>
 
-      {/* Font Family & Size Dropdowns */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 grid grid-cols-2 gap-[0.4vw]">
-          {/* Font Family */}
-          <CustomSelect
-            value={fontFamily}
-            onChange={(val) => handleChange('fontFamily', val)}
-            options={FONT_FAMILY_OPTIONS}
-          />
+          {/* Text Color */}
+          <PropertyRow label="Text Color">
+            <ColorInput
+              color={textColor}
+              onChange={(val) => handleChange('textColor', val)}
+              opacity={100}
+              onOpenPicker={() => handleToggleColorPicker('textColor')}
+              isActive={activeColorPicker === 'textColor'}
+            />
+          </PropertyRow>
 
-          {/* Font Size */}
-          <CustomSelect
-            value={fontSize}
-            onChange={(val) => handleChange('fontSize', parseInt(val))}
-            options={FONT_SIZE_OPTIONS}
-          />
-        </div>
-      </div>
+          {/* Bg Color */}
+          <PropertyRow label="Bg Color">
+            <ColorInput
+              color={frameBgColor}
+              onChange={(val) => handleChange('frameBgColor', val)}
+              opacity={100}
+              onOpenPicker={() => handleToggleColorPicker('frameBgColor')}
+              isActive={activeColorPicker === 'frameBgColor'}
+            />
+          </PropertyRow>
 
-      {/* Font Weight Dropdown */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1">
-          <CustomSelect
-            value={fontWeight}
-            onChange={(val) => handleChange('fontWeight', val)}
-            options={FONT_WEIGHT_OPTIONS}
-          />
-        </div>
-      </div>
-
-      {/* Text Color */}
-      <PropertyRow label="Text Color">
-        <ColorInput
-          color={textColor}
-          onChange={(val) => handleChange('textColor', val)}
-          opacity={100}
-          onOpenPicker={() => handleToggleColorPicker('textColor')}
-          isActive={activeColorPicker === 'textColor'}
-        />
-      </PropertyRow>
-
-      {/* Bg Color */}
-      <PropertyRow label="Bg Color">
-        <ColorInput
-          color={frameBgColor}
-          onChange={(val) => handleChange('frameBgColor', val)}
-          opacity={100}
-          onOpenPicker={() => handleToggleColorPicker('frameBgColor')}
-          isActive={activeColorPicker === 'frameBgColor'}
-        />
-      </PropertyRow>
-
-      {/* Arrow Color / Frame Accent Color */}
-      <PropertyRow label="Arrow Color">
-        <ColorInput
-          color={arrowColor}
-          onChange={(val) => handleChange('arrowColor', val)}
-          opacity={100}
-          onOpenPicker={() => handleToggleColorPicker('arrowColor')}
-          isActive={activeColorPicker === 'arrowColor'}
-        />
-      </PropertyRow>
+          {/* Arrow Color / Frame Accent Color */}
+          <PropertyRow label="Arrow Color">
+            <ColorInput
+              color={arrowColor}
+              onChange={(val) => handleChange('arrowColor', val)}
+              opacity={100}
+              onOpenPicker={() => handleToggleColorPicker('arrowColor')}
+              isActive={activeColorPicker === 'arrowColor'}
+            />
+          </PropertyRow>
+        </>
+      )}
 
       {/* 13. Effects Section */}
       <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
@@ -1362,85 +1372,6 @@ const ElementQRCodeProperties = ({
             />
           </div>
         </div>,
-        document.body
-      )}
-
-      {/* ── Frame Style Gallery Popup ── */}
-      {showFramePicker && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[4999]"
-            onClick={() => setShowFramePicker(false)}
-          />
-          <div
-            className="fixed z-[5000] bg-white border border-gray-100 rounded-[0.5vw] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 px-[1vw] pt-[1vw] pb-[0.6vw] shadow-2xl select-none"
-            style={{
-              width: '20vw',
-              minWidth: '300px',
-              top: '70%',
-              right: '19.5vw',
-              transform: 'translateY(-50%)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-full flex flex-col">
-              {/* Header */}
-              <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-                <h3 className="text-[0.9vw] font-medium text-gray-800 whitespace-nowrap">Frame Style Gallery</h3>
-                <div className="flex-grow h-[0.1px] bg-[#E2E8F0]" />
-              </div>
-
-              {/* Grid */}
-              <div className="grid grid-cols-3 gap-[0.5vw] mb-[0.5vw] max-h-[50vh] pr-[0.4vw]">
-                {QR_FRAMES.map((f) => {
-                  const isSelected = tempFrame === f.id;
-                  return (
-                    <div
-                      key={f.id}
-                      onClick={() => setTempFrame(f.id)}
-                      onDoubleClick={() => {
-                        handleChange('frame', f.id);
-                        setShowFramePicker(false);
-                      }}
-                      className={`cursor-pointer transition-all duration-300 p-[0.6vw] aspect-square rounded-[0.5vw] flex items-center justify-center border-[1px] border-gray-200 ${
-                        isSelected
-                          ? 'shadow-[0_8px_20px_rgba(0,0,0,0.12)] border-[2px] border-gray-300 scale-[1.05]'
-                          : 'hover:bg-gray-50 border-gray-100 bg-white'
-                      }`}
-                      title={f.name}
-                    >
-                      <div className="w-[4vw] h-[4vw] flex items-center justify-center pointer-events-none">
-                        <FrameThumbnail frameId={f.id} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-end justify-end gap-[0.8vw] pt-[0.5vw] border-t border-[#F1F5F9]">
-                <button
-                  type="button"
-                  onClick={() => setShowFramePicker(false)}
-                  className="flex items-end gap-[0.4vw] px-[1vw] py-[0.4vw] rounded-[0.4vw] border-[1px] border-gray-300 bg-white text-gray-700 font-semibold text-[0.8vw] hover:bg-gray-50 transition-all active:scale-95 shadow-sm cursor-pointer"
-                >
-                  <X size="1vw" className="mb-[0.1vw]" /> Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleChange('frame', tempFrame);
-                    setShowFramePicker(false);
-                  }}
-                  className="flex items-end gap-[0.4vw] px-[1.2vw] py-[0.4vw] bg-black text-white rounded-[0.4vw] text-[0.8vw] font-semibold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg cursor-pointer"
-                >
-                  <Icon icon="qlementine-icons:replace-16" className="w-[1vw] h-[1vw] mb-[0.1vw]" />
-                  Replace
-                </button>
-              </div>
-            </div>
-          </div>
-        </>,
         document.body
       )}
     </div>

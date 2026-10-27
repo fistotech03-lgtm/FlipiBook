@@ -39,7 +39,7 @@ const MiniQRMatrix = ({ x = 12, y = 12, size = 36 }) => {
 
 export const FrameVectorThumbnail = ({ frameId }) => {
   switch (frameId) {
-     case 'frame-none':
+    case 'frame-none':
     default:
       return (
         <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
@@ -97,35 +97,60 @@ export const FrameVectorThumbnail = ({ frameId }) => {
   }
 };
 
-export const QR_ITEMS = QR_FRAMES.map((frame) => ({
-  id: `qr-${frame.id}`,
-  name: frame.shortName,
-  category: 'qr-code',
-  type: 'qrcode',
-  renderPreview: () => (
-    <div className="w-full h-full flex items-center justify-center p-[0.3vw] pointer-events-none select-none">
-      <div className="w-[85%] h-[85%] flex items-center justify-center transition-transform group-hover:scale-105">
-        <FrameVectorThumbnail frameId={frame.id} />
+// Explicit default order of the 6 frame elements matching switch (frameId)
+export const QR_FRAME_IDS = [
+  'frame-none',
+  'frame-bottom-bar',
+  'frame-top-bubble',
+  'frame-curved-arrow',
+  'frame-phone',
+  'frame-simple-text'
+];
+
+export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
+  const frame = QR_FRAMES.find((f) => f.id === frameId) || {
+    id: frameId,
+    shortName: frameId === 'frame-none' ? 'No Frame' : frameId,
+    defaultText: frameId === 'frame-curved-arrow' ? 'Scan me' : (frameId === 'frame-none' ? '' : 'SCAN ME')
+  };
+  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
+  const defaultTextColor = isLightBg ? '#000000' : '#FFFFFF';
+  const defaultFontFamily = frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
+
+  return {
+    id: `qr-${frame.id}`,
+    name: frame.shortName,
+    category: 'qr-code',
+    type: 'qrcode',
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] pointer-events-none select-none">
+        <div className="w-[85%] h-[85%] flex items-center justify-center transition-transform group-hover:scale-105">
+          <FrameVectorThumbnail frameId={frame.id} />
+        </div>
       </div>
-    </div>
-  ),
-  insert: (cx, cy) =>
-    createQRCodeElementNode(
-      {
-        frameId: frame.id,
-        text: frame.defaultText,
-        url: 'https://example.com'
-      },
-      cx,
-      cy
     ),
-  getSvgString: (isDrag) =>
-    getQRCodeSvgString(
-      {
-        frameId: frame.id,
-        text: frame.defaultText,
-        url: 'https://example.com'
-      },
-      isDrag
-    )
-}));
+    insert: (cx, cy) =>
+      createQRCodeElementNode(
+        {
+          frameId: frame.id,
+          text: frame.defaultText,
+          textColor: defaultTextColor,
+          fontFamily: defaultFontFamily,
+          url: 'https://example.com'
+        },
+        cx,
+        cy
+      ),
+    getSvgString: (isDrag) =>
+      getQRCodeSvgString(
+        {
+          frameId: frame.id,
+          text: frame.defaultText,
+          textColor: defaultTextColor,
+          fontFamily: defaultFontFamily,
+          url: 'https://example.com'
+        },
+        isDrag
+      )
+  };
+});

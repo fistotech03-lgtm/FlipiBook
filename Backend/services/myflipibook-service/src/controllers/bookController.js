@@ -6,12 +6,13 @@ const Flipbook = require("../models/flipbook");
 const FlipbookAsset = require("../models/flipbookAsset");
 const UserGallery = require("../models/userGallery");
 const InteractionThreedModel = require("../models/interactionThreedModel");
+const User = require("../models/user");
 const {
   deleteBookStorage,
   getStorageRoot,
   initFlipbookStorage,
 } = require("../utils/storageHelper");
-const { getAuthUser, getFlipbookUserQuery } = require("../utils/userHelper");
+const { getAuthUser, resolveAuthUser, getFlipbookUserQuery } = require("../utils/userHelper");
 const {
   processAndSaveBase64Assets,
   normalizeToRelativeAssetPaths,
@@ -613,7 +614,7 @@ exports.renameBook = async (req, res) => {
  */
 exports.duplicateBook = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName } = req.body;
 
@@ -636,8 +637,11 @@ exports.duplicateBook = async (req, res) => {
 
     const cloneData = existing.toObject();
     delete cloneData._id;
-    cloneData.v_id = crypto.randomBytes(8).toString("hex");
+    const newVId = crypto.randomBytes(8).toString("hex");
+    cloneData.v_id = newVId;
+    cloneData.book_v_id = newVId;
     if (objectId) {
+      cloneData.userObjectID = objectId;
       cloneData.userId = objectId;
     }
     if (customUserId) {
@@ -645,6 +649,9 @@ exports.duplicateBook = async (req, res) => {
     }
     if (emailId) {
       cloneData.userEmail = emailId;
+    }
+    if (!cloneData.folder_id) {
+      cloneData.folder_id = 'fol_default';
     }
     cloneData.flipbookName = `${cloneData.flipbookName} Copy`;
     cloneData.trash = false;
@@ -979,7 +986,7 @@ exports.saveChunk = async (req, res) => {
  */
 exports.saveBook = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const {
       flipbookName,
@@ -1118,6 +1125,15 @@ exports.saveBook = async (req, res) => {
     const physicalFolder = targetFolder || "default";
     if (book) {
       book.flipbookName = safeName;
+      if (objectId && !book.userObjectID) {
+        book.userObjectID = objectId;
+      }
+      if (customUserId && !book.userID) {
+        book.userID = customUserId;
+      }
+      if (emailId && !book.userEmail) {
+        book.userEmail = emailId;
+      }
       const existingFolders = (Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName])
         .filter((f) => typeof f === "string" && f.trim() && f.trim() !== "Trash")
         .map((f) => f.trim());
@@ -1130,12 +1146,22 @@ exports.saveBook = async (req, res) => {
       book.lastUpdated = new Date();
       await book.save();
     } else {
+      if (!objectId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unable to identify user account. Please ensure you are logged in.",
+        });
+      }
+
       book = await Flipbook.create({
-        ...(objectId ? { userId: objectId } : {}),
+        userObjectID: objectId,
+        userId: objectId,
         ...(customUserId ? { userID: customUserId } : {}),
         userEmail: emailId,
+        book_v_id: resolvedVId,
         v_id: resolvedVId,
         flipbookName: finalFlipbookName,
+        folder_id: (targetFolder && targetFolder !== "default" && targetFolder !== "Recent Book") ? targetFolder : "fol_default",
         folderName: physicalFolder === "Recent Book" ? ["Recent Book"] : [physicalFolder, "Recent Book"],
         pages: mongoPages,
         fileSize: fileSize || 0,

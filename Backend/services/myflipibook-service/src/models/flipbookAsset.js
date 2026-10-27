@@ -39,6 +39,7 @@ const flipbookAssetSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
       required: true,
+      alias: 'userId',
       index: true
     },
     userID: {
@@ -51,6 +52,7 @@ const flipbookAssetSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      alias: 'v_id',
       index: true
     },
     flipbookName: {
@@ -79,8 +81,21 @@ const flipbookAssetSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
+
+// Note: alias: 'v_id' and alias: 'userId' automatically create virtual getters and setters on the schema.
+
+flipbookAssetSchema.pre('validate', function () {
+  if (!this.userObjectID && this.userId) {
+    this.userObjectID = this.userId;
+  }
+  if (!this.book_v_id && this.v_id) {
+    this.book_v_id = this.v_id;
+  }
+});
 
 module.exports = (mongoose.models.flipbookAsset || mongoose.models.FlipbookAsset) || mongoose.model('flipbookAsset', flipbookAssetSchema, 'flipbookAssets');

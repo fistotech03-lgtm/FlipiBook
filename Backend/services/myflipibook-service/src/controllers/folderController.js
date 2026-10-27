@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const UserFolder = require('../models/userFolder');
 const Flipbook = require('../models/flipbook');
 const { deleteFolderStorage, getStorageRoot } = require('../utils/storageHelper');
-const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
+const { getAuthUser, resolveAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
 
 /**
  * GET /api/flipbook/folders
@@ -13,7 +13,7 @@ const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/us
  */
 exports.getFolders = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getUserQuery(req);
     if (!userQuery) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -170,7 +170,7 @@ exports.getFolders = async (req, res) => {
  */
 exports.createFolder = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getUserQuery(req);
     const { folderName } = req.body;
 
@@ -254,7 +254,7 @@ exports.createFolder = async (req, res) => {
  */
 exports.renameFolder = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getUserQuery(req);
     const flipQuery = getFlipbookUserQuery(req);
     const { oldName, newName, folderId } = req.body;
@@ -376,7 +376,7 @@ exports.renameFolder = async (req, res) => {
  */
 exports.reorderFolders = async (req, res) => {
   try {
-    const { objectId, customUserId, emailId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getUserQuery(req);
     const { folders } = req.body;
 
@@ -540,7 +540,7 @@ exports.deleteFolder = async (req, res) => {
  */
 exports.duplicateFolder = async (req, res) => {
   try {
-    const { objectId, customUserId } = getAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getUserQuery(req);
     const flipQuery = getFlipbookUserQuery(req);
     const { folderName } = req.body;
@@ -576,12 +576,21 @@ exports.duplicateFolder = async (req, res) => {
       for (const b of books) {
         const clone = b.toObject();
         delete clone._id;
-        clone.v_id = crypto.randomBytes(8).toString('hex');
+        const newVId = crypto.randomBytes(8).toString('hex');
+        clone.v_id = newVId;
+        clone.book_v_id = newVId;
         if (objectId) {
+          clone.userObjectID = objectId;
           clone.userId = objectId;
         }
         if (customUserId) {
           clone.userID = customUserId;
+        }
+        if (emailId) {
+          clone.userEmail = emailId;
+        }
+        if (!clone.folder_id) {
+          clone.folder_id = 'fol_default';
         }
         clone.folderName = [newFolderName];
         clone.flipbookName = `${clone.flipbookName} Copy`;

@@ -553,15 +553,18 @@ exports.duplicateFolder = async (req, res) => {
     const newId = new mongoose.Types.ObjectId();
 
     let userFolderDoc = await UserFolder.findOne(userQuery);
+    const newFolVId = 'fol_' + crypto.randomBytes(6).toString('hex');
     if (userFolderDoc) {
-      userFolderDoc.folders.push({ _id: newId, name: newFolderName, isDefault: false });
+      userFolderDoc.folders.push({ fol_v_id: newFolVId, name: newFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
-      await UserFolder.create({
-        ...(objectId ? { userId: objectId, userObjectID: objectId } : {}),
+      userFolderDoc = await UserFolder.create({
+        ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
-        emailId,
-        folders: [{ _id: newId, name: newFolderName, isDefault: false }]
+        folders: [
+          { fol_v_id: 'fol_default', name: 'default', isDefault: true },
+          { fol_v_id: newFolVId, name: newFolderName, isDefault: false }
+        ]
       });
     }
 
@@ -569,30 +572,28 @@ exports.duplicateFolder = async (req, res) => {
     if (flipQuery) {
       const books = await Flipbook.find({
         ...flipQuery,
-        $or: [{ folderName }, { folderName: { $in: [folderName] } }]
+        $or: [{ folder_id: folderName }, { folderName }, { folderName: { $in: [folderName] } }]
       });
 
-      const crypto = require('crypto');
       for (const b of books) {
         const clone = b.toObject();
         delete clone._id;
+        delete clone.createdAt;
+        delete clone.updatedAt;
         const newVId = crypto.randomBytes(8).toString('hex');
         clone.v_id = newVId;
         clone.book_v_id = newVId;
         if (objectId) {
           clone.userObjectID = objectId;
-          clone.userId = objectId;
         }
         if (customUserId) {
           clone.userID = customUserId;
         }
-        if (emailId) {
-          clone.userEmail = emailId;
-        }
-        if (!clone.folder_id) {
-          clone.folder_id = 'fol_default';
-        }
-        clone.folderName = [newFolderName];
+        delete clone.userId;
+        delete clone.userEmail;
+        delete clone.folderName;
+        delete clone.lastUpdated;
+        clone.folder_id = newFolVId;
         clone.flipbookName = `${clone.flipbookName} Copy`;
         await Flipbook.create(clone);
       }

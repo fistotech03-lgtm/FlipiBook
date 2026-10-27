@@ -116,9 +116,9 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null) => {
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
-    userObjectID: doc.userObjectID ? doc.userObjectID.toString() : (doc.userId ? doc.userId.toString() : null),
-    userId: doc.userObjectID ? doc.userObjectID.toString() : (doc.userId ? doc.userId.toString() : null),
-    userID: doc.userID || (doc.userId ? doc.userId.toString() : null),
+    userObjectID: doc.userObjectID ? doc.userObjectID.toString() : null,
+    userId: doc.userID || (doc.userId && !mongoose.Types.ObjectId.isValid(doc.userId) ? doc.userId : null),
+    userID: doc.userID || (doc.userId && !mongoose.Types.ObjectId.isValid(doc.userId) ? doc.userId : null),
     book_v_id: bookVId,
     v_id: bookVId,
     title: doc.flipbookName,
@@ -637,33 +637,29 @@ exports.duplicateBook = async (req, res) => {
 
     const cloneData = existing.toObject();
     delete cloneData._id;
+    delete cloneData.createdAt;
+    delete cloneData.updatedAt;
     const newVId = crypto.randomBytes(8).toString("hex");
     cloneData.v_id = newVId;
     cloneData.book_v_id = newVId;
     if (objectId) {
       cloneData.userObjectID = objectId;
-      cloneData.userId = objectId;
     }
     if (customUserId) {
       cloneData.userID = customUserId;
     }
-    if (emailId) {
-      cloneData.userEmail = emailId;
-    }
     if (!cloneData.folder_id) {
       cloneData.folder_id = 'fol_default';
     }
+    delete cloneData.userId;
+    delete cloneData.userEmail;
+    delete cloneData.folderName;
+    delete cloneData.lastUpdated;
+
     cloneData.flipbookName = `${cloneData.flipbookName} Copy`;
     cloneData.trash = false;
     cloneData.trashedAt = null;
     cloneData.isPublished = false;
-
-    const cloneFolders = (Array.isArray(existing.folderName) ? existing.folderName.flat(Infinity) : [existing.folderName])
-      .filter((f) => f && typeof f === "string" && f.trim() && f.trim() !== "Trash")
-      .map((f) => f.trim());
-    if (!cloneFolders.includes("Recent Book")) cloneFolders.push("Recent Book");
-    cloneData.folderName = [...new Set(cloneFolders.length > 0 ? cloneFolders : ["default"])];
-    cloneData.lastUpdated = new Date();
 
     const duplicated = await Flipbook.create(cloneData);
     if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
@@ -1123,6 +1119,8 @@ exports.saveBook = async (req, res) => {
     }));
 
     const physicalFolder = targetFolder || "default";
+    const bookFolderId = req.body.folder_id || (targetFolder && targetFolder !== "default" && targetFolder !== "Recent Book" ? targetFolder : "fol_default");
+
     if (book) {
       book.flipbookName = safeName;
       if (objectId && !book.userObjectID) {
@@ -1131,19 +1129,12 @@ exports.saveBook = async (req, res) => {
       if (customUserId && !book.userID) {
         book.userID = customUserId;
       }
-      if (emailId && !book.userEmail) {
-        book.userEmail = emailId;
+      if (bookFolderId && bookFolderId !== "fol_default") {
+        book.folder_id = bookFolderId;
       }
-      const existingFolders = (Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName])
-        .filter((f) => typeof f === "string" && f.trim() && f.trim() !== "Trash")
-        .map((f) => f.trim());
-      if (!existingFolders.includes(physicalFolder)) existingFolders.unshift(physicalFolder);
-      if (!existingFolders.includes("Recent Book")) existingFolders.push("Recent Book");
-      book.folderName = [...new Set(existingFolders)];
 
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
-      book.lastUpdated = new Date();
       await book.save();
     } else {
       if (!objectId) {
@@ -1155,17 +1146,12 @@ exports.saveBook = async (req, res) => {
 
       book = await Flipbook.create({
         userObjectID: objectId,
-        userId: objectId,
-        ...(customUserId ? { userID: customUserId } : {}),
-        userEmail: emailId,
+        userID: customUserId || undefined,
         book_v_id: resolvedVId,
-        v_id: resolvedVId,
         flipbookName: finalFlipbookName,
-        folder_id: (targetFolder && targetFolder !== "default" && targetFolder !== "Recent Book") ? targetFolder : "fol_default",
-        folderName: physicalFolder === "Recent Book" ? ["Recent Book"] : [physicalFolder, "Recent Book"],
+        folder_id: bookFolderId,
         pages: mongoPages,
         fileSize: fileSize || 0,
-        lastUpdated: new Date(),
       });
     }
 

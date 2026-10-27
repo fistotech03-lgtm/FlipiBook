@@ -15,7 +15,7 @@ const getAuthUser = (req) => {
   let rawId = null;
 
   // Search candidate keys that might hold a 24-char hex ObjectId
-  const candidates = [user.id, user._id, user.userId];
+  const candidates = [user.id, user._id, user.userObjectID];
   for (const cand of candidates) {
     if (cand && typeof cand === 'string' && /^[0-9a-fA-F]{24}$/.test(cand)) {
       objectId = new mongoose.Types.ObjectId(cand);
@@ -28,10 +28,11 @@ const getAuthUser = (req) => {
     }
   }
 
-  // Custom user string identifier (e.g. 'FLIPI0001')
+  // Custom user sequence identifier (e.g. 'FLIP001', 'FLIPI0001')
   const customUserId = (
     user.userID ||
-    (user.userId && (!objectId || String(user.userId) !== rawId) ? user.userId : '')
+    user.userId ||
+    ''
   ).toString().trim();
 
   // Email address
@@ -79,18 +80,14 @@ const getUserQuery = (req) => {
  * Builds user query for Flipbook collection
  */
 const getFlipbookUserQuery = (req) => {
-  const { objectId, customUserId, emailId } = getAuthUser(req);
+  const { objectId, customUserId } = getAuthUser(req);
   const conds = [];
 
   if (objectId) {
     conds.push({ userObjectID: objectId });
-    conds.push({ userId: objectId });
   }
   if (customUserId) {
     conds.push({ userID: customUserId });
-  }
-  if (emailId) {
-    conds.push({ userEmail: emailId });
   }
 
   if (conds.length === 1) return conds[0];

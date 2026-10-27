@@ -35,11 +35,11 @@ const userFolderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
       required: true,
-      alias: 'userId',
       index: true
     },
     userID: {
       type: String,
+      alias: 'userId',
       trim: true,
       index: true
     },
@@ -55,13 +55,5 @@ const userFolderSchema = new mongoose.Schema(
     toObject: { virtuals: true }
   }
 );
-
-// Note: alias: 'userId' automatically creates virtual getter and setter on userObjectID.
-
-userFolderSchema.pre('validate', function () {
-  if (!this.userObjectID && this.userId) {
-    this.userObjectID = this.userId;
-  }
-});
 
 module.exports = (mongoose.models.userFolder || mongoose.models.UserFolder) || mongoose.model('userFolder', userFolderSchema, 'UserFolders');

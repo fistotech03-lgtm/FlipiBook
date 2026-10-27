@@ -1,8 +1,8 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const Profile = require('../models/Profile');
-const UserPreference = require('../models/UserPreference');
+const User = require('../models/user');
+const Profile = require('../models/profile');
+const UserPreference = require('../models/userPreference');
 
 /**
  * Helper to extract email from request

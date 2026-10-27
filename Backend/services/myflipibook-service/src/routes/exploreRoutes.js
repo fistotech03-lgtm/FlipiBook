@@ -1,9 +1,9 @@
 const express = require('express');
-const Flipbook = require('../models/Flipbook');
-const Profile = require('../models/Profile');
-const User = require('../models/User');
-const InteractionThreedModel = require('../models/InteractionThreedModel');
-const CustomizedSettings = require('../models/CustomizedSettings');
+const Flipbook = require('../models/flipbook');
+const Profile = require('../models/profile');
+const User = require('../models/user');
+const InteractionThreedModel = require('../models/interactionThreedModel');
+const CustomizedSettings = require('../models/customizedSettings');
 
 const router = express.Router();
 

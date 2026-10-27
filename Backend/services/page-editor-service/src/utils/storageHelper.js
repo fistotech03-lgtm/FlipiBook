@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const Flipbook = require('../models/Flipbook');
+const Flipbook = require('../models/flipbook');
 
 /**
  * Generate unique ID (nanoid replacement)
@@ -200,23 +200,23 @@ const initFlipbookStorage = (bookDir) => {
 };
 
 const WORKSPACE_FOLDERS = [
-  'Gallery',
-  'Gallery/userdetails',
-  'Gallery/userdetails/Profile',
-  'Gallery/userdetails/Company_logo',
-  'Gallery/pageEditorgallery',
-  'Gallery/pageEditorgallery/Images',
-  'Gallery/pageEditorgallery/Videos',
-  'Gallery/pageEditorgallery/gifs',
-  'Gallery/CustomizationGallery',
-  'Gallery/CustomizationGallery/Images',
-  'Gallery/CustomizationGallery/Videos',
-  'Gallery/3DGallery',
-  'Gallery/3DGallery/Models',
-  'Gallery/3DGallery/Texture',
-  'Gallery/3DGallery/Snapshot',
+  'gallery',
+  'gallery/pageEditorgallery',
+  'gallery/pageEditorgallery/images',
+  'gallery/pageEditorgallery/videos',
+  'gallery/pageEditorgallery/gifs',
+  'gallery/customizationGallery',
+  'gallery/customizationGallery/images',
+  'gallery/customizationGallery/videos',
+  'gallery/3dGallery',
+  'gallery/3dGallery/models',
+  'gallery/3dGallery/texture',
+  'gallery/3dGallery/snapshot',
   'books',
-  'books/default'
+  'books/default',
+  'userdetails',
+  'userdetails/profile',
+  'userdetails/company_logo'
 ];
 
 const ensureDirPerms = (p) => {

@@ -1,6 +1,6 @@
-const PresetHdri = require('../models/PresetHdri');
-const PresetMaterial = require('../models/PresetMaterial');
-const DefaultModel = require('../models/DefaultModel');
+const PresetHdri = require('../models/presetHdri');
+const PresetMaterial = require('../models/presetMaterial');
+const DefaultModel = require('../models/defaultModel');
 const { resolveUrl, generateId } = require('../utils/storageHelper');
 
 /**

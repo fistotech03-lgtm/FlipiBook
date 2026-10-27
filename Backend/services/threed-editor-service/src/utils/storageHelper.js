@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 let User;
 try {
-  User = require('../models/User');
+  User = require('../models/user');
 } catch (_) {}
 
 const userFolderCache = new Map();
@@ -116,7 +116,7 @@ const resolveUserFolderAsync = async (emailOrUserId, fallbackReq = null) => {
 
   // 3. Database lookup for user's userID (e.g. 'FLIPI0001')
   try {
-    const UserModel = User || mongoose.models.User || mongoose.model('User');
+    const UserModel = User || mongoose.models.user || mongoose.models.User || mongoose.model('user');
     if (UserModel && cand) {
       const u = await UserModel.findOne({
         $or: [

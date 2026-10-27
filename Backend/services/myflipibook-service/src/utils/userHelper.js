@@ -83,6 +83,7 @@ const getFlipbookUserQuery = (req) => {
   const conds = [];
 
   if (objectId) {
+    conds.push({ userObjectID: objectId });
     conds.push({ userId: objectId });
   }
   if (customUserId) {

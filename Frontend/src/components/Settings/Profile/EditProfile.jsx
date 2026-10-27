@@ -777,10 +777,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
     p => !activeSocialKeys.includes(p.key)
   );
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 5527875e8ed9af44d1eac630458d4b4496ce4e48
   return (
     <div className="flex flex-col flex-1 w-full relative h-full">
       <div className="flex flex-col gap-[2vw]">

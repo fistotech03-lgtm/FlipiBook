@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Flipbook = require("../models/flipbook");
 const FlipbookAsset = require("../models/flipbookAsset");
@@ -339,7 +340,7 @@ const uploadAsset = async (req, res) => {
           userID: userFolder || 'default',
           book_v_id: bookVId,
           flipbookName: safeFlipbookName,
-          folder_id: dbDoc?.folder_id || safeFolderName || 'fol_default',
+          folder_id: dbDoc?.folder_id || (safeFolderName && safeFolderName !== 'default' && safeFolderName !== 'fol_default' ? safeFolderName : ('fol_' + crypto.randomBytes(6).toString('hex'))),
           assets: { images: [], video: [], gif: [] }
         });
       }
@@ -969,7 +970,7 @@ const useGalleryAsset = async (req, res) => {
         userID: userFolder || 'default',
         book_v_id: bookVId,
         flipbookName: safeFlipbookName,
-        folder_id: dbDoc?.folder_id || safeFolderName || 'fol_default',
+        folder_id: dbDoc?.folder_id || (safeFolderName && safeFolderName !== 'default' && safeFolderName !== 'fol_default' ? safeFolderName : ('fol_' + crypto.randomBytes(6).toString('hex'))),
         assets: { images: [], video: [], gif: [] }
       });
     }

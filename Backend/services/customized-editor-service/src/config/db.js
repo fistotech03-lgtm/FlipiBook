@@ -1,20 +1,12 @@
 const dns = require('node:dns');
 const mongoose = require('mongoose');
 
-<<<<<<< HEAD
-try {
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
-} catch (e) {
-  // ignore if unable to set custom DNS
-}
-=======
 // Configure reliable DNS servers for Atlas SRV resolution
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 } catch (_) {}
 
 let isConnecting = false;
->>>>>>> 9f02ce44d97f33916ae3168b3e2c86b6ab0fdd34
 
 const connectDB = async () => {
   if (mongoose.connection.readyState === 1 || isConnecting) {

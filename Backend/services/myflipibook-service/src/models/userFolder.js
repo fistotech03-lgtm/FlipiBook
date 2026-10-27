@@ -39,6 +39,7 @@ const userFolderSchema = new mongoose.Schema(
     },
     userID: {
       type: String,
+      alias: 'userId',
       trim: true,
       index: true
     },

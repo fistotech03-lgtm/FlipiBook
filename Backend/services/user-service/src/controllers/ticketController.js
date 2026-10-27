@@ -4,9 +4,9 @@ const mongoose = require('mongoose');
 
 let User;
 try {
-  User = mongoose.models.User || require('../models/User');
+  User = mongoose.models.User || mongoose.models.user || require('../models/user');
 } catch (e) {
-  User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({ emailId: String, email: String, role: String }, { strict: false }));
+  User = mongoose.models.User || mongoose.models.user || mongoose.model('user', new mongoose.Schema({ emailId: String, email: String, role: String }, { strict: false }));
 }
 
 /**

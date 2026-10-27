@@ -285,14 +285,39 @@ export default function FlipbooksSidebar({
         };
     }, [storagePercent]);
 
-    // Calculate tip coordinates for overflow arc (above 50%)
-    const overflowCoords = useMemo(() => {
-        if (storagePercent <= 50) return { x: 18, y: 32.5 };
-        const targetPercent = Math.max(storagePercent, 65);
-        const angleRad = (-90 + targetPercent * 3.6) * (Math.PI / 180);
+    // Continuous Conic Gradient background for unbroken circular progress flow
+    const conicBackground = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+
+        if (p <= 0) {
+            return 'transparent';
+        }
+
+        if (p <= 50) {
+            // 0% to 50%: Pure clean crisp white arc
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        if (p < 85) {
+            // > 50% and < 85%: Starts white at 12 o'clock, smoothly flows into warm orange at 50%, reaching radiant orange at tip
+            const whiteStop = Math.min(140, deg * 0.55);
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        // >= 85%: Starts white, flows into orange at 50%, reaching warning crimson red at tip
+        const whiteStop = 120;
+        return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a 270deg, #ef4444 ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+    }, [storagePercent]);
+
+    // Tip coordinates for rounded end cap along the circular stroke
+    const tipCoords = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+        const rad = (deg - 90) * (Math.PI / 180);
         return {
-            x: (18 + 14.5 * Math.cos(angleRad)).toFixed(2),
-            y: (18 + 14.5 * Math.sin(angleRad)).toFixed(2)
+            left: (50 + 46.5 * Math.cos(rad)).toFixed(2),
+            top: (50 + 46.5 * Math.sin(rad)).toFixed(2)
         };
     }, [storagePercent]);
 
@@ -836,63 +861,43 @@ export default function FlipbooksSidebar({
                     >
                         {/* Circular Progress Ring */}
                         <div className="relative w-[2.6vw] h-[2.6vw] min-w-[40px] min-h-[40px] flex items-center justify-center">
-                            <svg className="w-full h-full" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="storageOverflowGradient" x1="18" y1="32.5" x2={overflowCoords.x} y2={overflowCoords.y} gradientUnits="userSpaceOnUse">
-                                        <stop offset="0%" stopColor="#ffffff" />
-                                        <stop offset={storagePercent >= 85 ? "35%" : "45%"} stopColor={storageTheme.midColor} />
-                                        <stop offset="100%" stopColor={storageTheme.endColor} />
-                                    </linearGradient>
-                                </defs>
-                                {/* Background Track */}
-                                <circle
-                                    cx="18"
-                                    cy="18"
-                                    r="14.5"
-                                    fill="#141a24"
-                                    stroke="#243042"
-                                    strokeWidth="2.6"
+                            {/* Background Track Circle */}
+                            <div className="absolute inset-0 rounded-full border-[2.6px] border-[#243042] bg-[#141a24] box-border" />
+
+                            {/* Continuous Conic Gradient Progress Arc */}
+                            <div
+                                className="absolute inset-0 rounded-full pointer-events-none transition-all duration-700 ease-out"
+                                style={{
+                                    background: conicBackground,
+                                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
+                                }}
+                            />
+
+                            {/* Start Round Cap at 12 o'clock */}
+                            {storagePercent > 0 && (
+                                <div
+                                    className="absolute top-[1.5px] left-1/2 -translate-x-1/2 w-[2.6px] h-[2.6px] rounded-full bg-white pointer-events-none"
+                                    style={{ boxShadow: '0 0 3px rgba(255,255,255,0.7)' }}
                                 />
-                                {/* Base Arc (0% to 50%) in Clean Crisp White */}
-                                <circle
-                                    cx="18"
-                                    cy="18"
-                                    r="14.5"
-                                    fill="none"
-                                    stroke="#ffffff"
-                                    strokeWidth="2.6"
-                                    strokeLinecap="round"
-                                    strokeDasharray={91.1}
-                                    strokeDashoffset={91.1 - (Math.min(Math.max(storagePercent, 0), 50) / 100) * 91.1}
-                                    transform="rotate(-90 18 18)"
-                                    className="transition-all duration-700 ease-out"
+                            )}
+
+                            {/* End Round Cap at active progress tip */}
+                            {storagePercent > 1 && storagePercent < 99 && (
+                                <div
+                                    className="absolute w-[2.6px] h-[2.6px] rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-700 ease-out"
                                     style={{
-                                        filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.35))'
+                                        top: `${tipCoords.top}%`,
+                                        left: `${tipCoords.left}%`,
+                                        backgroundColor: storageTheme.accentColor,
+                                        boxShadow: `0 0 4px ${storageTheme.glow}`
                                     }}
                                 />
-                                {/* Overflow Arc (above 50%): Dynamic Gradient Flow from White -> Orange / Red */}
-                                {storagePercent > 50 && (
-                                    <circle
-                                        cx="18"
-                                        cy="18"
-                                        r="14.5"
-                                        fill="none"
-                                        stroke="url(#storageOverflowGradient)"
-                                        strokeWidth="2.6"
-                                        strokeLinecap="round"
-                                        strokeDasharray={91.1}
-                                        strokeDashoffset={91.1 - (Math.min(storagePercent - 50, 50) / 100) * 91.1}
-                                        transform="rotate(90 18 18)"
-                                        className="transition-all duration-700 ease-out"
-                                        style={{
-                                            filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
-                                        }}
-                                    />
-                                )}
-                            </svg>
+                            )}
 
                             {/* Database/Storage Icon Centered Inside */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="relative z-10 flex items-center justify-center pointer-events-none">
                                 <div className="relative flex items-center justify-center">
                                     <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                         <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />

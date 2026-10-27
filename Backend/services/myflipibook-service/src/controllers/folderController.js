@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
-const UserFolder = require('../models/UserFolder');
-const Flipbook = require('../models/Flipbook');
+const crypto = require('crypto');
+const UserFolder = require('../models/userFolder');
+const Flipbook = require('../models/flipbook');
 const { deleteFolderStorage, getStorageRoot } = require('../utils/storageHelper');
 const { getAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
 
@@ -41,15 +42,19 @@ exports.getFolders = async (req, res) => {
       // Collect custom folders, avoiding duplicates
       userFolderDoc.folders.forEach((item) => {
         if (!item || !item.name) return;
-        if (defaultItem && (item === defaultItem || (item._id && defaultItem._id && item._id.toString() === defaultItem._id.toString()))) {
+        const itemFolId = item.fol_v_id || (item._id ? item._id.toString() : String(item.id));
+        const defFolId = defaultItem ? (defaultItem.fol_v_id || (defaultItem._id ? defaultItem._id.toString() : '')) : '';
+        if (defaultItem && (item === defaultItem || (defFolId && itemFolId === defFolId))) {
           return;
         }
         const trimmedName = String(item.name).trim();
         const low = trimmedName.toLowerCase();
         if (!seenNames.has(low)) {
           seenNames.add(low);
+          const fol_v_id = item.fol_v_id || ('fol_' + (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex')));
           customItems.push({
-            id: item._id ? item._id.toString() : String(item.id),
+            id: fol_v_id,
+            fol_v_id,
             name: trimmedName,
             isDefault: false
           });
@@ -58,17 +63,18 @@ exports.getFolders = async (req, res) => {
     }
 
     // Ensure default folder item exists
+    const defaultFolId = (defaultItem && defaultItem.fol_v_id) ? defaultItem.fol_v_id : 'fol_default';
     if (!defaultItem) {
       defaultItem = {
-        _id: new mongoose.Types.ObjectId(),
+        fol_v_id: defaultFolId,
         name: 'default',
         isDefault: true
       };
     } else {
       defaultItem.isDefault = true;
+      if (!defaultItem.fol_v_id) defaultItem.fol_v_id = defaultFolId;
     }
 
-    const defaultId = defaultItem._id ? defaultItem._id.toString() : new mongoose.Types.ObjectId().toString();
     const defaultStoredName = String(defaultItem.name || 'default').trim();
     // In frontend, default folder displays as 'My Flipbooks' unless user renamed it to something custom
     const defaultDisplayName = defaultStoredName === 'default' ? 'My Flipbooks' : defaultStoredName;
@@ -99,8 +105,10 @@ exports.getFolders = async (req, res) => {
             );
             if (!isSystem && !isDef && !seenNames.has(low)) {
               seenNames.add(low);
+              const fol_v_id = 'fol_' + crypto.randomBytes(6).toString('hex');
               customItems.push({
-                id: new mongoose.Types.ObjectId().toString(),
+                id: fol_v_id,
+                fol_v_id,
                 name: trimmed,
                 isDefault: false
               });
@@ -113,7 +121,8 @@ exports.getFolders = async (req, res) => {
     // 3. Assemble final unique list with default folder at the top
     const orderedFolders = [
       {
-        id: defaultId,
+        id: defaultFolId,
+        fol_v_id: defaultFolId,
         name: defaultDisplayName,
         rawName: defaultStoredName,
         isDefault: true
@@ -121,35 +130,29 @@ exports.getFolders = async (req, res) => {
       ...customItems
     ];
 
-    // Auto-sync in MongoDB with safe ObjectId references
+    // Auto-sync in MongoDB with fol_v_id
     const formattedSubdocs = [
       {
-        _id: (mongoose.Types.ObjectId.isValid(defaultId) && /^[0-9a-fA-F]{24}$/.test(defaultId))
-          ? new mongoose.Types.ObjectId(defaultId)
-          : new mongoose.Types.ObjectId(),
+        fol_v_id: defaultFolId,
         name: defaultStoredName,
         isDefault: true
       },
       ...customItems.map((c) => ({
-        _id: (mongoose.Types.ObjectId.isValid(c.id) && /^[0-9a-fA-F]{24}$/.test(c.id))
-          ? new mongoose.Types.ObjectId(c.id)
-          : new mongoose.Types.ObjectId(),
+        fol_v_id: c.fol_v_id || c.id,
         name: c.name,
         isDefault: false
       }))
     ];
 
     if (userFolderDoc) {
-      if (objectId && !userFolderDoc.userId) userFolderDoc.userId = objectId;
+      if (objectId) userFolderDoc.userObjectID = objectId;
       if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
-      if (emailId && !userFolderDoc.emailId) userFolderDoc.emailId = emailId;
       userFolderDoc.folders = formattedSubdocs;
       await userFolderDoc.save().catch(() => {});
     } else {
       await UserFolder.create({
-        ...(objectId ? { userId: objectId } : {}),
+        ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
-        emailId,
         folders: formattedSubdocs
       }).catch(() => {});
     }
@@ -188,7 +191,7 @@ exports.createFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This is a reserved folder name' });
     }
 
-    const newId = new mongoose.Types.ObjectId();
+    const newFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
     let userFolderDoc = await UserFolder.findOne(userQuery);
 
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
@@ -203,19 +206,17 @@ exports.createFolder = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Folder with this name already exists' });
       }
 
-      if (objectId && !userFolderDoc.userId) userFolderDoc.userId = objectId;
+      if (objectId) userFolderDoc.userObjectID = objectId;
       if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
-      if (emailId && !userFolderDoc.emailId) userFolderDoc.emailId = emailId;
-      userFolderDoc.folders.push({ _id: newId, name: safeFolderName, isDefault: false });
+      userFolderDoc.folders.push({ fol_v_id: newFolId, name: safeFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
       await UserFolder.create({
-        ...(objectId ? { userId: objectId } : {}),
+        ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
-        emailId,
         folders: [
-          { _id: new mongoose.Types.ObjectId(), name: 'default', isDefault: true },
-          { _id: newId, name: safeFolderName, isDefault: false }
+          { fol_v_id: 'fol_default', name: 'default', isDefault: true },
+          { fol_v_id: newFolId, name: safeFolderName, isDefault: false }
         ]
       });
     }
@@ -237,7 +238,8 @@ exports.createFolder = async (req, res) => {
       success: true,
       message: 'Folder created',
       folder: safeFolderName,
-      id: newId.toString(),
+      id: newFolId,
+      fol_v_id: newFolId,
       isDefault: false
     });
   } catch (err) {
@@ -280,7 +282,7 @@ exports.renameFolder = async (req, res) => {
     // Find target folder
     let targetFolder = null;
     if (folderId) {
-      targetFolder = userFolderDoc.folders.find((f) => (f._id ? f._id.toString() : String(f.id)) === String(folderId));
+      targetFolder = userFolderDoc.folders.find((f) => (f.fol_v_id === String(folderId)) || (f._id ? f._id.toString() : String(f.id)) === String(folderId));
     }
     if (!targetFolder && oldName) {
       const lowerOld = oldName.toLowerCase().trim();
@@ -462,7 +464,7 @@ exports.deleteFolder = async (req, res) => {
     let targetFolder = null;
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
       if (folderId) {
-        targetFolder = userFolderDoc.folders.find((f) => (f._id ? f._id.toString() : String(f.id)) === String(folderId));
+        targetFolder = userFolderDoc.folders.find((f) => (f.fol_v_id === String(folderId)) || (f._id ? f._id.toString() : String(f.id)) === String(folderId));
       }
       if (!targetFolder && folderName) {
         const lowerName = folderName.toLowerCase().trim();
@@ -488,7 +490,7 @@ exports.deleteFolder = async (req, res) => {
     // 1. Remove from UserFolder document
     if (userFolderDoc) {
       userFolderDoc.folders = userFolderDoc.folders.filter((f) => {
-        if (folderId && (f._id ? f._id.toString() : String(f.id)) === String(folderId)) return false;
+        if (folderId && ((f.fol_v_id === String(folderId)) || (f._id ? f._id.toString() : String(f.id)) === String(folderId))) return false;
         if (resolvedName && f.name.toLowerCase() === resolvedName.toLowerCase()) return false;
         return true;
       });

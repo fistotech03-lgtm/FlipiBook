@@ -79,16 +79,11 @@ const processAndCopyGalleryAssets = ({
       const relativePath = `../assets/${subfolder}/${assetFileName}`;
 
       newFlipbookAssets.push({
-        flipbook_v_id: flipbook_v_id,
-        file_v_id: crypto.randomBytes(8).toString('hex'),
+        book_v_id: flipbook_v_id,
         assetType: subfolder,
-        fileName: assetFileName,
+        convertedName: assetFileName,
         originalName: fileName,
         page_v_id: pageVId || 'global',
-        userEmail: userEmail || '',
-        isGallery: false,
-        flipbookName: flipbookName,
-        folderName: folderName,
         url: relativePath,
         size: fileSize
       });
@@ -253,16 +248,11 @@ const processAndSaveBase64Assets = ({
       fs.writeFileSync(filePath, buffer);
 
       newFlipbookAssets.push({
-        flipbook_v_id: flipbook_v_id,
-        file_v_id: crypto.randomBytes(8).toString('hex'),
+        book_v_id: flipbook_v_id,
         assetType: subfolder,
-        fileName: assetFileName,
+        convertedName: assetFileName,
         originalName: assetFileName,
         page_v_id: pageVId || 'global',
-        userEmail: userEmail || '',
-        isGallery: false,
-        flipbookName: flipbookName,
-        folderName: folderName,
         url: relativePath,
         size: buffer.length
       });

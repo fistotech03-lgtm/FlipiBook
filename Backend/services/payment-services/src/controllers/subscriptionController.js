@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const UserSubscription = require('../models/UserSubscription');
-const Plan = require('../models/Plan');
+const UserSubscription = require('../models/userSubscription');
+const Plan = require('../models/plan');
 const { DEFAULT_PLANS } = require('../config/defaultPlans');
 
 /**

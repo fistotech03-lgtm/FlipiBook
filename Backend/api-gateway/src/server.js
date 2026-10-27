@@ -87,7 +87,9 @@ const storageStaticMiddleware = async (req, res, next) => {
     relPath,
     relPath.replace(/^(?:testing|production)[/\\]/i, ''),
     relPath.replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/'),
-    relPath.replace(/^(?:testing|production)[/\\]/i, '').replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/')
+    relPath.replace(/^(?:testing|production)[/\\]/i, '').replace(/\/images?\//gi, '/Image/').replace(/\/videos?\//gi, '/video/').replace(/\/gifs?\//gi, '/gif/'),
+    relPath.replace(/\/Gallery\//g, '/gallery/').replace(/\/Images\//g, '/images/').replace(/\/Videos\//g, '/videos/').replace(/\/Profile\//g, '/profile/').replace(/\/Company_logo\//g, '/company_logo/').replace(/\/CustomizationGallery\//g, '/customizationGallery/').replace(/\/3DGallery\//g, '/3dGallery/'),
+    relPath.replace(/\/gallery\//g, '/Gallery/').replace(/\/images\//g, '/Images/').replace(/\/videos\//g, '/Videos/').replace(/\/profile\//g, '/Profile/').replace(/\/company_logo\//g, '/Company_logo/').replace(/\/customizationGallery\//g, '/CustomizationGallery/').replace(/\/3dGallery\//g, '/3DGallery/')
   ];
 
   for (const candRel of new Set(candidateRelPaths)) {

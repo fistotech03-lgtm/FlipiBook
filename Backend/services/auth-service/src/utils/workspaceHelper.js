@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const UserGallery = require('../models/UserGallery');
+const UserGallery = require('../models/userGallery');
 
 /**
  * Resolve root storage directory
@@ -22,58 +22,60 @@ const getStorageRoot = () => {
  * Aligned workspace directory structure for each user:
  * 
  * storage/<userId>/
- * ├── Gallery/
- * │   ├── userdetails/
- * │   │   ├── Profile/
- * │   │   └── Company_logo/
+ * ├── gallery/
  * │   ├── pageEditorgallery/
- * │   │   ├── Images/
- * │   │   ├── Videos/
+ * │   │   ├── images/
+ * │   │   ├── videos/
  * │   │   └── gifs/
- * │   ├── CustomizationGallery/
- * │   │   ├── Images/
- * │   │   └── Videos/
- * │   └── 3DGallery/
- * │       ├── Models/
- * │       ├── Texture/
- * │       └── Snapshot/
- * └── books/
- *     └── default/
+ * │   ├── customizationGallery/
+ * │   │   ├── images/
+ * │   │   └── videos/
+ * │   └── 3dGallery/
+ * │       ├── models/
+ * │       ├── texture/
+ * │       └── snapshot/
+ * ├── books/
+ * │   └── default/
+ * └── userdetails/
+ *     ├── profile/
+ *     └── company_logo/
  */
 const WORKSPACE_STRUCTURE = {
-  'Gallery': {
-    'userdetails': ['Profile', 'Company_logo'],
-    'pageEditorgallery': ['Images', 'Videos', 'gifs'],
-    'CustomizationGallery': ['Images', 'Videos'],
-    '3DGallery': ['Models', 'Texture', 'Snapshot']
+  'gallery': {
+    'pageEditorgallery': ['images', 'videos', 'gifs'],
+    'customizationGallery': ['images', 'videos'],
+    '3dGallery': ['models', 'texture', 'snapshot']
   },
-  'books': ['default']
+  'books': ['default'],
+  'userdetails': ['profile', 'company_logo']
 };
 
 /**
- * Flat list of relative directory paths created for each user
+ * Flat list of relative directory paths created for each user (all names start with lowercase)
  */
 const WORKSPACE_FOLDERS = [
   // 1. Gallery Root & Sub-galleries
-  'Gallery',
-  'Gallery/userdetails',
-  'Gallery/userdetails/Profile',
-  'Gallery/userdetails/Company_logo',
-  'Gallery/pageEditorgallery',
-  'Gallery/pageEditorgallery/Images',
-  'Gallery/pageEditorgallery/Videos',
-  'Gallery/pageEditorgallery/gifs',
-  'Gallery/CustomizationGallery',
-  'Gallery/CustomizationGallery/Images',
-  'Gallery/CustomizationGallery/Videos',
-  'Gallery/3DGallery',
-  'Gallery/3DGallery/Models',
-  'Gallery/3DGallery/Texture',
-  'Gallery/3DGallery/Snapshot',
+  'gallery',
+  'gallery/pageEditorgallery',
+  'gallery/pageEditorgallery/images',
+  'gallery/pageEditorgallery/videos',
+  'gallery/pageEditorgallery/gifs',
+  'gallery/customizationGallery',
+  'gallery/customizationGallery/images',
+  'gallery/customizationGallery/videos',
+  'gallery/3dGallery',
+  'gallery/3dGallery/models',
+  'gallery/3dGallery/texture',
+  'gallery/3dGallery/snapshot',
 
   // 2. Books Root & Default Book Folder
   'books',
-  'books/default'
+  'books/default',
+
+  // 3. User Details Root & Sub-folders
+  'userdetails',
+  'userdetails/profile',
+  'userdetails/company_logo'
 ];
 
 /**
@@ -122,7 +124,7 @@ const createUserWorkspace = (user) => {
     }
 
     // Self-healing migration for existing servers (Production / Testing):
-    // Move legacy My_Flipbooks contents to books/default if present
+    // 1. Move legacy My_Flipbooks contents to books/default if present
     const legacyMyFlipbooks = path.join(userDir, 'My_Flipbooks');
     const defaultBooksDir = path.join(userDir, 'books', 'default');
     if (fs.existsSync(legacyMyFlipbooks)) {
@@ -141,6 +143,68 @@ const createUserWorkspace = (user) => {
         } catch (e) {}
       } catch (migErr) {
         console.warn(`[Workspace Helper] Warning during legacy My_Flipbooks migration for ${dirName}:`, migErr.message);
+      }
+    }
+
+    // 2. Move legacy Gallery/userdetails to root userdetails if present
+    const legacyUserDetails = path.join(userDir, 'Gallery', 'userdetails');
+    const newUserDetails = path.join(userDir, 'userdetails');
+    if (fs.existsSync(legacyUserDetails)) {
+      try {
+        ['Profile', 'Company_logo', 'profile', 'company_logo'].forEach((sub) => {
+          const srcSub = path.join(legacyUserDetails, sub);
+          const destSub = path.join(newUserDetails, sub.toLowerCase());
+          ensureDir(destSub);
+          if (fs.existsSync(srcSub)) {
+            const files = fs.readdirSync(srcSub);
+            for (const file of files) {
+              const srcFile = path.join(srcSub, file);
+              const destFile = path.join(destSub, file);
+              if (!fs.existsSync(destFile)) {
+                fs.renameSync(srcFile, destFile);
+              }
+            }
+          }
+        });
+        try {
+          fs.rmSync(legacyUserDetails, { recursive: true, force: true });
+          console.log(`[Workspace Helper] Migrated legacy Gallery/userdetails to root userdetails for ${dirName}`);
+        } catch (e) {}
+      } catch (migErr) {
+        console.warn(`[Workspace Helper] Warning during Gallery/userdetails migration for ${dirName}:`, migErr.message);
+      }
+    }
+
+    // 3. Migrate any legacy uppercase folder names to lowercase
+    const lowercaseMigrations = [
+      { src: path.join(userDir, 'userdetails', 'Profile'), dest: path.join(userDir, 'userdetails', 'profile') },
+      { src: path.join(userDir, 'userdetails', 'Company_logo'), dest: path.join(userDir, 'userdetails', 'company_logo') },
+      { src: path.join(userDir, 'Gallery'), dest: path.join(userDir, 'gallery') },
+      { src: path.join(userDir, 'gallery', 'pageEditorgallery', 'Images'), dest: path.join(userDir, 'gallery', 'pageEditorgallery', 'images') },
+      { src: path.join(userDir, 'gallery', 'pageEditorgallery', 'Videos'), dest: path.join(userDir, 'gallery', 'pageEditorgallery', 'videos') },
+      { src: path.join(userDir, 'gallery', 'CustomizationGallery'), dest: path.join(userDir, 'gallery', 'customizationGallery') },
+      { src: path.join(userDir, 'gallery', 'customizationGallery', 'Images'), dest: path.join(userDir, 'gallery', 'customizationGallery', 'images') },
+      { src: path.join(userDir, 'gallery', 'customizationGallery', 'Videos'), dest: path.join(userDir, 'gallery', 'customizationGallery', 'videos') },
+      { src: path.join(userDir, 'gallery', '3DGallery'), dest: path.join(userDir, 'gallery', '3dGallery') },
+      { src: path.join(userDir, 'gallery', '3dGallery', 'Models'), dest: path.join(userDir, 'gallery', '3dGallery', 'models') },
+      { src: path.join(userDir, 'gallery', '3dGallery', 'Texture'), dest: path.join(userDir, 'gallery', '3dGallery', 'texture') },
+      { src: path.join(userDir, 'gallery', '3dGallery', 'Snapshot'), dest: path.join(userDir, 'gallery', '3dGallery', 'snapshot') }
+    ];
+
+    for (const { src, dest } of lowercaseMigrations) {
+      if (src !== dest && fs.existsSync(src)) {
+        try {
+          ensureDir(dest);
+          const entries = fs.readdirSync(src);
+          for (const ent of entries) {
+            const sPath = path.join(src, ent);
+            const dPath = path.join(dest, ent);
+            if (!fs.existsSync(dPath)) {
+              fs.renameSync(sPath, dPath);
+            }
+          }
+          try { fs.rmdirSync(src); } catch (_) {}
+        } catch (_) {}
       }
     }
 
@@ -184,32 +248,32 @@ const createUserWorkspace = (user) => {
 const getUserWorkspacePaths = (userId) => {
   const storageRoot = getStorageRoot();
   const userDir = path.join(storageRoot, String(userId));
-  const galleryDir = path.join(userDir, 'Gallery');
+  const galleryDir = path.join(userDir, 'gallery');
 
   return {
     root: userDir,
     galleryRoot: galleryDir,
     userDetails: {
-      root: path.join(galleryDir, 'userdetails'),
-      profile: path.join(galleryDir, 'userdetails', 'Profile'),
-      companyLogo: path.join(galleryDir, 'userdetails', 'Company_logo')
+      root: path.join(userDir, 'userdetails'),
+      profile: path.join(userDir, 'userdetails', 'profile'),
+      companyLogo: path.join(userDir, 'userdetails', 'company_logo')
     },
     pageEditorGallery: {
       root: path.join(galleryDir, 'pageEditorgallery'),
-      images: path.join(galleryDir, 'pageEditorgallery', 'Images'),
-      videos: path.join(galleryDir, 'pageEditorgallery', 'Videos'),
+      images: path.join(galleryDir, 'pageEditorgallery', 'images'),
+      videos: path.join(galleryDir, 'pageEditorgallery', 'videos'),
       gifs: path.join(galleryDir, 'pageEditorgallery', 'gifs')
     },
     customizationGallery: {
-      root: path.join(galleryDir, 'CustomizationGallery'),
-      images: path.join(galleryDir, 'CustomizationGallery', 'Images'),
-      videos: path.join(galleryDir, 'CustomizationGallery', 'Videos')
+      root: path.join(galleryDir, 'customizationGallery'),
+      images: path.join(galleryDir, 'customizationGallery', 'images'),
+      videos: path.join(galleryDir, 'customizationGallery', 'videos')
     },
     threeDGallery: {
-      root: path.join(galleryDir, '3DGallery'),
-      models: path.join(galleryDir, '3DGallery', 'Models'),
-      texture: path.join(galleryDir, '3DGallery', 'Texture'),
-      snapshot: path.join(galleryDir, '3DGallery', 'Snapshot')
+      root: path.join(galleryDir, '3dGallery'),
+      models: path.join(galleryDir, '3dGallery', 'models'),
+      texture: path.join(galleryDir, '3dGallery', 'texture'),
+      snapshot: path.join(galleryDir, '3dGallery', 'snapshot')
     },
     books: {
       root: path.join(userDir, 'books'),

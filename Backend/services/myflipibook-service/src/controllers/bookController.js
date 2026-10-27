@@ -2,10 +2,10 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
-const Flipbook = require("../models/Flipbook");
-const FlipbookAsset = require("../models/FlipbookAsset");
-const UserGallery = require("../models/UserGallery");
-const InteractionThreedModel = require("../models/InteractionThreedModel");
+const Flipbook = require("../models/flipbook");
+const FlipbookAsset = require("../models/flipbookAsset");
+const UserGallery = require("../models/userGallery");
+const InteractionThreedModel = require("../models/interactionThreedModel");
 const {
   deleteBookStorage,
   getStorageRoot,
@@ -101,21 +101,29 @@ const enforceRecentLimit = async (userQuery) => {
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
-const formatBook = (doc, settingsDoc = null) => {
-  const primaryFolder = resolveFolder(doc.folderName);
-  const displayFolder = primaryFolder === "default" ? "My Flipbooks" : primaryFolder;
+const formatBook = (doc, settingsDoc = null, currentUserId = null) => {
+  const primaryFolder = doc.folder_id || resolveFolder(doc.folderName);
+  const displayFolder = primaryFolder === "default" || primaryFolder === "fol_default" ? "My Flipbooks" : primaryFolder;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
   const s = settingsDoc || doc.Customized_Settings || {};
+  const bookVId = doc.book_v_id || doc.v_id;
+
+  const isFav = Array.isArray(doc.isFavorite)
+    ? (currentUserId ? doc.isFavorite.some(u => String(u) === String(currentUserId)) : doc.isFavorite.length > 0)
+    : Boolean(doc.isFavorite);
 
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
-    userId: doc.userId ? doc.userId.toString() : null,
+    userObjectID: doc.userObjectID ? doc.userObjectID.toString() : (doc.userId ? doc.userId.toString() : null),
+    userId: doc.userObjectID ? doc.userObjectID.toString() : (doc.userId ? doc.userId.toString() : null),
     userID: doc.userID || (doc.userId ? doc.userId.toString() : null),
-    v_id: doc.v_id,
+    book_v_id: bookVId,
+    v_id: bookVId,
     title: doc.flipbookName,
     realName: doc.flipbookName,
     flipbookName: doc.flipbookName,
+    folder_id: doc.folder_id || primaryFolder,
     folder: displayFolder,
     folderName: displayFolder,
     actualFolder: displayFolder,
@@ -134,13 +142,13 @@ const formatBook = (doc, settingsDoc = null) => {
     fileSize: doc.fileSize || 0,
     trash: Boolean(doc.trash),
     trashedAt: doc.trashedAt,
-    isFavorite: Boolean(doc.isFavorite),
+    isFavorite: isFav,
     isPublished: Boolean(doc.isPublished),
     createdAt: doc.createdAt,
     lastUpdated: mtime,
     updatedAt: doc.updatedAt || mtime,
     mtime: mtime,
-    allFolders: Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName],
+    allFolders: doc.folder_id ? [doc.folder_id] : (Array.isArray(doc.folderName) ? doc.folderName : [doc.folderName]),
     width: s?.FlipbookInfo?.width || s?.width || null,
     height: s?.FlipbookInfo?.height || s?.height || null,
     orientation: s?.FlipbookInfo?.orientation || s?.orientation || null,
@@ -285,9 +293,11 @@ exports.toggleFavorite = async (req, res) => {
         .json({ success: false, message: "Authentication required" });
     }
 
+    const { objectId } = getAuthUser(req);
+    const isFav = Boolean(isFavorite);
     const query = { ...userQuery };
     if (v_id) {
-      query.v_id = v_id;
+      query.$or = [{ book_v_id: v_id }, { v_id: v_id }];
     } else if (bookName) {
       query.flipbookName = bookName;
     } else {
@@ -299,9 +309,13 @@ exports.toggleFavorite = async (req, res) => {
         });
     }
 
+    const updateOp = objectId
+      ? (isFav ? { $addToSet: { isFavorite: objectId } } : { $pull: { isFavorite: objectId } })
+      : { $set: { isFavorite: isFav } };
+
     const updated = await Flipbook.findOneAndUpdate(
       query,
-      { $set: { isFavorite: Boolean(isFavorite) } },
+      updateOp,
       { returnDocument: "after" },
     );
 
@@ -314,8 +328,8 @@ exports.toggleFavorite = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Favorite status updated",
-      isFavorite: updated.isFavorite,
-      book: formatBook(updated),
+      isFavorite: isFav,
+      book: formatBook(updated, null, objectId),
     });
   } catch (err) {
     console.error("[Book Controller] Error toggling favorite:", err);

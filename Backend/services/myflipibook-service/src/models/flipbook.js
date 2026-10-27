@@ -59,8 +59,7 @@ const flipbookSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      alias: 'v_id',
-      index: true
+      alias: 'v_id'
     },
     isPublished: {
       type: Boolean,

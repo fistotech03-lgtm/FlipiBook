@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Counter = require('./Counter');
+const Counter = require('./counter');
 
 userSchema.pre('save', async function () {
   if (this.userID) return;

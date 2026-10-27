@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
@@ -246,6 +246,55 @@ export default function FlipbooksSidebar({
         ? `${Math.round(effectiveTotal / (1024 * 1024 * 1024))} GB`
         : `${Math.round(effectiveTotal / (1024 * 1024))} MB`;
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
+
+    // Dynamic storage gradient flow and theme
+    // <= 50%: Clean white flow
+    // > 50% & < 85%: Gradient flow starting in crisp white, transitioning to glowing orange
+    // >= 85%: Deep dark gradient flow from white through orange to warning red
+    const storageTheme = useMemo(() => {
+        if (storagePercent >= 85) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#ea543a',
+                endColor: '#ef4444',
+                accentColor: '#ef4444',
+                glow: 'rgba(239, 68, 68, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 40%, #ea543a 70%, #ef4444 100%)',
+                badgeBg: '#ef4444'
+            };
+        }
+        if (storagePercent > 50) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#fb923c',
+                endColor: '#ea543a',
+                accentColor: '#ea543a',
+                glow: 'rgba(234, 84, 58, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 50%, #ea543a 100%)',
+                badgeBg: '#ea543a'
+            };
+        }
+        return {
+            startColor: '#ffffff',
+            midColor: '#ffffff',
+            endColor: '#cbd5e1',
+            accentColor: '#ffffff',
+            glow: 'rgba(255, 255, 255, 0.35)',
+            linearCss: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
+            badgeBg: '#ffffff'
+        };
+    }, [storagePercent]);
+
+    // Calculate tip coordinates for overflow arc (above 50%)
+    const overflowCoords = useMemo(() => {
+        if (storagePercent <= 50) return { x: 18, y: 32.5 };
+        const targetPercent = Math.max(storagePercent, 65);
+        const angleRad = (-90 + targetPercent * 3.6) * (Math.PI / 180);
+        return {
+            x: (18 + 14.5 * Math.cos(angleRad)).toFixed(2),
+            y: (18 + 14.5 * Math.sin(angleRad)).toFixed(2)
+        };
+    }, [storagePercent]);
 
     const isBooksActive = dashboardMode === 'books' && activeFolder !== 'Favorites' && activeFolder !== 'Trash';
     const is3dActive = dashboardMode === '3d';
@@ -641,12 +690,12 @@ export default function FlipbooksSidebar({
                         <div className="flex items-center justify-between mb-[0.55vw]">
                             <div className="flex items-center gap-[0.5vw]">
                                 <div className="relative flex items-center justify-center">
-                                    <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke={storageTheme.accentColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-colors duration-300">
                                         <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
                                         <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
                                         <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
                                     </svg>
-                                    <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
+                                    <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] rounded-full ring-2 ring-white transition-colors duration-300" style={{ backgroundColor: storageTheme.badgeBg }}></div>
                                 </div>
                                 <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
                             </div>
@@ -668,8 +717,11 @@ export default function FlipbooksSidebar({
                         {/* Progress Bar */}
                         <div className="w-full h-[0.32vw] bg-[#e5e7eb] rounded-full overflow-hidden mb-[0.45vw]">
                             <div
-                                className="h-full bg-[#ea543a] rounded-full transition-all duration-500 ease-out"
-                                style={{ width: `${storagePercent}%` }}
+                                className="h-full rounded-full transition-all duration-500 ease-out"
+                                style={{
+                                    width: `${storagePercent}%`,
+                                    background: storageTheme.linearCss
+                                }}
                             ></div>
                         </div>
 
@@ -678,7 +730,7 @@ export default function FlipbooksSidebar({
                             <span>
                                 {isLoadingStorage ? 'Calculating...' : `${usedFormatted} of ${totalFormatted} used`}
                             </span>
-                            <span className="text-[#374151] font-semibold">{storagePercent}%</span>
+                            <span style={{ color: storageTheme.accentColor }} className="font-semibold transition-colors duration-300">{storagePercent}%</span>
                         </div>
 
                         {/* Divider line & Upgrade Profile Button */}
@@ -784,40 +836,73 @@ export default function FlipbooksSidebar({
                     >
                         {/* Circular Progress Ring */}
                         <div className="relative w-[2.6vw] h-[2.6vw] min-w-[40px] min-h-[40px] flex items-center justify-center">
-                            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                            <svg className="w-full h-full" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="storageOverflowGradient" x1="18" y1="32.5" x2={overflowCoords.x} y2={overflowCoords.y} gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stopColor="#ffffff" />
+                                        <stop offset={storagePercent >= 85 ? "35%" : "45%"} stopColor={storageTheme.midColor} />
+                                        <stop offset="100%" stopColor={storageTheme.endColor} />
+                                    </linearGradient>
+                                </defs>
                                 {/* Background Track */}
                                 <circle
                                     cx="18"
                                     cy="18"
                                     r="14.5"
-                                    fill="#1b2433"
-                                    stroke="#2c3749"
+                                    fill="#141a24"
+                                    stroke="#243042"
                                     strokeWidth="2.6"
                                 />
-                                {/* Orange Percentage Progress Ring */}
+                                {/* Base Arc (0% to 50%) in Clean Crisp White */}
                                 <circle
                                     cx="18"
                                     cy="18"
                                     r="14.5"
                                     fill="none"
-                                    stroke="#ea543a"
+                                    stroke="#ffffff"
                                     strokeWidth="2.6"
                                     strokeLinecap="round"
                                     strokeDasharray={91.1}
-                                    strokeDashoffset={91.1 - (Math.max(storagePercent, 0) / 100) * 91.1}
+                                    strokeDashoffset={91.1 - (Math.min(Math.max(storagePercent, 0), 50) / 100) * 91.1}
+                                    transform="rotate(-90 18 18)"
                                     className="transition-all duration-700 ease-out"
+                                    style={{
+                                        filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.35))'
+                                    }}
                                 />
+                                {/* Overflow Arc (above 50%): Dynamic Gradient Flow from White -> Orange / Red */}
+                                {storagePercent > 50 && (
+                                    <circle
+                                        cx="18"
+                                        cy="18"
+                                        r="14.5"
+                                        fill="none"
+                                        stroke="url(#storageOverflowGradient)"
+                                        strokeWidth="2.6"
+                                        strokeLinecap="round"
+                                        strokeDasharray={91.1}
+                                        strokeDashoffset={91.1 - (Math.min(storagePercent - 50, 50) / 100) * 91.1}
+                                        transform="rotate(90 18 18)"
+                                        className="transition-all duration-700 ease-out"
+                                        style={{
+                                            filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
+                                        }}
+                                    />
+                                )}
                             </svg>
 
                             {/* Database/Storage Icon Centered Inside */}
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="relative flex items-center justify-center">
-                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                         <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
                                         <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
                                         <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
                                     </svg>
-                                    <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] min-w-[5px] min-h-[5px] bg-[#ea543a] rounded-full ring-2 ring-[#1b2433]"></div>
+                                    <div
+                                        className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] min-w-[5px] min-h-[5px] rounded-full ring-2 ring-[#1b2433] transition-colors duration-500"
+                                        style={{ backgroundColor: storageTheme.badgeBg }}
+                                    ></div>
                                 </div>
                             </div>
                         </div>

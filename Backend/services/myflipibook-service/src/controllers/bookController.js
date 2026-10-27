@@ -1190,6 +1190,8 @@ exports.saveBook = async (req, res) => {
         book.folder_id = bookFolderId;
       }
 
+      if (!book.v_id) book.v_id = resolvedVId;
+      if (!book.book_v_id) book.book_v_id = resolvedVId;
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
       await book.save();
@@ -1204,6 +1206,7 @@ exports.saveBook = async (req, res) => {
       book = await Flipbook.create({
         userObjectID: objectId,
         userID: customUserId || undefined,
+        v_id: resolvedVId,
         book_v_id: resolvedVId,
         flipbookName: finalFlipbookName,
         folder_id: bookFolderId,

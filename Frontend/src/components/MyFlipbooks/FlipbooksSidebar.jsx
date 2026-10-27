@@ -821,13 +821,6 @@ export default function FlipbooksSidebar({
                                 }}
                             />
 
-                            {/* Start Round Cap at 12 o'clock */}
-                            {storagePercent > 0 && (
-                                <div
-                                    className="absolute top-[1.5px] left-1/2 -translate-x-1/2 w-[2.6px] h-[2.6px] rounded-full bg-white pointer-events-none"
-                                    style={{ boxShadow: '0 0 3px rgba(255,255,255,0.7)' }}
-                                />
-                            )}
 
                             {/* End Round Cap at active progress tip */}
                             {storagePercent > 1 && storagePercent < 99 && (

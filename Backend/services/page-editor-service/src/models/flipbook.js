@@ -54,11 +54,21 @@ const flipbookSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    book_v_id: {
+    v_id: {
       type: String,
       required: true,
       unique: true,
-      alias: 'v_id'
+      trim: true,
+      default: function () {
+        return this.book_v_id;
+      }
+    },
+    book_v_id: {
+      type: String,
+      trim: true,
+      default: function () {
+        return this.v_id;
+      }
     },
     isPublished: {
       type: Boolean,
@@ -121,6 +131,12 @@ flipbookSchema.pre('validate', async function () {
         }
       }
     } catch (_) {}
+  }
+  if (!this.v_id && this.book_v_id) {
+    this.v_id = this.book_v_id;
+  }
+  if (!this.book_v_id && this.v_id) {
+    this.book_v_id = this.v_id;
   }
   if (!this.folder_id || this.folder_id === 'fol_default') {
     this.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');

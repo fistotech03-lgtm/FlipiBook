@@ -26,8 +26,7 @@ const flipbookSchema = new mongoose.Schema(
     userObjectID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
-      required: true,
-      index: true
+      required: true
     },
     userID: {
       type: String, // sequence ID e.g. "FLIP001"
@@ -67,8 +66,7 @@ const flipbookSchema = new mongoose.Schema(
     },
     trash: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     },
     isFavorite: {
       type: [mongoose.Schema.Types.ObjectId],

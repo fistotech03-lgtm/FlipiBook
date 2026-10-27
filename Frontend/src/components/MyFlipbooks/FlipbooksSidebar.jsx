@@ -249,36 +249,50 @@ export default function FlipbooksSidebar({
 
     // Dynamic storage gradient flow and theme
     // <= 50%: Clean white flow
-    // > 50% & < 85%: Gradient orange flow
-    // >= 85%: Deep dark gradient red flow
+    // > 50% & < 85%: Gradient flow starting in crisp white, transitioning to glowing orange
+    // >= 85%: Deep dark gradient flow from white through orange to warning red
     const storageTheme = useMemo(() => {
         if (storagePercent >= 85) {
             return {
-                startColor: '#ff4d4d',
-                endColor: '#b91c1c',
+                startColor: '#ffffff',
+                midColor: '#ea543a',
+                endColor: '#ef4444',
                 accentColor: '#ef4444',
                 glow: 'rgba(239, 68, 68, 0.45)',
-                linearCss: 'linear-gradient(90deg, #ff4d4d 0%, #b91c1c 100%)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 40%, #ea543a 70%, #ef4444 100%)',
                 badgeBg: '#ef4444'
             };
         }
         if (storagePercent > 50) {
             return {
-                startColor: '#fb923c',
+                startColor: '#ffffff',
+                midColor: '#fb923c',
                 endColor: '#ea543a',
                 accentColor: '#ea543a',
                 glow: 'rgba(234, 84, 58, 0.45)',
-                linearCss: 'linear-gradient(90deg, #fb923c 0%, #ea543a 100%)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 50%, #ea543a 100%)',
                 badgeBg: '#ea543a'
             };
         }
         return {
             startColor: '#ffffff',
+            midColor: '#ffffff',
             endColor: '#cbd5e1',
             accentColor: '#ffffff',
             glow: 'rgba(255, 255, 255, 0.35)',
             linearCss: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
             badgeBg: '#ffffff'
+        };
+    }, [storagePercent]);
+
+    // Calculate tip coordinates for overflow arc (above 50%)
+    const overflowCoords = useMemo(() => {
+        if (storagePercent <= 50) return { x: 18, y: 32.5 };
+        const targetPercent = Math.max(storagePercent, 65);
+        const angleRad = (-90 + targetPercent * 3.6) * (Math.PI / 180);
+        return {
+            x: (18 + 14.5 * Math.cos(angleRad)).toFixed(2),
+            y: (18 + 14.5 * Math.sin(angleRad)).toFixed(2)
         };
     }, [storagePercent]);
 
@@ -822,10 +836,11 @@ export default function FlipbooksSidebar({
                     >
                         {/* Circular Progress Ring */}
                         <div className="relative w-[2.6vw] h-[2.6vw] min-w-[40px] min-h-[40px] flex items-center justify-center">
-                            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                            <svg className="w-full h-full" viewBox="0 0 36 36">
                                 <defs>
-                                    <linearGradient id="storageRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor={storageTheme.startColor} />
+                                    <linearGradient id="storageOverflowGradient" x1="18" y1="32.5" x2={overflowCoords.x} y2={overflowCoords.y} gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stopColor="#ffffff" />
+                                        <stop offset={storagePercent >= 85 ? "35%" : "45%"} stopColor={storageTheme.midColor} />
                                         <stop offset="100%" stopColor={storageTheme.endColor} />
                                     </linearGradient>
                                 </defs>
@@ -838,22 +853,42 @@ export default function FlipbooksSidebar({
                                     stroke="#243042"
                                     strokeWidth="2.6"
                                 />
-                                {/* Percentage Progress Ring with dynamic gradient flow */}
+                                {/* Base Arc (0% to 50%) in Clean Crisp White */}
                                 <circle
                                     cx="18"
                                     cy="18"
                                     r="14.5"
                                     fill="none"
-                                    stroke="url(#storageRingGradient)"
+                                    stroke="#ffffff"
                                     strokeWidth="2.6"
                                     strokeLinecap="round"
                                     strokeDasharray={91.1}
-                                    strokeDashoffset={91.1 - (Math.max(storagePercent, 0) / 100) * 91.1}
+                                    strokeDashoffset={91.1 - (Math.min(Math.max(storagePercent, 0), 50) / 100) * 91.1}
+                                    transform="rotate(-90 18 18)"
                                     className="transition-all duration-700 ease-out"
                                     style={{
-                                        filter: `drop-shadow(0 0 3px ${storageTheme.glow})`
+                                        filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.35))'
                                     }}
                                 />
+                                {/* Overflow Arc (above 50%): Dynamic Gradient Flow from White -> Orange / Red */}
+                                {storagePercent > 50 && (
+                                    <circle
+                                        cx="18"
+                                        cy="18"
+                                        r="14.5"
+                                        fill="none"
+                                        stroke="url(#storageOverflowGradient)"
+                                        strokeWidth="2.6"
+                                        strokeLinecap="round"
+                                        strokeDasharray={91.1}
+                                        strokeDashoffset={91.1 - (Math.min(storagePercent - 50, 50) / 100) * 91.1}
+                                        transform="rotate(90 18 18)"
+                                        className="transition-all duration-700 ease-out"
+                                        style={{
+                                            filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
+                                        }}
+                                    />
+                                )}
                             </svg>
 
                             {/* Database/Storage Icon Centered Inside */}

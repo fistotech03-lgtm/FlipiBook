@@ -1194,7 +1194,33 @@ exports.saveBook = async (req, res) => {
       if (!book.book_v_id) book.book_v_id = resolvedVId;
       if (mongoPages.length > 0) book.pages = mongoPages;
       if (fileSize !== undefined) book.fileSize = fileSize;
-      await book.save();
+
+      try {
+        await book.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Book Controller] Version conflict saving book ${book._id}. Performing atomic update fallback...`);
+          await Flipbook.updateOne(
+            { _id: book._id },
+            {
+              $set: {
+                flipbookName: safeName,
+                v_id: resolvedVId,
+                book_v_id: resolvedVId,
+                ...(bookFolderId ? { folder_id: bookFolderId } : {}),
+                ...(mongoPages.length > 0 ? { pages: mongoPages } : {}),
+                ...(fileSize !== undefined ? { fileSize } : {}),
+                ...(objectId && !book.userObjectID ? { userObjectID: objectId } : {}),
+                ...(customUserId && !book.userID ? { userID: customUserId } : {})
+              }
+            }
+          );
+          const freshBook = await Flipbook.findById(book._id);
+          if (freshBook) book = freshBook;
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
       if (!objectId) {
         return res.status(401).json({
@@ -1674,7 +1700,28 @@ exports.savePagesBatch = async (req, res) => {
 
     if (fileSize !== undefined) book.fileSize = fileSize;
     book.lastUpdated = new Date();
-    await book.save();
+
+    try {
+      await book.save();
+    } catch (saveErr) {
+      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+        console.warn(`[Book Controller] Version conflict in savePagesBatch for book ${book._id}. Performing atomic update fallback...`);
+        await Flipbook.updateOne(
+          { _id: book._id },
+          {
+            $set: {
+              pages: book.pages,
+              ...(fileSize !== undefined ? { fileSize } : {}),
+              lastUpdated: new Date()
+            }
+          }
+        );
+        const freshBook = await Flipbook.findById(book._id);
+        if (freshBook) book = freshBook;
+      } else {
+        throw saveErr;
+      }
+    }
 
     // Persist pages and workspace structure to disk
     try {
@@ -3198,7 +3245,26 @@ exports.renamePage = async (req, res) => {
     book.pages[pageIndex].fileName = newFileName;
     book.lastUpdated = new Date();
     book.markModified("pages");
-    await book.save();
+
+    try {
+      await book.save();
+    } catch (saveErr) {
+      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+        console.warn(`[Book Controller] Version conflict in renamePage for book ${book._id}. Performing atomic update fallback...`);
+        await Flipbook.updateOne(
+          { _id: book._id, "pages.pageNumber": page.pageNumber },
+          {
+            $set: {
+              "pages.$.name": trimmedNewName,
+              "pages.$.fileName": newFileName,
+              lastUpdated: new Date()
+            }
+          }
+        );
+      } else {
+        throw saveErr;
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -3414,7 +3480,26 @@ exports.deletePage = async (req, res) => {
     book.fileSize = book.pages.reduce((sum, p) => sum + (p.size || 0), 0);
     book.lastUpdated = new Date();
     book.markModified("pages");
-    await book.save();
+
+    try {
+      await book.save();
+    } catch (saveErr) {
+      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+        console.warn(`[Book Controller] Version conflict in deletePage for book ${book._id}. Performing atomic update fallback...`);
+        await Flipbook.updateOne(
+          { _id: book._id },
+          {
+            $set: {
+              pages: book.pages,
+              fileSize: book.fileSize,
+              lastUpdated: new Date()
+            }
+          }
+        );
+      } else {
+        throw saveErr;
+      }
+    }
 
     return res.status(200).json({
       success: true,

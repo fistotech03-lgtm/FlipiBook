@@ -169,13 +169,6 @@ const SettingsLayout = () => {
           label: "Notifications",
           icon: "basil:notification-on-outline",
         },
-        {
-          path: "shelf",
-          to: "/my-flipbooks?tab=shelf",
-          id: "shelf",
-          label: "My Shelf",
-          icon: "bi:bookshelf",
-        },
       ],
     },
     {
@@ -196,32 +189,6 @@ const SettingsLayout = () => {
         },
         {
           path: "support",
-          to: "#",
-          id: "support",
-          label: "Support",
-          icon: "griddy-icons:customer-support",
-        },
-      ],
-    },
-    {
-      title: "System & Billing",
-      items: [
-        {
-          path: "virtual-stall",
-          to: "#",
-          id: "virtual-stall",
-          label: "Virtual Stall",
-          icon: "icon-park-outline:booth",
-        },
-        {
-          path: "billing",
-          id: "billing",
-          label: "Billing and Invoice",
-          icon: "tdesign:bill",
-        },
-        {
-          path: "support",
-          to: "#",
           id: "support",
           label: "Support",
           icon: "griddy-icons:customer-support",

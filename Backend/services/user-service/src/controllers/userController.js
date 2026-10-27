@@ -29,7 +29,7 @@ const getMe = async (req, res) => {
     }
 
     const [user, profile, preferences] = await Promise.all([
-      User.findOne({ emailId: email }).lean(),
+      User.findOne({ emailId: email }).select('+password').lean(),
       Profile.findOne({ emailId: email }).lean(),
       UserPreference.findOne({ emailId: email }).lean()
     ]);
@@ -37,6 +37,8 @@ const getMe = async (req, res) => {
     if (!user && !profile) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    const hasPassword = Boolean(user?.password && typeof user.password === 'string' && user.password.trim() !== '');
 
     // Merge data, giving precedence to explicit user fields
     const combined = {
@@ -56,6 +58,7 @@ const getMe = async (req, res) => {
       country: user?.country || profile?.country || 'INDIA',
       website: user?.website || profile?.website || '',
       socials: { ...(profile?.socials || {}), ...(user?.socials || {}) },
+      hasPassword,
       preferences: preferences || {
         theme: 'system',
         language: 'en',

@@ -538,6 +538,7 @@ const PageEditor = () => {
       setPages,
       currentBook,
       v_id,
+      folder,
       setHasUnsavedChanges,
       isSaving,
       setIsSaving,
@@ -923,10 +924,10 @@ const PageEditor = () => {
       // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
       if (!activeVId) {
         const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-        const targetFolder = resolvePhysicalFolder(location.state?.folderName) || 'My_Flipbooks';
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${generatedVId}`, {
+        const targetFolderVId = location.state?.folder_v_id || location.state?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+        navigate(`/editor/${encodeURIComponent(targetFolderVId)}/${generatedVId}`, {
           replace: true,
-          state: { ...(location.state || {}), v_id: generatedVId, folderName: targetFolder }
+          state: { ...(location.state || {}), v_id: generatedVId, folder_v_id: targetFolderVId }
         });
         return;
       }
@@ -973,15 +974,15 @@ const PageEditor = () => {
           }
 
           try {
-            const backendUrl =
-              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
 
             const userEmail = user?.emailId || user?.email || location.state?.emailId || 'user@flipibook.com';
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: {
                 emailId: userEmail,
                 v_id: activeVId,
-                folderName: folder || location.state?.folderName || 'My_Flipbooks',
+                folder_id: folder,
+                folderName: location.state?.folderName,
                 bookName: decodeURIComponent(activeVId),
               },
               withCredentials: true,
@@ -995,6 +996,11 @@ const PageEditor = () => {
                   folder ||
                   location.state?.folderName,
               );
+              const resolvedFolderVId =
+                res.data.meta?.folder_v_id ||
+                res.data.meta?.folder_id ||
+                location.state?.folder_v_id ||
+                (folder && folder.startsWith('fol_') ? folder : 'fol_default');
               const bookName =
                 res.data.meta?.flipbookName ||
                 location.state?.flipbookName ||
@@ -1034,6 +1040,8 @@ const PageEditor = () => {
                 ...(prev || {}),
                 ...(fetchedMeta || {}),
                 v_id: res.data.meta?.v_id || res.data.v_id || activeVId,
+                folder_v_id: resolvedFolderVId,
+                folder_id: resolvedFolderVId,
                 folderName: actualFolderName,
                 flipbookName:
                   fetchedMeta.flipbookName ||
@@ -1048,6 +1056,14 @@ const PageEditor = () => {
                 Customized_Settings: fetchedSettings || fetchedMeta?.Customized_Settings || {},
                 share: res.data.share || (fetchedShareId ? { shareId: fetchedShareId } : undefined)
               }));
+
+              // Auto-normalize URL to show folder_v_id instead of folder name in address bar
+              if (folder && folder !== resolvedFolderVId) {
+                navigate(`/editor/${encodeURIComponent(resolvedFolderVId)}/${activeVId}`, {
+                  replace: true,
+                  state: { ...(location.state || {}), folder_v_id: resolvedFolderVId }
+                });
+              }
 
               const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;
 
@@ -1723,7 +1739,7 @@ const PageEditor = () => {
             v_id={v_id || currentBook?.v_id}
             flipbookVId={v_id || currentBook?.v_id}
             folderName={resolvePhysicalFolder(
-              currentBook?.folderName || folder || location.state?.folderName,
+              currentBook?.folderName || location.state?.folderName,
             )}
             flipbookName={
               currentBook?.flipbookName || location.state?.flipbookName || ""
@@ -1872,7 +1888,7 @@ const PageEditor = () => {
           v_id={v_id || currentBook?.v_id}
           flipbookVId={v_id || currentBook?.v_id}
           folderName={resolvePhysicalFolder(
-            currentBook?.folderName || folder || location.state?.folderName,
+            currentBook?.folderName || location.state?.folderName,
           )}
           flipbookName={
             currentBook?.flipbookName ||

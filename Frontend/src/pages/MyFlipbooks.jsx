@@ -502,6 +502,8 @@ export default function MyFlipbooks() {
             uniqueName = candidateBookName;
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
+            const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
 
             // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
@@ -667,7 +669,7 @@ export default function MyFlipbooks() {
             await new Promise(res => setTimeout(res, 80));
 
             // Navigate to the customized editor IMMEDIATELY with all in-memory pages
-            navigate(`/editor/customized_editor/${encodeURIComponent(targetFolder)}/${v_id}`, {
+            navigate(`/editor/customized_editor/${encodeURIComponent(targetFolderVId)}/${v_id}`, {
                 state: { 
                     flipbookName: uniqueName, 
                     pageCount: allPages.length,
@@ -675,6 +677,7 @@ export default function MyFlipbooks() {
                     width: maxWidth,
                     height: maxHeight,
                     orientation,
+                    folder_v_id: targetFolderVId,
                     folderName: targetFolder,
                     v_id: v_id
                 }
@@ -795,20 +798,22 @@ export default function MyFlipbooks() {
 
             console.log("Creation result:", res.data);
             const finalVId = res.data?.v_id || generatedVId;
+            const finalFolderVId = res.data?.folder_v_id || res.data?.folder_id || matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
 
             // Invalidate React Query cache so newly created book appears immediately
             queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
             queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
 
-            const redirectUrl = `/editor/${encodeURIComponent(targetFolder)}/${finalVId}`;
+            const redirectUrl = `/editor/${encodeURIComponent(finalFolderVId)}/${finalVId}`;
             console.log("Navigating with v_id:", redirectUrl);
-            navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, emailId } });
+            navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, folder_v_id: finalFolderVId, emailId } });
         } catch (e) {
             console.error("Creation failed", e);
             showAlert('Creation Warning', 'Backend save warning. Continuing to Editor with generated book ID.', 'warning');
             const fallbackVId = generatedVId || Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-            navigate(`/editor/${encodeURIComponent(targetFolder)}/${fallbackVId}`, {
-                state: { ...templateData, v_id: fallbackVId, emailId }
+            const fallbackFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+            navigate(`/editor/${encodeURIComponent(fallbackFolderVId)}/${fallbackVId}`, {
+                state: { ...templateData, v_id: fallbackVId, folder_v_id: fallbackFolderVId, emailId }
             });
         } finally {
             setIsLoading(false);

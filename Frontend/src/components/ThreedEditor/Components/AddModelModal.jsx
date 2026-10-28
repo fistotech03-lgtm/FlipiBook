@@ -131,7 +131,7 @@ const GalleryThumbnail = React.memo(({ model, fullUrl }) => {
         return () => observer.disconnect();
     }, []);
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     
     // Check if thumbnail exists
     const rawThumbnailUrl = model.thumbnail || model.thumbnailUrl || model.preview || model.previewUrl;
@@ -274,7 +274,7 @@ export default function AddModelModal({
     const fetchModels = async () => {
         try {
             setLoading(true);
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const emailId = user?.emailId || user?.email;
             
             const promises = [
@@ -405,7 +405,7 @@ export default function AddModelModal({
         }
         
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             await axios.delete(`${backendUrl}/api/3d-models/delete-model/${model.modelId}`, {
                 data: { emailId }
             });
@@ -427,7 +427,7 @@ export default function AddModelModal({
         if (!emailId || selectedForDeletion.length === 0) return;
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const idsToDelete = selectedForDeletion.map(m => m.modelId);
             
             await axios.post(`${backendUrl}/api/3d-models/delete-multiple-models`, {
@@ -592,7 +592,7 @@ export default function AddModelModal({
                             ) : filteredModels.length > 0 ? (
                                 <div className="grid grid-cols-5 gap-[0.8vw]">
                                     {filteredModels.map((model) => {
-                                        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                                        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                                         const rawUrl = (model.url && (model.url.startsWith('http://') || model.url.startsWith('https://'))) 
                                             ? model.url 
                                             : `${backendUrl}${model.url?.startsWith('/') ? '' : '/'}${model.url}`;

@@ -42,6 +42,7 @@ export const useSaveEngine = ({
   setPages,
   currentBook,
   v_id,
+  folder,
   setHasUnsavedChanges,
   isSaving,
   setIsSaving,
@@ -114,8 +115,7 @@ export const useSaveEngine = ({
 
       const userEmail = user?.emailId || user?.email;
       const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
       const fNameFor3D = resolvePhysicalFolder(
@@ -1190,13 +1190,25 @@ export const useSaveEngine = ({
         });
         console.log("Flipbook saved successfully:", lastRes.data);
 
-        // Transition to project URL if we don't have a v_id yet
-        if (!v_id) {
-          const folderName = resolvePhysicalFolder(
-            currentBook?.folderName || location.state?.folderName,
-          );
-          const newUrl = `/editor/${encodeURIComponent(folderName)}/${lastRes.data.v_id}`;
-          navigate(newUrl, { replace: true, state: location.state });
+        // Transition to project URL with folder_v_id if missing or if URL currently contains folder name
+        const currentFolderParam = (typeof folder !== 'undefined' && folder)
+          ? folder
+          : (location?.pathname?.split('/editor/')[1]?.split('/')[0] || '');
+
+        const folderVId =
+          lastRes.data?.folder_v_id ||
+          lastRes.data?.folder_id ||
+          lastRes.data?.book?.folder_v_id ||
+          lastRes.data?.book?.folder_id ||
+          currentBook?.folder_v_id ||
+          currentBook?.folder_id ||
+          location?.state?.folder_v_id ||
+          (currentFolderParam && currentFolderParam.startsWith('fol_') ? currentFolderParam : 'fol_default');
+
+        const activeBookVId = lastRes.data?.v_id || v_id;
+        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_'))) {
+          const newUrl = `/editor/${encodeURIComponent(folderVId)}/${activeBookVId}`;
+          navigate(newUrl, { replace: true, state: location?.state });
         }
       }
     } catch (err) {

@@ -405,7 +405,7 @@ export const convert3dsToGlbBlob = async (file, { setLoadingText, setSafeProgres
 
 export const convertModelViaBackend = async (file, ext, baseName, helpers = {}) => {
   const { setLoadingText, setSafeProgress, startConversionTicker, stopConversionTicker } = helpers;
-  const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
   const authUser = helpers?.user || store.getState()?.auth?.user;
   const emailId = authUser?.emailId || authUser?.email || 'guest_user';

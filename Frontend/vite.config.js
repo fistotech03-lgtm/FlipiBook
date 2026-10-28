@@ -47,6 +47,16 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        "/hdri": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        "/textures": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
   };

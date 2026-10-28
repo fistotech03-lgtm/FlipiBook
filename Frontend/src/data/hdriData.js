@@ -1,5 +1,5 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-const HDRI_BASE_URL = `${BACKEND_URL}/hdri`;
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL !== undefined ? import.meta.env.VITE_BACKEND_URL : '') || '';
+const HDRI_BASE_URL = BACKEND_URL ? `${BACKEND_URL}/hdri` : '/hdri';
 
 export const builtInHdris = [
   {

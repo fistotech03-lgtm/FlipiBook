@@ -172,7 +172,7 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
       const imageUrl = imgToDelete?.url || imgToDelete?.src;
 
       if (imageUrl && typeof imageUrl === 'string' && (imageUrl.includes('/customized_assets/') || imageUrl.includes('supabase.co'))) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         axios.post(`${backendUrl}/api/flipbook/delete-customized-asset`, { url: imageUrl }).catch((err) => {
           console.warn("Failed to delete asset from Supabase:", err);
         });
@@ -440,7 +440,7 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
       const currentCustom = prev.sound?.customBgSounds || [];
       const targetSound = currentCustom.find(s => s.id === id);
       if (targetSound?.url && typeof targetSound.url === 'string' && (targetSound.url.includes('/customized_assets/') || targetSound.url.includes('supabase.co'))) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         axios.post(`${backendUrl}/api/flipbook/delete-customized-asset`, { url: targetSound.url }).catch((err) => {
           console.warn("Failed to delete custom sound from Supabase:", err);
         });

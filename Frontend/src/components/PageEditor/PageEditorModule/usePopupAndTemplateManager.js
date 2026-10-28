@@ -755,7 +755,7 @@ export const usePopupAndTemplateManager = ({
     saveToHistory();
 
     const { width: targetW, height: targetH } = getFlipbookDimensions();
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
     const insertIdx = targetIndex !== undefined && targetIndex !== null ? targetIndex : activePageIndex;
 

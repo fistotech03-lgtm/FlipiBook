@@ -124,7 +124,7 @@ export const useCanvasAssetInsertion = ({
           const emailId = user?.emailId || user?.email;
           if (!emailId) return;
 
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const resolvedFolder = resolvePhysicalFolder(folderName);
           const resolvedBook = flipbookName || 'Untitled_Document';
           const subFolder = dataType === 'gif' ? 'gif' : 'Image';
@@ -865,7 +865,7 @@ export const useCanvasAssetInsertion = ({
             const emailId = user?.emailId || user?.email;
             if (!emailId) return;
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const resolvedFolder = resolvePhysicalFolder(folderName);
             const resolvedBook = flipbookName || 'Untitled_Document';
 

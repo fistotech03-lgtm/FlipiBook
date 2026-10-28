@@ -309,7 +309,7 @@ export default function ThreeDDashboard({
 
   const fileInputRef = useRef(null);
   const menuRef = useRef(null);
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
   // Load Favorites and UI preferences from storage
   useEffect(() => {

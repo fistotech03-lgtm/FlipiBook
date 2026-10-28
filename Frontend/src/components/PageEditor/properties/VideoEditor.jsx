@@ -1791,7 +1791,7 @@ const VideoEditor = ({
         formData.append('file', file);
 
         try {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data && (res.data.url || res.data.filename)) {
             const serverUrl = resolveUploadsPath(res.data.serverUrl || res.data.storageUrl || res.data.url);

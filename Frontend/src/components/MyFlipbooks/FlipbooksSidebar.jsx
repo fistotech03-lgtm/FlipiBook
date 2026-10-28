@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
@@ -246,6 +246,80 @@ export default function FlipbooksSidebar({
         ? `${Math.round(effectiveTotal / (1024 * 1024 * 1024))} GB`
         : `${Math.round(effectiveTotal / (1024 * 1024))} MB`;
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
+
+    // Dynamic storage gradient flow and theme
+    // <= 50%: Clean white flow
+    // > 50% & < 85%: Gradient flow starting in crisp white, transitioning to glowing orange
+    // >= 85%: Deep dark gradient flow from white through orange to warning red
+    const storageTheme = useMemo(() => {
+        if (storagePercent >= 85) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#ea543a',
+                endColor: '#ef4444',
+                accentColor: '#ef4444',
+                glow: 'rgba(239, 68, 68, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 40%, #ea543a 70%, #ef4444 100%)',
+                badgeBg: '#ef4444'
+            };
+        }
+        if (storagePercent > 50) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#fb923c',
+                endColor: '#ea543a',
+                accentColor: '#ea543a',
+                glow: 'rgba(234, 84, 58, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 50%, #ea543a 100%)',
+                badgeBg: '#ea543a'
+            };
+        }
+        return {
+            startColor: '#ffffff',
+            midColor: '#ffffff',
+            endColor: '#cbd5e1',
+            accentColor: '#ffffff',
+            glow: 'rgba(255, 255, 255, 0.35)',
+            linearCss: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
+            badgeBg: '#ffffff'
+        };
+    }, [storagePercent]);
+
+    // Continuous Conic Gradient background for unbroken circular progress flow
+    const conicBackground = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+
+        if (p <= 0) {
+            return 'transparent';
+        }
+
+        if (p <= 50) {
+            // 0% to 50%: Pure clean crisp white arc
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        if (p < 85) {
+            // > 50% and < 85%: Starts white at 12 o'clock, smoothly flows into warm orange at 50%, reaching radiant orange at tip
+            const whiteStop = Math.min(140, deg * 0.55);
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        // >= 85%: Starts white, flows into orange at 50%, reaching warning crimson red at tip
+        const whiteStop = 120;
+        return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a 270deg, #ef4444 ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+    }, [storagePercent]);
+
+    // Tip coordinates for rounded end cap along the circular stroke
+    const tipCoords = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+        const rad = (deg - 90) * (Math.PI / 180);
+        return {
+            left: (50 + 46.5 * Math.cos(rad)).toFixed(2),
+            top: (50 + 46.5 * Math.sin(rad)).toFixed(2)
+        };
+    }, [storagePercent]);
 
     const isBooksActive = dashboardMode === 'books' && activeFolder !== 'Favorites' && activeFolder !== 'Trash';
     const is3dActive = dashboardMode === '3d';
@@ -636,138 +710,87 @@ export default function FlipbooksSidebar({
             <div ref={storageContainerRef} className="mt-auto relative z-30 pt-[0.6vw] flex-none">
                 {/* Floating Storage Card Popover (Shown on click toggle) */}
                 {isStorageBoxOpen && (
-                    <div className="absolute bottom-[calc(100%+0.6vw)] left-0 w-full bg-white rounded-[0.6vw] p-[0.85vw] border border-gray-200/90 shadow-[0_12px_32px_rgba(0,0,0,0.35)] flex flex-col select-none z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        {/* Top Header: Database/Storage Icon + Title + Close Button */}
-                        <div className="flex items-center justify-between mb-[0.55vw]">
-                            <div className="flex items-center gap-[0.5vw]">
-                                <div className="relative flex items-center justify-center">
-                                    <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                        <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
-                                        <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
-                                        <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
-                                    </svg>
-                                    <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
+                    <>
+                        {/* Backdrop to close modal when clicking outside */}
+                        <div
+                            className="fixed inset-0 z-40"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsStorageBoxOpen(false);
+                            }}
+                        />
+
+                        <div className="absolute bottom-[calc(100%+0.6vw)] left-0 w-full bg-white rounded-[0.6vw] p-[0.85vw] border border-gray-200/90 shadow-[0_12px_32px_rgba(0,0,0,0.35)] flex flex-col select-none z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            {/* Top Header: Database/Storage Icon + Title + Close Button */}
+                            <div className="flex items-center justify-between mb-[0.55vw]">
+                                <div className="flex items-center gap-[0.5vw]">
+                                    <div className="relative flex items-center justify-center">
+                                        <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
+                                            <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
+                                            <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
+                                        </svg>
+                                        <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
+                                    </div>
+                                    <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
                                 </div>
-                                <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsStorageBoxOpen(false);
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-[0.2vw] rounded-full transition-colors cursor-pointer flex items-center justify-center -mr-[0.2vw] -mt-[0.2vw]"
+                                    title="Close Storage"
+                                    aria-label="Close Storage"
+                                >
+                                    <X size="0.85vw" strokeWidth={2.2} />
+                                </button>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsStorageBoxOpen(false);
-                                }}
-                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-[0.2vw] rounded-full transition-colors cursor-pointer flex items-center justify-center -mr-[0.2vw] -mt-[0.2vw]"
-                                title="Close Storage"
-                                aria-label="Close Storage"
-                            >
-                                <X size="0.85vw" strokeWidth={2.2} />
-                            </button>
+                            {/* Progress Bar */}
+                            <div className="w-full h-[0.32vw] bg-[#e5e7eb] rounded-full overflow-hidden mb-[0.45vw]">
+                                <div
+                                    className="h-full rounded-full transition-all duration-500 ease-out"
+                                    style={{
+                                        width: `${storagePercent}%`,
+                                        background: storageTheme.linearCss
+                                    }}
+                                ></div>
+                            </div>
+
+                            {/* Storage Usage Stats */}
+                            <div className="flex items-center justify-between text-[0.7vw] text-[#4b5563] font-semibold mb-[0.55vw]">
+                                <span>
+                                    {isLoadingStorage ? 'Calculating...' : `${usedFormatted} of ${totalFormatted} used`}
+                                </span>
+                                <span style={{ color: storageTheme.accentColor }} className="font-semibold transition-colors duration-300">{storagePercent}%</span>
+                            </div>
+
+                            {/* Small Upgrade Button with Gradient Background */}
+                            <div className="pt-[0.45vw] border-t border-[#f3f4f6]">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsStorageBoxOpen(false);
+                                        navigate('/settings/profile');
+                                    }}
+                                    className="w-full py-[0.42vw] px-[0.75vw] rounded-[0.5vw] text-[0.75vw] font-semibold text-white flex items-center justify-center gap-[0.35vw] shadow-[0_3px_12px_rgba(234,84,58,0.3)] hover:shadow-[0_4px_16px_rgba(234,84,58,0.45)] hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer group"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #fb923c 0%, #ea543a 50%, #dc2626 100%)'
+                                    }}
+                                >
+                                    <span>Upgrade</span>
+                                    <ArrowRight size="0.75vw" strokeWidth={2.4} className="transition-transform group-hover:translate-x-[0.15vw]" />
+                                </button>
+                            </div>
+
+                            {/* Downward pointer caret */}
+                            <div className="absolute -bottom-[0.35vw] left-[1.1vw] w-[0.7vw] h-[0.7vw] bg-white border-r border-b border-gray-200/90 rotate-45"></div>
                         </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full h-[0.32vw] bg-[#e5e7eb] rounded-full overflow-hidden mb-[0.45vw]">
-                            <div
-                                className="h-full bg-[#ea543a] rounded-full transition-all duration-500 ease-out"
-                                style={{ width: `${storagePercent}%` }}
-                            ></div>
-                        </div>
-
-                        {/* Storage Usage Stats */}
-                        <div className="flex items-center justify-between text-[0.7vw] text-[#4b5563] font-semibold mb-[0.6vw]">
-                            <span>
-                                {isLoadingStorage ? 'Calculating...' : `${usedFormatted} of ${totalFormatted} used`}
-                            </span>
-                            <span className="text-[#374151] font-semibold">{storagePercent}%</span>
-                        </div>
-
-                        {/* Divider line & Upgrade Profile Button */}
-                        {!isUpgradeCardClosed && (
-                            <>
-                                <div className="border-t border-[#f3f4f6] mb-[0.65vw]"></div>
-
-                                <div className="relative">
-                                    {/* 3D Gold Crown */}
-                                    <div className="absolute -top-[1.05vw] -left-[0.5vw] w-[2.35vw] h-[1.88vw] -rotate-[16deg] z-20 select-none pointer-events-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]">
-                                        <svg viewBox="0 0 68 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                                            <defs>
-                                                <linearGradient id="goldGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" stopColor="#FFF7C2" />
-                                                    <stop offset="20%" stopColor="#FAD04C" />
-                                                    <stop offset="50%" stopColor="#E5A620" />
-                                                    <stop offset="80%" stopColor="#FCE082" />
-                                                    <stop offset="100%" stopColor="#A86B06" />
-                                                </linearGradient>
-                                                <linearGradient id="goldShine" x1="0%" y1="100%" x2="100%" y2="0%">
-                                                    <stop offset="0%" stopColor="#7A4B00" />
-                                                    <stop offset="35%" stopColor="#FFDE6A" />
-                                                    <stop offset="65%" stopColor="#CF8B13" />
-                                                    <stop offset="100%" stopColor="#FFFDF2" />
-                                                </linearGradient>
-                                                <radialGradient id="crownVelvet" cx="50%" cy="40%" r="60%">
-                                                    <stop offset="0%" stopColor="#8A151B" />
-                                                    <stop offset="70%" stopColor="#5E0B10" />
-                                                    <stop offset="100%" stopColor="#3B0508" />
-                                                </radialGradient>
-                                                <radialGradient id="rubyGem" cx="35%" cy="35%" r="65%">
-                                                    <stop offset="0%" stopColor="#FF6B6B" />
-                                                    <stop offset="40%" stopColor="#DC2626" />
-                                                    <stop offset="100%" stopColor="#7F1D1D" />
-                                                </radialGradient>
-                                                <radialGradient id="blueGem" cx="35%" cy="35%" r="65%">
-                                                    <stop offset="0%" stopColor="#60A5FA" />
-                                                    <stop offset="50%" stopColor="#2563EB" />
-                                                    <stop offset="100%" stopColor="#1E3A8A" />
-                                                </radialGradient>
-                                                <radialGradient id="emeraldGem" cx="35%" cy="35%" r="65%">
-                                                    <stop offset="0%" stopColor="#34D399" />
-                                                    <stop offset="50%" stopColor="#059669" />
-                                                    <stop offset="100%" stopColor="#064E3B" />
-                                                </radialGradient>
-                                                <radialGradient id="pearlSphere" cx="35%" cy="35%" r="65%">
-                                                    <stop offset="0%" stopColor="#FFFFFF" />
-                                                    <stop offset="60%" stopColor="#FFF3D6" />
-                                                    <stop offset="100%" stopColor="#D4A747" />
-                                                </radialGradient>
-                                            </defs>
-
-                                            <path d="M 12 40 C 14 26, 54 26, 56 40 Z" fill="url(#crownVelvet)" opacity="0.9" />
-                                            <path d="M 10 40 Q 34 20 34 11 Q 34 20 58 40" stroke="url(#goldGradMain)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                                            <path d="M 7 42 Q 34 47 61 42 L 59 50 Q 34 54 9 50 Z" fill="url(#goldShine)" stroke="#7A4B00" strokeWidth="0.8" />
-                                            <circle cx="16" cy="46.5" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                            <circle cx="28" cy="48" r="2" fill="url(#blueGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                            <circle cx="40" cy="48" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                            <circle cx="52" cy="46.5" r="2" fill="url(#emeraldGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                            <path d="M 7 42 L 3 19 L 20 30 L 34 11 L 48 30 L 65 19 L 61 42 Q 34 47 7 42 Z" fill="url(#goldGradMain)" stroke="#8A5A00" strokeWidth="0.9" />
-                                            <path d="M 10 40 L 7 24 L 20 32 L 34 15 L 48 32 L 61 24 L 58 40 Q 34 44 10 40 Z" fill="url(#goldShine)" opacity="0.6" />
-                                            <circle cx="3" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                            <circle cx="20" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                            <circle cx="34" cy="10" r="4.1" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                            <circle cx="48" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                            <circle cx="65" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                            <polygon points="34,22 38.5,28 34,34 29.5,28" fill="url(#rubyGem)" stroke="#FFF3B0" strokeWidth="0.8" />
-                                            <circle cx="20" cy="36" r="1.6" fill="url(#blueGem)" />
-                                            <circle cx="48" cy="36" r="1.6" fill="url(#emeraldGem)" />
-                                        </svg>
-                                    </div>
-
-                                    <button
-                                        onClick={() => navigate('/settings/profile')}
-                                        className="w-full relative overflow-hidden py-[0.52vw] px-[0.8vw] rounded-[0.65vw] text-[0.78vw] font-medium text-white flex items-center justify-center gap-[0.45vw] shadow-[0_4px_14px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.35)] active:scale-[0.99] transition-all cursor-pointer group"
-                                        style={{
-                                            background: 'radial-gradient(ellipse at 50% 30%, #25282d 0%, #15171a 70%, #0d0e10 100%)'
-                                        }}
-                                    >
-                                        <span className="tracking-wide">Upgrade Profile</span>
-                                        <ArrowRight size="0.85vw" strokeWidth={2.4} className="transition-transform group-hover:translate-x-[0.15vw]" />
-                                    </button>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Downward pointer caret */}
-                        <div className="absolute -bottom-[0.35vw] left-[1.1vw] w-[0.7vw] h-[0.7vw] bg-white border-r border-b border-gray-200/90 rotate-45"></div>
-                    </div>
+                    </>
                 )}
 
                 {/* Collapsed Trigger Button: Storage Icon with circular percentage border */}
@@ -784,40 +807,46 @@ export default function FlipbooksSidebar({
                     >
                         {/* Circular Progress Ring */}
                         <div className="relative w-[2.6vw] h-[2.6vw] min-w-[40px] min-h-[40px] flex items-center justify-center">
-                            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
-                                {/* Background Track */}
-                                <circle
-                                    cx="18"
-                                    cy="18"
-                                    r="14.5"
-                                    fill="#1b2433"
-                                    stroke="#2c3749"
-                                    strokeWidth="2.6"
+                            {/* Background Track Circle */}
+                            <div className="absolute inset-0 rounded-full border-[2.6px] border-[#243042] bg-[#141a24] box-border" />
+
+                            {/* Continuous Conic Gradient Progress Arc */}
+                            <div
+                                className="absolute inset-0 rounded-full pointer-events-none transition-all duration-700 ease-out"
+                                style={{
+                                    background: conicBackground,
+                                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
+                                }}
+                            />
+
+
+                            {/* End Round Cap at active progress tip */}
+                            {storagePercent > 1 && storagePercent < 99 && (
+                                <div
+                                    className="absolute w-[2.6px] h-[2.6px] rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-700 ease-out"
+                                    style={{
+                                        top: `${tipCoords.top}%`,
+                                        left: `${tipCoords.left}%`,
+                                        backgroundColor: storageTheme.accentColor,
+                                        boxShadow: `0 0 4px ${storageTheme.glow}`
+                                    }}
                                 />
-                                {/* Orange Percentage Progress Ring */}
-                                <circle
-                                    cx="18"
-                                    cy="18"
-                                    r="14.5"
-                                    fill="none"
-                                    stroke="#ea543a"
-                                    strokeWidth="2.6"
-                                    strokeLinecap="round"
-                                    strokeDasharray={91.1}
-                                    strokeDashoffset={91.1 - (Math.max(storagePercent, 0) / 100) * 91.1}
-                                    className="transition-all duration-700 ease-out"
-                                />
-                            </svg>
+                            )}
 
                             {/* Database/Storage Icon Centered Inside */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="relative z-10 flex items-center justify-center pointer-events-none">
                                 <div className="relative flex items-center justify-center">
-                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                         <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
                                         <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
                                         <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
                                     </svg>
-                                    <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] min-w-[5px] min-h-[5px] bg-[#ea543a] rounded-full ring-2 ring-[#1b2433]"></div>
+                                    <div
+                                        className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] min-w-[5px] min-h-[5px] rounded-full ring-2 ring-[#1b2433] transition-colors duration-500"
+                                        style={{ backgroundColor: storageTheme.badgeBg }}
+                                    ></div>
                                 </div>
                             </div>
                         </div>

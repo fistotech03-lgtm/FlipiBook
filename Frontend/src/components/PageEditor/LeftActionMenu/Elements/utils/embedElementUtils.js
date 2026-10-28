@@ -137,6 +137,8 @@ export const getEmbedSvgCode = (isClick = false) => {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
+       data-stroke-alignment="Inside"
+       data-stroke-position="Inside"
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
@@ -148,12 +150,12 @@ export const getEmbedSvgCode = (isClick = false) => {
       <g class="embed-content-group" pointer-events="none">
         <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
           <div xmlns="http://www.w3.org/1999/xhtml" class="embed-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;">
-            <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen="true" allowtransparency="true"></iframe>
+            <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen="true" allowtransparency="true"></iframe>
             ${overlayHtml}
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 };
@@ -199,6 +201,8 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
+       data-stroke-alignment="Inside"
+       data-stroke-position="Inside"
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
@@ -210,12 +214,12 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
       <g class="embed-content-group" pointer-events="none">
         <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
           <div xmlns="http://www.w3.org/1999/xhtml" class="embed-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;">
-            <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen="true" allowtransparency="true"></iframe>
+            <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius: 0px;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen="true" allowtransparency="true"></iframe>
             ${overlayHtml}
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 

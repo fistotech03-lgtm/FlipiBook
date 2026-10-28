@@ -85,7 +85,7 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
     }
     if (validFiles.length > 0) {
       setIsUploading(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       const uploadPromises = validFiles.map(async (newFile) => {
         const tempUrl = URL.createObjectURL(newFile);
@@ -156,7 +156,7 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
     if (show && (replaceModalTab === galleryTabName || replaceModalTab === 'Upload' || galleryAssets.length === 0)) {
       const fetchAssets = async () => {
         if (!user) return;
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         try {
           const res = await axios.get(`${backendUrl}/api/flipbook/get-gallery-assets`, {
             params: { emailId: user.emailId || user.email, type: mediaType }
@@ -185,7 +185,7 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
     }
     
     if (user) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       
       try {
         const res = await axios.post(`${backendUrl}/api/flipbook/rename-gallery-asset`, {
@@ -481,7 +481,7 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                   };
 
                   if (user) {
-                    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                     const formData = new FormData();
                     formData.append('emailId', user.emailId || user.email);
                     formData.append('isGallery', 'true');
@@ -598,7 +598,7 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (user) {
-                              const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                              const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                               try {
                                 await axios.post(`${backendUrl}/api/flipbook/delete-gallery-asset`, {
                                   emailId: user.emailId || user.email,

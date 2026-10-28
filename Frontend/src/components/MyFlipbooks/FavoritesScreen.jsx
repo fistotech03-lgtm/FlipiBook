@@ -345,15 +345,17 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
+        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
-            `/editor/customized_editor/${encodeURIComponent(targetFolder || 'My_Flipbooks')}/${identifier}`,
+            `/editor/customized_editor/${encodeURIComponent(folderVId)}/${identifier}`,
             {
                 state: {
                     flipbookName: book.realName,
                     pageCount: pageCountVal,
                     pages: pagesArray,
                     v_id: book.v_id,
+                    folder_v_id: folderVId,
                     folderName: targetFolder || 'My_Flipbooks',
                     width: book.width,
                     height: book.height,
@@ -377,12 +379,14 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
+        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
         const identifier = book.v_id || encodeURIComponent(book.realName);
-        navigate?.(`/editor/${encodeURIComponent(targetFolder || 'My_Flipbooks')}/${identifier}`, {
+        navigate?.(`/editor/${encodeURIComponent(folderVId)}/${identifier}`, {
             state: {
                 flipbookName: book.realName,
                 pages: pagesArray,
                 v_id: book.v_id,
+                folder_v_id: folderVId,
                 folderName: targetFolder || 'My_Flipbooks',
                 width: book.width,
                 height: book.height,

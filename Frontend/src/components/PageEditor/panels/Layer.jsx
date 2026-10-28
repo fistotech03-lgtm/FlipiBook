@@ -613,15 +613,17 @@ const Layer = ({
         return;
       }
     }
-    const path = folder
-      ? `/editor/customized_editor/${folder}/${v_id}`
+    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+    const path = folderVId
+      ? `/editor/customized_editor/${encodeURIComponent(folderVId)}/${v_id}`
       : `/editor/customized_editor/${v_id}`;
     navigate(path, {
       state: {
         pages,
         pageCount: pages?.length || 1,
         flipbookName: currentBook?.flipbookName,
-        folderName: folder,
+        folder_v_id: folderVId,
+        folderName: currentBook?.folderName || folder,
         v_id
       }
     });
@@ -676,7 +678,7 @@ const Layer = ({
     const fetchBooks = async () => {
       const emailId = user?.emailId || user?.email;
       if (emailId) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         try {
           const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId } });
           if (res.data && res.data.books) {

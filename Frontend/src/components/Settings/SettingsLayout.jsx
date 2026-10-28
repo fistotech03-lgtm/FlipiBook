@@ -283,7 +283,7 @@ const SettingsLayout = () => {
             <div key={index} className="mb-[1.2vw]">
               {/* Group Title with Line */}
               <div className="flex items-center gap-[0.75vw] mb-[0.6vw] px-[0.3vw]">
-                <h4 className="text-[0.82vw] font-semibold text-gray-300 whitespace-nowrap">
+                <h4 className="text-[0.875vw] font-semibold text-gray-300 whitespace-nowrap">
                   {group.title}
                 </h4>
                 <div className="h-[1px] bg-[#243042] flex-1"></div>
@@ -308,7 +308,7 @@ const SettingsLayout = () => {
                       key={item.id || item.path}
                       to={destination}
                       className={`
-                        w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.82vw] cursor-pointer select-none
+                        w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none
                         ${
                           isActive
                             ? "bg-[#2c3749] text-white font-medium shadow-xs"

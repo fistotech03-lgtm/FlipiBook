@@ -42,6 +42,7 @@ export const useSaveEngine = ({
   setPages,
   currentBook,
   v_id,
+  folder,
   setHasUnsavedChanges,
   isSaving,
   setIsSaving,
@@ -1190,6 +1191,10 @@ export const useSaveEngine = ({
         console.log("Flipbook saved successfully:", lastRes.data);
 
         // Transition to project URL with folder_v_id if missing or if URL currently contains folder name
+        const currentFolderParam = (typeof folder !== 'undefined' && folder)
+          ? folder
+          : (location?.pathname?.split('/editor/')[1]?.split('/')[0] || '');
+
         const folderVId =
           lastRes.data?.folder_v_id ||
           lastRes.data?.folder_id ||
@@ -1197,13 +1202,13 @@ export const useSaveEngine = ({
           lastRes.data?.book?.folder_id ||
           currentBook?.folder_v_id ||
           currentBook?.folder_id ||
-          location.state?.folder_v_id ||
-          (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+          location?.state?.folder_v_id ||
+          (currentFolderParam && currentFolderParam.startsWith('fol_') ? currentFolderParam : 'fol_default');
 
         const activeBookVId = lastRes.data?.v_id || v_id;
-        if (!v_id || (folder && !folder.startsWith('fol_'))) {
+        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_'))) {
           const newUrl = `/editor/${encodeURIComponent(folderVId)}/${activeBookVId}`;
-          navigate(newUrl, { replace: true, state: location.state });
+          navigate(newUrl, { replace: true, state: location?.state });
         }
       }
     } catch (err) {

@@ -1,9 +1,9 @@
-﻿/**
+/**
  * properties/index.js
  * Central barrel file for editor properties and panels.
  */
 
-export { default as DimensionProperties, DimensionInput } from './DimensionProperties';
+export { default as TransformProperties, DimensionInput } from './TransformProperties';
 export { default as PageProperties, getDocumentInfo } from './PageProperties';
 export { default as TextEditor } from './TextEditor';
 export { default as VideoEditor } from './VideoEditor';

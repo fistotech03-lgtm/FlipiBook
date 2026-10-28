@@ -151,10 +151,14 @@ const MainEditor = ({
 
 
   const isConvertedFlipbook = Boolean(isPdfProject || (pages && pages.some(p => p.html && (p.html.includes('PDF Background') || p.html.includes('pdf-vector-layer') || p.html.includes('Document Shield')))));
+  const isPdfMode = Boolean(isPdfProject || isConvertedFlipbook);
 
   const pdfDefaultsSetRef = useRef(false);
   useEffect(() => {
     if (isConvertedFlipbook) {
+      setIsElementsModalOpen(false);
+      setIsStylesModalOpen(false);
+      setIsIconsModalOpen(false);
       if (!pdfDefaultsSetRef.current) {
         if (setActiveTopTool) setActiveTopTool('interaction');
         pdfDefaultsSetRef.current = true;
@@ -510,6 +514,29 @@ const MainEditor = ({
   });
 
   handleRotateRef.current = handleRotate;
+
+  useEffect(() => {
+    window.editorRotate = handleRotate;
+    window.editorFlip = handleFlip;
+
+    const onEditorRotate = (e) => {
+      if (handleRotate && e.detail) {
+        handleRotate(e.detail.angle, e.detail.isFinal !== false);
+      }
+    };
+    const onEditorFlip = (e) => {
+      if (handleFlip && e.detail) {
+        handleFlip(e.detail.direction);
+      }
+    };
+    window.addEventListener('editor-rotate', onEditorRotate);
+    window.addEventListener('editor-flip', onEditorFlip);
+
+    return () => {
+      window.removeEventListener('editor-rotate', onEditorRotate);
+      window.removeEventListener('editor-flip', onEditorFlip);
+    };
+  }, [handleRotate, handleFlip]);
 
 
   // ── Modular Hook Call: Canvas Context Menu & Interaction Badges ──
@@ -1281,10 +1308,6 @@ const getDraggableElement = (target, canvasRoot) => {
         onRedo={onRedo}
         canUndo={canUndo}
         canRedo={canRedo}
-        rotation={rotation}
-        onRotate={handleRotate}
-        onFlipH={() => handleFlip('h')}
-        onFlipV={() => handleFlip('v')}
         onAlign={handleAlign}
         hideTools={isPdfProject}
 
@@ -1516,7 +1539,7 @@ const getDraggableElement = (target, canvasRoot) => {
           }}
         >
           {/* Left Action Menu (Elements, Templets, Styles, Icons) */}
-          {!isPopupEditor && (
+          {!isPopupEditor && !isPdfMode && (
             <LeftActionMenu
               isRulerEnabled={localRulerEnabled}
               activePageIndex={activePageIndex}
@@ -1555,43 +1578,49 @@ const getDraggableElement = (target, canvasRoot) => {
           )}
 
           {/* Draggable Add Elements Modal */}
-          <AddElementsModal
-            isOpen={isElementsModalOpen}
-            onClose={() => setIsElementsModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            pages={pages}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            setSelectedLayerId={setSelectedLayerId}
-            setActiveMainTool={setActiveMainTool}
-            baseWidth={baseWidth}
-            baseHeight={baseHeight}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <AddElementsModal
+              isOpen={isElementsModalOpen}
+              onClose={() => setIsElementsModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              pages={pages}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              setSelectedLayerId={setSelectedLayerId}
+              setActiveMainTool={setActiveMainTool}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Draggable Styles Modal */}
-          <StylesModal
-            isOpen={isStylesModalOpen}
-            onClose={() => setIsStylesModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <StylesModal
+              isOpen={isStylesModalOpen}
+              onClose={() => setIsStylesModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Draggable Icons Modal */}
-          <IconsModal
-            isOpen={isIconsModalOpen}
-            onClose={() => setIsIconsModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            setSelectedLayerId={setSelectedLayerId}
-            setActiveMainTool={setActiveMainTool}
-            baseWidth={baseWidth}
-            baseHeight={baseHeight}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <IconsModal
+              isOpen={isIconsModalOpen}
+              onClose={() => setIsIconsModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              setSelectedLayerId={setSelectedLayerId}
+              setActiveMainTool={setActiveMainTool}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Modular Canvas Viewport */}
           <CanvasViewport

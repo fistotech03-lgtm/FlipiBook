@@ -1,10 +1,10 @@
-﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getVisualBBox, getCanvasBounds } from '../mainEditor/utils/geometryUtils';
 import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, ChevronRight, Upload, Link, Check, FileText, Video } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import {
-  DimensionProperties,
+  TransformProperties,
   PageProperties,
   ShapeProperties,
   ElementShapesProperties,
@@ -821,9 +821,9 @@ const RightSidebar = ({
         </div>
       )}
 
-      {/* Persistent Dimension Section (Common for all) */}
+      {/* Persistent Transform Section (Common for all properties) */}
       {!is3DModalOpen && (
-        <DimensionProperties
+        <TransformProperties
           selectedLayerId={selectedLayerId}
           selectedElementProps={selectedElementProps}
           isDimensionDisabled={isDimensionDisabled}

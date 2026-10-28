@@ -19,6 +19,8 @@ export const IconsMenuIcon = ({ className = "w-[1.1vw] h-[1.1vw]" }) => (
 );
 
 export const LeftActionMenu = ({
+  isPdfProject = false,
+  isPdfMode = false,
   isRulerEnabled = true,
   activePageIndex = 0,
   onOpenTemplateModal,
@@ -32,6 +34,8 @@ export const LeftActionMenu = ({
   onToggleIconsModal,
   onCloseIconsModal,
 }) => {
+  if (isPdfProject || isPdfMode) return null;
+
   const [rulerActive, setRulerActive] = useState(isRulerEnabled);
   const menuContainerRef = useRef(null);
 

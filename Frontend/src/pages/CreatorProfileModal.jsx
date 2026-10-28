@@ -58,7 +58,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                     observer.disconnect();
                     setFetching(true);
                     axios
-                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
                         .then((res) => {
                             if (res.data?.html) {
                                 const fontsToLoad = new Set();

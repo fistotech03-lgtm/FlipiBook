@@ -50,7 +50,7 @@ const EditorLayout = () => {
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const res = await axios.get(`${backendUrl}/api/usersetting/get-settings`, {
-            params: { emailId: user.emailId || user.email }
+            withCredentials: true
           });
           
           if (res.data) {

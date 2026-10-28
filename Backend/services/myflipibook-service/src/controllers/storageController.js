@@ -3,24 +3,13 @@ const PageEditorSettings = require('../models/pageEditorSettings');
 const User = require('../models/user');
 const Flipbook = require('../models/flipbook');
 const { calculateUserStorage } = require('../utils/storageHelper');
-const { getAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
+const { getAuthUser, resolveAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 
 /**
  * Resolves user credentials and builds query specifically for pageEditorSettings
  */
 const resolveSettingsUser = async (req) => {
-  let { objectId, customUserId, rawId, emailId } = getAuthUser(req);
-
-  // If objectId is not in token but emailId is present, resolve user from DB
-  if (!objectId && emailId) {
-    try {
-      const u = await User.findOne({ emailId }).select('_id userID');
-      if (u) {
-        objectId = u._id;
-        if (!customUserId) customUserId = u.userID;
-      }
-    } catch (_) {}
-  }
+  const { objectId, customUserId, rawId, emailId } = await resolveAuthUser(req);
 
   const conds = [];
   if (objectId) conds.push({ userObjectID: objectId });
@@ -42,7 +31,7 @@ exports.getStorageSettings = async (req, res) => {
       await resolveSettingsUser(req);
     const flipQuery = getFlipbookUserQuery(req);
 
-    if (!settingsQuery && !emailId) {
+    if (!settingsQuery && !emailId && !objectId) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 

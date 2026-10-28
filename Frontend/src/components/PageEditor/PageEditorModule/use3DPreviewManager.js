@@ -74,7 +74,8 @@ export const use3DPreviewManager = ({
 
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-            axios.get(`${backendUrl}/api/assets/3d-models/${user?.emailId || user?.email || 'guest'}`)
+            const userIdentifier = user?.userID || user?.userId || user?.emailId || user?.email || 'guest';
+            axios.get(`${backendUrl}/api/assets/3d-models/${encodeURIComponent(userIdentifier)}`, { withCredentials: true })
               .then(res => {
                 if (res.data?.success && Array.isArray(res.data.data)) {
                   const targetModel = res.data.data.find(m => m.v_id === parsed.v_id);

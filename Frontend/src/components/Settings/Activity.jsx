@@ -248,7 +248,7 @@ const Activity = ({ userEmail: propEmail }) => {
     setDeletingId(id);
     try {
       const res = await axios.delete(`${backendUrl}/api/activity/${id}`, {
-        params: { emailId: effectiveEmail }
+        withCredentials: true
       });
       if (res.data?.success) {
         const updatedRaw = rawItems.filter(item => item.id !== id && item._id !== id);

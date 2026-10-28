@@ -50,7 +50,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
       setIsLoading(true);
       try {
         const res = await axios.get(`${backendUrl}/api/flipbook/get-gallery-assets`, {
-          params: { emailId: user.emailId || user.email }
+          withCredentials: true
         });
 
         if (res.data.assets) {

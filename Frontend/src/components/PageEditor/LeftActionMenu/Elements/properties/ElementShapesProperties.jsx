@@ -719,7 +719,7 @@ const ElementShapesProperties = ({
         if (!pcu || pcu === 'objectBoundingBox') {
             wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
         } else {
-            wrapper.setAttribute('transform', `translate(0, 0)`);
+            wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y})`);
         }
         
         const ghostImg = imgNode.cloneNode(true);
@@ -960,13 +960,13 @@ const ElementShapesProperties = ({
                         m[2] = m[2] * b.width;
                         m[1] = m[1] * b.height;
                         m[3] = m[3] * b.height;
-                        m[4] = b.x + m[4] * b.width;
-                        m[5] = b.y + m[5] * b.height;
+                        m[4] = m[4] * b.width;
+                        m[5] = m[5] * b.height;
                       } else {
                         const scale = Math.max(b.width / imgW, b.height / imgH);
                         const finalW = imgW * scale;
                         const finalH = imgH * scale;
-                        m = [scale, 0, 0, scale, b.x + (b.width - finalW) / 2, b.y + (b.height - finalH) / 2];
+                        m = [scale, 0, 0, scale, (b.width - finalW) / 2, (b.height - finalH) / 2];
                       }
                       pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
                       pattern.removeAttribute('patternTransform');
@@ -978,6 +978,28 @@ const ElementShapesProperties = ({
                       imgNode.setAttribute('height', imgH);
                       let rotStr = rMatch ? rMatch[0] + ' ' : '';
                       imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
+                    }
+                  } catch (e) {}
+                } else {
+                  // If already userSpaceOnUse, auto-fix if it was saved with the buggy b.x / b.y offset
+                  try {
+                    const b = shapeEl.getBBox();
+                    if (b.width && b.height && (Math.abs(b.x) > 0.1 || Math.abs(b.y) > 0.1)) {
+                      const mMatch = tf.match(/matrix\(([^)]+)\)/);
+                      if (mMatch) {
+                        const m = mMatch[1].split(/[ ,]+/).map(parseFloat);
+                        const imgW = parseFloat(imgNode.getAttribute('width')) || b.width;
+                        const imgH = parseFloat(imgNode.getAttribute('height')) || b.height;
+                        const scale = m[0] || Math.max(b.width / imgW, b.height / imgH);
+                        const finalH = imgH * scale;
+                        const buggyTy = b.y + (b.height - finalH) / 2;
+                        if (Math.abs(m[5] - buggyTy) < 0.5) {
+                          m[4] -= b.x;
+                          m[5] -= b.y;
+                          let rotStr = rMatch ? rMatch[0] + ' ' : '';
+                          imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
+                        }
+                      }
                     }
                   } catch (e) {}
                 }
@@ -1023,8 +1045,8 @@ const ElementShapesProperties = ({
                       let cx = 0.5;
                       let cy = 0.5;
                       if (pcu === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                          cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
-                          cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
+                          cx = adjustStateRef.current.bbox.width / 2;
+                          cy = adjustStateRef.current.bbox.height / 2;
                       }
       
                       m[0] *= zoomDelta;
@@ -1166,8 +1188,8 @@ const ElementShapesProperties = ({
 
     let bbox = { x: 0, y: 0, width: 100, height: 100 };
     try { bbox = shapeEl.getBBox(); } catch(e) {}
-    const cx = bbox.x + bbox.width / 2;
-    const cy = bbox.y + bbox.height / 2;
+    const cx = bbox.width / 2;
+    const cy = bbox.height / 2;
 
     const pcu = pattern.getAttribute('patternContentUnits');
     const imgNode = pattern.querySelector('image, img');
@@ -1185,8 +1207,8 @@ const ElementShapesProperties = ({
       m[2] = m[2] * bbox.width;
       m[1] = m[1] * bbox.height;
       m[3] = m[3] * bbox.height;
-      m[4] = bbox.x + m[4] * bbox.width;
-      m[5] = bbox.y + m[5] * bbox.height;
+      m[4] = m[4] * bbox.width;
+      m[5] = m[5] * bbox.height;
       pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
       pattern.removeAttribute('patternTransform');
     }
@@ -1283,8 +1305,8 @@ const ElementShapesProperties = ({
       const finalW = imgW * scale;
       const finalH = imgH * scale;
 
-      const tx_user = bbox.x + (slotW - finalW) / 2;
-      const ty_user = bbox.y + (slotH - finalH) / 2;
+      const tx_user = (slotW - finalW) / 2;
+      const ty_user = (slotH - finalH) / 2;
 
       let imageNode = pattern.querySelector('image, img');
       if (!imageNode) {

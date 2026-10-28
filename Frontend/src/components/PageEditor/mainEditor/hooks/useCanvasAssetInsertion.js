@@ -279,8 +279,8 @@ export const useCanvasAssetInsertion = ({
               const scale = Math.max(slotW / imgW, slotH / imgH);
               const finalW = imgW * scale;
               const finalH = imgH * scale;
-              const tx = bbox.x + (slotW - finalW) / 2;
-              const ty = bbox.y + (slotH - finalH) / 2;
+              const tx = (slotW - finalW) / 2;
+              const ty = (slotH - finalH) / 2;
               imageNode.setAttribute('width', imgW);
               imageNode.setAttribute('height', imgH);
               imageNode.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${tx} ${ty})`);

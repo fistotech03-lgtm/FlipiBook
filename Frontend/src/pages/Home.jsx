@@ -220,7 +220,8 @@ export default function Home() {
           stage: 'done'
         });
 
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+        const folderVId = createRes?.data?.folder_v_id || createRes?.data?.folder_id || 'fol_default';
+        navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
         return;
       }
 
@@ -275,7 +276,8 @@ export default function Home() {
         stage: 'done'
       });
 
-      navigate(`/editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+      const folderVId = createRes?.data?.folder_v_id || createRes?.data?.folder_id || 'fol_default';
+      navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
 
     } catch (error) {
       if (!isUploadCancelledRef.current) {
@@ -342,7 +344,8 @@ export default function Home() {
       });
 
       if (res.data && res.data.v_id) {
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${res.data.v_id}`, { state: templateData });
+        const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'fol_default';
+        navigate(`/editor/${encodeURIComponent(folderVId)}/${res.data.v_id}`, { state: { ...templateData, folder_v_id: folderVId } });
       } else {
         navigate('/editor', { state: templateData });
       }

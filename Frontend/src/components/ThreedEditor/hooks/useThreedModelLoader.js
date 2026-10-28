@@ -202,7 +202,7 @@ export function useThreedModelLoader({
       type: model.type || 'glb'
     });
 
-    const activeBackendUrl = backendUrl || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+    const activeBackendUrl = backendUrl || (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
     const rawUrl = (model.url && (model.url.startsWith('http://') || model.url.startsWith('https://')))
       ? model.url
       : `${activeBackendUrl}${model.url.startsWith('/') ? '' : '/'}${model.url}`;
@@ -421,7 +421,7 @@ export function useThreedModelLoader({
     try {
       if (user) {
         const emailId = user.emailId || user.email;
-        const activeBackend = backendUrl || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+        const activeBackend = backendUrl || (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
         await axios.post(`${activeBackend}/api/3d-models/save-session`, {
           emailId,
           state: {

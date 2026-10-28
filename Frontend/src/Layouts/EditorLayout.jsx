@@ -181,7 +181,7 @@ const EditorLayout = () => {
   const confirmUnpublish = async () => {
     setIsUnpublishing(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const v_id = currentBook?.v_id || currentBook?.realName;
       const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 
@@ -240,7 +240,7 @@ const EditorLayout = () => {
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const emailId = user?.emailId || user?.email || currentBook?.userEmail;
 
       const pathParts = window.location.pathname.split('/');

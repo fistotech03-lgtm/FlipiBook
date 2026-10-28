@@ -725,12 +725,12 @@ export default function FlipbooksSidebar({
                             <div className="flex items-center justify-between mb-[0.55vw]">
                                 <div className="flex items-center gap-[0.5vw]">
                                     <div className="relative flex items-center justify-center">
-                                        <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke={storageTheme.accentColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-colors duration-300">
+                                        <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                             <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
                                             <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
                                             <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
                                         </svg>
-                                        <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] rounded-full ring-2 ring-white transition-colors duration-300" style={{ backgroundColor: storageTheme.badgeBg }}></div>
+                                        <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
                                     </div>
                                     <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
                                 </div>

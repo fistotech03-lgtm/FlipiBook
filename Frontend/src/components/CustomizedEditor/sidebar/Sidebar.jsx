@@ -47,7 +47,8 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   const handleGoToPageEditor = () => {
-    const path = folder ? `/editor/${folder}/${v_id}` : `/editor/${v_id}`;
+    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+    const path = folderVId ? `/editor/${encodeURIComponent(folderVId)}/${v_id}` : `/editor/${v_id}`;
     navigate(path);
   };
 

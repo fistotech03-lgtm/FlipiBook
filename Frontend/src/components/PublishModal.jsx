@@ -95,7 +95,7 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
           const portMatch = origin.match(/:(\d+)/);
           if (portMatch) return origin.replace(portMatch[0], ':8000');
         }
-        return 'http://localhost:8000';
+        return '';
       };
       const backendUrl = getBackendUrl();
       const v_id = currentBook?.v_id || currentBook?.id || currentBook?.realName;

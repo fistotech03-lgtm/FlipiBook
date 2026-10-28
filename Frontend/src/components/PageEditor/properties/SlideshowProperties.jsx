@@ -1267,7 +1267,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     formData.append('file', file);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
       if (res.data && (res.data.url || res.data.filename)) {
         const accessibleUrl = (res.data.serverUrl || res.data.storageUrl)
@@ -1421,7 +1421,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
     if (img.file_v_id) {
       try {
         if (user) {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const effectiveFolder = folderName || location.state?.folderName || 'My_Flipbooks';
           const effectiveBook = flipbookName || location.state?.flipbookName || 'Untitled Flipbook';
           await axios.post(`${backendUrl}/api/flipbook/delete-asset`, {

@@ -336,7 +336,7 @@ const ElementAudioProperties = ({ selectedElement, selectedLayerId, activePageIn
             formData.append('type', 'audio');
             formData.append('file', file);
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
             
             if (res.data.url) {

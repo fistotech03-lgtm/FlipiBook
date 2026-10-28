@@ -538,6 +538,7 @@ const PageEditor = () => {
       setPages,
       currentBook,
       v_id,
+      folder,
       setHasUnsavedChanges,
       isSaving,
       setIsSaving,

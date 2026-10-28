@@ -837,6 +837,19 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             }
           }
 
+          // Apply Stroke & Background properties to frames and container frame
+          const sColor = slideshowSettings.strokeColor || '#9ca3af';
+          const sWidth = slideshowSettings.strokeWidth !== undefined ? slideshowSettings.strokeWidth : 1;
+          const sOpacity = (slideshowSettings.strokeOpacity !== undefined ? slideshowSettings.strokeOpacity : 100) / 100;
+          let sDash = 'none';
+          if (slideshowSettings.strokeLineStyle === 'Dotted') {
+            sDash = '2,3';
+          } else if (slideshowSettings.strokeLineStyle === 'Dashed') {
+            sDash = `${slideshowSettings.strokeDashLength || 8},${slideshowSettings.strokeDashGap || 4}`;
+          }
+          const sCap = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'square';
+          const sJoin = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'miter';
+
           const sAlign = slideshowSettings.strokeAlignment || 'Outside';
           let alignOffset = 0;
           if (sAlign === 'Inside') alignOffset = sWidth / 2;
@@ -865,19 +878,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             containerBg.style.fill = bgColor;
             containerBg.style.fillOpacity = bgOpacity.toString();
           }
-
-          // Apply Stroke & Background properties to frames and container frame
-          const sColor = slideshowSettings.strokeColor || '#9ca3af';
-          const sWidth = slideshowSettings.strokeWidth !== undefined ? slideshowSettings.strokeWidth : 1;
-          const sOpacity = (slideshowSettings.strokeOpacity !== undefined ? slideshowSettings.strokeOpacity : 100) / 100;
-          let sDash = 'none';
-          if (slideshowSettings.strokeLineStyle === 'Dotted') {
-            sDash = '2,3';
-          } else if (slideshowSettings.strokeLineStyle === 'Dashed') {
-            sDash = `${slideshowSettings.strokeDashLength || 8},${slideshowSettings.strokeDashGap || 4}`;
-          }
-          const sCap = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'square';
-          const sJoin = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'miter';
 
           [containerBg, centerRect, leftRect, rightRect].forEach(r => {
             if (r) {
@@ -2861,11 +2861,11 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Stroke Width */}
             <div className="flex flex-col gap-[0.25vw]">
               <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+              <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
                 <button
                   type="button"
                   onClick={() => updateSetting('strokeWidth', Math.max(0, (slideshowSettings.strokeWidth || 1) - 1))}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   −
                 </button>
@@ -2874,13 +2874,13 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                     type="number"
                     value={slideshowSettings.strokeWidth ?? 1}
                     onChange={(e) => updateSetting('strokeWidth', Math.max(0, Number(e.target.value)))}
-                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => updateSetting('strokeWidth', (slideshowSettings.strokeWidth || 1) + 1)}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   +
                 </button>
@@ -2890,35 +2890,12 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Line Corner */}
             <div className="flex flex-col gap-[0.25vw] relative">
               <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-              <button
-                type="button"
-                onClick={() => setIsCornerOpen(!isCornerOpen)}
-                className="w-full h-[2.2vw] px-[0.75vw] border border-[#e2e8f0] hover:border-slate-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] text-slate-800 font-medium shadow-2xs"
-              >
-                <span>{slideshowSettings.strokeLineCorner || 'Square'}</span>
-              </button>
-              {isCornerOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setIsCornerOpen(false)} />
-                  <div className="absolute top-[3.6vw] left-0 right-0 bg-white border border-[#e2e8f0] rounded-[0.45vw] shadow-lg z-40 py-1">
-                    {['Square', 'Rounded'].map((c) => (
-                      <div
-                        key={c}
-                        onClick={() => {
-                          updateSetting('strokeLineCorner', c);
-                          setIsCornerOpen(false);
-                        }}
-                        className={`px-[0.75vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-slate-50 flex items-center justify-between ${
-                          (slideshowSettings.strokeLineCorner || 'Square') === c ? 'font-bold text-slate-900 bg-slate-50/80' : 'text-slate-700'
-                        }`}
-                      >
-                        <span>{c}</span>
-                        {(slideshowSettings.strokeLineCorner || 'Square') === c && <Check size="0.75vw" className="text-slate-900" />}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              <ElementDropdown
+                value={slideshowSettings.strokeLineCorner || 'Square'}
+                onChange={(val) => updateSetting('strokeLineCorner', val)}
+                options={['Square', 'Rounded']}
+                buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
+              />
             </div>
           </div>
         </div>
@@ -3145,8 +3122,10 @@ export default function ElementSlideshowProperties({
       if (!targetNode) return;
       const svgRoot = targetNode.ownerSVGElement || targetNode.closest?.('svg') || editorDoc.querySelector('svg');
       if (svgRoot && updateElementAttribute && selectedLayerId) {
+        const cloneSvg = svgRoot.cloneNode(true);
+        cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
         const serializer = new XMLSerializer();
-        const html = serializer.serializeToString(svgRoot);
+        const html = serializer.serializeToString(cloneSvg);
         updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
       }
     }

@@ -10,7 +10,7 @@ export const DIRECT_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://ww
 
 // Global style to ensure injected SVGs always fill their container perfectly
 export const svgGlobalStyles = `
-  .page-svg-container svg:not(.svg-icon-override) {
+  .page-svg-container svg:not(.svg-icon-override):not(foreignObject svg) {
     width: 100% !important;
     height: 100% !important;
     display: block !important;

@@ -1,4 +1,6 @@
 export const getInteractionScript = (pageNumber) => `  <style>
+    [data-type="qrcode"],
+    [data-qr-url],
     [data-interaction="link"],
     [data-interaction="open-link"],
     [data-interaction="navigate-to"],
@@ -32,6 +34,39 @@ export const getInteractionScript = (pageNumber) => `  <style>
             };
             let lastInteractionTime = 0;
             const handleStart = (e) => {
+                // Native <a> tag support (e.g. Map cards, Embed overlays, Table links)
+                const anchorEl = e.target.closest ? e.target.closest('a[href]') : null;
+                if (anchorEl && !findInteractionEl(anchorEl)) {
+                    const href = anchorEl.getAttribute('href');
+                    if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const target = anchorEl.getAttribute('target') || '_blank';
+                        if (target === '_top' || target === '_self') {
+                            try {
+                                window.top.location.href = href;
+                            } catch (err) {
+                                window.open(href, '_top');
+                            }
+                        } else {
+                            window.open(href, '_blank', 'noopener,noreferrer');
+                        }
+                        return;
+                    }
+                }
+
+                // QR Code direct link support
+                const qrEl = e.target.closest ? e.target.closest('[data-type="qrcode"], [data-qr-url]') : null;
+                if (qrEl && !findInteractionEl(qrEl)) {
+                    const qrUrl = qrEl.getAttribute('data-qr-url') || qrEl.dataset?.qrUrl;
+                    if (qrUrl) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(qrUrl.startsWith('http') ? qrUrl : 'https://' + qrUrl, '_blank');
+                        return;
+                    }
+                }
+
                const el = findInteractionEl(e.target);
                if (el) {
                    e.preventDefault();

@@ -74,6 +74,9 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
               element.removeAttribute(attr);
             }
             if (attr === 'stroke-width') element.setAttribute('stroke', 'none');
+            if (['stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit'].includes(attr) && element.tagName.toLowerCase() === 'g') {
+              element.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline').forEach(c => c.removeAttribute(attr));
+            }
           } else {
             if (attr === 'innerHTML' || attr === 'hotspotHtml') {
               element.innerHTML = val;
@@ -81,15 +84,18 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
               element.setAttribute(attr, val);
 
               if (element.tagName.toLowerCase() === 'g') {
-                const inner = element.querySelector('path, polygon, rect, circle, ellipse, line');
-                if (inner && [
-                  'data-shape-type', 'data-shape-id', 'data-count', 'data-ratio', 'data-radius',
-                  'data-cx', 'data-cy', 'data-rx', 'rx', 'ry', 'data-tl', 'data-tr', 'data-bl', 'data-br',
-                  'data-corner-linked', 'paint-order', 'data-stroke-position'
-                ].includes(attr)) {
-                  inner.setAttribute(attr, val);
-                  if (attr === 'paint-order') inner.style.paintOrder = val;
-                }
+                const innerShapes = element.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline');
+                innerShapes.forEach(child => {
+                  if ([
+                    'data-shape-type', 'data-shape-id', 'data-count', 'data-ratio', 'data-radius',
+                    'data-cx', 'data-cy', 'data-rx', 'rx', 'ry', 'data-tl', 'data-tr', 'data-bl', 'data-br',
+                    'data-corner-linked', 'paint-order', 'data-stroke-position',
+                    'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit'
+                  ].includes(attr)) {
+                    child.setAttribute(attr, val);
+                    if (attr === 'paint-order') child.style.paintOrder = val;
+                  }
+                });
               }
 
               if ((attr === 'fill' || attr === 'stroke' || attr === 'stroke-width' || attr === 'stroke-dasharray') && element.getAttribute('data-type') === 'icon') {

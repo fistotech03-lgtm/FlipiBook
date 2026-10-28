@@ -4,24 +4,80 @@ import { Icon } from '@iconify/react';
 import { X, Search, Shapes } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
-
-// Precompute catalog of all Lucide icons (1,800+ icons)
-export const ALL_LUCIDE_ICONS = Object.keys(icons).map((key) => {
+ 
+// ─────────────────────────────────────────────────────────────
+// PRIORITY ICONS: shown first, in this exact order.
+// Case-insensitive. Add / remove / reorder freely.
+// ─────────────────────────────────────────────────────────────
+export const PRIORITY_ICON_KEYS = [
+  'Target',
+  'Activity',
+  'Send',
+  'Phone',
+  'Contact',
+  'Power',
+  'Cast',
+  'Battery',
+  'BatteryCharging',
+  'BatteryFull',
+  'PhoneCall',
+  'Smartphone',
+  'Wifi',
+  'Bluetooth',
+  'Zap',
+  'Radio',
+  'Signal',
+  'Plug',
+];
+ 
+const toCatalogItem = (key) => {
   const displayName = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
   return {
     key,
     name: displayName,
     searchKey: `${key.toLowerCase()} ${displayName.toLowerCase()}`,
   };
-});
-
+};
+ 
+const buildCatalog = () => {
+  const allKeys = Object.keys(icons);
+ 
+  // lowercase -> real Lucide key (so "target", "Target", "TARGET" all work)
+  const lowerToReal = new Map(allKeys.map((k) => [k.toLowerCase(), k]));
+ 
+  const priorityKeys = [];
+  const missing = [];
+  PRIORITY_ICON_KEYS.forEach((name) => {
+    const real = lowerToReal.get(String(name).toLowerCase());
+    if (real && !priorityKeys.includes(real)) priorityKeys.push(real);
+    else if (!real) missing.push(name);
+  });
+ 
+  if (missing.length) {
+    console.warn('[IconsModal] Priority icons not found in this lucide-react version:', missing);
+  }
+  console.info(
+    `[IconsModal] Priority icons loaded: ${priorityKeys.length}/${PRIORITY_ICON_KEYS.length}`,
+    priorityKeys
+  );
+ 
+  const prioritySet = new Set(priorityKeys);
+  return [
+    ...priorityKeys.map(toCatalogItem),
+    ...allKeys.filter((k) => !prioritySet.has(k)).map(toCatalogItem),
+  ];
+};
+ 
+// Priority icons first, then every other Lucide icon
+export const ALL_LUCIDE_ICONS = buildCatalog();
+ 
 // Cache for extracted SVG markup to prevent re-extracting on every click/drag
 const svgCache = new Map();
-
+ 
 const extractIconSvg = (key, IconComp) => {
   if (svgCache.has(key)) return svgCache.get(key);
   if (!IconComp) return { html: '', viewBox: '0 0 24 24' };
-
+ 
   try {
     const markup = renderToStaticMarkup(
       React.createElement(IconComp, { size: 24, strokeWidth: 2 })
@@ -40,7 +96,7 @@ const extractIconSvg = (key, IconComp) => {
     return { html: '', viewBox: '0 0 24 24' };
   }
 };
-
+ 
 export const IconsModal = ({
   isOpen = false,
   onClose,
@@ -57,7 +113,7 @@ export const IconsModal = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [rulerActive, setRulerActive] = useState(Boolean(isRulerEnabled));
   const isRight = position === 'right';
-
+ 
   // Close modal when clicking outside if docked to right side
   useEffect(() => {
     if (!isOpen || !isRight) return;
@@ -74,12 +130,12 @@ export const IconsModal = ({
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [isOpen, isRight, onClose]);
-
+ 
   // Sync with prop
   useEffect(() => {
     setRulerActive(Boolean(isRulerEnabled));
   }, [isRulerEnabled]);
-
+ 
   // Listen to global ruler toggle event
   useEffect(() => {
     const handleToggleRuler = (e) => {
@@ -95,26 +151,26 @@ export const IconsModal = ({
     window.addEventListener('editor_toggleRuler', handleToggleRuler);
     return () => window.removeEventListener('editor_toggleRuler', handleToggleRuler);
   }, []);
-
-  // Filtered icons matching search
+ 
+  // Filtered icons matching search (order of ALL_LUCIDE_ICONS is preserved)
   const filteredIcons = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return ALL_LUCIDE_ICONS;
-    const cleanQuery = query.replace(/[\s-_]+/g, '');
+    const cleanQuery = query.replace(/[\s\-_]+/g, '');
     return ALL_LUCIDE_ICONS.filter(
       (item) => item.searchKey.includes(query) || item.key.toLowerCase().includes(cleanQuery)
     );
   }, [searchQuery]);
-
+ 
   // Lazy loading on scroll (chunk size 60)
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
+ 
   // Reset pagination when search query changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [searchQuery]);
-
+ 
   // Handle container scroll to load remaining icons
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -122,12 +178,12 @@ export const IconsModal = ({
       setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredIcons.length));
     }
   };
-
+ 
   // Click to add icon to page center or select for target component
   const handleAddIcon = (item) => {
     const IconComp = icons[item.key];
     const svgData = extractIconSvg(item.key, IconComp);
-
+ 
     if (onSelect) {
       onSelect({
         name: item.key,
@@ -137,7 +193,7 @@ export const IconsModal = ({
       });
       return;
     }
-
+ 
     window.dispatchEvent(
       new CustomEvent('add-icon-to-editor', {
         detail: {
@@ -152,12 +208,12 @@ export const IconsModal = ({
       })
     );
   };
-
+ 
   // Drag start to place icon at dropped position
   const handleDragStart = (e, item) => {
     const IconComp = icons[item.key];
     const svgData = extractIconSvg(item.key, IconComp);
-
+ 
     const payload = {
       type: 'icon',
       name: item.name,
@@ -169,15 +225,15 @@ export const IconsModal = ({
         viewBox: svgData.viewBox,
       },
     };
-
+ 
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
     e.dataTransfer.effectAllowed = 'copy';
   };
-
+ 
   if (!isOpen) return null;
-
+ 
   const displayedIcons = filteredIcons.slice(0, visibleCount);
-
+ 
   const defaultPosition = isRight
     ? {
         right: '24.5vw',
@@ -189,11 +245,11 @@ export const IconsModal = ({
         top: rulerActive ? '2.2vw' : '1vw',
         right: 'auto',
       };
-
+ 
   const defaultClasses = isRight
     ? 'fixed z-[5000] bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[right,top] duration-300 ease-in-out'
     : 'absolute z-50 bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden select-none transition-[left,top] duration-300 ease-in-out';
-
+ 
   return (
     <AnimatePresence>
       <motion.div
@@ -231,7 +287,7 @@ export const IconsModal = ({
               <Icon icon="ph:dots-six-bold" className="w-[1.2vw] h-[1.2vw] text-gray-400 hover:text-gray-600" />
             </div>
           </div>
-
+ 
           {/* Title & Close Row */}
           <div className="flex items-center justify-between mt-[0.2vh]">
             <div className="flex items-center gap-[0.45vw]">
@@ -243,7 +299,7 @@ export const IconsModal = ({
                 </span>
               </div>
             </div>
-
+ 
             <button
               onClick={onClose}
               className="w-[1.5vw] h-[1.5vw] rounded-[0.4vw] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
@@ -252,7 +308,7 @@ export const IconsModal = ({
               <X size="1vw" />
             </button>
           </div>
-
+ 
           {/* Search Bar */}
           <div className="mt-[0.75vh]">
             <div className="relative flex items-center">
@@ -276,7 +332,7 @@ export const IconsModal = ({
             </div>
           </div>
         </div>
-
+ 
         {/* ── Icons Grid Body with Lazy Infinite Scroll ── */}
         <div
           onScroll={handleScroll}
@@ -286,7 +342,7 @@ export const IconsModal = ({
             {displayedIcons.map((item) => {
               const IconComp = icons[item.key];
               if (!IconComp) return null;
-
+ 
               return (
                 <button
                   key={item.key}
@@ -306,13 +362,13 @@ export const IconsModal = ({
                 </button>
               );
             })}
-
+ 
             {displayedIcons.length === 0 && (
               <div className="col-span-5 py-[4vh] text-center text-gray-400 text-[0.75vw]">
                 No icons found for "{searchQuery}"
               </div>
             )}
-
+ 
             {visibleCount < filteredIcons.length && (
               <div className="col-span-5 py-[1.2vh] text-center text-gray-400 text-[0.62vw] flex items-center justify-center gap-[0.35vw]">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"></span>
@@ -325,5 +381,5 @@ export const IconsModal = ({
     </AnimatePresence>
   );
 };
-
+ 
 export default IconsModal;

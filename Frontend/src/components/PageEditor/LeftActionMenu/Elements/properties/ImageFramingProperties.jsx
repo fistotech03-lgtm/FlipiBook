@@ -103,7 +103,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     strokeDasharrayValue: selectedElementProps?.['data-frame-stroke-dasharray'] || 'none',
     strokeDashLength: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[0]) || 10,
     strokeDashGap: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[1]) || 10,
-    strokeLinecap: selectedElementProps?.['data-frame-stroke-linecap'] || 'square',
+    strokeLinecap: (selectedElementProps?.['data-frame-stroke-linecap'] === 'round' || selectedElementProps?.['stroke-linecap'] === 'round' || selectedElementProps?.['stroke-linejoin'] === 'round') ? 'round' : 'square',
     strokePosition: selectedElementProps?.['data-frame-stroke-position'] || 'Outside',
   };
 
@@ -123,6 +123,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     }
     if (backgroundColor.strokeLinecap !== next.strokeLinecap && next.strokeLinecap !== undefined) {
       updates['data-frame-stroke-linecap'] = next.strokeLinecap;
+      updates['stroke-linecap'] = next.strokeLinecap;
+      updates['stroke-linejoin'] = next.strokeLinecap === 'round' ? 'round' : 'miter';
     }
     if (backgroundColor.strokePosition !== next.strokePosition && next.strokePosition !== undefined) {
       updates['data-frame-stroke-position'] = next.strokePosition;
@@ -1554,14 +1556,14 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             {/* Stroke Width Stepper */}
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
-              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+              <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
                 <button
                   type="button"
                   onClick={() => handleSetBackgroundColor(prev => ({
                     ...prev,
                     strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
                   }))}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   −
                 </button>
@@ -1577,7 +1579,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                         handleSetBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
                       }
                     }}
-                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                   />
                 </div>
                 <button
@@ -1586,7 +1588,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     ...prev,
                     strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
                   }))}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   +
                 </button>
@@ -1600,7 +1602,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                 value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
                 onChange={(val) => handleSetBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
                 options={['Square', 'Rounded']}
-                buttonClassName="!h-[2.2vw]"
+                buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
               />
             </div>
           </div>

@@ -302,7 +302,8 @@ const ShapeProperties = ({
     if (backgroundColor.strokeRadius !== next.strokeRadius) updates['stroke-radius'] = next.strokeRadius;
 
     // Apply immediate live DOM updates for smooth scrubbing feedback
-    const liveEl = document.getElementById(selectedLayerId);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
     if (liveEl) {
       Object.entries(updates).forEach(([k, v]) => {
         if (v === 'none' && (k === 'fill' || k === 'stroke')) {
@@ -311,6 +312,13 @@ const ShapeProperties = ({
           liveEl.setAttribute(k, v);
         }
       });
+      if (updates['stroke-linecap'] || updates['stroke-linejoin']) {
+        const childShapes = liveEl.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline');
+        childShapes.forEach(child => {
+          if (updates['stroke-linecap']) child.setAttribute('stroke-linecap', updates['stroke-linecap']);
+          if (updates['stroke-linejoin']) child.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
+        });
+      }
     }
 
     if (Object.keys(updates).length > 0) {
@@ -339,7 +347,8 @@ const ShapeProperties = ({
     updates['ry'] = maxR.toString();
 
     // Immediate live DOM update for responsive slider/drag experience
-    const liveEl = document.getElementById(selectedLayerId);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
     if (liveEl) {
       Object.entries(updates).forEach(([k, v]) => liveEl.setAttribute(k, v));
       const shapeType = liveEl.getAttribute('data-shape-type') || (liveEl.tagName.toLowerCase() === 'rect' ? 'rectangle' : null);

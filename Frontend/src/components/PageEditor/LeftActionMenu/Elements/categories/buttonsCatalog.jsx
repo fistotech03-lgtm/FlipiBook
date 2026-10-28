@@ -249,8 +249,15 @@ export const ButtonPreview = ({ template }) => {
 
         {btn.id === 'upload-ribbon' && (
           <>
+            <defs>
+              <clipPath id="preview-clip-upload-ribbon">
+                <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} />
+              </clipPath>
+            </defs>
             <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} fill={btn.fill} />
-            <polygon points={`0,0 34,0 42,${btn.height / 2} 34,${btn.height} 0,${btn.height}`} fill={btn.ribbonColor} />
+            <g clipPath="url(#preview-clip-upload-ribbon)">
+              <polygon points={`0,0 34,0 42,${btn.height / 2} 34,${btn.height} 0,${btn.height}`} fill={btn.ribbonColor} />
+            </g>
             <g transform="translate(10, 13)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -260,6 +267,338 @@ export const ButtonPreview = ({ template }) => {
             </g>
             <text
               x="92"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              letterSpacing={btn.letterSpacing}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ letterSpacing: btn.letterSpacing }}
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'gradient-pill' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-sunrise" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffe8d6" />
+                <stop offset="100%" stopColor="#ffd1dc" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-sunrise)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+              </svg>
+            </g>
+            <text
+              x="84"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'ocean-breeze' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-ocean" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#e0f2fe" />
+                <stop offset="100%" stopColor="#bae6fd" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-ocean)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={btn.iconColor} stroke="none" />
+              </svg>
+            </g>
+            <text
+              x="82"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'lavender-badge' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-lav-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#faf5ff" />
+                <stop offset="100%" stopColor="#f3e8ff" />
+              </linearGradient>
+              <linearGradient id="preview-grad-lav-badge" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#c084fc" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-lav-bg)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <circle cx="21" cy={btn.height / 2} r="14" fill="url(#preview-grad-lav-badge)" />
+            <g transform="translate(13, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
+            </g>
+            <text
+              x="92"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'mint-frost' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-mint" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#d1fae5" />
+                <stop offset="100%" stopColor="#a7f3d0" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-mint)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </g>
+            <text
+              x="84"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'sunset-coral' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-sunset" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fff1f2" />
+                <stop offset="100%" stopColor="#fed7aa" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-sunset)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={btn.iconColor} stroke="none">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </g>
+            <text
+              x="82"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'frosted-glass' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-frost" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f0f9ff" />
+                <stop offset="100%" stopColor="#e0e7ff" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-frost)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <text
+              x="64"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+            <g transform="translate(116, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </g>
+          </>
+        )}
+
+        {btn.id === 'lemon-ribbon' && (
+          <>
+            <defs>
+              <clipPath id="preview-clip-lemon-ribbon">
+                <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} />
+              </clipPath>
+              <linearGradient id="preview-grad-lemon-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fefce8" />
+                <stop offset="100%" stopColor="#fef08a" />
+              </linearGradient>
+              <linearGradient id="preview-grad-lemon-ribbon" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fde047" />
+                <stop offset="100%" stopColor="#fbbf24" />
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} fill="url(#preview-grad-lemon-bg)" stroke="#fde047" strokeWidth="1" />
+            <g clipPath="url(#preview-clip-lemon-ribbon)">
+              <polygon points={`0,0 34,0 42,${btn.height / 2} 34,${btn.height} 0,${btn.height}`} fill="url(#preview-grad-lemon-ribbon)" />
+            </g>
+            <g transform="translate(10, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+                <circle cx="7" cy="7" r="1.5" fill={btn.iconColor} stroke="none" />
+              </svg>
+            </g>
+            <text
+              x="94"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              letterSpacing={btn.letterSpacing}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ letterSpacing: btn.letterSpacing }}
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'pearl-pill' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-pearl" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#e0e7ff" />
+                <stop offset="50%" stopColor="#ede9fe" />
+                <stop offset="100%" stopColor="#fce7f3" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-pearl)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3h12l4 6-10 13L2 9Z" />
+                <path d="M11 3 8 9l4 13 4-13-3-6" />
+                <path d="M2 9h20" />
+              </svg>
+            </g>
+            <text
+              x="86"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              letterSpacing={btn.letterSpacing}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ letterSpacing: btn.letterSpacing }}
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'diagonal-pastel' && (
+          <>
+            <defs>
+              <clipPath id="preview-clip-diagonal-pastel">
+                <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} />
+              </clipPath>
+              <linearGradient id="preview-grad-diag-slice" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#93c5fd" />
+                <stop offset="100%" stopColor="#c4b5fd" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill={btn.fill} stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
+            <g clipPath="url(#preview-clip-diagonal-pastel)">
+              <polygon points={`-5,-5 42,-5 26,${btn.height + 5} -5,${btn.height + 5}`} fill="url(#preview-grad-diag-slice)" />
+            </g>
+            <g transform="translate(10, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </g>
+            <text
+              x="94"
+              y={btn.height / 2 + 1}
+              fill={btn.textColor}
+              fontSize={btn.fontSize}
+              fontFamily={btn.fontFamily}
+              fontWeight={btn.fontWeight}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {btn.text}
+            </text>
+          </>
+        )}
+
+        {btn.id === 'slanted-pastel' && (
+          <>
+            <defs>
+              <linearGradient id="preview-grad-slanted-pastel" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f5f3ff" />
+                <stop offset="100%" stopColor="#ecfeff" />
+              </linearGradient>
+            </defs>
+            <path
+              d={`M 20,0 L ${btn.width - 4},0 A 4,4 0 0 1 ${btn.width},4 L ${btn.width},${btn.height - 20} A 20,20 0 0 1 ${btn.width - 20},${btn.height} L 4,${btn.height} A 4,4 0 0 1 0,${btn.height - 4} L 0,20 A 20,20 0 0 1 20,0 Z`}
+              fill="url(#preview-grad-slanted-pastel)"
+              stroke={btn.stroke}
+              strokeWidth={btn.strokeWidth}
+            />
+            <g transform="translate(16, 13)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={btn.iconColor} stroke="none">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </g>
+            <text
+              x="88"
               y={btn.height / 2 + 1}
               fill={btn.textColor}
               fontSize={btn.fontSize}

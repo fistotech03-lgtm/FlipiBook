@@ -194,6 +194,205 @@ export const BUTTON_TEMPLATES = [
     iconName: 'Upload',
     iconColor: '#ffffff',
     hasIcon: true
+  },
+  {
+    id: 'gradient-pill',
+    name: 'Sunrise Pill',
+    width: 146,
+    height: 42,
+    rx: 21,
+    fill: 'linear-gradient(135deg, rgba(255, 232, 214, 1) 0%, rgba(255, 209, 220, 1) 100%)',
+    gradientColors: ['#ffe8d6', '#ffd1dc'],
+    stroke: '#fca5a5',
+    strokeWidth: 1.5,
+    text: 'Get Started',
+    textColor: '#831843',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'Sparkles',
+    iconColor: '#e11d48',
+    hasIcon: true
+  },
+  {
+    id: 'ocean-breeze',
+    name: 'Ocean Breeze',
+    width: 142,
+    height: 42,
+    rx: 10,
+    fill: 'linear-gradient(135deg, rgba(224, 242, 254, 1) 0%, rgba(186, 230, 253, 1) 100%)',
+    gradientColors: ['#e0f2fe', '#bae6fd'],
+    stroke: '#38bdf8',
+    strokeWidth: 1.5,
+    text: 'Explore',
+    textColor: '#0369a1',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'Compass',
+    iconColor: '#0284c7',
+    hasIcon: true
+  },
+  {
+    id: 'lavender-badge',
+    name: 'Lavender Badge',
+    width: 154,
+    height: 42,
+    rx: 21,
+    fill: 'linear-gradient(135deg, rgba(250, 245, 255, 1) 0%, rgba(243, 232, 255, 1) 100%)',
+    gradientColors: ['#faf5ff', '#f3e8ff'],
+    stroke: '#d8b4fe',
+    strokeWidth: 1.5,
+    badgeColor: '#a855f7',
+    text: 'Subscribe',
+    textColor: '#581c87',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'Bell',
+    iconColor: '#ffffff',
+    hasIcon: true
+  },
+  {
+    id: 'mint-frost',
+    name: 'Mint Frost',
+    width: 146,
+    height: 42,
+    rx: 21,
+    fill: 'linear-gradient(135deg, rgba(209, 250, 229, 1) 0%, rgba(167, 243, 208, 1) 100%)',
+    gradientColors: ['#d1fae5', '#a7f3d0'],
+    stroke: '#34d399',
+    strokeWidth: 1.5,
+    text: 'Verified',
+    textColor: '#065f46',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'ShieldCheck',
+    iconColor: '#059669',
+    hasIcon: true
+  },
+  {
+    id: 'sunset-coral',
+    name: 'Sunset Coral',
+    width: 142,
+    height: 42,
+    rx: 12,
+    fill: 'linear-gradient(135deg, rgba(255, 241, 242, 1) 0%, rgba(254, 215, 170, 1) 100%)',
+    gradientColors: ['#fff1f2', '#fed7aa'],
+    stroke: '#fb7185',
+    strokeWidth: 1.5,
+    text: 'Hot Deals',
+    textColor: '#9f1239',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'Zap',
+    iconColor: '#e11d48',
+    hasIcon: true
+  },
+  {
+    id: 'frosted-glass',
+    name: 'Frosted Glass',
+    width: 148,
+    height: 42,
+    rx: 8,
+    fill: 'linear-gradient(135deg, rgba(240, 249, 255, 1) 0%, rgba(224, 231, 255, 1) 100%)',
+    gradientColors: ['#f0f9ff', '#e0e7ff'],
+    stroke: '#818cf8',
+    strokeWidth: 1.5,
+    text: 'Learn More',
+    textColor: '#3730a3',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Inter', sans-serif",
+    iconName: 'ArrowRight',
+    iconColor: '#4f46e5',
+    iconPlacement: 'Right',
+    hasIcon: true
+  },
+  {
+    id: 'lemon-ribbon',
+    name: 'Lemon Ribbon',
+    width: 148,
+    height: 42,
+    rx: 6,
+    fill: 'linear-gradient(135deg, rgba(254, 252, 232, 1) 0%, rgba(254, 240, 138, 1) 100%)',
+    gradientColors: ['#fefce8', '#fef08a'],
+    ribbonColor: '#fbbf24',
+    text: 'SPECIAL OFFER',
+    textColor: '#713f12',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: "'Poppins', sans-serif",
+    letterSpacing: '0.8px',
+    iconName: 'Tag',
+    iconColor: '#78350f',
+    hasIcon: true
+  },
+  {
+    id: 'pearl-pill',
+    name: 'Pearl Gradient',
+    width: 148,
+    height: 42,
+    rx: 21,
+    fill: 'linear-gradient(120deg, rgba(224, 231, 255, 1) 0%, rgba(237, 233, 254, 1) 50%, rgba(252, 231, 243, 1) 100%)',
+    gradientColors: ['#e0e7ff', '#ede9fe', '#fce7f3'],
+    stroke: '#c7d2fe',
+    strokeWidth: 1.5,
+    text: 'PREMIUM',
+    textColor: '#312e81',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: "'Poppins', sans-serif",
+    letterSpacing: '1px',
+    iconName: 'Diamond',
+    iconColor: '#4f46e5',
+    hasIcon: true
+  },
+  {
+    id: 'diagonal-pastel',
+    name: 'Diagonal Pastel',
+    width: 152,
+    height: 42,
+    rx: 21,
+    fill: '#ffffff',
+    stroke: '#e2e8f0',
+    strokeWidth: 1.5,
+    sliceColor: '#a78bfa',
+    text: 'Download',
+    textColor: '#0f172a',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
+    iconName: 'Download',
+    iconColor: '#ffffff',
+    hasIcon: true
+  },
+  {
+    id: 'slanted-pastel',
+    name: 'Slanted Pastel',
+    width: 150,
+    height: 42,
+    rx: 20,
+    tl: 20,
+    tr: 4,
+    bl: 4,
+    br: 20,
+    cornerLinked: false,
+    fill: 'linear-gradient(135deg, rgba(245, 243, 255, 1) 0%, rgba(236, 254, 255, 1) 100%)',
+    gradientColors: ['#f5f3ff', '#ecfeff'],
+    stroke: '#a78bfa',
+    strokeWidth: 2,
+    text: 'WATCH LIVE',
+    textColor: '#5b21b6',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: "'Poppins', sans-serif",
+    letterSpacing: '1px',
+    iconName: 'Play',
+    iconColor: '#7c3aed',
+    hasIcon: true
   }
 ];
 
@@ -236,10 +435,18 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
   }
 
   if (template.id === 'rect-badge') {
+    const clipId = `clip-rect-${uniqueId}`;
     return `
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.badgeColor}" data-button-template="rect-badge" data-has-icon="true" data-icon-name="ShoppingCart" data-icon-color="#ffffff" data-icon-bg-color="${template.badgeColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="4" data-tr="4" data-bl="4" data-br="4" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" ry="${template.rx}" />
+          </clipPath>
+        </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <path class="btn-badge-block" d="M 0,${template.rx} A ${template.rx},${template.rx} 0 0 1 ${template.rx},0 L 38,0 L 38,${h} L ${template.rx},${h} A ${template.rx},${template.rx} 0 0 1 0,${h - template.rx} Z" fill="${template.badgeColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
+          <path class="btn-badge-block" d="M 0,${template.rx} A ${template.rx},${template.rx} 0 0 1 ${template.rx},0 L 38,0 L 38,${h} L ${template.rx},${h} A ${template.rx},${template.rx} 0 0 1 0,${h - template.rx} Z" fill="${template.badgeColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        </g>
         <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(11, 13)" pointer-events="none" style="pointer-events: none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
             <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
@@ -344,10 +551,18 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
   }
 
   if (template.id === 'upload-ribbon') {
+    const clipId = `clip-upload-${uniqueId}`;
     return `
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.ribbonColor}" data-button-template="upload-ribbon" data-has-icon="true" data-icon-name="Upload" data-icon-color="#ffffff" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="4" data-tr="4" data-bl="4" data-br="4" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" ry="${template.rx}" />
+          </clipPath>
+        </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <polygon points="0,0 34,0 42,${h / 2} 34,${h} 0,${h}" fill="${template.ribbonColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
+          <polygon points="0,0 34,0 42,${h / 2} 34,${h} 0,${h}" fill="${template.ribbonColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        </g>
         <g class="btn-icon" data-icon-name="Upload" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -356,6 +571,253 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </svg>
         </g>
         <text x="92" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="0.8px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 0.8px; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'gradient-pill') {
+    const gradId = `btn-grad-sunrise-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="gradient-pill" data-has-icon="true" data-icon-name="Sparkles" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffe8d6" />
+            <stop offset="100%" stop-color="#ffd1dc" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Sparkles" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+          </svg>
+        </g>
+        <text x="84" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'ocean-breeze') {
+    const gradId = `btn-grad-ocean-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="ocean-breeze" data-has-icon="true" data-icon-name="Compass" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="10" data-tr="10" data-bl="10" data-br="10" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#e0f2fe" />
+            <stop offset="100%" stop-color="#bae6fd" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Compass" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="${template.iconColor}" stroke="none"/>
+          </svg>
+        </g>
+        <text x="82" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'lavender-badge') {
+    const gradId = `btn-grad-lav-bg-${uniqueId}`;
+    const badgeGradId = `btn-grad-lav-badge-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-accent-color="${template.badgeColor}" data-button-template="lavender-badge" data-has-icon="true" data-icon-name="Bell" data-icon-color="#ffffff" data-icon-bg-color="${template.badgeColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#faf5ff" />
+            <stop offset="100%" stop-color="#f3e8ff" />
+          </linearGradient>
+          <linearGradient id="${badgeGradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#c084fc" />
+            <stop offset="100%" stop-color="#a855f7" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <circle class="btn-badge-circle" cx="21" cy="${h / 2}" r="14" fill="url(#${badgeGradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Bell" transform="translate(13, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+        </g>
+        <text x="92" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'mint-frost') {
+    const gradId = `btn-grad-mint-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="mint-frost" data-has-icon="true" data-icon-name="ShieldCheck" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d1fae5" />
+            <stop offset="100%" stop-color="#a7f3d0" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="ShieldCheck" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </g>
+        <text x="84" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'sunset-coral') {
+    const gradId = `btn-grad-sunset-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="sunset-coral" data-has-icon="true" data-icon-name="Zap" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="12" data-tr="12" data-bl="12" data-br="12" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fff1f2" />
+            <stop offset="100%" stop-color="#fed7aa" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Zap" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${template.iconColor}" stroke="none" pointer-events="none" style="pointer-events: none;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </g>
+        <text x="82" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'frosted-glass') {
+    const gradId = `btn-grad-frost-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="frosted-glass" data-has-icon="true" data-icon-name="ArrowRight" data-icon-color="${template.iconColor}" data-icon-placement="Right" data-padding-w="0" data-padding-h="0" data-tl="8" data-tr="8" data-bl="8" data-br="8" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f0f9ff" />
+            <stop offset="100%" stop-color="#e0e7ff" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <text x="64" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+        <g class="btn-icon" data-icon-name="ArrowRight" transform="translate(116, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </g>
+      </g>
+    `;
+  }
+
+  if (template.id === 'lemon-ribbon') {
+    const clipId = `clip-lemon-${uniqueId}`;
+    const gradId = `btn-grad-lemon-${uniqueId}`;
+    const ribbonGradId = `btn-grad-lemon-ribbon-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.ribbonColor}" data-button-template="lemon-ribbon" data-has-icon="true" data-icon-name="Tag" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="6" data-tr="6" data-bl="6" data-br="6" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" ry="${template.rx}" />
+          </clipPath>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fefce8" />
+            <stop offset="100%" stop-color="#fef08a" />
+          </linearGradient>
+          <linearGradient id="${ribbonGradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fde047" />
+            <stop offset="100%" stop-color="#fbbf24" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="#fde047" stroke-width="1" pointer-events="none" style="pointer-events: none;" />
+        <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
+          <polygon points="0,0 34,0 42,${h / 2} 34,${h} 0,${h}" fill="url(#${ribbonGradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        </g>
+        <g class="btn-icon" data-icon-name="Tag" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+            <circle cx="7" cy="7" r="1.5" fill="${template.iconColor}" stroke="none"/>
+          </svg>
+        </g>
+        <text x="94" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="0.8px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 0.8px; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'pearl-pill') {
+    const gradId = `btn-grad-pearl-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="pearl-pill" data-has-icon="true" data-icon-name="Diamond" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#e0e7ff" />
+            <stop offset="50%" stop-color="#ede9fe" />
+            <stop offset="100%" stop-color="#fce7f3" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Diamond" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M6 3h12l4 6-10 13L2 9Z"/>
+            <path d="M11 3 8 9l4 13 4-13-3-6"/>
+            <path d="M2 9h20"/>
+          </svg>
+        </g>
+        <text x="86" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="1px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 1px; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'diagonal-pastel') {
+    const clipId = `clip-diag-${uniqueId}`;
+    const gradId = `btn-grad-diag-${uniqueId}`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.sliceColor}" data-button-template="diagonal-pastel" data-has-icon="true" data-icon-name="Download" data-icon-color="#ffffff" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" />
+          </clipPath>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#93c5fd" />
+            <stop offset="100%" stop-color="#c4b5fd" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
+          <polygon points="-5,-5 42,-5 26,${h + 5} -5,${h + 5}" fill="url(#${gradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
+        </g>
+        <g class="btn-icon" data-icon-name="Download" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </g>
+        <text x="94" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
+      </g>
+    `;
+  }
+
+  if (template.id === 'slanted-pastel') {
+    const gradId = `btn-grad-slanted-${uniqueId}`;
+    const d = `M 20,0 L ${w - 4},0 A 4,4 0 0 1 ${w},4 L ${w},${h - 20} A 20,20 0 0 1 ${w - 20},${h} L 4,${h} A 4,4 0 0 1 0,${h - 4} L 0,20 A 20,20 0 0 1 20,0 Z`;
+    return `
+      <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-color="${template.stroke}" data-button-template="slanted-pastel" data-has-icon="true" data-icon-name="Play" data-icon-color="${template.iconColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="20" data-tr="4" data-bl="4" data-br="20" data-corner-linked="false" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+        <defs>
+          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f5f3ff" />
+            <stop offset="100%" stop-color="#ecfeff" />
+          </linearGradient>
+        </defs>
+        <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="20" fill="none" stroke="none" opacity="0" pointer-events="none" style="pointer-events: none;" />
+        <path class="btn-main-poly" d="${d}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
+        <g class="btn-icon" data-icon-name="Play" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${template.iconColor}" stroke="none" pointer-events="none" style="pointer-events: none;">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </g>
+        <text x="88" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="1px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 1px; pointer-events: none;">${template.text}</text>
       </g>
     `;
   }

@@ -647,6 +647,14 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   g.setAttribute('paint-order', 'stroke fill');
   g.style.paintOrder = 'stroke fill';
 
+  const initialLinecap = shapeData.strokeLinecap || 'square';
+  const initialLinejoin = shapeData.strokeLinejoin || (initialLinecap === 'round' ? 'round' : 'miter');
+  g.setAttribute('stroke-linecap', initialLinecap);
+  g.setAttribute('stroke-linejoin', initialLinejoin);
+  if (shapeData.strokeMiterlimit) {
+    g.setAttribute('stroke-miterlimit', String(shapeData.strokeMiterlimit));
+  }
+
   // Copy child shape attributes (like data-shape-type, data-count, etc.) up to g for RightSidebar inspection
   const primaryChild = svgRoot.querySelector('path, polygon, rect, circle, ellipse, line, g');
   if (primaryChild) {
@@ -661,6 +669,8 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   Array.from(svgRoot.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline')).forEach((child) => {
     child.removeAttribute('stroke');
     child.removeAttribute('stroke-width');
+    child.removeAttribute('stroke-linecap');
+    child.removeAttribute('stroke-linejoin');
     child.setAttribute('fill', 'inherit');
     child.setAttribute('paint-order', 'stroke fill');
     child.style.paintOrder = 'stroke fill';

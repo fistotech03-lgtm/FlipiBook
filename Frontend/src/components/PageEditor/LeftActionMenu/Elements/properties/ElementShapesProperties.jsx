@@ -292,14 +292,14 @@ const ShapeAppearanceControls = ({
             {/* Stroke Width Stepper */}
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
-              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+              <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
                 <button
                   type="button"
                   onClick={() => setBackgroundColor(prev => ({
                     ...prev,
                     strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
                   }))}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   −
                 </button>
@@ -315,7 +315,7 @@ const ShapeAppearanceControls = ({
                         setBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
                       }
                     }}
-                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                   />
                 </div>
                 <button
@@ -324,7 +324,7 @@ const ShapeAppearanceControls = ({
                     ...prev,
                     strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
                   }))}
-                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   +
                 </button>
@@ -335,10 +335,14 @@ const ShapeAppearanceControls = ({
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Line Corner</span>
               <ElementDropdown
-                value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
-                onChange={(val) => setBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
+                value={(backgroundColor?.strokeLinecap === 'round' || backgroundColor?.strokeLinejoin === 'round') ? 'Rounded' : 'Square'}
+                onChange={(val) => setBackgroundColor(prev => ({
+                  ...prev,
+                  strokeLinecap: val === 'Rounded' ? 'round' : 'square',
+                  strokeLinejoin: val === 'Rounded' ? 'round' : 'miter'
+                }))}
                 options={['Square', 'Rounded']}
-                buttonClassName="!h-[2.2vw]"
+                buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
               />
             </div>
           </div>
@@ -1759,7 +1763,23 @@ const ElementShapesProperties = ({
     strokeDasharrayValue: selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray,
     strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0]) || 8,
     strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0])) || 4,
-    strokeLinecap: selectedElementProps['stroke-linecap'] === 'round' ? 'round' : 'square',
+    strokeLinecap: (() => {
+      const cap = selectedElementProps['stroke-linecap'] || selectedElementProps['data-stroke-linecap'];
+      const join = selectedElementProps['stroke-linejoin'] || selectedElementProps['data-stroke-linejoin'];
+      if (cap === 'round' || join === 'round') return 'round';
+      if (cap === 'square' || cap === 'butt' || join === 'miter') return 'square';
+      try {
+        const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+        const el = doc.getElementById(selectedLayerId);
+        if (el) {
+          const domCap = el.getAttribute('stroke-linecap') || el.querySelector('path, polygon, rect, circle, ellipse, line, polyline')?.getAttribute('stroke-linecap');
+          const domJoin = el.getAttribute('stroke-linejoin') || el.querySelector('path, polygon, rect, circle, ellipse, line, polyline')?.getAttribute('stroke-linejoin');
+          if (domCap === 'round' || domJoin === 'round') return 'round';
+          if (domCap === 'square' || domCap === 'butt' || domJoin === 'miter') return 'square';
+        }
+      } catch (e) {}
+      return 'square';
+    })(),
     strokePosition: 'Outside',
   };
 
@@ -1817,7 +1837,7 @@ const ElementShapesProperties = ({
     }
     updates['data-stroke-position'] = 'Outside';
     updates['paint-order'] = 'stroke fill';
-    if (backgroundColor.strokeLinecap !== next.strokeLinecap) {
+    if (backgroundColor.strokeLinecap !== next.strokeLinecap || (next.strokeLinecap !== undefined && (selectedElementProps['stroke-linecap'] !== next.strokeLinecap || selectedElementProps['stroke-linejoin'] !== (next.strokeLinecap === 'round' ? 'round' : 'miter')))) {
       updates['stroke-linecap'] = next.strokeLinecap;
       updates['stroke-linejoin'] = next.strokeLinecap === 'round' ? 'round' : 'miter';
     }
@@ -1835,10 +1855,12 @@ const ElementShapesProperties = ({
         selectedElement.setAttribute('data-stroke-position', 'Outside');
         selectedElement.setAttribute('paint-order', 'stroke fill');
         selectedElement.style.paintOrder = 'stroke fill';
-        const inner = selectedElement.querySelector('path, polygon, rect, circle, ellipse, line');
+        const inner = selectedElement.querySelector('path, polygon, rect, circle, ellipse, line, polyline');
         if (inner) {
           inner.setAttribute('paint-order', 'stroke fill');
           inner.style.paintOrder = 'stroke fill';
+          if (updates['stroke-linecap']) inner.setAttribute('stroke-linecap', updates['stroke-linecap']);
+          if (updates['stroke-linejoin']) inner.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
         }
         const bgRect = selectedElement.querySelector('.frame-bg-rect');
         if (bgRect) {
@@ -1859,6 +1881,8 @@ const ElementShapesProperties = ({
               : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
             bgRect.setAttribute('stroke-dasharray', dashValue);
           }
+          if (updates['stroke-linecap']) bgRect.setAttribute('stroke-linecap', updates['stroke-linecap']);
+          if (updates['stroke-linejoin']) bgRect.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
           Object.entries(updates).forEach(([k, v]) => {
             if (k === 'fill' || k === 'stroke') return;
             selectedElement.setAttribute(k, v);
@@ -1883,6 +1907,21 @@ const ElementShapesProperties = ({
             selectedElement.removeAttribute(k);
           } else {
             selectedElement.setAttribute(k, v);
+          }
+        });
+
+        // Sync stroke-linecap, stroke-linejoin, and paint-order to all inner vector elements
+        const childShapes = selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline');
+        childShapes.forEach((child) => {
+          if (updates['stroke-linecap']) {
+            child.setAttribute('stroke-linecap', updates['stroke-linecap']);
+          }
+          if (updates['stroke-linejoin']) {
+            child.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
+          }
+          if (updates['paint-order']) {
+            child.setAttribute('paint-order', updates['paint-order']);
+            if (child.style) child.style.paintOrder = updates['paint-order'];
           }
         });
 

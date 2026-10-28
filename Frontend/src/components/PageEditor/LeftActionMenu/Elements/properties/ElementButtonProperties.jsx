@@ -318,6 +318,7 @@ export const ButtonEditor = ({
       const rectEl = currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect');
       const rxVal = rectEl?.getAttribute('rx');
       const isSlanted = currentElement.getAttribute('data-button-template') === 'slanted-border' ||
+        currentElement.getAttribute('data-button-template') === 'slanted-pastel' ||
         (rawTl === '24' && rawTr === '0');
 
       const parseR = (val, fb) => {
@@ -352,6 +353,7 @@ export const ButtonEditor = ({
       }
     }
     const isSlanted = currentElement?.getAttribute('data-button-template') === 'slanted-border' ||
+      currentElement?.getAttribute('data-button-template') === 'slanted-pastel' ||
       (currentElement?.getAttribute('data-tl') === '24' && currentElement?.getAttribute('data-tr') === '0');
     return isSlanted ? false : true;
   });
@@ -477,6 +479,8 @@ export const ButtonEditor = ({
         savedIconBgColor = '#1e1b4b';
       } else if (btnTemplate === 'social-badge') {
         savedIconBgColor = '#ffffff';
+      } else if (btnTemplate === 'lavender-badge') {
+        savedIconBgColor = '#a855f7';
       } else {
         savedIconBgColor = badgeEl ? '#1e1b4b' : 'none';
       }
@@ -545,6 +549,7 @@ export const ButtonEditor = ({
 
     // 5. Corner Radius
     const isSlantedBorder = el.getAttribute('data-button-template') === 'slanted-border' ||
+      el.getAttribute('data-button-template') === 'slanted-pastel' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
     const parseRadiusAttr = (attrVal, fallback) => {
@@ -918,8 +923,14 @@ export const ButtonEditor = ({
 
     // Apply corner radius & shape geometry
     const isPill = el.getAttribute('data-button-template') === 'solid-pill' ||
-      el.getAttribute('data-button-template') === 'white-pill-badge';
+      el.getAttribute('data-button-template') === 'white-pill-badge' ||
+      el.getAttribute('data-button-template') === 'gradient-pill' ||
+      el.getAttribute('data-button-template') === 'lavender-badge' ||
+      el.getAttribute('data-button-template') === 'mint-frost' ||
+      el.getAttribute('data-button-template') === 'pearl-pill' ||
+      el.getAttribute('data-button-template') === 'diagonal-pastel';
     const isSlanted = el.getAttribute('data-button-template') === 'slanted-border' ||
+      el.getAttribute('data-button-template') === 'slanted-pastel' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
     const savedTl = el.getAttribute('data-tl');
@@ -987,15 +998,59 @@ export const ButtonEditor = ({
     const ownerDoc = el.ownerDocument || document;
     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const svgRoot = el.closest('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
-    const clipId = `clip-${el.id || selectedLayerId}`;
-    const clipRect = el.querySelector('clipPath rect') || svgRoot?.querySelector(`#${clipId} rect`) || svgRoot?.querySelector(`[id*="${el.id}"] rect`);
-    if (clipRect) {
-      clipRect.setAttribute('x', rectX.toString());
-      clipRect.setAttribute('y', rectY.toString());
-      clipRect.setAttribute('width', newButtonWidth.toString());
-      clipRect.setAttribute('height', newButtonHeight.toString());
-      clipRect.setAttribute('rx', maxR.toString());
-      clipRect.setAttribute('ry', maxR.toString());
+
+    // Identify accent shapes
+    const placement = currentPlacement || el.getAttribute('data-icon-placement') || 'Left';
+    const blockPoly = el.querySelector('polygon:not(.btn-main-poly)');
+    const ribbonPoly = el.querySelector('polygon:not(.btn-main-poly)') || (btnTemplate === 'upload-ribbon' || btnTemplate === 'lemon-ribbon' ? el.querySelector('polygon') : null);
+    const slicePoly = el.querySelector('g[clip-path] polygon');
+    const badgeBlock = el.querySelector('.btn-badge-block');
+    let badgeCircle = el.querySelector('.btn-badge-circle, .btn-icon-bg');
+    if (!badgeCircle && badgeEl && badgeEl.tagName?.toLowerCase() === 'circle') {
+      badgeCircle = badgeEl;
+    }
+
+    // Ensure clipPath exists and clips ribbons / accent shapes cleanly to corner radius
+    let clipEl = el.querySelector('clipPath') || (svgRoot ? svgRoot.querySelector(`clipPath[id*="${el.id}"]`) : null);
+    const clipId = clipEl?.getAttribute('id') || `clip-${el.id || selectedLayerId || Date.now()}`;
+
+    if (!clipEl && (ribbonPoly || slicePoly || badgeBlock || btnTemplate === 'upload-ribbon' || btnTemplate === 'lemon-ribbon' || btnTemplate === 'angled-slice' || btnTemplate === 'diagonal-pastel' || btnTemplate === 'rect-badge')) {
+      let defs = el.querySelector(':scope > defs') || el.querySelector('defs');
+      if (!defs) {
+        defs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+        el.insertBefore(defs, el.firstChild);
+      }
+      clipEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+      clipEl.setAttribute('id', clipId);
+      defs.appendChild(clipEl);
+    }
+
+    if (clipEl) {
+      if (!clipEl.getAttribute('id')) clipEl.setAttribute('id', clipId);
+      const activeClipId = clipEl.getAttribute('id');
+
+      // Wrap ribbon in clip-path group if not already wrapped
+      if (ribbonPoly && !ribbonPoly.getAttribute('clip-path') && !ribbonPoly.parentElement?.getAttribute('clip-path')) {
+        const ribbonWrap = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "g");
+        ribbonWrap.setAttribute('clip-path', `url(#${activeClipId})`);
+        ribbonWrap.setAttribute('pointer-events', 'none');
+        ribbonWrap.style.pointerEvents = 'none';
+        ribbonPoly.parentNode.insertBefore(ribbonWrap, ribbonPoly);
+        ribbonWrap.appendChild(ribbonPoly);
+      }
+
+      // Update clipping geometry according to corner radius
+      if (areCornersEqual) {
+        clipEl.innerHTML = `<rect class="btn-clip-rect" x="${rectX}" y="${rectY}" width="${newButtonWidth}" height="${newButtonHeight}" rx="${maxR}" ry="${maxR}" />`;
+      } else {
+        const pathD = getRoundedPathD(rectX, rectY, newButtonWidth, newButtonHeight, radTl, radTr, radBr, radBl);
+        clipEl.innerHTML = `<path class="btn-clip-path" d="${pathD}" />`;
+      }
+
+      const rootClip = svgRoot?.querySelector(`#${activeClipId}`);
+      if (rootClip && rootClip !== clipEl) {
+        rootClip.innerHTML = clipEl.innerHTML;
+      }
     }
 
     const borderRect = el.querySelector('rect.btn-border');
@@ -1006,17 +1061,6 @@ export const ButtonEditor = ({
       borderRect.setAttribute('height', newButtonHeight.toString());
       borderRect.setAttribute('rx', maxR.toString());
       borderRect.setAttribute('ry', maxR.toString());
-    }
-
-    // Identify accent shapes
-    const placement = currentPlacement || el.getAttribute('data-icon-placement') || 'Left';
-    const blockPoly = el.querySelector('polygon:not(.btn-main-poly)');
-    const ribbonPoly = el.querySelector('polygon:not(.btn-main-poly)') || (btnTemplate === 'upload-ribbon' ? el.querySelector('polygon') : null);
-    const slicePoly = el.querySelector('g[clip-path] polygon');
-    const badgeBlock = el.querySelector('.btn-badge-block');
-    let badgeCircle = el.querySelector('.btn-badge-circle, .btn-icon-bg');
-    if (!badgeCircle && badgeEl && badgeEl.tagName?.toLowerCase() === 'circle') {
-      badgeCircle = badgeEl;
     }
 
     let iconWrap = el.querySelector('.btn-icon');
@@ -1074,51 +1118,53 @@ export const ButtonEditor = ({
           textX = rectX + (newButtonWidth - blockW) / 2;
           textY = centerY;
         }
-      } else if (btnTemplate === 'upload-ribbon' && ribbonPoly) {
+      } else if ((btnTemplate === 'upload-ribbon' || btnTemplate === 'lemon-ribbon') && ribbonPoly) {
         ribbonPoly.removeAttribute('display');
         if (ribbonPoly.style) ribbonPoly.style.display = '';
-        const ribbonW = Math.max(36, iconSize + 16);
         if (placement === 'Left') {
-          ribbonPoly.setAttribute('points', `${rectX},${rectY} ${rectX + ribbonW - 8},${rectY} ${rectX + ribbonW},${rectY + newButtonHeight / 2} ${rectX + ribbonW - 8},${rectY} ${rectX},${rectY + newButtonHeight}`);
-          iconX = rectX + (ribbonW - 8 - iconSize) / 2;
+          const leftR = Math.max(0, Math.min(newButtonHeight / 2, Math.max(radTl, radBl)));
+          const cornerOffset = leftR > 4 ? Math.round((leftR - 4) * 0.45) : 0;
+          const flatW = 34 + cornerOffset;
+          const ribbonPointW = flatW + 8;
+          ribbonPoly.setAttribute('points', `${rectX},${rectY} ${rectX + flatW},${rectY} ${rectX + ribbonPointW},${centerY} ${rectX + flatW},${rectY + newButtonHeight} ${rectX},${rectY + newButtonHeight}`);
+          iconX = rectX + 10 + cornerOffset;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + ribbonW) + (newButtonWidth - ribbonW) / 2;
+          textX = (rectX + ribbonPointW) + (newButtonWidth - ribbonPointW) / 2;
           textY = centerY;
         } else {
-          ribbonPoly.setAttribute('points', `${rectX + newButtonWidth},${rectY} ${rectX + newButtonWidth - ribbonW + 8},${rectY} ${rectX + newButtonWidth - ribbonW},${rectY + newButtonHeight / 2} ${rectX + newButtonWidth - ribbonW + 8},${rectY + newButtonHeight} ${rectX + newButtonWidth},${rectY + newButtonHeight}`);
-          iconX = rectX + newButtonWidth - ribbonW + 8 + (ribbonW - 8 - iconSize) / 2;
+          const rightR = Math.max(0, Math.min(newButtonHeight / 2, Math.max(radTr, radBr)));
+          const cornerOffset = rightR > 4 ? Math.round((rightR - 4) * 0.45) : 0;
+          const flatW = 34 + cornerOffset;
+          const ribbonPointW = flatW + 8;
+          ribbonPoly.setAttribute('points', `${rectX + newButtonWidth},${rectY} ${rectX + newButtonWidth - flatW},${rectY} ${rectX + newButtonWidth - ribbonPointW},${centerY} ${rectX + newButtonWidth - flatW},${rectY + newButtonHeight} ${rectX + newButtonWidth},${rectY + newButtonHeight}`);
+          iconX = rectX + newButtonWidth - flatW + (flatW - iconSize) / 2 - cornerOffset;
           iconY = centerY - iconSize / 2;
-          textX = rectX + (newButtonWidth - ribbonW) / 2;
+          textX = rectX + (newButtonWidth - ribbonPointW) / 2;
           textY = centerY;
         }
       } else if (btnTemplate === 'rect-badge' && badgeBlock) {
         badgeBlock.removeAttribute('display');
         if (badgeBlock.style) badgeBlock.style.display = '';
-        const badgeW = Math.max(38, iconSize + 18);
         if (placement === 'Left') {
-          const badgeRx = Math.min(radTl, radBl, badgeW / 2, newButtonHeight / 2);
-          if (badgeRx > 0) {
-            badgeBlock.setAttribute('d', `M ${rectX},${rectY + badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + badgeRx},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX + badgeRx},${rectY + newButtonHeight} A ${badgeRx},${badgeRx} 0 0 1 ${rectX},${rectY + newButtonHeight - badgeRx} Z`);
-          } else {
-            badgeBlock.setAttribute('d', `M ${rectX},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX},${rectY + newButtonHeight} Z`);
-          }
-          iconX = rectX + (badgeW - iconSize) / 2;
+          const leftR = Math.max(0, Math.min(newButtonHeight / 2, Math.max(radTl, radBl)));
+          const cornerOffset = leftR > 4 ? Math.round((leftR - 4) * 0.45) : 0;
+          const badgeW = 38 + cornerOffset;
+          badgeBlock.setAttribute('d', `M ${rectX},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX},${rectY + newButtonHeight} Z`);
+          iconX = rectX + 11 + cornerOffset;
           iconY = centerY - iconSize / 2;
           textX = (rectX + badgeW) + (newButtonWidth - badgeW) / 2;
           textY = centerY;
         } else {
-          const badgeRx = Math.min(radTr, radBr, badgeW / 2, newButtonHeight / 2);
-          if (badgeRx > 0) {
-            badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth - badgeRx},${rectY} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth},${rectY + badgeRx} L ${rectX + newButtonWidth},${rectY + newButtonHeight - badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth - badgeRx},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
-          } else {
-            badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth},${rectY} L ${rectX + newButtonWidth},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
-          }
-          iconX = rectX + newButtonWidth - badgeW + (badgeW - iconSize) / 2;
+          const rightR = Math.max(0, Math.min(newButtonHeight / 2, Math.max(radTr, radBr)));
+          const cornerOffset = rightR > 4 ? Math.round((rightR - 4) * 0.45) : 0;
+          const badgeW = 38 + cornerOffset;
+          badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth},${rectY} L ${rectX + newButtonWidth},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
+          iconX = rectX + newButtonWidth - badgeW + (badgeW - iconSize) / 2 - cornerOffset;
           iconY = centerY - iconSize / 2;
           textX = rectX + (newButtonWidth - badgeW) / 2;
           textY = centerY;
         }
-      } else if (btnTemplate === 'angled-slice' && slicePoly) {
+      } else if ((btnTemplate === 'angled-slice' || btnTemplate === 'diagonal-pastel') && slicePoly) {
         slicePoly.removeAttribute('display');
         if (slicePoly.style) slicePoly.style.display = '';
         const sliceW = Math.max(42, iconSize + 22);
@@ -1135,7 +1181,7 @@ export const ButtonEditor = ({
           textX = rectX + (newButtonWidth - (sliceW - 8)) / 2;
           textY = centerY;
         }
-      } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
+      } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
         const circleEl = badgeCircle || badgeEl;
         const bRadius = Math.max(14, Math.round(newButtonHeight / 2 - 4));
         if (placement === 'Left') {
@@ -1197,7 +1243,7 @@ export const ButtonEditor = ({
           if (circ.style) circ.style.display = '';
         } else {
           const circ = el.querySelector('.btn-badge-circle, .btn-icon-bg');
-          if (circ && btnTemplate !== 'white-pill-badge' && btnTemplate !== 'social-badge') {
+          if (circ && btnTemplate !== 'white-pill-badge' && btnTemplate !== 'social-badge' && btnTemplate !== 'lavender-badge') {
             circ.setAttribute('display', 'none');
           }
         }
@@ -1776,8 +1822,8 @@ export const ButtonEditor = ({
       el.setAttribute('data-bl', maxR.toString());
       el.setAttribute('data-br', maxR.toString());
       updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, unifiedRadius);
-      syncButtonToCanvas();
     }
+    syncButtonToCanvas();
   };
 
   // Effects Handlers
@@ -2113,11 +2159,11 @@ export const ButtonEditor = ({
           {/* Stroke Width */}
           <div className="flex flex-col gap-[0.25vw]">
             <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[2.3vw]">
+            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 −
               </button>
@@ -2126,13 +2172,13 @@ export const ButtonEditor = ({
                   type="number"
                   value={strokeWidth}
                   onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 +
               </button>
@@ -2146,6 +2192,7 @@ export const ButtonEditor = ({
               value={lineCorner}
               onChange={handleLineCornerChange}
               options={['Square', 'Rounded']}
+              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
             />
           </div>
         </div>

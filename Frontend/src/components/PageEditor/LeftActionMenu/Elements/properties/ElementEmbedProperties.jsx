@@ -7,6 +7,7 @@ import {
 import ColorPicker from '../../../properties/ColorPicker';
 import Effect from '../../../properties/Effect';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
+import { getEmbedOverlayHtml } from '../utils/embedElementUtils';
 
 // Section header matching editor design standards
 // Helper to sync live SVG filters on the DOM element for Drop Shadow
@@ -132,7 +133,7 @@ const syncLiveFilters = (el) => {
 };
 
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
+  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.5vw]">
     <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
@@ -588,7 +589,13 @@ const ElementEmbedProperties = ({
     if (!frameGroup) return;
 
     const snap = lastAppliedSnapshotRef.current;
+    const hasOverlayInDom = !!frameGroup.querySelector('.embed-overlay-wrapper');
+    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && !!(url || customCode);
+    const hasCorrectOverlay = !!frameGroup.querySelector('.embed-overlay-wrapper .svg-icon-override');
+    const overlayNeedsUpdate = hasOverlayInDom !== shouldHaveOverlay || (shouldHaveOverlay && !hasCorrectOverlay);
+
     if (
+      !overlayNeedsUpdate &&
       snap &&
       snap.code === customCode &&
       snap.url === url &&
@@ -696,12 +703,20 @@ const ElementEmbedProperties = ({
         }
       }
 
-      // 3. Update foreignObject and iframe in-place
+      // 3. Update foreignObject, rootContainer, iframe, and overlay in-place
       const iframeInfo = getEmbedIframeContent({
         via: embedVia,
         targetUrl: url,
         code: customCode,
         allowFs: allowFullscreen
+      });
+
+      const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+      const overlayHtml = getEmbedOverlayHtml({
+        targetUrl: effectiveUrl,
+        openWebsiteBtn,
+        allowFullscreen,
+        behavior
       });
 
       let fo = frameGroup.querySelector('foreignObject');
@@ -711,7 +726,23 @@ const ElementEmbedProperties = ({
         fo.style.borderRadius = '0px';
         fo.style.overflow = 'hidden';
 
-        const existingIframe = fo.querySelector('iframe');
+        let rootContainer = fo.querySelector('.embed-root-container');
+        if (!rootContainer) {
+          const existingIframe = fo.querySelector('iframe');
+          rootContainer = document.createElement('div');
+          rootContainer.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+          rootContainer.className = 'embed-root-container';
+          rootContainer.setAttribute('style', 'position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;');
+          if (existingIframe) {
+            rootContainer.appendChild(existingIframe);
+          } else {
+            rootContainer.innerHTML = iframeInfo.html;
+          }
+          fo.innerHTML = '';
+          fo.appendChild(rootContainer);
+        }
+
+        const existingIframe = rootContainer.querySelector('iframe');
         let needsReload = false;
         if (!existingIframe) {
           needsReload = true;
@@ -727,9 +758,32 @@ const ElementEmbedProperties = ({
         }
 
         if (needsReload) {
-          fo.innerHTML = iframeInfo.html;
-        } else {
+          const temp = document.createElement('div');
+          temp.innerHTML = iframeInfo.html;
+          const newIframe = temp.querySelector('iframe');
+          if (existingIframe) {
+            existingIframe.replaceWith(newIframe);
+          } else {
+            rootContainer.insertBefore(newIframe, rootContainer.firstChild);
+          }
+        } else if (existingIframe) {
           existingIframe.style.borderRadius = '0px';
+        }
+
+        // Update or insert overlay wrapper
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (overlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = overlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (overlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
         }
       } else {
         const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}"`;
@@ -740,7 +794,10 @@ const ElementEmbedProperties = ({
           ${fillLayerHtml}
           <g class="embed-content-group" pointer-events="none">
             <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
-              ${iframeInfo.html}
+              <div xmlns="http://www.w3.org/1999/xhtml" class="embed-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;">
+                ${iframeInfo.html}
+                ${overlayHtml}
+              </div>
             </foreignObject>
           </g>
           ${strokeLayerHtml}
@@ -824,6 +881,31 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-open-website-btn', val ? 'true' : 'false');
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn: val,
+          allowFullscreen,
+          behavior
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      }
+      syncEmbedDomToPage();
     }
   };
 
@@ -833,6 +915,31 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-allow-fullscreen', val ? 'true' : 'false');
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn,
+          allowFullscreen: val,
+          behavior
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      }
+      syncEmbedDomToPage();
     }
   };
 
@@ -842,6 +949,31 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-behavior', val);
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn,
+          allowFullscreen,
+          behavior: val
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      }
+      syncEmbedDomToPage();
     }
   };
 
@@ -1031,8 +1163,7 @@ const ElementEmbedProperties = ({
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
         <div className="flex items-center gap-[0.25vw]">
           <span className="text-[0.78vw] text-gray-700 font-medium">Allow Fullscreen</span>
-          <span className="text-gray-400 text-[0.68vw] font-normal">(if available)</span>
-        </div>
+         </div>
         <ToggleSwitch
           checked={allowFullscreen}
           onChange={handleAllowFullscreenChange}
@@ -1069,26 +1200,26 @@ const ElementEmbedProperties = ({
           {/* Stroke Width */}
           <div className="flex flex-col gap-[0.25vw]">
             <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[2.4vw] min-h-[32px]">
+            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
-                -
+                −
               </button>
               <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
                 <input
                   type="number"
                   value={strokeWidth}
                   onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 +
               </button>
@@ -1102,6 +1233,7 @@ const ElementEmbedProperties = ({
               value={lineCorner}
               onChange={handleLineCornerChange}
               options={['Square', 'Rounded']}
+              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
             />
           </div>
         </div>

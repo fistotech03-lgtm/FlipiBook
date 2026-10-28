@@ -622,9 +622,15 @@ const RightSidebar = ({
 
         // For shapes added as SVGs wrapped in a <g>, extract inner shape properties
         if (el.tagName.toLowerCase() === 'g') {
-          const innerShape = el.querySelector('path, polygon, rect, circle, ellipse, line');
+          const innerShape = el.querySelector('path, polygon, rect, circle, ellipse, line, polyline');
           if (innerShape) {
             props.innerTagName = innerShape.tagName.toLowerCase();
+            if (!props['stroke-linecap'] && innerShape.getAttribute('stroke-linecap')) {
+              props['stroke-linecap'] = innerShape.getAttribute('stroke-linecap');
+            }
+            if (!props['stroke-linejoin'] && innerShape.getAttribute('stroke-linejoin')) {
+              props['stroke-linejoin'] = innerShape.getAttribute('stroke-linejoin');
+            }
             Array.from(innerShape.attributes).forEach(attr => {
               if (['data-shape-type', 'data-shape-id', 'data-shape-title', 'data-name', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked', 'x', 'y', 'width', 'height'].includes(attr.name)) {
                 props[attr.name] = attr.value;
@@ -1183,6 +1189,31 @@ const RightSidebar = ({
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                            } else {
+                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                              const el = editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+                              if (!el) return;
+                              const container = el.closest('.page-svg-container');
+                              const svgRoot = container ? (container.querySelector('[id^="canvas-content-"] svg') || container.querySelector('svg')) : el.closest('svg');
+                              if (svgRoot) {
+                                const cloneSvg = svgRoot.cloneNode(true);
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+                                cloneSvg.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                                  td.removeAttribute('data-cell-selected');
+                                  td.style.removeProperty('outline');
+                                  td.style.removeProperty('outline-offset');
+                                  td.style.removeProperty('box-shadow');
+                                });
+                                const serializer = new XMLSerializer();
+                                const html = serializer.serializeToString(cloneSvg);
+                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                              }
+                            }
+                          }}
                         />
                       ) : selectedElementProps?.isQRCode ? (
                         <ElementQRCodeProperties
@@ -1307,6 +1338,25 @@ const RightSidebar = ({
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
+                          onUpdate={(newHtml) => {
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                            } else {
+                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                              const el = editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+                              if (!el) return;
+                              const container = el.closest('.page-svg-container');
+                              const svgRoot = container ? (container.querySelector('[id^="canvas-content-"] svg') || container.querySelector('svg')) : el.closest('svg');
+                              if (svgRoot) {
+                                const cloneSvg = svgRoot.cloneNode(true);
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+                                const serializer = new XMLSerializer();
+                                const html = serializer.serializeToString(cloneSvg);
+                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                              }
+                            }
+                          }}
                         />
                       ) : selectedElementProps?.isAudio ? (
                         <ElementAudioProperties

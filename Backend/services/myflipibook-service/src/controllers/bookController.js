@@ -195,6 +195,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
  */
 exports.getBooks = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     if (!userQuery) {
       return res

@@ -1,10 +1,11 @@
 const { verifyToken } = require('../utils/jwtHelper');
+const { resolveAuthUser } = require('../utils/userHelper');
 
 /**
  * Middleware to authenticate requests via HttpOnly cookie or Bearer token
  * Strictly enforces authentication first before allowing page editor operations.
  */
-const authenticateUser = (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
   const token =
     req.cookies?.token ||
     (req.headers.authorization?.startsWith('Bearer ')
@@ -21,6 +22,9 @@ const authenticateUser = (req, res, next) => {
 
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
     return next();
   }
 
@@ -28,6 +32,9 @@ const authenticateUser = (req, res, next) => {
   const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
   if (fallbackEmail) {
     req.user = { emailId: fallbackEmail, email: fallbackEmail };
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
     return next();
   }
 
@@ -40,7 +47,7 @@ const authenticateUser = (req, res, next) => {
 /**
  * Optional authentication: attaches req.user if valid token present, otherwise proceeds
  */
-const optionalAuth = (req, res, next) => {
+const optionalAuth = async (req, res, next) => {
   const token =
     req.cookies?.token ||
     (req.headers.authorization?.startsWith('Bearer ')
@@ -48,6 +55,22 @@ const optionalAuth = (req, res, next) => {
       : null);
 
   const decoded = verifyToken(token);
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
+    req.user = decoded;
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
+  } else {
+    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
+    if (fallbackEmail) {
+      req.user = { emailId: fallbackEmail, email: fallbackEmail };
+      try {
+        await resolveAuthUser(req);
+      } catch (_) {}
+    }
+  }
+  next();
+};
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
   } else {

@@ -71,16 +71,6 @@ const optionalAuth = async (req, res, next) => {
   }
   next();
 };
-  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
-    req.user = decoded;
-  } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
-    if (fallbackEmail) {
-      req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    }
-  }
-  next();
-};
 
 module.exports = {
   authenticateUser,

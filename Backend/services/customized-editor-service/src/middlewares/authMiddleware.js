@@ -85,23 +85,6 @@ const optionalAuth = async (req, res, next) => {
   }
   next();
 };
-  const token =
-    req.cookies?.token ||
-    (req.headers.authorization?.startsWith('Bearer ')
-      ? req.headers.authorization.split(' ')[1]
-      : null);
-
-  const decoded = verifyToken(token);
-  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
-    req.user = decoded;
-  } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
-    if (fallbackEmail) {
-      req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    }
-  }
-  next();
-};
 
 module.exports = {
   authenticateUser,

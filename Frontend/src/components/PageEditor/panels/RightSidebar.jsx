@@ -834,7 +834,7 @@ const RightSidebar = ({
         />
       )}
 
-      <div className={`flex-1 flex flex-col overflow-hidden bg-[#fbfbfb] ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`flex-1 flex flex-col overflow-hidden bg-white ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
         {is3DModalOpen ? (
           <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
             <Model3DEditor
@@ -1016,10 +1016,9 @@ const RightSidebar = ({
                   folderName={effectiveFolder}
                   flipbookName={effectiveBook}
                 />
-              ) : (
+              ) : selectedElementProps ? (
                 <div className="flex flex-col p-[1.5vw] gap-[1.5vw]">
-                  {selectedElementProps ? (
-                    <div className="flex flex-col gap-[1.5vw]">
+                  <div className="flex flex-col gap-[1.5vw]">
                       {(selectedElementProps?.isUserGroup || (multiSelectedIds && multiSelectedIds.size > 1)) ? (
                         <GroupProperties
                           selectedElement={(() => {
@@ -1393,21 +1392,20 @@ const RightSidebar = ({
                         </>
                       )}
                     </div>
-                  ) : (
-                    /* Page Properties (Default View) */
-                    <PageProperties
-                      pages={pages}
-                      activePageIndex={activePageIndex}
-                      updateElementAttribute={updateElementAttribute}
-                      baseWidth={baseWidth}
-                      baseHeight={baseHeight}
-                      presetColors={presetColors}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          )
+                  </div>
+                ) : (
+                  /* Page Properties (Default View) */
+                  <PageProperties
+                    pages={pages}
+                    activePageIndex={activePageIndex}
+                    updateElementAttribute={updateElementAttribute}
+                    baseWidth={baseWidth}
+                    baseHeight={baseHeight}
+                    presetColors={presetColors}
+                  />
+                )}
+              </div>
+            )
         ) : activeTopTool === 'interaction' ? (
           <InteractionPanel
             selectedElementProps={selectedElementProps}

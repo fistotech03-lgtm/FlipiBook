@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import usePreventBrowserZoom from './hooks/usePreventBrowserZoom';
@@ -537,6 +537,45 @@ const MainEditor = ({
       window.removeEventListener('editor-flip', onEditorFlip);
     };
   }, [handleRotate, handleFlip]);
+
+  // Sync workspace canvas color state & opacity
+  const [canvaColor, setCanvaColor] = useState(() => {
+    return localStorage.getItem('editor_canva_color') || '#E6E7E7';
+  });
+  const [canvaOpacity, setCanvaOpacity] = useState(() => {
+    const saved = localStorage.getItem('editor_canva_opacity');
+    return saved !== null ? parseFloat(saved) : 1;
+  });
+
+  useEffect(() => {
+    const onCanvaColorChange = (e) => {
+      if (e.detail?.color) {
+        setCanvaColor(e.detail.color);
+      }
+      if (e.detail?.opacity !== undefined) {
+        setCanvaOpacity(e.detail.opacity);
+      }
+    };
+    window.addEventListener('editor-canva-color-changed', onCanvaColorChange);
+    return () => window.removeEventListener('editor-canva-color-changed', onCanvaColorChange);
+  }, []);
+
+  const computedCanvaBackground = useMemo(() => {
+    if (isPopupEditor) return 'transparent';
+    if (!canvaColor) return '#E6E7E7';
+    if (canvaColor.includes('gradient')) {
+      return canvaColor;
+    }
+    if (canvaColor.startsWith('#')) {
+      let hex = canvaColor.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${canvaOpacity})`;
+    }
+    return canvaColor;
+  }, [canvaColor, canvaOpacity, isPopupEditor]);
 
 
   // ── Modular Hook Call: Canvas Context Menu & Interaction Badges ──
@@ -1333,8 +1372,11 @@ const getDraggableElement = (target, canvasRoot) => {
       />
       <div
         ref={editorContainerRef}
-        className={`flex-1 relative flex items-center justify-center  overflow-hidden ${isPopupEditor ? 'bg-transparent' : 'bg-[#e6e7e7]'}`}
-        style={{ cursor: isSpaceDown ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
+        className="flex-1 relative flex items-center justify-center overflow-hidden"
+        style={{
+          cursor: isSpaceDown ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default',
+          background: computedCanvaBackground
+        }}
         onContextMenu={(e) => {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('show-layer-context-menu', {
@@ -1528,8 +1570,7 @@ const getDraggableElement = (target, canvasRoot) => {
         />
         {/* Canvas Area container */}
         <div
-          ref={editorContainerRef}
-          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'bg-transparent overflow-visible' : 'overflow-hidden bg-[#e6e7e7]'}`}
+          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'overflow-visible' : 'overflow-hidden'} bg-transparent`}
           onMouseDown={(e) => {
             if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
               if (handleSvgMouseDown) {

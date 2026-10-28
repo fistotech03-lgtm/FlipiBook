@@ -14,32 +14,65 @@ const api = axios.create({
 
 export const flipbookApi = {
     // Folders API
-    getFolders: (emailId) => api.get('/api/flipbook/folders', { params: { emailId } }),
-    createFolder: (emailId, folderName) => api.post('/api/flipbook/folder/create', { emailId, folderName }),
-    renameFolder: (emailId, oldName, newName, folderId) =>
-        api.post('/api/flipbook/folder/rename', { emailId, oldName, newName, folderId }),
-    deleteFolder: (emailId, folderName, folderId) =>
-        api.delete('/api/flipbook/folder', { data: { emailId, folderName, folderId } }),
-    duplicateFolder: (emailId, folderName) =>
-        api.post('/api/flipbook/folder/duplicate', { emailId, folderName }),
-    reorderFolders: (emailId, folders) =>
-        api.post('/api/flipbook/folder/reorder', { emailId, folders }),
+    getFolders: () => api.get('/api/flipbook/folders'),
+    createFolder: (arg1, arg2) => {
+        const folderName = arg2 !== undefined ? arg2 : arg1;
+        return api.post('/api/flipbook/folder/create', { folderName });
+    },
+    renameFolder: (arg1, arg2, arg3, arg4) => {
+        let oldName, newName, folderId;
+        if (arg4 !== undefined) {
+            oldName = arg2; newName = arg3; folderId = arg4;
+        } else {
+            oldName = arg1; newName = arg2; folderId = arg3;
+        }
+        return api.post('/api/flipbook/folder/rename', { oldName, newName, folderId });
+    },
+    deleteFolder: (arg1, arg2, arg3) => {
+        let folderName, folderId;
+        if (arg3 !== undefined) {
+            folderName = arg2; folderId = arg3;
+        } else {
+            folderName = arg1; folderId = arg2;
+        }
+        return api.delete('/api/flipbook/folder', { data: { folderName, folderId } });
+    },
+    duplicateFolder: (arg1, arg2) => {
+        const folderName = arg2 !== undefined ? arg2 : arg1;
+        return api.post('/api/flipbook/folder/duplicate', { folderName });
+    },
+    reorderFolders: (arg1, arg2) => {
+        const folders = Array.isArray(arg1) ? arg1 : arg2;
+        return api.post('/api/flipbook/folder/reorder', { folders });
+    },
 
     // Flipbooks API
-    getBooks: (emailId) => api.get('/api/flipbook/list', { params: { emailId } }),
-    getPreview: (v_id, emailId, signal) =>
-        api.get(`/api/flipbook/preview/${v_id}`, { params: { emailId }, signal }),
+    getBooks: () => api.get('/api/flipbook/list'),
+    getPreview: (v_id, arg2, arg3) => {
+        const signal = (arg2 && arg2.aborted !== undefined) ? arg2 : arg3;
+        return api.get(`/api/flipbook/preview/${v_id}`, signal ? { signal } : undefined);
+    },
     saveBook: (payload) => api.post('/api/flipbook/save', payload),
     savePagesBatch: (payload) => api.post('/api/flipbook/save-pages-batch', payload),
     renamePage: (payload) => api.post('/api/flipbook/rename-page', payload),
     deletePage: (payload) => api.post('/api/flipbook/delete-page', payload),
-    deleteBook: (emailId, v_id) => api.delete(`/api/flipbook/delete/${v_id}`, { params: { emailId } }),
-    restoreBook: (emailId, bookName, folder) =>
-        api.post('/api/flipbook/restore', { emailId, bookName, folder }),
+    deleteBook: (arg1, arg2) => {
+        const v_id = arg2 || arg1;
+        return api.delete(`/api/flipbook/delete/${v_id}`);
+    },
+    restoreBook: (arg1, arg2, arg3) => {
+        let bookName, folder;
+        if (arg3 !== undefined) {
+            bookName = arg2; folder = arg3;
+        } else {
+            bookName = arg1; folder = arg2;
+        }
+        return api.post('/api/flipbook/restore', { bookName, folder });
+    },
     duplicateBook: (payload) => api.post('/api/flipbook/duplicate', payload),
     toggleFavorite: (payload) => api.post('/api/flipbook/favorite', payload),
     removeRecent: (payload) => api.post('/api/flipbook/remove-recent', payload),
-    emptyTrash: (emailId) => api.post('/api/flipbook/empty-trash', { emailId }),
+    emptyTrash: () => api.post('/api/flipbook/empty-trash'),
     unpublishBook: (payload) => api.post('/api/flipbook/unpublish', payload),
     trashBook: (payload) => api.post('/api/flipbook/trash', payload),
     renameBook: (payload) => api.post('/api/flipbook/rename', payload),
@@ -47,8 +80,8 @@ export const flipbookApi = {
     deleteBookPermanently: (payload) => api.delete('/api/flipbook/delete', { data: payload }),
 
     // Storage Settings API
-    getStorageSettings: (emailId) =>
-        api.get('/api/usersetting/get-settings', { params: { emailId } }),
+    getStorageSettings: () =>
+        api.get('/api/usersetting/get-settings'),
 };
 
 export default flipbookApi;

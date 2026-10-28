@@ -104,12 +104,22 @@ export async function extractDocToPdf(fileInput, fileName = 'document.docx', onP
         fragments,
       });
 
+      const pageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const widthMm = Math.round(geometry.width * (25.4 / 96) * 10) / 10;
+      const heightMm = Math.round(geometry.height * (25.4 / 96) * 10) / 10;
+      const flattenedSvg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${widthMm} ${heightMm}" width="100%" height="100%"><g data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true" style="pointer-events: none;"><image href="${pageDataUrl}" width="${widthMm}" height="${heightMm}" preserveAspectRatio="none"/></g><rect data-name="Document Shield" data-type="shield" data-locked="true" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="transparent" pointer-events="all" style="cursor: default;"/></svg>`;
+
       previewPages.push({
         index: i + 1,
+        pageNumber: i + 1,
+        pageName: `Page ${i + 1}`,
         canvas,
-        width: geometry.width,
-        height: geometry.height,
-        dataUrl: canvas.toDataURL('image/jpeg', 0.85),
+        width: widthMm,
+        height: heightMm,
+        dataUrl: pageDataUrl,
+        svgString: flattenedSvg,
+        content: flattenedSvg,
+        isVector: false,
       });
     }
 

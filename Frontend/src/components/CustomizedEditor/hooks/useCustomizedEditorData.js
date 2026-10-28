@@ -200,7 +200,6 @@ export const useCustomizedEditorData = ({
             params: {
               ...(userId ? { userId } : {}),
               ...(user?.userID ? { customUserId: user.userID } : {}),
-              ...(userEmail ? { emailId: userEmail } : {}),
               v_id,
               folderName: folder,
               bookName: decodeURIComponent(v_id)

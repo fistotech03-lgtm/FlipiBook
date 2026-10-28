@@ -55,7 +55,8 @@ const getAuthUser = (req) => {
 };
 
 /**
- * Builds user query for UserFolder and pageEditorSettings collections
+ * Builds user query for UserFolder and pageEditorSettings collections.
+ * Uses user ID (userObjectID or userID) instead of gmail.
  */
 const getUserQuery = (req) => {
   const { objectId, customUserId, emailId } = getAuthUser(req);
@@ -67,7 +68,7 @@ const getUserQuery = (req) => {
   if (customUserId) {
     conds.push({ userID: customUserId });
   }
-  if (emailId) {
+  if (conds.length === 0 && emailId) {
     conds.push({ emailId });
   }
 
@@ -103,10 +104,11 @@ const getFlipbookUserQuery = (req) => {
 const resolveAuthUser = async (req) => {
   let auth = getAuthUser(req);
 
-  if (!auth.objectId && (auth.emailId || auth.customUserId)) {
+  if (!auth.objectId || !auth.customUserId || !auth.emailId) {
     try {
       const User = require('../models/user');
       const conds = [];
+      if (auth.objectId) conds.push({ _id: auth.objectId });
       if (auth.customUserId) conds.push({ userID: auth.customUserId });
       if (auth.emailId) conds.push({ emailId: auth.emailId });
 

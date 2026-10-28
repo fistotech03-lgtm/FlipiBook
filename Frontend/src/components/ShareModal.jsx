@@ -28,7 +28,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                     setFetching(true);
                     // Always fetch first-page HTML for both PDF and template books
                     axios
-                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
                         .then((res) => {
                             if (res.data?.html) {
                                 // Extract and dynamically load Google Fonts found in the SVG

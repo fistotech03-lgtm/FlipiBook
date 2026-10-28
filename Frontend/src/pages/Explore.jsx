@@ -514,7 +514,7 @@ const Explore = () => {
         const fetchShelfBooks = async () => {
             try {
                 const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books?emailId=${encodeURIComponent(currentUserEmail)}`);
+                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true });
                 if (res.data && res.data.books) {
                     setShelfBookIds(res.data.books.map(b => b.v_id));
                 }

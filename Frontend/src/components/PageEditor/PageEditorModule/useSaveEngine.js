@@ -1195,18 +1195,19 @@ export const useSaveEngine = ({
           ? folder
           : (location?.pathname?.split('/editor/')[1]?.split('/')[0] || '');
 
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
         const folderVId =
-          lastRes.data?.folder_v_id ||
-          lastRes.data?.folder_id ||
-          lastRes.data?.book?.folder_v_id ||
-          lastRes.data?.book?.folder_id ||
-          currentBook?.folder_v_id ||
-          currentBook?.folder_id ||
-          location?.state?.folder_v_id ||
-          (currentFolderParam && currentFolderParam.startsWith('fol_') ? currentFolderParam : 'fol_default');
+          (isFolId(lastRes.data?.folder_v_id) ? lastRes.data.folder_v_id : null) ||
+          (isFolId(lastRes.data?.folder_id) ? lastRes.data.folder_id : null) ||
+          (isFolId(lastRes.data?.book?.folder_v_id) ? lastRes.data.book.folder_v_id : null) ||
+          (isFolId(lastRes.data?.book?.folder_id) ? lastRes.data.book.folder_id : null) ||
+          (isFolId(currentBook?.folder_v_id) ? currentBook.folder_v_id : null) ||
+          (isFolId(currentBook?.folder_id) ? currentBook.folder_id : null) ||
+          (isFolId(location?.state?.folder_v_id) ? location.state.folder_v_id : null) ||
+          (isFolId(currentFolderParam) ? currentFolderParam : 'fol_default');
 
         const activeBookVId = lastRes.data?.v_id || v_id;
-        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_'))) {
+        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_')) || currentFolderParam !== folderVId) {
           const newUrl = `/editor/${encodeURIComponent(folderVId)}/${activeBookVId}`;
           navigate(newUrl, { replace: true, state: location?.state });
         }

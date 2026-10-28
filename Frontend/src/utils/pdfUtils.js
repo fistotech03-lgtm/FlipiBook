@@ -1164,37 +1164,8 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
     }
   }
 
-  // If targetFile was extracted client-side with native vector SVG pages (e.g. from PPTX extractor)
-  if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0 && targetFile.pagesData[0].isVector) {
-    if (typeof onProgress === 'function') {
-      try {
-        onProgress(targetFile.pagesData.length, targetFile.pagesData.length, 100, 'converting', 'All vector slides extracted!');
-      } catch (e) {}
-    }
-    return targetFile.pagesData.map((p, idx) => {
-      let rawContent = p.content || p.svgString || '';
-      if (rawContent && rawContent.includes('<svg')) {
-        rawContent = rawContent.replace(/<svg\b([^>]*)\bwidth=["'][^"']*["']/i, '<svg$1width="100%"');
-        rawContent = rawContent.replace(/<svg\b([^>]*)\bheight=["'][^"']*["']/i, '<svg$1height="100%"');
-        if (!rawContent.includes('width="100%"')) {
-          rawContent = rawContent.replace(/<svg\b/i, '<svg width="100%" height="100%" ');
-        }
-      }
-      return {
-        pageNumber: idx + 1,
-        pageName: `Page ${idx + 1}`,
-        content: rawContent,
-        svgString: rawContent,
-        width: p.width,
-        height: p.height,
-        dataUrl: p.dataUrl || svgToDataUrl(rawContent),
-        blob: p.blob || new Blob([rawContent], { type: 'image/svg+xml' }),
-        isVector: true
-      };
-    });
-  }
-
   // 2. Client-side MuPDF WebAssembly engine (100% server-free, 0 RAM / 0 server CPU)
+  // Word (.docx, .doc) and PowerPoint (.pptx, .ppt) are rasterized & flattened identically to PDFs
   try {
     const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress);
     return images.map((img, idx) => ({
@@ -1206,10 +1177,37 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       blob: img.blob,
       width: img.width,
       height: img.height,
-      isVector: Boolean(img.isVector)
+      isVector: false
     }));
   } catch (rasterErr) {
-    console.error('[MuPDF] Page extraction error:', rasterErr);
+    console.error('[MuPDF] Page extraction error, checking fallback pages:', rasterErr);
+    // Fallback: If MuPDF cannot process the generated PDF, flatten extractor pages into non-editable PDF background SVGs
+    if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0) {
+      if (typeof onProgress === 'function') {
+        try {
+          onProgress(targetFile.pagesData.length, targetFile.pagesData.length, 100, 'converting', 'All pages extracted and flattened!');
+        } catch (e) {}
+      }
+      return targetFile.pagesData.map((p, idx) => {
+        const width = p.width || 210;
+        const height = p.height || 297;
+        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.92) : null);
+        const flattenedContent = pageDataUrl
+          ? generatePdfPageSvg(pageDataUrl, `Page ${idx + 1}`, width, height, true)
+          : (p.content || p.svgString || '');
+        return {
+          pageNumber: idx + 1,
+          pageName: `Page ${idx + 1}`,
+          content: flattenedContent,
+          svgString: flattenedContent,
+          dataUrl: pageDataUrl,
+          blob: p.blob || null,
+          width,
+          height,
+          isVector: false
+        };
+      });
+    }
     throw new Error(`Unable to extract pages from ${file.name}: ${rasterErr.message || 'unknown error'}`);
   }
 };

@@ -1381,7 +1381,7 @@ const InteractionPanel = ({
     setUploadingItems(prev => ({ ...prev, [item.id]: true }));
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const ext = recordedData.fileExt || '.webm';
       const mime = recordedData.mimeType || 'audio/webm';
       const recFile = new File([recordedData.blob], `voice_recording_${Date.now()}${ext}`, { type: mime });
@@ -3066,7 +3066,7 @@ const InteractionPanel = ({
                                           setUploadingItems(prev => ({ ...prev, [item.id]: true }));
 
                                           try {
-                                            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                                            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                                             const formData = new FormData();
                                             formData.append('emailId', user.emailId || user.email);
                                             if (effectiveVId) formData.append('v_id', effectiveVId);
@@ -4819,7 +4819,7 @@ const InteractionPanel = ({
           setActive3DGalleryItem(null); // Close modal immediately
 
           const rawUrl = model.url || '';
-          const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
+          const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 
           // Normalize URL: resolve paths and ensure it points to active backendUrl if pointing to local ports
           let fullUrl = rawUrl;

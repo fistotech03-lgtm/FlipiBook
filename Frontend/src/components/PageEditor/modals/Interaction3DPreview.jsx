@@ -499,7 +499,7 @@ const Model3DPreviewModal = (props) => {
 
   React.useEffect(() => {
     if (isOpen && targetVId) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       axios.get(`${backendUrl}/api/3d-models/get-model/${targetVId}`)
         .then(res => {
            if (res.data && res.data.displayName) {
@@ -550,7 +550,7 @@ const Model3DPreviewModal = (props) => {
       return "AR View unavailable for local/unsaved models.";
     }
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     let resolvedUrl = dataUrl;
     if (typeof dataUrl === 'string' && dataUrl.startsWith('/')) {
       resolvedUrl = `${backendUrl}${dataUrl}`;

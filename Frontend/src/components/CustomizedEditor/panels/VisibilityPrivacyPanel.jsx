@@ -629,7 +629,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
     setResendTimer(23);
     setOtpValues(['', '', '', '']);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const emailId = getUserEmail();
       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
       if (!emailId) {
@@ -1586,7 +1586,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setVerificationError('');
                     setIsSaving(true);
                     try {
-                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
                       await axios.post(`${backendUrl}/api/flipbook/verify-credential`, {
                         v_id: currentVid,
@@ -1614,7 +1614,7 @@ const Visibility = ({ onBack, settings, onUpdate, bookName, v_id, folder }) => {
                     setVerificationError('');
                     setIsSaving(true);
                     try {
-                      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                       const emailId = getUserEmail();
                       const currentVid = v_id || localSettings?.v_id || settings?.v_id || settings?.bookName || bookName;
                       await axios.post(`${backendUrl}/api/flipbook/verify-visibility-otp`, {

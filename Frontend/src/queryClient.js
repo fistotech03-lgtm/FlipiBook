@@ -89,6 +89,8 @@ export const fetchFlipbookBooks = async (emailId) => {
       ...b,
       folder: resolvedFolder,
       folderName: resolvedFolder,
+      folder_v_id: b.folder_v_id || b.folder_id || 'fol_default',
+      folder_id: b.folder_v_id || b.folder_id || 'fol_default',
       pages: pageCount,
       pagesCount: pageCount,
       pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || []),

@@ -129,7 +129,7 @@ const MyShelf = () => {
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const currentUserEmail = (() => {
     try {
       const storedUser = localStorage.getItem('user');

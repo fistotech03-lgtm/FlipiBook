@@ -102,7 +102,7 @@ const enforceRecentLimit = async (userQuery) => {
 /**
  * Format book document to match frontend contract expected by MyFlipbooks.jsx
  */
-const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = null) => {
+const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = null, reverseFolderMap = null) => {
   let displayFolder = null;
   if (folderMap && doc.folder_id && folderMap.has(doc.folder_id)) {
     displayFolder = folderMap.get(doc.folder_id);
@@ -117,7 +117,21 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
     displayFolder = "My Flipbooks";
   }
 
-  const primaryFolder = doc.folder_id || displayFolder;
+  let folderVId = null;
+  if (doc.folder_id && String(doc.folder_id).startsWith('fol_')) {
+    folderVId = String(doc.folder_id);
+  } else if (reverseFolderMap) {
+    folderVId = reverseFolderMap.get(displayFolder.toLowerCase()) ||
+                reverseFolderMap.get(displayFolder.toLowerCase().replace(/\s+/g, '_')) ||
+                reverseFolderMap.get('__default__');
+  }
+  if (!folderVId) {
+    folderVId = (doc.folder_id && String(doc.folder_id).startsWith('fol_'))
+      ? String(doc.folder_id)
+      : 'fol_default';
+  }
+
+  const primaryFolder = folderVId;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
   const s = settingsDoc || doc.Customized_Settings || {};
   const bookVId = doc.book_v_id || doc.v_id;
@@ -137,7 +151,8 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
     title: doc.flipbookName,
     realName: doc.flipbookName,
     flipbookName: doc.flipbookName,
-    folder_id: doc.folder_id || primaryFolder,
+    folder_id: folderVId,
+    folder_v_id: folderVId,
     folder: displayFolder,
     folderName: displayFolder,
     actualFolder: displayFolder,
@@ -244,16 +259,22 @@ exports.getBooks = async (req, res) => {
     const UserFolder = require("../models/userFolder");
     const userFolderDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
     const folderMap = new Map();
+    const reverseFolderMap = new Map();
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
       for (const f of userFolderDoc.folders) {
         if (!f) continue;
         const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
-        if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
-        if (f._id) folderMap.set(f._id.toString(), name);
+        const folId = f.fol_v_id || (f._id ? f._id.toString() : null);
+        if (folId) {
+          folderMap.set(folId, name);
+          reverseFolderMap.set(name.toLowerCase(), folId);
+          reverseFolderMap.set(name.toLowerCase().replace(/\s+/g, '_'), folId);
+          if (f.isDefault) reverseFolderMap.set('__default__', folId);
+        }
       }
     }
 
-    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, null, folderMap));
+    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, null, folderMap, reverseFolderMap));
 
     const hasRecentTag = (doc) => {
       if (doc.trash) return false;
@@ -279,7 +300,7 @@ exports.getBooks = async (req, res) => {
     );
 
     const recentBooks = recentDocs.map((doc) => {
-      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, null, folderMap);
+      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, null, folderMap, reverseFolderMap);
       return {
         ...base,
         id: `Recent_${doc.v_id || doc._id.toString()}`,
@@ -1575,6 +1596,7 @@ exports.saveBook = async (req, res) => {
     }
 
     let folderMap = new Map();
+    let reverseFolderMap = new Map();
     try {
       const UserFolder = require("../models/userFolder");
       if (!userFolderDoc) {
@@ -1584,17 +1606,25 @@ exports.saveBook = async (req, res) => {
         for (const f of userFolderDoc.folders) {
           if (!f) continue;
           const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
-          if (f.fol_v_id) folderMap.set(f.fol_v_id, name);
-          if (f._id) folderMap.set(f._id.toString(), name);
+          const folId = f.fol_v_id || (f._id ? f._id.toString() : null);
+          if (folId) {
+            folderMap.set(folId, name);
+            reverseFolderMap.set(name.toLowerCase(), folId);
+            reverseFolderMap.set(name.toLowerCase().replace(/\s+/g, '_'), folId);
+            if (f.isDefault) reverseFolderMap.set('__default__', folId);
+          }
         }
       }
     } catch (_) {}
 
+    const formattedBook = formatBook(book, null, null, folderMap, reverseFolderMap);
     res.status(200).json({
       success: true,
       message: "Flipbook saved successfully",
       v_id: resolvedVId,
-      book: formatBook(book, null, null, folderMap),
+      folder_id: formattedBook.folder_v_id || book.folder_id || bookFolderId || 'fol_default',
+      folder_v_id: formattedBook.folder_v_id || book.folder_id || bookFolderId || 'fol_default',
+      book: formattedBook,
       pages: safePages,
     });
   } catch (err) {
@@ -2132,7 +2162,27 @@ exports.getBook = async (req, res) => {
       }
     } catch (e) {}
 
-    const formattedMeta = formatBook(book, customizedDoc || {});
+    let folderMap = new Map();
+    let reverseFolderMap = new Map();
+    try {
+      const UserFolder = require("../models/userFolder");
+      const userFolderDoc = userQuery ? await UserFolder.findOne(userQuery).lean().catch(() => null) : null;
+      if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
+        for (const f of userFolderDoc.folders) {
+          if (!f) continue;
+          const name = (f.isDefault && f.name === "default") ? "My Flipbooks" : f.name;
+          const folId = f.fol_v_id || (f._id ? f._id.toString() : null);
+          if (folId) {
+            folderMap.set(folId, name);
+            reverseFolderMap.set(name.toLowerCase(), folId);
+            reverseFolderMap.set(name.toLowerCase().replace(/\s+/g, '_'), folId);
+            if (f.isDefault) reverseFolderMap.set('__default__', folId);
+          }
+        }
+      }
+    } catch (_) {}
+
+    const formattedMeta = formatBook(book, customizedDoc || {}, null, folderMap, reverseFolderMap);
 
     let resolvedShareId =
       customizedDoc?.Visibility?.shareId ||

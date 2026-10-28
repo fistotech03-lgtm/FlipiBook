@@ -100,14 +100,6 @@ export default function ProfileModal({
     }
   }, [isAutoSaveEnabled]);
 
-  const handleToggleAutoSave = () => {
-    const nextState = !autoSave;
-    setAutoSave(nextState);
-    localStorage.setItem("isAutoSaveEnabled", JSON.stringify(nextState));
-    if (onToggleAutoSave) {
-      onToggleAutoSave(nextState);
-    }
-  };
 
   // Sync local user state whenever authUser changes
   useEffect(() => {

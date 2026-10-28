@@ -235,7 +235,7 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
         if ((!finalSettings.appearance || !finalSettings.logo || !finalSettings.preloader) && v_id) {
 
           if (user) {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: { emailId: user.emailId || user.email, v_id, metadataOnly: true }

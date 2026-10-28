@@ -157,7 +157,7 @@ export default function AddMaterial({ isOpen, onClose, editData, onUpdateSuccess
   const [mapMenuOpen, setMapMenuOpen] = useState(null);
   const [isPreviewDragging, setIsPreviewDragging] = useState(false);
   const [loadingMaps, setLoadingMaps] = useState({});
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const { user } = useAuth();
 
   const getUserEmail = () => {

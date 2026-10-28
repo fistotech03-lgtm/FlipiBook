@@ -45,7 +45,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
     const fetchGalleryAssets = async () => {
       if (!user) return;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       setIsLoading(true);
       try {
@@ -149,7 +149,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
   const handleFileChange = async (e) => {
     if (e.target.files?.length) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       const validFiles = [];
       for (let i = 0; i < e.target.files.length; i++) {
@@ -266,7 +266,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
       };
 
       if (user) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const formData = new FormData();
         formData.append('emailId', user.emailId || user.email);
         formData.append('isGallery', 'true');
@@ -332,7 +332,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
     }
     
     if (user) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       
       try {
         const res = await axios.post(`${backendUrl}/api/flipbook/rename-gallery-asset`, {
@@ -596,7 +596,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (user) {
-                              const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                              const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                               try {
                                 await axios.post(`${backendUrl}/api/flipbook/delete-gallery-asset`, {
                                   emailId: user.emailId || user.email,

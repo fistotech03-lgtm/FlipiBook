@@ -349,7 +349,7 @@ const BackgroundSection = ({
 
     const fetchAssets = async () => {
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const res = await axios.get(`${backendUrl}/api/flipbook/background-assets`);
         if (res.data && res.data.success) {
           const vdos = Array.isArray(res.data.videos) ? res.data.videos : [];

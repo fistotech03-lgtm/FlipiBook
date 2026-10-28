@@ -374,7 +374,7 @@ const ShareViewBook = () => {
                 return origin.replace(portMatch[0], ':8000');
             }
         }
-        return 'http://localhost:8000';
+        return '';
     };
 
     // Auto-record page view count once per flipbook load for unique viewers

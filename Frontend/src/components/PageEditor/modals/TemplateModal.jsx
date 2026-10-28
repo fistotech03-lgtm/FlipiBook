@@ -79,7 +79,7 @@ const TemplateModal = ({
   flipbookDimensions = null,
   onAddTemplatePages
 }) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
   // Step state: null = template list view; object = page selection view
   const [selectedTemplate, setSelectedTemplate] = useState(null);

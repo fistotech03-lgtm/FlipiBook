@@ -114,7 +114,7 @@ const ModelThumbnail = React.memo(({ model }) => {
     const viewRef = useRef();
     const [isInView, setIsInView] = useState(false);
     const [isFullyLoaded, setIsFullyLoaded] = useState(false);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     
     // Support for static thumbnails if backend provides them
     const thumbnailPath = model.thumbnail || model.image || model.preview;
@@ -258,7 +258,7 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
     const fetchModels = async () => {
         try {
             setLoading(true);
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const emailId = user?.emailId || user?.email;
             const userID = user?.userID || user?.userId;
             
@@ -330,7 +330,7 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
         const wasInUse = isModelInUse(model);
         
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const email = encodeURIComponent(emailId);
             const deleteUrl = `${backendUrl}/api/3d-models/delete-model/${email}/${model.modelId}`;
             
@@ -379,7 +379,7 @@ export default function ModelGalleryModal({ isOpen, onClose, onSelectModel, hide
         const hasInUse = modelsToDelete.some(m => isModelInUse(m));
         
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const email = encodeURIComponent(emailId);
             
             await Promise.all(modelsToDelete.map(model => 

@@ -73,7 +73,7 @@ export const use3DPreviewManager = ({
           if (parsed.v_id) {
 
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             axios.get(`${backendUrl}/api/assets/3d-models/${user?.emailId || user?.email || 'guest'}`)
               .then(res => {
                 if (res.data?.success && Array.isArray(res.data.data)) {
@@ -124,7 +124,7 @@ export const use3DPreviewManager = ({
 
                   const userEmail = user?.emailId || user?.email;
                   if (userEmail) {
-                    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                     axios.post(`${backendUrl}/api/assets/3d-models/save-config`, {
                       emailId: userEmail,
                       v_id: parsed.v_id,

@@ -360,7 +360,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
         };
     }, [isOpen]);
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     const targetEmail = creator?.emailId || creator?.email || creator?.userEmail || '';
 
     useEffect(() => {

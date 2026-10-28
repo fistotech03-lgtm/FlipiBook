@@ -609,7 +609,7 @@ export default function MyFlipbooks() {
             createdFlipbookVIdRef.current = v_id;
 
             if (isUploadCancelledRef.current) {
-                flipbookApi.deleteBook(emailId, v_id).catch(() => {});
+                flipbookApi.deleteBook(v_id).catch(() => {});
                 return;
             }
 
@@ -727,7 +727,7 @@ export default function MyFlipbooks() {
         setIsLoading(false);
         setProcessingProgress(null);
         if (createdFlipbookVIdRef.current) {
-            flipbookApi.deleteBook(emailId, createdFlipbookVIdRef.current).catch(() => {});
+            flipbookApi.deleteBook(createdFlipbookVIdRef.current).catch(() => {});
             createdFlipbookVIdRef.current = null;
         }
     };
@@ -926,7 +926,7 @@ export default function MyFlipbooks() {
             setBooks(prev => prev.filter(b => b.folder !== folderName));
 
             try {
-                await flipbookApi.deleteFolder(emailId, folderName, folderId);
+                await flipbookApi.deleteFolder(folderName, folderId);
             } catch (err) {
                 console.error("Delete folder error:", err);
                 showAlert('Delete Failed', err.response?.data?.message || err.message);

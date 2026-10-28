@@ -207,7 +207,7 @@ export default function Home() {
         createdFlipbookVIdRef.current = v_id;
 
         if (isUploadCancelledRef.current) {
-          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
           return;
         }
 
@@ -244,7 +244,7 @@ export default function Home() {
       const BATCH_SIZE = 15;
       for (let i = 20; i < allPages.length; i += BATCH_SIZE) {
         if (isUploadCancelledRef.current) {
-          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
           return;
         }
         const batchPages = allPages.slice(i, i + BATCH_SIZE);
@@ -266,7 +266,7 @@ export default function Home() {
       }
 
       if (isUploadCancelledRef.current) {
-        axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+        axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
         return;
       }
 
@@ -308,7 +308,7 @@ export default function Home() {
     setIsLoading(false);
     setProcessingProgress(null);
     if (createdFlipbookVIdRef.current) {
-      axios.delete(`${backendUrl}/api/flipbook/delete/${createdFlipbookVIdRef.current}`, { params: { emailId } }).catch(() => { });
+      axios.delete(`${backendUrl}/api/flipbook/delete/${createdFlipbookVIdRef.current}`, { withCredentials: true }).catch(() => { });
       createdFlipbookVIdRef.current = null;
     }
   };

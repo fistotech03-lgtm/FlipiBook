@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload } from 'lucide-react';
-import Color from '../../../properties/Color';
+import { createPortal } from 'react-dom';
+import {
+  Upload,
+  Plus,
+  GripVertical,
+  Trash2,
+  Edit2,
+  ArrowRightLeft
+} from 'lucide-react';
+import ColorPicker from '../../../../ColorPicker';
+import ImageAdjustModal from './ImageAdjustModal';
 import Effect from '../../../properties/Effect';
-import { ElementSlider } from './ElementUIControls';
+import { ElementSlider, ElementDropdown } from './ElementUIControls';
+import { DEFAULT_FRAME_IMAGE } from '../utils/imageFramingUtils';
 
 const PropertySlider = ({ label, value, onChange, onPointerUp, min = 0, max = 100 }) => {
   return (
@@ -43,19 +53,20 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
   const [activeSlotId, setActiveSlotId] = useState(null);
   const [slotRadii, setSlotRadii] = useState({});
   const [slotRotations, setSlotRotations] = useState({});
-  const fileInputRefs = useRef({});
+  const [slotMeta, setSlotMeta] = useState({});
+  const slotReplaceRefs = useRef({});
   const activeSlotRef = useRef(null);
   const adjustStateRef = useRef({ isAdjusting: false, slotId: null, isPanning: false, startX: 0, startY: 0, matrix: null, rotateStr: '', imgNode: null, bbox: null, startMatrix: null, path: null });
 
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustTargetSlotId, setAdjustTargetSlotId] = useState(null);
+
   const [openSubSection, setOpenSubSection] = useState('slots');
   const [activeColorPicker, setActiveColorPicker] = useState(null);
-  const [showStrokeSettings, setShowStrokeSettings] = useState(false);
-  const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
-  const [isDashPosOpen, setIsDashPosOpen] = useState(false);
-  const [activePopup, setActivePopup] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
+
+  const [localFillHex, setLocalFillHex] = useState(null);
+  const [localStrokeHex, setLocalStrokeHex] = useState(null);
 
   const colorsOnPage = React.useMemo(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -92,8 +103,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     strokeDasharrayValue: selectedElementProps?.['data-frame-stroke-dasharray'] || 'none',
     strokeDashLength: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[0]) || 10,
     strokeDashGap: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[1]) || 10,
-    strokeLinecap: 'butt',
-    strokePosition: 'Center',
+    strokeLinecap: selectedElementProps?.['data-frame-stroke-linecap'] || 'square',
+    strokePosition: selectedElementProps?.['data-frame-stroke-position'] || 'Outside',
   };
 
   const handleSetBackgroundColor = (updater) => {
@@ -110,6 +121,12 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
       updates['data-frame-stroke-dasharray'] = dashValue;
     }
+    if (backgroundColor.strokeLinecap !== next.strokeLinecap && next.strokeLinecap !== undefined) {
+      updates['data-frame-stroke-linecap'] = next.strokeLinecap;
+    }
+    if (backgroundColor.strokePosition !== next.strokePosition && next.strokePosition !== undefined) {
+      updates['data-frame-stroke-position'] = next.strokePosition;
+    }
 
     if (Object.keys(updates).length > 0) {
       Object.entries(updates).forEach(([k, v]) => selectedElement.setAttribute(k, v));
@@ -125,11 +142,21 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         if (next.fillOpacity !== undefined) bgRect.setAttribute('fill-opacity', next.fillOpacity / 100);
         bgRect.setAttribute('stroke', next.stroke !== 'none' && next.stroke !== '#' ? next.stroke : 'none');
         if (next.strokeOpacity !== undefined) bgRect.setAttribute('stroke-opacity', next.strokeOpacity / 100);
-        if (next.strokeWeight !== undefined) bgRect.setAttribute('stroke-width', next.strokeWeight);
+        if (next.strokeWeight !== undefined) {
+          const sw = parseFloat(next.strokeWeight) || 0;
+          bgRect.setAttribute('paint-order', 'stroke fill');
+          bgRect.style.paintOrder = 'stroke fill';
+          bgRect.setAttribute('stroke-width', (sw * 2).toString());
+          bgRect.setAttribute('data-frame-stroke-width', sw.toString());
+        }
         const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') 
           ? 'none' 
           : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
         bgRect.setAttribute('stroke-dasharray', dashValue);
+        if (next.strokeLinecap !== undefined) {
+          bgRect.setAttribute('stroke-linecap', next.strokeLinecap);
+          bgRect.setAttribute('stroke-linejoin', next.strokeLinecap === 'round' ? 'round' : 'miter');
+        }
       }
 
       // Gap color is now handled perfectly by the frame-bg-rect showing through the SVG mask holes.
@@ -143,6 +170,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       });
 
       syncDomChanges();
+      updateElementAttribute(activePageIndex, selectedLayerId, updates);
     }
   };
 
@@ -666,33 +694,127 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     };
   }, [selectedElement, selectedLayerId]);
 
+  useEffect(() => {
+    slots.forEach(slot => {
+      if (slot.currentImage && !slotMeta[slot.id]) {
+        const img = new window.Image();
+        img.onload = () => {
+          setSlotMeta(prev => {
+            if (prev[slot.id]) return prev;
+            return {
+              ...prev,
+              [slot.id]: {
+                name: 'Image Name .jpg',
+                meta: `${img.width} X ${img.height} • 24MB`
+              }
+            };
+          });
+        };
+        img.src = slot.currentImage;
+      }
+    });
+  }, [slots]);
+
+  const processFileForSlot = (file, slotId, customName = null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Only Image formats are allowed for slots.');
+      return;
+    }
+    const fileName = customName || file.name || 'Image Name .jpg';
+    const fileSizeFormatted = file.size
+      ? (file.size >= 1024 * 1024
+          ? `${(file.size / (1024 * 1024)).toFixed(0)}MB`
+          : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+      : '24MB';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const img = new window.Image();
+      img.onload = () => {
+        setSlotMeta(prev => ({
+          ...prev,
+          [slotId]: {
+            name: fileName,
+            meta: `${img.width} X ${img.height} • ${fileSizeFormatted}`,
+            originalUrl: dataUrl,
+            size: fileSizeFormatted,
+            cropData: null,
+            filters: null,
+            opacity: 100
+          }
+        }));
+        updateSlotImage(slotId, dataUrl);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeleteSlotImage = (slotId) => {
+    if (!selectedElement) return;
+    setSlotMeta(prev => ({
+      ...prev,
+      [slotId]: {
+        name: 'Image Name .jpg',
+        meta: '300 X 300 • 24MB',
+        originalUrl: DEFAULT_FRAME_IMAGE,
+        cropData: null,
+        filters: null,
+        opacity: 100
+      }
+    }));
+    updateSlotImage(slotId, DEFAULT_FRAME_IMAGE);
+  };
+
+  const handleSaveAdjustedImage = ({
+    croppedUrl,
+    originalUrl,
+    cropData,
+    fixType,
+    opacity: adjustedOpacity,
+    filters
+  }) => {
+    if (!adjustTargetSlotId) return;
+    const slotId = adjustTargetSlotId;
+
+    const img = new window.Image();
+    img.onload = () => {
+      setSlotMeta(prev => ({
+        ...prev,
+        [slotId]: {
+          name: prev[slotId]?.name || 'Image Name .jpg',
+          meta: `${img.width} X ${img.height} • ${prev[slotId]?.size || '24MB'}`,
+          originalUrl: originalUrl || prev[slotId]?.originalUrl || croppedUrl,
+          cropData,
+          fixType,
+          opacity: adjustedOpacity,
+          filters
+        }
+      }));
+      updateSlotImage(slotId, croppedUrl);
+    };
+    img.src = croppedUrl;
+
+    setShowAdjustModal(false);
+    setAdjustTargetSlotId(null);
+  };
+
   const handleImageDrop = async (e, slotId) => {
     e.preventDefault();
     e.stopPropagation();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleFileChange({ target: { files: files } }, slotId);
+      processFileForSlot(files[0], slotId);
     }
   };
 
   const handleFileChange = async (e, slotId) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isVideo = file.type.startsWith('video/');
-
-    if (!file.type.startsWith('image/') && !isVideo) {
-      alert('Only Image formats are allowed for slots.');
-      e.target.value = '';
-      return;
+    if (file) {
+      processFileForSlot(file, slotId);
     }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target.result;
-      updateSlotImage(slotId, dataUrl);
-    };
-    reader.readAsDataURL(file);
     e.target.value = '';
   };
 
@@ -1074,76 +1196,205 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     img.src = dataUrl;
   };
 
+  const isFillNone = !backgroundColor?.fill || backgroundColor.fill === 'none' || backgroundColor.fill === 'transparent' || backgroundColor.fill === '#';
+  const isStrokeNone = !backgroundColor?.stroke || backgroundColor.stroke === 'none' || backgroundColor.stroke === 'transparent' || backgroundColor.stroke === '#';
+
+  const currentFillHex = localFillHex !== null 
+    ? localFillHex 
+    : (isFillNone ? 'NONE' : backgroundColor.fill);
+
+  const currentStrokeHex = localStrokeHex !== null 
+    ? localStrokeHex 
+    : (isStrokeNone ? 'NONE' : backgroundColor.stroke);
+
+  const handleHexSubmit = (type, val) => {
+    let clean = (val || '').trim();
+    if (clean.toLowerCase() === 'none' || clean === '' || clean === '#' || clean.toLowerCase() === 'transparent') {
+      if (type === 'fill') {
+        setLocalFillHex(null);
+        handleSetBackgroundColor(prev => ({ ...prev, fill: 'none' }));
+      } else {
+        setLocalStrokeHex(null);
+        handleSetBackgroundColor(prev => ({ ...prev, stroke: 'none' }));
+      }
+      return;
+    }
+
+    if (!clean.startsWith('#')) clean = '#' + clean;
+    if (/^#[0-9A-Fa-f]{3,8}$/.test(clean)) {
+      if (type === 'fill') {
+        setLocalFillHex(null);
+        handleSetBackgroundColor(prev => ({ ...prev, fill: clean, fillType: 'solid' }));
+      } else {
+        setLocalStrokeHex(null);
+        handleSetBackgroundColor(prev => ({
+          ...prev,
+          stroke: clean,
+          strokeType: 'solid',
+          strokeWeight: (parseFloat(prev.strokeWeight) || 0) === 0 ? 3 : prev.strokeWeight
+        }));
+      }
+    } else {
+      if (type === 'fill') setLocalFillHex(null);
+      else setLocalStrokeHex(null);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-[1vw] p-[1vw]">
+    <div className="flex flex-col gap-[1vw] font-sans select-none text-gray-800">
       {/* Title Header */}
-      <div className="flex items-center gap-[0.75vw] mb-[0.5vw]">
+      <div className="flex items-center gap-[0.75vw] mb-[0.2vw]">
         <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">
           Image Framing Properties
         </span>
         <div className="h-[0.1vw] flex-1 bg-gray-200 mr-[-3vw]"></div>
       </div>
-      <div className="text-[0.8vw] font-semibold text-gray-800">Image Slots </div>
-      <div className="grid grid-cols-2 gap-[1vw]">
-        {slots.map((slot, i) => (
-          <div key={slot.id} className="flex flex-col gap-[0.5vw]">
-            <span className="text-[0.8vw] text-gray-600 font-medium flex items-center justify-between">
-              {slots.length > 1 ? `Slot ${i + 1}` : 'Image'}
-              {slot.currentImage && (
-                <span className="text-[0.6vw] text-green-600 bg-green-50 px-[0.3vw] py-[0.1vw] rounded">Filled</span>
-              )}
-            </span>
-            <div
-              className={`border border-dashed rounded-[0.5vw] flex flex-col items-center justify-center cursor-pointer transition-colors relative overflow-hidden group ${
-                activeSlotId === slot.id ? 'ring-1 ring-offset-1 ring-blue-500 border-blue-500 ' : ''
-              } ${
-                slot.currentImage 
-                  ? (activeSlotId === slot.id ? 'bg-blue-50 h-[5vw]' : 'border-gray-300 hover:border-[#4c5add] bg-gray-50 h-[5vw]')
-                  : (activeSlotId === slot.id ? 'bg-blue-100 p-[1vw]' : 'border-[#4c5add] bg-blue-50/30 hover:bg-blue-50 p-[1vw]')
-              }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => handleImageDrop(e, slot.id)}
-              onClick={() => {
-                if (fileInputRefs.current[slot.id]) {
-                  fileInputRefs.current[slot.id].click();
-                }
-              }}
-            >
-              {slot.currentImage ? (
-                <>
-                  <img src={slot.currentImage} alt={`Slot ${i+1}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Upload size="1.2vw" className="text-white mb-[0.2vw]" />
-                    <span className="text-[0.65vw] text-white font-medium">Replace</span>
+
+      {/* ── 1. Top Section: Add Images Dashed Button (shown before upload) ── */}
+      {!slots.some(s => s.currentImage && s.currentImage !== DEFAULT_FRAME_IMAGE) && (
+        <div
+          onClick={() => {
+            const targetSlot = slots.find(s => s.id === activeSlotId) || slots[0];
+            if (targetSlot && slotReplaceRefs.current[targetSlot.id]) {
+              slotReplaceRefs.current[targetSlot.id]?.click();
+            }
+          }}
+          className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-medium text-[0.85vw]"
+        >
+          <Plus size="1vw" />
+          <span>Add Images</span>
+        </div>
+      )}
+
+      {/* ── 2. Images Slots List (matching reference image) ── */}
+      {slots.length > 0 && (
+        <div className="flex flex-col gap-[0.6vw]">
+          {slots.map((slot, i) => {
+            const isSelected = activeSlotId === slot.id;
+            const meta = slotMeta[slot.id] || {
+              name: 'Image Name .jpg',
+              meta: '300 X 300 • 24MB'
+            };
+
+            return (
+              <div
+                key={slot.id}
+                onClick={() => {
+                  if (activeSlotId === slot.id) {
+                    setActiveSlotId(null);
+                    activeSlotRef.current = null;
+                  } else {
+                    setActiveSlotId(slot.id);
+                    activeSlotRef.current = slot.id;
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => handleImageDrop(e, slot.id)}
+                className={`flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border rounded-[0.75vw] shadow-2xs transition-all cursor-pointer ${
+                  isSelected || (!slot.currentImage || slot.currentImage === DEFAULT_FRAME_IMAGE)
+                    ? 'border-blue-500 ring-1 ring-blue-500/30'
+                    : 'border-gray-200/90 hover:border-gray-300'
+                }`}
+              >
+                {/* Left Section: Drag handle + Thumbnail + Meta */}
+                <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
+                  {/* Drag Handle */}
+                  <div className="text-gray-300 hover:text-gray-500 cursor-grab shrink-0 px-[0.1vw]">
+                    <GripVertical size="0.95vw" />
                   </div>
-                </>
-              ) : (
-                <>
-                  <Upload size="1vw" className="text-[#4c5add] mb-[0.2vw]" />
-                  <span className="text-[0.6vw] text-[#4c5add] font-semibold text-center leading-tight">Drop on Slot<br/>or Click</span>
-                </>
-              )}
-              <input
-                type="file"
-                ref={(el) => fileInputRefs.current[slot.id] = el}
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => handleFileChange(e, slot.id)}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
+
+                  {/* Thumbnail with Replace button overlay */}
+                  <div
+                    className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] border border-gray-200 shrink-0 overflow-hidden group/thumb cursor-pointer shadow-2xs bg-gray-100 flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      slotReplaceRefs.current[slot.id]?.click();
+                    }}
+                    title="Click to replace image"
+                  >
+                    {slot.currentImage ? (
+                      <>
+                        <img
+                          src={slot.currentImage}
+                          alt={meta.name}
+                          className="w-full h-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
+                        />
+                        {/* Replace Overlay Button over the image */}
+                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
+                          <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
+                          <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-indigo-600">
+                        <Plus size="0.9vw" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* File Name & Dimensions block */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={meta.name}>
+                      {meta.name}
+                    </span>
+                    <span className="text-[0.68vw] text-gray-400 font-medium">
+                      {meta.meta}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Actions: Pencil / Edit & Delete Trash */}
+                <div className="flex items-center gap-[0.4vw] shrink-0 ml-[0.5vw]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAdjustTargetSlotId(slot.id);
+                      setShowAdjustModal(true);
+                    }}
+                    className="p-[0.3vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
+                    title="Edit Image Adjustment"
+                  >
+                    <Edit2 size="0.95vw" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSlotImage(slot.id);
+                    }}
+                    className="p-[0.3vw] text-[#e02424] hover:text-red-700 hover:bg-red-50 rounded-[0.35vw] transition-colors cursor-pointer"
+                    title="Remove Image"
+                  >
+                    <Trash2 size="0.95vw" />
+                  </button>
+                </div>
+
+                {/* Hidden File Input for this slot */}
+                <input
+                  type="file"
+                  ref={(el) => (slotReplaceRefs.current[slot.id] = el)}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, slot.id)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {slots.length === 0 && (
         <div className="text-[0.8vw] text-gray-500 text-center py-[2vw]">
           No image slots found in this frame.
         </div>
       )}
-      
-      <div className="flex flex-col gap-[0.5vw] mt-[1vw]">
+
+      {/* ── 3. Properties Sliders ── */}
+      <div className="flex flex-col gap-[0.5vw] mt-[0.5vw]">
         {slots.length > 1 && (
           <PropertySlider 
             label="Partition Gap" 
@@ -1171,6 +1422,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             max={100} 
           />
         )}
+
         <PropertySlider 
           label="Rotation" 
           value={activeSlotId ? (slotRotations[activeSlotId] || 0) : (Object.values(slotRotations)[0] || 0)} 
@@ -1181,45 +1433,311 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         />
       </div>
 
-      <Color
-        openSubSection={openSubSection}
-        setOpenSubSection={setOpenSubSection}
-        backgroundColor={backgroundColor}
-        setBackgroundColor={handleSetBackgroundColor}
-        activeColorPicker={activeColorPicker}
-        setActiveColorPicker={setActiveColorPicker}
-        showStrokeSettings={showStrokeSettings}
-        setShowStrokeSettings={setShowStrokeSettings}
-        isStrokeStyleOpen={isStrokeStyleOpen}
-        setIsStrokeStyleOpen={setIsStrokeStyleOpen}
-        dropdownPos={dropdownPos}
-        setDropdownPos={setDropdownPos}
-        strokeSettingsPos={strokeSettingsPos}
-        setStrokeSettingsPos={setStrokeSettingsPos}
-        isDashPosOpen={isDashPosOpen}
-        setIsDashPosOpen={setIsDashPosOpen}
-        activePopup={activePopup}
-        setActivePopup={setActivePopup}
-        colorsOnPage={colorsOnPage}
-        showDetailedPicker={showDetailedPicker}
-        setShowDetailedPicker={setShowDetailedPicker}
-      />
+      {/* ===================== 4. FILL COLOR ===================== */}
+      <div className="flex flex-col gap-[0.5vw]">
+        <div className="flex items-center mt-[0.5vw] gap-[0.5vw]">
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Fill Color</span>
+          <div className="h-[1px] flex-1 bg-gray-200"></div>
+        </div>
 
-      <Effect
-        isShape={false}
-        openSubSection={openSubSection}
-        setOpenSubSection={setOpenSubSection}
-        activeEffects={activeEffects}
-        setActiveEffects={handleSetActiveEffects}
-        effectSettings={effectSettings}
-        setEffectSettings={handleSetEffectSettings}
-        activeColorPicker={activeColorPicker}
-        setActiveColorPicker={setActiveColorPicker}
-        showDetailedPicker={showDetailedPicker}
-        setShowDetailedPicker={setShowDetailedPicker}
-        hideBlur={true}
-        hideInnerShadow={true}
-      />
+        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
+          {/* Swatch */}
+          <button
+            type="button"
+            onClick={() => setActiveColorPicker(activeColorPicker === 'fill' ? null : 'fill')}
+            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
+            title="Choose Fill Color"
+          >
+            {isFillNone ? (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundColor: backgroundColor.fill,
+                  opacity: (backgroundColor.fillOpacity ?? 100) / 100
+                }}
+              />
+            )}
+          </button>
+
+          {/* Hex & Opacity Input */}
+          <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
+            <input
+              type="text"
+              value={currentFillHex.toUpperCase()}
+              onChange={(e) => setLocalFillHex(e.target.value)}
+              onBlur={() => handleHexSubmit('fill', currentFillHex)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit('fill', currentFillHex); }}
+              className="text-[0.76vw] font-semibold text-gray-700 w-[5vw] outline-none uppercase bg-transparent"
+            />
+            <div className="flex items-center">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={Math.round(backgroundColor?.fillOpacity !== undefined ? backgroundColor.fillOpacity : 100)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) {
+                    handleSetBackgroundColor(prev => ({ ...prev, fillOpacity: Math.min(100, Math.max(0, val)) }));
+                  }
+                }}
+                className="w-[2vw] text-right text-[0.74vw] text-gray-500 font-semibold outline-none bg-transparent no-spin"
+              />
+              <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===================== 5. STROKE COLOR ===================== */}
+      <div className="flex flex-col gap-[0.5vw]">
+        <div className="flex items-center gap-[0.5vw]">
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Stroke Color</span>
+          <div className="h-[1px] flex-1 bg-gray-200"></div>
+        </div>
+
+        {/* Row 1: Swatch + Hex/Opacity + Format */}
+        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
+          <button
+            type="button"
+            onClick={() => setActiveColorPicker(activeColorPicker === 'stroke' ? null : 'stroke')}
+            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
+            title="Choose Stroke Color"
+          >
+            {isStrokeNone ? (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundColor: backgroundColor.stroke,
+                  opacity: (backgroundColor.strokeOpacity ?? 100) / 100
+                }}
+              />
+            )}
+          </button>
+
+          <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
+            <input
+              type="text"
+              value={currentStrokeHex.toUpperCase()}
+              onChange={(e) => setLocalStrokeHex(e.target.value)}
+              onBlur={() => handleHexSubmit('stroke', currentStrokeHex)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit('stroke', currentStrokeHex); }}
+              className="text-[0.76vw] font-semibold text-gray-700 w-[5vw] outline-none uppercase bg-transparent"
+            />
+            <div className="flex items-center">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={Math.round(backgroundColor?.strokeOpacity !== undefined ? backgroundColor.strokeOpacity : 100)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) {
+                    handleSetBackgroundColor(prev => ({ ...prev, strokeOpacity: Math.min(100, Math.max(0, val)) }));
+                  }
+                }}
+                className="w-[2vw] text-right text-[0.74vw] text-gray-500 font-semibold outline-none bg-transparent no-spin"
+              />
+              <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stroke Settings (Exact match to image 2) */}
+        <div className="flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw]">
+          {/* Row 1: Alignment & Stroke Width */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            {/* Alignment */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Alignment</span>
+              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.5vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
+                <span>Outside</span>
+              </div>
+            </div>
+
+            {/* Stroke Width Stepper */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
+              <div className="flex items-center gap-[0.3vw] h-[2.2vw]">
+                <button
+                  type="button"
+                  onClick={() => handleSetBackgroundColor(prev => ({
+                    ...prev,
+                    strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
+                  }))}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  −
+                </button>
+                <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs focus-within:border-indigo-500">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={Math.round(parseFloat(backgroundColor?.strokeWeight) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        handleSetBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
+                      }
+                    }}
+                    className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSetBackgroundColor(prev => ({
+                    ...prev,
+                    strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
+                  }))}
+                  className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Line style & Line Corner */}
+          <div className="grid grid-cols-2 gap-[0.75vw]">
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Line style</span>
+              <div className="flex items-center h-[2.2vw]">
+                {/* Solid */}
+                <button
+                  type="button"
+                  onClick={() => handleSetBackgroundColor(prev => ({ ...prev, strokeDashStyle: 'Solid', strokeDasharrayValue: 'none' }))}
+                  className="w-[9.5vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
+                  title="Solid Line"
+                >
+                  <div className="w-[5vw] h-[2.5px] bg-[#243042] rounded-full"></div>
+                </button>
+              </div>
+            </div>
+
+            {/* Line Corner */}
+            <div className="flex flex-col gap-[0.3vw]">
+              <span className="text-[0.76vw] font-semibold text-[#546274]">Line Corner</span>
+              <ElementDropdown
+                value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
+                onChange={(val) => handleSetBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
+                options={['Square', 'Rounded']}
+                buttonClassName="!h-[2.2vw]"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===================== 6. EFFECTS ===================== */}
+      <div className="flex flex-col mt-[0.5vw] gap-[0.5vw]">
+        <div className="flex items-center gap-[0.5vw]">
+          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Effects</span>
+          <div className="h-[1px] flex-1 bg-gray-200"></div>
+        </div>
+
+        <Effect
+          hideHeader={true}
+          isShape={false}
+          openSubSection={openSubSection}
+          setOpenSubSection={setOpenSubSection}
+          activeEffects={activeEffects}
+          setActiveEffects={handleSetActiveEffects}
+          effectSettings={effectSettings}
+          setEffectSettings={handleSetEffectSettings}
+          activeColorPicker={activeColorPicker}
+          setActiveColorPicker={setActiveColorPicker}
+          showDetailedPicker={showDetailedPicker}
+          setShowDetailedPicker={setShowDetailedPicker}
+          hideBlur={true}
+          hideInnerShadow={true}
+        />
+      </div>
+
+      {/* ===================== IMAGE ADJUST MODAL ===================== */}
+      {showAdjustModal && adjustTargetSlotId && (
+        <ImageAdjustModal
+          isOpen={showAdjustModal}
+          onClose={() => {
+            setShowAdjustModal(false);
+            setAdjustTargetSlotId(null);
+          }}
+          imageSrc={
+            slotMeta[adjustTargetSlotId]?.originalUrl ||
+            slots.find(s => s.id === adjustTargetSlotId)?.currentImage ||
+            DEFAULT_FRAME_IMAGE
+          }
+          initialFixType={slotMeta[adjustTargetSlotId]?.fixType || 'Fit'}
+          initialOpacity={slotMeta[adjustTargetSlotId]?.opacity !== undefined ? slotMeta[adjustTargetSlotId]?.opacity : 100}
+          initialFilters={slotMeta[adjustTargetSlotId]?.filters || null}
+          initialCrop={slotMeta[adjustTargetSlotId]?.cropData || null}
+          frameAspectRatio={(() => {
+            const slot = slots.find(s => s.id === adjustTargetSlotId);
+            if (slot && slot.path) {
+              try {
+                const bbox = slot.path.getBBox();
+                if (bbox.width && bbox.height) {
+                  return bbox.width / bbox.height;
+                }
+              } catch (e) {}
+            }
+            return 130 / 140;
+          })()}
+          onSave={handleSaveAdjustedImage}
+        />
+      )}
+
+      {/* ===================== 7. COLOR PICKER PORTAL ===================== */}
+      {activeColorPicker && !activeColorPicker.startsWith('effect-') && !activeColorPicker.startsWith('data-effect-') && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{
+            top: '50%',
+            right: '19.5vw',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="animate-in fade-in zoom-in-95 duration-200">
+            <ColorPicker
+              key={activeColorPicker}
+              color={activeColorPicker === 'fill' ? (backgroundColor?.fill || 'none') : (backgroundColor?.stroke || 'none')}
+              opacity={activeColorPicker === 'fill' ? (backgroundColor?.fillOpacity ?? 100) : (backgroundColor?.strokeOpacity ?? 100)}
+              onChange={(newColor) => {
+                if (activeColorPicker === 'fill') {
+                  setLocalFillHex(null);
+                  handleSetBackgroundColor(prev => ({ ...prev, fill: newColor, fillType: 'solid' }));
+                } else {
+                  setLocalStrokeHex(null);
+                  handleSetBackgroundColor(prev => ({
+                    ...prev,
+                    stroke: newColor,
+                    strokeType: 'solid',
+                    strokeWeight: newColor === 'none' ? prev.strokeWeight : ((parseFloat(prev.strokeWeight) || 0) === 0 ? 3 : prev.strokeWeight)
+                  }));
+                }
+              }}
+              onOpacityChange={(newOpacity) => {
+                const num = parseFloat(newOpacity);
+                if (!isNaN(num)) {
+                  if (activeColorPicker === 'fill') {
+                    handleSetBackgroundColor(prev => ({ ...prev, fillOpacity: num }));
+                  } else {
+                    handleSetBackgroundColor(prev => ({ ...prev, strokeOpacity: num }));
+                  }
+                }
+              }}
+              onClose={() => setActiveColorPicker(null)}
+              colorsOnPage={colorsOnPage || []}
+              disableGradient={activeColorPicker === 'stroke'}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

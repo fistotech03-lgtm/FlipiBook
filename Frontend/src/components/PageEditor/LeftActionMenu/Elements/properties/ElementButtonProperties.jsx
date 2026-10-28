@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ChevronDown,
   ChevronUp,
   ChevronLeft,
   ChevronRight,
@@ -103,10 +102,6 @@ const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, is
         maxLength={color && color.includes('gradient') ? 10 : 7}
       />
       <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
-    </div>
-    <div className="h-[2.5vw] flex items-center justify-between px-[0.6vw] border border-gray-200 rounded-[0.5vw] bg-white cursor-pointer hover:border-gray-300 min-w-[4vw] shadow-2xs">
-      <span className="text-[0.75vw] text-gray-600 font-medium">{color && color.includes('gradient') ? 'GRAD' : 'HEX'}</span>
-      <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.3vw]" />
     </div>
   </div>
 );
@@ -484,13 +479,16 @@ export const ButtonEditor = ({
       const sc = extractColorOrGradient(shapeEl, 'stroke', '#000000');
       setStrokeColor(sc || '#000000');
 
-      const sw = shapeEl.getAttribute('stroke-width') || shapeEl.style?.strokeWidth || '1';
-      setStrokeWidth(parseFloat(sw) || 1);
+      const rawSw = shapeEl.getAttribute('data-stroke-width') || shapeEl.getAttribute('stroke-width') || shapeEl.style?.strokeWidth || '1';
+      const actualSw = shapeEl.hasAttribute('data-stroke-width')
+        ? parseFloat(shapeEl.getAttribute('data-stroke-width')) || 0
+        : (shapeEl.getAttribute('paint-order') === 'stroke fill' ? (parseFloat(rawSw) || 0) / 2 : (parseFloat(rawSw) || 0));
+      setStrokeWidth(actualSw || (shapeEl.getAttribute('stroke') && shapeEl.getAttribute('stroke') !== 'none' ? 1 : 0));
 
       const so = shapeEl.getAttribute('stroke-opacity') || shapeEl.style?.strokeOpacity || '1';
       setStrokeOpacity(Math.round(parseFloat(so) * 100));
 
-      const sa = el.getAttribute('data-stroke-alignment') || 'Center';
+      const sa = 'Outside';
       setStrokeAlignment(sa);
 
       const sda = shapeEl.getAttribute('stroke-dasharray');
@@ -1523,6 +1521,8 @@ export const ButtonEditor = ({
     const targetEl = mainPoly || rectEl;
 
     if (targetEl) {
+      targetEl.setAttribute('paint-order', 'stroke fill');
+      targetEl.style.paintOrder = 'stroke fill';
       const strokeVal = applySvgGradient(color, 'stroke', 'shape');
       targetEl.setAttribute('stroke', strokeVal);
       targetEl.style.stroke = strokeVal;
@@ -1530,13 +1530,16 @@ export const ButtonEditor = ({
 
       if (color !== 'none' && strokeWidth === 0) {
         setStrokeWidth(1);
-        targetEl.setAttribute('stroke-width', '1');
-        targetEl.style.strokeWidth = '1';
+        targetEl.setAttribute('data-stroke-width', '1');
+        targetEl.setAttribute('stroke-width', '2');
+        targetEl.style.strokeWidth = '2px';
       }
     }
 
     const borderRect = el.querySelector('rect.btn-border');
     if (borderRect) {
+      borderRect.setAttribute('paint-order', 'stroke fill');
+      borderRect.style.paintOrder = 'stroke fill';
       const strokeVal = applySvgGradient(color, 'stroke', 'border');
       borderRect.setAttribute('stroke', strokeVal);
       borderRect.style.stroke = strokeVal;
@@ -1551,29 +1554,38 @@ export const ButtonEditor = ({
     const el = resolveTargetElement();
     if (!el) return;
 
+    el.setAttribute('data-stroke-alignment', 'Outside');
+    el.setAttribute('data-stroke-position', 'Outside');
+
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     const targetEl = mainPoly || rectEl;
 
     if (targetEl) {
-      targetEl.setAttribute('stroke-width', num.toString());
-      targetEl.style.strokeWidth = num.toString();
+      targetEl.setAttribute('data-stroke-width', num.toString());
+      targetEl.setAttribute('paint-order', 'stroke fill');
+      targetEl.style.paintOrder = 'stroke fill';
+      targetEl.setAttribute('stroke-width', (num * 2).toString());
+      targetEl.style.strokeWidth = `${num * 2}px`;
     }
 
     const borderRect = el.querySelector('rect.btn-border');
     if (borderRect) {
-      borderRect.setAttribute('stroke-width', num.toString());
+      borderRect.setAttribute('paint-order', 'stroke fill');
+      borderRect.style.paintOrder = 'stroke fill';
+      borderRect.setAttribute('stroke-width', (num * 2).toString());
     }
 
     syncButtonToCanvas();
   };
 
   const handleStrokeAlignmentChange = (val) => {
-    setStrokeAlignment(val);
+    setStrokeAlignment('Outside');
     const el = resolveTargetElement();
     if (!el) return;
 
-    el.setAttribute('data-stroke-alignment', val);
+    el.setAttribute('data-stroke-alignment', 'Outside');
+    el.setAttribute('data-stroke-position', 'Outside');
     syncButtonToCanvas();
   };
 
@@ -2045,7 +2057,7 @@ export const ButtonEditor = ({
           {/* Alignment */}
           <div className="flex flex-col gap-[0.25vw]">
             <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
-            <div className="w-full h-[2.3vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs">
+            <div className="w-full h-[2.3vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
               <span>Outside</span>
             </div>
           </div>

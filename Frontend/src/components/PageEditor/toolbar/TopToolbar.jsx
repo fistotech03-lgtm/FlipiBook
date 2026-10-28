@@ -26,6 +26,15 @@ const TopToolbar = ({
   const dragStartValue = useRef(0);
   const [localRotation, setLocalRotation] = useState(rotation);
   const localRotationRef = useRef(rotation);
+  const [, setMaskUpdateTick] = useState(0);
+
+  useEffect(() => {
+    const handleMaskToggled = () => {
+      setMaskUpdateTick(t => t + 1);
+    };
+    window.addEventListener('shape-mask-toggled', handleMaskToggled);
+    return () => window.removeEventListener('shape-mask-toggled', handleMaskToggled);
+  }, []);
 
   useEffect(() => {
     setLocalRotation(rotation);
@@ -311,6 +320,7 @@ const TopToolbar = ({
                   onClick={() => {
                     if (hasSelection) {
                       window.dispatchEvent(new CustomEvent('trigger-mask'));
+                      setTimeout(() => setMaskUpdateTick(t => t + 1), 30);
                     }
                   }}
                   className={`flex flex-col items-center justify-center px-[0.5vw] py-[0.2vw] ${

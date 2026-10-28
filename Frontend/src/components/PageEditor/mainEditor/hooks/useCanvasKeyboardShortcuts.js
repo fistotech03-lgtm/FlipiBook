@@ -398,8 +398,9 @@ export const useCanvasKeyboardShortcuts = ({
     };
 
     const handleTriggerMask = () => {
-      const activeContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
-      const svg = activeContainer?.querySelector('svg');
+      const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const activeContainer = doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`) || document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+      const svg = activeContainer?.querySelector('svg') || doc.querySelector('svg');
       if (!svg) return;
 
       const ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)

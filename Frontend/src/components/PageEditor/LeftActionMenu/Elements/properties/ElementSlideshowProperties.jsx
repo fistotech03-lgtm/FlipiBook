@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
 import {
-  ChevronDown,
   Type,
   ArrowRightLeft,
   Plus,
@@ -838,7 +837,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             }
           }
 
-          const sAlign = slideshowSettings.strokeAlignment || 'Center';
+          const sAlign = slideshowSettings.strokeAlignment || 'Outside';
           let alignOffset = 0;
           if (sAlign === 'Inside') alignOffset = sWidth / 2;
           else if (sAlign === 'Outside') alignOffset = -sWidth / 2;
@@ -1381,7 +1380,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               }
               const sCap = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'square';
               const sJoin = slideshowSettings.strokeLineCorner === 'Rounded' ? 'round' : 'miter';
-              const sAlign = slideshowSettings.strokeAlignment || 'Center';
+              const sAlign = slideshowSettings.strokeAlignment || 'Outside';
               let alignOffset = 0;
               if (sAlign === 'Inside') alignOffset = sWidth / 2;
               else if (sAlign === 'Outside') alignOffset = -sWidth / 2;
@@ -2829,13 +2828,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               {slideshowSettings.bgOpacity ?? 100}%
             </span>
           </div>
-          <div
-            onClick={() => setShowBgColorPicker(true)}
-            className="h-[2vw] px-[0.75vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-between text-[0.75vw] font-medium text-gray-600 bg-white cursor-pointer hover:bg-gray-50 shadow-2xs"
-          >
-            <span>HEX</span>
-            <ChevronDown size="0.75vw" className="text-gray-400 ml-[0.3vw]" />
-          </div>
         </div>
       </div>
 
@@ -2860,10 +2852,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
               {slideshowSettings.strokeOpacity ?? 100}%
             </span>
           </div>
-          <div className="h-[2vw] px-[0.75vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-between text-[0.75vw] font-medium text-gray-600 bg-white cursor-pointer hover:bg-gray-50 shadow-2xs">
-            <span>HEX</span>
-            <ChevronDown size="0.75vw" className="text-gray-400 ml-[0.3vw]" />
-          </div>
         </div>
 
         {/* Stroke Settings Grid (Exact match to image) */}
@@ -2873,7 +2861,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Alignment */}
             <div className="flex flex-col gap-[0.25vw]">
               <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
-              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs">
+              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
                 <span>Outside</span>
               </div>
             </div>

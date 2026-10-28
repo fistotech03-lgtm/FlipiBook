@@ -783,7 +783,7 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
     bgStroke: selectedElementProps?.['data-bg-stroke'] || 'none',
     bgStrokeOpacity: parseFloat(selectedElementProps?.['data-bg-stroke-opacity'] !== undefined ? selectedElementProps['data-bg-stroke-opacity'] : 1) * 100,
     bgStrokeWidth: parseFloat(selectedElementProps?.['data-bg-stroke-width'] !== undefined ? selectedElementProps['data-bg-stroke-width'] : 0),
-    bgStrokePosition: selectedElementProps?.['data-bg-stroke-position'] || 'Center',
+    bgStrokePosition: selectedElementProps?.['data-bg-stroke-position'] || 'Outside',
     scrollBarOpacity: 100,
     stroke: selectedElementProps?.stroke || 'none',
     strokeOpacity: parseFloat(selectedElementProps?.['stroke-opacity'] !== undefined ? selectedElementProps['stroke-opacity'] : 1) * 100,
@@ -852,7 +852,7 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
       bgStroke: selectedElementProps?.['data-bg-stroke'] || 'none',
       bgStrokeOpacity: parseFloat(selectedElementProps?.['data-bg-stroke-opacity'] !== undefined ? selectedElementProps['data-bg-stroke-opacity'] : 1) * 100,
       bgStrokeWidth: parseFloat(selectedElementProps?.['data-bg-stroke-width'] !== undefined ? selectedElementProps['data-bg-stroke-width'] : 0),
-      bgStrokePosition: selectedElementProps?.['data-bg-stroke-position'] || 'Center',
+      bgStrokePosition: selectedElementProps?.['data-bg-stroke-position'] || 'Outside',
       stroke: selectedElementProps?.stroke || 'none',
       strokeOpacity: parseFloat(selectedElementProps?.['stroke-opacity'] !== undefined ? selectedElementProps['stroke-opacity'] : 1) * 100,
       strokeDashStyle: selectedElementProps?.strokeDasharray && selectedElementProps?.strokeDasharray !== 'none' ? 'Dashed' : 'Solid',
@@ -946,7 +946,7 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
 
       const dashVal = backgroundColor.strokeDashStyle === 'Dashed' ? (backgroundColor.strokeDasharrayValue || `${backgroundColor.strokeDashLength || 10},${backgroundColor.strokeDashGap || 10}`) : 'none';
       updateElementAttributeLocal(activePageIndex, selectedLayerId, 'strokeDasharray', dashVal);
-      updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-stroke-position', backgroundColor.strokePosition || 'Center');
+      updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-stroke-position', backgroundColor.strokePosition || 'Outside');
 
       const linecap = backgroundColor.strokeLinecap || 'butt';
       updateElementAttributeLocal(activePageIndex, selectedLayerId, 'strokeLinecap', linecap);
@@ -1338,7 +1338,7 @@ const TextEditor = ({
             }
           }
           if (attribute === 'stroke' || attribute === 'strokeWidth' || attribute === 'data-stroke-position') {
-            const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Center');
+            const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Outside');
             const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
             liveEl.firstElementChild.style.setProperty('paint-order', paintOrder, 'important');
             Array.from(liveEl.firstElementChild.querySelectorAll('*')).forEach(child => child.style.setProperty('paint-order', paintOrder, 'important'));
@@ -1371,7 +1371,7 @@ const TextEditor = ({
             liveEl.setAttribute(attribute, value);
           }
           if (attribute === 'stroke' || attribute === 'strokeWidth' || attribute === 'data-stroke-position' || attribute === 'stroke-opacity') {
-            const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Center');
+            const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Outside');
             const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
             liveEl.setAttribute('paint-order', paintOrder);
             liveEl.style.setProperty('paint-order', paintOrder, 'important');
@@ -1424,7 +1424,7 @@ const TextEditor = ({
                 }
               }
               if (attribute === 'stroke' || attribute === 'strokeWidth' || attribute === 'data-stroke-position') {
-                const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Center');
+                const pos = attribute === 'data-stroke-position' ? value : (liveEl.getAttribute('data-stroke-position') || 'Outside');
                 const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
                 child.setAttribute('paint-order', paintOrder);
                 child.style.setProperty('paint-order', paintOrder, 'important');
@@ -2104,7 +2104,7 @@ const TextEditor = ({
               element.setAttribute(attribute, value);
             }
             if (attribute === 'stroke' || attribute === 'strokeWidth' || attribute === 'data-stroke-position') {
-              const pos = attribute === 'data-stroke-position' ? value : (element.getAttribute('data-stroke-position') || 'Center');
+              const pos = attribute === 'data-stroke-position' ? value : (element.getAttribute('data-stroke-position') || 'Outside');
               const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
               element.setAttribute('paint-order', paintOrder);
               element.style.setProperty('paint-order', paintOrder, 'important');
@@ -2131,7 +2131,7 @@ const TextEditor = ({
                   }
                 }
                 if (attribute === 'stroke' || attribute === 'strokeWidth' || attribute === 'data-stroke-position') {
-                  const pos = attribute === 'data-stroke-position' ? value : (element.getAttribute('data-stroke-position') || 'Center');
+                  const pos = attribute === 'data-stroke-position' ? value : (element.getAttribute('data-stroke-position') || 'Outside');
                   const paintOrder = pos === 'Outside' ? 'stroke fill' : 'normal';
                   child.setAttribute('paint-order', paintOrder);
                   child.style.setProperty('paint-order', paintOrder, 'important');

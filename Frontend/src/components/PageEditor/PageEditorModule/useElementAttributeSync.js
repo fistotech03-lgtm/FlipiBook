@@ -85,9 +85,10 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
                 if (inner && [
                   'data-shape-type', 'data-shape-id', 'data-count', 'data-ratio', 'data-radius',
                   'data-cx', 'data-cy', 'data-rx', 'rx', 'ry', 'data-tl', 'data-tr', 'data-bl', 'data-br',
-                  'data-corner-linked'
+                  'data-corner-linked', 'paint-order', 'data-stroke-position'
                 ].includes(attr)) {
                   inner.setAttribute(attr, val);
+                  if (attr === 'paint-order') inner.style.paintOrder = val;
                 }
               }
 

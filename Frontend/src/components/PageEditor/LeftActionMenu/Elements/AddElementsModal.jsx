@@ -258,7 +258,7 @@ export const AddElementsModal = ({
                 {activeCategoryObj.name}
               </span>
 
-              <div className="grid grid-cols-3 gap-[0.65vw]">
+              <div className="grid grid-cols-3 gap-x-[0.65vw] gap-y-[1.3vh]">
                 {filteredElements.map((item) => (
                   <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                 ))}

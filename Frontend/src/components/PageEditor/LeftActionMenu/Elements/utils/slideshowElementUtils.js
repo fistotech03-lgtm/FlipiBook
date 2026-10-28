@@ -31,7 +31,7 @@ const defaultSlideshowSettings = {
   bgOpacity: 100,
   strokeColor: '#9ca3af',
   strokeOpacity: 100,
-  strokeAlignment: 'Center',
+  strokeAlignment: 'Outside',
   strokeWidth: 1,
   strokeLineStyle: 'Solid',
   strokeDashLength: 8,
@@ -638,7 +638,7 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
   }
   const sCap = settings.strokeLineCorner === 'Rounded' ? 'round' : 'square';
   const sJoin = settings.strokeLineCorner === 'Rounded' ? 'round' : 'miter';
-  const sAlign = settings.strokeAlignment || 'Center';
+  const sAlign = settings.strokeAlignment || 'Outside';
   let alignOffset = 0;
   if (sAlign === 'Inside') alignOffset = sWidth / 2;
   else if (sAlign === 'Outside') alignOffset = -sWidth / 2;

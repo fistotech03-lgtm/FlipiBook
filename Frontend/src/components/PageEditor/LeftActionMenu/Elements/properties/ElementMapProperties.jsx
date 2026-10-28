@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ChevronDown, AlertCircle, Loader2, X, Copy, Check } from 'lucide-react';
+import { Search, AlertCircle, Loader2, X, Copy, Check } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import ColorPicker from '../../../properties/ColorPicker';
 import { DEFAULT_MAP_DATA, MAP_TEMPLATES, generateOverlayHtml, escapeXml } from '../utils/mapElementUtils';
@@ -961,15 +961,6 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
             maxLength={7}
           />
           <span className="text-gray-400 text-[0.75vw] font-medium">{buttonOpacity}%</span>
-        </div>
-
-        {/* HEX dropdown indicator */}
-        <div
-          onClick={() => setActiveColorPicker(activeColorPicker === 'buttonColor' ? null : 'buttonColor')}
-          className="h-[2.5vw] flex items-center justify-between px-[0.6vw] border border-gray-200 rounded-[0.5vw] bg-white cursor-pointer hover:border-gray-300 min-w-[4.2vw] shadow-2xs"
-        >
-          <span className="text-[0.75vw] text-gray-600 font-medium">HEX</span>
-          <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.3vw]" />
         </div>
       </div>
 

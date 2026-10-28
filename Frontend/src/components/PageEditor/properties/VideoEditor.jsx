@@ -322,7 +322,7 @@ const VideoEditor = ({
       const parsedGap = parts.length > 1 ? parseInt(parts[1]) : parsedLen;
       dashGap = isNaN(parsedGap) ? dashLen : parsedGap;
     }
-    const dashPos = visualTarget.getAttribute('data-stroke-position') || 'Center';
+    const dashPos = visualTarget.getAttribute('data-stroke-position') || 'Outside';
     const dashCap = visualTarget.getAttribute('stroke-linecap') || 'butt';
 
     const existingStrokeType = visualTarget.getAttribute('data-stroke-type') || liveElement.getAttribute('data-stroke-type');
@@ -763,7 +763,7 @@ const VideoEditor = ({
         return hex;
       };
 
-      const pos = backgroundColor.strokePosition || 'Center';
+      const pos = backgroundColor.strokePosition || 'Outside';
       const color = hexToRgba(backgroundColor.stroke, backgroundColor.strokeOpacity / 100);
       const weight = backgroundColor.strokeWeight;
       const style = backgroundColor.strokeDashStyle === 'Dashed' ? 'dashed' : 'solid';
@@ -787,7 +787,7 @@ const VideoEditor = ({
       }
 
       // Dashed Stroke Attributes
-      visualTarget.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Center');
+      visualTarget.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
       visualTarget.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
       visualTarget.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
 

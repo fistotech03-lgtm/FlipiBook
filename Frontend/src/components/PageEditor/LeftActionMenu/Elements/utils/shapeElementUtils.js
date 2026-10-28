@@ -640,7 +640,12 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   // Default styling: Clean fill and stroke matching shape definition
   g.setAttribute('fill', shapeData.fill || '#d8e9feff');
   g.setAttribute('stroke', shapeData.stroke || 'none');
-  g.setAttribute('stroke-width', shapeData.strokeWidth !== undefined ? String(shapeData.strokeWidth) : '0');
+  const initialSw = shapeData.strokeWidth !== undefined ? parseFloat(shapeData.strokeWidth) : 0;
+  g.setAttribute('data-stroke-width', String(initialSw));
+  g.setAttribute('stroke-width', String(initialSw * 2));
+  g.setAttribute('data-stroke-position', 'Outside');
+  g.setAttribute('paint-order', 'stroke fill');
+  g.style.paintOrder = 'stroke fill';
 
   // Copy child shape attributes (like data-shape-type, data-count, etc.) up to g for RightSidebar inspection
   const primaryChild = svgRoot.querySelector('path, polygon, rect, circle, ellipse, line, g');
@@ -652,11 +657,13 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
     });
   }
 
-  // Ensure child elements inside do not have hardcoded stroke overriding g
+  // Ensure child elements inside do not have hardcoded stroke overriding g and preserve outside stroke paint-order
   Array.from(svgRoot.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline')).forEach((child) => {
     child.removeAttribute('stroke');
     child.removeAttribute('stroke-width');
     child.setAttribute('fill', 'inherit');
+    child.setAttribute('paint-order', 'stroke fill');
+    child.style.paintOrder = 'stroke fill';
   });
 
   // Inject child SVG elements into the group

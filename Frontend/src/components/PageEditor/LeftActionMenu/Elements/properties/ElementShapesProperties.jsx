@@ -7,18 +7,19 @@ import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../../ColorPicker';
 import { getShapeCornerDefaults, buildCornerRadiusPath } from '../utils/shapeElementUtils';
 import { 
-  ChevronDown, 
   ChevronLeft, 
   ChevronRight, 
   Upload, 
   Plus, 
   GripVertical, 
   Trash2, 
+  Edit2,
   ArrowRightLeft,
   Link2,
-  Link2Off,
-  Check
+  Link2Off
 } from 'lucide-react';
+import ImageAdjustModal from './ImageAdjustModal';
+import { DEFAULT_FRAME_IMAGE } from '../utils/imageFramingUtils';
 import { ElementSlider, ElementDropdown } from './ElementUIControls';
 
 // Section Header matching audio/elements exact styling
@@ -108,15 +109,26 @@ const ShapeAppearanceControls = ({
   const [localStrokeHex, setLocalStrokeHex] = useState(null);
   const [isAlignDropdownOpen, setIsAlignDropdownOpen] = useState(false);
   const [isCornerDropdownOpen, setIsCornerDropdownOpen] = useState(false);
-  const [isFormatDropdownOpen, setIsFormatDropdownOpen] = useState(false);
-  const [colorFormat, setColorFormat] = useState('HEX');
 
-  const currentFillHex = localFillHex !== null ? localFillHex : (backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC');
-  const currentStrokeHex = localStrokeHex !== null ? localStrokeHex : (backgroundColor?.stroke && backgroundColor.stroke !== 'none' && backgroundColor.stroke !== 'inherit' ? backgroundColor.stroke : '#000000');
+  const isFillNone = !backgroundColor?.fill || backgroundColor.fill === 'none' || backgroundColor.fill === 'transparent';
+  const isStrokeNone = !backgroundColor?.stroke || backgroundColor.stroke === 'none' || backgroundColor.stroke === 'transparent';
+
+  const currentFillHex = isFillNone ? 'NONE' : (localFillHex !== null ? localFillHex : (backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC'));
+  const currentStrokeHex = isStrokeNone ? 'NONE' : (localStrokeHex !== null ? localStrokeHex : (backgroundColor?.stroke && backgroundColor.stroke !== 'inherit' ? backgroundColor.stroke : '#000000'));
 
   // Hex input commit helpers
   const handleHexSubmit = (type, val) => {
     let clean = (val || '').trim();
+    if (clean.toLowerCase() === 'none') {
+      if (type === 'fill') {
+        setLocalFillHex(null);
+        setBackgroundColor(prev => ({ ...prev, fill: 'none' }));
+      } else {
+        setLocalStrokeHex(null);
+        setBackgroundColor(prev => ({ ...prev, stroke: 'none' }));
+      }
+      return;
+    }
     if (!clean.startsWith('#')) clean = '#' + clean;
     if (/^#[0-9A-Fa-f]{3,8}$/.test(clean)) {
       if (type === 'fill') {
@@ -152,10 +164,21 @@ const ShapeAppearanceControls = ({
           <button
             type="button"
             onClick={() => setActiveColorPicker(activeColorPicker === 'fill' ? null : 'fill')}
-            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden"
-            style={{ backgroundColor: backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC' }}
+            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
             title="Choose Fill Color"
-          />
+          >
+            {isFillNone ? (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundColor: backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC',
+                  opacity: (backgroundColor?.fillOpacity ?? 100) / 100
+                }}
+              />
+            )}
+          </button>
 
           {/* Hex & Opacity Input */}
           <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
@@ -184,38 +207,6 @@ const ShapeAppearanceControls = ({
               <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
             </div>
           </div>
-
-          {/* Format Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsFormatDropdownOpen(prev => !prev)}
-              className="h-[2.2vw] px-[0.6vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center gap-[0.3vw] text-[0.74vw] font-semibold text-gray-700 shadow-sm hover:border-gray-300 cursor-pointer transition-all"
-            >
-              <span>{colorFormat}</span>
-              <ChevronDown size="0.75vw" className="text-gray-400" />
-            </button>
-
-            {isFormatDropdownOpen && (
-              <div className="absolute top-[2.4vw] right-0 w-[5.5vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-50 py-[0.2vw]">
-                {['HEX', 'RGB', 'HSL'].map(fmt => (
-                  <div
-                    key={fmt}
-                    onClick={() => {
-                      setColorFormat(fmt);
-                      setIsFormatDropdownOpen(false);
-                    }}
-                    className={`px-[0.6vw] py-[0.3vw] text-[0.72vw] cursor-pointer hover:bg-gray-50 flex items-center justify-between ${
-                      colorFormat === fmt ? 'font-bold text-indigo-600' : 'text-gray-700'
-                    }`}
-                  >
-                    <span>{fmt}</span>
-                    {colorFormat === fmt && <Check size="0.7vw" />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -231,10 +222,21 @@ const ShapeAppearanceControls = ({
           <button
             type="button"
             onClick={() => setActiveColorPicker(activeColorPicker === 'stroke' ? null : 'stroke')}
-            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden"
-            style={{ backgroundColor: backgroundColor?.stroke && backgroundColor.stroke !== 'none' && backgroundColor.stroke !== 'inherit' ? backgroundColor.stroke : '#000000' }}
+            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
             title="Choose Stroke Color"
-          />
+          >
+            {isStrokeNone ? (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundColor: backgroundColor?.stroke && backgroundColor.stroke !== 'none' && backgroundColor.stroke !== 'inherit' ? backgroundColor.stroke : '#000000',
+                  opacity: (backgroundColor?.strokeOpacity ?? 100) / 100
+                }}
+              />
+            )}
+          </button>
 
           <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
             <input
@@ -262,16 +264,6 @@ const ShapeAppearanceControls = ({
               <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
             </div>
           </div>
-
-          <div className="relative">
-            <button
-              type="button"
-              className="h-[2.2vw] px-[0.6vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center gap-[0.3vw] text-[0.74vw] font-semibold text-gray-700 shadow-sm cursor-default"
-            >
-              <span>{colorFormat}</span>
-              <ChevronDown size="0.75vw" className="text-gray-400" />
-            </button>
-          </div>
         </div>
 
         {/* Stroke Settings (Exact match to image) */}
@@ -281,12 +273,9 @@ const ShapeAppearanceControls = ({
             {/* Alignment */}
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Alignment</span>
-              <ElementDropdown
-                value={backgroundColor?.strokePosition || 'Outside'}
-                onChange={(val) => setBackgroundColor(prev => ({ ...prev, strokePosition: val }))}
-                options={['Outside', 'Center', 'Inside']}
-                buttonClassName="!h-[2.2vw]"
-              />
+              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.5vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
+                <span>Outside</span>
+              </div>
             </div>
 
             {/* Stroke Width Stepper */}
@@ -561,6 +550,14 @@ const ElementShapesProperties = ({
   const [slotRotation, setSlotRotation] = useState(0);
   const [framePadding, setFramePadding] = useState(0);
   const [isMaskEnabled, setIsMaskEnabled] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const hasUploadedImage = Boolean(slotImage && slotImage !== DEFAULT_FRAME_IMAGE);
+  const [slotAdjustData, setSlotAdjustData] = useState({
+    cropData: null,
+    fixType: 'Fit',
+    opacity: 100,
+    filters: null
+  });
   const fileInputRef = useRef(null);
   const adjustStateRef = useRef({ isAdjusting: false, slotId: null, isPanning: false, startX: 0, startY: 0, matrix: null, rotateStr: '', imgNode: null, bbox: null, startMatrix: null, path: null });
 
@@ -610,13 +607,16 @@ const ElementShapesProperties = ({
   // Listen for mask toggle events
   useEffect(() => {
     const handleShapeMaskToggled = (e) => {
-      if (!e.detail || e.detail.layerId === selectedLayerId) {
+      if (!e.detail || !e.detail.layerId || e.detail.layerId === selectedLayerId) {
         const enabled = Boolean(e.detail?.enabled);
         setIsMaskEnabled(enabled);
         if (!enabled) {
           setSlotImage(null);
           setSlotOriginalImage(null);
           setSlotRotation(0);
+        } else if (e.detail?.url) {
+          setSlotImage(e.detail.url);
+          setSlotOriginalImage(e.detail.url);
         }
       }
     };
@@ -651,8 +651,16 @@ const ElementShapesProperties = ({
     setFramePadding(parseFloat(selectedElement.getAttribute('data-frame-padding')) || 0);
 
     const hasMaskEnabledAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
-      selectedElement.querySelector('[data-mask-enabled="true"]') !== null;
-    setIsMaskEnabled(hasMaskEnabledAttr);
+      selectedElement.querySelector('[data-mask-enabled="true"]') !== null ||
+      (selectedElement.getAttribute('fill') && selectedElement.getAttribute('fill').includes('url(#pattern-')) ||
+      selectedElement.querySelector('[fill*="url(#pattern-"]') !== null ||
+      Boolean(selectedElementProps?.['data-mask-enabled'] === 'true');
+    setIsMaskEnabled(Boolean(hasMaskEnabledAttr));
+    if (!hasMaskEnabledAttr) {
+      setSlotImage(null);
+      setSlotOriginalImage(null);
+      setSlotRotation(0);
+    }
 
     let svgRoot = selectedElement;
     while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
@@ -1145,6 +1153,8 @@ const ElementShapesProperties = ({
     selectedElement.removeAttribute('data-slot-original-url');
     setSlotImage(null);
     setSlotOriginalImage(null);
+    setSlotImageName('Image Name .jpg');
+    setSlotImageMeta('300 X 300 • 24MB');
     setSlotRotation(0);
     setIsMaskEnabled(false);
 
@@ -1160,7 +1170,97 @@ const ElementShapesProperties = ({
   };
 
   const handleDeleteImage = () => {
-    handleRemoveMask();
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const selectedElement = doc.getElementById(selectedLayerId);
+    if (!selectedElement) return;
+
+    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
+    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
+      shapeEl = selectedElement;
+    }
+
+    let svgRoot = selectedElement;
+    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
+      svgRoot = svgRoot.parentElement;
+    }
+
+    if (shapeEl) {
+      const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
+      if (patternMatch && patternMatch[1]) {
+        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
+        if (pat) pat.remove();
+      }
+      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
+      shapeEl.setAttribute('fill', origFill);
+      shapeEl.removeAttribute('data-pattern-id');
+      shapeEl.removeAttribute('data-masked-image-url');
+      shapeEl.removeAttribute('data-slot-image-name');
+      shapeEl.removeAttribute('data-slot-image-meta');
+      shapeEl.removeAttribute('data-slot-original-url');
+      shapeEl.removeAttribute('data-slot-crop-data');
+      shapeEl.removeAttribute('data-slot-fix-type');
+      shapeEl.removeAttribute('data-slot-opacity');
+      shapeEl.removeAttribute('data-slot-filters');
+      shapeEl.setAttribute('data-mask-enabled', 'true');
+    }
+
+    selectedElement.removeAttribute('data-slot-image-name');
+    selectedElement.removeAttribute('data-slot-image-meta');
+    selectedElement.removeAttribute('data-slot-original-url');
+    selectedElement.removeAttribute('data-slot-crop-data');
+    selectedElement.removeAttribute('data-slot-fix-type');
+    selectedElement.removeAttribute('data-slot-opacity');
+    selectedElement.removeAttribute('data-slot-filters');
+    selectedElement.setAttribute('data-mask-enabled', 'true');
+
+    setSlotImage(null);
+    setSlotOriginalImage(null);
+    setSlotImageName('Image Name .jpg');
+    setSlotImageMeta('300 X 300 • 24MB');
+    setSlotRotation(0);
+    setIsMaskEnabled(true);
+
+    window.__skipCanvasUpdateForPage = activePageIndex;
+    if (svgRoot) {
+      const cloneSvg = svgRoot.cloneNode(true);
+      cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
+      const serializer = new XMLSerializer();
+      const html = serializer.serializeToString(cloneSvg);
+      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+    }
+  };
+
+  const handleSaveAdjustedImage = ({
+    croppedUrl,
+    originalUrl,
+    cropData,
+    fixType,
+    opacity: adjustedOpacity,
+    filters
+  }) => {
+    const origUrlToKeep = originalUrl || slotOriginalImage || croppedUrl;
+    setSlotOriginalImage(origUrlToKeep);
+    setSlotAdjustData({
+      cropData,
+      fixType,
+      opacity: adjustedOpacity,
+      filters
+    });
+
+    const img = new window.Image();
+    img.onload = () => {
+      const imgW = img.naturalWidth || img.width;
+      const imgH = img.naturalHeight || img.height;
+      const dims = `${imgW} X ${imgH}`;
+      const sizePart = slotImageMeta?.includes('•') ? slotImageMeta.split('•')[1].trim() : '24MB';
+      const meta = `${dims} • ${sizePart}`;
+      setSlotImageMeta(meta);
+
+      applyImageMask(croppedUrl, slotImageName, meta, origUrlToKeep);
+    };
+    img.src = croppedUrl;
+
+    setShowAdjustModal(false);
   };
 
   const updateRotation = (angle, skipSync = false) => {
@@ -1580,7 +1680,7 @@ const ElementShapesProperties = ({
     strokeStops: selectedElementProps['stroke-stops'],
     strokeAngle: parseFloat(selectedElementProps['stroke-angle'] || 0),
     strokeRadius: parseFloat(selectedElementProps['stroke-radius'] || 100),
-    strokeWeight: parseFloat(selectedElementProps['stroke-width'] || 0),
+    strokeWeight: parseFloat(selectedElementProps['data-stroke-width'] !== undefined ? selectedElementProps['data-stroke-width'] : (selectedElementProps['stroke-width'] ? (parseFloat(selectedElementProps['stroke-width']) / (selectedElementProps['paint-order'] === 'stroke fill' ? 2 : 1)) : 0)),
     strokeDashStyle: ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) && (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) !== 'none') ? (
       (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray).startsWith('2,') ? 'Dotted' : 'Dashed'
     ) : 'Solid',
@@ -1588,7 +1688,7 @@ const ElementShapesProperties = ({
     strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0]) || 8,
     strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '8,4' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '8,4')).split(',')[0])) || 4,
     strokeLinecap: selectedElementProps['stroke-linecap'] === 'round' ? 'round' : 'square',
-    strokePosition: selectedElementProps['data-stroke-position'] || 'Outside',
+    strokePosition: 'Outside',
   };
 
   const handleSetBackgroundColor = (updater) => {
@@ -1610,12 +1710,18 @@ const ElementShapesProperties = ({
     if (backgroundColor.stroke !== next.stroke) {
       updates['stroke'] = next.stroke;
       updates['data-stroke-color'] = next.stroke;
+      if (next.stroke !== 'none' && (parseFloat(backgroundColor.strokeWeight) || 0) === 0) {
+        updates['stroke-width'] = '2';
+        updates['strokeWidth'] = '2';
+        updates['data-stroke-width'] = '1';
+      }
     }
     if (backgroundColor.strokeOpacity !== next.strokeOpacity) updates['stroke-opacity'] = (next.strokeOpacity / 100).toString();
     if (backgroundColor.strokeWeight !== next.strokeWeight) {
-      updates['stroke-width'] = next.strokeWeight.toString();
-      updates['strokeWidth'] = next.strokeWeight.toString();
-      updates['data-stroke-width'] = next.strokeWeight.toString();
+      const sw = parseFloat(next.strokeWeight) || 0;
+      updates['stroke-width'] = (sw * 2).toString();
+      updates['strokeWidth'] = (sw * 2).toString();
+      updates['data-stroke-width'] = sw.toString();
     }
     if (backgroundColor.strokeDashStyle !== next.strokeDashStyle || backgroundColor.strokeDashLength !== next.strokeDashLength || backgroundColor.strokeDashGap !== next.strokeDashGap || backgroundColor.strokeDasharrayValue !== next.strokeDasharrayValue) {
       if (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') {
@@ -1624,7 +1730,8 @@ const ElementShapesProperties = ({
         updates['stroke-dasharray'] = next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`;
       }
     }
-    if (backgroundColor.strokePosition !== next.strokePosition) updates['data-stroke-position'] = next.strokePosition;
+    updates['data-stroke-position'] = 'Outside';
+    updates['paint-order'] = 'stroke fill';
     if (backgroundColor.strokeLinecap !== next.strokeLinecap) {
       updates['stroke-linecap'] = next.strokeLinecap;
       updates['stroke-linejoin'] = next.strokeLinecap === 'round' ? 'round' : 'miter';
@@ -1645,13 +1752,27 @@ const ElementShapesProperties = ({
       const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
       const selectedElement = doc.getElementById(selectedLayerId);
       if (selectedElement) {
+        selectedElement.setAttribute('data-stroke-position', 'Outside');
+        selectedElement.setAttribute('paint-order', 'stroke fill');
+        selectedElement.style.paintOrder = 'stroke fill';
+        const inner = selectedElement.querySelector('path, polygon, rect, circle, ellipse, line');
+        if (inner) {
+          inner.setAttribute('paint-order', 'stroke fill');
+          inner.style.paintOrder = 'stroke fill';
+        }
         const bgRect = selectedElement.querySelector('.frame-bg-rect');
         if (bgRect) {
           if (next.fill !== undefined) bgRect.setAttribute('fill', next.fill !== '#' ? next.fill : 'none');
           if (next.fillOpacity !== undefined) bgRect.setAttribute('fill-opacity', next.fillOpacity / 100);
           if (next.stroke !== undefined) bgRect.setAttribute('stroke', next.stroke !== '#' ? next.stroke : 'none');
           if (next.strokeOpacity !== undefined) bgRect.setAttribute('stroke-opacity', next.strokeOpacity / 100);
-          if (next.strokeWeight !== undefined) bgRect.setAttribute('stroke-width', next.strokeWeight);
+          if (next.strokeWeight !== undefined) {
+            const sw = parseFloat(next.strokeWeight) || 0;
+            bgRect.setAttribute('paint-order', 'stroke fill');
+            bgRect.style.paintOrder = 'stroke fill';
+            bgRect.setAttribute('stroke-width', (sw * 2).toString());
+            bgRect.setAttribute('data-stroke-width', sw.toString());
+          }
           if (next.strokeDashStyle !== undefined) {
             const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') 
               ? 'none' 
@@ -1873,35 +1994,35 @@ const ElementShapesProperties = ({
       <SectionHeader title="Element Shape Properties" />
 
       {/* Image Slots / Masking Section */}
-      {(isMaskEnabled || slotImage) && (
-        <div className="flex flex-col gap-[0.5vw]" data-image-slots="true">
-          <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw]">
-            <span className="text-[0.8vw] font-semibold text-gray-800">Image Slots</span>
-            <button
-              type="button"
-              onClick={handleRemoveMask}
-              className="text-[0.7vw] text-red-500 hover:text-red-700 font-medium cursor-pointer transition-colors"
+      {shapeType !== 'line' && (isMaskEnabled || hasUploadedImage) && (
+        <div className="flex flex-col gap-[0.5vw] pl-[0.5vw] pr-[0.2vw]" data-image-slots="true">
+          {/* Dashed Add Images button shown before upload */}
+          {!hasUploadedImage && (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                  handleFileChange({ target: { files } });
+                }
+              }}
+              className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-medium text-[0.85vw]"
             >
-              Remove
-            </button>
-          </div>
+              <Plus size="1vw" />
+              <span>Add Images</span>
+            </div>
+          )}
 
-          <div className="pl-[0.5vw] pr-[0.2vw] flex flex-col gap-[0.5vw]">
-            <div className="flex flex-col gap-[0.35vw]">
-              <span className="text-[0.8vw] text-gray-600 font-medium flex items-center justify-between">
-                Image
-                {slotImage && (
-                  <span className="text-[0.6vw] text-green-600 bg-green-50 px-[0.3vw] py-[0.1vw] rounded font-medium">
-                    Filled
-                  </span>
-                )}
-              </span>
+          {/* Uploaded Image Preview Card (shown ONLY after upload) */}
+          {hasUploadedImage && (
+            <>
               <div
-                className={`border border-dashed rounded-[0.5vw] flex flex-col items-center justify-center cursor-pointer transition-colors relative overflow-hidden group ${
-                  slotImage
-                    ? 'border-gray-300 hover:border-[#4c5add] bg-gray-50 h-[5vw]'
-                    : 'border-[#4c5add] bg-blue-50/30 hover:bg-blue-50 p-[1vw]'
-                }`}
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1914,35 +2035,74 @@ const ElementShapesProperties = ({
                     handleFileChange({ target: { files } });
                   }
                 }}
-                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border border-gray-200/90 hover:border-gray-300 rounded-[0.75vw] shadow-2xs transition-all cursor-pointer"
               >
-                {slotImage ? (
-                  <>
-                    <img src={slotImage} alt={slotImageName || 'Mask'} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Upload size="1.2vw" className="text-white mb-[0.2vw]" />
-                      <span className="text-[0.65vw] text-white font-medium">Replace</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Upload size="1vw" className="text-[#4c5add] mb-[0.2vw]" />
-                    <span className="text-[0.6vw] text-[#4c5add] font-semibold text-center leading-tight">
-                      Drop on Slot<br />or Click
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-              </div>
-            </div>
+                {/* Left Section: Drag handle + Thumbnail + Meta */}
+                <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
+                  {/* Drag Handle */}
+                  <div className="text-gray-300 hover:text-gray-500 cursor-grab shrink-0 px-[0.1vw]">
+                    <GripVertical size="0.95vw" />
+                  </div>
 
-            {slotImage && (
+                  {/* Thumbnail with Replace button overlay */}
+                  <div
+                    className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] border border-gray-200 shrink-0 overflow-hidden group/thumb cursor-pointer shadow-2xs bg-gray-100 flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    title="Click to replace image"
+                  >
+                    <img
+                      src={slotImage || DEFAULT_FRAME_IMAGE}
+                      alt={slotImageName || 'Image Name .jpg'}
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
+                    />
+                    {/* Replace Overlay Button over the image */}
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
+                      <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
+                      <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                    </div>
+                  </div>
+
+                  {/* File Name & Dimensions block */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={slotImageName || 'Image Name .jpg'}>
+                      {slotImageName || 'Image Name .jpg'}
+                    </span>
+                    <span className="text-[0.68vw] text-gray-400 font-medium">
+                      {slotImageMeta || '300 X 300 • 24MB'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Actions: Pencil / Edit & Delete Trash */}
+                <div className="flex items-center gap-[0.4vw] shrink-0 ml-[0.5vw]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAdjustModal(true);
+                    }}
+                    className="p-[0.3vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
+                    title="Edit Image Adjustment"
+                  >
+                    <Edit2 size="0.95vw" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteImage();
+                    }}
+                    className="p-[0.3vw] text-[#e02424] hover:text-red-700 hover:bg-red-50 rounded-[0.35vw] transition-colors cursor-pointer"
+                    title="Remove Image"
+                  >
+                    <Trash2 size="0.95vw" />
+                  </button>
+                </div>
+              </div>
+
               <PropertySlider
                 label="Rotation"
                 value={slotRotation}
@@ -1951,8 +2111,17 @@ const ElementShapesProperties = ({
                 min={-180}
                 max={180}
               />
-            )}
-          </div>
+            </>
+          )}
+
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileChange}
+          />
         </div>
       )}
 
@@ -2013,6 +2182,39 @@ const ElementShapesProperties = ({
         showDetailedPicker={showDetailedPicker}
         setShowDetailedPicker={setShowDetailedPicker}
       />
+
+      {/* ===================== IMAGE ADJUST MODAL ===================== */}
+      {showAdjustModal && (
+        <ImageAdjustModal
+          isOpen={showAdjustModal}
+          onClose={() => setShowAdjustModal(false)}
+          imageSrc={slotOriginalImage || slotImage || DEFAULT_FRAME_IMAGE}
+          initialFixType={slotAdjustData?.fixType || 'Fit'}
+          initialOpacity={slotAdjustData?.opacity !== undefined ? slotAdjustData.opacity : 100}
+          initialFilters={slotAdjustData?.filters || null}
+          initialCrop={slotAdjustData?.cropData || null}
+          frameAspectRatio={(() => {
+            const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+            const selectedElement = doc.getElementById(selectedLayerId);
+            if (selectedElement) {
+              try {
+                let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
+                if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
+                  shapeEl = selectedElement;
+                }
+                if (shapeEl) {
+                  const bbox = shapeEl.getBBox();
+                  if (bbox.width && bbox.height) {
+                    return bbox.width / bbox.height;
+                  }
+                }
+              } catch (e) {}
+            }
+            return 1;
+          })()}
+          onSave={handleSaveAdjustedImage}
+        />
+      )}
 
       {/* Custom Scroller and Scrub Styling */}
       <style>{`

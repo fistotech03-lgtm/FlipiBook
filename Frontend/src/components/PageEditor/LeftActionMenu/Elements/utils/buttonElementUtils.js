@@ -361,8 +361,8 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
   }
 
   return `
-    <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name || 'Button'}" data-text="${template.text}" data-fill-color="${template.fill}" data-padding-w="0" data-padding-h="0" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
-      <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx || 6}" fill="${template.fill}" stroke="${template.stroke || 'none'}" stroke-width="${template.strokeWidth || 0}" pointer-events="none" style="pointer-events: none;" />
+    <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name || 'Button'}" data-text="${template.text}" data-fill-color="${template.fill}" data-stroke-alignment="Outside" data-stroke-position="Outside" data-padding-w="0" data-padding-h="0" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
+      <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx || 6}" fill="${template.fill}" stroke="${template.stroke || 'none'}" stroke-width="${(template.strokeWidth || 0) * 2}" data-stroke-width="${template.strokeWidth || 0}" paint-order="stroke fill" style="paint-order: stroke fill; pointer-events: none;" pointer-events="none" />
       <text x="${w / 2}" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily || '-apple-system'}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; pointer-events: none;">${template.text}</text>
     </g>
   `;

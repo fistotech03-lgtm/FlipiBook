@@ -252,7 +252,7 @@ const GifEditor = ({
       const parsedGap = parts.length > 1 ? parseInt(parts[1]) : parsedLen;
       dashGap = isNaN(parsedGap) ? dashLen : parsedGap;
     }
-    const dashPos = selectedElement.getAttribute('data-stroke-position') || 'Center';
+    const dashPos = selectedElement.getAttribute('data-stroke-position') || 'Outside';
     const dashCap = selectedElement.getAttribute('stroke-linecap') || 'butt';
 
     const existingStrokeType = selectedElement.getAttribute('data-stroke-type');
@@ -1083,7 +1083,7 @@ const GifEditor = ({
             liveElement.removeAttribute('stroke-dasharray');
           }
 
-          liveElement.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Center');
+          liveElement.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
           liveElement.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
           liveElement.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
 
@@ -1102,7 +1102,7 @@ const GifEditor = ({
                             const syncOverlay = () => {
                 if (!strokeOverlay.isConnected) return;
                 const weight = parseFloat(strokeOverlay.getAttribute('stroke-width')) || 0;
-                const pos = strokeOverlay.getAttribute('data-img-stroke-position') || 'Center';
+                const pos = strokeOverlay.getAttribute('data-img-stroke-position') || 'Outside';
                 let targetEl = svgImageEl || liveElement;
                 if (svgImageEl && svgImageEl.tagName?.toLowerCase() === 'img') {
                   targetEl = svgImageEl.closest('foreignObject') || svgImageEl;
@@ -1232,7 +1232,7 @@ const GifEditor = ({
               } catch { }
             }
 
-            const pos = backgroundColor.strokePosition || 'Center';
+            const pos = backgroundColor.strokePosition || 'Outside';
             const sw = backgroundColor.strokeWeight || 0;
 
             let scaleX = 1;
@@ -1327,7 +1327,7 @@ const GifEditor = ({
               strokeOverlay.removeAttribute('stroke-dasharray');
             }
 
-            strokeOverlay.setAttribute('data-img-stroke-position', backgroundColor.strokePosition || 'Center');
+            strokeOverlay.setAttribute('data-img-stroke-position', backgroundColor.strokePosition || 'Outside');
             strokeOverlay.removeAttribute('data-stroke-position');
             strokeOverlay.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
             strokeOverlay.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
@@ -1406,7 +1406,7 @@ const GifEditor = ({
           style = (backgroundColor.strokeDashStyle === 'Dashed') ? 'dashed' : 'solid';
         }
 
-        const pos = backgroundColor.strokePosition || 'Center';
+        const pos = backgroundColor.strokePosition || 'Outside';
         const color = hexToRgba(backgroundColor.stroke, backgroundColor.strokeOpacity / 100);
         const weight = backgroundColor.strokeWeight;
 

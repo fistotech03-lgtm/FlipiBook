@@ -992,7 +992,6 @@ const PageEditor = () => {
             const userEmail = user?.emailId || user?.email || location.state?.emailId || 'user@flipibook.com';
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: {
-                emailId: userEmail,
                 v_id: activeVId,
                 folder_id: folder,
                 folderName: location.state?.folderName,

@@ -2020,6 +2020,7 @@ exports.savePagesBatch = async (req, res) => {
  */
 exports.getBook = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName, folderName } = req.query;
 

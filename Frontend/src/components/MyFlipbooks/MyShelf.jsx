@@ -7,31 +7,6 @@ import { getInitialUser } from '../../utils/authUtils';
 const resolveUploadsPath = (path) => path || '';
 
 import bookShelf1 from '../../assets/Bookshelf/Book_shelf1.webp';
-import textureScreen2 from '../../assets/Bookshelf/classicwood/classic woodtexture.webp';
-import bookShelf2 from '../../assets/Bookshelf/classicwood/classicwoodshelf.webp';
-import darkOakTex1 from '../../assets/Bookshelf/Darkoak/texture_screen1.webp';
-import darkOakTex2 from '../../assets/Bookshelf/Darkoak/texture_screen2.webp';
-import darkOakTex3 from '../../assets/Bookshelf/Darkoak/texture_screen3.webp';
-import darkOakShelf from '../../assets/Bookshelf/Darkoak/darkoakshelf.webp';
-
-import mwWall1 from '../../assets/Bookshelf/modernwhite/wall1.webp';
-import book1 from '../../assets/Bookshelf/Bookcover/book1.webp';
-import book2 from '../../assets/Bookshelf/Bookcover/book2.webp';
-import book3 from '../../assets/Bookshelf/Bookcover/book3.webp';
-import book4 from '../../assets/Bookshelf/Bookcover/book4.webp';
-import book5 from '../../assets/Bookshelf/Bookcover/book5.webp';
-import book6 from '../../assets/Bookshelf/Bookcover/book6.webp';
-
-const initialBooks = [
-  book1, book2, book3, book4, book5, book6,
-  book1, book2, book3, book4, book5, book6,
-  book1, book2, book3, book4, book5, book6,
-  book1
-];
-
-import customize1 from '../../assets/Bookshelf/customize_shelf/customize1.svg';
-import customize2 from '../../assets/Bookshelf/customize_shelf/customize2.svg';
-import customize3 from '../../assets/Bookshelf/customize_shelf/customize3.svg';
 import listFrame from '../../assets/Bookshelf/list_frame.svg';
 
 import cover1 from '../../assets/Explore/c-bg1.png';
@@ -46,12 +21,20 @@ import blueshelfwood from '../../assets/Bookshelf/blueshelf/blueshelfwood.webp';
 import bluedecor from '../../assets/Bookshelf/blueshelf/bluedecor.webp';
 import blueLamp from '../../assets/Bookshelf/blueshelf/Lamp.png';
 import blueBookWithPot from '../../assets/Bookshelf/blueshelf/bookwithpot.png';
+import blueRopeShelfImg from '../../assets/Bookshelf/blue_frame/blue-ropeshelf.png';
+import blueFrameSheet from '../../assets/Bookshelf/blue_frame/bluesheet.png';
+import blueFrameLeftShelf from '../../assets/Bookshelf/blue_frame/leftshelf.png';
+import blueFrameBase from '../../assets/Bookshelf/blue_frame/base.png';
+import blueFrameRopeShelf from '../../assets/Bookshelf/blue_frame/rope_shelf.png';
+import blueFrameLight from '../../assets/Bookshelf/blue_frame/light.png';
+import blueFrameDecor from '../../assets/Bookshelf/blue_frame/decor.png';
 import greenshade from '../../assets/Bookshelf/greenshelf/greenshade.svg';
-import greensheet from '../../assets/Bookshelf/greenshelf/greenshelf.webp';
+import greensheet from '../../assets/Bookshelf/greenshelf/Green_sheet.png';
+import greenLeftWood from '../../assets/Bookshelf/greenshelf/Leftwood.png';
 import greenWoodshelf from '../../assets/Bookshelf/greenshelf/woodshelf.svg';
 import greenShelfShadow from '../../assets/Bookshelf/greenshelf/shelfshadow.svg';
-import greenLamp from '../../assets/Bookshelf/greenshelf/lamp.svg';
-import greenDecor from '../../assets/Bookshelf/greenshelf/decor.svg';
+import greenLamp from '../../assets/Bookshelf/greenshelf/lamp.png';
+import greenDecor from '../../assets/Bookshelf/greenshelf/decor.png';
 import greenBase from '../../assets/Bookshelf/greenshelf/base.png';
 import lightShelfImg from '../../assets/Bookshelf/light_shelf/light-sheld.svg';
 import goldenLightSheet from '../../assets/Bookshelf/light_shelf/goldenlightsheet.png';
@@ -705,18 +688,31 @@ const MyShelf = () => {
     const actualDraggedIndex = currentFolder.books.findIndex(b => b.v_id === draggedBookObj.v_id);
     if (actualDraggedIndex === -1) return;
 
-    const newBooks = [...currentFolder.books];
-    const [draggedBook] = newBooks.splice(actualDraggedIndex, 1);
-
     const targetBookObj = filteredBooks[targetIndex];
-    let actualTargetIndex;
-    if (targetBookObj) {
-      actualTargetIndex = currentFolder.books.findIndex(b => b.v_id === targetBookObj.v_id);
-    } else {
-      actualTargetIndex = newBooks.length;
-    }
+    const newBooks = [...currentFolder.books];
 
-    newBooks.splice(actualTargetIndex, 0, draggedBook);
+    if (targetBookObj) {
+      // SWAP: If dropped where a book already exists, swap their positions
+      const actualTargetIndex = currentFolder.books.findIndex(b => b.v_id === targetBookObj.v_id);
+      if (actualTargetIndex !== -1 && actualTargetIndex !== actualDraggedIndex) {
+        const temp = newBooks[actualDraggedIndex];
+        newBooks[actualDraggedIndex] = newBooks[actualTargetIndex];
+        newBooks[actualTargetIndex] = temp;
+      }
+    } else {
+      // Drop onto empty slot (Add Book):
+      // Move dragged book to targetIndex slot
+      const [draggedBook] = newBooks.splice(actualDraggedIndex, 1);
+      if (targetIndex >= newBooks.length) {
+        // Pad array if needed so target slot is reached or push to end
+        while (newBooks.length < targetIndex) {
+          newBooks.push(null);
+        }
+        newBooks.push(draggedBook);
+      } else {
+        newBooks.splice(targetIndex, 0, draggedBook);
+      }
+    }
 
     setFolders(prev => prev.map(folder => {
       if (folder.name === selectedFolder) {
@@ -728,7 +724,7 @@ const MyShelf = () => {
     setDraggedBookIndex(null);
 
     try {
-      const bookIds = newBooks.map(b => b.v_id);
+      const bookIds = newBooks.filter(Boolean).map(b => b.v_id);
       await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
         emailId: currentUserEmail,
         folderName: selectedFolder,
@@ -826,6 +822,13 @@ const MyShelf = () => {
         return {
           type: 'plant_light_shelf',
           bg: selectedWallTheme || plantLightSheet,
+          bgStretch: true,
+          noZone: true,
+        };
+      case 'customize_bluerope':
+        return {
+          type: 'blue_rope_shelf',
+          bg: selectedWallTheme || blueFrameSheet,
           bgStretch: true,
           noZone: true,
         };
@@ -1058,6 +1061,28 @@ const MyShelf = () => {
                         Green-Light Shelf
                       </span>
                     </div>
+
+                    {/* Blue Rope Shelf card */}
+                    <div
+                      onClick={() => {
+                        setSelectedFolder(folder.name);
+                        setActiveShelfStyle('customize_bluerope');
+                        setSelectedWallTheme(null);
+                        setCurrentView('shelf_detail');
+                      }}
+                      className="group cursor-pointer flex flex-col items-center"
+                    >
+                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-sky-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
+                        <img
+                          src={blueRopeShelfImg}
+                          alt="Blue Rope Shelf"
+                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
+                        />
+                      </div>
+                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-sky-600 transition-colors">
+                        Blue Rope Shelf
+                      </span>
+                    </div>
                   </>
                 )}
               </React.Fragment>
@@ -1125,7 +1150,7 @@ const MyShelf = () => {
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
-                      {activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : (selectedFolder === 'My Flipbooks' ? 'Pumps based shelf' : selectedFolder)}
+                      {activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : (selectedFolder === 'My Flipbooks' ? 'Pumps based shelf' : selectedFolder)}
                     </h2>
                     <button className="text-gray-400 hover:text-gray-600 transition-colors p-0.5" title="Rename shelf">
                       <Icon icon="lucide:edit-3" className="w-3.5 h-3.5" />
@@ -1433,8 +1458,8 @@ const MyShelf = () => {
                       <React.Fragment key={`green-tier-${tierIdx}`}>
                         {/* Two split shelves per tier: Left shelf and Right shelf */}
                         {[
-                          { side: 'left', left: '17.2%', width: '28.8%', bookIndices: [books[0], books[1]] },
-                          { side: 'right', left: '49.0%', width: '30.1%', bookIndices: [books[2], books[3]] }
+                          { side: 'left', left: '23.5%', width: '28.8%', bookIndices: [books[0], books[1]] },
+                          { side: 'right', left: '55.0%', width: '30.1%', bookIndices: [books[2], books[3]] }
                         ].map(({ side, left, width, bookIndices }) => (
                           <div
                             key={`green-shelf-${tierIdx}-${side}`}
@@ -1704,8 +1729,8 @@ const MyShelf = () => {
                           className="absolute pointer-events-none z-10"
                           style={{
                             top: shelfTop,
-                            left: '12.8%',
-                            width: '78.5%'
+                            left: '24.0%',
+                            width: '68.0%'
                           }}
                         >
                           <img
@@ -1720,8 +1745,8 @@ const MyShelf = () => {
                           className="absolute pointer-events-none z-10"
                           style={{
                             top: lightTop,
-                            left: '19.17%',
-                            width: '65.7%'
+                            left: '29.5%',
+                            width: '57.0%'
                           }}
                         >
                           <img
@@ -1737,8 +1762,8 @@ const MyShelf = () => {
                             className="absolute pointer-events-none z-15"
                             style={{
                               top: lightTop,
-                              left: '12.8%',
-                              width: '78.5%',
+                              left: '24.0%',
+                              width: '68.0%',
                               height: '100%'
                             }}
                           >
@@ -1755,7 +1780,7 @@ const MyShelf = () => {
                                   style={{
                                     left: center,
                                     top: '3.5%',
-                                    width: '12.0%',
+                                    width: '13.0%',
                                     height: '26%',
                                     background:
                                       selectedLightTheme === 'light1'
@@ -1764,7 +1789,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.58) 32%, rgba(14, 165, 233, 0.16) 75%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
-                                    filter: 'blur(7px)',
+                                    filter: 'blur(7.5px)',
                                     mixBlendMode: 'screen'
                                   }}
                                 />
@@ -1775,7 +1800,7 @@ const MyShelf = () => {
                                   style={{
                                     left: center,
                                     top: '3%',
-                                    width: '4.8%',
+                                    width: '5.2%',
                                     height: '20%',
                                     background:
                                       selectedLightTheme === 'light1'
@@ -1784,7 +1809,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(224, 242, 254, 1.0) 0%, rgba(56, 189, 248, 0.65) 25%, rgba(14, 165, 233, 0.15) 70%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
-                                    filter: 'blur(4px)',
+                                    filter: 'blur(4.5px)',
                                     mixBlendMode: 'screen'
                                   }}
                                 />
@@ -1818,8 +1843,8 @@ const MyShelf = () => {
                           className="absolute pointer-events-none z-20"
                           style={{
                             top: shelfTop,
-                            left: '12.8%',
-                            width: '78.5%',
+                            left: '24.0%',
+                            width: '68.0%',
                             transform: 'translateY(-100%)',
                             height: '1px'
                           }}
@@ -1840,7 +1865,7 @@ const MyShelf = () => {
                                   className="pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end"
                                   style={{
                                     left: center,
-                                    width: '11.5%',
+                                    width: '13.0%',
                                     aspectRatio: '2.5 / 3.35'
                                   }}
                                 >
@@ -1883,7 +1908,7 @@ const MyShelf = () => {
                                 className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 group cursor-pointer flex justify-center items-end ${openMenuId === `greenlight-${bookIndex}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
                                 style={{
                                   left: center,
-                                  width: '11.5%'
+                                  width: '13.0%'
                                 }}
                               >
                                 <div className="w-full aspect-[2.5/3.35] relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
@@ -2024,7 +2049,7 @@ const MyShelf = () => {
                       className="absolute pointer-events-none z-20"
                       style={{
                         top: '9.5%',
-                        left: '19.87%',
+                        left: '22.87%',
                         width: '64.48%'
                       }}
                     >
@@ -2046,7 +2071,7 @@ const MyShelf = () => {
                           className="absolute pointer-events-none z-10"
                           style={{
                             top: shelfTop,
-                            left: '13.6%',
+                            left: '16.6%',
                             width: '77.0%'
                           }}
                         >
@@ -2063,7 +2088,7 @@ const MyShelf = () => {
                             className="absolute pointer-events-none z-15"
                             style={{
                               top: lightTop,
-                              left: '13.6%',
+                              left: '16.6%',
                               width: '77.0%',
                               height: '100%'
                             }}
@@ -2144,7 +2169,7 @@ const MyShelf = () => {
                           className="absolute pointer-events-none z-20"
                           style={{
                             top: shelfTop,
-                            left: '13.6%',
+                            left: '16.6%',
                             width: '77.0%',
                             transform: 'translateY(-100%)',
                             height: '1px'
@@ -2761,26 +2786,75 @@ const MyShelf = () => {
                 {/* Bottom Decors for Green Shelf (customize_green): lamp on bottom-left, decor on right */}
                 {activeShelfStyle === 'customize_green' && (
                   <>
-                    {/* Shelf Base Credenza: only displayed when a custom wall theme is selected */}
-                    {selectedWallTheme && (
+                    {/* Left Wood Panel on left wall with natural tight light & shadow on right side */}
+                    <div
+                      className="absolute left-0 top-0 pointer-events-none z-10"
+                      style={{
+                        bottom: '12.5%',
+                        aspectRatio: '140 / 950'
+                      }}
+                    >
+                      {/* 1. Bright intense vertical LED strip directly behind the panel edge */}
                       <div
-                        className="absolute left-0 w-full pointer-events-none z-10"
-                        style={{ bottom: 0 }}
-                      >
-                        <img
-                          src={greenBase}
-                          alt="Green Shelf Base"
-                          className="w-full h-auto block object-cover"
-                        />
-                      </div>
-                    )}
+                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
+                        style={{
+                          width: '16px',
+                          transform: 'translateX(30%)',
+                          background: 'linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 245, 205, 0.98) 40%, rgba(253, 224, 71, 0.85) 75%, transparent 100%)',
+                          filter: 'blur(3px)',
+                          mixBlendMode: 'screen'
+                        }}
+                      />
 
-                    {/* Bottom Left: lamp.svg placed on credenza with internal lamp light effects */}
+                      {/* 2. Primary bright warm core glow */}
+                      <div
+                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
+                        style={{
+                          width: '65px',
+                          transform: 'translateX(60%)',
+                          background: 'linear-gradient(90deg, rgba(255, 241, 168, 0.95) 0%, rgba(252, 211, 77, 0.75) 35%, rgba(245, 158, 11, 0.40) 65%, transparent 100%)',
+                          filter: 'blur(10px)',
+                          mixBlendMode: 'screen'
+                        }}
+                      />
+
+                      {/* 3. Wide soft ambient light diffusion spreading onto the green wall */}
+                      <div
+                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
+                        style={{
+                          width: '130px',
+                          transform: 'translateX(55%)',
+                          background: 'linear-gradient(90deg, rgba(254, 240, 138, 0.60) 0%, rgba(251, 191, 36, 0.35) 40%, rgba(217, 119, 6, 0.12) 75%, transparent 100%)',
+                          filter: 'blur(20px)',
+                          mixBlendMode: 'screen'
+                        }}
+                      />
+
+                      <img
+                        src={greenLeftWood}
+                        alt="Left Wood Panel"
+                        className="w-full h-full block object-contain object-left relative z-10"
+                      />
+                    </div>
+
+                    {/* Shelf Base Credenza across the bottom */}
+                    <div
+                      className="absolute left-0 w-full pointer-events-none z-10"
+                      style={{ bottom: 0, height: '12.5%' }}
+                    >
+                      <img
+                        src={greenBase}
+                        alt="Green Shelf Base"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* Bottom Left: lamp.png placed on credenza with internal lamp light effects */}
                     <div
                       className="absolute pointer-events-none z-20 transition-all duration-300"
                       style={{
                         left: '3.8%',
-                        bottom: '12.8%',
+                        bottom: '10.0%',
                         width: '18.5%'
                       }}
                     >
@@ -2878,12 +2952,12 @@ const MyShelf = () => {
                       />
                     </div>
 
-                    {/* Bottom Right: decor.svg placed on credenza (moved to right edge) */}
+                    {/* Bottom Right: decor.png placed on credenza (moved to right edge) */}
                     <div
                       className="absolute pointer-events-none z-20"
                       style={{
                         right: '2.5%',
-                        bottom: '12.8%',
+                        bottom: '10.0%',
                         width: '13.5%'
                       }}
                     >
@@ -3286,19 +3360,242 @@ const MyShelf = () => {
                   </>
                 )}
 
+                {/* Blue Rope Shelf (customize_bluerope): leftshelf, base, 2 staggered rope shelves, top-right light, bottom-left decor */}
+                {activeShelfStyle === 'customize_bluerope' && (
+                  <>
+                    {/* 1. Left Bookcase Shelf on left wall */}
+                    <div
+                      className="absolute left-0 top-0 pointer-events-none z-10"
+                      style={{
+                        bottom: '8.4%',
+                        width: '12.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameLeftShelf}
+                        alt="Left Shelf"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 2. Base Credenza along bottom */}
+                    <div
+                      className="absolute left-0 w-full pointer-events-none z-10"
+                      style={{
+                        bottom: 0,
+                        height: '9.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameBase}
+                        alt="Base"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 3. Top-Right Ceiling Hanging Pendant Lamp */}
+                    <div
+                      className="absolute top-0 pointer-events-none z-20"
+                      style={{
+                        right: '4.8%',
+                        width: '11.9%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameLight}
+                        alt="Ceiling Light"
+                        className="w-full h-auto block drop-shadow-md"
+                        style={{
+                          filter: decors.lights
+                            ? (selectedLightTheme === 'light1'
+                                ? 'brightness(1.10) contrast(1.02)'
+                                : selectedLightTheme === 'light2'
+                                ? 'brightness(1.18) contrast(1.02)'
+                                : 'brightness(1.06) contrast(1.02)')
+                            : 'brightness(0.75) contrast(0.95)'
+                        }}
+                      />
+                    </div>
+
+                    {/* 4. Bottom-Left Vase/Plant Decor placed on credenza */}
+                    <div
+                      className="absolute pointer-events-none z-20"
+                      style={{
+                        left: '13.6%',
+                        bottom: '8.5%',
+                        width: '12.6%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameDecor}
+                        alt="Decor"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 5. Upper-Left Rope Shelf Tier */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '16.8%',
+                        top: '21.5%',
+                        width: '36.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameRopeShelf}
+                        alt="Upper Rope Shelf"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 6. Lower-Right Rope Shelf Tier */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '55.8%',
+                        top: '51.5%',
+                        width: '36.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameRopeShelf}
+                        alt="Lower Rope Shelf"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 7. Books on Upper-Left Rope Shelf (2 books matching screenshot) */}
+                    <div
+                      className="absolute z-20 flex items-end justify-center pointer-events-auto"
+                      style={{
+                        left: '23.8%',
+                        top: '16.5%',
+                        width: '22.5%',
+                        height: '24.8%',
+                        gap: '5.2%'
+                      }}
+                    >
+                      {[0, 1].map((slotIdx) => {
+                        const book = filteredBooks && filteredBooks[slotIdx];
+                        return (
+                          <div
+                            key={`upper-rope-${slotIdx}`}
+                            className="relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer"
+                            onClick={() => {
+                              if (book) {
+                                const targetShareId = book.shareId || book.v_id;
+                                const rawAcc = String(book.access || 'public').toLowerCase();
+                                if (targetShareId) {
+                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                }
+                              } else {
+                                setShowSelectBookModal(true);
+                              }
+                            }}
+                          >
+                            {book ? (
+                              <div className="relative w-full h-full flex items-end justify-center">
+                                <img
+                                  src={book.coverImage || book.cover || cover1}
+                                  alt={book.title || 'Book'}
+                                  className="w-full h-full object-fill rounded-xs shadow-md transition-transform duration-200 group-hover:scale-105"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="w-full h-full border border-dashed border-white/50 hover:border-white/90 bg-white/10 hover:bg-white/20 rounded flex flex-col items-center justify-center gap-1 transition-all"
+                                title="Add Book"
+                              >
+                                <Icon icon="lucide:book-open" className="w-4 h-4 text-white/70" />
+                                <span className="text-[10px] text-white/80 font-medium">Add Book</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 8. Books on Lower-Right Rope Shelf (2 books matching screenshot) */}
+                    <div
+                      className="absolute z-20 flex items-end justify-center pointer-events-auto"
+                      style={{
+                        left: '62.8%',
+                        top: '46.5%',
+                        width: '22.5%',
+                        height: '24.8%',
+                        gap: '5.2%'
+                      }}
+                    >
+                      {[2, 3].map((slotIdx) => {
+                        const book = filteredBooks && filteredBooks[slotIdx];
+                        return (
+                          <div
+                            key={`lower-rope-${slotIdx}`}
+                            className="relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer"
+                            onClick={() => {
+                              if (book) {
+                                const targetShareId = book.shareId || book.v_id;
+                                const rawAcc = String(book.access || 'public').toLowerCase();
+                                if (targetShareId) {
+                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                }
+                              } else {
+                                setShowSelectBookModal(true);
+                              }
+                            }}
+                          >
+                            {book ? (
+                              <div className="relative w-full h-full flex items-end justify-center">
+                                <img
+                                  src={book.coverImage || book.cover || cover1}
+                                  alt={book.title || 'Book'}
+                                  className="w-full h-full object-fill rounded-xs shadow-md transition-transform duration-200 group-hover:scale-105"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="w-full h-full border border-dashed border-white/50 hover:border-white/90 bg-white/10 hover:bg-white/20 rounded flex flex-col items-center justify-center gap-1 transition-all"
+                                title="Add Book"
+                              >
+                                <Icon icon="lucide:book-open" className="w-4 h-4 text-white/70" />
+                                <span className="text-[10px] text-white/80 font-medium">Add Book</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
                 {/* Shelf Logo predefined box with light shadow on left wall */}
                 <div
                   className="absolute z-15 transition-all duration-300 group"
                   style={{
-                    top: '7%',
-                    left: '8%',
-                    width: '13.5%',
+                    top: activeShelfStyle === 'customize_plantlight'
+                      ? '2.8%'
+                      : activeShelfStyle === 'customize_light'
+                      ? '3.8%'
+                      : activeShelfStyle === 'customize_greenlight'
+                      ? '5.8%'
+                      : activeShelfStyle === 'customize_green'
+                      ? '6.0%'
+                      : '6.2%',
+                    left: activeShelfStyle === 'customize_greenlight'
+                      ? '8.5%'
+                      : activeShelfStyle === 'customize4'
+                      ? '12.5%'
+                      : activeShelfStyle === 'customize_green'
+                      ? '12.0%'
+                      : '8.8%',
+                    width: '11.2%',
                     aspectRatio: '16 / 9'
                   }}
                 >
                   {shelfLogo?.url ? (
                     <div
-                      className="w-full h-full rounded-lg bg-white/40 backdrop-blur-md p-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.08)] border border-white/50 flex items-center justify-center overflow-hidden transition-all duration-200"
+                      className="w-full h-full flex items-center justify-center overflow-hidden transition-all duration-200"
                       style={{
                         opacity: (logoOpacity ?? 100) / 100
                       }}
@@ -3306,7 +3603,7 @@ const MyShelf = () => {
                       <img
                         src={shelfLogo.url}
                         alt="Shelf Logo"
-                        className="w-full h-full block"
+                        className="w-full h-full block rounded-md"
                         style={{
                           objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
                         }}
@@ -3364,13 +3661,14 @@ const MyShelf = () => {
                     { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf' },
                     { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf' },
                     { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf' },
+                    { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf' },
                   ].map((styleItem) => {
                     const isSelected = activeShelfStyle === styleItem.id;
                     return (
                       <div
                         key={styleItem.id}
                         onClick={() => {
-                          if (styleItem.id === 'customize4' || styleItem.id === 'customize_green' || styleItem.id === 'customize_greenlight' || styleItem.id === 'customize_light' || styleItem.id === 'customize_plantlight') {
+                          if (styleItem.id === 'customize4' || styleItem.id === 'customize_green' || styleItem.id === 'customize_greenlight' || styleItem.id === 'customize_light' || styleItem.id === 'customize_plantlight' || styleItem.id === 'customize_bluerope') {
                             setActiveShelfStyle(styleItem.id);
                             setSelectedWallTheme(null);
                           }

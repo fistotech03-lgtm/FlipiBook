@@ -609,7 +609,7 @@ export default function MyFlipbooks() {
             createdFlipbookVIdRef.current = v_id;
 
             if (isUploadCancelledRef.current) {
-                flipbookApi.deleteBook(emailId, v_id).catch(() => {});
+                flipbookApi.deleteBook(v_id).catch(() => {});
                 return;
             }
 
@@ -727,7 +727,7 @@ export default function MyFlipbooks() {
         setIsLoading(false);
         setProcessingProgress(null);
         if (createdFlipbookVIdRef.current) {
-            flipbookApi.deleteBook(emailId, createdFlipbookVIdRef.current).catch(() => {});
+            flipbookApi.deleteBook(createdFlipbookVIdRef.current).catch(() => {});
             createdFlipbookVIdRef.current = null;
         }
     };
@@ -797,8 +797,14 @@ export default function MyFlipbooks() {
             });
 
             console.log("Creation result:", res.data);
+            const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
             const finalVId = res.data?.v_id || generatedVId;
-            const finalFolderVId = res.data?.folder_v_id || res.data?.folder_id || matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+            const finalFolderVId = (isFolId(res.data?.folder_v_id) ? res.data.folder_v_id : null) ||
+                (isFolId(res.data?.folder_id) ? res.data.folder_id : null) ||
+                (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
+                (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
+                'fol_default';
 
             // Invalidate React Query cache so newly created book appears immediately
             queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
@@ -810,8 +816,12 @@ export default function MyFlipbooks() {
         } catch (e) {
             console.error("Creation failed", e);
             showAlert('Creation Warning', 'Backend save warning. Continuing to Editor with generated book ID.', 'warning');
+            const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
             const fallbackVId = generatedVId || Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-            const fallbackFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+            const fallbackFolderVId = (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
+                (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
+                'fol_default';
             navigate(`/editor/${encodeURIComponent(fallbackFolderVId)}/${fallbackVId}`, {
                 state: { ...templateData, v_id: fallbackVId, folder_v_id: fallbackFolderVId, emailId }
             });
@@ -916,7 +926,7 @@ export default function MyFlipbooks() {
             setBooks(prev => prev.filter(b => b.folder !== folderName));
 
             try {
-                await flipbookApi.deleteFolder(emailId, folderName, folderId);
+                await flipbookApi.deleteFolder(folderName, folderId);
             } catch (err) {
                 console.error("Delete folder error:", err);
                 showAlert('Delete Failed', err.response?.data?.message || err.message);

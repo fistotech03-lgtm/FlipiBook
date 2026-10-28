@@ -617,17 +617,14 @@ const Layer = ({
   // Fetch all books for uniqueness validation
   useEffect(() => {
     const fetchBooks = async () => {
-      const emailId = user?.emailId || user?.email;
-      if (emailId) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-        try {
-          const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId } });
-          if (res.data && res.data.books) {
-            setAllBooks(res.data.books);
-          }
-        } catch (err) {
-          console.error("Error fetching books for validation:", err);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      try {
+        const res = await axios.get(`${backendUrl}/api/flipbook/list`, { withCredentials: true });
+        if (res.data && res.data.books) {
+          setAllBooks(res.data.books);
         }
+      } catch (err) {
+        console.error("Error fetching books for validation:", err);
       }
     };
     fetchBooks();

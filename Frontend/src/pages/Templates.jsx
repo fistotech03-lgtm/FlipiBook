@@ -262,7 +262,7 @@ export default function Templates() {
     const fetchExistingFlipbooks = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/flipbook/list`, {
-          params: { emailId }
+          withCredentials: true
         });
         const rawBooks = res.data?.books || [];
         const names = rawBooks.map(b => b.realName || b.title).filter(Boolean);

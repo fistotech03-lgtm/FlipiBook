@@ -1,9 +1,13 @@
 // Backend/services/user-service/src/routes/profileRoutes.js
 const express = require('express');
 const multer = require('multer');
+const { optionalAuth } = require('../middlewares/authMiddleware');
 const profileController = require('../controllers/profileController');
 
 const router = express.Router();
+
+// Attach user if JWT or session is present
+router.use(optionalAuth);
 
 const upload = multer({
   storage: multer.memoryStorage(),

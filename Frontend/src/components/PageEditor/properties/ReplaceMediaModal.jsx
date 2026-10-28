@@ -159,7 +159,8 @@ const ReplaceMediaModal = ({ show, onClose, onReplace, mediaType = 'image', titl
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         try {
           const res = await axios.get(`${backendUrl}/api/flipbook/get-gallery-assets`, {
-            params: { emailId: user.emailId || user.email, type: mediaType }
+            params: { type: mediaType },
+            withCredentials: true
           });
           if (res.data.assets) {
             setGalleryAssets(res.data.assets.map(asset => ({

@@ -846,12 +846,12 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         axios.get(`${backendUrl}/api/flipbook/get`, {
           params: {
-            emailId,
             v_id,
             folderName,
             bookName,
             metadataOnly: true
-          }
+          },
+          withCredentials: true
         })
         .then(async res => {
           if (res.data) {

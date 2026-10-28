@@ -33,7 +33,7 @@ export const validateStorageBeforeUpload = async (emailId, incomingBytes = 0, fa
 
   if (emailId && emailId !== 'No Email' && emailId !== 'guest@example.com') {
     try {
-      const res = await flipbookApi.getStorageSettings(emailId);
+      const res = await flipbookApi.getStorageSettings();
       if (res?.data) {
         storage = {
           used: typeof res.data.usedStorage === 'number' ? res.data.usedStorage : 0,

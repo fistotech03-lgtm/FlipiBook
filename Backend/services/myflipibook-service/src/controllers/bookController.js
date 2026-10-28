@@ -136,9 +136,12 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
   const s = settingsDoc || doc.Customized_Settings || {};
   const bookVId = doc.book_v_id || doc.v_id;
 
+  const cleanFavList = Array.isArray(doc.isFavorite)
+    ? doc.isFavorite.filter(u => u && u !== false && String(u) !== 'false' && String(u) !== '[ false ]')
+    : [];
   const isFav = Array.isArray(doc.isFavorite)
-    ? (currentUserId ? doc.isFavorite.some(u => String(u) === String(currentUserId)) : doc.isFavorite.length > 0)
-    : Boolean(doc.isFavorite);
+    ? (currentUserId ? cleanFavList.some(u => String(u) === String(currentUserId)) : cleanFavList.length > 0)
+    : (typeof doc.isFavorite === 'boolean' ? doc.isFavorite : false);
 
   return {
     id: doc._id.toString(),
@@ -192,6 +195,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
  */
 exports.getBooks = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     if (!userQuery) {
       return res
@@ -730,7 +734,7 @@ exports.duplicateBook = async (req, res) => {
  */
 exports.deleteBookPermanently = async (req, res) => {
   try {
-    const { rawId, customUserId, emailId } = getAuthUser(req);
+    const { rawId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const v_id = req.params?.v_id || req.body?.v_id;
     const bookName = req.body?.bookName;
@@ -2016,6 +2020,7 @@ exports.savePagesBatch = async (req, res) => {
  */
 exports.getBook = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const { v_id, bookName, folderName } = req.query;
 
@@ -2364,8 +2369,9 @@ exports.updateSettings = async (req, res) => {
  */
 exports.previewBook = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const v_id = req.params?.v_id;
-    const reqEmail = req.query?.emailId;
+    const reqEmail = req.query?.emailId || req.user?.emailId;
     let book = await Flipbook.findOne({ v_id });
     if (!book && mongoose.Types.ObjectId.isValid(v_id)) {
       book = await Flipbook.findById(v_id);
@@ -2606,7 +2612,7 @@ exports.previewBook = async (req, res) => {
  */
 exports.getGalleryAssets = async (req, res) => {
   try {
-    const { emailId: authEmail } = getAuthUser(req);
+    const { objectId, customUserId, emailId: authEmail } = await resolveAuthUser(req);
     const { emailId: reqEmail, type, currentUrl, currentFileName } = req.query;
     const emailId = authEmail || reqEmail;
 

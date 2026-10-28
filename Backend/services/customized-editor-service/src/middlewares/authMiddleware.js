@@ -1,10 +1,11 @@
 const { verifyToken } = require('../utils/jwtHelper');
+const { resolveAuthUser } = require('../utils/userHelper');
 
 /**
  * Middleware to authenticate requests via HttpOnly cookie or Bearer token
  * (Identical to myflipibook-service)
  */
-const authenticateUser = (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
   const token =
     req.cookies?.token ||
     (req.headers.authorization?.startsWith('Bearer ')
@@ -21,6 +22,9 @@ const authenticateUser = (req, res, next) => {
 
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
     return next();
   }
 
@@ -35,6 +39,9 @@ const authenticateUser = (req, res, next) => {
   const fallbackUserID = (req.query?.userID || req.body?.userID || '').trim();
   if (fallbackEmail || fallbackUserID) {
     req.user = { emailId: fallbackEmail, email: fallbackEmail, userID: fallbackUserID };
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
     return next();
   }
 
@@ -47,7 +54,37 @@ const authenticateUser = (req, res, next) => {
 /**
  * Optional authentication: attaches req.user if valid token present, otherwise proceeds
  */
-const optionalAuth = (req, res, next) => {
+const optionalAuth = async (req, res, next) => {
+  const token =
+    req.cookies?.token ||
+    (req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.split(' ')[1]
+      : null);
+
+  const decoded = verifyToken(token);
+  if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
+    req.user = decoded;
+    try {
+      await resolveAuthUser(req);
+    } catch (_) {}
+  } else {
+    const fallbackEmail = (
+      req.query?.emailId ||
+      req.body?.emailId ||
+      req.query?.userEmail ||
+      req.body?.userEmail ||
+      ''
+    ).trim().toLowerCase();
+    const fallbackUserID = (req.query?.userID || req.body?.userID || '').trim();
+    if (fallbackEmail || fallbackUserID) {
+      req.user = { emailId: fallbackEmail, email: fallbackEmail, userID: fallbackUserID };
+      try {
+        await resolveAuthUser(req);
+      } catch (_) {}
+    }
+  }
+  next();
+};
   const token =
     req.cookies?.token ||
     (req.headers.authorization?.startsWith('Bearer ')

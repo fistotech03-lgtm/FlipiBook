@@ -136,9 +136,12 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
   const s = settingsDoc || doc.Customized_Settings || {};
   const bookVId = doc.book_v_id || doc.v_id;
 
+  const cleanFavList = Array.isArray(doc.isFavorite)
+    ? doc.isFavorite.filter(u => u && u !== false && String(u) !== 'false' && String(u) !== '[ false ]')
+    : [];
   const isFav = Array.isArray(doc.isFavorite)
-    ? (currentUserId ? doc.isFavorite.some(u => String(u) === String(currentUserId)) : doc.isFavorite.length > 0)
-    : Boolean(doc.isFavorite);
+    ? (currentUserId ? cleanFavList.some(u => String(u) === String(currentUserId)) : cleanFavList.length > 0)
+    : (typeof doc.isFavorite === 'boolean' ? doc.isFavorite : false);
 
   return {
     id: doc._id.toString(),
@@ -192,6 +195,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
  */
 exports.getBooks = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     if (!userQuery) {
       return res

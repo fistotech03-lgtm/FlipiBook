@@ -2854,18 +2854,10 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           </div>
         </div>
 
-        {/* Stroke Settings Grid (Exact match to image) */}
+        {/* Stroke Settings Grid */}
         <div className="flex flex-col gap-[0.75vw] mt-[0.25vw]">
-          {/* Row 1: Alignment & Stroke Width */}
+          {/* Stroke Width & Line Corner */}
           <div className="grid grid-cols-2 gap-[0.75vw]">
-            {/* Alignment */}
-            <div className="flex flex-col gap-[0.25vw]">
-              <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
-              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
-                <span>Outside</span>
-              </div>
-            </div>
-
             {/* Stroke Width */}
             <div className="flex flex-col gap-[0.25vw]">
               <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
@@ -2891,24 +2883,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
                 >
                   +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Line style & Line Corner */}
-          <div className="grid grid-cols-2 gap-[0.75vw]">
-            <div className="flex flex-col gap-[0.25vw]">
-              <span className="text-[0.76vw] text-[#546274] font-semibold">Line style</span>
-              <div className="flex items-center h-[2.2vw]">
-                {/* Solid */}
-                <button
-                  type="button"
-                  onClick={() => updateSetting('strokeLineStyle', 'Solid')}
-                  className="w-[2.8vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
-                  title="Solid Line"
-                >
-                  <div className="w-[1.35vw] h-[2.5px] bg-[#243042] rounded-full" />
                 </button>
               </div>
             </div>

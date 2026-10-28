@@ -253,12 +253,12 @@ export const AddElementsModal = ({
             />
 
             {/* Right Elements Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.9vw] flex flex-col">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.5vw] flex flex-col">
               <span className="text-[0.8vw] font-bold text-gray-700 mb-[0.9vh] block">
                 {activeCategoryObj.name}
               </span>
 
-              <div className="grid grid-cols-3 gap-x-[0.65vw] gap-y-[1.3vh]">
+              <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
                 {filteredElements.map((item) => (
                   <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                 ))}

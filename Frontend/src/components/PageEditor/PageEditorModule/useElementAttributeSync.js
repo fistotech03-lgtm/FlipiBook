@@ -384,15 +384,25 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
         });
 
         // --- GRADIENT SYNC ---
-        const checkGrad = (attr) => attr.startsWith('fill') || attr.startsWith('stroke') || attr.includes('-stops') || attr.includes('-gradient-type') || attr.includes('-type') || attr.includes('stroke-');
+        const checkGrad = (attr) => attr.startsWith('fill') || attr.startsWith('stroke') || attr.includes('-stops') || attr.includes('-gradient-type') || attr.includes('-type') || attr.includes('stroke-') || attr.includes('data-fill-color') || attr.includes('data-stroke-color');
         const hasGradRelated = typeof attribute === 'object' && attribute !== null
           ? Object.keys(attribute).some(checkGrad)
           : checkGrad(attribute);
 
         if (hasGradRelated) {
-          const primaryAttr = typeof attribute === 'object' && attribute !== null ? Object.keys(attribute)[0] : attribute;
-          const base = (primaryAttr.startsWith('fill') || primaryAttr.includes('fill-')) ? 'fill' : 'stroke';
-          syncGradient(doc, element, base);
+          const hasFillGrad = typeof attribute === 'object' && attribute !== null
+            ? Object.keys(attribute).some(a => a.startsWith('fill') || a.includes('fill-') || a === 'data-fill-color')
+            : (attribute.startsWith('fill') || attribute.includes('fill-') || attribute === 'data-fill-color');
+          const hasStrokeGrad = typeof attribute === 'object' && attribute !== null
+            ? Object.keys(attribute).some(a => a.startsWith('stroke') || a.includes('stroke-') || a === 'data-stroke-color')
+            : (attribute.startsWith('stroke') || attribute.includes('stroke-') || attribute === 'data-stroke-color');
+
+          if (hasFillGrad) {
+            syncGradient(doc, element, 'fill');
+          }
+          if (hasStrokeGrad) {
+            syncGradient(doc, element, 'stroke');
+          }
 
           if (element.tagName.toLowerCase() === 'g') {
             const children = element.querySelectorAll('path, rect, circle, ellipse, polyline, polygon');
@@ -405,9 +415,13 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
                   }
                 }
               });
-              if (typeof attribute === 'object' && attribute !== null ? Object.keys(attribute).some(a => a.includes('-stops') || a.includes('-gradient-type') || a.includes('-type')) : (attribute.includes('-stops') || attribute.includes('-gradient-type') || attribute.includes('-type'))) {
-                child.removeAttribute(base);
-                if (child.style) child.style.removeProperty(base);
+              if (hasFillGrad) {
+                child.removeAttribute('fill');
+                if (child.style) child.style.removeProperty('fill');
+              }
+              if (hasStrokeGrad) {
+                child.removeAttribute('stroke');
+                if (child.style) child.style.removeProperty('stroke');
               }
             });
           }

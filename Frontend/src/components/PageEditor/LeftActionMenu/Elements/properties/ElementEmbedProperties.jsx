@@ -164,7 +164,7 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
     <div className="flex items-center gap-[0.4vw] w-full">
       <div
         onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
+        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
           isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
         }`}
         style={{ backgroundColor: color === 'none' || color === 'transparent' ? '#ffffff' : color }}
@@ -174,7 +174,7 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
         )}
       </div>
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
+      <div className="flex-1 h-[2.4vw] min-h-[32px] flex items-center justify-between border border-gray-200 rounded-[0.45vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
         <input
           type="text"
           value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
@@ -183,10 +183,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
-          maxLength={7}
+          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          maxLength={color && color.includes('gradient') ? 10 : 9}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-500 text-[0.75vw] font-medium">{opacity}%</span>
       </div>
     </div>
   );
@@ -521,7 +521,7 @@ const ElementEmbedProperties = ({
     const sColor = frameGroup.getAttribute('data-stroke-color') || frameGroup.getAttribute('stroke') || '#000000';
     const sOp = frameGroup.getAttribute('data-stroke-opacity') || frameGroup.getAttribute('stroke-opacity');
     const sW = frameGroup.getAttribute('data-stroke-width') || frameGroup.getAttribute('stroke-width') || '1';
-    const sCorner = frameGroup.getAttribute('data-line-corner') || (frameGroup.getAttribute('stroke-linecap') === 'round' ? 'Rounded' : 'Rounded');
+    const sCorner = frameGroup.getAttribute('data-line-corner') || (frameGroup.getAttribute('stroke-linecap') === 'round' ? 'Rounded' : 'Square');
 
     const cleanStrokeCol = sColor === 'none' || sColor === 'transparent' ? '#000000' : sColor;
     const cleanStrokeOp = sOp ? Math.round(parseFloat(sOp) * 100) : 100;
@@ -853,6 +853,8 @@ const ElementEmbedProperties = ({
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-color', newColor);
       frameGroup.setAttribute('stroke', newColor);
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke', newColor);
@@ -861,7 +863,9 @@ const ElementEmbedProperties = ({
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'stroke': newColor,
-        'data-stroke-color': newColor
+        'data-stroke-color': newColor,
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };
@@ -894,15 +898,28 @@ const ElementEmbedProperties = ({
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-width', val.toString());
       frameGroup.setAttribute('stroke-width', val.toString());
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-width', val.toString());
+        const fo = frameGroup.querySelector('foreignObject');
+        const baseW = fo ? parseFloat(fo.getAttribute('width')) : parseFloat(frameGroup.getAttribute('width') || '0');
+        const baseH = fo ? parseFloat(fo.getAttribute('height')) : parseFloat(frameGroup.getAttribute('height') || '0');
+        if (baseW && baseH) {
+          strokeOverlay.setAttribute('x', (-val / 2).toString());
+          strokeOverlay.setAttribute('y', (-val / 2).toString());
+          strokeOverlay.setAttribute('width', (baseW + val).toString());
+          strokeOverlay.setAttribute('height', (baseH + val).toString());
+        }
       }
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'stroke-width': val.toString(),
-        'data-stroke-width': val.toString()
+        'data-stroke-width': val.toString(),
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };
@@ -1034,8 +1051,8 @@ const ElementEmbedProperties = ({
       {/* ─── 3. STROKE COLOR ─── */}
       <SectionHeader title="Stroke Color" />
 
-      {/* Color row */}
-      <PropertyRow label="Color">
+      {/* Row 1: Swatch, Hex, Opacity */}
+      <div className="pl-[0.5vw]">
         <ColorInput
           color={strokeColor}
           onChange={handleStrokeColorChange}
@@ -1043,44 +1060,52 @@ const ElementEmbedProperties = ({
           onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
           isActive={activeColorPicker === 'strokeColor'}
         />
-      </PropertyRow>
+      </div>
 
-      {/* Stroke Width */}
-      <PropertyRow label="Stroke Width">
-        <div className="flex items-center gap-[0.3vw] h-[2.5vw] w-full">
-          <button
-            type="button"
-            onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-            className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer text-[1vw]"
-          >
-            -
-          </button>
-          <div className="flex-1 h-full bg-white border border-gray-200 rounded-[0.5vw] flex items-center justify-center shadow-2xs focus-within:border-[#E05638]">
-            <input
-              type="number"
-              value={strokeWidth}
-              onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full text-center text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
+      {/* Stroke Settings Grid */}
+      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
+        {/* Stroke Width & Line Corner */}
+        <div className="grid grid-cols-2 gap-[0.6vw]">
+          {/* Stroke Width */}
+          <div className="flex flex-col gap-[0.25vw]">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+            <div className="flex items-center gap-[0.3vw] h-[2.4vw] min-h-[32px]">
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+              >
+                -
+              </button>
+              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                <input
+                  type="number"
+                  value={strokeWidth}
+                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full text-center text-[0.82vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Line Corner */}
+          <div className="flex flex-col gap-[0.25vw] relative">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+            <ElementDropdown
+              value={lineCorner}
+              onChange={handleLineCornerChange}
+              options={['Square', 'Rounded']}
             />
           </div>
-          <button
-            type="button"
-            onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-            className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer text-[1vw]"
-          >
-            +
-          </button>
         </div>
-      </PropertyRow>
-
-      {/* Line Corner */}
-      <PropertyRow label="Line Corner">
-        <CustomSelect
-          value={lineCorner}
-          onChange={handleLineCornerChange}
-          options={LINE_CORNER_OPTIONS}
-        />
-      </PropertyRow>
+      </div>
 
       {/* ─── 4. EFFECTS ─── */}
       <SectionHeader title="Effects" />

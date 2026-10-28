@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 import { handleScrubHelper } from '../../../properties/Color';
 import CornerRadius from '../../../properties/CornerRadius';
 import Effect from '../../../properties/Effect';
-import ColorPicker from '../../../../ColorPicker';
+import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
+import { syncGradient } from '../../../PageEditorModule/svgFilterUtils';
 import { getShapeCornerDefaults, buildCornerRadiusPath } from '../utils/shapeElementUtils';
 import { 
   ChevronLeft, 
@@ -113,8 +114,26 @@ const ShapeAppearanceControls = ({
   const isFillNone = !backgroundColor?.fill || backgroundColor.fill === 'none' || backgroundColor.fill === 'transparent';
   const isStrokeNone = !backgroundColor?.stroke || backgroundColor.stroke === 'none' || backgroundColor.stroke === 'transparent';
 
-  const currentFillHex = isFillNone ? 'NONE' : (localFillHex !== null ? localFillHex : (backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC'));
+  const isFillGradient = backgroundColor?.fillType === 'gradient' || (backgroundColor?.fill && (backgroundColor.fill.includes('gradient') || backgroundColor.fill.includes('url(#')));
+
+  const currentFillHex = isFillNone ? 'NONE' : (localFillHex !== null ? localFillHex : (isFillGradient ? `${(backgroundColor?.fillGradientType || 'linear').toUpperCase()}-GRAD` : (backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC')));
   const currentStrokeHex = isStrokeNone ? 'NONE' : (localStrokeHex !== null ? localStrokeHex : (backgroundColor?.stroke && backgroundColor.stroke !== 'inherit' ? backgroundColor.stroke : '#000000'));
+
+  const fillBackgroundStyle = (() => {
+    if (isFillNone) return 'white';
+    if (backgroundColor?.fill && backgroundColor.fill.includes('gradient')) {
+      return backgroundColor.fill;
+    }
+    if (backgroundColor?.fillStops) {
+      try {
+        const stops = JSON.parse(backgroundColor.fillStops);
+        if (Array.isArray(stops) && stops.length > 0) {
+          return `linear-gradient(to right, ${stops.map(s => s.color).join(', ')})`;
+        }
+      } catch (e) {}
+    }
+    return (backgroundColor?.fill && backgroundColor.fill !== 'inherit') ? backgroundColor.fill : '#3194FC';
+  })();
 
   // Hex input commit helpers
   const handleHexSubmit = (type, val) => {
@@ -122,7 +141,7 @@ const ShapeAppearanceControls = ({
     if (clean.toLowerCase() === 'none') {
       if (type === 'fill') {
         setLocalFillHex(null);
-        setBackgroundColor(prev => ({ ...prev, fill: 'none' }));
+        setBackgroundColor(prev => ({ ...prev, fill: 'none', fillType: 'solid', fillStops: null }));
       } else {
         setLocalStrokeHex(null);
         setBackgroundColor(prev => ({ ...prev, stroke: 'none' }));
@@ -133,7 +152,7 @@ const ShapeAppearanceControls = ({
     if (/^#[0-9A-Fa-f]{3,8}$/.test(clean)) {
       if (type === 'fill') {
         setLocalFillHex(null);
-        setBackgroundColor(prev => ({ ...prev, fill: clean, fillType: 'solid' }));
+        setBackgroundColor(prev => ({ ...prev, fill: clean, fillType: 'solid', fillStops: null }));
       } else {
         setLocalStrokeHex(null);
         setBackgroundColor(prev => ({
@@ -173,7 +192,7 @@ const ShapeAppearanceControls = ({
               <div
                 className="w-full h-full"
                 style={{
-                  backgroundColor: backgroundColor?.fill && backgroundColor.fill !== 'inherit' ? backgroundColor.fill : '#3194FC',
+                  background: fillBackgroundStyle,
                   opacity: (backgroundColor?.fillOpacity ?? 100) / 100
                 }}
               />
@@ -266,18 +285,10 @@ const ShapeAppearanceControls = ({
           </div>
         </div>
 
-        {/* Stroke Settings (Exact match to image) */}
+        {/* Stroke Settings */}
         <div className="flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw]">
-          {/* Row 1: Alignment & Stroke Width */}
+          {/* Stroke Width & Line Corner */}
           <div className="grid grid-cols-2 gap-[0.75vw]">
-            {/* Alignment */}
-            <div className="flex flex-col gap-[0.3vw]">
-              <span className="text-[0.76vw] font-semibold text-[#546274]">Alignment</span>
-              <div className="w-full h-[2.2vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.5vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
-                <span>Outside</span>
-              </div>
-            </div>
-
             {/* Stroke Width Stepper */}
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
@@ -316,24 +327,6 @@ const ShapeAppearanceControls = ({
                   className="w-[2.2vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
                 >
                   +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Line style & Line Corner */}
-          <div className="grid grid-cols-2 gap-[0.75vw]">
-            <div className="flex flex-col gap-[0.3vw]">
-              <span className="text-[0.76vw] font-semibold text-[#546274]">Line style</span>
-              <div className="flex items-center h-[2.2vw]">
-                {/* Solid */}
-                <button
-                  type="button"
-                  onClick={() => setBackgroundColor(prev => ({ ...prev, strokeDashStyle: 'Solid', strokeDasharrayValue: 'none' }))}
-                  className="w-[9.5vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
-                  title="Solid Line"
-                >
-                  <div className="w-[5vw] h-[2.5px] bg-[#243042] rounded-full"></div>
                 </button>
               </div>
             </div>
@@ -399,12 +392,65 @@ const ShapeAppearanceControls = ({
           <div className="animate-in fade-in zoom-in-95 duration-200">
             <ColorPicker
               key={activeColorPicker}
-              color={activeColorPicker === 'fill' ? (backgroundColor?.fill || '#3194FC') : (backgroundColor?.stroke || '#000000')}
+              color={(() => {
+                if (activeColorPicker === 'fill') {
+                  const isGrad = backgroundColor?.fillType === 'gradient' || (backgroundColor?.fill && (backgroundColor.fill.includes('gradient') || backgroundColor.fill.includes('url(#')));
+                  if (isGrad) {
+                    if (backgroundColor.fill && backgroundColor.fill.includes('gradient')) {
+                      return backgroundColor.fill;
+                    }
+                    if (backgroundColor.fillStops) {
+                      try {
+                        const stops = JSON.parse(backgroundColor.fillStops);
+                        const gType = (backgroundColor.fillGradientType || 'linear');
+                        return generateGradientString(
+                          gType.charAt(0).toUpperCase() + gType.slice(1),
+                          stops.map(s => ({ ...s, opacity: (s.opacity !== undefined ? (s.opacity > 1 ? s.opacity : s.opacity * 100) : 100) })),
+                          parseFloat(backgroundColor.fillAngle || 0),
+                          parseFloat(backgroundColor.fillRadius || 100)
+                        );
+                      } catch (e) {}
+                    }
+                  }
+                  return (backgroundColor?.fill && backgroundColor.fill !== 'inherit') ? backgroundColor.fill : '#3194FC';
+                } else {
+                  return (backgroundColor?.stroke && backgroundColor.stroke !== 'inherit') ? backgroundColor.stroke : '#000000';
+                }
+              })()}
               opacity={activeColorPicker === 'fill' ? (backgroundColor?.fillOpacity ?? 100) : (backgroundColor?.strokeOpacity ?? 100)}
               onChange={(newColor) => {
                 if (activeColorPicker === 'fill') {
                   setLocalFillHex(null);
-                  setBackgroundColor(prev => ({ ...prev, fill: newColor, fillType: 'solid' }));
+                  if (newColor && newColor.includes('gradient')) {
+                    const parsed = parseGradient(newColor);
+                    if (parsed) {
+                      setBackgroundColor(prev => ({
+                        ...prev,
+                        fill: newColor,
+                        fillType: 'gradient',
+                        fillGradientType: parsed.type.toLowerCase(),
+                        fillStops: JSON.stringify(parsed.stops.map(s => ({
+                          color: s.color,
+                          offset: s.offset,
+                          opacity: (s.opacity !== undefined ? s.opacity : 100) / 100
+                        }))),
+                        fillAngle: parsed.angle || 0,
+                        fillRadius: parsed.radius || 100
+                      }));
+                    } else {
+                      setBackgroundColor(prev => ({ ...prev, fill: newColor, fillType: 'solid', fillStops: null }));
+                    }
+                  } else {
+                    setBackgroundColor(prev => ({
+                      ...prev,
+                      fill: newColor,
+                      fillType: 'solid',
+                      fillStops: null,
+                      fillGradientType: 'linear',
+                      fillAngle: 0,
+                      fillRadius: 100
+                    }));
+                  }
                 } else {
                   setLocalStrokeHex(null);
                   setBackgroundColor(prev => ({
@@ -1664,13 +1710,39 @@ const ElementShapesProperties = ({
     updateElementAttribute(activePageIndex, selectedLayerId, attribute, value);
   };
 
+  const isGradFill = selectedElementProps['fill-type'] === 'gradient' ||
+    (selectedElementProps.fill && selectedElementProps.fill.includes('url(#')) ||
+    (selectedElementProps['data-fill-color'] && selectedElementProps['data-fill-color'].includes('gradient')) ||
+    Boolean(selectedElementProps['fill-stops']);
+
+  const getEffectiveFill = () => {
+    if (selectedElementProps['data-fill-color'] && selectedElementProps['data-fill-color'].includes('gradient')) {
+      return selectedElementProps['data-fill-color'];
+    }
+    if (selectedElementProps['fill-stops']) {
+      try {
+        const stops = JSON.parse(selectedElementProps['fill-stops']);
+        if (Array.isArray(stops) && stops.length > 0) {
+          const gType = selectedElementProps['fill-gradient-type'] || 'linear';
+          return generateGradientString(
+            gType.charAt(0).toUpperCase() + gType.slice(1),
+            stops.map(s => ({ ...s, opacity: (s.opacity !== undefined ? (s.opacity > 1 ? s.opacity : s.opacity * 100) : 100) })),
+            parseFloat(selectedElementProps['fill-angle'] || 0),
+            parseFloat(selectedElementProps['fill-radius'] || 100)
+          );
+        }
+      } catch (e) {}
+    }
+    return (selectedElementProps.fill && selectedElementProps.fill !== 'inherit') ? selectedElementProps.fill : (selectedElementProps['data-fill-color'] || '#000000');
+  };
+
   // --- DERIVED STATE ---
   const backgroundColor = {
-    fill: (selectedElementProps.fill && selectedElementProps.fill !== 'inherit') ? selectedElementProps.fill : (selectedElementProps['data-fill-color'] || '#000000'),
+    fill: getEffectiveFill(),
     fillOpacity: selectedElementProps['fill-opacity'] ? parseFloat(selectedElementProps['fill-opacity']) * 100 : (selectedElementProps.opacity ? parseFloat(selectedElementProps.opacity) * 100 : 100),
     stroke: (selectedElementProps.stroke && selectedElementProps.stroke !== 'inherit') ? selectedElementProps.stroke : (selectedElementProps['data-stroke-color'] || 'none'),
     strokeOpacity: selectedElementProps['stroke-opacity'] ? parseFloat(selectedElementProps['stroke-opacity']) * 100 : 100,
-    fillType: selectedElementProps['fill-type'] || 'solid',
+    fillType: selectedElementProps['fill-type'] || (isGradFill ? 'gradient' : 'solid'),
     fillGradientType: selectedElementProps['fill-gradient-type'] || 'linear',
     fillStops: selectedElementProps['fill-stops'],
     fillAngle: parseFloat(selectedElementProps['fill-angle'] || 0),
@@ -1695,14 +1767,27 @@ const ElementShapesProperties = ({
     const next = typeof updater === 'function' ? updater(backgroundColor) : updater;
 
     const updates = {};
-    if (backgroundColor.fill !== next.fill) {
-      if (slotImage) {
-        updates['data-fill-color'] = next.fill;
-      } else {
-        updates['fill'] = next.fill;
-        updates['data-fill-color'] = next.fill;
+    if (next.fillType === 'gradient') {
+      updates['fill-type'] = 'gradient';
+      updates['fill-gradient-type'] = next.fillGradientType || 'linear';
+      updates['fill-stops'] = next.fillStops;
+      updates['fill-angle'] = (next.fillAngle !== undefined ? next.fillAngle : 0).toString();
+      updates['fill-radius'] = (next.fillRadius !== undefined ? next.fillRadius : 100).toString();
+      updates['data-fill-color'] = next.fill;
+      updates['fill'] = next.fill;
+    } else {
+      if (backgroundColor.fill !== next.fill || backgroundColor.fillType !== next.fillType) {
+        if (slotImage) {
+          updates['data-fill-color'] = next.fill;
+        } else {
+          updates['fill'] = next.fill;
+          updates['data-fill-color'] = next.fill;
+        }
+        updates['fill-type'] = 'solid';
+        updates['fill-stops'] = 'none';
       }
     }
+
     if (backgroundColor.fillOpacity !== next.fillOpacity) {
       updates['fill-opacity'] = (next.fillOpacity / 100).toString();
       updates['opacity'] = '1';
@@ -1736,11 +1821,6 @@ const ElementShapesProperties = ({
       updates['stroke-linecap'] = next.strokeLinecap;
       updates['stroke-linejoin'] = next.strokeLinecap === 'round' ? 'round' : 'miter';
     }
-    if (backgroundColor.fillType !== next.fillType) updates['fill-type'] = next.fillType;
-    if (backgroundColor.fillGradientType !== next.fillGradientType) updates['fill-gradient-type'] = next.fillGradientType;
-    if (backgroundColor.fillStops !== next.fillStops) updates['fill-stops'] = next.fillStops;
-    if (backgroundColor.fillAngle !== next.fillAngle) updates['fill-angle'] = next.fillAngle;
-    if (backgroundColor.fillRadius !== next.fillRadius) updates['fill-radius'] = next.fillRadius;
 
     if (backgroundColor.strokeType !== next.strokeType) updates['stroke-type'] = next.strokeType;
     if (backgroundColor.strokeGradientType !== next.strokeGradientType) updates['stroke-gradient-type'] = next.strokeGradientType;
@@ -1795,6 +1875,37 @@ const ElementShapesProperties = ({
             updateElementAttribute(activePageIndex, selectedLayerId, { ...updates, '__dom_sync__': html });
             return;
           }
+        }
+
+        // --- Live DOM sync for element shapes ---
+        Object.entries(updates).forEach(([k, v]) => {
+          if (v === null || v === 'none') {
+            selectedElement.removeAttribute(k);
+          } else {
+            selectedElement.setAttribute(k, v);
+          }
+        });
+
+        if (next.fillType === 'gradient') {
+          syncGradient(doc, selectedElement, 'fill');
+          if (inner) {
+            inner.removeAttribute('fill');
+            if (inner.style) inner.style.removeProperty('fill');
+          }
+        } else if (next.fillType === 'solid') {
+          selectedElement.setAttribute('fill', next.fill !== '#' ? next.fill : 'none');
+          if (inner) {
+            inner.setAttribute('fill', next.fill !== '#' ? next.fill : 'none');
+          }
+          const svgRoot = (selectedElement.closest ? selectedElement.closest('svg') : null) || doc.querySelector('svg');
+          const oldGrad = svgRoot?.querySelector?.(`defs [id="grad-${selectedElement.id}-fill"]`);
+          if (oldGrad) oldGrad.remove();
+        }
+
+        if (next.fillOpacity !== undefined) {
+          const fo = (next.fillOpacity / 100).toString();
+          selectedElement.setAttribute('fill-opacity', fo);
+          if (inner) inner.setAttribute('fill-opacity', fo);
         }
       }
       updateElementAttribute(activePageIndex, selectedLayerId, updates);

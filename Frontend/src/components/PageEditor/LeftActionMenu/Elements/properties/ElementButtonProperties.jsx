@@ -310,13 +310,47 @@ export const ButtonEditor = ({
 
   // ─── 5. Corner Radius States ────────────────────────────────────
   const [radius, setRadius] = useState(() => {
-    const isSlanted = currentElement?.getAttribute('data-button-template') === 'slanted-border' ||
-      (currentElement?.getAttribute('data-tl') === '24' && currentElement?.getAttribute('data-tr') === '0');
-    return isSlanted
-      ? { tl: 24, tr: 0, bl: 0, br: 24 }
-      : { tl: 12, tr: 12, bl: 12, br: 12 };
+    if (currentElement) {
+      const rawTl = currentElement.getAttribute('data-tl');
+      const rawTr = currentElement.getAttribute('data-tr');
+      const rawBl = currentElement.getAttribute('data-bl');
+      const rawBr = currentElement.getAttribute('data-br');
+      const rectEl = currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect');
+      const rxVal = rectEl?.getAttribute('rx');
+      const isSlanted = currentElement.getAttribute('data-button-template') === 'slanted-border' ||
+        (rawTl === '24' && rawTr === '0');
+
+      const parseR = (val, fb) => {
+        if (val === null || val === undefined || val === '') return fb;
+        const n = parseInt(val, 10);
+        return !isNaN(n) ? n : fb;
+      };
+      const defTl = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+      const defTr = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+      const defBl = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+      const defBr = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+
+      return {
+        tl: parseR(rawTl !== null ? rawTl : rxVal, defTl),
+        tr: parseR(rawTr !== null ? rawTr : rxVal, defTr),
+        bl: parseR(rawBl !== null ? rawBl : rxVal, defBl),
+        br: parseR(rawBr !== null ? rawBr : rxVal, defBr)
+      };
+    }
+    return { tl: 12, tr: 12, bl: 12, br: 12 };
   });
   const [isRadiusLinked, setIsRadiusLinked] = useState(() => {
+    if (currentElement) {
+      const savedCornerLinked = currentElement.getAttribute('data-corner-linked');
+      if (savedCornerLinked !== null) return savedCornerLinked !== 'false';
+      const rawTl = currentElement.getAttribute('data-tl');
+      const rawTr = currentElement.getAttribute('data-tr');
+      const rawBl = currentElement.getAttribute('data-bl');
+      const rawBr = currentElement.getAttribute('data-br');
+      if (rawTl !== null && rawTr !== null && rawBl !== null && rawBr !== null) {
+        return rawTl === rawTr && rawTl === rawBl && rawTl === rawBr;
+      }
+    }
     const isSlanted = currentElement?.getAttribute('data-button-template') === 'slanted-border' ||
       (currentElement?.getAttribute('data-tl') === '24' && currentElement?.getAttribute('data-tr') === '0');
     return isSlanted ? false : true;
@@ -884,23 +918,33 @@ export const ButtonEditor = ({
 
     // Apply corner radius & shape geometry
     const isPill = el.getAttribute('data-button-template') === 'solid-pill' ||
-      el.getAttribute('data-button-template') === 'white-pill-badge' ||
-      el.getAttribute('data-tl') === '21';
+      el.getAttribute('data-button-template') === 'white-pill-badge';
     const isSlanted = el.getAttribute('data-button-template') === 'slanted-border' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
-    let radTl = Number(currentRadius?.tl !== undefined ? currentRadius.tl : (isPill ? newButtonHeight / 2 : (isSlanted ? 24 : 12)));
-    let radTr = Number(currentRadius?.tr !== undefined ? currentRadius.tr : (isPill ? newButtonHeight / 2 : (isSlanted ? 0 : 12)));
-    let radBl = Number(currentRadius?.bl !== undefined ? currentRadius.bl : (isPill ? newButtonHeight / 2 : (isSlanted ? 0 : 12)));
-    let radBr = Number(currentRadius?.br !== undefined ? currentRadius.br : (isPill ? newButtonHeight / 2 : (isSlanted ? 24 : 12)));
-    if (isPill) {
-      radTl = newButtonHeight / 2;
-      radTr = newButtonHeight / 2;
-      radBl = newButtonHeight / 2;
-      radBr = newButtonHeight / 2;
-    }
+    const savedTl = el.getAttribute('data-tl');
+    const savedTr = el.getAttribute('data-tr');
+    const savedBl = el.getAttribute('data-bl');
+    const savedBr = el.getAttribute('data-br');
+
+    const parseR = (val, fb) => {
+      if (val === undefined || val === null || val === '') return fb;
+      const n = Number(val);
+      return !isNaN(n) ? n : fb;
+    };
+
+    let radTl = parseR(currentRadius?.tl, parseR(savedTl, isPill ? newButtonHeight / 2 : (isSlanted ? 24 : 12)));
+    let radTr = parseR(currentRadius?.tr, parseR(savedTr, isPill ? newButtonHeight / 2 : (isSlanted ? 0 : 12)));
+    let radBl = parseR(currentRadius?.bl, parseR(savedBl, isPill ? newButtonHeight / 2 : (isSlanted ? 0 : 12)));
+    let radBr = parseR(currentRadius?.br, parseR(savedBr, isPill ? newButtonHeight / 2 : (isSlanted ? 24 : 12)));
+
     const maxR = Math.max(radTl, radTr, radBl, radBr);
     const areCornersEqual = radTl === radTr && radTl === radBl && radTl === radBr;
+
+    el.setAttribute('data-tl', radTl.toString());
+    el.setAttribute('data-tr', radTr.toString());
+    el.setAttribute('data-bl', radBl.toString());
+    el.setAttribute('data-br', radBr.toString());
 
     rectEl.setAttribute('rx', maxR.toString());
     rectEl.setAttribute('ry', maxR.toString());
@@ -951,6 +995,7 @@ export const ButtonEditor = ({
       clipRect.setAttribute('width', newButtonWidth.toString());
       clipRect.setAttribute('height', newButtonHeight.toString());
       clipRect.setAttribute('rx', maxR.toString());
+      clipRect.setAttribute('ry', maxR.toString());
     }
 
     const borderRect = el.querySelector('rect.btn-border');
@@ -960,6 +1005,7 @@ export const ButtonEditor = ({
       borderRect.setAttribute('width', newButtonWidth.toString());
       borderRect.setAttribute('height', newButtonHeight.toString());
       borderRect.setAttribute('rx', maxR.toString());
+      borderRect.setAttribute('ry', maxR.toString());
     }
 
     // Identify accent shapes
@@ -1051,14 +1097,22 @@ export const ButtonEditor = ({
         const badgeW = Math.max(38, iconSize + 18);
         if (placement === 'Left') {
           const badgeRx = Math.min(radTl, radBl, badgeW / 2, newButtonHeight / 2);
-          badgeBlock.setAttribute('d', `M ${rectX},${rectY + badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + badgeRx},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX + badgeRx},${rectY + newButtonHeight} A ${badgeRx},${badgeRx} 0 0 1 ${rectX},${rectY + newButtonHeight - badgeRx} Z`);
+          if (badgeRx > 0) {
+            badgeBlock.setAttribute('d', `M ${rectX},${rectY + badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + badgeRx},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX + badgeRx},${rectY + newButtonHeight} A ${badgeRx},${badgeRx} 0 0 1 ${rectX},${rectY + newButtonHeight - badgeRx} Z`);
+          } else {
+            badgeBlock.setAttribute('d', `M ${rectX},${rectY} L ${rectX + badgeW},${rectY} L ${rectX + badgeW},${rectY + newButtonHeight} L ${rectX},${rectY + newButtonHeight} Z`);
+          }
           iconX = rectX + (badgeW - iconSize) / 2;
           iconY = centerY - iconSize / 2;
           textX = (rectX + badgeW) + (newButtonWidth - badgeW) / 2;
           textY = centerY;
         } else {
           const badgeRx = Math.min(radTr, radBr, badgeW / 2, newButtonHeight / 2);
-          badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth - badgeRx},${rectY} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth},${rectY + badgeRx} L ${rectX + newButtonWidth},${rectY + newButtonHeight - badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth - badgeRx},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
+          if (badgeRx > 0) {
+            badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth - badgeRx},${rectY} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth},${rectY + badgeRx} L ${rectX + newButtonWidth},${rectY + newButtonHeight - badgeRx} A ${badgeRx},${badgeRx} 0 0 1 ${rectX + newButtonWidth - badgeRx},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
+          } else {
+            badgeBlock.setAttribute('d', `M ${rectX + newButtonWidth - badgeW},${rectY} L ${rectX + newButtonWidth},${rectY} L ${rectX + newButtonWidth},${rectY + newButtonHeight} L ${rectX + newButtonWidth - badgeW},${rectY + newButtonHeight} Z`);
+          }
           iconX = rectX + newButtonWidth - badgeW + (badgeW - iconSize) / 2;
           iconY = centerY - iconSize / 2;
           textX = rectX + (newButtonWidth - badgeW) / 2;
@@ -1515,6 +1569,8 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-stroke-color', color);
+    el.setAttribute('data-stroke-alignment', 'Outside');
+    el.setAttribute('data-stroke-position', 'Outside');
 
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
@@ -2050,18 +2106,10 @@ export const ButtonEditor = ({
         />
       </div>
 
-      {/* Stroke Settings Grid (Exact match to image) */}
+      {/* Stroke Settings Grid */}
       <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
-        {/* Row 1: Alignment & Stroke Width */}
+        {/* Stroke Width & Line Corner */}
         <div className="grid grid-cols-2 gap-[0.6vw]">
-          {/* Alignment */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Alignment</span>
-            <div className="w-full h-[2.3vw] px-[0.75vw] bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center text-[0.8vw] text-slate-800 font-medium shadow-2xs select-none">
-              <span>Outside</span>
-            </div>
-          </div>
-
           {/* Stroke Width */}
           <div className="flex flex-col gap-[0.25vw]">
             <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
@@ -2087,24 +2135,6 @@ export const ButtonEditor = ({
                 className="w-[2.3vw] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[0.95vw] transition-all cursor-pointer shadow-2xs"
               >
                 +
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Line style & Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.6vw]">
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Line style</span>
-            <div className="flex items-center h-[2.3vw]">
-              {/* Solid */}
-              <button
-                type="button"
-                onClick={() => handleLineStyleChange('Solid')}
-                className="w-[2.9vw] h-full rounded-[0.5vw] border border-[#e2e8f0] bg-white hover:border-slate-300 shadow-2xs flex items-center justify-center transition-all cursor-pointer"
-                title="Solid Line"
-              >
-                <div className="w-[1.35vw] h-[2.5px] bg-[#243042] rounded-full" />
               </button>
             </div>
           </div>

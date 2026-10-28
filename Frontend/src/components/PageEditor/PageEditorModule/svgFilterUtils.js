@@ -253,6 +253,11 @@ export const syncGradient = (doc, element, baseAttr) => {
     const stopsJson = element.getAttribute(`${baseAttr}-stops`);
 
     if (type === 'solid' || type === 'none') {
+      if (element.id) {
+        const svgRoot = (element.closest ? element.closest('svg') : null) || doc.querySelector('svg');
+        const oldGrad = svgRoot?.querySelector?.(`defs [id="grad-${element.id}-${baseAttr}"]`);
+        if (oldGrad) oldGrad.remove();
+      }
       return;
     }
     if (!type && !isUrl) return;
@@ -325,7 +330,9 @@ export const syncGradient = (doc, element, baseAttr) => {
       const stop = doc.createElementNS("http://www.w3.org/2000/svg", "stop");
       stop.setAttribute('offset', `${s.offset}%`);
       stop.setAttribute('stop-color', s.color);
-      stop.setAttribute('stop-opacity', (s.opacity !== undefined && s.opacity !== null) ? s.opacity : 1);
+      const rawOp = (s.opacity !== undefined && s.opacity !== null) ? s.opacity : 1;
+      const normOp = typeof rawOp === 'number' && rawOp > 1 ? rawOp / 100 : rawOp;
+      stop.setAttribute('stop-opacity', normOp);
       gradEl.appendChild(stop);
     });
 

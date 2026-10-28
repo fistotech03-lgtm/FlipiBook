@@ -13,7 +13,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../../../utils/assetUtils';
 import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
-import ColorPicker from '../../../properties/ColorPicker';
+import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import Effect from '../../../properties/Effect';
 import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
 import {
@@ -152,7 +152,13 @@ const CustomDropdown = ElementDropdown;
 
 // Color Swatch + Hex Input Box
 const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = color && color.startsWith('#') ? color.toUpperCase() : color || '#000000';
+  const isGradient = Boolean(color && typeof color === 'string' && color.includes('gradient'));
+  const isNone = color === 'none' || color === 'transparent';
+  const displayColor = isGradient
+    ? 'GRADIENT'
+    : isNone
+    ? 'NONE'
+    : (color && color.startsWith('#') ? color.toUpperCase() : (color || '#000000'));
 
   return (
     <div className="flex items-center gap-[0.4vw] w-full">
@@ -161,25 +167,88 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
         className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
           isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
         }`}
-        style={{ backgroundColor: color || '#000000' }}
+        style={{ background: isNone ? '#ffffff' : (color || '#000000') }}
         title="Click to open color palette"
-      />
+      >
+        {isNone && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+        )}
+      </div>
       <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
         <input
           type="text"
           value={displayColor}
           onChange={(e) => {
             let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0) val = '#' + val;
+            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
           className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
-          maxLength={7}
+          maxLength={isGradient ? 10 : 7}
         />
         <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
       </div>
     </div>
   );
+};
+
+const parseStopOffset = (raw) => {
+  if (!raw) return 0;
+  const str = String(raw).trim();
+  const num = parseFloat(str);
+  if (isNaN(num)) return 0;
+  if (!str.includes('%') && num <= 1 && num > 0) {
+    return Math.round(num * 100);
+  }
+  return Math.round(num);
+};
+
+const parseStopOpacity = (raw) => {
+  if (raw === null || raw === undefined || raw === '') return 100;
+  const str = String(raw).trim();
+  const num = parseFloat(str);
+  if (isNaN(num)) return 100;
+  if (!str.includes('%') && num <= 1 && num >= 0) {
+    return Math.round(num * 100);
+  }
+  return Math.round(num);
+};
+
+export const extractGradientFromSvg = (urlRef, root) => {
+  if (!urlRef || typeof urlRef !== 'string' || !urlRef.startsWith('url(#')) return null;
+  const gradId = urlRef.match(/url\(#([^)]+)\)/)?.[1];
+  if (!gradId) return null;
+
+  const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+  const svgRoot = root?.closest?.('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
+
+  const gradEl = (root?.querySelector ? root.querySelector(`#${gradId}`) : null) ||
+    (svgRoot?.querySelector ? svgRoot.querySelector(`#${gradId}`) : null) ||
+    (editorDoc?.getElementById ? editorDoc.getElementById(gradId) : null) ||
+    document.getElementById(gradId);
+
+  if (gradEl) {
+    const isRadial = gradEl.tagName.toLowerCase().includes('radial');
+    const stops = Array.from(gradEl.querySelectorAll('stop')).map((stop) => ({
+      color: stop.getAttribute('stop-color') || '#ffffff',
+      offset: parseStopOffset(stop.getAttribute('offset')),
+      opacity: parseStopOpacity(stop.getAttribute('stop-opacity'))
+    }));
+    if (stops.length > 0) {
+      if (isRadial) {
+        const r = parseFloat(gradEl.getAttribute('r') || 50);
+        return generateGradientString('Radial', stops, 0, r);
+      } else {
+        const x1 = parseFloat(gradEl.getAttribute('x1') || 0);
+        const y1 = parseFloat(gradEl.getAttribute('y1') || 0);
+        const x2 = parseFloat(gradEl.getAttribute('x2') || 100);
+        const y2 = parseFloat(gradEl.getAttribute('y2') || 0);
+        const angle = Math.round((Math.atan2(x2 - x1, -(y2 - y1)) * 180) / Math.PI + 360) % 360;
+        return generateGradientString('Linear', stops, angle, 100);
+      }
+    }
+  }
+  return null;
 };
 
 const SPEED_OPTIONS = [
@@ -214,8 +283,16 @@ export const AUDIO_TEMPLATE_PALETTES = {
   'glassmorphism': { icon: '#334155', bg: '#ffffff', stroke: '#e2e8f0' },
   'forest-moss': { icon: '#c9e4b7', bg: '#16291a', stroke: '#23422a' },
   'cyber-blue': { icon: '#00f2fe', bg: '#0c1421', stroke: '#182840' },
-  'silver-mono': { icon: '#1e293b', bg: '#8c8c8c', stroke: '#ffffff' },
-  'sunset-vibrant': { icon: '#ffffff', bg: '#ff2a55', stroke: '#ff2a55' },
+  'silver-mono': {
+    icon: '#1e293b',
+    bg: 'linear-gradient(180deg, rgba(184, 184, 184, 1) 0%, rgba(140, 140, 140, 1) 50%, rgba(116, 116, 116, 1) 100%)',
+    stroke: '#ffffff'
+  },
+  'sunset-vibrant': {
+    icon: '#ffffff',
+    bg: 'linear-gradient(90deg, rgba(255, 67, 40, 1) 0%, rgba(255, 42, 85, 1) 35%, rgba(230, 25, 114, 1) 70%, rgba(196, 24, 139, 1) 100%)',
+    stroke: 'none'
+  },
   'cyberpunk-wide': { icon: '#00f2fe', bg: '#080d15', stroke: '#162133' },
   'audio-icon': { icon: '#000000', bg: '#ffffff', stroke: '#900000' }
 };
@@ -258,21 +335,43 @@ export const extractAudioColors = (el) => {
   }
 
   // 2. Extract Background Color
-  let bg = wasCorrupted ? null : root.getAttribute('data-fill-color');
-  if (!bg) {
-    const fillLayer = root.querySelector('.audio-fill-layer');
-    const layerFill = fillLayer?.getAttribute('fill');
-    if (layerFill && !layerFill.startsWith('url(#') && layerFill !== 'none') {
-      bg = layerFill;
+  let bg = null;
+  const fillLayer = root.querySelector('.audio-fill-layer');
+  const layerFill = fillLayer?.getAttribute('fill');
+  const savedFillColor = wasCorrupted ? null : root.getAttribute('data-fill-color');
+
+  // If layerFill references a gradient in <defs>, extract it
+  if (layerFill && layerFill.startsWith('url(#')) {
+    if (savedFillColor && savedFillColor.includes('gradient')) {
+      bg = savedFillColor;
     } else {
-      bg = defaults.bg;
+      const gradCss = extractGradientFromSvg(layerFill, root);
+      if (gradCss) {
+        bg = gradCss;
+        root.setAttribute('data-fill-color', gradCss);
+      }
     }
+  } else if (layerFill && layerFill !== 'none' && layerFill !== 'transparent') {
+    bg = layerFill;
+  }
+
+  // If not extracted from layerFill, fall back to saved data-fill-color
+  if (!bg && savedFillColor && savedFillColor !== 'none') {
+    if (savedFillColor.startsWith('url(#')) {
+      bg = extractGradientFromSvg(savedFillColor, root) || defaults.bg;
+    } else {
+      bg = savedFillColor;
+    }
+  }
+
+  // Fallback to template defaults
+  if (!bg) {
+    bg = defaults.bg;
   }
 
   // 3. Extract Stroke Color
   let stroke = wasCorrupted ? null : rawStroke;
   if (!stroke) {
-    const fillLayer = root.querySelector('.audio-fill-layer');
     const layerStroke = fillLayer?.getAttribute('stroke');
     if (layerStroke && layerStroke !== 'none' && (!wasCorrupted || layerStroke !== '#900000')) {
       stroke = layerStroke;
@@ -294,11 +393,79 @@ export const extractAudioColors = (el) => {
 export const applyColorsToCanvas = (el, { icon, bg, stroke }) => {
   if (!el) return;
   const root = el.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || el;
+  const ownerDoc = root.ownerDocument || document;
 
   if (bg !== undefined) {
     const fillLayer = root.querySelector('.audio-fill-layer');
     if (fillLayer) {
-      fillLayer.setAttribute('fill', bg);
+      if (bg && typeof bg === 'string' && bg.includes('gradient')) {
+        const parsed = parseGradient(bg);
+        if (parsed && parsed.stops && parsed.stops.length > 0) {
+          let defs = root.querySelector(':scope > defs') || root.querySelector('defs');
+          if (!defs) {
+            defs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+            root.insertBefore(defs, root.firstChild);
+          }
+          const baseGradId = `grad-${root.id || 'audio'}-bg`;
+          Array.from(defs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+
+          const gradId = `${baseGradId}-${Math.random().toString(36).substr(2, 4)}`;
+          let gradEl;
+          if (parsed.type === 'Linear') {
+            gradEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+            const angleRad = ((parsed.angle || 0) * Math.PI) / 180;
+            const dx = Math.sin(angleRad) * 50;
+            const dy = -Math.cos(angleRad) * 50;
+            gradEl.setAttribute('x1', `${Math.round(50 - dx)}%`);
+            gradEl.setAttribute('y1', `${Math.round(50 - dy)}%`);
+            gradEl.setAttribute('x2', `${Math.round(50 + dx)}%`);
+            gradEl.setAttribute('y2', `${Math.round(50 + dy)}%`);
+          } else {
+            gradEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+            gradEl.setAttribute('cx', '50%');
+            gradEl.setAttribute('cy', '50%');
+            gradEl.setAttribute('r', `${parsed.radius || 50}%`);
+          }
+          gradEl.setAttribute('id', gradId);
+
+          parsed.stops.forEach((stop) => {
+            const stopEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "stop");
+            stopEl.setAttribute('offset', `${stop.offset}%`);
+            stopEl.setAttribute('stop-color', stop.color);
+            stopEl.setAttribute('stop-opacity', ((stop.opacity !== undefined ? stop.opacity : 100) / 100).toString());
+            gradEl.appendChild(stopEl);
+          });
+
+          defs.appendChild(gradEl);
+
+          // Also mirror in top-level SVG defs if present
+          const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+          const svgRoot = root.closest('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
+          if (svgRoot && svgRoot !== root) {
+            let rootDefs = svgRoot.querySelector(':scope > defs') || svgRoot.querySelector('defs');
+            if (!rootDefs) {
+              rootDefs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+              svgRoot.insertBefore(rootDefs, svgRoot.firstChild);
+            }
+            Array.from(rootDefs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+            rootDefs.appendChild(gradEl.cloneNode(true));
+          }
+
+          fillLayer.setAttribute('fill', `url(#${gradId})`);
+        } else {
+          fillLayer.setAttribute('fill', bg);
+        }
+      } else if (bg && typeof bg === 'string' && bg.startsWith('url(#')) {
+        fillLayer.setAttribute('fill', bg);
+      } else {
+        // Solid color or 'none' - remove dynamic gradient defs if present
+        const defs = root.querySelector(':scope > defs') || root.querySelector('defs');
+        if (defs) {
+          const baseGradId = `grad-${root.id || 'audio'}-bg`;
+          Array.from(defs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+        }
+        fillLayer.setAttribute('fill', bg);
+      }
     }
     root.setAttribute('data-fill-color', bg);
   }
@@ -306,10 +473,14 @@ export const applyColorsToCanvas = (el, { icon, bg, stroke }) => {
   if (stroke !== undefined) {
     const fillLayer = root.querySelector('.audio-fill-layer');
     if (fillLayer) {
+      fillLayer.setAttribute('paint-order', 'stroke fill');
+      fillLayer.style.paintOrder = 'stroke fill';
       fillLayer.setAttribute('stroke', stroke);
-      fillLayer.setAttribute('stroke-width', stroke === 'none' ? '0' : '1.5');
+      fillLayer.setAttribute('stroke-width', stroke === 'none' ? '0' : '3');
     }
     root.setAttribute('data-stroke-color', stroke);
+    root.setAttribute('data-stroke-position', 'Outside');
+    root.setAttribute('data-stroke-alignment', 'Outside');
   }
 
   if (icon !== undefined) {
@@ -687,6 +858,15 @@ const ElementAudioProperties = ({
       rootEl.setAttribute('data-icon-color', extracted.iconColor);
       rootEl.setAttribute('data-fill-color', extracted.bgColor);
       rootEl.setAttribute('data-stroke-color', extracted.strokeColor);
+    } else if (rootEl.getAttribute('data-fill-color') !== extracted.bgColor) {
+      rootEl.setAttribute('data-fill-color', extracted.bgColor);
+      if (typeof updateElementAttributeRef.current === 'function') {
+        if (activePageIndexRef.current !== undefined && selectedLayerIdRef.current) {
+          updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-fill-color', extracted.bgColor);
+        } else {
+          updateElementAttributeRef.current('data-fill-color', extracted.bgColor);
+        }
+      }
     }
 
     // Drop Shadow
@@ -1866,7 +2046,7 @@ const ElementAudioProperties = ({
               opacity={100}
               onOpacityChange={() => {}}
               onClose={() => setActiveColorPicker(null)}
-              disableGradient={true}
+              disableGradient={activeColorPicker !== 'bgColor'}
               colorsOnPage={[]}
             />
           </div>

@@ -152,9 +152,9 @@ export default function ProfileModal({
       )
         return;
       try {
-        const res = await fetch(
-          `${backendUrl}/api/profile?emailId=${encodeURIComponent(emailToFetch)}`,
-        );
+        const res = await fetch(`${backendUrl}/api/profile`, {
+          credentials: 'include'
+        });
         if (res.ok) {
           const data = await res.json();
           if (data?.success && data?.profile) {
@@ -188,9 +188,9 @@ export default function ProfileModal({
 
       setIsLoadingStorage(true);
       try {
-        const response = await fetch(
-          `${backendUrl}/api/usersetting/get-settings?emailId=${encodeURIComponent(emailToFetch)}`,
-        );
+        const response = await fetch(`${backendUrl}/api/usersetting/get-settings`, {
+          credentials: 'include'
+        });
         if (response.ok) {
           const data = await response.json();
           if (data) {

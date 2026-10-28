@@ -4,8 +4,10 @@ const Profile = require('../models/profile');
 const User = require('../models/user');
 const InteractionThreedModel = require('../models/interactionThreedModel');
 const CustomizedSettings = require('../models/customizedSettings');
+const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+router.use(optionalAuth);
 
 /**
  * @route   GET /api/explore/published
@@ -118,7 +120,7 @@ router.get('/published', async (req, res) => {
  */
 router.get('/creator', async (req, res) => {
   try {
-    let rawEmail = req.query.emailId || req.query.email;
+    let rawEmail = req.query.emailId || req.query.email || req.user?.emailId;
     const shareId = req.query.shareId;
     const v_id = req.query.v_id || req.query.vId;
 

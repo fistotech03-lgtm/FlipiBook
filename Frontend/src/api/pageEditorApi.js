@@ -13,8 +13,8 @@ export const pageEditorApi = {
         api.get('/api/page-editor/status'),
 
     // Flipbook Page Editor Data
-    getData: (v_id, emailId) => 
-        api.get('/api/page-editor/data', { params: { v_id, emailId } }),
+    getData: (v_id) => 
+        api.get('/api/page-editor/data', { params: { v_id } }),
 
     // Page Persistence
     savePage: (payload) => 

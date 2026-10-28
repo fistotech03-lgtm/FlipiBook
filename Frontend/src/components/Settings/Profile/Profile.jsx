@@ -26,7 +26,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl = '', title, ima
       (entries) => {
         if (entries[0].isIntersecting && !loaded && !fetching) {
           setFetching(true);
-          axios.get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+          axios.get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
             .then((res) => {
               if (res.data && res.data.html) {
                 const fontsToLoad = new Set();
@@ -303,7 +303,6 @@ const Profile = () => {
     const fetchUserProfile = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/profile`, {
-          params: { emailId: effectiveEmail },
           withCredentials: true
         });
         const p = res.data?.profile || (res.data?.emailId ? res.data : null);
@@ -485,7 +484,7 @@ const Profile = () => {
       setIsLoadingBooks(true);
       try {
         const res = await axios.get(`${backendUrl}/api/flipbook/list`, {
-          params: { emailId: effectiveEmail }
+          withCredentials: true
         });
         const allBooks = res.data?.books || [];
 

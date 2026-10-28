@@ -2,11 +2,13 @@ const { verifyToken } = require('../utils/jwtHelper');
 const { resolveAuthUser } = require('../utils/userHelper');
 
 /**
- * Middleware to authenticate requests via HttpOnly cookie or Bearer token
+ * Extracts and decodes access token from cookie or Bearer authorization header.
  */
-const authenticateUser = async (req, res, next) => {
+const parseAuthToken = (req) => {
   const token =
     req.cookies?.token ||
+    req.cookies?.accessToken ||
+    req.cookies?.access_token ||
     (req.headers.authorization?.startsWith('Bearer ')
       ? req.headers.authorization.split(' ')[1]
       : null);
@@ -18,6 +20,15 @@ const authenticateUser = async (req, res, next) => {
   if ((!decoded || (!decoded.userId && !decoded.id && !decoded.emailId)) && refreshToken) {
     decoded = verifyToken(refreshToken);
   }
+  return decoded;
+};
+
+/**
+ * Middleware to authenticate requests via HttpOnly cookie or Bearer token.
+ * Populates req.user with decoded token and resolves canonical user ID.
+ */
+const authenticateUser = async (req, res, next) => {
+  const decoded = parseAuthToken(req);
 
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
@@ -72,6 +83,7 @@ const optionalAuth = async (req, res, next) => {
 };
 
 module.exports = {
+  parseAuthToken,
   authenticateUser,
   optionalAuth
 };

@@ -734,7 +734,7 @@ exports.duplicateBook = async (req, res) => {
  */
 exports.deleteBookPermanently = async (req, res) => {
   try {
-    const { rawId, customUserId, emailId } = getAuthUser(req);
+    const { rawId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
     const v_id = req.params?.v_id || req.body?.v_id;
     const bookName = req.body?.bookName;
@@ -2368,8 +2368,9 @@ exports.updateSettings = async (req, res) => {
  */
 exports.previewBook = async (req, res) => {
   try {
+    await resolveAuthUser(req);
     const v_id = req.params?.v_id;
-    const reqEmail = req.query?.emailId;
+    const reqEmail = req.query?.emailId || req.user?.emailId;
     let book = await Flipbook.findOne({ v_id });
     if (!book && mongoose.Types.ObjectId.isValid(v_id)) {
       book = await Flipbook.findById(v_id);
@@ -2610,7 +2611,7 @@ exports.previewBook = async (req, res) => {
  */
 exports.getGalleryAssets = async (req, res) => {
   try {
-    const { emailId: authEmail } = getAuthUser(req);
+    const { objectId, customUserId, emailId: authEmail } = await resolveAuthUser(req);
     const { emailId: reqEmail, type, currentUrl, currentFileName } = req.query;
     const emailId = authEmail || reqEmail;
 

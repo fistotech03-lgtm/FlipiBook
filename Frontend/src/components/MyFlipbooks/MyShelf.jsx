@@ -156,9 +156,9 @@ const MyShelf = () => {
         }
         const timestamp = Date.now();
         const [creatorRes, listRes, shelfRes] = await Promise.all([
-          axios.get(`${backendUrl}/api/explore/creator`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} })),
-          axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} })),
-          axios.get(`${backendUrl}/api/profile/my-shelf-books`, { params: { emailId: currentUserEmail, t: timestamp } }).catch(() => ({ data: {} }))
+          axios.get(`${backendUrl}/api/explore/creator`, { withCredentials: true, params: { t: timestamp } }).catch(() => ({ data: {} })),
+          axios.get(`${backendUrl}/api/flipbook/list`, { withCredentials: true, params: { t: timestamp } }).catch(() => ({ data: {} })),
+          axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true, params: { t: timestamp } }).catch(() => ({ data: {} }))
         ]);
 
         if (creatorRes.data?.profile) {
@@ -2344,7 +2344,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
           observer.disconnect();
           setFetching(true);
           axios
-            .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+            .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
             .then((res) => {
               if (res.data?.html) {
                 const fontsToLoad = new Set();

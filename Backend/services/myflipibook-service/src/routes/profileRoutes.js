@@ -1,8 +1,10 @@
 const express = require('express');
 const Profile = require('../models/profile');
 const Flipbook = require('../models/flipbook');
+const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+router.use(optionalAuth);
 
 const normalizeFolderName = (name) => {
   if (!name || typeof name !== 'string') return 'My Bookshelf';
@@ -23,10 +25,10 @@ const normalizeAndMergeFolders = (profile) => {
 // GET /api/profile/my-shelf-books
 router.get('/my-shelf-books', async (req, res) => {
   try {
-    const { emailId } = req.query;
-    if (!emailId) return res.status(400).json({ success: false, message: 'emailId is required' });
+    const emailId = (req.query?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    if (!emailId) return res.status(400).json({ success: false, message: 'Authentication required' });
 
-    const normalizedEmail = emailId.trim().toLowerCase();
+    const normalizedEmail = emailId;
     const profile = await Profile.findOne({ emailId: normalizedEmail });
     if (!profile) {
       return res.json({ success: true, books: [], myShelf: { folders: [] } });
@@ -87,12 +89,13 @@ router.get('/my-shelf-books', async (req, res) => {
 // POST /api/profile/add-to-shelf
 router.post('/add-to-shelf', async (req, res) => {
   try {
-    const { emailId, bookId, folderName } = req.body;
+    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    const { bookId, folderName } = req.body;
     if (!emailId || !bookId) {
       return res.status(400).json({ success: false, message: 'Missing emailId or bookId' });
     }
 
-    const normalizedEmail = emailId.trim().toLowerCase();
+    const normalizedEmail = emailId;
     let profile = await Profile.findOne({ emailId: normalizedEmail });
     if (!profile) {
       profile = new Profile({ emailId: normalizedEmail });
@@ -141,12 +144,13 @@ router.post('/add-to-shelf', async (req, res) => {
 // POST /api/profile/remove-from-shelf
 router.post('/remove-from-shelf', async (req, res) => {
   try {
-    const { emailId, bookId } = req.body;
+    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    const { bookId } = req.body;
     if (!emailId || !bookId) {
       return res.status(400).json({ success: false, message: 'Missing emailId or bookId' });
     }
 
-    const normalizedEmail = emailId.trim().toLowerCase();
+    const normalizedEmail = emailId;
     let profile = await Profile.findOne({ emailId: normalizedEmail });
     if (!profile || !profile.myShelf || !profile.myShelf.folders) {
       return res.status(404).json({ success: false, message: 'Profile or shelf not found' });

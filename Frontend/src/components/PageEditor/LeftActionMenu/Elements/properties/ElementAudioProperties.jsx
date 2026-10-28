@@ -268,15 +268,6 @@ const BEHAVIOUR_OPTIONS = [
   { value: 'Loop on Page', label: 'Loop on Page' }
 ];
 
-const PLAYER_STYLE_OPTIONS = [
-  { value: 'glassmorphism', label: 'Clean Glassmorphism' },
-  { value: 'forest-moss', label: 'Forest Moss (Solid)' },
-  { value: 'cyber-blue', label: 'Cyber Neon Blue' },
-  { value: 'silver-mono', label: 'Silver Mono Capsule' },
-  { value: 'sunset-vibrant', label: 'Sunset Vibrant' },
-  { value: 'cyberpunk-wide', label: 'Cyberpunk Neon (Wide Bar)' },
-  { value: 'audio-icon', label: 'Audio Icon (Compact)' }
-];
 
 // Preset color palettes for each audio template style
 export const AUDIO_TEMPLATE_PALETTES = {
@@ -746,8 +737,18 @@ const ElementAudioProperties = ({
     // Auto-fix bounding box & hitboxes on canvas element
     const fillLayer = selectedElement.querySelector('.audio-fill-layer');
     if (fillLayer) {
+      const templateId = selectedElement.getAttribute('data-audio-template') || 'sunset-vibrant';
+      const TEMPLATE_WIDTHS = {
+        'glassmorphism': 360,
+        'forest-moss': 440,
+        'cyber-blue': 360,
+        'silver-mono': 450,
+        'sunset-vibrant': 460,
+        'cyberpunk-wide': 460,
+      };
+      const defW = TEMPLATE_WIDTHS[templateId] || 460;
       if (!fillLayer.getAttribute('width') || fillLayer.getAttribute('width') === '0') {
-        fillLayer.setAttribute('width', '420');
+        fillLayer.setAttribute('width', String(defW));
       }
     }
     const oversizedHitbox = selectedElement.querySelector('.volume-group > rect[width="150"]');
@@ -1600,125 +1601,6 @@ const ElementAudioProperties = ({
     if (onUpdate) onUpdate();
   };
 
-  const handlePlayerStyleChange = (val) => {
-    setPlayerStyle(val);
-    updateAttribute('data-audio-template', val);
-
-    // Update colors to the new template style's palette
-    const newPalette = AUDIO_TEMPLATE_PALETTES[val] || AUDIO_TEMPLATE_PALETTES['glassmorphism'];
-    setIconColor(newPalette.icon);
-    setBgColor(newPalette.bg);
-    setStrokeColor(newPalette.stroke);
-
-    if (selectedElement) {
-      // Re-generate SVG template code while preserving instance state
-      const uniqueId = selectedElement.id ? selectedElement.id.replace(/^audio-/, '') : Date.now();
-      const rawCode = getAudioSvgCode(val, uniqueId);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(
-        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${rawCode}</svg>`,
-        'image/svg+xml'
-      );
-      const newG = doc.querySelector('g[data-type="audio-frame"]') || doc.querySelector('g[id^="audio-"]');
-      if (newG) {
-        selectedElement.innerHTML = newG.innerHTML;
-        selectedElement.setAttribute('data-audio-template', val);
-
-        // Apply colors
-        applyColorsToCanvas(selectedElement, {
-          icon: newPalette.icon,
-          bg: newPalette.bg,
-          stroke: newPalette.stroke
-        });
-
-        // Sync track title text
-        const titleEl = selectedElement.querySelector('.audio-title');
-        if (titleEl && audioName) {
-          titleEl.textContent = audioName.replace(/\.[^/.]+$/, '');
-        }
-
-        // Sync duration text
-        const totTimeEl = selectedElement.querySelector('.audio-total-time');
-        const durAttr = selectedElement.getAttribute('data-audio-duration-text') || audioDurationText;
-        if (totTimeEl) {
-          if (audioRef.current && isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
-            totTimeEl.textContent = formatTime(audioRef.current.duration);
-          } else if (durAttr) {
-            const p = parseDurationTextToDisplay(durAttr);
-            if (p) totTimeEl.textContent = p;
-          }
-        }
-
-        // Sync current time text
-        const curTimeEl = selectedElement.querySelector('.audio-current-time');
-        if (curTimeEl && audioRef.current) {
-          curTimeEl.textContent = formatTime(audioRef.current.currentTime);
-        }
-
-        // Sync volume
-        const volFill = selectedElement.querySelector('.volume-fill');
-        const volKnob = selectedElement.querySelector('.volume-knob');
-        const volBg = selectedElement.querySelector('.volume-bg');
-        if (volFill && volKnob && volBg) {
-          const bgX = parseFloat(volBg.getAttribute('x') || '0');
-          const bgWidth = parseFloat(volBg.getAttribute('width') || '50');
-          const fillW = (defaultVolume / 100) * bgWidth;
-          volFill.setAttribute('width', fillW.toString());
-          volKnob.setAttribute('cx', (bgX + fillW).toString());
-        }
-
-        // Sync progress
-        const progFill = selectedElement.querySelector('.progress-fill');
-        const progKnob = selectedElement.querySelector('.progress-knob');
-        const progBg = selectedElement.querySelector('.progress-bg');
-        if (progFill && progKnob && progBg && audioRef.current && audioRef.current.duration) {
-          const bgX = parseFloat(progBg.getAttribute('x') || '0');
-          const bgWidth = parseFloat(progBg.getAttribute('width') || '100');
-          const ratio = Math.min(1, Math.max(0, audioRef.current.currentTime / audioRef.current.duration));
-          const fillW = ratio * bgWidth;
-          progFill.setAttribute('width', fillW.toString());
-          progKnob.setAttribute('cx', (bgX + fillW).toString());
-        }
-
-        // Sync play/pause icon
-        updatePlayPauseIconOnCanvas(isPlaying);
-
-        // Sync loop opacity
-        updateLoopIconOnCanvas(isLooping);
-
-        // Sync controls visibility
-        const ppBtn = selectedElement.querySelector('.play-pause-btn') || selectedElement.querySelector('.play-pause-icon');
-        if (ppBtn) ppBtn.style.display = controlPlayPause ? '' : 'none';
-        const prevIcon = selectedElement.querySelector('.prev-icon');
-        const nextIcon = selectedElement.querySelector('.next-icon');
-        if (prevIcon) prevIcon.style.display = controlSkip ? '' : 'none';
-        if (nextIcon) nextIcon.style.display = controlSkip ? '' : 'none';
-        const curTime = selectedElement.querySelector('.audio-current-time');
-        const totTime = selectedElement.querySelector('.audio-total-time');
-        const sepTime = selectedElement.querySelector('.audio-duration-separator');
-        const progGroup = selectedElement.querySelector('.progress-group');
-        if (curTime) curTime.style.display = controlDuration ? '' : 'none';
-        if (totTime) totTime.style.display = controlDuration ? '' : 'none';
-        if (sepTime) sepTime.style.display = controlDuration ? '' : 'none';
-        if (progGroup) progGroup.style.display = controlDuration ? '' : 'none';
-        const volSlider = selectedElement.querySelector('.volume-slider-part');
-        if (volSlider) volSlider.style.display = controlVolume ? '' : 'none';
-        const loopBtn = selectedElement.querySelector('.loop-icon');
-        if (loopBtn) loopBtn.style.display = controlLoop ? '' : 'none';
-        const volIcon = selectedElement.querySelector('.volume-icon');
-        if (volIcon) volIcon.style.display = controlMute ? '' : 'none';
-
-        // Re-sync live drop shadow filter if present
-        syncLiveFilters(selectedElement);
-      }
-    }
-
-    updateAttribute('data-icon-color', newPalette.icon);
-    updateAttribute('data-fill-color', newPalette.bg);
-    updateAttribute('data-stroke-color', newPalette.stroke);
-
-    if (onUpdate) onUpdate();
-  };
 
   const COLOR_MAP = {
     iconColor: {
@@ -1812,15 +1694,6 @@ const ElementAudioProperties = ({
 
       {/* ── 2. Audio Properties Section ── */}
       <SectionHeader title="Audio Properties" />
-
-      {/* Player Style */}
-      <PropertyRow label="Player Style">
-        <CustomDropdown
-          value={playerStyle}
-          options={PLAYER_STYLE_OPTIONS}
-          onChange={handlePlayerStyleChange}
-        />
-      </PropertyRow>
 
       {/* Playback Speed */}
       <PropertyRow label="Playback Speed">

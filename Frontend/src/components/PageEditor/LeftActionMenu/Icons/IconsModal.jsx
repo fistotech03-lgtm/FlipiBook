@@ -9,67 +9,630 @@ import { renderToStaticMarkup } from 'react-dom/server';
 // PRIORITY ICONS: shown first, in this exact order.
 // Case-insensitive. Add / remove / reorder freely.
 // ─────────────────────────────────────────────────────────────
-export const PRIORITY_ICON_KEYS = [
-  'Target',
-  'Activity',
-  'Send',
-  'Phone',
-  'Contact',
-  'Power',
-  'Cast',
-  'Battery',
-  'BatteryCharging',
-  'BatteryFull',
-  'PhoneCall',
-  'Smartphone',
-  'Wifi',
-  'Bluetooth',
-  'Zap',
-  'Radio',
-  'Signal',
-  'Plug',
+// Priority icons shown FIRST in the picker (categories 1-15 of your approved list).
+
+// Each entry: [display label, [candidate Lucide names]].
+
+// The first candidate that exists in your installed lucide-react AND isn't already used wins,
+
+// so renamed icons across Lucide versions (Home/House, Trash2/Trash ...) still resolve.
+
+// Categories 16-18 (Animation, Interactive, Transitions) are NOT icons -> see animationPresets.js
+ 
+export const PRIORITY_CATEGORIES = [
+
+  ['Navigation & Arrows', [
+
+    ['Arrow', ['MoveUpRight', 'ArrowUpRight']],
+
+    ['Arrow Up', ['ArrowUp']],
+
+    ['Arrow Down', ['ArrowDown']],
+
+    ['Arrow Left', ['ArrowLeft']],
+
+    ['Arrow Right', ['ArrowRight']],
+
+    ['Chevron', ['ChevronRight']],
+
+    ['Expand', ['Expand', 'Maximize2']],
+
+    ['Collapse', ['Shrink', 'Minimize2']],
+
+    ['Refresh', ['RefreshCw']],
+
+    ['Rotate', ['RotateCw']],
+
+    ['Undo', ['Undo2', 'Undo']],
+
+    ['Redo', ['Redo2', 'Redo']],
+
+    ['External Link', ['ExternalLink']],
+
+    ['Cursor', ['MousePointer2', 'MousePointer']],
+
+    ['Mouse Click', ['MousePointerClick']],
+
+  ]],
+
+  ['Business & Analytics', [
+
+    ['Chart', ['ChartColumn', 'BarChart3', 'ChartNoAxesColumn']],
+
+    ['Bar Chart', ['ChartBar', 'ChartBarBig', 'BarChartHorizontal']],
+
+    ['Pie Chart', ['ChartPie', 'PieChart']],
+
+    ['Line Chart', ['ChartLine', 'LineChart']],
+
+    ['Graph', ['ChartSpline', 'ChartArea']],
+
+    ['Analytics', ['ChartNoAxesCombined', 'ChartArea']],
+
+    ['Dashboard', ['LayoutDashboard']],
+
+    ['Trending Up', ['TrendingUp']],
+
+    ['Trending Down', ['TrendingDown']],
+
+    ['Target', ['Target']],
+
+    ['Growth', ['Sprout', 'ChartNoAxesColumnIncreasing']],
+
+    ['Statistics', ['ChartScatter', 'ChartColumnBig', 'ChartCandlestick']],
+
+    ['Progress', ['CircleGauge', 'Activity']],
+
+    ['Gauge', ['Gauge']],
+
+    ['Speedometer', ['CircleGauge', 'Gauge']],
+
+    ['KPI', ['Crosshair', 'Target']],
+
+  ]],
+
+  ['Actions & Controls', [
+
+    ['Search', ['Search']],
+
+    ['Filter', ['Funnel', 'Filter']],
+
+    ['Sort', ['ArrowUpDown']],
+
+    ['Plus', ['Plus']],
+
+    ['Minus', ['Minus']],
+
+    ['Edit', ['SquarePen', 'Pencil']],
+
+    ['Delete', ['Trash2', 'Trash']],
+
+    ['Copy', ['Copy']],
+
+    ['Paste', ['ClipboardPaste']],
+
+    ['Download', ['Download']],
+
+    ['Upload', ['Upload']],
+
+    ['Share', ['Share2', 'Share']],
+
+    ['Send', ['Send']],
+
+    ['Save', ['Save']],
+
+    ['Settings', ['Settings']],
+
+  ]],
+
+  ['Status & Feedback', [
+
+    ['Checkmark', ['Check']],
+
+    ['Success', ['CircleCheck', 'CheckCircle']],
+
+    ['Error', ['CircleX', 'XCircle']],
+
+    ['Warning', ['TriangleAlert', 'AlertTriangle']],
+
+    ['Info', ['Info']],
+
+    ['Loading', ['LoaderCircle', 'Loader2']],
+
+    ['Spinner', ['Loader']],
+
+    ['Notification Bell', ['Bell']],
+
+    ['Alert', ['CircleAlert', 'AlertCircle']],
+
+    ['Question Mark', ['CircleQuestionMark', 'HelpCircle']],
+
+    ['Help', ['MessageCircleQuestionMark', 'MessageCircleQuestion', 'CircleHelp']],
+
+    ['Verification', ['BadgeCheck']],
+
+    ['Shield', ['Shield']],
+
+    ['Lock', ['Lock']],
+
+  ]],
+
+  ['Communication', [
+
+    ['Message', ['MessageSquare']],
+
+    ['Chat Bubble', ['MessageCircle']],
+
+    ['Comment', ['MessagesSquare']],
+
+    ['Email', ['AtSign']],
+
+    ['Mail', ['Mail']],
+
+    ['Phone', ['Phone']],
+
+    ['Video Call', ['Video']],
+
+    ['Microphone', ['Mic']],
+
+    ['Headphones', ['Headphones']],
+
+    ['Megaphone', ['Megaphone']],
+
+    ['Paper Plane', ['SendHorizontal']],
+
+    ['Inbox', ['Inbox']],
+
+    ['Contact', ['Contact']],
+
+    ['Users', ['Users']],
+
+    ['Support', ['LifeBuoy', 'Headset']],
+
+  ]],
+
+  ['Files & Documents', [
+
+    ['File', ['File']],
+
+    ['Folder', ['Folder']],
+
+    ['PDF', ['FileText']],
+
+    ['Document', ['FileType', 'ScrollText']],
+
+    ['Spreadsheet', ['FileSpreadsheet']],
+
+    ['Image', ['Image']],
+
+    ['Video', ['FileVideo', 'Film']],
+
+    ['Music', ['Music', 'Music4', 'AudioLines']],
+
+    ['Attachment', ['Paperclip']],
+
+    ['Cloud Upload', ['CloudUpload']],
+
+    ['Cloud Download', ['CloudDownload']],
+
+    ['Archive', ['Archive']],
+
+    ['Clipboard', ['Clipboard']],
+
+    ['Calendar', ['Calendar']],
+
+    ['Bookmark', ['Bookmark']],
+
+  ]],
+
+  ['Finance & E-commerce', [
+
+    ['Wallet', ['Wallet']],
+
+    ['Credit Card', ['CreditCard']],
+
+    ['Money', ['Banknote']],
+
+    ['Dollar', ['DollarSign']],
+
+    ['Coins', ['Coins']],
+
+    ['Shopping Cart', ['ShoppingCart']],
+
+    ['Shopping Bag', ['ShoppingBag']],
+
+    ['Receipt', ['Receipt']],
+
+    ['Invoice', ['ReceiptText']],
+
+    ['Bank', ['Landmark']],
+
+    ['Piggy Bank', ['PiggyBank']],
+
+    ['Barcode', ['Barcode']],
+
+    ['Tag', ['Tag']],
+
+    ['Gift', ['Gift']],
+
+    ['Price Drop', ['TicketPercent', 'BadgePercent', 'TagPercent']],
+
+  ]],
+
+  ['Media & Entertainment', [
+
+    ['Play', ['Play']],
+
+    ['Pause', ['Pause']],
+
+    ['Stop', ['Square']],
+
+    ['Record', ['CircleDot']],
+
+    ['Volume', ['Volume2']],
+
+    ['Mute', ['VolumeX']],
+
+    ['Music Note', ['Music2', 'Music3', 'Disc3']],
+
+    ['Camera', ['Camera']],
+
+    ['Photo', ['Images', 'Aperture']],
+
+    ['Heart', ['Heart']],
+
+    ['Star', ['Star']],
+
+    ['Like', ['ThumbsUp']],
+
+    ['Dislike', ['ThumbsDown']],
+
+    ['Eye', ['Eye']],
+
+    ['Eye Off', ['EyeOff']],
+
+  ]],
+
+  ['People & Social', [
+
+    ['User', ['User']],
+
+    ['User Profile', ['CircleUser']],
+
+    ['Add User', ['UserPlus']],
+
+    ['Remove User', ['UserMinus']],
+
+    ['Team', ['UsersRound', 'Users2']],
+
+    ['Group', ['Group']],
+
+    ['Handshake', ['Handshake']],
+
+    ['Community', ['HeartHandshake', 'Rss']],
+
+    ['Follow', ['UserCheck']],
+
+    ['Unfollow', ['UserX']],
+
+    ['Login', ['LogIn']],
+
+    ['Logout', ['LogOut']],
+
+    ['Fingerprint', ['Fingerprint', 'FingerprintPattern']],
+
+    ['Face ID', ['ScanFace']],
+
+    ['Avatar', ['CircleUserRound', 'UserRound']],
+
+  ]],
+
+  ['Devices & Technology', [
+
+    ['Laptop', ['Laptop']],
+
+    ['Desktop', ['Monitor']],
+
+    ['Mobile Phone', ['Smartphone']],
+
+    ['Tablet', ['Tablet']],
+
+    ['Wi-Fi', ['Wifi']],
+
+    ['Bluetooth', ['Bluetooth']],
+
+    ['Cloud', ['Cloud']],
+
+    ['Database', ['Database']],
+
+    ['Server', ['Server']],
+
+    ['Code', ['Code']],
+
+    ['Terminal', ['Terminal']],
+
+    ['CPU', ['Cpu']],
+
+    ['Robot', ['Bot']],
+
+    ['AI', ['BrainCircuit', 'Brain']],
+
+    ['Sparkle', ['Sparkle']],
+
+    ['Network', ['Network']],
+
+  ]],
+
+  ['Location & Travel', [
+
+    ['Location Pin', ['MapPin']],
+
+    ['Map', ['Map']],
+
+    ['Compass', ['Compass']],
+
+    ['Navigation', ['Navigation']],
+
+    ['Globe', ['Globe']],
+
+    ['Earth', ['Earth', 'Globe2']],
+
+    ['Route', ['Route']],
+
+    ['Car', ['Car']],
+
+    ['Airplane', ['Plane']],
+
+    ['Train', ['TrainFront', 'Train']],
+
+    ['Bicycle', ['Bike', 'Bicycle']],
+
+    ['Ship', ['Ship']],
+
+    ['Home', ['House', 'Home']],
+
+    ['Building', ['Building']],
+
+    ['Store', ['Store']],
+
+  ]],
+
+  ['Time & Weather', [
+
+    ['Clock', ['Clock']],
+
+    ['Timer', ['Timer']],
+
+    ['Stopwatch', ['Watch', 'TimerReset']],
+
+    ['Hourglass', ['Hourglass']],
+
+    ['Sun', ['Sun']],
+
+    ['Moon', ['Moon']],
+
+    ['Cloud (Weather)', ['CloudSun', 'CloudFog']],
+
+    ['Rain', ['CloudRain']],
+
+    ['Snow', ['Snowflake']],
+
+    ['Lightning', ['CloudLightning', 'Zap']],
+
+    ['Wind', ['Wind']],
+
+    ['Thermometer', ['Thermometer']],
+
+    ['Sunrise', ['Sunrise']],
+
+    ['Sunset', ['Sunset']],
+
+    ['Calendar Check', ['CalendarCheck']],
+
+  ]],
+
+  ['Security & Privacy', [
+
+    ['Padlock', ['LockKeyhole', 'Lock']],
+
+    ['Unlock', ['LockOpen', 'Unlock']],
+
+    ['Key', ['Key']],
+
+    ['Shield Check', ['ShieldCheck']],
+
+    ['Fingerprint (Security)', ['Fingerprint', 'FingerprintPattern', 'ScanFingerprint']],
+
+    ['Password', ['KeyRound', 'Asterisk']],
+
+    ['Eye Privacy', ['ScanEye', 'EyeClosed']],
+
+    ['Security Scan', ['ScanSearch', 'ShieldSearch']],
+
+    ['Bug', ['Bug']],
+
+    ['Firewall', ['BrickWall', 'Flame']],
+
+    ['Safe', ['Vault']],
+
+    ['Verified Badge', ['ShieldUser', 'CircleCheckBig', 'Verified']],
+
+  ]],
+
+  ['Design & Creativity', [
+
+    ['Pencil', ['Pencil']],
+
+    ['Brush', ['Brush', 'Paintbrush']],
+
+    ['Palette', ['Palette']],
+
+    ['Layers', ['Layers']],
+
+    ['Shapes', ['Shapes']],
+
+    ['Magic Wand', ['WandSparkles', 'Wand2']],
+
+    ['Sparkles', ['Sparkles']],
+
+    ['Wand', ['Wand']],
+
+    ['Crop', ['Crop']],
+
+    ['Ruler', ['Ruler']],
+
+    ['Pen Tool', ['PenTool']],
+
+    ['Grid', ['Grid3x3', 'Grid3X3']],
+
+    ['Color Picker', ['Pipette']],
+
+    ['Typography', ['Type']],
+
+    ['3D Cube', ['Box', 'Cuboid']],
+
+  ]],
+
+  ['Miscellaneous UI', [
+
+    ['Menu', ['Menu']],
+
+    ['Hamburger Menu', ['TextAlignJustify', 'AlignJustify', 'PanelLeft']],
+
+    ['Close', ['X']],
+
+    ['More Options', ['EllipsisVertical', 'MoreVertical']],
+
+    ['Dots', ['Ellipsis', 'MoreHorizontal']],
+
+    ['Home (UI)', ['House', 'Home']],
+
+    ['Flag', ['Flag']],
+
+    ['Lightbulb', ['Lightbulb']],
+
+    ['Rocket', ['Rocket']],
+
+    ['Puzzle', ['Puzzle']],
+
+    ['Leaf', ['Leaf']],
+
+    ['Fire', ['Flame']],
+
+    ['Water Drop', ['Droplet']],
+
+    ['Trophy', ['Trophy']],
+
+    ['Medal', ['Medal']],
+
+  ]],
+
 ];
  
-const toCatalogItem = (key) => {
-  const displayName = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-  return {
-    key,
-    name: displayName,
-    searchKey: `${key.toLowerCase()} ${displayName.toLowerCase()}`,
-  };
-};
+// Your earlier favourites that are not in the 18 categories (shown right after them)
+
+export const EXTRA_PRIORITY_KEYS = ['Activity', 'Power', 'Cast', 'Battery'];
  
-const buildCatalog = () => {
+/**
+
+* Builds the ordered catalog: approved icons first, then every other Lucide icon.
+
+* @param {Record<string, any>} icons  the `icons` object from lucide-react
+
+*/
+
+export const buildPriorityCatalog = (icons) => {
+
   const allKeys = Object.keys(icons);
- 
-  // lowercase -> real Lucide key (so "target", "Target", "TARGET" all work)
+
   const lowerToReal = new Map(allKeys.map((k) => [k.toLowerCase(), k]));
+
+  const used = new Set();
+
+  const priority = [];
+
+  const unresolved = [];
  
-  const priorityKeys = [];
-  const missing = [];
-  PRIORITY_ICON_KEYS.forEach((name) => {
-    const real = lowerToReal.get(String(name).toLowerCase());
-    if (real && !priorityKeys.includes(real)) priorityKeys.push(real);
-    else if (!real) missing.push(name);
+  const toItem = (key, name, category) => {
+
+    const displayName = name || key.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+    return {
+
+      key,
+
+      name: displayName,
+
+      category,
+
+      searchKey: `${key.toLowerCase()} ${displayName.toLowerCase()}`,
+
+    };
+
+  };
+ 
+  PRIORITY_CATEGORIES.forEach(([category, entries]) => {
+
+    entries.forEach(([label, candidates]) => {
+
+      const key = candidates
+
+        .map((c) => lowerToReal.get(c.toLowerCase()))
+
+        .find((k) => k && !used.has(k));
+
+      if (key) {
+
+        used.add(key);
+
+        priority.push(toItem(key, label, category));
+
+      } else {
+
+        unresolved.push(`${category} > ${label}`);
+
+      }
+
+    });
+
   });
  
-  if (missing.length) {
-    console.warn('[IconsModal] Priority icons not found in this lucide-react version:', missing);
-  }
-  console.info(
-    `[IconsModal] Priority icons loaded: ${priorityKeys.length}/${PRIORITY_ICON_KEYS.length}`,
-    priorityKeys
-  );
+  EXTRA_PRIORITY_KEYS.forEach((name) => {
+
+    const key = lowerToReal.get(name.toLowerCase());
+
+    if (key && !used.has(key)) {
+
+      used.add(key);
+
+      priority.push(toItem(key, null, 'Favorites'));
+
+    }
+
+  });
  
-  const prioritySet = new Set(priorityKeys);
-  return [
-    ...priorityKeys.map(toCatalogItem),
-    ...allKeys.filter((k) => !prioritySet.has(k)).map(toCatalogItem),
-  ];
+  const rest = allKeys.filter((k) => !used.has(k)).map((k) => toItem(k, null, 'All Icons'));
+
+  return { catalog: [...priority, ...rest], priorityCount: priority.length, unresolved };
+
 };
  
+ 
+const priorityCatalogResult = buildPriorityCatalog(icons);
+
+if (priorityCatalogResult.unresolved?.length) {
+  console.warn('[IconsModal] Priority icons not found in this lucide-react version:', priorityCatalogResult.unresolved);
+}
+console.info(
+  `[IconsModal] Priority icons loaded: ${priorityCatalogResult.priorityCount}`,
+  priorityCatalogResult.catalog.slice(0, priorityCatalogResult.priorityCount).map((item) => item.key)
+);
+
 // Priority icons first, then every other Lucide icon
-export const ALL_LUCIDE_ICONS = buildCatalog();
+export const ALL_LUCIDE_ICONS = priorityCatalogResult.catalog;
+
+// Export PRIORITY_ICON_KEYS for backwards compatibility
+export const PRIORITY_ICON_KEYS = ALL_LUCIDE_ICONS.slice(0, priorityCatalogResult.priorityCount).map((item) => item.key);
  
 // Cache for extracted SVG markup to prevent re-extracting on every click/drag
 const svgCache = new Map();

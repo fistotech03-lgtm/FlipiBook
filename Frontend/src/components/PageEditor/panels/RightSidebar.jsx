@@ -1210,7 +1210,8 @@ const RightSidebar = ({
                                 });
                                 const serializer = new XMLSerializer();
                                 const html = serializer.serializeToString(cloneSvg);
-                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                                const targetId = selectedElementProps?.audioId || selectedLayerId;
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
                               }
                             }
                           }}
@@ -1366,16 +1367,17 @@ const RightSidebar = ({
                             return rawEl?.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || rawEl;
                           })()}
                           selectedElementProps={selectedElementProps}
-                          selectedLayerId={selectedLayerId}
+                          selectedLayerId={selectedElementProps?.audioId || selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
                           onUpdate={(newHtml) => {
+                            const targetId = selectedElementProps?.audioId || selectedLayerId;
                             window.__skipCanvasUpdateForPage = activePageIndex;
                             if (typeof newHtml === 'string') {
-                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                              updateElementAttribute(activePageIndex, targetId, '__dom_sync__', newHtml);
                             } else {
                               const svgRoot = (() => {
-                                const el = document.getElementById(selectedLayerId);
+                                const el = document.getElementById(targetId);
                                 if (!el) return null;
                                 const container = el.closest('.page-svg-container');
                                 if (container) return container.querySelector('svg');
@@ -1393,9 +1395,9 @@ const RightSidebar = ({
                                 cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
                                 const serializer = new XMLSerializer();
                                 const html = serializer.serializeToString(cloneSvg);
-                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
                               } else {
-                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', null);
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', null);
                               }
                             }
                           }}

@@ -511,8 +511,11 @@ const ElementEmbedProperties = ({
     } else {
       const rect = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (rect) {
-        currentW = Math.round(parseFloat(rect.getAttribute('width')) || 650).toString();
-        currentH = Math.round(parseFloat(rect.getAttribute('height')) || 400).toString();
+        const sW = parseFloat(frameGroup.getAttribute('data-stroke-width') || frameGroup.getAttribute('stroke-width') || '0') || 0;
+        const rawW = parseFloat(rect.getAttribute('width')) || 650;
+        const rawH = parseFloat(rect.getAttribute('height')) || 400;
+        currentW = Math.round(Math.max(10, rawW - sW)).toString();
+        currentH = Math.round(Math.max(10, rawH - sW)).toString();
       }
     }
     setEmbedWidth(currentW);
@@ -639,8 +642,8 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-stroke-width', strokeWidth.toString());
       frameGroup.setAttribute('data-stroke-opacity', (strokeOpacity / 100).toString());
       frameGroup.setAttribute('data-line-corner', lineCorner);
-      frameGroup.setAttribute('data-stroke-alignment', 'Inside');
-      frameGroup.setAttribute('data-stroke-position', 'Inside');
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       frameGroup.setAttribute('stroke-linecap', lineCorner === 'Rounded' ? 'round' : 'square');
       frameGroup.setAttribute('stroke-linejoin', lineCorner === 'Rounded' ? 'round' : 'miter');
       frameGroup.removeAttribute('data-tl');
@@ -659,15 +662,17 @@ const ElementEmbedProperties = ({
       const strokeJoin = lineCorner === 'Rounded' ? 'round' : 'miter';
 
       const sHalf = strokeW > 0 ? strokeW / 2 : 0;
-      const sRectW = Math.max(0, w - strokeW);
-      const sRectH = Math.max(0, h - strokeW);
+      const sRectX = strokeW > 0 ? -sHalf : 0;
+      const sRectY = strokeW > 0 ? -sHalf : 0;
+      const sRectW = strokeW > 0 ? w + strokeW : w;
+      const sRectH = strokeW > 0 ? h + strokeW : h;
 
       // 1. Update Stroke Layer in-place (without wiping innerHTML)
       let strokeLayer = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeLayer) {
         if (strokeLayer.tagName.toLowerCase() === 'rect') {
-          strokeLayer.setAttribute('x', sHalf.toString());
-          strokeLayer.setAttribute('y', sHalf.toString());
+          strokeLayer.setAttribute('x', sRectX.toString());
+          strokeLayer.setAttribute('y', sRectY.toString());
           strokeLayer.setAttribute('width', sRectW.toString());
           strokeLayer.setAttribute('height', sRectH.toString());
           strokeLayer.removeAttribute('rx');
@@ -687,8 +692,8 @@ const ElementEmbedProperties = ({
           newStrokeEl.setAttribute('stroke-opacity', strokeOp.toString());
           newStrokeEl.setAttribute('stroke-linecap', strokeCap);
           newStrokeEl.setAttribute('stroke-linejoin', strokeJoin);
-          newStrokeEl.setAttribute('x', sHalf.toString());
-          newStrokeEl.setAttribute('y', sHalf.toString());
+          newStrokeEl.setAttribute('x', sRectX.toString());
+          newStrokeEl.setAttribute('y', sRectY.toString());
           newStrokeEl.setAttribute('width', sRectW.toString());
           newStrokeEl.setAttribute('height', sRectH.toString());
           strokeLayer.replaceWith(newStrokeEl);
@@ -804,7 +809,7 @@ const ElementEmbedProperties = ({
       } else {
         const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}"`;
         const fillLayerHtml = `<rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />`;
-        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="${sHalf}" y="${sHalf}" width="${sRectW}" height="${sRectH}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
+        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="${sRectX}" y="${sRectY}" width="${sRectW}" height="${sRectH}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
 
         frameGroup.innerHTML = `
           ${fillLayerHtml}
@@ -1001,8 +1006,8 @@ const ElementEmbedProperties = ({
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-color', newColor);
       frameGroup.setAttribute('stroke', newColor);
-      frameGroup.setAttribute('data-stroke-alignment', 'Inside');
-      frameGroup.setAttribute('data-stroke-position', 'Inside');
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke', newColor);
@@ -1012,8 +1017,8 @@ const ElementEmbedProperties = ({
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'stroke': newColor,
         'data-stroke-color': newColor,
-        'data-stroke-alignment': 'Inside',
-        'data-stroke-position': 'Inside'
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };
@@ -1025,6 +1030,8 @@ const ElementEmbedProperties = ({
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-opacity', (newOpacity / 100).toString());
       frameGroup.setAttribute('stroke-opacity', (newOpacity / 100).toString());
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-opacity', (newOpacity / 100).toString());
@@ -1033,7 +1040,9 @@ const ElementEmbedProperties = ({
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'stroke-opacity': (newOpacity / 100).toString(),
-        'data-stroke-opacity': (newOpacity / 100).toString()
+        'data-stroke-opacity': (newOpacity / 100).toString(),
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };
@@ -1046,8 +1055,8 @@ const ElementEmbedProperties = ({
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-width', val.toString());
       frameGroup.setAttribute('stroke-width', val.toString());
-      frameGroup.setAttribute('data-stroke-alignment', 'Inside');
-      frameGroup.setAttribute('data-stroke-position', 'Inside');
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-width', val.toString());
@@ -1057,10 +1066,14 @@ const ElementEmbedProperties = ({
         const baseH = fo ? parseFloat(fo.getAttribute('height')) : (fillLayer ? parseFloat(fillLayer.getAttribute('height')) : parseFloat(frameGroup.getAttribute('height') || '400'));
         if (baseW && baseH) {
           const sHalf = val > 0 ? val / 2 : 0;
-          strokeOverlay.setAttribute('x', sHalf.toString());
-          strokeOverlay.setAttribute('y', sHalf.toString());
-          strokeOverlay.setAttribute('width', Math.max(0, baseW - val).toString());
-          strokeOverlay.setAttribute('height', Math.max(0, baseH - val).toString());
+          const sX = val > 0 ? -sHalf : 0;
+          const sY = val > 0 ? -sHalf : 0;
+          const sW = val > 0 ? baseW + val : baseW;
+          const sH = val > 0 ? baseH + val : baseH;
+          strokeOverlay.setAttribute('x', sX.toString());
+          strokeOverlay.setAttribute('y', sY.toString());
+          strokeOverlay.setAttribute('width', sW.toString());
+          strokeOverlay.setAttribute('height', sH.toString());
         }
       }
     }
@@ -1068,8 +1081,8 @@ const ElementEmbedProperties = ({
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'stroke-width': val.toString(),
         'data-stroke-width': val.toString(),
-        'data-stroke-alignment': 'Inside',
-        'data-stroke-position': 'Inside'
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };
@@ -1084,6 +1097,8 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-line-corner', corner);
       frameGroup.setAttribute('stroke-linecap', linecap);
       frameGroup.setAttribute('stroke-linejoin', linejoin);
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-linecap', linecap);
@@ -1094,7 +1109,9 @@ const ElementEmbedProperties = ({
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'data-line-corner': corner,
         'stroke-linecap': linecap,
-        'stroke-linejoin': linejoin
+        'stroke-linejoin': linejoin,
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
       });
     }
   };

@@ -943,6 +943,15 @@ const getDraggableElement = (target, canvasRoot) => {
       return buttonGroup;
     }
 
+    // Audio elements are single compound elements; always drag/select the whole audio group
+    const audioGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="audio-frame"], g[id^="audio-"]') : null;
+    if (audioGroup) {
+      if (!audioGroup.id) {
+        audioGroup.id = `audio-${Date.now()}`;
+      }
+      return audioGroup;
+    }
+
     // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
     const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
     if (typographyGroup) {
@@ -953,9 +962,9 @@ const getDraggableElement = (target, canvasRoot) => {
     }
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group
-    // Element shapes are single compound elements; always drag/select the whole shape group
+    // Element shapes are single compound elements; always drag/select the whole shape group (ensure never inside audio frame)
     const shapeGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]') : null;
-    if (shapeGroup) {
+    if (shapeGroup && !shapeGroup.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
       if (!shapeGroup.id) {
         shapeGroup.id = `shape-${Date.now()}`;
       }
@@ -1006,14 +1015,6 @@ const getDraggableElement = (target, canvasRoot) => {
       return slideshowGroup;
     }
 
-    // Audio elements are single compound elements; always drag/select the whole audio group
-    const audioGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="audio-frame"], g[id^="audio-"]') : null;
-    if (audioGroup) {
-      if (!audioGroup.id) {
-        audioGroup.id = `audio-${Date.now()}`;
-      }
-      return audioGroup;
-    }
 
     // Embed elements are single compound elements; always drag/select the whole embed group
     const embedGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="embed-frame"], g[id^="embed-"]') : null;

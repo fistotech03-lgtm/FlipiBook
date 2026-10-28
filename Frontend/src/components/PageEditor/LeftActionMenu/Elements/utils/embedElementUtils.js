@@ -137,8 +137,8 @@ export const getEmbedSvgCode = (isClick = false) => {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
-       data-stroke-alignment="Inside"
-       data-stroke-position="Inside"
+       data-stroke-alignment="Outside"
+       data-stroke-position="Outside"
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
@@ -155,7 +155,7 @@ export const getEmbedSvgCode = (isClick = false) => {
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="-0.5" y="-0.5" width="${w + 1}" height="${h + 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 };
@@ -201,8 +201,8 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
        data-stroke-width="1" 
        data-stroke-opacity="1" 
        data-line-corner="Rounded" 
-       data-stroke-alignment="Inside"
-       data-stroke-position="Inside"
+       data-stroke-alignment="Outside"
+       data-stroke-position="Outside"
        data-custom-code="" 
        data-url="" 
        data-embed-via="URL" 
@@ -219,7 +219,7 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="-0.5" y="-0.5" width="${w + 1}" height="${h + 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
     </g>
   `.trim();
 

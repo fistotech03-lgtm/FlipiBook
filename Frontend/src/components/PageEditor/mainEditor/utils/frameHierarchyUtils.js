@@ -42,6 +42,7 @@ export const getDirectChildFrames = (el) => {
     dataType === 'embed-frame' ||
     dataType === 'map' ||
     dataType === 'audio-frame' ||
+    (el.id && el.id.startsWith('audio-')) ||
     dataType === 'table-frame' ||
     dataType === 'qrcode' ||
     dataType === 'slideshow' ||

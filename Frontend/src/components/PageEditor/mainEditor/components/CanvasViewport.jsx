@@ -91,6 +91,15 @@ export const CanvasViewport = ({
       }
     }
 
+    // Auto-heal: ensure audio-fill-layer is always a <rect> and not a corrupted <path data-shape-type="rectangle">
+    if (clean.includes('audio-fill-layer')) {
+      clean = clean.replace(/<path\b([^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^]*?)(?:\/>|><\/path>)/gi, (match, attrs) => {
+        let cleanedAttrs = attrs.replace(/\s*d="[^"]*"/gi, '').replace(/\s*data-shape-type="[^"]*"/gi, '');
+        return `<rect${cleanedAttrs} />`;
+      });
+      clean = clean.replace(/(<rect\b[^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^>]*)data-shape-type="[^"]*"/gi, '$1');
+    }
+
     if (isEditingTextRef?.current && lastRenderedHtmlRef.current[index]) {
       return lastRenderedHtmlRef.current[index];
     }
@@ -167,6 +176,19 @@ export const CanvasViewport = ({
                                         el.innerHTML = newHtml;
                                         el.__lastPageIndex = displayIndex;
                                         el.__lastHtml = newHtml;
+                                        // Auto-heal any path.audio-fill-layer into rect.audio-fill-layer
+                                        el.querySelectorAll?.('path.audio-fill-layer').forEach(pathEl => {
+                                          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                                          Array.from(pathEl.attributes).forEach(attr => {
+                                            if (attr.name !== 'd' && attr.name !== 'data-shape-type') {
+                                              rect.setAttribute(attr.name, attr.value);
+                                            }
+                                          });
+                                          if (pathEl.parentNode) pathEl.parentNode.replaceChild(rect, pathEl);
+                                        });
+                                        el.querySelectorAll?.('rect.audio-fill-layer[data-shape-type]').forEach(rectEl => {
+                                          rectEl.removeAttribute('data-shape-type');
+                                        });
                                       } else {
                                         const parser = new DOMParser();
                                         const doc = parser.parseFromString(newHtml, 'text/html');

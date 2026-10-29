@@ -2791,7 +2791,7 @@ const MyShelf = () => {
                                     : selectedLightTheme === 'light2'
                                     ? 'brightness(1.15) contrast(1.02)'
                                     : 'brightness(1.04) contrast(1.02)')
-                                : 'brightness(0.72) contrast(0.95)'
+                                : 'none'
                             }}
                           />
                         </div>
@@ -2973,14 +2973,14 @@ const MyShelf = () => {
                         className="w-full h-auto block drop-shadow-md relative z-20 transition-all duration-300"
                         style={{
                           filter: !decors.lamp
-                            ? 'brightness(0.70) contrast(0.95)'
+                            ? 'none'
                             : decors.lights
                             ? (selectedLightTheme === 'light1'
                                 ? 'brightness(1.06) contrast(1.02)'
                                 : selectedLightTheme === 'light2'
                                 ? 'brightness(1.15) contrast(1.02)'
                                 : 'brightness(1.04) contrast(1.02)')
-                            : 'brightness(0.72) contrast(0.95)'
+                            : 'none'
                         }}
                       />
                     </div>
@@ -3028,7 +3028,7 @@ const MyShelf = () => {
                           left: '1.2%',
                           bottom: '6.5%',
                           width: '15.2%',
-                          filter: !decors.lights ? 'brightness(0.75) contrast(0.95)' : 'none'
+                          filter: 'none'
                         }}
                       >
                         {/* Light inside the lamp dome (lamp kulla light) & surrounding ambiance */}
@@ -3121,7 +3121,7 @@ const MyShelf = () => {
                                   : selectedLightTheme === 'light2'
                                   ? 'brightness(1.15) contrast(1.02)'
                                   : 'brightness(1.05) contrast(1.02)')
-                              : 'brightness(0.75) contrast(0.95)'
+                              : 'none'
                           }}
                         />
                       </div>
@@ -3172,7 +3172,7 @@ const MyShelf = () => {
                           left: '3.2%',
                           bottom: '4.2%',
                           width: '12.8%',
-                          filter: !decors.lights ? 'brightness(0.75) contrast(0.95)' : 'none'
+                          filter: 'none'
                         }}
                       >
                         {/* Light inside the lamp dome & warm ambient glow */}
@@ -3246,7 +3246,7 @@ const MyShelf = () => {
                                   : selectedLightTheme === 'light2'
                                   ? 'brightness(1.15) contrast(1.02)'
                                   : 'brightness(1.05) contrast(1.02)')
-                              : 'brightness(0.75) contrast(0.95)'
+                              : 'none'
                           }}
                         />
                       </div>
@@ -3311,7 +3311,7 @@ const MyShelf = () => {
                           right: '3.0%',
                           bottom: '6.5%',
                           width: '10.5%',
-                          filter: !decors.lights ? 'brightness(0.75) contrast(0.95)' : 'none'
+                          filter: 'none'
                         }}
                       >
                         {/* Light inside the lamp dome & warm ambient glow */}
@@ -3385,7 +3385,7 @@ const MyShelf = () => {
                                   : selectedLightTheme === 'light2'
                                   ? 'brightness(1.15) contrast(1.02)'
                                   : 'brightness(1.05) contrast(1.02)')
-                              : 'brightness(0.75) contrast(0.95)'
+                              : 'none'
                           }}
                         />
                       </div>
@@ -3445,7 +3445,7 @@ const MyShelf = () => {
                                 : selectedLightTheme === 'light2'
                                 ? 'brightness(1.18) contrast(1.02)'
                                 : 'brightness(1.06) contrast(1.02)')
-                            : 'brightness(0.75) contrast(0.95)'
+                            : 'none'
                         }}
                       />
                     </div>
@@ -3910,7 +3910,7 @@ const MyShelf = () => {
                               : selectedLightTheme === 'light2'
                               ? 'brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6))'
                               : 'brightness(1.18) drop-shadow(0 0 16px rgba(186, 230, 253, 0.55))'
-                            : 'brightness(0.8) contrast(0.95)'
+                            : 'none'
                         }}
                       />
                     </div>

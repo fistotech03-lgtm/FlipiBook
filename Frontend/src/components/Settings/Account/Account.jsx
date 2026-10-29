@@ -166,6 +166,7 @@ const Account = () => {
           hasPassword={hasPassword}
           onAddPasswordClick={() => setActiveView('add-password')}
           onChangePasswordClick={() => setActiveView('change-password')}
+          showToast={showToast}
         />
       )}
 

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --admin-accent: #ec5137;
-  --admin-accent-hover: #d5452e;
-  --admin-accent-light: #fff1ee;
+  --admin-accent: #EC5137;
+  --admin-accent-hover: #d94229;
+  --admin-accent-light: #fff5f3;
   --admin-sidebar-bg: #151c28;
   --admin-sidebar-hover: #1e2738;
   --admin-sidebar-active: #2c3749;
@@ -14,10 +14,11 @@ body {
   margin: 0;
   padding: 0;
   background-color: #f8fafc;
-  color: #1e293b;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom smooth scrollbars */

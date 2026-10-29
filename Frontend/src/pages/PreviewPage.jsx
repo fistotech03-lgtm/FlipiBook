@@ -33,13 +33,10 @@ const PreviewPage = () => {
             const portMatch = origin.match(/:(\d+)/);
             if (portMatch) return origin.replace(portMatch[0], ':8000');
           }
-          return 'http://localhost:8000';
+          return '';
         };
         const backendUrl = getBackendUrl();
         const params = {};
-        if (currentUserEmail) params.emailId = currentUserEmail;
-        if (currentUserID) params.userID = currentUserID;
-        if (currentUserId) params.userId = currentUserId;
         if (v_id) params.v_id = v_id;
 
         let res;

@@ -66,7 +66,7 @@ export default function ThreedEditor() {
   const [saveAsNameInput, setSaveAsNameInput] = useState("");
 
   const toast = useToast();
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 
   // ==========================================================================
   // SECTION 2: CORE EDITOR & MODEL STATE
@@ -1310,7 +1310,7 @@ export default function ThreedEditor() {
     const initializeEditor = async () => {
       setIsSyncing(true);
       try {
-        const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const backendUrl = rawBackendUrl.trim().replace(/\/+$/, '');
 
         if (urlModelId) {

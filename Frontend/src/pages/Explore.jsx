@@ -513,8 +513,8 @@ const Explore = () => {
         if (!currentUserEmail) return;
         const fetchShelfBooks = async () => {
             try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books?emailId=${encodeURIComponent(currentUserEmail)}`);
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true });
                 if (res.data && res.data.books) {
                     setShelfBookIds(res.data.books.map(b => b.v_id));
                 }
@@ -554,7 +554,7 @@ const Explore = () => {
         setFollowingLoadingMap(prev => ({ ...prev, [normTarget]: true }));
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             const res = await axios.post(`${backendUrl}/api/explore/toggle-follow`, {
                 currentEmail: currentUserEmail,
                 targetEmail: normTarget
@@ -617,7 +617,7 @@ const Explore = () => {
             return;
         }
         const isAdded = shelfBookIds.includes(rawBook.v_id);
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
         try {
             if (isAdded) {
@@ -654,7 +654,7 @@ const Explore = () => {
     };
 
     useEffect(() => {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
         const fetchPublishedBooks = async () => {
             try {

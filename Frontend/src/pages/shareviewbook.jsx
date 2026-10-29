@@ -143,7 +143,7 @@ const ShareViewBook = () => {
         const checkShelf = async () => {
             try {
                 const backendUrl = getBackendUrl();
-                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books?emailId=${encodeURIComponent(currentUserEmail)}`);
+                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true });
                 if (res.data && res.data.books) {
                     const shelfIds = res.data.books.map(b => b.v_id);
                     if (shelfIds.includes(bookData.v_id || shareId)) {
@@ -374,7 +374,7 @@ const ShareViewBook = () => {
                 return origin.replace(portMatch[0], ':8000');
             }
         }
-        return 'http://localhost:8000';
+        return '';
     };
 
     // Auto-record page view count once per flipbook load for unique viewers
@@ -581,7 +581,6 @@ const ShareViewBook = () => {
                 console.log(`Fetching public flipbook: ${shareId} (Attempt ${retryCount + 1}/${maxRetries + 1})`);
 
                 const params = {};
-                if (currentUserEmail) params.emailId = currentUserEmail;
                 if (user?.userID) params.userID = user.userID;
                 if (user?.userId || user?._id || user?.id) params.userId = user.userId || user._id || user.id;
                 if (passVal) {
@@ -783,7 +782,6 @@ const ShareViewBook = () => {
                 accessKey: passwordInput.trim(),
                 password: passwordInput.trim()
             };
-            if (currentUserEmail) params.emailId = currentUserEmail;
             if (user?.userID) params.userID = user.userID;
             if (user?.userId || user?._id || user?.id) params.userId = user.userId || user._id || user.id;
 

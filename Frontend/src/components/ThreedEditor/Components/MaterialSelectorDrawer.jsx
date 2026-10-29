@@ -140,7 +140,7 @@ export default function MaterialSelectorDrawer({
     if (!email) return;
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const response = await axios.get(`${backendUrl}/api/textures/get?email=${email}`);
       if (response.data.textures) {
         const mapped = response.data.textures.map(t => {
@@ -169,7 +169,7 @@ export default function MaterialSelectorDrawer({
     if (!email) return;
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const response = await axios.get(`${backendUrl}/api/textures/categories/get?email=${email}`);
       if (response.data.categories) {
         setFetchedCategories(response.data.categories);
@@ -206,7 +206,7 @@ export default function MaterialSelectorDrawer({
 
     try {
       setIsCreatingFolder(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       await axios.post(`${backendUrl}/api/textures/categories/add`, {
         name: folderName,
         userEmail: email
@@ -236,7 +236,7 @@ export default function MaterialSelectorDrawer({
     }
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       await axios.put(`${backendUrl}/api/textures/categories/rename/${folderId}`, {
         name: cleanName
       });
@@ -256,7 +256,7 @@ export default function MaterialSelectorDrawer({
     if (!deletingFolder) return;
     setIsDeletingFolder(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       await axios.delete(`${backendUrl}/api/textures/categories/delete/${deletingFolder._id}`);
       setDeletingFolder(null);
       await fetchCategories();

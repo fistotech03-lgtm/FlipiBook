@@ -510,6 +510,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
         company_logo_url: savedProfile?.company_logo_url || savedProfile?.companyLogo || updatedEditedUser.company_logo_url || updatedEditedUser.companyLogo || '',
         companyLogo: savedProfile?.company_logo_url || savedProfile?.companyLogo || updatedEditedUser.company_logo_url || updatedEditedUser.companyLogo || '',
         services: savedProfile?.services || updatedEditedUser.services || [],
+        specialization: savedProfile?.specialization || updatedEditedUser.specialization || [],
         // The user's explicit sanitized socials MUST take precedence over stale backend fields
         socials: sanitizedSocials
       };
@@ -546,7 +547,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
   };
 
   const actionRef = useRef({});
-  actionRef.current = { handleSave, handleCancel, isSaving };
+  actionRef.current = { handleSave, handleCancel, isSaving, isDirty: isEdited };
 
   useEffect(() => {
     if (onActionReady) {

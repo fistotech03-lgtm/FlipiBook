@@ -362,7 +362,7 @@ export function useThreedMaterialTree({
     try {
       if (!user) return;
       const userEmail = user.emailId || user.email;
-      const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 
       const nextModels = models.map(m => {
         if (m.name === oldModelName || models.length === 1) {

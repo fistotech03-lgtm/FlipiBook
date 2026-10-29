@@ -79,8 +79,7 @@ const flipbookSchema = new mongoose.Schema(
       default: false
     },
     isFavorite: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: 'user',
+      type: mongoose.Schema.Types.Mixed,
       default: []
     },
     trashedAt: {
@@ -114,6 +113,7 @@ const flipbookSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }
@@ -121,6 +121,20 @@ const flipbookSchema = new mongoose.Schema(
 
 // Pre-validate hook to ensure required fields are always populated
 flipbookSchema.pre('validate', async function () {
+  if (this.isFavorite !== undefined && this.isFavorite !== null) {
+    if (typeof this.isFavorite === 'string') {
+      try {
+        const parsed = JSON.parse(this.isFavorite);
+        this.isFavorite = Array.isArray(parsed) ? parsed.filter(v => v && typeof v !== 'boolean' && String(v) !== 'false') : [];
+      } catch {
+        this.isFavorite = [];
+      }
+    } else if (typeof this.isFavorite === 'boolean') {
+      this.isFavorite = [];
+    } else if (Array.isArray(this.isFavorite)) {
+      this.isFavorite = this.isFavorite.filter(v => v && typeof v !== 'boolean' && String(v) !== 'false' && String(v) !== '[ false ]');
+    }
+  }
   if (!this.userObjectID && this.userID) {
     try {
       const UserModel = mongoose.models.user || (mongoose.modelNames().includes('user') ? mongoose.model('user') : null);

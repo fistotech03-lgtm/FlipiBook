@@ -200,15 +200,22 @@ const CustomizedEditor = () => {
 
   useEffect(() => {
     if (folder && v_id) {
+      const activeFolderVId =
+        currentBook?.folder_v_id ||
+        currentBook?.folder_id ||
+        location.state?.folder_v_id ||
+        (folder.startsWith('fol_') ? folder : null);
+
+      const targetFolderParam = activeFolderVId || folder;
       const targetPath = targetPage > 0
-        ? `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}/${targetPage}`
-        : `/editor/customized_editor/${encodeURIComponent(folder)}/${v_id}`;
+        ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
+        : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;
 
       if (location.pathname !== targetPath) {
         navigate(targetPath, { replace: true, state: location.state });
       }
     }
-  }, [targetPage, folder, v_id, navigate, location.pathname, location.state]);
+  }, [targetPage, folder, v_id, currentBook?.folder_v_id, currentBook?.folder_id, navigate, location.pathname, location.state]);
 
   // Global flipbook name sync
   useEffect(() => {

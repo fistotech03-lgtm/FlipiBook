@@ -9,19 +9,43 @@ const {
 } = require('../utils/profileStorageHelper');
 
 /**
+ * Helper to resolve target email from query, body, headers, or decoded JWT token
+ */
+const resolveReqEmail = async (req) => {
+  let emailId = (
+    req.body?.emailId ||
+    req.body?.email ||
+    req.query?.emailId ||
+    req.query?.email ||
+    req.headers['x-user-email'] ||
+    req.user?.emailId ||
+    req.user?.email ||
+    ''
+  ).trim().toLowerCase();
+
+  if (!emailId && (req.user?.id || req.user?._id || req.user?.userId)) {
+    const uId = req.user.id || req.user._id;
+    const conds = [];
+    if (uId && mongoose.Types.ObjectId.isValid(uId)) conds.push({ _id: new mongoose.Types.ObjectId(uId) });
+    if (req.user.userId) conds.push({ userID: req.user.userId });
+    if (conds.length > 0) {
+      const u = await User.findOne({ $or: conds }).select('emailId').lean();
+      if (u?.emailId) {
+        emailId = u.emailId.trim().toLowerCase();
+      }
+    }
+  }
+
+  return emailId;
+};
+
+/**
  * GET /api/profile
  * Get user profile by emailId or email
  */
 const getProfile = async (req, res) => {
   try {
-    const emailId = (
-      req.query?.emailId ||
-      req.query?.email ||
-      req.headers['x-user-email'] ||
-      req.user?.emailId ||
-      req.user?.email ||
-      ''
-    ).trim().toLowerCase();
+    const emailId = await resolveReqEmail(req);
 
     if (!emailId) {
       return res.status(400).json({ success: false, message: 'emailId is required' });
@@ -99,14 +123,7 @@ const getProfile = async (req, res) => {
  */
 const saveProfile = async (req, res) => {
   try {
-    const emailId = (
-      req.body?.emailId ||
-      req.body?.email ||
-      req.headers['x-user-email'] ||
-      req.user?.emailId ||
-      req.user?.email ||
-      ''
-    ).trim().toLowerCase();
+    const emailId = await resolveReqEmail(req);
 
     if (!emailId) {
       return res.status(400).json({ success: false, message: 'emailId is required' });
@@ -224,12 +241,7 @@ const saveProfile = async (req, res) => {
  */
 const updateAvatar = async (req, res) => {
   try {
-    const emailId = (
-      req.body?.emailId ||
-      req.headers['x-user-email'] ||
-      req.user?.emailId ||
-      ''
-    ).trim().toLowerCase();
+    const emailId = await resolveReqEmail(req);
 
     if (!emailId) {
       return res.status(400).json({ success: false, message: 'emailId is required' });
@@ -307,12 +319,7 @@ const updateAvatar = async (req, res) => {
  */
 const updateBanner = async (req, res) => {
   try {
-    const emailId = (
-      req.body?.emailId ||
-      req.headers['x-user-email'] ||
-      req.user?.emailId ||
-      ''
-    ).trim().toLowerCase();
+    const emailId = await resolveReqEmail(req);
 
     if (!emailId) {
       return res.status(400).json({ success: false, message: 'emailId is required' });

@@ -240,7 +240,7 @@ export default function CameraModal({
             formData.append('type', 'image');
             formData.append('isGallery', 'true');
             
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });

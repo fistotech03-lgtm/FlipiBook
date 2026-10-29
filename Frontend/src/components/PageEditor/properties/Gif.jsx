@@ -1860,7 +1860,7 @@ const GifEditor = ({
         formData.append('page_v_id', currentPageVId || 'global');
         formData.append('file', file);
         try {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
           if (res.data && (res.data.url || res.data.filename)) {
             const filename = res.data.filename;

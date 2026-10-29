@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const backendUrl = (import.meta.env.VITE_BACKEND_URL !== undefined ? import.meta.env.VITE_BACKEND_URL : '') || '';
 
 const formatModelUrl = (url) => {
   if (!url) return '';

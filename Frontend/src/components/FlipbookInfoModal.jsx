@@ -1029,7 +1029,7 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
     formData.append('file', file);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
       if (res.data.url) {
         const fullUrl = res.data.url.startsWith('http') ? res.data.url : `${backendUrl}${res.data.url}`;
@@ -1064,7 +1064,7 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
     setErrors({});
     setIsSaving(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const v_id = currentBook?.v_id || currentBook?.realName;
       const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 

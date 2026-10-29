@@ -321,7 +321,7 @@ export async function executeSave3D({
     }
 
     const userEmail = activeUser.emailId || activeUser.email;
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").trim().replace(/\/+$/, "");
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").trim().replace(/\/+$/, "");
     const nextModels = [...models];
 
     updateProgress(20, isSaveAs ? "Duplicating 3D model hierarchy & nodes..." : "Processing scene hierarchy & transformations...");

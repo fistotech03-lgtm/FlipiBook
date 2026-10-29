@@ -54,7 +54,6 @@ const Account = () => {
     const fetchStatus = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/profile`, {
-          params: { emailId: userEmail },
           withCredentials: true,
         });
         if (res.data && isMounted) {

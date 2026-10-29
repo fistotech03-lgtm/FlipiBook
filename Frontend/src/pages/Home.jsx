@@ -207,7 +207,7 @@ export default function Home() {
         createdFlipbookVIdRef.current = v_id;
 
         if (isUploadCancelledRef.current) {
-          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
           return;
         }
 
@@ -220,7 +220,11 @@ export default function Home() {
           stage: 'done'
         });
 
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
+          (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
+          'fol_default';
+        navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
         return;
       }
 
@@ -240,7 +244,7 @@ export default function Home() {
       const BATCH_SIZE = 15;
       for (let i = 20; i < allPages.length; i += BATCH_SIZE) {
         if (isUploadCancelledRef.current) {
-          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+          axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
           return;
         }
         const batchPages = allPages.slice(i, i + BATCH_SIZE);
@@ -262,7 +266,7 @@ export default function Home() {
       }
 
       if (isUploadCancelledRef.current) {
-        axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { params: { emailId } }).catch(() => { });
+        axios.delete(`${backendUrl}/api/flipbook/delete/${v_id}`, { withCredentials: true }).catch(() => { });
         return;
       }
 
@@ -275,7 +279,11 @@ export default function Home() {
         stage: 'done'
       });
 
-      navigate(`/editor/${encodeURIComponent(targetFolder)}/${v_id}`);
+      const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+      const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
+        (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
+        'fol_default';
+      navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
 
     } catch (error) {
       if (!isUploadCancelledRef.current) {
@@ -300,7 +308,7 @@ export default function Home() {
     setIsLoading(false);
     setProcessingProgress(null);
     if (createdFlipbookVIdRef.current) {
-      axios.delete(`${backendUrl}/api/flipbook/delete/${createdFlipbookVIdRef.current}`, { params: { emailId } }).catch(() => { });
+      axios.delete(`${backendUrl}/api/flipbook/delete/${createdFlipbookVIdRef.current}`, { withCredentials: true }).catch(() => { });
       createdFlipbookVIdRef.current = null;
     }
   };
@@ -342,7 +350,8 @@ export default function Home() {
       });
 
       if (res.data && res.data.v_id) {
-        navigate(`/editor/${encodeURIComponent(targetFolder)}/${res.data.v_id}`, { state: templateData });
+        const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'fol_default';
+        navigate(`/editor/${encodeURIComponent(folderVId)}/${res.data.v_id}`, { state: { ...templateData, folder_v_id: folderVId } });
       } else {
         navigate('/editor', { state: templateData });
       }

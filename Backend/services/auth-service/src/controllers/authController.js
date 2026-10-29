@@ -205,29 +205,31 @@ const verifyGoogleIdentity = async ({ accessToken, credential }) => {
  * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
+  // If connection is explicitly HTTP (not HTTPS), cookies MUST NOT have secure: true,
+  // otherwise browsers (Chrome/Firefox/Safari) will drop the cookie immediately.
+  const forwardedProto = req?.headers?.["x-forwarded-proto"];
+  const origin = req?.headers?.origin;
+  const referer = req?.headers?.referer;
+
+  if (forwardedProto === "http" || origin?.startsWith("http:") || referer?.startsWith("http:")) {
+    return false;
+  }
+
   // 1. If connection is explicitly HTTPS (via TLS terminating reverse proxy like Nginx, Dokploy/Traefik, Cloudflare)
   if (
     req?.secure ||
-    req?.headers?.["x-forwarded-proto"]?.includes("https") ||
-    req?.headers?.origin?.startsWith("https:") ||
-    req?.headers?.referer?.startsWith("https:")
+    forwardedProto?.includes("https") ||
+    origin?.startsWith("https:") ||
+    referer?.startsWith("https:")
   ) {
     return true;
   }
+
   // 2. If configured CLIENT_URL in docker-compose is HTTPS (testing / production environments)
   if (process.env.CLIENT_URL?.startsWith("https:")) {
     return true;
   }
-  // 3. If forwarded host is a live external domain (not localhost, not 127.0.0.1, not docker internal 'backend')
-  const forwardedHost = req?.headers?.["x-forwarded-host"] || "";
-  if (
-    forwardedHost &&
-    !forwardedHost.includes("localhost") &&
-    !forwardedHost.includes("127.0.0.1") &&
-    !forwardedHost.includes("backend")
-  ) {
-    return true;
-  }
+
   return false;
 };
 

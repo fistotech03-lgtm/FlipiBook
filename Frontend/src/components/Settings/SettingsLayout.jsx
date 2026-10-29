@@ -112,7 +112,6 @@ const SettingsLayout = () => {
     const fetchProfile = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/profile`, {
-          params: { emailId: currentEmail },
           withCredentials: true
         });
         const p = res.data?.profile || (res.data?.emailId ? res.data : null);

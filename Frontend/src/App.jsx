@@ -56,10 +56,8 @@ const ThreedEditor = lazy(
 import "./utils/preloadUtils";
 
 // Settings Components
-const SettingsLayout = lazy(
-  () => import("./components/Settings/SettingsLayout"),
-);
-const Profile = lazy(() => import("./components/Settings/Profile"));
+const SettingsLayout = lazy(() => import("./components/Settings/SettingsLayout"));
+const Profile = lazy(() => import("./components/Settings/Profile/Profile"));
 const Account = lazy(() => import("./components/Settings/Account/Account"));
 const Notifications = lazy(() => import("./components/Settings/Notifications"));
 const Billing = lazy(() => import("./components/Settings/Billing/Billing"));

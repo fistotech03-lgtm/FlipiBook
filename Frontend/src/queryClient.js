@@ -12,9 +12,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-export const fetchFlipbookFolders = async (emailId) => {
-  if (!emailId) return [];
-  const folderRes = await flipbookApi.getFolders(emailId);
+export const fetchFlipbookFolders = async (userKey) => {
+  const folderRes = await flipbookApi.getFolders();
   const rawFolders = folderRes.data?.folders || [];
 
   let hasDefault = false;
@@ -70,9 +69,8 @@ export const fetchFlipbookFolders = async (emailId) => {
   return cleanedFolders;
 };
 
-export const fetchFlipbookBooks = async (emailId) => {
-  if (!emailId) return [];
-  const booksRes = await flipbookApi.getBooks(emailId);
+export const fetchFlipbookBooks = async (userKey) => {
+  const booksRes = await flipbookApi.getBooks();
   const rawBooks = booksRes.data?.books || [];
   return rawBooks.map((b) => {
     let f = b.folder || b.folderName;
@@ -89,6 +87,8 @@ export const fetchFlipbookBooks = async (emailId) => {
       ...b,
       folder: resolvedFolder,
       folderName: resolvedFolder,
+      folder_v_id: b.folder_v_id || b.folder_id || 'fol_default',
+      folder_id: b.folder_v_id || b.folder_id || 'fol_default',
       pages: pageCount,
       pagesCount: pageCount,
       pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || []),
@@ -118,7 +118,7 @@ export const prefetchMyFlipbooks = (emailId) => {
   queryClient.prefetchQuery({
     queryKey: ['user-storage', emailId],
     queryFn: async () => {
-      const res = await flipbookApi.getStorageSettings(emailId);
+      const res = await flipbookApi.getStorageSettings();
       return {
         used: typeof res.data?.usedStorage === 'number' ? res.data.usedStorage : 0,
         total: typeof res.data?.maxStorage === 'number' ? res.data.maxStorage : 300 * 1024 * 1024,

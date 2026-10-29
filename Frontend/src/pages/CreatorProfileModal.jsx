@@ -11,14 +11,6 @@ import cover3 from '../assets/Explore/c-bg3.png';
 import cover4 from '../assets/Explore/c-bg4.png';
 import cover5 from '../assets/Explore/c-bg5.png';
 import bookShelf1 from '../assets/Bookshelf/Book_shelf1.webp';
-import textureScreen2 from '../assets/Bookshelf/classicwood/classic woodtexture.webp';
-import bookShelf2 from '../assets/Bookshelf/classicwood/classicwoodshelf.webp';
-import darkOakTex1 from '../assets/Bookshelf/Darkoak/texture_screen1.webp';
-import darkOakTex2 from '../assets/Bookshelf/Darkoak/texture_screen2.webp';
-import darkOakTex3 from '../assets/Bookshelf/Darkoak/texture_screen3.webp';
-import darkOakShelf from '../assets/Bookshelf/Darkoak/darkoakshelf.webp';
-import mwWall1 from '../assets/Bookshelf/modernwhite/wall1.webp';
-
 const covers = [cover1, cover2, cover3, cover4, cover5];
 
 const defaultColors = [
@@ -66,7 +58,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                     observer.disconnect();
                     setFetching(true);
                     axios
-                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
                         .then((res) => {
                             if (res.data?.html) {
                                 const fontsToLoad = new Set();
@@ -368,7 +360,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
         };
     }, [isOpen]);
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     const targetEmail = creator?.emailId || creator?.email || creator?.userEmail || '';
 
     useEffect(() => {

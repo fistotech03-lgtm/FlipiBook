@@ -1,6 +1,11 @@
 // Backend/services/user-service/src/controllers/ticketController.js
 const SupportTicket = require('../models/SupportTicket');
 const mongoose = require('mongoose');
+const {
+  resolveUserFolder,
+  processTicketAttachments,
+  deleteTicketAttachments
+} = require('../utils/ticketStorageHelper');
 
 let User;
 try {
@@ -187,10 +192,24 @@ const createTicket = async (req, res) => {
       name: requester?.name || 'Support User',
       email: (requester?.email || req.headers['x-user-email'] || 'user@example.com').toLowerCase().trim(),
       role: requester?.role || 'User',
-      avatarColor: requester?.avatarColor || '#ec5137'
+      avatarColor: requester?.avatarColor || '#ec5137',
+      userID: requester?.userID || req.headers['x-user-id'] || ''
     };
 
+    // 1. Resolve user storage folder (e.g. 'FLIPI0001')
+    const userFolder = await resolveUserFolder(
+      effectiveRequester.email,
+      effectiveRequester.userID
+    );
+
+    // 2. Generate unique ticket code
+    const ticketCode = `TICK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // 3. Process and write attachments into Backend/storage/<userFolder>/tickets/
+    const processedAttachments = processTicketAttachments(userFolder, attachments, ticketCode);
+
     const newTicket = new SupportTicket({
+      id: ticketCode,
       subject: subject.trim(),
       moduleId: moduleId || 'others',
       moduleName: moduleName || department || 'General',
@@ -200,14 +219,14 @@ const createTicket = async (req, res) => {
       requester: effectiveRequester,
       ccRecipients: Array.isArray(ccRecipients) ? ccRecipients : [],
       description: description.trim(),
-      attachments: Array.isArray(attachments) ? attachments : [],
+      attachments: processedAttachments,
       messages: [
         {
           sender: 'user',
           authorName: effectiveRequester.name,
           authorEmail: effectiveRequester.email,
           content: description.trim(),
-          attachments: Array.isArray(attachments) ? attachments : [],
+          attachments: processedAttachments,
           createdAt: new Date()
         }
       ]
@@ -266,10 +285,21 @@ const updateTicketStatus = async (req, res) => {
 const addTicketMessage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, sender = 'user', authorName, authorEmail, attachments = [] } = req.body;
+    const { 
+      content, 
+      message,
+      sender = 'user', 
+      senderRole,
+      authorName, 
+      senderName,
+      authorEmail, 
+      senderEmail,
+      attachments = [] 
+    } = req.body;
 
-    if (!content || !content.trim()) {
-      return res.status(400).json({ success: false, message: 'Message content is required' });
+    const messageContent = (content || message || '').trim();
+    if (!messageContent && (!Array.isArray(attachments) || attachments.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Message content or attachment is required' });
     }
 
     const isObjectId = mongoose.Types.ObjectId.isValid(id);
@@ -287,12 +317,25 @@ const addTicketMessage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
+    // Resolve user storage folder for ticket requester
+    const userFolder = await resolveUserFolder(
+      ticket.requester?.email,
+      ticket.requester?.userID || req.headers['x-user-id']
+    );
+
+    // Save attachments to Backend/storage/<userFolder>/tickets/
+    const processedAttachments = processTicketAttachments(userFolder, attachments, ticket.id);
+
+    const effectiveSender = senderRole || sender || 'user';
+    const effectiveAuthorName = authorName || senderName || (effectiveSender === 'admin' ? 'Support Admin' : ticket.requester?.name);
+    const effectiveAuthorEmail = authorEmail || senderEmail || (effectiveSender === 'admin' ? 'admin@flipibook.com' : ticket.requester?.email);
+
     const newMessage = {
-      sender,
-      authorName: authorName || (sender === 'admin' ? 'Support Admin' : ticket.requester?.name),
-      authorEmail: authorEmail || (sender === 'admin' ? 'admin@flipibook.com' : ticket.requester?.email),
-      content: content.trim(),
-      attachments: Array.isArray(attachments) ? attachments : [],
+      sender: effectiveSender,
+      authorName: effectiveAuthorName,
+      authorEmail: effectiveAuthorEmail,
+      content: messageContent,
+      attachments: processedAttachments,
       createdAt: new Date()
     };
 
@@ -308,7 +351,7 @@ const addTicketMessage = async (req, res) => {
 
 /**
  * DELETE /api/tickets/:id
- * Withdraw/Cancel ticket (only allowed before admin/staff has replied)
+ * Delete / Withdraw ticket and remove all attached files from physical storage
  */
 const cancelTicket = async (req, res) => {
   try {
@@ -329,24 +372,31 @@ const cancelTicket = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
-    // Check if staff/admin has already replied
-    const hasAdminReplied = ticket.messages.some(
-      m => m.sender === 'agent' || m.sender === 'staff' || m.sender === 'admin'
+    // 1. Resolve user storage folder and remove all attachment files from disk
+    const userFolder = await resolveUserFolder(
+      ticket.requester?.email,
+      ticket.requester?.userID || req.headers['x-user-id']
     );
-    if (hasAdminReplied) {
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot withdraw ticket after support team has replied. You may close the ticket instead.'
+    const deletedFiles = deleteTicketAttachments(userFolder, ticket);
+
+    // 2. Mark ticket as deleted and clear attachment references
+    ticket.isDeleted = true;
+    ticket.attachments = [];
+    if (Array.isArray(ticket.messages)) {
+      ticket.messages.forEach(m => {
+        m.attachments = [];
       });
     }
-
-    ticket.isDeleted = true;
     await ticket.save();
 
-    res.json({ success: true, message: `Ticket #${ticket.id} withdrawn successfully` });
+    res.json({ 
+      success: true, 
+      message: `Ticket #${ticket.id} and its attachments deleted successfully`,
+      deletedAttachmentsCount: deletedFiles.length
+    });
   } catch (error) {
     console.error('[cancelTicket Error]:', error);
-    res.status(500).json({ success: false, message: 'Failed to cancel ticket', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete ticket', error: error.message });
   }
 };
 

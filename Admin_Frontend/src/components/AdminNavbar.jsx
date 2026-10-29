@@ -58,7 +58,7 @@ export default function AdminNavbar() {
           <NavLink to="/" aria-label="FlipiBook Admin Console" className="flex items-center">
             <img src="/logo.svg" alt="Flipibook" className="h-[4.5vh] w-auto object-contain transition-transform duration-300" />
           </NavLink>
-          <span className="hidden sm:inline-block px-[0.5vw] py-[0.15vw] rounded-[0.35vw] bg-[#ec5137]/10 text-[#ec5137] border border-[#ec5137]/20 text-[0.65vw] font-black uppercase tracking-wider">
+          <span className="hidden sm:inline-block px-[0.5vw] py-[0.15vw] rounded-[0.35vw] bg-[#ec5137]/10 text-[#ec5137] border border-[#ec5137]/20 text-[0.62vw] font-medium uppercase tracking-wider">
             ADMIN
           </span>
         </div>
@@ -67,8 +67,8 @@ export default function AdminNavbar() {
         <div className="hidden lg:flex items-center gap-[1.5vw] xl:gap-[2.2vw]">
           {navLinks.map((link) => {
             const isActive = checkIsActive(link.path);
-            const baseLinkStyle = "text-gray-500 hover:text-gray-900 font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-black after:transition-all after:duration-300 after:rounded-full";
-            const activeLinkStyle = "text-[#ec5137] font-semibold text-[0.85vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
+            const baseLinkStyle = "text-gray-600 hover:text-gray-900 font-medium text-[0.82vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-0 hover:after:w-full after:bg-gray-800 after:transition-all after:duration-300 after:rounded-full";
+            const activeLinkStyle = "text-[#ec5137] font-medium text-[0.82vw] transition-colors relative pb-[0.25vw] after:absolute after:left-0 after:bottom-0 after:h-[0.15vw] after:w-full after:bg-[#ec5137] after:transition-all after:duration-300 after:rounded-full";
 
             return (
               <NavLink
@@ -87,8 +87,8 @@ export default function AdminNavbar() {
       {/* Right Actions */}
       <div className="flex items-center gap-[0.8vw]">
         {/* Cluster Telemetry Status Pill */}
-        <div className="hidden sm:flex items-center gap-[0.4vw] px-[0.8vw] py-[0.35vw] rounded-full bg-emerald-50 border border-emerald-200 text-[0.75vw] text-emerald-800 font-medium">
-          <span className="w-[0.45vw] h-[0.45vw] rounded-full bg-emerald-500 status-pulse" />
+        <div className="hidden sm:flex items-center gap-[0.4vw] px-[0.8vw] py-[0.3vw] rounded-full bg-[#DCFCE7] border border-[#bbf7d0] text-[0.72vw] text-[#16A34A] font-medium">
+          <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-[#16A34A] status-pulse" />
           <span>
             {onlineCount !== null ? `${onlineCount}/${totalCount} Online` : 'Checking...'}
           </span>
@@ -100,31 +100,31 @@ export default function AdminNavbar() {
           onClick={handleManualRefresh}
           disabled={isRefreshing}
           title="Refresh cluster telemetry"
-          className="w-[2.4vw] h-[2.4vw] rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 transition-all cursor-pointer disabled:opacity-50"
+          className="w-[2.2vw] h-[2.2vw] rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 transition-all cursor-pointer disabled:opacity-50"
         >
-          <RefreshCw className={`w-[1.1vw] h-[1.1vw] ${isRefreshing ? 'animate-spin text-[#ec5137]' : ''}`} />
+          <RefreshCw className={`w-[1vw] h-[1vw] ${isRefreshing ? 'animate-spin text-[#ec5137]' : ''}`} />
         </button>
 
         {/* Notification Bell */}
         <button
           type="button"
           aria-label="Notifications"
-          className="w-[2.4vw] h-[2.4vw] rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 transition-all relative cursor-pointer"
+          className="w-[2.2vw] h-[2.2vw] rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 transition-all relative cursor-pointer"
         >
-          <Bell className="w-[1.15vw] h-[1.15vw]" />
-          <span className="absolute top-[0.5vw] right-[0.5vw] w-[0.45vw] h-[0.45vw] rounded-full bg-[#ec5137]" />
+          <Bell className="w-[1.05vw] h-[1.05vw]" />
+          <span className="absolute top-[0.45vw] right-[0.45vw] w-[0.4vw] h-[0.4vw] rounded-full bg-[#ec5137]" />
         </button>
 
         {/* Admin Profile Pill */}
         <div className="flex items-center gap-[0.6vw] pl-[0.6vw] border-l border-gray-200">
-          <div className="w-[2.3vw] h-[2.3vw] rounded-full bg-gradient-to-tr from-[#ec5137] to-orange-400 text-white font-bold text-[0.8vw] flex items-center justify-center shadow-xs ring-2 ring-orange-100 flex-shrink-0">
+          <div className="w-[2.2vw] h-[2.2vw] rounded-full bg-gradient-to-tr from-[#ec5137] to-orange-400 text-white font-medium text-[0.8vw] flex items-center justify-center shadow-xs ring-1 ring-orange-200 flex-shrink-0">
             {adminUser?.initials || 'AD'}
           </div>
           <div className="hidden xl:block text-left">
-            <p className="text-[0.8vw] font-bold text-gray-900 leading-tight">
+            <p className="text-[0.78vw] font-medium text-gray-800 leading-tight">
               {adminUser?.name || 'Administrator'}
             </p>
-            <p className="text-[0.65vw] font-semibold text-[#ec5137] uppercase tracking-wide">
+            <p className="text-[0.65vw] font-medium text-[#ec5137] uppercase tracking-wide">
               {adminUser?.role || 'Super Admin'}
             </p>
           </div>

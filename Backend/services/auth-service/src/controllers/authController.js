@@ -12,6 +12,7 @@ const {
 } = require("../utils/jwtHelper");
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 const { createUserWorkspace } = require("../utils/workspaceHelper");
+const { parseUserAgent, resolveLocation } = require("../utils/deviceParser");
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -63,6 +64,13 @@ const normalizeIp = (ip) => {
   return clean;
 };
 
+const isIPv4 = (ip) => {
+  if (!ip || typeof ip !== "string") return false;
+  const parts = String(ip).trim().split(".");
+  if (parts.length !== 4) return false;
+  return parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
+};
+
 /**
  * Extract client IP address accurately from request across multiple proxy hops.
  * Prioritizes real routable public IPs over internal Docker / loopback IPs.
@@ -70,14 +78,17 @@ const normalizeIp = (ip) => {
 const getClientIp = (req) => {
   const candidates = [];
 
-  // 1. Cloudflare direct client header
-  if (req.headers?.["cf-connecting-ip"]) {
-    candidates.push(req.headers["cf-connecting-ip"]);
-  }
-
-  // 2. Explicit gateway forwarded client IP
+  // 1. Explicit client reported IP in header or body
   if (req.headers?.["x-client-ip"]) {
     candidates.push(req.headers["x-client-ip"]);
+  }
+  if (req.body?.ipAddress) {
+    candidates.push(req.body.ipAddress);
+  }
+
+  // 2. Cloudflare direct client header
+  if (req.headers?.["cf-connecting-ip"]) {
+    candidates.push(req.headers["cf-connecting-ip"]);
   }
 
   // 3. X-Real-IP (set by Nginx / Traefik / Dokploy)
@@ -104,14 +115,26 @@ const getClientIp = (req) => {
     .map(normalizeIp)
     .filter((ip) => Boolean(ip) && ip !== "unknown");
 
-  // First priority: find the first non-private, non-loopback public routable IP
+  // 1. Highest priority: public routable IPv4 address
+  const publicIpv4 = normalizedList.find((ip) => isIPv4(ip) && !isPrivateOrLoopbackIp(ip));
+  if (publicIpv4) {
+    return publicIpv4;
+  }
+
+  // 2. Secondary priority: any public routable IP
   const publicIp = normalizedList.find((ip) => !isPrivateOrLoopbackIp(ip));
   if (publicIp) {
     return publicIp;
   }
 
-  // Fallback: return the first normalized IP or default 127.0.0.1
-  return normalizedList[0] || "127.0.0.1";
+  // 3. Fallback: private IPv4 (e.g. 192.168.x.x, 10.x.x.x, or 127.0.0.1)
+  const privateIpv4 = normalizedList.find((ip) => isIPv4(ip));
+  if (privateIpv4) {
+    return privateIpv4;
+  }
+
+  // 4. Default loopback IPv4
+  return "127.0.0.1";
 };
 
 /**
@@ -317,20 +340,38 @@ const signup = async (req, res) => {
       console.warn("[Workspace Creation Warning]:", wsErr.message);
     }
 
-    // Capture IP & Create Login Log
+    // Capture Device, IP & Create Login Log
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType: "NEW_DEVICE_LOGIN",
         loginMethod: "EMAIL_PASSWORD",
       });
     } catch (logErr) {
@@ -341,14 +382,16 @@ const signup = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     setAuthCookies(res, token, refreshToken, req, user);
@@ -523,20 +566,38 @@ const verifySignupOtp = async (req, res) => {
     // Clean up pending OTP record
     await SignupOtp.deleteOne({ _id: pendingSignup._id });
 
-    // Capture IP & Create Login Log
+    // Capture Device, IP & Create Login Log
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType: "NEW_DEVICE_LOGIN",
         loginMethod: "EMAIL_PASSWORD",
       });
     } catch (logErr) {
@@ -547,14 +608,16 @@ const verifySignupOtp = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     setAuthCookies(res, token, refreshToken, req, user);
@@ -658,8 +721,45 @@ const login = async (req, res) => {
       });
     }
 
+    // Capture Device, IP & Geo Location
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      // Record failed login attempt in audit history
+      try {
+        await LoginLog.create({
+          userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+          userObjectId: user._id,
+          emailId: user.emailId,
+          sessionId: new mongoose.Types.ObjectId().toString(),
+          deviceId: clientDeviceId,
+          ipAddress,
+          userAgent,
+          browser,
+          operatingSystem,
+          deviceType,
+          location,
+          loginTime: new Date(),
+          lastActiveAt: new Date(),
+          status: "EXPIRED",
+          isRevoked: true,
+          eventType: "FAILED_LOGIN",
+          loginMethod: "EMAIL_PASSWORD",
+        });
+      } catch (failedLogErr) {
+        console.warn("[Failed Login Log Warning]:", failedLogErr.message);
+      }
+
       return res
         .status(400)
         .json({
@@ -668,20 +768,67 @@ const login = async (req, res) => {
         });
     }
 
-    // Track Login in LoginLog Table
-    const ipAddress = getClientIp(req);
-    const userAgent = req.headers["user-agent"] || "";
+    // Determine if this is a newly seen device for this account
+    let eventType = "SUCCESSFUL_LOGIN";
+    try {
+      const prevDeviceLog = await LoginLog.findOne({
+        $or: [
+          { userId: user.userID },
+          { userObjectId: user._id },
+          { emailId: user.emailId.toLowerCase() }
+        ],
+        deviceId: clientDeviceId
+      });
+      if (!prevDeviceLog) {
+        eventType = "NEW_DEVICE_LOGIN";
+      }
+    } catch (checkErr) {
+      console.warn("[Device Check Warning]:", checkErr.message);
+    }
+
+    // Close any previous active session on this exact same device for this user
+    try {
+      await LoginLog.updateMany(
+        {
+          $or: [
+            { userId: user.userID },
+            { userObjectId: user._id },
+            { emailId: user.emailId.toLowerCase() }
+          ],
+          deviceId: clientDeviceId,
+          status: "ACTIVE"
+        },
+        {
+          $set: {
+            status: "LOGGED_OUT",
+            logoutTime: new Date()
+          }
+        }
+      );
+    } catch (staleErr) {
+      console.warn("[Stale Session Cleanup Warning]:", staleErr.message);
+    }
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType,
         loginMethod: "EMAIL_PASSWORD",
       });
     } catch (logErr) {
@@ -692,14 +839,16 @@ const login = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     setAuthCookies(res, token, refreshToken, req, user);
@@ -798,20 +947,79 @@ const googleLogin = async (req, res) => {
       await user.save();
     }
 
-    // Log the Google Sign-in event
+    // Log the Google Sign-in event with device tracking
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
+
+    // Determine if this is a newly seen device for this account
+    let eventType = "SUCCESSFUL_LOGIN";
+    try {
+      const prevDeviceLog = await LoginLog.findOne({
+        $or: [
+          { userId: user.userID },
+          { userObjectId: user._id },
+          { emailId: user.emailId.toLowerCase() }
+        ],
+        deviceId: clientDeviceId
+      });
+      if (!prevDeviceLog) {
+        eventType = "NEW_DEVICE_LOGIN";
+      }
+    } catch (checkErr) {
+      console.warn("[Google Device Check Warning]:", checkErr.message);
+    }
+
+    // Close any previous active session on this exact same device for this user
+    try {
+      await LoginLog.updateMany(
+        {
+          $or: [
+            { userId: user.userID },
+            { userObjectId: user._id },
+            { emailId: user.emailId.toLowerCase() }
+          ],
+          deviceId: clientDeviceId,
+          status: "ACTIVE"
+        },
+        {
+          $set: {
+            status: "LOGGED_OUT",
+            logoutTime: new Date()
+          }
+        }
+      );
+    } catch (staleErr) {
+      console.warn("[Google Stale Session Cleanup Warning]:", staleErr.message);
+    }
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType,
         loginMethod: "GOOGLE",
       });
     } catch (logErr) {
@@ -822,14 +1030,16 @@ const googleLogin = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     setAuthCookies(res, token, refreshToken, req, user);
@@ -1135,32 +1345,43 @@ const logout = async (req, res) => {
 
     try {
       const dbUpdatePromise = (async () => {
-        // 1. Try updating specific session by sessionId
-        if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
-          const resSession = await LoginLog.updateOne(
-            { _id: decoded.sessionId },
-            { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+        const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
+        const targetDeviceId = decoded?.deviceId || req.headers["x-device-id"] || req.cookies?.flipibook_device_id || null;
+
+        const sessionMatches = [
+          targetSessionId ? { sessionId: String(targetSessionId) } : null,
+          targetSessionId && mongoose.Types.ObjectId.isValid(targetSessionId) ? { _id: targetSessionId } : null,
+          targetDeviceId ? { deviceId: targetDeviceId } : null,
+        ].filter(Boolean);
+
+        const orClauses = [
+          decoded?.id && mongoose.Types.ObjectId.isValid(decoded.id)
+            ? { userObjectId: decoded.id }
+            : null,
+          decoded?.userId ? { userId: decoded.userId } : null,
+          decoded?.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
+        ].filter(Boolean);
+
+        // Terminate ONLY this specific session / device, preserving other active sessions
+        if (sessionMatches.length > 0 && orClauses.length > 0) {
+          const resSession = await LoginLog.updateMany(
+            {
+              $or: orClauses,
+              $and: [{ $or: sessionMatches }],
+              status: { $in: ["ACTIVE", "active"] },
+            },
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT", isRevoked: true } }
           );
           updatedCount = resSession.modifiedCount;
-        }
-
-        // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
-        if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
-          const orClauses = [
-            decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
-              ? { userObjectId: decoded.id }
-              : null,
-            decoded.userId ? { userId: decoded.userId } : null,
-            decoded.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
-          ].filter(Boolean);
-
-          if (orClauses.length > 0) {
-            const resUser = await LoginLog.updateMany(
-              { $or: orClauses, status: "ACTIVE" },
-              { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
-            );
-            updatedCount = resUser.modifiedCount;
-          }
+        } else if (sessionMatches.length > 0) {
+          const resSession = await LoginLog.updateMany(
+            {
+              $or: sessionMatches,
+              status: { $in: ["ACTIVE", "active"] },
+            },
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT", isRevoked: true } }
+          );
+          updatedCount = resSession.modifiedCount;
         }
       })();
 
@@ -1261,17 +1482,32 @@ const verifySession = async (req, res) => {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
-        if (decodedAccess.sessionId && mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)) {
+        if (decodedAccess.sessionId) {
           try {
-            const session = await LoginLog.findById(decodedAccess.sessionId);
-            if (session && session.status === "LOGGED_OUT") {
+            const session = await LoginLog.findOne({
+              $or: [
+                { sessionId: String(decodedAccess.sessionId) },
+                mongoose.Types.ObjectId.isValid(decodedAccess.sessionId) ? { _id: decodedAccess.sessionId } : null
+              ].filter(Boolean)
+            });
+
+            if (session && (session.status === "LOGGED_OUT" || session.status === "REVOKED" || session.isRevoked === true)) {
               clearAuthCookies(res, req);
               return res.status(200).json({
                 success: true,
                 isAuthenticated: false,
                 user: null,
-                message: "Session has been logged out",
+                message: "Session has been revoked or logged out",
               });
+            }
+
+            // Update lastActiveAt throttled (once every 60s)
+            if (session && session.status === "ACTIVE") {
+              const lastActive = session.lastActiveAt ? new Date(session.lastActiveAt).getTime() : 0;
+              if (Date.now() - lastActive > 60000) {
+                session.lastActiveAt = new Date();
+                await session.save().catch(() => {});
+              }
             }
           } catch (sessionErr) {
             console.warn("[Verify Session] Warning checking LoginLog:", sessionErr.message);
@@ -1289,17 +1525,28 @@ const verifySession = async (req, res) => {
       if (decodedRefresh && decodedRefresh.id) {
         tokenEmail = decodedRefresh.emailId || null;
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
-        if (decodedRefresh.sessionId && mongoose.Types.ObjectId.isValid(decodedRefresh.sessionId)) {
+        if (decodedRefresh.sessionId) {
           try {
-            const session = await LoginLog.findById(decodedRefresh.sessionId);
-            if (session && session.status === "LOGGED_OUT") {
+            const session = await LoginLog.findOne({
+              $or: [
+                { sessionId: String(decodedRefresh.sessionId) },
+                mongoose.Types.ObjectId.isValid(decodedRefresh.sessionId) ? { _id: decodedRefresh.sessionId } : null
+              ].filter(Boolean)
+            });
+
+            if (session && (session.status === "LOGGED_OUT" || session.status === "REVOKED" || session.isRevoked === true)) {
               clearAuthCookies(res, req);
               return res.status(200).json({
                 success: true,
                 isAuthenticated: false,
                 user: null,
-                message: "Session has been logged out",
+                message: "Session has been revoked or logged out",
               });
+            }
+
+            if (session && session.status === "ACTIVE") {
+              session.lastActiveAt = new Date();
+              await session.save().catch(() => {});
             }
           } catch (sessionErr) {
             console.warn("[Verify Session] Warning checking refresh LoginLog:", sessionErr.message);
@@ -1312,6 +1559,7 @@ const verifySession = async (req, res) => {
           emailId: decodedRefresh.emailId,
           id: decodedRefresh.id,
           sessionId: decodedRefresh.sessionId,
+          deviceId: decodedRefresh.deviceId,
         });
 
         targetUserId = decodedRefresh.id;
@@ -1406,6 +1654,373 @@ const verifySession = async (req, res) => {
   }
 };
 
+/**
+ * 9. Get Active Sessions for Current Account
+ */
+const getActiveSessions = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    if (userQueries.length === 0) {
+      return res.status(400).json({ success: false, message: "User identity unknown" });
+    }
+
+    // 1. Identify the caller environment
+    const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const callerBrowser = req.headers["x-client-browser"] || parsed.browser;
+    const callerOS = req.headers["x-client-os"] || parsed.operatingSystem;
+    const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || null;
+    const callerSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+
+    // 2. Fetch all ACTIVE sessions for this user (safely matches isRevoked: false, null, or undefined)
+    const sessions = await LoginLog.find({
+      $or: userQueries,
+      status: { $in: ["ACTIVE", "active"] },
+      isRevoked: { $ne: true },
+    })
+      .sort({ lastActiveAt: -1 })
+      .limit(20)
+      .lean();
+
+    // 3. Find if caller's device/session is already in the active list
+    let callerSessionFound = sessions.find((s) => {
+      if (callerSessionId && (s.sessionId === callerSessionId || s._id?.toString() === callerSessionId)) {
+        return true;
+      }
+      if (callerDeviceId && s.deviceId === callerDeviceId) {
+        return true;
+      }
+      return false;
+    });
+
+    // 4. Auto-heal: If authenticated caller has no active session record, register one immediately
+    if (!callerSessionFound) {
+      try {
+        const sessionObjectId = new mongoose.Types.ObjectId();
+        const ipAddress = getClientIp(req);
+        const location = resolveLocation(req, ipAddress);
+        const assignedDeviceId = callerDeviceId || `dev_${callerBrowser.toLowerCase()}_${crypto.randomBytes(8).toString("hex")}`;
+
+        const createdSession = await LoginLog.create({
+          _id: sessionObjectId,
+          userId: req.user.userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+          userObjectId: req.user.id,
+          emailId: req.user.emailId,
+          sessionId: sessionObjectId.toString(),
+          deviceId: assignedDeviceId,
+          ipAddress,
+          userAgent,
+          browser: callerBrowser,
+          operatingSystem: callerOS,
+          deviceType: parsed.deviceType,
+          location,
+          loginTime: new Date(),
+          lastActiveAt: new Date(),
+          status: "ACTIVE",
+          isRevoked: false,
+          eventType: "SUCCESSFUL_LOGIN",
+          loginMethod: "TOKEN_AUTH",
+        });
+
+        const createdObj = createdSession.toObject ? createdSession.toObject() : createdSession;
+        sessions.unshift(createdObj);
+        callerSessionFound = createdObj;
+      } catch (healErr) {
+        console.warn("[Auto-heal Session Warning]:", healErr.message);
+      }
+    } else {
+      // Touch lastActiveAt throttled (every 30s) and auto-update IP/location if previously loopback
+      try {
+        const detectedIp = getClientIp(req);
+        const updates = {};
+        if (
+          detectedIp &&
+          isIPv4(detectedIp) &&
+          !isPrivateOrLoopbackIp(detectedIp) &&
+          (!isIPv4(callerSessionFound.ipAddress) || callerSessionFound.ipAddress === "127.0.0.1" || isPrivateOrLoopbackIp(callerSessionFound.ipAddress))
+        ) {
+          callerSessionFound.ipAddress = detectedIp;
+          updates.ipAddress = detectedIp;
+        }
+
+        const clientLoc = req.headers["x-client-location"] || (req.body?.location ? req.body.location : null);
+        if (clientLoc && (!callerSessionFound.location || callerSessionFound.location === "Unknown Location" || callerSessionFound.location === "Coimbatore, India")) {
+          callerSessionFound.location = clientLoc;
+          updates.location = clientLoc;
+        }
+
+        const lastActiveTime = callerSessionFound.lastActiveAt ? new Date(callerSessionFound.lastActiveAt).getTime() : 0;
+        if (Date.now() - lastActiveTime > 30000) {
+          callerSessionFound.lastActiveAt = new Date();
+          updates.lastActiveAt = new Date();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await LoginLog.updateOne(
+            { _id: callerSessionFound._id },
+            { $set: updates }
+          );
+        }
+      } catch (touchErr) {
+        // ignore
+      }
+    }
+
+    // 5. Map sessions and accurately mark isCurrent for the caller device
+    let hasCurrentMatched = false;
+    const mappedSessions = sessions.map((sess) => {
+      let isCurrent = false;
+      if (!hasCurrentMatched) {
+        if (callerSessionId && (sess.sessionId === callerSessionId || sess._id?.toString() === callerSessionId)) {
+          isCurrent = true;
+        } else if (callerDeviceId && sess.deviceId === callerDeviceId) {
+          isCurrent = true;
+        } else if (callerSessionFound && (sess.sessionId === callerSessionFound.sessionId || sess._id?.toString() === callerSessionFound._id?.toString())) {
+          isCurrent = true;
+        }
+      }
+      if (isCurrent) hasCurrentMatched = true;
+
+      return {
+        id: sess._id,
+        sessionId: sess.sessionId || sess._id.toString(),
+        deviceId: sess.deviceId,
+        browser: sess.browser || "Unknown Browser",
+        operatingSystem: sess.operatingSystem || "Unknown OS",
+        deviceType: sess.deviceType || "desktop",
+        ipAddress: sess.ipAddress || "127.0.0.1",
+        location: sess.location || "Unknown Location",
+        lastActiveAt: sess.lastActiveAt || sess.loginTime || sess.createdAt,
+        loginTime: sess.loginTime || sess.createdAt,
+        isCurrent,
+        loginMethod: sess.loginMethod,
+      };
+    });
+
+    // Fallback if neither sessionId nor deviceId matched: match by same browser & OS
+    if (!hasCurrentMatched && mappedSessions.length > 0) {
+      const sameBrowserSession = mappedSessions.find(
+        (s) => s.browser === callerBrowser && s.operatingSystem === callerOS
+      );
+      if (sameBrowserSession) {
+        sameBrowserSession.isCurrent = true;
+      } else {
+        mappedSessions[0].isCurrent = true;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      sessions: mappedSessions,
+    });
+  } catch (error) {
+    console.error("[Get Active Sessions Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve active sessions",
+    });
+  }
+};
+
+/**
+ * 10. Revoke a Specific Session
+ */
+const revokeSession = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "Session ID is required" });
+    }
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const sessionQuery = [
+      { sessionId: String(sessionId) },
+      mongoose.Types.ObjectId.isValid(sessionId) ? { _id: sessionId } : null,
+    ].filter(Boolean);
+
+    const targetSession = await LoginLog.findOne({
+      $and: [
+        { $or: sessionQuery },
+        { $or: userQueries },
+      ],
+    });
+
+    if (!targetSession) {
+      return res.status(404).json({
+        success: false,
+        message: "Session not found or already terminated",
+      });
+    }
+
+    targetSession.status = "REVOKED";
+    targetSession.isRevoked = true;
+    targetSession.logoutTime = new Date();
+    await targetSession.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Session successfully logged out and revoked",
+    });
+  } catch (error) {
+    console.error("[Revoke Session Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke session",
+    });
+  }
+};
+
+/**
+ * 11. Revoke All Other Sessions Except Current
+ */
+const revokeOtherSessions = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+    const currentDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || null;
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const filter = {
+      $or: userQueries,
+      status: { $in: ["ACTIVE", "active"] },
+      isRevoked: { $ne: true },
+    };
+
+    const excludeQueries = [
+      currentSessionId ? { sessionId: currentSessionId } : null,
+      currentSessionId && mongoose.Types.ObjectId.isValid(currentSessionId) ? { _id: currentSessionId } : null,
+      currentDeviceId ? { deviceId: currentDeviceId } : null,
+    ].filter(Boolean);
+
+    if (excludeQueries.length > 0) {
+      filter.$nor = excludeQueries;
+    }
+
+    const result = await LoginLog.updateMany(filter, {
+      $set: {
+        status: "REVOKED",
+        isRevoked: true,
+        logoutTime: new Date(),
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully logged out ${result.modifiedCount} other device(s)`,
+      revokedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("[Revoke Other Sessions Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke other sessions",
+    });
+  }
+};
+
+/**
+ * 12. Get Recent Login Activities History
+ */
+const getRecentActivities = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const { limit = 20 } = req.query;
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const logs = await LoginLog.find({
+      $or: userQueries,
+    })
+      .sort({ createdAt: -1 })
+      .limit(Math.min(Math.max(1, Number(limit) || 20), 50))
+      .lean();
+
+    const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+    const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || null;
+    const detectedPublicIp = req.headers["x-client-ip"] || getClientIp(req);
+
+    const activities = logs.map((log) => {
+      const isCurrent = Boolean(
+        (currentSessionId && (log.sessionId === currentSessionId || log._id.toString() === currentSessionId)) ||
+        (callerDeviceId && log.deviceId === callerDeviceId)
+      );
+
+      let effectiveIp = log.ipAddress || "127.0.0.1";
+      if (
+        isCurrent &&
+        detectedPublicIp &&
+        isIPv4(detectedPublicIp) &&
+        !isPrivateOrLoopbackIp(detectedPublicIp) &&
+        (!isIPv4(effectiveIp) || effectiveIp === "127.0.0.1" || isPrivateOrLoopbackIp(effectiveIp))
+      ) {
+        effectiveIp = detectedPublicIp;
+      }
+
+      return {
+        id: log._id,
+        sessionId: log.sessionId,
+        device: `${log.browser || "Browser"} on ${log.operatingSystem || "Device"}`,
+        browser: log.browser || "Unknown",
+        operatingSystem: log.operatingSystem || "Unknown",
+        deviceType: log.deviceType || "desktop",
+        location: log.location || "Unknown Location",
+        date: log.createdAt || log.loginTime,
+        ipAddress: effectiveIp,
+        status: log.status,
+        eventType: log.eventType || "SUCCESSFUL_LOGIN",
+        isCurrent,
+        loginMethod: log.loginMethod,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      activities,
+    });
+  } catch (error) {
+    console.error("[Get Recent Activities Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve login activities",
+    });
+  }
+};
+
 module.exports = {
   signup,
   sendSignupOtp,
@@ -1420,4 +2035,8 @@ module.exports = {
   logout,
   getLoginLogs,
   verifySession,
+  getActiveSessions,
+  revokeSession,
+  revokeOtherSessions,
+  getRecentActivities,
 };

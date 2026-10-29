@@ -12,7 +12,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 
 export default function App() {
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col">
+    <div className="w-screen h-screen overflow-hidden bg-[#f8fafc] text-gray-800 font-sans antialiased flex flex-col">
       {/* 1. Full-Width Top Navbar: Exactly 7vh */}
       <AdminNavbar />
 
@@ -22,7 +22,7 @@ export default function App() {
         <AdminSidebar />
 
         {/* Right Main Content Canvas: 82vw x 93vh */}
-        <main className="w-[82vw] h-[93vh] overflow-y-auto bg-[#f8fafc] p-[1.2vw] space-y-[1.2vw]">
+        <main className="w-[82vw] h-[93vh] overflow-y-auto bg-[#f8fafc] p-[1.5vw] font-sans">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/users" element={<UsersPage />} />

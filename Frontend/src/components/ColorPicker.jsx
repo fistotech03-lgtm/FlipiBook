@@ -440,26 +440,36 @@ export default function ColorPicker({
       return [];
     }
 
-    // 2. Extract colors from iframe only if an active flipbook editor iframe exists
-    const flipbookIframe = typeof document !== 'undefined' ? document.getElementById('main-flipbook-editor') : null;
-    if (flipbookIframe?.contentDocument) {
-      const doc = flipbookIframe.contentDocument;
-      const elements = doc.querySelectorAll('*');
+    // 2. Extract colors from iframe or page SVG containers
+    const addColor = (c) => {
+      if (!c || typeof c !== 'string' || c === 'none' || c === 'transparent' || c.includes('url(') || c.includes('gradient')) return;
+      let hex = c.trim().toLowerCase();
+      if (hex.startsWith('rgb')) {
+        const match = hex.match(/\d+/g);
+        if (match && match.length >= 3) {
+          hex = rgbToHex(parseInt(match[0]), parseInt(match[1]), parseInt(match[2])).toLowerCase();
+        }
+      }
+      if (hex.startsWith('#')) {
+        if (hex.length === 4) hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+        colors.add(hex.toUpperCase().substring(0, 7));
+      }
+    };
 
-      const addColor = (c) => {
-        if (!c || typeof c !== 'string' || c === 'none' || c === 'transparent' || c.includes('url(') || c.includes('gradient')) return;
-        let hex = c.trim().toLowerCase();
-        if (hex.startsWith('rgb')) {
-          const match = hex.match(/\d+/g);
-          if (match && match.length >= 3) {
-            hex = rgbToHex(parseInt(match[0]), parseInt(match[1]), parseInt(match[2])).toLowerCase();
-          }
+    if (typeof document !== 'undefined') {
+      const flipbookIframe = document.getElementById('main-flipbook-editor');
+      const doc = flipbookIframe?.contentDocument;
+      let elements = [];
+      if (doc) {
+        elements = Array.from(doc.querySelectorAll('*'));
+      } else {
+        const pageContainers = document.querySelectorAll('.page-svg-container');
+        if (pageContainers.length > 0) {
+          pageContainers.forEach(container => {
+            elements.push(...Array.from(container.querySelectorAll('*')));
+          });
         }
-        if (hex.startsWith('#')) {
-          if (hex.length === 4) hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
-          colors.add(hex.toUpperCase().substring(0, 7));
-        }
-      };
+      }
 
       elements.forEach(el => {
         addColor(el.getAttribute('fill'));
@@ -474,15 +484,12 @@ export default function ColorPicker({
           addColor(el.style.backgroundColor);
         }
       });
-
-      colors.add('#DADBE8');
-      colors.add('#FFFFFF');
-      colors.add('#000000');
-      return Array.from(colors).slice(0, 12);
     }
 
-    // If explicit colorsOnPage wasn't passed and not inside editor iframe, don't scrape arbitrary webpage elements
-    return [];
+    colors.add('#DADBE8');
+    colors.add('#FFFFFF');
+    colors.add('#000000');
+    return Array.from(colors).slice(0, 12);
   }, [colorsOnPage, showColorsOnPage]);
 
   useEffect(() => {
@@ -747,8 +754,8 @@ export default function ColorPicker({
           </div>
         </div>
       ) : (
-        <div className="relative min-h-[28vw] flex flex-col justify-between">
-          <div className="flex flex-col gap-[0.8vw] flex-1 justify-between">
+        <div className="relative flex flex-col">
+          <div className="flex flex-col gap-[0.8vw] flex-1">
             {/* Header Controls */}
             <div className="flex items-center justify-between w-full mb-[0.5vw]">
               {!disableGradient && !disableSolid ? (

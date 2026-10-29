@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import usePreventBrowserZoom from './hooks/usePreventBrowserZoom';
@@ -151,10 +151,14 @@ const MainEditor = ({
 
 
   const isConvertedFlipbook = Boolean(isPdfProject || (pages && pages.some(p => p.html && (p.html.includes('PDF Background') || p.html.includes('pdf-vector-layer') || p.html.includes('Document Shield')))));
+  const isPdfMode = Boolean(isPdfProject || isConvertedFlipbook);
 
   const pdfDefaultsSetRef = useRef(false);
   useEffect(() => {
     if (isConvertedFlipbook) {
+      setIsElementsModalOpen(false);
+      setIsStylesModalOpen(false);
+      setIsIconsModalOpen(false);
       if (!pdfDefaultsSetRef.current) {
         if (setActiveTopTool) setActiveTopTool('interaction');
         pdfDefaultsSetRef.current = true;
@@ -510,6 +514,68 @@ const MainEditor = ({
   });
 
   handleRotateRef.current = handleRotate;
+
+  useEffect(() => {
+    window.editorRotate = handleRotate;
+    window.editorFlip = handleFlip;
+
+    const onEditorRotate = (e) => {
+      if (handleRotate && e.detail) {
+        handleRotate(e.detail.angle, e.detail.isFinal !== false);
+      }
+    };
+    const onEditorFlip = (e) => {
+      if (handleFlip && e.detail) {
+        handleFlip(e.detail.direction);
+      }
+    };
+    window.addEventListener('editor-rotate', onEditorRotate);
+    window.addEventListener('editor-flip', onEditorFlip);
+
+    return () => {
+      window.removeEventListener('editor-rotate', onEditorRotate);
+      window.removeEventListener('editor-flip', onEditorFlip);
+    };
+  }, [handleRotate, handleFlip]);
+
+  // Sync workspace canvas color state & opacity
+  const [canvaColor, setCanvaColor] = useState(() => {
+    return localStorage.getItem('editor_canva_color') || '#E6E7E7';
+  });
+  const [canvaOpacity, setCanvaOpacity] = useState(() => {
+    const saved = localStorage.getItem('editor_canva_opacity');
+    return saved !== null ? parseFloat(saved) : 1;
+  });
+
+  useEffect(() => {
+    const onCanvaColorChange = (e) => {
+      if (e.detail?.color) {
+        setCanvaColor(e.detail.color);
+      }
+      if (e.detail?.opacity !== undefined) {
+        setCanvaOpacity(e.detail.opacity);
+      }
+    };
+    window.addEventListener('editor-canva-color-changed', onCanvaColorChange);
+    return () => window.removeEventListener('editor-canva-color-changed', onCanvaColorChange);
+  }, []);
+
+  const computedCanvaBackground = useMemo(() => {
+    if (isPopupEditor) return 'transparent';
+    if (!canvaColor) return '#E6E7E7';
+    if (canvaColor.includes('gradient')) {
+      return canvaColor;
+    }
+    if (canvaColor.startsWith('#')) {
+      let hex = canvaColor.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${canvaOpacity})`;
+    }
+    return canvaColor;
+  }, [canvaColor, canvaOpacity, isPopupEditor]);
 
 
   // ── Modular Hook Call: Canvas Context Menu & Interaction Badges ──
@@ -1281,10 +1347,6 @@ const getDraggableElement = (target, canvasRoot) => {
         onRedo={onRedo}
         canUndo={canUndo}
         canRedo={canRedo}
-        rotation={rotation}
-        onRotate={handleRotate}
-        onFlipH={() => handleFlip('h')}
-        onFlipV={() => handleFlip('v')}
         onAlign={handleAlign}
         hideTools={isPdfProject}
 
@@ -1310,8 +1372,11 @@ const getDraggableElement = (target, canvasRoot) => {
       />
       <div
         ref={editorContainerRef}
-        className={`flex-1 relative flex items-center justify-center  overflow-hidden ${isPopupEditor ? 'bg-transparent' : 'bg-[#e6e7e7]'}`}
-        style={{ cursor: isSpaceDown ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
+        className="flex-1 relative flex items-center justify-center overflow-hidden"
+        style={{
+          cursor: isSpaceDown ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default',
+          background: computedCanvaBackground
+        }}
         onContextMenu={(e) => {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('show-layer-context-menu', {
@@ -1505,8 +1570,7 @@ const getDraggableElement = (target, canvasRoot) => {
         />
         {/* Canvas Area container */}
         <div
-          ref={editorContainerRef}
-          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'bg-transparent overflow-visible' : 'overflow-hidden bg-[#e6e7e7]'}`}
+          className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'overflow-visible' : 'overflow-hidden'} bg-transparent`}
           onMouseDown={(e) => {
             if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
               if (handleSvgMouseDown) {
@@ -1516,7 +1580,7 @@ const getDraggableElement = (target, canvasRoot) => {
           }}
         >
           {/* Left Action Menu (Elements, Templets, Styles, Icons) */}
-          {!isPopupEditor && (
+          {!isPopupEditor && !isPdfMode && (
             <LeftActionMenu
               isRulerEnabled={localRulerEnabled}
               activePageIndex={activePageIndex}
@@ -1555,43 +1619,49 @@ const getDraggableElement = (target, canvasRoot) => {
           )}
 
           {/* Draggable Add Elements Modal */}
-          <AddElementsModal
-            isOpen={isElementsModalOpen}
-            onClose={() => setIsElementsModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            pages={pages}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            setSelectedLayerId={setSelectedLayerId}
-            setActiveMainTool={setActiveMainTool}
-            baseWidth={baseWidth}
-            baseHeight={baseHeight}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <AddElementsModal
+              isOpen={isElementsModalOpen}
+              onClose={() => setIsElementsModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              pages={pages}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              setSelectedLayerId={setSelectedLayerId}
+              setActiveMainTool={setActiveMainTool}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Draggable Styles Modal */}
-          <StylesModal
-            isOpen={isStylesModalOpen}
-            onClose={() => setIsStylesModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <StylesModal
+              isOpen={isStylesModalOpen}
+              onClose={() => setIsStylesModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Draggable Icons Modal */}
-          <IconsModal
-            isOpen={isIconsModalOpen}
-            onClose={() => setIsIconsModalOpen(false)}
-            isRulerEnabled={localRulerEnabled}
-            activePageIndex={activePageIndex}
-            saveModifiedPageHtml={saveModifiedPageHtml}
-            setSelectedLayerId={setSelectedLayerId}
-            setActiveMainTool={setActiveMainTool}
-            baseWidth={baseWidth}
-            baseHeight={baseHeight}
-            dragConstraintsRef={editorContainerRef}
-          />
+          {!isPdfMode && (
+            <IconsModal
+              isOpen={isIconsModalOpen}
+              onClose={() => setIsIconsModalOpen(false)}
+              isRulerEnabled={localRulerEnabled}
+              activePageIndex={activePageIndex}
+              saveModifiedPageHtml={saveModifiedPageHtml}
+              setSelectedLayerId={setSelectedLayerId}
+              setActiveMainTool={setActiveMainTool}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              dragConstraintsRef={editorContainerRef}
+            />
+          )}
 
           {/* Modular Canvas Viewport */}
           <CanvasViewport

@@ -699,7 +699,7 @@ const AccountOverview = ({
           </h2>
         </div>
         <p className="text-[0.72vw] text-gray-500 mb-[1.3vw] pl-[1.65vw] font-normal">
-          Manage your account access, multi-account switching and deletion
+          Manage your account access and deletion
         </p>
 
         {/* Options List */}
@@ -723,54 +723,7 @@ const AccountOverview = ({
             <Icon icon="lucide:chevron-right" className="w-[1.05vw] h-[1.05vw] text-gray-400 group-hover:text-gray-700 transition-colors" />
           </div>
 
-          {/* Option 2: Switch Accounts */}
-          <div className="w-full bg-[#f8f9fa] hover:bg-gray-100/70 border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between cursor-pointer transition-colors group">
-            <div className="flex items-center gap-[0.85vw]">
-              {/* Overlapping Avatars */}
-              <div className="relative w-[2.8vw] h-[2.5vw] flex items-center">
-                <div className="absolute right-0 w-[1.9vw] h-[1.9vw] rounded-full bg-[#E11D48] text-white text-[0.75vw] font-medium flex items-center justify-center shadow-xs">
-                  A
-                </div>
-                <div
-                  className="absolute left-0 w-[1.9vw] h-[1.9vw] rounded-full overflow-hidden border-2 border-white flex items-center justify-center shadow-xs"
-                  style={{
-                    backgroundColor: avatarSrc
-                      ? '#ffffff'
-                      : contextUser?.avatarBgColor || getAvatarColor(userName || userEmail || 'User'),
-                  }}
-                >
-                  {avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt={userName}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <span className="text-white text-[0.8vw] font-semibold">
-                      {userName.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800">
-                  Switch Accounts
-                </span>
-                <span className="text-[0.72vw] text-gray-400 mt-[0.1vw] font-normal">
-                  Sign in with another FlipiBook account or add a new account
-                </span>
-              </div>
-            </div>
-
-            <Icon icon="lucide:chevron-right" className="w-[1.05vw] h-[1.05vw] text-gray-400 group-hover:text-gray-700 transition-colors" />
-          </div>
-
-          {/* Option 3: Logout */}
+          {/* Option 2: Logout */}
           <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between">
             <div className="flex items-center gap-[0.85vw]">
               <div

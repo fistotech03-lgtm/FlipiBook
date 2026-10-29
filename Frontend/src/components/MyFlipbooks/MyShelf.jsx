@@ -97,7 +97,7 @@ const wallThemeList = [
 const lightThemeList = [
   { id: 'light1', img: lightTheme1, glowColor: 'rgba(245, 158, 11, 0.28)' },
   { id: 'light2', img: lightTheme2, glowColor: 'rgba(255, 255, 255, 0.25)' },
-  { id: 'light3', img: lightTheme3, glowColor: 'rgba(56, 189, 248, 0.28)' },
+  { id: 'light3', img: lightTheme3, glowColor: 'rgba(186, 230, 253, 0.40)' },
 ];
 
 const covers = [cover1, cover2, cover3, cover4, cover5];
@@ -112,6 +112,8 @@ const MyShelf = () => {
   const [currentView, setCurrentView] = useState('overview'); // 'overview' | 'shelf_detail'
   const [view, setView] = useState('shelf');
   const [showShelfModal, setShowShelfModal] = useState(false);
+  const [showShareShelfModal, setShowShareShelfModal] = useState(false);
+  const [shelfLinkCopied, setShelfLinkCopied] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [hoveredInfoId, setHoveredInfoId] = useState(null);
   const [folders, setFolders] = useState([
@@ -1195,12 +1197,7 @@ const MyShelf = () => {
 
                   <div className="flex items-center gap-2.5">
                     <button
-                      onClick={() => {
-                        if (navigator.clipboard) {
-                          navigator.clipboard.writeText(window.location.href);
-                          alert('Shelf link copied to clipboard!');
-                        }
-                      }}
+                      onClick={() => setShowShareShelfModal(true)}
                       className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
                     >
                       <Icon icon="lucide:share-2" className="w-3.5 h-3.5 text-gray-600" />
@@ -1823,7 +1820,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.95) 0%, rgba(254, 240, 138, 0.52) 32%, rgba(251, 191, 36, 0.16) 75%, transparent 100%)'
                                         : selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 100%)'
-                                        : 'linear-gradient(to bottom, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.58) 32%, rgba(14, 165, 233, 0.16) 75%, transparent 100%)',
+                                        : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
                                     filter: 'blur(7.5px)',
                                     mixBlendMode: 'screen'
@@ -1843,7 +1840,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.60) 25%, rgba(251, 191, 36, 0.15) 70%, transparent 100%)'
                                         : selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
-                                        : 'linear-gradient(to bottom, rgba(224, 242, 254, 1.0) 0%, rgba(56, 189, 248, 0.65) 25%, rgba(14, 165, 233, 0.15) 70%, transparent 100%)',
+                                        : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
                                     filter: 'blur(4.5px)',
                                     mixBlendMode: 'screen'
@@ -1866,7 +1863,7 @@ const MyShelf = () => {
                                         ? '0 0 8px 2px rgba(251, 191, 36, 0.90)'
                                         : selectedLightTheme === 'light2'
                                         ? '0 0 8px 2px rgba(255, 255, 255, 0.95)'
-                                        : '0 0 8px 2px rgba(56, 189, 248, 0.90)'
+                                        : '0 0 8px 2px rgba(186, 230, 253, 0.85)'
                                   }}
                                 />
                               </React.Fragment>
@@ -2148,7 +2145,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.50) 30%, rgba(203, 213, 225, 0.12) 75%, transparent 100%)'
                                         : selectedLightTheme === 'light3'
-                                        ? 'linear-gradient(to bottom, rgba(224, 242, 254, 0.95) 0%, rgba(56, 189, 248, 0.50) 30%, rgba(14, 165, 233, 0.12) 75%, transparent 100%)'
+                                        ? 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(255, 240, 180, 0.82) 0%, rgba(252, 211, 77, 0.38) 32%, rgba(245, 158, 11, 0.12) 72%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
                                     filter: 'blur(7px)',
@@ -2168,7 +2165,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
                                         : selectedLightTheme === 'light3'
-                                        ? 'linear-gradient(to bottom, rgba(224, 242, 254, 1.0) 0%, rgba(56, 189, 248, 0.65) 25%, rgba(14, 165, 233, 0.15) 70%, transparent 100%)'
+                                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(255, 250, 220, 0.90) 0%, rgba(253, 224, 71, 0.52) 25%, rgba(245, 158, 11, 0.16) 65%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
                                     filter: 'blur(4px)',
@@ -2191,7 +2188,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? '0 0 8px 2px rgba(255, 255, 255, 0.95)'
                                         : selectedLightTheme === 'light3'
-                                        ? '0 0 8px 2px rgba(56, 189, 248, 0.90)'
+                                        ? '0 0 8px 2px rgba(186, 230, 253, 0.85)'
                                         : '0 0 8px 2px rgba(245, 158, 11, 0.75), 0 0 14px 4px rgba(251, 191, 36, 0.30)'
                                   }}
                                 />
@@ -2722,7 +2719,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(circle, rgba(251, 191, 36, 0.42) 0%, rgba(245, 158, 11, 0.20) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                    : 'radial-gradient(circle, rgba(56, 189, 248, 0.55) 0%, rgba(14, 165, 233, 0.28) 35%, rgba(2, 132, 199, 0.06) 60%, transparent 80%)',
+                                    : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                   filter: 'blur(22px)',
                                   mixBlendMode: 'screen'
                                 }}
@@ -2740,7 +2737,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.32) 40%, transparent 75%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.35) 40%, transparent 75%)'
-                                    : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.75) 0%, rgba(56, 189, 248, 0.45) 40%, rgba(14, 165, 233, 0.15) 65%, transparent 80%)',
+                                    : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
                                   filter: 'blur(12px)',
                                   mixBlendMode: 'screen'
                                 }}
@@ -2759,7 +2756,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.95) 0%, rgba(251, 191, 36, 0.70) 50%, rgba(217, 119, 6, 0.30) 85%, transparent 100%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.80) 50%, rgba(203, 213, 225, 0.30) 85%, transparent 100%)'
-                                    : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.85) 50%, rgba(14, 165, 233, 0.40) 85%, transparent 100%)',
+                                    : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
                                   mixBlendMode: 'screen',
                                   filter: 'blur(3px)'
                                 }}
@@ -2775,7 +2772,7 @@ const MyShelf = () => {
                                     width: '84%',
                                     height: '33%',
                                     borderRadius: '50% 50% 16% 16% / 78% 78% 22% 22%',
-                                    background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.70) 0%, rgba(14, 165, 233, 0.50) 100%)',
+                                    background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
                                     mixBlendMode: 'color'
                                   }}
                                 />
@@ -2909,7 +2906,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(248, 250, 252, 0.26) 35%, rgba(226, 232, 240, 0.06) 60%, transparent 80%)'
-                                : 'radial-gradient(circle, rgba(56, 189, 248, 0.55) 0%, rgba(14, 165, 233, 0.28) 35%, rgba(2, 132, 199, 0.06) 60%, transparent 80%)',
+                                : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                               filter: 'blur(16px)',
                               mixBlendMode: 'screen'
                             }}
@@ -2927,7 +2924,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.70) 0%, rgba(251, 191, 36, 0.35) 40%, transparent 75%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.80) 0%, rgba(241, 245, 249, 0.38) 40%, transparent 75%)'
-                                : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.80) 0%, rgba(56, 189, 248, 0.48) 40%, rgba(14, 165, 233, 0.16) 65%, transparent 80%)',
+                                : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
                               filter: 'blur(10px)',
                               mixBlendMode: 'screen'
                             }}
@@ -2946,7 +2943,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.98) 0%, rgba(251, 191, 36, 0.80) 50%, rgba(217, 119, 6, 0.35) 85%, transparent 100%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.85) 50%, rgba(203, 213, 225, 0.35) 85%, transparent 100%)'
-                                : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.88) 50%, rgba(14, 165, 233, 0.45) 85%, transparent 100%)',
+                                : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
                               mixBlendMode: 'screen',
                               filter: 'blur(2px)'
                             }}
@@ -2962,7 +2959,7 @@ const MyShelf = () => {
                                 width: '42%',
                                 height: '40%',
                                 borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
-                                background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.70) 0%, rgba(14, 165, 233, 0.50) 100%)',
+                                background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
                                 mixBlendMode: 'color'
                               }}
                             />
@@ -3049,7 +3046,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(20px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3067,7 +3064,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(10px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3086,7 +3083,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3105,7 +3102,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(254, 240, 138, 0.70) 0%, rgba(245, 158, 11, 0.35) 60%, transparent 90%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 255, 0.75) 0%, rgba(203, 213, 225, 0.35) 60%, transparent 90%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(186, 230, 253, 0.75) 0%, rgba(56, 189, 248, 0.35) 60%, transparent 90%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(240, 249, 255, 0.75) 0%, rgba(186, 230, 253, 0.28) 60%, transparent 90%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(7px)'
                               }}
@@ -3193,7 +3190,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(18px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3211,7 +3208,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(9px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3230,7 +3227,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3332,7 +3329,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(20px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3350,7 +3347,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(10px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3369,7 +3366,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3912,7 +3909,7 @@ const MyShelf = () => {
                               ? 'brightness(1.22) drop-shadow(0 0 16px rgba(245, 158, 11, 0.55))'
                               : selectedLightTheme === 'light2'
                               ? 'brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6))'
-                              : 'brightness(1.2) drop-shadow(0 0 16px rgba(56, 189, 248, 0.55))'
+                              : 'brightness(1.18) drop-shadow(0 0 16px rgba(186, 230, 253, 0.55))'
                             : 'brightness(0.8) contrast(0.95)'
                         }}
                       />
@@ -3922,9 +3919,9 @@ const MyShelf = () => {
                     <div
                       className="absolute pointer-events-none z-10"
                       style={{
-                        left: '28.5%',
-                        top: '40.4%',
-                        width: '69.0%'
+                        left: '33.65%',
+                        top: '42.22%',
+                        width: '67.55%'
                       }}
                     >
                       <img
@@ -3938,9 +3935,9 @@ const MyShelf = () => {
                     <div
                       className="absolute pointer-events-none z-20"
                       style={{
-                        left: '24.6%',
-                        top: '42.0%',
-                        width: '12.2%'
+                        left: '30.16%',
+                        top: '40.37%',
+                        width: '11.72%'
                       }}
                     >
                       <img
@@ -3954,11 +3951,11 @@ const MyShelf = () => {
                     <div
                       className="absolute z-20 flex items-end justify-center pointer-events-auto"
                       style={{
-                        left: '42.2%',
-                        top: '33.3%',
-                        width: '27.5%',
-                        height: '21.1%',
-                        gap: '6.5%'
+                        left: '44.5%',
+                        top: '35.5%',
+                        width: '24.0%',
+                        height: '24.5%',
+                        gap: '12.5%'
                       }}
                     >
                       {[0, 1].map((slotIdx) => {
@@ -4885,6 +4882,125 @@ const MyShelf = () => {
         )}
       </div>
       </>
+      )}
+
+            {/* Share Shelf Modal */}
+      {showShareShelfModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4 transition-opacity animate-in fade-in"
+          onClick={() => setShowShareShelfModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-[540px] max-w-[95vw] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#FF5733]">
+                  <Icon icon="lucide:share-2" className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 leading-tight">Share Shelf</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Share this bookshelf collection with your audience or friends
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowShareShelfModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full p-2"
+                title="Close"
+              >
+                <Icon icon="mdi:close" className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 flex flex-col gap-5 bg-white">
+              {/* Dummy Link Box */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Shareable Shelf Link
+                </label>
+                <div className="flex items-center gap-2 p-1.5 pl-3 border border-gray-200 rounded-xl bg-gray-50/80 focus-within:border-[#FF5733] focus-within:bg-white transition-all">
+                  <Icon icon="lucide:link" className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type="text"
+                    readOnly
+                    value="https://flipibook.com/shelf/collection/sh-9382104"
+                    className="w-full bg-transparent text-xs text-gray-700 font-medium focus:outline-none select-all truncate"
+                  />
+                  <button
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText("https://flipibook.com/shelf/collection/sh-9382104");
+                      }
+                      setShelfLinkCopied(true);
+                      setTimeout(() => setShelfLinkCopied(false), 2000);
+                    }}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${
+                      shelfLinkCopied
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
+                    }`}
+                  >
+                    <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
+                    <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Social Media Apps */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2.5">
+                  Share on Social Media
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                  {[
+                    { name: 'WhatsApp', icon: 'logos:whatsapp-icon', bg: 'hover:bg-emerald-50 hover:border-emerald-200' },
+                    { name: 'Facebook', icon: 'logos:facebook', bg: 'hover:bg-blue-50 hover:border-blue-200' },
+                    { name: 'X / Twitter', icon: 'ri:twitter-x-fill', bg: 'hover:bg-gray-100 hover:border-gray-300', color: 'text-black' },
+                    { name: 'LinkedIn', icon: 'logos:linkedin-icon', bg: 'hover:bg-sky-50 hover:border-sky-200' },
+                    { name: 'Instagram', icon: 'skill-icons:instagram', bg: 'hover:bg-pink-50 hover:border-pink-200' },
+                    { name: 'Pinterest', icon: 'logos:pinterest', bg: 'hover:bg-red-50 hover:border-red-200' },
+                    { name: 'Telegram', icon: 'logos:telegram', bg: 'hover:bg-cyan-50 hover:border-cyan-200' },
+                    { name: 'Reddit', icon: 'logos:reddit-icon', bg: 'hover:bg-orange-50 hover:border-orange-200' },
+                    { name: 'Email', icon: 'fluent-emoji-flat:envelope', bg: 'hover:bg-gray-100 hover:border-gray-300' },
+                    { name: 'Embed', icon: 'lucide:code-2', bg: 'hover:bg-purple-50 hover:border-purple-200', color: 'text-purple-600' },
+                  ].map((app) => (
+                    <button
+                      key={app.name}
+                      type="button"
+                      onClick={() => {}}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
+                    >
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                        <Icon icon={app.icon} className={`w-6 h-6 ${app.color || ''}`} />
+                      </div>
+                      <span className="text-[11px] font-medium text-gray-700 mt-1.5 group-hover:text-gray-900 truncate max-w-full">
+                        {app.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/60">
+              <span className="text-[11px] text-gray-400">
+                Anyone with the link can view this shelf
+              </span>
+              <button
+                onClick={() => setShowShareShelfModal(false)}
+                className="px-4 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-800 transition-colors shadow-2xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Change Shelf Modal */}

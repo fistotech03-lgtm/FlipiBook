@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
+import { handleScrubHelper } from './Color';
 
 export const DimensionInput = ({ targetId, targetAttr, value, readOnly, onChange, className }) => {
   const [localVal, setLocalVal] = useState('');
@@ -154,6 +155,33 @@ const TransformProperties = ({
   const dragStartAngle = useRef(0);
   const hasRotatedMoved = useRef(false);
 
+  // Sync aspect locked state with DOM element attribute
+  useEffect(() => {
+    if (!selectedLayerId) return;
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const el = editorDoc.getElementById(selectedLayerId);
+    if (el) {
+      setIsAspectLocked(el.getAttribute('data-aspect-locked') === 'true');
+    }
+  }, [selectedLayerId]);
+
+  const handleToggleAspectLock = () => {
+    if (isDimensionDisabled) return;
+    setIsAspectLocked((prev) => {
+      const next = !prev;
+      const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const el = editorDoc.getElementById(selectedLayerId);
+      if (el) {
+        if (next) {
+          el.setAttribute('data-aspect-locked', 'true');
+        } else {
+          el.removeAttribute('data-aspect-locked');
+        }
+      }
+      return next;
+    });
+  };
+
   // Helper to extract rotation from DOM element matrix
   const getElementRotation = (el) => {
     if (!el) return 0;
@@ -296,9 +324,8 @@ const TransformProperties = ({
       const { w, h } = getLiveDimensions();
       if (w > 0 && h > 0) {
         const ratio = h / w;
-        const newH = (newW * ratio).toFixed(1);
-        updateDimensionWithScale(newW.toString(), 'width');
-        updateDimensionWithScale(newH, 'height');
+        const newH = Number((newW * ratio).toFixed(1));
+        updateDimensionWithScale({ width: newW, height: newH });
         return;
       }
     }
@@ -312,9 +339,8 @@ const TransformProperties = ({
       const { w, h } = getLiveDimensions();
       if (w > 0 && h > 0) {
         const ratio = w / h;
-        const newW = (newH * ratio).toFixed(1);
-        updateDimensionWithScale(newH.toString(), 'height');
-        updateDimensionWithScale(newW, 'width');
+        const newW = Number((newH * ratio).toFixed(1));
+        updateDimensionWithScale({ width: newW, height: newH });
         return;
       }
     }
@@ -324,11 +350,10 @@ const TransformProperties = ({
   const handleDecrementW = () => {
     if (isDimensionDisabled) return;
     const { w, h } = getLiveDimensions();
-    const newW = Math.max(1, w - 1);
+    const newW = Math.max(1, Number((w - 1).toFixed(1)));
     if (isAspectLocked && w > 0 && h > 0) {
-      const newH = ((newW / w) * h).toFixed(1);
-      updateDimensionWithScale(newW.toString(), 'width');
-      updateDimensionWithScale(newH, 'height');
+      const newH = Number(((newW / w) * h).toFixed(1));
+      updateDimensionWithScale({ width: newW, height: newH });
     } else {
       updateDimensionWithScale(newW.toString(), 'width');
     }
@@ -337,11 +362,10 @@ const TransformProperties = ({
   const handleIncrementW = () => {
     if (isDimensionDisabled) return;
     const { w, h } = getLiveDimensions();
-    const newW = w + 1;
+    const newW = Number((w + 1).toFixed(1));
     if (isAspectLocked && w > 0 && h > 0) {
-      const newH = ((newW / w) * h).toFixed(1);
-      updateDimensionWithScale(newW.toString(), 'width');
-      updateDimensionWithScale(newH, 'height');
+      const newH = Number(((newW / w) * h).toFixed(1));
+      updateDimensionWithScale({ width: newW, height: newH });
     } else {
       updateDimensionWithScale(newW.toString(), 'width');
     }
@@ -350,11 +374,10 @@ const TransformProperties = ({
   const handleDecrementH = () => {
     if (isDimensionDisabled) return;
     const { w, h } = getLiveDimensions();
-    const newH = Math.max(1, h - 1);
+    const newH = Math.max(1, Number((h - 1).toFixed(1)));
     if (isAspectLocked && w > 0 && h > 0) {
-      const newW = ((newH / h) * w).toFixed(1);
-      updateDimensionWithScale(newH.toString(), 'height');
-      updateDimensionWithScale(newW, 'width');
+      const newW = Number(((newH / h) * w).toFixed(1));
+      updateDimensionWithScale({ width: newW, height: newH });
     } else {
       updateDimensionWithScale(newH.toString(), 'height');
     }
@@ -363,14 +386,60 @@ const TransformProperties = ({
   const handleIncrementH = () => {
     if (isDimensionDisabled) return;
     const { w, h } = getLiveDimensions();
-    const newH = h + 1;
+    const newH = Number((h + 1).toFixed(1));
     if (isAspectLocked && w > 0 && h > 0) {
-      const newW = ((newH / h) * w).toFixed(1);
-      updateDimensionWithScale(newH.toString(), 'height');
-      updateDimensionWithScale(newW, 'width');
+      const newW = Number(((newH / h) * w).toFixed(1));
+      updateDimensionWithScale({ width: newW, height: newH });
     } else {
       updateDimensionWithScale(newH.toString(), 'height');
     }
+  };
+
+  // Pointer scrub sliders for X, Y, Width, and Height (referencing CornerRadius scrub in Image properties)
+  const handleScrubX = (e) => {
+    if (isDimensionDisabled || e.target.tagName === 'INPUT') return;
+    const { x } = getLivePosition();
+    handleScrubHelper(e, x, (newVal) => {
+      const val = Number(parseFloat(newVal).toFixed(1));
+      updatePosition(val.toString(), 'x');
+    }, 4);
+  };
+
+  const handleScrubY = (e) => {
+    if (isDimensionDisabled || e.target.tagName === 'INPUT') return;
+    const { y } = getLivePosition();
+    handleScrubHelper(e, y, (newVal) => {
+      const val = Number(parseFloat(newVal).toFixed(1));
+      updatePosition(val.toString(), 'y');
+    }, 4);
+  };
+
+  const handleScrubW = (e) => {
+    if (isDimensionDisabled || e.target.tagName === 'INPUT') return;
+    const { w, h } = getLiveDimensions();
+    handleScrubHelper(e, w, (newVal) => {
+      const newW = Math.max(1, Number(parseFloat(newVal).toFixed(1)));
+      if (isAspectLocked && w > 0 && h > 0) {
+        const newH = Math.max(1, Number(((newW / w) * h).toFixed(1)));
+        updateDimensionWithScale({ width: newW, height: newH });
+      } else {
+        updateDimensionWithScale(newW.toString(), 'width');
+      }
+    }, 4);
+  };
+
+  const handleScrubH = (e) => {
+    if (isDimensionDisabled || e.target.tagName === 'INPUT') return;
+    const { w, h } = getLiveDimensions();
+    handleScrubHelper(e, h, (newVal) => {
+      const newH = Math.max(1, Number(parseFloat(newVal).toFixed(1)));
+      if (isAspectLocked && w > 0 && h > 0) {
+        const newW = Math.max(1, Number(((newH / h) * w).toFixed(1)));
+        updateDimensionWithScale({ width: newW, height: newH });
+      } else {
+        updateDimensionWithScale(newH.toString(), 'height');
+      }
+    }, 4);
   };
 
   // Rotation dispatching
@@ -478,14 +547,18 @@ const TransformProperties = ({
             >
               <ChevronLeft size="0.8vw" />
             </button>
-            <div className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] ${
-              isDimensionDisabled ? 'bg-gray-100/60' : 'bg-[#F1F3F5]'
-            }`}>
-              <span className="text-gray-800 font-semibold text-[0.78vw]">X</span>
+            <div
+              onPointerDown={handleScrubX}
+              title="Drag horizontally to adjust X or type value"
+              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
+              }`}
+            >
+              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">X</span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="x"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium ${
+                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
                   isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.x || 0)}
@@ -511,14 +584,14 @@ const TransformProperties = ({
               <span className="text-[0.82vw] font-medium text-gray-800">Size</span>
               <button
                 type="button"
-                onClick={() => !isDimensionDisabled && setIsAspectLocked(prev => !prev)}
-                className={`p-[0.1vw] rounded hover:bg-gray-200 transition-colors ${
-                  isDimensionDisabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                }`}
+                onClick={handleToggleAspectLock}
+                className={`p-[0.1vw] rounded transition-colors ${
+                  isAspectLocked ? 'text-gray-900 bg-gray-200/80 hover:bg-gray-300/80' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'
+                } ${isDimensionDisabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
                 title={isAspectLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
               >
                 {isAspectLocked ? (
-                  <Lock size="0.75vw" className="text-gray-800" />
+                  <Lock size="0.75vw" className="text-gray-900" />
                 ) : (
                   <Unlock size="0.75vw" className="text-gray-400 hover:text-gray-600" />
                 )}
@@ -534,14 +607,18 @@ const TransformProperties = ({
             >
               <ChevronLeft size="0.8vw" />
             </button>
-            <div className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] ${
-              isDimensionDisabled ? 'bg-gray-100/60' : 'bg-[#F1F3F5]'
-            }`}>
-              <span className="text-gray-800 font-semibold text-[0.78vw]">W</span>
+            <div
+              onPointerDown={handleScrubW}
+              title={isAspectLocked ? "Drag horizontally to adjust Width and Height proportionally or type value" : "Drag horizontally to adjust Width or type value"}
+              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
+              }`}
+            >
+              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">W</span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="width"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium ${
+                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
                   isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.w || flipbookDimensions?.width)}
@@ -577,14 +654,18 @@ const TransformProperties = ({
             >
               <ChevronLeft size="0.8vw" />
             </button>
-            <div className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] ${
-              isDimensionDisabled ? 'bg-gray-100/60' : 'bg-[#F1F3F5]'
-            }`}>
-              <span className="text-gray-800 font-semibold text-[0.78vw]">Y</span>
+            <div
+              onPointerDown={handleScrubY}
+              title="Drag horizontally to adjust Y or type value"
+              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
+              }`}
+            >
+              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">Y</span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="y"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium ${
+                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
                   isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.y || 0)}
@@ -617,14 +698,18 @@ const TransformProperties = ({
             >
               <ChevronLeft size="0.8vw" />
             </button>
-            <div className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] ${
-              isDimensionDisabled ? 'bg-gray-100/60' : 'bg-[#F1F3F5]'
-            }`}>
-              <span className="text-gray-800 font-semibold text-[0.78vw]">H</span>
+            <div
+              onPointerDown={handleScrubH}
+              title={isAspectLocked ? "Drag horizontally to adjust Height and Width proportionally or type value" : "Drag horizontally to adjust Height or type value"}
+              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
+              }`}
+            >
+              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">H</span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="height"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium ${
+                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
                   isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.h || flipbookDimensions?.height)}
@@ -719,6 +804,19 @@ const TransformProperties = ({
           </div>
         </div>
       </div>
+      <style>{`
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 999999;
+          transform: translate(-50%, -50%);
+          filter: drop-shadow(0 0.2vw 0.4vw rgba(0,0,0,0.4));
+        }
+        body.is-scrubbing * {
+          cursor: ew-resize !important;
+          user-select: none !important;
+        }
+      `}</style>
     </div>
   );
 };

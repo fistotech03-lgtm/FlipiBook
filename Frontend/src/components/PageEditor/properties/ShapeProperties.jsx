@@ -5,6 +5,7 @@ import Color from './Color';
 import CornerRadius from './CornerRadius';
 import Effect from './Effect';
 import { ElementSlider } from '../LeftActionMenu/Elements/properties/ElementUIControls';
+import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false }) => {
   const [localVal, setLocalVal] = useState(value);
@@ -585,6 +586,45 @@ const ShapeProperties = ({
         showDetailedPicker={showDetailedPicker}
         setShowDetailedPicker={setShowDetailedPicker}
       />
+
+      {/* ===================== MASKING & FLATTEN ===================== */}
+      <div className="flex flex-col gap-[0.5vw] mt-[0.4vw]">
+        <div className="flex items-center gap-[0.75vw] mb-[0.2vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Masking & Flatten</span>
+          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+        </div>
+        <div className="grid grid-cols-2 gap-[0.6vw] pt-[0.2vw] px-[0.1vw]">
+          {/* Mask Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-mask'));
+            }}
+            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${
+              Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url'])
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+            }`}
+            title={Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'Click to Unmask' : 'Use as Mask'}
+          >
+            <MaskIcon size="1vw" className={Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'text-indigo-600' : 'text-gray-600'} />
+            <span className="truncate">{Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'Unmask' : 'Masking'}</span>
+          </button>
+
+          {/* Flatten Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-flatten'));
+            }}
+            className="flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw]"
+            title="Flatten shape to vector path and edit points"
+          >
+            <FlattenIcon size="1vw" className="text-gray-600" />
+            <span className="truncate">Flatten</span>
+          </button>
+        </div>
+      </div>
 
       {/* CUSTOM CSS */}
       <style>{`

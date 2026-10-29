@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import ImageAdjustModal from './ImageAdjustModal';
 import { DEFAULT_FRAME_IMAGE } from '../utils/imageFramingUtils';
+import { MaskIcon, FlattenIcon } from '../../../mainEditor/components/editorIcons';
 import { ElementSlider, ElementDropdown } from './ElementUIControls';
 
 // Section Header matching audio/elements exact styling
@@ -726,7 +727,7 @@ const ElementShapesProperties = ({
         if (adjustStateRef.current.imgNode) {
             adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
         }
-        const ghost = selectedElement.querySelector('#ghost-layer');
+        const ghost = selectedElement?.querySelector('#ghost-layer');
         if (ghost) {
             const ghostImg = ghost.querySelector('image, img');
             const outline = ghost.querySelector('rect');
@@ -738,8 +739,16 @@ const ElementShapesProperties = ({
     const enterAdjustMode = (patternId, path) => {
         const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
         if (!pattern) return;
-        const imgNode = pattern.querySelector('image, img');
-        if (!imgNode) return;
+        let imgNode = pattern.querySelector('image, img');
+        if (!imgNode) {
+          const useNode = pattern.querySelector('use');
+          if (useNode) {
+            const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+            const targetId = href.replace('#', '');
+            imgNode = (svgRoot || selectedElement).querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
+          }
+        }
+        if (!imgNode) return; // Cannot adjust empty slot
 
         adjustStateRef.current.isAdjusting = true;
         adjustStateRef.current.slotId = patternId;
@@ -753,8 +762,11 @@ const ElementShapesProperties = ({
         if (transformStr) {
             const rMatch = transformStr.match(/rotate\([^)]+\)/);
             if (rMatch) rotateStr = rMatch[0] + ' ';
+            
             const match = transformStr.match(/matrix\(([^)]+)\)/);
-            if (match) matrix = match[1].split(/[ ,]+/).map(parseFloat);
+            if (match) {
+                matrix = match[1].split(/[ ,]+/).map(parseFloat);
+            }
         }
         adjustStateRef.current.matrix = matrix;
         adjustStateRef.current.rotateStr = rotateStr;
@@ -764,37 +776,44 @@ const ElementShapesProperties = ({
         
         ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         ghost.id = 'ghost-layer';
-        ghost.style.cursor = 'grab';
+        ghost.style.pointerEvents = 'none';
         
+        // Inherit path's transform to match local coordinate space
         let combinedTransform = path.getAttribute('transform') || '';
         const pt = pattern.getAttribute('patternTransform');
-        if (pt) combinedTransform = `${combinedTransform} ${pt}`.trim();
-        if (combinedTransform) ghost.setAttribute('transform', combinedTransform);
+        if (pt) {
+            combinedTransform = `${combinedTransform} ${pt}`.trim();
+        }
+        if (combinedTransform) {
+            ghost.setAttribute('transform', combinedTransform);
+        }
         
         const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         const bbox = adjustStateRef.current.bbox;
+        
         const pcu = pattern.getAttribute('patternContentUnits');
         if (!pcu || pcu === 'objectBoundingBox') {
             wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
         } else {
-            wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y})`);
+            wrapper.setAttribute('transform', `translate(0, 0)`);
         }
         
         const ghostImg = imgNode.cloneNode(true);
         ghostImg.setAttribute('opacity', '0.4');
-        ghostImg.style.pointerEvents = 'auto';
+        ghostImg.removeAttribute('id');
         
         const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         outline.setAttribute('fill', 'none');
         outline.setAttribute('stroke', '#f59e0b');
         outline.setAttribute('vector-effect', 'non-scaling-stroke');
         outline.setAttribute('stroke-dasharray', '5,5');
-        outline.style.pointerEvents = 'none';
+        outline.setAttribute('stroke-width', '1.5');
         
         let iw = imgNode.getAttribute('width');
         let ih = imgNode.getAttribute('height');
         if (!iw || iw.includes('%')) iw = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.width.toString();
         if (!ih || ih.includes('%')) ih = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.height.toString();
+        
         outline.setAttribute('width', iw);
         outline.setAttribute('height', ih);
         
@@ -805,6 +824,7 @@ const ElementShapesProperties = ({
         wrapper.appendChild(outline);
         ghost.appendChild(wrapper);
 
+        // Insert sibling to inherit group transforms
         if (path.parentNode) {
             path.parentNode.insertBefore(ghost, path.nextSibling);
         } else {
@@ -812,24 +832,7 @@ const ElementShapesProperties = ({
         }
 
         path.style.cursor = 'grab';
-
-        ghost.addEventListener('pointerdown', (e) => {
-            if (adjustStateRef.current.isAdjusting) {
-                e.preventDefault();
-                e.stopPropagation();
-                adjustStateRef.current.isPanning = true;
-                adjustStateRef.current.startX = e.clientX;
-                adjustStateRef.current.startY = e.clientY;
-                adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
-                ghost.style.cursor = 'grabbing';
-                if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grabbing';
-            }
-        });
-        ghost.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            exitAdjustMode();
-        });
+        if (selectedElement) selectedElement.style.cursor = 'grab';
 
         const highlightId = `highlight-${patternId}`;
         let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
@@ -855,30 +858,24 @@ const ElementShapesProperties = ({
 
     const exitAdjustMode = () => {
         adjustStateRef.current.isAdjusting = false;
+        adjustStateRef.current.isPanning = false;
         if (adjustStateRef.current.path) {
             adjustStateRef.current.path.style.cursor = '';
         }
-        const ghost = selectedElement.querySelector('#ghost-layer');
+        if (selectedElement) {
+            selectedElement.style.cursor = '';
+        }
+        const ghost = selectedElement?.querySelector('#ghost-layer');
         if (ghost) ghost.remove();
+        
         if (adjustStateRef.current.slotId) {
             const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-            const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
+            const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
             if (highlight) highlight.remove();
         }
         adjustStateRef.current.slotId = null;
         syncDomChanges();
     };
-
-    // Auto-exit adjust mode when clicking outside the shape
-    const handleOutsideClick = (e) => {
-      if (!adjustStateRef.current.isAdjusting) return;
-      const target = e.target;
-      if (target && (target.closest?.('#ghost-layer') || target.closest?.(`#${selectedLayerId}`) || target.closest?.('[data-image-slots]'))) {
-        return;
-      }
-      exitAdjustMode();
-    };
-    window.addEventListener('pointerdown', handleOutsideClick);
 
     const handlePointerMove = (e) => {
         if (!adjustStateRef.current.isPanning) return;
@@ -893,6 +890,8 @@ const ElementShapesProperties = ({
             const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`) || doc.getElementById(adjustStateRef.current.slotId);
             if (pattern) {
                 pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
+                
+                // Read rotation from patternTransform (old) OR from image transform (new)
                 let rot = 0;
                 const pt = pattern.getAttribute('patternTransform');
                 if (pt) {
@@ -930,14 +929,17 @@ const ElementShapesProperties = ({
             tx_delta = dx / scaleX;
             ty_delta = dy / scaleY;
         } else {
-            tx_delta = (dx / scaleX) / bbox.width;
-            ty_delta = (dy / scaleY) / bbox.height;
+            tx_delta = (dx / scaleX) / (bbox?.width || 1);
+            ty_delta = (dy / scaleY) / (bbox?.height || 1);
         }
         
         const m = adjustStateRef.current.startMatrix;
         if (!m || !adjustStateRef.current.matrix) return;
-        adjustStateRef.current.matrix[4] = m[4] + tx_delta;
-        adjustStateRef.current.matrix[5] = m[5] + ty_delta;
+        const newTx = m[4] + tx_delta;
+        const newTy = m[5] + ty_delta;
+        
+        adjustStateRef.current.matrix[4] = newTx;
+        adjustStateRef.current.matrix[5] = newTy;
         
         updateAdjustTransform();
     };
@@ -946,8 +948,7 @@ const ElementShapesProperties = ({
         if (adjustStateRef.current.isPanning) {
             adjustStateRef.current.isPanning = false;
             if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grab';
-            const ghost = selectedElement?.querySelector('#ghost-layer');
-            if (ghost) ghost.style.cursor = 'grab';
+            if (selectedElement) selectedElement.style.cursor = 'grab';
         }
     };
 
@@ -962,10 +963,10 @@ const ElementShapesProperties = ({
       
       let foundImage = false;
       
-      listeners.forEach(({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
-        shapeEl.removeEventListener('dblclick', handleDoubleClick);
-        if (handlePointerDown) shapeEl.removeEventListener('pointerdown', handlePointerDown);
-        shapeEl.removeEventListener('wheel', handleWheel);
+      listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
+        targetEl.removeEventListener('dblclick', handleDoubleClick);
+        if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
+        if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
       });
       listeners.length = 0;
       
@@ -1018,13 +1019,13 @@ const ElementShapesProperties = ({
                         m[2] = m[2] * b.width;
                         m[1] = m[1] * b.height;
                         m[3] = m[3] * b.height;
-                        m[4] = m[4] * b.width;
-                        m[5] = m[5] * b.height;
+                        m[4] = b.x + m[4] * b.width;
+                        m[5] = b.y + m[5] * b.height;
                       } else {
                         const scale = Math.max(b.width / imgW, b.height / imgH);
                         const finalW = imgW * scale;
                         const finalH = imgH * scale;
-                        m = [scale, 0, 0, scale, (b.width - finalW) / 2, (b.height - finalH) / 2];
+                        m = [scale, 0, 0, scale, b.x + (b.width - finalW) / 2, b.y + (b.height - finalH) / 2];
                       }
                       pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
                       pattern.removeAttribute('patternTransform');
@@ -1038,30 +1039,8 @@ const ElementShapesProperties = ({
                       imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
                     }
                   } catch (e) {}
-                } else {
-                  // If already userSpaceOnUse, auto-fix if it was saved with the buggy b.x / b.y offset
-                  try {
-                    const b = shapeEl.getBBox();
-                    if (b.width && b.height && (Math.abs(b.x) > 0.1 || Math.abs(b.y) > 0.1)) {
-                      const mMatch = tf.match(/matrix\(([^)]+)\)/);
-                      if (mMatch) {
-                        const m = mMatch[1].split(/[ ,]+/).map(parseFloat);
-                        const imgW = parseFloat(imgNode.getAttribute('width')) || b.width;
-                        const imgH = parseFloat(imgNode.getAttribute('height')) || b.height;
-                        const scale = m[0] || Math.max(b.width / imgW, b.height / imgH);
-                        const finalH = imgH * scale;
-                        const buggyTy = b.y + (b.height - finalH) / 2;
-                        if (Math.abs(m[5] - buggyTy) < 0.5) {
-                          m[4] -= b.x;
-                          m[5] -= b.y;
-                          let rotStr = rMatch ? rMatch[0] + ' ' : '';
-                          imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
-                        }
-                      }
-                    }
-                  } catch (e) {}
                 }
-                
+
                 foundImage = true;
 
                 const handleDoubleClick = (e) => {
@@ -1083,9 +1062,8 @@ const ElementShapesProperties = ({
                       adjustStateRef.current.startX = e.clientX;
                       adjustStateRef.current.startY = e.clientY;
                       adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
-                      shapeEl.style.cursor = 'grabbing';
-                      const ghost = selectedElement?.querySelector('#ghost-layer');
-                      if (ghost) ghost.style.cursor = 'grabbing';
+                      if (shapeEl) shapeEl.style.cursor = 'grabbing';
+                      if (selectedElement) selectedElement.style.cursor = 'grabbing';
                   }
                 };
       
@@ -1096,15 +1074,15 @@ const ElementShapesProperties = ({
                       const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
                       const m = adjustStateRef.current.matrix;
                       
-                      let pcu = 'objectBoundingBox';
+                      let pcuVal = 'objectBoundingBox';
                       const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
-                      if (pat) pcu = pat.getAttribute('patternContentUnits') || 'objectBoundingBox';
+                      if (pat) pcuVal = pat.getAttribute('patternContentUnits') || 'objectBoundingBox';
                       
                       let cx = 0.5;
                       let cy = 0.5;
-                      if (pcu === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                          cx = adjustStateRef.current.bbox.width / 2;
-                          cy = adjustStateRef.current.bbox.height / 2;
+                      if (pcuVal === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
+                          cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
+                          cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
                       }
       
                       m[0] *= zoomDelta;
@@ -1119,7 +1097,14 @@ const ElementShapesProperties = ({
                 shapeEl.addEventListener('dblclick', handleDoubleClick);
                 shapeEl.addEventListener('pointerdown', handlePointerDown);
                 shapeEl.addEventListener('wheel', handleWheel, { passive: false });
-                listeners.push({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
+                listeners.push({ targetEl: shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
+
+                if (selectedElement && selectedElement !== shapeEl) {
+                  selectedElement.addEventListener('dblclick', handleDoubleClick);
+                  selectedElement.addEventListener('pointerdown', handlePointerDown);
+                  selectedElement.addEventListener('wheel', handleWheel, { passive: false });
+                  listeners.push({ targetEl: selectedElement, handleDoubleClick, handlePointerDown, handleWheel });
+                }
 
                 break;
               }
@@ -1147,7 +1132,7 @@ const ElementShapesProperties = ({
         childList: true, 
         subtree: true, 
         attributes: true, 
-        attributeFilter: ['fill', 'href', 'xlink:href', 'transform', 'patternTransform', 'data-mask-enabled'] 
+        attributeFilter: ['fill', 'href', 'xlink:href', 'data-mask-enabled'] 
       });
     }
 
@@ -1155,14 +1140,20 @@ const ElementShapesProperties = ({
       if (observer) observer.disconnect();
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointerdown', handleOutsideClick);
-      listeners.forEach(({ shapeEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
-        shapeEl.removeEventListener('dblclick', handleDoubleClick);
-        if (handlePointerDown) shapeEl.removeEventListener('pointerdown', handlePointerDown);
-        shapeEl.removeEventListener('wheel', handleWheel);
+      listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
+        targetEl.removeEventListener('dblclick', handleDoubleClick);
+        if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
+        if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
       });
       const ghost = selectedElement?.querySelector('#ghost-layer');
       if (ghost) ghost.remove();
+      if (adjustStateRef.current.slotId) {
+        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
+        const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
+        if (highlight) highlight.remove();
+      }
+      adjustStateRef.current.isAdjusting = false;
+      adjustStateRef.current.isPanning = false;
     };
   }, [selectedLayerId, activePageIndex, selectedElementProps?.fill]);
 
@@ -1338,8 +1329,8 @@ const ElementShapesProperties = ({
 
     let bbox = { x: 0, y: 0, width: 100, height: 100 };
     try { bbox = shapeEl.getBBox(); } catch(e) {}
-    const cx = bbox.width / 2;
-    const cy = bbox.height / 2;
+    const cx = (bbox.x || 0) + bbox.width / 2;
+    const cy = (bbox.y || 0) + bbox.height / 2;
 
     const pcu = pattern.getAttribute('patternContentUnits');
     const imgNode = pattern.querySelector('image, img');
@@ -1475,7 +1466,7 @@ const ElementShapesProperties = ({
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
 
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${tx_user} ${ty_user})`);
+      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${bbox.x + tx_user} ${bbox.y + ty_user})`);
       imageNode.setAttribute('href', dataUrl);
       imageNode.setAttribute('xlink:href', dataUrl);
 
@@ -2142,6 +2133,41 @@ const ElementShapesProperties = ({
     <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
 
       <SectionHeader title="Element Shape Properties" />
+
+      {/* ===================== MASKING & FLATTEN ===================== */}
+      <div className="flex flex-col gap-[0.35vw] px-[0.2vw] py-[0.1vw]">
+        <div className="grid grid-cols-2 gap-[0.6vw]">
+          {/* Mask / Unmask Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-mask'));
+            }}
+            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${
+              isMaskEnabled
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+            }`}
+            title={isMaskEnabled ? 'Click to Unmask' : 'Use as Mask (or add image)'}
+          >
+            <MaskIcon size="1vw" className={isMaskEnabled ? 'text-indigo-600' : 'text-gray-600'} />
+            <span className="truncate">{isMaskEnabled ? 'Unmask' : 'Masking'}</span>
+          </button>
+
+          {/* Flatten Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-flatten'));
+            }}
+            className="flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw]"
+            title="Flatten shape to vector path and edit points"
+          >
+            <FlattenIcon size="1vw" className="text-gray-600" />
+            <span className="truncate">Flatten</span>
+          </button>
+        </div>
+      </div>
 
       {/* Image Slots / Masking Section */}
       {shapeType !== 'line' && (isMaskEnabled || hasUploadedImage) && (

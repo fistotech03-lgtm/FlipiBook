@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   X,
-  Save,
   BookOpen,
   ChevronRight,
   Settings,
   LogOut,
+  Database,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { clearSession } from "../../utils/authUtils";
@@ -238,47 +238,47 @@ export default function ProfileModal({
 
   return (
     <>
-      {/* Light Dark Backdrop without blur */}
+      {/* Light Backdrop */}
       <div
-        className="fixed inset-0 z-[150] cursor-default bg-black/15"
+        className="fixed inset-0 z-[150] cursor-default bg-black/15 backdrop-blur-[1px] transition-opacity"
         onClick={onClose}
-      ></div>
+      />
 
       {/* Popup Modal Card */}
-      <div className="fixed top-[4.5vw] right-[2vw] z-[160] w-[21vw] min-w-[290px] max-w-[350px] bg-white rounded-[1.25vw] shadow-2xl border border-gray-100 overflow-hidden p-[1.25vw] animate-in fade-in zoom-in-95 duration-150 select-none">
+      <div className="fixed top-[4.5vw] right-[2vw] z-[160] w-[21vw] min-w-[300px] max-w-[360px] bg-white rounded-[1.2vw] shadow-[0_20px_50px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden p-[1.1vw] animate-in fade-in zoom-in-95 duration-150 select-none">
         {/* Header */}
-        <div className="flex items-center justify-between mb-[1vw]">
-          <div className="flex items-center flex-1 mr-[0.75vw]">
-            <h2 className="text-[1.25vw] font-bold text-gray-900 tracking-tight pr-[0.5vw]">
-              Profile
-            </h2>
-            <div className="flex-1 h-[1px] bg-gray-200 mt-[0.1vw]"></div>
+        <div className="flex items-center justify-between mb-[0.9vw]">
+          <div className="flex items-center gap-[0.5vw] flex-1 mr-[0.5vw]">
+            <span className="text-[1.05vw] font-bold text-gray-900 tracking-tight">Profile</span>
+            <div className="flex-1 h-[1px] bg-gray-100" />
           </div>
-          {/* Red Close Button */}
           <button
+            type="button"
             onClick={onClose}
-            className="text-red-500 border border-red-300 hover:bg-red-50 transition-colors p-[0.25vw] rounded-[0.4vw] cursor-pointer flex items-center justify-center"
+            aria-label="Close profile modal"
+            className="w-[1.6vw] h-[1.6vw] rounded-[0.4vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+            title="Close"
           >
-            <X size="1.0vw" strokeWidth={2} />
+            <X size="0.95vw" strokeWidth={2} />
           </button>
         </div>
 
-        {/* User Info Card with Free Ribbon */}
+        {/* User Info Card with Old Badge Ribbon */}
         <div
           onClick={() => {
             navigate("/settings/profile");
             onClose();
           }}
-          className="relative border border-gray-100 rounded-[0.8vw] p-[0.85vw] shadow-sm bg-white flex items-center gap-[0.85vw] mb-[1vw] cursor-pointer hover:bg-gray-50/80 hover:border-gray-200 hover:shadow transition-all group"
+          className="relative bg-gradient-to-b from-gray-50/70 to-white border border-gray-100 hover:border-indigo-100 rounded-[0.9vw] p-[0.85vw] mb-[0.85vw] flex items-center gap-[0.85vw] cursor-pointer transition-all hover:shadow-xs group overflow-hidden"
         >
           {/* Free Badge Ribbon */}
-          <div className="absolute top-0 right-0 bg-[#0066ff] text-white text-[0.62vw] font-bold px-[0.75vw] py-[0.2vw] rounded-bl-[0.4vw] rounded-tr-[0.8vw] shadow-sm">
-            Free
+          <div className="absolute top-0 right-0 bg-[#0066ff] text-white text-[0.62vw] font-bold px-[0.75vw] py-[0.2vw] rounded-bl-[0.4vw] rounded-tr-[0.9vw] shadow-sm select-none">
+            {authUser?.plan || "Free"}
           </div>
 
           {/* Avatar */}
           <div
-            className="w-[3.2vw] h-[3.2vw] rounded-full overflow-hidden border border-gray-200 shadow-sm flex-shrink-0 flex items-center justify-center transition-colors group-hover:border-indigo-300"
+            className="w-[3.1vw] h-[3.1vw] rounded-full overflow-hidden ring-2 ring-white shadow-xs flex-shrink-0 flex items-center justify-center transition-transform group-hover:scale-105"
             style={{
               backgroundColor:
                 user.picture && user.picture !== "color_only"
@@ -306,93 +306,128 @@ export default function ProfileModal({
                 }}
               />
             ) : (
-              <span className="text-[1.2vw] font-bold text-white drop-shadow-sm select-none">
+              <span className="text-[1.15vw] font-bold text-white drop-shadow-sm select-none">
                 {(user.displayName || user.name) ? (user.displayName || user.name).trim().charAt(0).toUpperCase() : "U"}
               </span>
             )}
           </div>
 
           {/* User Details */}
-          <div className="flex flex-col min-w-0 pr-[2vw]">
-            <h3 className="text-[0.95vw] font-bold text-gray-900 truncate leading-tight">
+          <div className="flex flex-col min-w-0 pr-[3.5vw]">
+            <h3 className="text-[0.88vw] font-bold text-gray-900 truncate leading-snug group-hover:text-indigo-600 transition-colors">
               {user.displayName || user.name || "User"}
             </h3>
-            <p className="text-[0.65vw] text-gray-500 font-normal truncate mt-[0.1vw]">
+            <p className="text-[0.68vw] text-gray-500 font-normal truncate mt-[0.05vw]">
               {user.email}
             </p>
-            <span className="text-[0.65vw] text-gray-400 font-normal mt-[0.1vw]">
-              Free Plan
+            <span className="text-[0.62vw] text-indigo-600/80 font-medium mt-[0.2vw] flex items-center gap-[0.15vw]">
+              <span>Manage profile</span>
+              <ChevronRight size="0.6vw" />
             </span>
           </div>
         </div>
 
         {/* Storage Progress Section */}
-        <div className="mb-[1vw] px-[0.1vw]">
-          <div className="flex justify-between items-center mb-[0.3vw]">
-            <span className="text-[0.8vw] font-bold text-gray-900">
-              Storage
-            </span>
-            <span className="text-[0.65vw] text-gray-500 font-medium">
+        <div className="bg-gray-50/70 border border-gray-100 rounded-[0.85vw] p-[0.75vw] mb-[0.85vw]">
+          <div className="flex justify-between items-center mb-[0.35vw]">
+            <div className="flex items-center gap-[0.35vw]">
+              <Database size="0.75vw" className="text-gray-500" />
+              <span className="text-[0.76vw] font-semibold text-gray-800">Storage</span>
+            </div>
+            <span className="text-[0.68vw] font-medium text-gray-500">
               {isLoadingStorage
                 ? "Calculating..."
                 : `${usedFormatted} / ${totalFormatted}`}
             </span>
           </div>
-          <div className="w-full h-[0.35vw] bg-gray-100 rounded-full overflow-hidden mb-[0.25vw]">
+          <div className="w-full h-[0.35vw] bg-gray-200/70 rounded-full overflow-hidden mb-[0.25vw]">
             <div
-              className="h-full bg-[#4c5add] transition-all duration-500 ease-out rounded-full"
+              className="h-full bg-gradient-to-r from-indigo-500 to-[#4c5add] transition-all duration-500 ease-out rounded-full"
               style={{ width: `${percentage}%` }}
-            ></div>
+            />
           </div>
-          <span className="text-[0.6vw] text-gray-400 font-normal">
-            {percentage}% used
-          </span>
+          <div className="flex justify-between items-center text-[0.62vw] text-gray-400 font-medium">
+            <span>{percentage}% used</span>
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/settings/billing");
+                onClose();
+              }}
+              className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer hover:underline"
+            >
+              Upgrade Storage
+            </button>
+          </div>
         </div>
 
-        {/* Navigation Options - shown if not already on /my-flipbooks */}
-        {!isMyFlipbooksPage && (
-          <div className="border-t border-b border-gray-100 divide-y divide-gray-100 mb-[1vw]">
-            <div
+        {/* Navigation List */}
+        <div className="flex flex-col gap-[0.2vw]">
+          {/* My Flipbooks - shown if not already on /my-flipbooks */}
+          {!isMyFlipbooksPage && (
+            <button
+              type="button"
               onClick={() => {
                 navigate("/my-flipbooks");
                 onClose();
               }}
-              className="flex items-center justify-between py-[0.65vw] px-[0.25vw] hover:bg-gray-50 rounded-[0.4vw] cursor-pointer transition-colors group"
+              className="w-full flex items-center justify-between py-[0.55vw] px-[0.6vw] hover:bg-gray-50/90 rounded-[0.6vw] cursor-pointer transition-colors group text-left"
             >
-              <div className="flex items-center gap-[0.75vw]">
-                <div className="w-[2vw] h-[2vw] rounded-[0.4vw] bg-[#eef0fe] text-[#4c5add] flex items-center justify-center">
-                  <BookOpen size="0.95vw" />
+              <div className="flex items-center gap-[0.65vw]">
+                <div className="w-[1.8vw] h-[1.8vw] rounded-[0.45vw] bg-indigo-50 text-indigo-600 flex items-center justify-center transition-colors group-hover:bg-indigo-100">
+                  <BookOpen size="0.9vw" />
                 </div>
-                <span className="text-[0.78vw] font-semibold text-gray-800 group-hover:text-[#4c5add] transition-colors">
+                <span className="text-[0.78vw] font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
                   My Flipbooks
                 </span>
               </div>
               <ChevronRight
-                size="0.85vw"
-                className="text-gray-400 group-hover:text-[#4c5add] transition-colors"
+                size="0.8vw"
+                className="text-gray-400 group-hover:text-gray-600 transition-colors"
               />
-            </div>
-          </div>
-        )}
+            </button>
+          )}
 
-        {/* Settings Button */}
-        <button
-          onClick={() => {
-            navigate("/settings/profile");
-            onClose();
-          }}
-          className="w-full bg-[#18181b] hover:bg-black text-white py-[0.65vw] px-[1vw] rounded-[0.75vw] text-[0.8vw] font-bold flex items-center justify-center gap-[0.5vw] shadow-md transition-all cursor-pointer"
-        >
-          <Settings size="0.95vw" />
-          <span>Settings</span>
-        </button>
+          {/* Settings */}
+          <button
+            type="button"
+            onClick={() => {
+              navigate("/settings/profile");
+              onClose();
+            }}
+            className="w-full flex items-center justify-between py-[0.55vw] px-[0.6vw] hover:bg-gray-50/90 rounded-[0.6vw] cursor-pointer transition-colors group text-left"
+          >
+            <div className="flex items-center gap-[0.65vw]">
+              <div className="w-[1.8vw] h-[1.8vw] rounded-[0.45vw] bg-gray-100 text-gray-600 flex items-center justify-center transition-colors group-hover:bg-gray-200">
+                <Settings size="0.9vw" />
+              </div>
+              <span className="text-[0.78vw] font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                Settings
+              </span>
+            </div>
+            <ChevronRight
+              size="0.8vw"
+              className="text-gray-400 group-hover:text-gray-600 transition-colors"
+            />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="h-[1px] bg-gray-100 my-[0.4vw]" />
 
         {/* Log Out Button */}
         <button
+          type="button"
           onClick={handleLogout}
-          className="w-full mt-[0.5vw] bg-transparent border border-red-200 hover:bg-red-50 text-red-600 py-[0.55vw] px-[1vw] rounded-[0.75vw] text-[0.78vw] font-semibold flex items-center justify-center gap-[0.4vw] transition-all cursor-pointer"
+          className="w-full py-[0.5vw] px-[0.6vw] rounded-[0.6vw] text-red-600 hover:bg-red-50/70 text-[0.78vw] font-medium flex items-center justify-between transition-colors cursor-pointer group"
         >
-          <LogOut size="0.85vw" /> Log Out
+          <div className="flex items-center gap-[0.65vw]">
+            <div className="w-[1.8vw] h-[1.8vw] rounded-[0.45vw] bg-red-50 text-red-500 flex items-center justify-center transition-colors group-hover:bg-red-100">
+              <LogOut size="0.85vw" />
+            </div>
+            <span>Log Out</span>
+          </div>
+          <ChevronRight size="0.8vw" className="text-red-300 group-hover:text-red-500 transition-colors" />
         </button>
       </div>
     </>

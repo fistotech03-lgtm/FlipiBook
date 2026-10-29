@@ -93,15 +93,15 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-[1.1vw]">
-      {/* Top Header & Toolbar (Matching MyFlipbooks style) */}
+    <div className="space-y-[1.2vw]">
+      {/* Top Header & Toolbar */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[1.4vw] font-bold text-slate-800 tracking-tight flex items-center gap-[0.45vw]">
-            <Users className="w-[1.4vw] h-[1.4vw] text-[#ec5137]" />
+          <h1 className="text-[1.35vw] font-semibold text-gray-800 tracking-tight flex items-center gap-[0.5vw]">
+            <Users className="w-[1.25vw] h-[1.25vw] text-[#ec5137]" />
             <span>User Directory & Governance</span>
           </h1>
-          <p className="text-[0.78vw] text-slate-500 mt-[0.1vw]">
+          <p className="text-[0.74vw] text-gray-500 font-normal mt-[0.25vw]">
             Manage user roles, ban abusive accounts, and inspect platform memberships
           </p>
         </div>
@@ -109,40 +109,40 @@ export default function UsersPage() {
         <button
           onClick={fetchUsersList}
           disabled={loading}
-          className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.45vw] rounded-[0.6vw] text-[0.78vw] font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer disabled:opacity-50"
+          className="flex items-center gap-[0.45vw] px-[0.85vw] py-[0.42vw] rounded-[0.5vw] text-[0.78vw] font-medium bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-xs transition active:scale-[0.98] cursor-pointer disabled:opacity-50"
         >
           <RefreshCw className={`w-[0.9vw] h-[0.9vw] text-[#ec5137] ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
         </button>
       </div>
 
-      {/* Filter Row matching MyFlipbooks toolbar */}
-      <div className="bg-white rounded-[0.8vw] border border-slate-200/90 p-[0.75vw] shadow-xs flex items-center justify-between gap-[0.8vw]">
+      {/* Filter Row */}
+      <div className="bg-white rounded-[1vw] border border-gray-200 p-[0.9vw] shadow-sm flex items-center justify-between gap-[0.8vw]">
         {/* Search */}
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-[22vw]">
-          <Search size="0.95vw" className="absolute left-[0.75vw] top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size="0.95vw" className="absolute left-[0.75vw] top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search users by name or email..."
-            className="w-full pl-[2.2vw] pr-[0.8vw] py-[0.45vw] bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 rounded-[0.55vw] text-[0.78vw] text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#ec5137] transition"
+            className="w-full pl-[2.2vw] pr-[0.8vw] py-[0.45vw] bg-[#f8f9fa] hover:bg-white focus:bg-white border border-gray-200 rounded-[0.5vw] text-[0.78vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#ec5137] transition"
           />
         </form>
 
         {/* Dropdown Pills */}
         <div className="flex items-center gap-[0.65vw]">
           {/* Role Filter */}
-          <div className="flex items-center gap-[0.35vw] px-[0.7vw] py-[0.4vw] rounded-[0.55vw] border border-slate-200 bg-white text-[0.78vw] text-slate-700 font-medium shadow-2xs">
+          <div className="flex items-center gap-[0.35vw] px-[0.7vw] py-[0.4vw] rounded-[0.5vw] border border-gray-200 bg-white text-[0.75vw] text-gray-700 font-medium shadow-xs">
             <Shield size="0.9vw" className="text-[#ec5137]" />
-            <span className="text-slate-400">Role:</span>
+            <span className="text-gray-400 font-normal">Role:</span>
             <select
               value={roleFilter}
               onChange={(e) => {
                 setRoleFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer"
+              className="bg-transparent font-medium text-gray-800 outline-none cursor-pointer"
             >
               <option value="all">All Roles</option>
               <option value="user">User</option>
@@ -151,16 +151,16 @@ export default function UsersPage() {
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-[0.35vw] px-[0.7vw] py-[0.4vw] rounded-[0.55vw] border border-slate-200 bg-white text-[0.78vw] text-slate-700 font-medium shadow-2xs">
+          <div className="flex items-center gap-[0.35vw] px-[0.7vw] py-[0.4vw] rounded-[0.5vw] border border-gray-200 bg-white text-[0.75vw] text-gray-700 font-medium shadow-xs">
             <Filter size="0.9vw" className="text-[#ec5137]" />
-            <span className="text-slate-400">Status:</span>
+            <span className="text-gray-400 font-normal">Status:</span>
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer"
+              className="bg-transparent font-medium text-gray-800 outline-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -169,8 +169,8 @@ export default function UsersPage() {
             </select>
           </div>
 
-          <span className="text-[0.78vw] text-slate-500 font-medium ml-[0.4vw]">
-            Total: <strong className="text-slate-800 font-bold">{totalCount}</strong>
+          <span className="text-[0.75vw] text-gray-500 font-normal ml-[0.4vw]">
+            Total: <strong className="text-gray-800 font-semibold">{totalCount}</strong>
           </span>
         </div>
       </div>
@@ -178,15 +178,15 @@ export default function UsersPage() {
       {/* Users Horizontal Cards List */}
       <div className="space-y-[0.65vw]">
         {loading ? (
-          <div className="py-[4vw] text-center bg-white rounded-[0.8vw] border border-slate-200 shadow-xs">
+          <div className="py-[4vw] text-center bg-white rounded-[1vw] border border-gray-200 shadow-sm">
             <Loader2 className="animate-spin text-[#ec5137] mx-auto mb-[0.5vw]" size="1.5vw" />
-            <p className="text-[0.78vw] font-semibold text-slate-600">Loading user accounts...</p>
+            <p className="text-[0.78vw] font-medium text-gray-600">Loading user accounts...</p>
           </div>
         ) : users.length === 0 ? (
-          <div className="py-[3vw] text-center bg-white rounded-[0.8vw] border border-slate-200 p-[1.5vw] shadow-xs">
-            <Users size="2vw" className="mx-auto text-slate-300 mb-[0.4vw]" />
-            <p className="text-[0.88vw] font-bold text-slate-800">No users match the criteria</p>
-            <p className="text-[0.72vw] text-slate-400 mt-[0.2vw]">Try resetting the search keyword or filter pills.</p>
+          <div className="py-[3vw] text-center bg-white rounded-[1vw] border border-gray-200 p-[1.5vw] shadow-sm">
+            <Users size="2vw" className="mx-auto text-gray-300 mb-[0.4vw]" />
+            <p className="text-[0.88vw] font-medium text-gray-800">No users match the criteria</p>
+            <p className="text-[0.72vw] text-gray-400 font-normal mt-[0.2vw]">Try resetting the search keyword or filter pills.</p>
           </div>
         ) : (
           users.map((user) => {
@@ -200,53 +200,53 @@ export default function UsersPage() {
             return (
               <div
                 key={user._id}
-                className="bg-white rounded-[0.8vw] border border-slate-200/90 p-[0.9vw] shadow-xs hover:shadow-sm hover:border-[#ec5137]/30 transition duration-150 flex items-center justify-between gap-[1vw]"
+                className="bg-white rounded-[0.75vw] border border-gray-200 p-[0.9vw] shadow-xs hover:border-gray-300 transition duration-150 flex items-center justify-between gap-[1vw]"
               >
                 {/* User Info */}
                 <div className="flex items-center gap-[0.8vw] min-w-0">
-                  <div className="w-[2.6vw] h-[2.6vw] rounded-full bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300/80 text-slate-700 font-bold text-[0.85vw] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                  <div className="w-[2.6vw] h-[2.6vw] rounded-full bg-gray-100 border border-gray-200 text-gray-700 font-medium text-[0.85vw] flex items-center justify-center flex-shrink-0 shadow-xs">
                     {initials}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-[0.5vw]">
-                      <h3 className="text-[0.88vw] font-bold text-slate-800 truncate">
+                      <h3 className="text-[0.88vw] font-medium text-gray-800 truncate">
                         {user.name || 'Unnamed Member'}
                       </h3>
                       {user.role === 'admin' ? (
-                        <span className="px-[0.4vw] py-[0.1vw] rounded-[0.3vw] text-[0.65vw] font-bold bg-[#ec5137]/10 text-[#ec5137] border border-[#ec5137]/20 uppercase">
+                        <span className="px-[0.55vw] py-[0.12vw] rounded-full text-[0.66vw] font-medium bg-purple-50 text-purple-700 border border-purple-200 uppercase">
                           Admin
                         </span>
                       ) : (
-                        <span className="px-[0.4vw] py-[0.1vw] rounded-[0.3vw] text-[0.65vw] font-medium bg-slate-100 text-slate-600 border border-slate-200 uppercase">
+                        <span className="px-[0.55vw] py-[0.12vw] rounded-full text-[0.66vw] font-medium bg-gray-100 text-gray-600 border border-gray-200 uppercase">
                           User
                         </span>
                       )}
                       <span
-                        className={`inline-flex items-center gap-[0.25vw] px-[0.45vw] py-[0.1vw] rounded-[0.3vw] text-[0.68vw] font-semibold border ${
+                        className={`inline-flex items-center gap-[0.25vw] px-[0.55vw] py-[0.12vw] rounded-full text-[0.66vw] font-medium border ${
                           isBanned
                             ? 'bg-rose-50 text-rose-700 border-rose-200'
                             : isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            ? 'bg-[#DCFCE7] text-[#16A34A] border-[#bbf7d0]'
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}
                       >
                         <span
                           className={`w-[0.35vw] h-[0.35vw] rounded-full ${
-                            isBanned ? 'bg-rose-500' : isActive ? 'bg-emerald-500' : 'bg-amber-500'
+                            isBanned ? 'bg-rose-500' : isActive ? 'bg-[#16A34A]' : 'bg-amber-500'
                           }`}
                         />
                         <span>{user.status || (user.isActive ? 'active' : 'inactive')}</span>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-[0.6vw] text-[0.72vw] text-slate-400 mt-[0.1vw]">
+                    <div className="flex items-center gap-[0.6vw] text-[0.72vw] text-gray-400 font-normal mt-[0.15vw]">
                       <span className="flex items-center gap-[0.25vw] truncate">
-                        <Mail size="0.75vw" className="text-slate-400" />
-                        <span className="text-slate-600 font-medium truncate">{user.emailId || user.email}</span>
+                        <Mail size="0.75vw" className="text-gray-400" />
+                        <span className="text-gray-600 font-medium truncate">{user.emailId || user.email}</span>
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-[0.25vw]">
-                        <Calendar size="0.75vw" className="text-slate-400" />
+                        <Calendar size="0.75vw" className="text-gray-400" />
                         <span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString()}</span>
                       </span>
                     </div>
@@ -256,12 +256,12 @@ export default function UsersPage() {
                 {/* Actions & Role Switcher */}
                 <div className="flex items-center gap-[0.6vw]">
                   {/* Role Switcher */}
-                  <div className="flex items-center gap-[0.3vw] bg-slate-50 border border-slate-200 rounded-[0.55vw] px-[0.6vw] py-[0.3vw] text-[0.72vw]">
-                    <span className="text-slate-400 text-[0.68vw]">Role:</span>
+                  <div className="flex items-center gap-[0.3vw] bg-[#f8f9fa] border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.32vw] text-[0.72vw]">
+                    <span className="text-gray-400 text-[0.68vw] font-normal">Role:</span>
                     <select
                       value={user.role || 'user'}
                       onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                      className="bg-transparent font-semibold text-slate-700 outline-none cursor-pointer"
+                      className="bg-transparent font-medium text-gray-700 outline-none cursor-pointer"
                     >
                       <option value="user">User</option>
                       <option value="admin">Admin</option>
@@ -273,7 +273,7 @@ export default function UsersPage() {
                     <button
                       type="button"
                       onClick={() => handleStatusChange(user._id, 'banned')}
-                      className="px-[0.7vw] py-[0.35vw] rounded-[0.55vw] border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[0.72vw] font-semibold transition cursor-pointer"
+                      className="px-[0.75vw] py-[0.35vw] rounded-[0.5vw] border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[0.72vw] font-medium transition cursor-pointer active:scale-[0.98]"
                       title="Ban account"
                     >
                       Ban
@@ -282,7 +282,7 @@ export default function UsersPage() {
                     <button
                       type="button"
                       onClick={() => handleStatusChange(user._id, 'active')}
-                      className="px-[0.7vw] py-[0.35vw] rounded-[0.55vw] border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[0.72vw] font-semibold transition cursor-pointer"
+                      className="px-[0.75vw] py-[0.35vw] rounded-[0.5vw] border border-emerald-200 bg-[#DCFCE7] hover:bg-emerald-100 text-[#16A34A] text-[0.72vw] font-medium transition cursor-pointer active:scale-[0.98]"
                       title="Reactivate account"
                     >
                       Activate
@@ -293,7 +293,7 @@ export default function UsersPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteUser(user._id, user.emailId || user.email)}
-                    className="p-[0.4vw] rounded-[0.45vw] text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                    className="p-[0.4vw] rounded-[0.4vw] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                     title="Delete user account"
                   >
                     <Trash2 size="0.95vw" />
@@ -307,22 +307,22 @@ export default function UsersPage() {
 
       {/* Pagination Bar */}
       {totalPages > 1 && (
-        <div className="bg-white rounded-[0.8vw] border border-slate-200/90 px-[0.9vw] py-[0.6vw] shadow-xs flex items-center justify-between text-[0.75vw]">
-          <span className="text-slate-500 font-medium">
-            Page <strong className="text-slate-800">{page}</strong> of <strong className="text-slate-800">{totalPages}</strong>
+        <div className="bg-white rounded-[0.75vw] border border-gray-200 px-[0.9vw] py-[0.6vw] shadow-xs flex items-center justify-between text-[0.75vw]">
+          <span className="text-gray-500 font-normal">
+            Page <strong className="text-gray-800 font-semibold">{page}</strong> of <strong className="text-gray-800 font-semibold">{totalPages}</strong>
           </span>
           <div className="flex items-center gap-[0.35vw]">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-[0.35vw] rounded-[0.4vw] border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 transition cursor-pointer"
+              className="p-[0.35vw] rounded-[0.4vw] border border-gray-200 hover:bg-gray-50 text-gray-600 disabled:opacity-40 transition cursor-pointer"
             >
               <ChevronLeft size="0.95vw" />
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-[0.35vw] rounded-[0.4vw] border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 transition cursor-pointer"
+              className="p-[0.35vw] rounded-[0.4vw] border border-gray-200 hover:bg-gray-50 text-gray-600 disabled:opacity-40 transition cursor-pointer"
             >
               <ChevronRight size="0.95vw" />
             </button>

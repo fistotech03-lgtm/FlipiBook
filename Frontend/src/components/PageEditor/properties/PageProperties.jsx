@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import ColorPicker, { parseGradient } from './ColorPicker';
 import { generateGradientString } from "../../CustomizedEditor/AppearanceShared";
+import { handleScrubHelper } from './Color';
 
 export const getDocumentInfo = (w, h) => {
   const roundedW = Math.round(w || 210);
@@ -40,22 +41,32 @@ export const getDocumentInfo = (w, h) => {
   };
 };
 
-const DEFAULT_PRESET_COLORS = [
-  '#000000', '#4B5563', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#F3F4F6', '#FFFFFF',
-  '#EF4444', '#F97316', '#F59E0B', '#10B981', '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'
-];
-
 const PageProperties = ({
   pages,
   overlay,
   activePageIndex,
   updateElementAttribute,
   baseWidth,
-  baseHeight,
-  presetColors = DEFAULT_PRESET_COLORS
+  baseHeight
 }) => {
-  const [isPageBgPickerOpen, setIsPageBgPickerOpen] = useState(false);
+  const [isPageColorPickerOpen, setIsPageColorPickerOpen] = useState(false);
+  const [isCanvaColorPickerOpen, setIsCanvaColorPickerOpen] = useState(false);
 
+  // Canva (Workspace canvas) color state with local storage persistence
+  const [canvaColor, setCanvaColor] = useState(() => {
+    return localStorage.getItem('editor_canva_color') || '#E6E7E7';
+  });
+  const [canvaOpacity, setCanvaOpacity] = useState(() => {
+    const saved = localStorage.getItem('editor_canva_opacity');
+    return saved !== null ? parseFloat(saved) : 1;
+  });
+  const [canvaColorHex, setCanvaColorHex] = useState(canvaColor);
+
+  useEffect(() => {
+    setCanvaColorHex(canvaColor);
+  }, [canvaColor]);
+
+  // Extract page overlay details
   let effectiveOverlay = overlay;
   if (!effectiveOverlay && pages && pages[activePageIndex]) {
     try {
@@ -67,8 +78,10 @@ const PageProperties = ({
     }
   }
 
-  const currentBg = effectiveOverlay?.getAttribute('fill') || '#ffffff';
+  const currentBg = effectiveOverlay?.getAttribute('fill') || '#FFFFFF';
   const fillType = effectiveOverlay?.getAttribute('fill-type') || 'solid';
+  const rawOpacity = effectiveOverlay?.getAttribute('fill-opacity');
+  const pageOpacity = rawOpacity !== null && rawOpacity !== undefined ? parseFloat(rawOpacity) : 1;
 
   let currentBgStr = currentBg;
   if (fillType === 'gradient' || currentBg.toLowerCase().includes('url(#')) {
@@ -85,117 +98,284 @@ const PageProperties = ({
     }
   }
 
+  const [pageColorHex, setPageColorHex] = useState(currentBg.startsWith('#') ? currentBg : '#FFFFFF');
+
+  useEffect(() => {
+    if (currentBg.startsWith('#')) {
+      setPageColorHex(currentBg);
+    }
+  }, [currentBg]);
+
+  const handlePageColorChange = (newVal) => {
+    if (newVal.includes('gradient')) {
+      const parsed = parseGradient(newVal);
+      if (parsed) {
+        updateElementAttribute(activePageIndex, 'Overlay', {
+          'fill-type': 'gradient',
+          'fill-gradient-type': parsed.type.toLowerCase(),
+          'fill-stops': JSON.stringify(parsed.stops.map(s => ({
+            color: s.color,
+            offset: s.offset,
+            opacity: s.opacity / 100
+          }))),
+          'fill-angle': (parsed.angle || 0).toString(),
+          'fill-radius': (parsed.radius || 100).toString(),
+          'fill': newVal
+        });
+      }
+    } else {
+      updateElementAttribute(activePageIndex, 'Overlay', {
+        'fill-type': 'solid',
+        'fill': newVal
+      });
+      if (newVal.startsWith('#')) setPageColorHex(newVal);
+    }
+  };
+
+  const handlePageOpacityChange = (newOpacity) => {
+    updateElementAttribute(activePageIndex, 'Overlay', {
+      'fill-opacity': newOpacity.toString()
+    });
+  };
+
+  const handlePageHexInput = (e) => {
+    const val = e.target.value;
+    setPageColorHex(val);
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      handlePageColorChange(val);
+    }
+  };
+
+  const handleCanvaColorChange = (newColor) => {
+    setCanvaColor(newColor);
+    setCanvaColorHex(newColor);
+    localStorage.setItem('editor_canva_color', newColor);
+    window.dispatchEvent(new CustomEvent('editor-canva-color-changed', {
+      detail: { color: newColor, opacity: canvaOpacity }
+    }));
+  };
+
+  const handleCanvaOpacityChange = (newOpacity) => {
+    setCanvaOpacity(newOpacity);
+    localStorage.setItem('editor_canva_opacity', newOpacity.toString());
+    window.dispatchEvent(new CustomEvent('editor-canva-color-changed', {
+      detail: { color: canvaColor, opacity: newOpacity }
+    }));
+  };
+
+  const handleCanvaHexInput = (e) => {
+    const val = e.target.value;
+    setCanvaColorHex(val);
+    if (/^#[0-9A-Fa-f]{6}$/.test(val) || /^#[0-9A-Fa-f]{3}$/.test(val)) {
+      handleCanvaColorChange(val);
+    }
+  };
+
   const info = getDocumentInfo(baseWidth, baseHeight);
 
+  // Extract all colors on the active page for ColorPicker "Colors on this page"
+  const pageColors = useMemo(() => {
+    const colors = new Set();
+    const currentPage = pages?.[activePageIndex];
+    if (currentPage?.html) {
+      const hexMatches = currentPage.html.match(/#[0-9A-Fa-f]{6}\b/g) || [];
+      hexMatches.forEach(c => colors.add(c.toUpperCase()));
+      const hex3Matches = currentPage.html.match(/#[0-9A-Fa-f]{3}\b/g) || [];
+      hex3Matches.forEach(c => colors.add(c.toUpperCase()));
+    }
+    if (typeof document !== 'undefined') {
+      const pageEl = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`) || document.querySelector('.page-svg-container');
+      if (pageEl) {
+        pageEl.querySelectorAll('*').forEach(el => {
+          ['fill', 'stroke', 'color'].forEach(attr => {
+            const val = el.getAttribute(attr);
+            if (val && val.startsWith('#')) colors.add(val.toUpperCase());
+          });
+          if (el.style) {
+            ['fill', 'stroke', 'color', 'backgroundColor'].forEach(prop => {
+              const val = el.style[prop];
+              if (val && val.startsWith('#')) colors.add(val.toUpperCase());
+            });
+          }
+        });
+      }
+    }
+    colors.add('#DADBE8');
+    colors.add('#FFFFFF');
+    colors.add('#000000');
+    return Array.from(colors).slice(0, 12);
+  }, [pages, activePageIndex]);
+
   return (
-    <div className="flex flex-col gap-[3vh]">
-      {/* Page Background Section */}
-      <div className="flex flex-col gap-[1.5vh]">
-        <div className="flex items-center gap-[0.75vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">
-            Page Background
-          </span>
-          <div className="h-[0.1vw] flex-1 bg-gray-200"></div>
+    <div className="bg-white px-[1.2vw] pt-[1.1vw] pb-[1.5vw] flex flex-col gap-[1.5vw] flex-1 select-none">
+      {/* ── Page Properties Section ── */}
+      <div className="flex flex-col gap-[1vw]">
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Page Properties</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
         </div>
 
-        <div className="bg-white rounded-[0.8vw] border border-gray-200 p-[1vw] shadow-sm">
-          <div className="flex items-center justify-between mb-[1.5vh]">
-            <span className="text-[0.75vw] text-gray-500 font-medium">Background Color</span>
-            <div
-              className="flex items-center gap-[0.5vw] cursor-pointer hover:bg-gray-50 p-[0.3vw] rounded-[0.4vw] transition-colors"
-              onClick={() => setIsPageBgPickerOpen(!isPageBgPickerOpen)}
-            >
-              <div className="w-[1.2vw] h-[1.2vw] rounded-full border border-gray-200 shadow-inner flex-shrink-0" style={{ background: currentBgStr }} />
-              <span className="text-[0.7vw] font-mono text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[8vw]">
-                {currentBgStr.toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-8 gap-[0.4vw]">
-            {presetColors.map((color) => (
-              <button
-                key={color}
-                onClick={() => {
-                  updateElementAttribute(activePageIndex, 'Overlay', {
-                    'fill-type': 'solid',
-                    'fill': color
+        {/* 1. Page Color */}
+        <div className="flex flex-col gap-[0.35vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800">Page Color</span>
+          <div className="flex items-center gap-[0.6vw]">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCanvaColorPickerOpen(false);
+                setIsPageColorPickerOpen(prev => !prev);
+              }}
+              className="w-[3.6vw] h-[2vw] rounded-[0.4vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+              style={{ background: currentBgStr }}
+              title="Change page color"
+            />
+            <div className="flex-1 h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-between px-[0.7vw] hover:border-gray-400 transition-colors">
+              <input
+                type="text"
+                value={pageColorHex}
+                onChange={handlePageHexInput}
+                className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent w-[5.5vw] uppercase"
+                maxLength={7}
+              />
+              <div
+                className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                onPointerDown={(e) => {
+                  const currentPct = Math.round(pageOpacity * 100);
+                  handleScrubHelper(e, currentPct, (val) => {
+                    const num = parseInt(val);
+                    const clamped = Math.min(Math.max(num, 0), 100);
+                    handlePageOpacityChange(clamped / 100);
                   });
                 }}
-                className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] border border-gray-100 transition-all hover:scale-110 shadow-sm ${currentBg.toLowerCase() === color.toLowerCase() ? 'ring-2 ring-blue-500 scale-110 z-10 ring-offset-1' : 'hover:z-10'}`}
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
-          </div>
-
-          {isPageBgPickerOpen && createPortal(
-            <div
-              className="fixed z-[5000]"
-              style={{
-                top: '50%',
-                right: '19.5vw',
-                transform: 'translateY(-50%)'
-              }}
-            >
-              <div className="animate-in fade-in zoom-in-95 duration-200 relative">
-                <ColorPicker
-                  color={currentBgStr}
-                  onChange={(newVal) => {
-                    if (newVal.includes('gradient')) {
-                      const parsed = parseGradient(newVal);
-                      if (parsed) {
-                        updateElementAttribute(activePageIndex, 'Overlay', {
-                          'fill-type': 'gradient',
-                          'fill-gradient-type': parsed.type.toLowerCase(),
-                          'fill-stops': JSON.stringify(parsed.stops.map(s => ({
-                            color: s.color,
-                            offset: s.offset,
-                            opacity: s.opacity / 100
-                          }))),
-                          'fill-angle': (parsed.angle || 0).toString(),
-                          'fill-radius': (parsed.radius || 100).toString(),
-                          'fill': newVal
-                        });
-                      }
-                    } else {
-                      updateElementAttribute(activePageIndex, 'Overlay', {
-                        'fill-type': 'solid',
-                        'fill': newVal
-                      });
-                    }
-                  }}
-                  opacity={100}
-                  onClose={() => setIsPageBgPickerOpen(false)}
-                />
+                title="Drag horizontally to adjust opacity"
+              >
+                <span className="text-[0.8vw] font-medium text-gray-700">{Math.round(pageOpacity * 100)}%</span>
               </div>
-            </div>,
-            document.body
-          )}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Canva Color */}
+        <div className="flex flex-col gap-[0.35vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800">Canva Color</span>
+          <div className="flex items-center gap-[0.6vw]">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPageColorPickerOpen(false);
+                setIsCanvaColorPickerOpen(prev => !prev);
+              }}
+              className="w-[3.6vw] h-[2vw] rounded-[0.4vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+              style={{
+                background: canvaColor.startsWith('#')
+                  ? (() => {
+                      let hex = canvaColor.replace('#', '');
+                      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+                      const r = parseInt(hex.substring(0, 2), 16) || 0;
+                      const g = parseInt(hex.substring(2, 4), 16) || 0;
+                      const b = parseInt(hex.substring(4, 6), 16) || 0;
+                      return `rgba(${r}, ${g}, ${b}, ${canvaOpacity})`;
+                    })()
+                  : canvaColor
+              }}
+              title="Change canva color"
+            />
+            <div className="flex-1 h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-between px-[0.7vw] hover:border-gray-400 transition-colors">
+              <input
+                type="text"
+                value={canvaColorHex}
+                onChange={handleCanvaHexInput}
+                className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent w-[5.5vw] uppercase"
+                maxLength={7}
+              />
+              <div
+                className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                onPointerDown={(e) => {
+                  const currentPct = Math.round(canvaOpacity * 100);
+                  handleScrubHelper(e, currentPct, (val) => {
+                    const num = parseInt(val);
+                    const clamped = Math.min(Math.max(num, 0), 100);
+                    handleCanvaOpacityChange(clamped / 100);
+                  });
+                }}
+                title="Drag horizontally to adjust opacity"
+              >
+                <span className="text-[0.8vw] font-medium text-gray-700">{Math.round(canvaOpacity * 100)}%</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Document Info Section */}
-      <div className="flex flex-col gap-[1.5vh]">
-        <div className="flex items-center gap-[0.75vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Document info</span>
-          <div className="h-[0.1vw] flex-1 bg-gray-200"></div>
+      {/* ── Document Info Section ── */}
+      <div className="flex flex-col gap-[0.8vw]">
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Document info</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
         </div>
-        <div className="bg-white rounded-[0.8vw] border border-gray-200 p-[1vw] shadow-sm flex flex-col gap-[1vh]">
-          <div className="flex justify-between items-center text-[0.75vw]">
+        <div className="bg-white rounded-[0.5vw] border border-gray-200 p-[0.9vw] shadow-2xs flex flex-col gap-[0.7vw]">
+          <div className="flex justify-between items-center text-[0.8vw]">
             <span className="text-gray-500 font-medium">Format</span>
             <span className="text-gray-900 font-semibold">{info.format}</span>
           </div>
-          <div className="flex justify-between items-center text-[0.75vw]">
+          <div className="flex justify-between items-center text-[0.8vw]">
             <span className="text-gray-500 font-medium">Orientation</span>
             <span className="text-gray-900 font-semibold">{info.orientation}</span>
           </div>
-          <div className="flex justify-between items-center text-[0.75vw]">
+          <div className="flex justify-between items-center text-[0.8vw]">
             <span className="text-gray-500 font-medium">Dimensions</span>
             <span className="text-gray-900 font-semibold">{info.dimensions}</span>
           </div>
         </div>
       </div>
+
+      {/* Page Color Picker Portal */}
+      {isPageColorPickerOpen && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{
+            top: '50%',
+            right: '25vw',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="animate-in fade-in zoom-in-95 duration-200 relative">
+            <ColorPicker
+              color={currentBgStr}
+              colorsOnPage={pageColors}
+              onChange={handlePageColorChange}
+              opacity={pageOpacity * 100}
+              onOpacityChange={(newOp) => handlePageOpacityChange(newOp / 100)}
+              onClose={() => setIsPageColorPickerOpen(false)}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Canva Color Picker Portal */}
+      {isCanvaColorPickerOpen && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{
+            top: '50%',
+            right: '25vw',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="animate-in fade-in zoom-in-95 duration-200 relative">
+            <ColorPicker
+              color={canvaColor}
+              colorsOnPage={pageColors}
+              onChange={handleCanvaColorChange}
+              opacity={canvaOpacity * 100}
+              onOpacityChange={(newOp) => handleCanvaOpacityChange(newOp / 100)}
+              onClose={() => setIsCanvaColorPickerOpen(false)}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -6,8 +6,7 @@ import {
   AlertCircle, 
   UploadCloud,
   Loader2,
-  Trash2,
-  Image as ImageIcon
+  Trash2
 } from 'lucide-react';
 import { TICKET_MODULES } from './data/ticketData';
 import CustomDropdown from '../../CustomDropdown';
@@ -106,7 +105,8 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
         email: contactEmail,
         avatarColor: currentUser?.avatarBgColor || '#ec5137',
         badge: 'Authorized User',
-        role: currentUser?.role || 'User'
+        role: currentUser?.role || 'User',
+        userID: currentUser?.userID || currentUser?.userId || ''
       },
       ccRecipients: [
         contactEmail,
@@ -159,189 +159,202 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
   const totalBytes = attachments.reduce((sum, item) => sum + (item.size || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-[1vw] bg-stone-900/60 backdrop-blur-[2px] animate-in fade-in duration-150 select-none">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-[1vw]"
+    >
       <div 
-        className="bg-white rounded-[1vw] shadow-2xl w-full max-w-[42vw] max-h-[88vh] flex flex-col overflow-hidden border border-stone-200"
+        className="w-full max-w-[34vw] bg-white rounded-[1vw] shadow-xl border border-gray-200 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
-        {/* Header */}
-        <div className="px-[1.4vw] py-[0.9vw] border-b border-orange-100 flex items-center justify-between bg-orange-50/40 flex-shrink-0">
-          <div className="flex items-center gap-[0.7vw]">
-            <div className="w-[2vw] h-[2vw] rounded-[0.5vw] bg-orange-100 text-[#ec5137] flex items-center justify-center">
-              <LifeBuoy className="w-[1.05vw] h-[1.05vw]" />
+        {/* Modal Header */}
+        <div className="px-[1.6vw] pt-[1.35vw] pb-[0.8vw] border-b border-gray-100 shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-[0.65vw]">
+              <div className="mt-[0.1vw] text-[#EC5137]">
+                <LifeBuoy className="w-[1.15vw] h-[1.15vw]" />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-[1.15vw] font-semibold text-gray-800 leading-tight">
+                  Raise Support Ticket
+                </h2>
+                <p className="text-[0.72vw] text-gray-500 mt-[0.2vw] font-normal">
+                  Direct inquiry to our support and engineering team.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-[1.05vw] font-bold text-stone-900">
-                Raise Support Ticket
-              </h2>
-              <p className="text-[0.72vw] text-stone-500 font-normal">
-                Direct inquiry to our support and engineering team
-              </p>
-            </div>
-          </div>
 
-          <button 
-            type="button"
-            onClick={onClose}
-            className="text-stone-400 hover:text-[#ec5137] p-[0.35vw] rounded-[0.4vw] hover:bg-orange-50 transition-colors cursor-pointer"
-          >
-            <X className="w-[1vw] h-[1vw]" />
-          </button>
+            <button 
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer p-[0.3vw] rounded-[0.4vw] hover:bg-gray-100"
+            >
+              <X className="w-[0.95vw] h-[0.95vw]" strokeWidth="2.2" />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-[1.4vw] space-y-[0.85vw] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {/* Module Selector with CustomDropdown */}
-          <CustomDropdown
-            label="Module (Optional)"
-            value={moduleId}
-            onChange={(val) => setModuleId(val)}
-            options={modulesList.map((m) => ({
-              value: m.id,
-              label: m.name
-            }))}
-            placeholder="Select a module..."
-          />
-
-          {/* Subject */}
-          <div>
-            <label className="block text-[0.72vw] font-semibold text-stone-700 uppercase tracking-wide mb-[0.35vw]">
-              Subject <span className="text-[#ec5137]">*</span>
-            </label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Brief summary of the issue..."
-              className="w-full px-[0.85vw] py-[0.5vw] text-[0.8vw] border border-stone-300 rounded-[0.55vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137]/20 focus:border-[#ec5137] text-stone-900 font-normal shadow-2xs"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-[0.72vw] font-semibold text-stone-700 uppercase tracking-wide mb-[0.35vw]">
-              Description <span className="text-[#ec5137]">*</span>
-            </label>
-            <textarea
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Explain the problem in detail (what happened, steps taken, error message)..."
-              className="w-full p-[0.85vw] text-[0.8vw] border border-stone-300 rounded-[0.55vw] focus:outline-none focus:ring-1 focus:ring-[#ec5137]/20 focus:border-[#ec5137] resize-y text-stone-900 font-normal leading-relaxed shadow-2xs"
-            />
-          </div>
-
-          {/* Attachment */}
-          <div>
-            <div className="flex items-center justify-between mb-[0.35vw]">
-              <label className="block text-[0.72vw] font-semibold text-stone-700 uppercase tracking-wide">
-                Image Attachments <span className="text-stone-400 font-normal">(Optional, max 5)</span>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-[1.6vw] pb-[0.8vw] pt-[0.9vw] flex flex-col gap-[0.85vw] overflow-y-auto [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {/* Module Selector with CustomDropdown */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <label className="text-[0.74vw] font-medium text-gray-700">
+                Department / Module <span className="text-gray-400 font-normal">(Optional)</span>
               </label>
-              <span className="text-[0.68vw] text-stone-500 font-normal">
-                {attachments.length}/5 images • {formatFileSize(totalBytes)}/4 MB
-              </span>
+              <CustomDropdown
+                value={moduleId}
+                onChange={(val) => setModuleId(val)}
+                options={modulesList.map((m) => ({
+                  value: m.id,
+                  label: m.name
+                }))}
+                placeholder="Select a module..."
+                buttonClassName="h-[2.3vw] py-[0.35vw] text-[0.76vw] rounded-[0.5vw] border-gray-200 text-gray-800 font-normal"
+              />
             </div>
 
-            <div className="border border-dashed border-stone-300 hover:border-[#ec5137]/50 rounded-[0.65vw] p-[0.9vw] bg-stone-50/60 transition-colors">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[0.7vw]">
-                <div className="flex items-center gap-[0.6vw]">
-                  <div className="w-[2.2vw] h-[2.2vw] rounded-[0.5vw] bg-orange-100/70 text-[#ec5137] flex items-center justify-center shrink-0">
-                    <UploadCloud className="w-[1.1vw] h-[1.1vw]" />
-                  </div>
-                  <div>
-                    <p className="text-[0.78vw] font-medium text-stone-800">
-                      Upload JPG, PNG, JPEG, or WebP
-                    </p>
-                    <p className="text-[0.68vw] text-stone-500 font-normal">
-                      Max 10 MB per image • Auto-resized to 1920px & compressed
-                    </p>
-                  </div>
-                </div>
+            {/* Subject */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <label className="text-[0.74vw] font-medium text-gray-700">
+                Subject <span className="text-[#EC5137]">*</span>
+              </label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Brief summary of the issue..."
+                className="w-full px-[0.85vw] py-[0.52vw] text-[0.76vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-gray-800 placeholder-gray-400 font-normal transition-colors"
+              />
+            </div>
 
-                <label className={`px-[0.75vw] py-[0.4vw] rounded-[0.45vw] border border-stone-300 bg-white text-[0.75vw] font-semibold text-stone-700 hover:bg-stone-50 cursor-pointer transition-colors shadow-2xs shrink-0 flex items-center justify-center gap-[0.35vw] ${
-                  attachments.length >= 5 || isCompressing ? 'opacity-50 pointer-events-none' : ''
-                }`}>
-                  {isCompressing ? (
-                    <>
-                      <Loader2 className="w-[0.8vw] h-[0.8vw] animate-spin text-[#ec5137]" />
-                      <span>Optimizing...</span>
-                    </>
-                  ) : (
-                    <span>Add Images</span>
-                  )}
-                  <input 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept="image/png,image/jpeg,image/jpg,image/webp" 
-                    multiple
-                    disabled={attachments.length >= 5 || isCompressing}
-                    onChange={handleImageFilesChange} 
-                    className="hidden" 
-                  />
+            {/* Description */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <label className="text-[0.74vw] font-medium text-gray-700">
+                Description <span className="text-[#EC5137]">*</span>
+              </label>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Explain the problem in detail (what happened, steps taken, error message)..."
+                className="w-full p-[0.85vw] text-[0.76vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none resize-y text-gray-800 placeholder-gray-400 font-normal leading-relaxed transition-colors"
+              />
+            </div>
+
+            {/* Attachment */}
+            <div className="flex flex-col gap-[0.25vw]">
+              <div className="flex items-center justify-between mb-[0.1vw]">
+                <label className="text-[0.74vw] font-medium text-gray-700">
+                  Image Attachments <span className="text-gray-400 font-normal">(Optional, max 5)</span>
                 </label>
+                <span className="text-[0.66vw] text-gray-400 font-normal">
+                  {attachments.length}/5 images • {formatFileSize(totalBytes)}/4 MB
+                </span>
               </div>
 
-              {/* Attached Images Previews */}
-              {attachments.length > 0 && (
-                <div className="mt-[0.75vw] pt-[0.65vw] border-t border-stone-200/80 grid grid-cols-1 sm:grid-cols-2 gap-[0.45vw]">
-                  {attachments.map((att, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-center justify-between p-[0.5vw] rounded-[0.45vw] bg-white border border-stone-200 shadow-2xs gap-[0.45vw]"
-                    >
-                      <div className="flex items-center gap-[0.45vw] min-w-0">
-                        <img 
-                          src={att.dataUrl} 
-                          alt={att.name} 
-                          className="w-[1.8vw] h-[1.8vw] rounded-[0.3vw] object-cover border border-stone-200 shrink-0" 
-                        />
-                        <div className="min-w-0">
-                          <p className="text-[0.72vw] font-medium text-stone-800 truncate" title={att.name}>
-                            {att.name}
-                          </p>
-                          <p className="text-[0.62vw] text-stone-400">
-                            {formatFileSize(att.size)} <span className="text-stone-300">•</span> {att.width}×{att.height}px
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(idx)}
-                        className="text-stone-400 hover:text-red-500 p-[0.25vw] rounded-[0.3vw] hover:bg-red-50 transition-colors shrink-0"
-                        title="Remove image"
-                      >
-                        <Trash2 className="w-[0.85vw] h-[0.85vw]" />
-                      </button>
+              <div className="border border-dashed border-gray-200 rounded-[0.5vw] p-[0.85vw] bg-[#f8f9fa] transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[0.6vw]">
+                  <div className="flex items-center gap-[0.55vw]">
+                    <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-orange-100/70 text-[#EC5137] flex items-center justify-center shrink-0">
+                      <UploadCloud className="w-[1vw] h-[1vw]" />
                     </div>
-                  ))}
+                    <div>
+                      <p className="text-[0.76vw] font-medium text-gray-800">
+                        Upload JPG, PNG, JPEG, or WebP
+                      </p>
+                      <p className="text-[0.66vw] text-gray-400 font-normal">
+                        Max 10 MB per image • Auto-resized to 1920px & compressed
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className={`px-[0.75vw] py-[0.38vw] rounded-[0.45vw] border border-gray-200 bg-white text-[0.74vw] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors shadow-xs shrink-0 flex items-center justify-center gap-[0.35vw] ${
+                    attachments.length >= 5 || isCompressing ? 'opacity-50 pointer-events-none' : ''
+                  }`}>
+                    {isCompressing ? (
+                      <>
+                        <Loader2 className="w-[0.75vw] h-[0.75vw] animate-spin text-[#EC5137]" />
+                        <span>Optimizing...</span>
+                      </>
+                    ) : (
+                      <span>Add Images</span>
+                    )}
+                    <input 
+                      ref={fileInputRef}
+                      type="file" 
+                      accept="image/png,image/jpeg,image/jpg,image/webp" 
+                      multiple
+                      disabled={attachments.length >= 5 || isCompressing}
+                      onChange={handleImageFilesChange} 
+                      className="hidden" 
+                    />
+                  </label>
                 </div>
-              )}
+
+                {/* Attached Images Previews */}
+                {attachments.length > 0 && (
+                  <div className="mt-[0.65vw] pt-[0.6vw] border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-[0.45vw]">
+                    {attachments.map((att, idx) => (
+                      <div 
+                        key={idx} 
+                        className="flex items-center justify-between p-[0.45vw] rounded-[0.45vw] bg-white border border-gray-200 shadow-xs gap-[0.45vw]"
+                      >
+                        <div className="flex items-center gap-[0.45vw] min-w-0">
+                          <img 
+                            src={att.dataUrl} 
+                            alt={att.name} 
+                            className="w-[1.8vw] h-[1.8vw] rounded-[0.3vw] object-cover border border-gray-100 shrink-0" 
+                          />
+                          <div className="min-w-0">
+                            <p className="text-[0.72vw] font-medium text-gray-800 truncate" title={att.name}>
+                              {att.name}
+                            </p>
+                            <p className="text-[0.62vw] text-gray-400 font-normal">
+                              {formatFileSize(att.size)} <span className="text-gray-300">•</span> {att.width}×{att.height}px
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(idx)}
+                          className="text-gray-400 hover:text-red-500 p-[0.25vw] rounded-[0.3vw] hover:bg-red-50 transition-colors shrink-0"
+                          title="Remove image"
+                        >
+                          <Trash2 className="w-[0.8vw] h-[0.8vw]" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {error && (
+              <div className="flex items-center gap-[0.45vw] text-[0.74vw] font-medium text-red-600 bg-red-50 p-[0.65vw] rounded-[0.5vw] border border-red-200">
+                <AlertCircle className="w-[0.85vw] h-[0.85vw] shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
           </div>
 
-          {error && (
-            <div className="flex items-center gap-[0.45vw] text-[0.75vw] font-semibold text-red-600 bg-red-50 p-[0.7vw] rounded-[0.5vw] border border-red-200">
-              <AlertCircle className="w-[0.9vw] h-[0.9vw] shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-[0.6vw] pt-[0.75vw] border-t border-stone-100">
+          <div className="px-[1.6vw] py-[0.9vw] border-t border-gray-100 flex items-center justify-end gap-[0.65vw] shrink-0 bg-white">
             <button
               type="button"
               onClick={onClose}
-              className="px-[0.9vw] py-[0.45vw] text-[0.78vw] font-semibold text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
+              className="px-[1.05vw] py-[0.48vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.76vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isCompressing}
-              className="px-[1.1vw] py-[0.45vw] text-[0.78vw] font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] rounded-[0.55vw] transition-all shadow-xs hover:shadow cursor-pointer disabled:opacity-50 flex items-center gap-[0.45vw]"
+              className="px-[1.25vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.76vw] font-medium shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-[0.38vw]"
             >
-              <Send className="w-[0.85vw] h-[0.85vw]" />
+              <Send className="w-[0.8vw] h-[0.8vw]" />
               <span>{isSubmitting ? 'Submitting...' : 'Submit Ticket'}</span>
             </button>
           </div>

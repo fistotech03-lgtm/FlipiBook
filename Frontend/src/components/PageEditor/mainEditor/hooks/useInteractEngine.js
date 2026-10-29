@@ -1565,7 +1565,7 @@ export const useInteractEngine = ({
               }
             }
 
-            if (event.shiftKey) {
+            if (event.shiftKey || el.getAttribute?.('data-aspect-locked') === 'true') {
               let targetRatio = null;
               if (el.hasAttribute?.('data-original-aspect-ratio') && !isElementInCropMode) {
                 targetRatio = parseFloat(el.getAttribute('data-original-aspect-ratio'));

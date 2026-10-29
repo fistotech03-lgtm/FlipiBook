@@ -13,7 +13,11 @@ const {
   setPasswordWithOtp,
   logout,
   getLoginLogs,
-  verifySession
+  verifySession,
+  getActiveSessions,
+  revokeSession,
+  revokeOtherSessions,
+  getRecentActivities
 } = require('../controllers/authController');
 
 const { authLimiter, otpLimiter, otpVerifyLimiter } = require('../middlewares/rateLimiter');
@@ -37,6 +41,12 @@ router.get('/verify', verifySession);
 
 // Tracked Login History Endpoint (Protected - only authenticated users can access)
 router.get('/logs', authenticateUser, getLoginLogs);
+
+// Account Security / Active Sessions Endpoints (Protected)
+router.get('/sessions', authenticateUser, getActiveSessions);
+router.post('/sessions/revoke', authenticateUser, revokeSession);
+router.post('/sessions/revoke-others', authenticateUser, revokeOtherSessions);
+router.get('/recent-activity', authenticateUser, getRecentActivities);
 
 module.exports = router;
 

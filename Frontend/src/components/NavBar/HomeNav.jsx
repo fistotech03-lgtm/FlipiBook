@@ -31,7 +31,7 @@ const MY_FLIPBOOKS_NAV_LINKS = [
   { name: 'Guide', path: '/guide' },
 ];
 
-const PROTECTED_NAV_ITEMS = new Set(['/my-flipbooks']);
+const PROTECTED_NAV_ITEMS = new Set(['/my-flipbooks', '/overview']);
 
 const getAvatarColor = (identifier, customColor) => {
   if (customColor && customColor !== '#E8D4C8' && customColor !== '#ffffff' && customColor !== 'transparent') {
@@ -207,14 +207,14 @@ export default function HomeNav() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-[0.8vw]">
-          {/* Go to My FlipiBook Button */}
+          {/* Go to Dashboard Button */}
           {!isMyFlipbooksPage && (
             <button
               type="button"
-              onClick={() => isLoggedIn ? navigate('/my-flipbooks') : openAuthModal('signin', '/my-flipbooks')}
+              onClick={() => isLoggedIn ? navigate('/overview') : openAuthModal('signin', '/overview')}
               className="flex items-center gap-[0.5vw] px-[1.3vw] py-[0.55vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d5452e] text-white text-[0.85vw] font-medium shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 cursor-pointer group whitespace-nowrap"
             >
-              <span>Go to My FlipiBook</span>
+              <span>Go to Dashboard</span>
               <ArrowRight className="w-[1vw] h-[1vw] transition-transform duration-200 group-hover:translate-x-0.5" />
             </button>
           )}

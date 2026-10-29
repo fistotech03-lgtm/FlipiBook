@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
 import { getAvatarColor } from '../SettingsLayout';
+import { getClientDeviceInfo, getPublicClientIpAndLocation, isIPv4 } from '../../../utils/deviceUtils';
 
 const AccountOverview = ({
   contextUser,
@@ -11,7 +13,210 @@ const AccountOverview = ({
   hasPassword,
   onAddPasswordClick,
   onChangePasswordClick,
+  showToast,
 }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+  // Active Sessions & Recent Activity States
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [isRevokingAll, setIsRevokingAll] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState(null);
+  const [isViewMoreActivities, setIsViewMoreActivities] = useState(false);
+
+  // Fetch active sessions
+  const fetchActiveSessions = useCallback(async () => {
+    try {
+      setLoadingSessions(true);
+      const deviceInfo = getClientDeviceInfo();
+      const netInfo = await getPublicClientIpAndLocation();
+      const headers = {
+        'x-device-id': deviceInfo.deviceId,
+        'x-client-browser': deviceInfo.browser,
+        'x-client-os': deviceInfo.operatingSystem,
+      };
+      if (netInfo?.ip) {
+        headers['x-client-ip'] = netInfo.ip;
+      }
+      if (netInfo?.location) {
+        headers['x-client-location'] = netInfo.location;
+      }
+
+      const res = await axios.get(`${backendUrl}/api/auth/sessions`, {
+        headers,
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.sessions)) {
+        const enriched = res.data.sessions.map((s) => {
+          const needsIpv4 = !isIPv4(s.ipAddress) || s.ipAddress === '127.0.0.1' || s.ipAddress === '::1' || s.ipAddress === 'localhost';
+          if (s.isCurrent && netInfo?.ip && isIPv4(netInfo.ip) && needsIpv4) {
+            return {
+              ...s,
+              ipAddress: netInfo.ip,
+              location: netInfo.location || s.location,
+            };
+          }
+          return s;
+        });
+        setSessions(enriched);
+      }
+    } catch (err) {
+      console.warn('Failed to load active sessions:', err.message);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [backendUrl]);
+
+  // Fetch recent login activities
+  const fetchRecentActivities = useCallback(async () => {
+    try {
+      setLoadingActivities(true);
+      const deviceInfo = getClientDeviceInfo();
+      const netInfo = await getPublicClientIpAndLocation();
+      const headers = {
+        'x-device-id': deviceInfo.deviceId,
+      };
+      if (netInfo?.ip) {
+        headers['x-client-ip'] = netInfo.ip;
+      }
+
+      const res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {
+        headers,
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.activities)) {
+        const enriched = res.data.activities.map((a) => {
+          const needsIpv4 = !isIPv4(a.ipAddress) || a.ipAddress === '127.0.0.1' || a.ipAddress === '::1' || a.ipAddress === 'localhost';
+          if (a.isCurrent && netInfo?.ip && isIPv4(netInfo.ip) && needsIpv4) {
+            return {
+              ...a,
+              ipAddress: netInfo.ip,
+              location: netInfo.location || a.location,
+            };
+          }
+          return a;
+        });
+        setRecentActivities(enriched);
+      }
+    } catch (err) {
+      console.warn('Failed to load recent activity:', err.message);
+    } finally {
+      setLoadingActivities(false);
+    }
+  }, [backendUrl]);
+
+  useEffect(() => {
+    fetchActiveSessions();
+    fetchRecentActivities();
+  }, [fetchActiveSessions, fetchRecentActivities]);
+
+  // Revoke single session
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      setRevokingSessionId(sessionId);
+      const res = await axios.post(
+        `${backendUrl}/api/auth/sessions/revoke`,
+        { sessionId },
+        { withCredentials: true }
+      );
+      if (res.data?.success) {
+        showToast?.('Device logged out successfully', 'success');
+        fetchActiveSessions();
+        fetchRecentActivities();
+      } else {
+        showToast?.(res.data?.message || 'Failed to logout device', 'error');
+      }
+    } catch (err) {
+      showToast?.(err.response?.data?.message || 'Failed to logout device', 'error');
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
+  // Revoke all other sessions
+  const handleRevokeOtherSessions = async () => {
+    const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
+    if (otherSessionsCount === 0) {
+      showToast?.('No other active devices found', 'success');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to log out of all other devices?')) {
+      return;
+    }
+
+    try {
+      setIsRevokingAll(true);
+      const deviceInfo = getClientDeviceInfo();
+      const res = await axios.post(
+        `${backendUrl}/api/auth/sessions/revoke-others`,
+        {},
+        {
+          headers: {
+            'x-device-id': deviceInfo.deviceId,
+          },
+          withCredentials: true,
+        }
+      );
+      if (res.data?.success) {
+        showToast?.(res.data.message || 'Logged out from all other devices successfully', 'success');
+        fetchActiveSessions();
+        fetchRecentActivities();
+      } else {
+        showToast?.(res.data?.message || 'Failed to logout other devices', 'error');
+      }
+    } catch (err) {
+      showToast?.(err.response?.data?.message || 'Failed to logout other devices', 'error');
+    } finally {
+      setIsRevokingAll(false);
+    }
+  };
+
+  // Device Icon Helper
+  const getDeviceIcon = (operatingSystem = '', browser = '') => {
+    const os = String(operatingSystem).toLowerCase();
+    if (os.includes('win')) {
+      return <Icon icon="uim:windows" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#0078D4]" />;
+    }
+    if (os.includes('mac') || os.includes('ios') || os.includes('iphone') || os.includes('ipad')) {
+      return <Icon icon="logos:apple" className="w-[1.4vw] h-[1.4vw] shrink-0 text-gray-900" />;
+    }
+    if (os.includes('android')) {
+      return <Icon icon="ant-design:android-filled" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#3DDC84]" />;
+    }
+    if (os.includes('linux')) {
+      return <Icon icon="logos:linux-tux" className="w-[1.6vw] h-[1.6vw] shrink-0" />;
+    }
+    return <Icon icon="solar:laptop-bold" className="w-[1.7vw] h-[1.7vw] shrink-0 text-gray-600" />;
+  };
+
+  // Human-readable time ago helper
+  const formatTimeAgo = (dateValue, isCurrent) => {
+    if (isCurrent) return 'Active Now';
+    if (!dateValue) return 'Recently';
+    const d = new Date(dateValue);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 5) return 'Active Now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  // Date and Time formatter
+  const formatDateTime = (dateValue) => {
+    if (!dateValue) return '--';
+    const d = new Date(dateValue);
+    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+  };
   return (
     <div className="w-full flex flex-col p-[1.5vw] font-sans">
       {/* Page Title & Subtitle */}
@@ -142,12 +347,9 @@ const AccountOverview = ({
                 strokeWidth="2"
               />
               <span className="text-[0.76vw] text-[#555962] font-normal">
-                {new Date().toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}{' '}
-                &nbsp;10:45 AM
+                {sessions[0]?.loginTime
+                  ? formatDateTime(sessions[0].loginTime)
+                  : formatDateTime(new Date())}
               </span>
             </div>
           </div>
@@ -235,181 +437,135 @@ const AccountOverview = ({
               </h2>
             </div>
             <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
-              Devices currently signed in and authorized for this account
+              Devices currently signed in and authorized for this account ({sessions.length})
             </p>
           </div>
 
           <div className="flex items-center gap-[0.7vw]">
-            {/* Select devices button */}
+            {/* Refresh sessions button */}
             <button
               type="button"
+              onClick={fetchActiveSessions}
               className="flex items-center gap-[0.35vw] text-gray-600 hover:text-gray-900 text-[0.78vw] font-medium px-[0.75vw] py-[0.45vw] transition-colors cursor-pointer"
+              title="Refresh sessions"
             >
-              <Icon icon="lucide:copy" className="w-[0.85vw] h-[0.85vw] text-gray-500" strokeWidth="2" />
-              <span>Select devices</span>
+              <Icon
+                icon="lucide:refresh-cw"
+                className={`w-[0.85vw] h-[0.85vw] text-gray-500 ${loadingSessions ? 'animate-spin' : ''}`}
+                strokeWidth="2"
+              />
+              <span>Refresh</span>
             </button>
 
             {/* Logout other devices button */}
-            <button
-              type="button"
-              className="flex items-center gap-[0.35vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer"
-            >
-              <Icon icon="lucide:log-out" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2" />
-              <span>Logout other devices</span>
-            </button>
+            {sessions.filter((s) => !s.isCurrent).length > 0 && (
+              <button
+                type="button"
+                onClick={handleRevokeOtherSessions}
+                disabled={isRevokingAll}
+                className="flex items-center gap-[0.35vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Icon icon="lucide:log-out" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2" />
+                <span>{isRevokingAll ? 'Logging out...' : 'Logout other devices'}</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Sessions List */}
-        <div className="flex flex-col gap-[0.75vw]">
-          {/* Session 1: Current Session */}
-          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.1vw] py-[0.9vw] grid grid-cols-12 items-center shadow-xs">
-            <div className="col-span-4 flex items-center gap-[0.85vw]">
-              <Icon icon="uim:windows" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#0078D4]" />
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800 leading-none">
-                  Chrome on Windows
-                </span>
-                <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal">
-                  Coimbatore, India <span className="text-gray-300">•</span>{' '}
-                  <span className="text-emerald-600 font-medium">Active Now</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="col-span-2 flex items-center justify-center">
-              <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-flex items-center justify-center leading-normal">
-                Current Session
-              </span>
-            </div>
-
-            <div className="col-span-3 text-[0.74vw] text-gray-500 font-normal pl-[0.8vw]">
-              IP : 123.3445.455.345
-            </div>
-
-            <div className="col-span-3 flex flex-col">
-              <span className="text-[0.7vw] text-gray-400 font-normal">
-                Last Activated
-              </span>
-              <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw]">
-                Apr 29, 2026 - 10:45 AM
-              </span>
-            </div>
+        {loadingSessions ? (
+          <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.8vw]">
+            <Icon icon="lucide:loader-2" className="w-[1.2vw] h-[1.2vw] animate-spin text-[#4c5add] mr-[0.5vw]" />
+            <span>Loading active sessions...</span>
           </div>
-
-          {/* Session 2 */}
-          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.1vw] py-[0.9vw] grid grid-cols-12 items-center shadow-xs">
-            <div className="col-span-4 flex items-center gap-[0.85vw]">
-              <Icon icon="uim:windows" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#0078D4]" />
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800 leading-none">
-                  Chrome on Windows
-                </span>
-                <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal">
-                  Coimbatore, India <span className="text-gray-300">•</span> Last Active 2 hours ago
-                </span>
-              </div>
-            </div>
-            <div className="col-span-2"></div>
-            <div className="col-span-3 text-[0.74vw] text-gray-500 font-normal pl-[0.8vw]">
-              IP : 123.3445.455.345
-            </div>
-            <div className="col-span-2 flex flex-col">
-              <span className="text-[0.7vw] text-gray-400 font-normal">
-                Last Activated
-              </span>
-              <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw]">
-                Apr 29, 2026 - 10:45 AM
-              </span>
-            </div>
-            <div className="col-span-1 flex justify-end">
-              <button
-                type="button"
-                className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:log-out" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2" />
-                <span>Logout</span>
-              </button>
-            </div>
+        ) : sessions.length === 0 ? (
+          <div className="py-[2vw] text-center text-gray-400 text-[0.8vw]">
+            No active sessions found.
           </div>
+        ) : (
+          <div className="flex flex-col gap-[0.75vw]">
+            {(() => {
+              const hasOtherDevices = sessions.some((s) => !s.isCurrent);
+              return sessions.map((session) => (
+                <div
+                  key={session.sessionId || session.id}
+                  className={`w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.2vw] py-[0.9vw] grid ${
+                    hasOtherDevices ? 'grid-cols-5' : 'grid-cols-4'
+                  } items-center shadow-xs`}
+                >
+                  {/* Col 1: Device icon + Browser & OS + Location/Activity */}
+                  <div className="flex items-center gap-[0.85vw] min-w-0 pr-[0.5vw]">
+                    {getDeviceIcon(session.operatingSystem, session.browser)}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[0.85vw] font-medium text-gray-800 leading-none truncate">
+                        {session.browser} on {session.operatingSystem}
+                      </span>
+                      <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal truncate">
+                        {session.location} <span className="text-gray-300">•</span>{' '}
+                        {session.isCurrent ? (
+                          <span className="text-emerald-600 font-medium">Active Now</span>
+                        ) : (
+                          <span>Last Active {formatTimeAgo(session.lastActiveAt, false)}</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
 
-          {/* Session 3 */}
-          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.1vw] py-[0.9vw] grid grid-cols-12 items-center shadow-xs">
-            <div className="col-span-4 flex items-center gap-[0.85vw]">
-              <Icon icon="uim:windows" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#0078D4]" />
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800 leading-none">
-                  Chrome on Windows
-                </span>
-                <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal">
-                  Coimbatore, India <span className="text-gray-300">•</span> Last Active 1 day ago
-                </span>
-              </div>
-            </div>
-            <div className="col-span-2"></div>
-            <div className="col-span-3 text-[0.74vw] text-gray-500 font-normal pl-[0.8vw]">
-              IP : 123.3445.455.345
-            </div>
-            <div className="col-span-2 flex flex-col">
-              <span className="text-[0.7vw] text-gray-400 font-normal">
-                Last Activated
-              </span>
-              <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw]">
-                Apr 29, 2026 - 10:45 AM
-              </span>
-            </div>
-            <div className="col-span-1 flex justify-end">
-              <button
-                type="button"
-                className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:log-out" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
+                  {/* Col 2: Current Session Badge */}
+                  <div className="flex items-center justify-center">
+                    {session.isCurrent ? (
+                      <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-flex items-center justify-center leading-normal">
+                        Current Session
+                      </span>
+                    ) : null}
+                  </div>
 
-          {/* Session 4 */}
-          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.1vw] py-[0.9vw] grid grid-cols-12 items-center shadow-xs">
-            <div className="col-span-4 flex items-center gap-[0.85vw]">
-              <Icon icon="uim:windows" className="w-[1.7vw] h-[1.7vw] shrink-0 text-[#0078D4]" />
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800 leading-none">
-                  Chrome on Windows
-                </span>
-                <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal">
-                  Coimbatore, India <span className="text-gray-300">•</span> Last Active 1 hour ago
-                </span>
-              </div>
-            </div>
-            <div className="col-span-2"></div>
-            <div className="col-span-3 text-[0.74vw] text-gray-500 font-normal pl-[0.8vw]">
-              IP : 123.3445.455.345
-            </div>
-            <div className="col-span-2 flex flex-col">
-              <span className="text-[0.7vw] text-gray-400 font-normal">
-                Last Activated
-              </span>
-              <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw]">
-                Apr 29, 2026 - 10:45 AM
-              </span>
-            </div>
-            <div className="col-span-1 flex justify-end">
-              <button
-                type="button"
-                className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:log-out" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2" />
-                <span>Logout</span>
-              </button>
-            </div>
+                  {/* Col 3: IP Address */}
+                  <div className="flex flex-col justify-center pl-[1vw]">
+                    <span className="text-[0.68vw] text-gray-400 font-normal">
+                      IP Address
+                    </span>
+                    <span className="text-[0.74vw] text-gray-700 font-mono font-medium mt-[0.1vw] truncate">
+                      {session.ipAddress}
+                    </span>
+                  </div>
+
+                  {/* Col 4: Last Activated Timestamp */}
+                  <div className="flex flex-col justify-center pl-[1vw]">
+                    <span className="text-[0.68vw] text-gray-400 font-normal">
+                      Last Activated
+                    </span>
+                    <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw] whitespace-nowrap">
+                      {formatDateTime(session.lastActiveAt)}
+                    </span>
+                  </div>
+
+                  {/* Col 5: Action Button (only rendered when other devices exist to avoid dead empty gaps) */}
+                  {hasOtherDevices && (
+                    <div className="flex items-center justify-end">
+                      {!session.isCurrent ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeSession(session.sessionId)}
+                          disabled={revokingSessionId === session.sessionId}
+                          className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Icon icon="lucide:log-out" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2" />
+                          <span>{revokingSessionId === session.sessionId ? '...' : 'Logout'}</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              ));
+            })()}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Recent Login Activities Card */}
       <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
-        {/* Card Header with More Menu */}
+        {/* Card Header with Refresh Button */}
         <div className="flex items-start justify-between mb-[1.3vw]">
           <div>
             <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
@@ -419,15 +575,20 @@ const AccountOverview = ({
               </h2>
             </div>
             <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
-              Your recent sign-in attempts and account activity
+              Your recent sign-in attempts, security events and device logins
             </p>
           </div>
 
           <button
             type="button"
+            onClick={fetchRecentActivities}
             className="p-[0.3vw] text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-[0.4vw] transition-colors cursor-pointer"
+            title="Refresh history"
           >
-            <Icon icon="lucide:more-vertical" className="w-[1vw] h-[1vw]" />
+            <Icon
+              icon="lucide:refresh-cw"
+              className={`w-[1vw] h-[1vw] ${loadingActivities ? 'animate-spin' : ''}`}
+            />
           </button>
         </div>
 
@@ -444,93 +605,88 @@ const AccountOverview = ({
           </div>
 
           {/* Table Rows */}
-          <div className="divide-y divide-gray-100 text-[0.75vw]">
-            {/* Row 1: Chrome on Windows - Current Session */}
-            <div className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors">
-              <div className="flex items-center gap-[0.6vw] font-medium text-gray-800">
-                <Icon icon="uim:windows" className="w-[1.3vw] h-[1.3vw] shrink-0 text-[#0078D4]" />
-                <span>Chrome on Windows</span>
-              </div>
-              <div className="text-gray-500 font-normal">Coimbatore, India</div>
-              <div className="text-gray-500 font-normal">Apr 29, 2026 - 10:45 AM</div>
-              <div className="text-gray-500 font-normal">IP : 192 . 168 . 584 . 485</div>
-              <div>
-                <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
-                  Current Session
-                </span>
-              </div>
-              <div className="text-right pr-[0.6vw] text-gray-400 font-normal">
-                Current device
-              </div>
+          {loadingActivities ? (
+            <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.8vw]">
+              <Icon icon="lucide:loader-2" className="w-[1.2vw] h-[1.2vw] animate-spin text-[#4c5add] mr-[0.5vw]" />
+              <span>Loading activities...</span>
             </div>
-
-            {/* Row 2: Chrome on Windows - Failed */}
-            <div className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors">
-              <div className="flex items-center gap-[0.6vw] font-medium text-gray-800">
-                <Icon icon="uim:windows" className="w-[1.3vw] h-[1.3vw] shrink-0 text-[#0078D4]" />
-                <span>Chrome on Windows</span>
-              </div>
-              <div className="text-gray-500 font-normal">Coimbatore, India</div>
-              <div className="text-gray-500 font-normal">Apr 29, 2026 - 10:45 AM</div>
-              <div className="text-gray-500 font-normal">IP : 192 . 168 . 584 . 485</div>
-              <div>
-                <span className="bg-[#FEE2E2] text-[#EF4444] text-[0.68vw] font-medium px-[0.8vw] py-[0.18vw] rounded-full inline-block">
-                  Failed
-                </span>
-              </div>
-              <div className="text-right pr-[0.6vw]">
-                <button type="button" className="text-[#EF4444] hover:underline font-normal cursor-pointer">
-                  It's Not you?
-                </button>
-              </div>
+          ) : recentActivities.length === 0 ? (
+            <div className="py-[2vw] text-center text-gray-400 text-[0.8vw]">
+              No recent login records found.
             </div>
-
-            {/* Row 3: Chrome on Android - Completed */}
-            <div className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors">
-              <div className="flex items-center gap-[0.6vw] font-medium text-gray-800">
-                <Icon icon="ant-design:android-filled" className="w-[1.3vw] h-[1.3vw] shrink-0 text-[#3DDC84]" />
-                <span>Chrome on Android</span>
-              </div>
-              <div className="text-gray-500 font-normal">Coimbatore, India</div>
-              <div className="text-gray-500 font-normal">Apr 29, 2026 - 10:45 AM</div>
-              <div className="text-gray-500 font-normal">IP : 192 . 168 . 584 . 485</div>
-              <div className="text-gray-600 font-normal">Completed</div>
-              <div className="text-right pr-[0.6vw]">
-                <button type="button" className="text-[#EF4444] hover:underline font-normal cursor-pointer">
-                  It's Not you?
-                </button>
-              </div>
+          ) : (
+            <div className="divide-y divide-gray-100 text-[0.75vw]">
+              {(isViewMoreActivities ? recentActivities : recentActivities.slice(0, 4)).map((act) => (
+                <div
+                  key={act.id || act.sessionId + act.date}
+                  className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-[0.6vw] font-medium text-gray-800 min-w-0">
+                    {getDeviceIcon(act.operatingSystem, act.browser)}
+                    <span className="truncate">{act.device || `${act.browser} on ${act.operatingSystem}`}</span>
+                  </div>
+                  <div className="text-gray-500 font-normal truncate">{act.location}</div>
+                  <div className="text-gray-500 font-normal">{formatDateTime(act.date)}</div>
+                  <div className="text-gray-700 font-normal font-mono text-[0.74vw]">{act.ipAddress}</div>
+                  <div>
+                    {act.isCurrent ? (
+                      <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+                        Current Session
+                      </span>
+                    ) : act.eventType === 'FAILED_LOGIN' ? (
+                      <span className="bg-[#FEE2E2] text-[#EF4444] text-[0.68vw] font-medium px-[0.8vw] py-[0.18vw] rounded-full inline-block">
+                        Failed
+                      </span>
+                    ) : act.eventType === 'NEW_DEVICE_LOGIN' ? (
+                      <span className="bg-[#DBEAFE] text-[#1D4ED8] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+                        New Device
+                      </span>
+                    ) : act.status === 'LOGGED_OUT' || act.status === 'REVOKED' || act.eventType === 'LOGOUT' ? (
+                      <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+                        Completed
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 font-normal">Active</span>
+                    )}
+                  </div>
+                  <div className="text-right pr-[0.6vw]">
+                    {act.isCurrent ? (
+                      <span className="text-gray-400 font-normal">Current device</span>
+                    ) : act.eventType === 'FAILED_LOGIN' ? (
+                      <button
+                        type="button"
+                        onClick={onChangePasswordClick}
+                        className="text-[#EF4444] hover:underline font-normal cursor-pointer"
+                      >
+                        It's Not you?
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 font-normal">Completed</span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* Row 4: Safari on Mac - Completed */}
-            <div className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors">
-              <div className="flex items-center gap-[0.6vw] font-medium text-gray-800">
-                <Icon icon="logos:apple" className="w-[1.15vw] h-[1.15vw] shrink-0 text-gray-900" />
-                <span>Safari on Mac</span>
-              </div>
-              <div className="text-gray-500 font-normal">Coimbatore, India</div>
-              <div className="text-gray-500 font-normal">Apr 29, 2026 - 10:45 AM</div>
-              <div className="text-gray-500 font-normal">IP : 192 . 168 . 584 . 485</div>
-              <div className="text-gray-600 font-normal">Completed</div>
-              <div className="text-right pr-[0.6vw]">
-                <button type="button" className="text-[#EF4444] hover:underline font-normal cursor-pointer">
-                  It's Not you?
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* View More Expander Button */}
-        <div className="w-full flex items-center justify-center pt-[1vw]">
-          <button
-            type="button"
-            className="flex items-center gap-[0.3vw] text-gray-600 hover:text-gray-900 text-[0.78vw] font-medium transition-colors cursor-pointer"
-          >
-            <span>View More</span>
-            <Icon icon="lucide:chevron-down" className="w-[0.9vw] h-[0.9vw]" strokeWidth="2" />
-          </button>
-        </div>
+        {recentActivities.length > 4 && (
+          <div className="w-full flex items-center justify-center pt-[1vw]">
+            <button
+              type="button"
+              onClick={() => setIsViewMoreActivities((prev) => !prev)}
+              className="flex items-center gap-[0.3vw] text-gray-600 hover:text-gray-900 text-[0.78vw] font-medium transition-colors cursor-pointer"
+            >
+              <span>{isViewMoreActivities ? 'View Less' : 'View More'}</span>
+              <Icon
+                icon="lucide:chevron-down"
+                className={`w-[0.9vw] h-[0.9vw] transition-transform ${isViewMoreActivities ? 'rotate-180' : ''}`}
+                strokeWidth="2"
+              />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Account Management Card */}
@@ -543,7 +699,7 @@ const AccountOverview = ({
           </h2>
         </div>
         <p className="text-[0.72vw] text-gray-500 mb-[1.3vw] pl-[1.65vw] font-normal">
-          Manage your account access, multi-account switching and deletion
+          Manage your account access and deletion
         </p>
 
         {/* Options List */}
@@ -567,54 +723,7 @@ const AccountOverview = ({
             <Icon icon="lucide:chevron-right" className="w-[1.05vw] h-[1.05vw] text-gray-400 group-hover:text-gray-700 transition-colors" />
           </div>
 
-          {/* Option 2: Switch Accounts */}
-          <div className="w-full bg-[#f8f9fa] hover:bg-gray-100/70 border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between cursor-pointer transition-colors group">
-            <div className="flex items-center gap-[0.85vw]">
-              {/* Overlapping Avatars */}
-              <div className="relative w-[2.8vw] h-[2.5vw] flex items-center">
-                <div className="absolute right-0 w-[1.9vw] h-[1.9vw] rounded-full bg-[#E11D48] text-white text-[0.75vw] font-medium flex items-center justify-center shadow-xs">
-                  A
-                </div>
-                <div
-                  className="absolute left-0 w-[1.9vw] h-[1.9vw] rounded-full overflow-hidden border-2 border-white flex items-center justify-center shadow-xs"
-                  style={{
-                    backgroundColor: avatarSrc
-                      ? '#ffffff'
-                      : contextUser?.avatarBgColor || getAvatarColor(userName || userEmail || 'User'),
-                  }}
-                >
-                  {avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt={userName}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <span className="text-white text-[0.8vw] font-semibold">
-                      {userName.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800">
-                  Switch Accounts
-                </span>
-                <span className="text-[0.72vw] text-gray-400 mt-[0.1vw] font-normal">
-                  Sign in with another FlipiBook account or add a new account
-                </span>
-              </div>
-            </div>
-
-            <Icon icon="lucide:chevron-right" className="w-[1.05vw] h-[1.05vw] text-gray-400 group-hover:text-gray-700 transition-colors" />
-          </div>
-
-          {/* Option 3: Logout */}
+          {/* Option 2: Logout */}
           <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between">
             <div className="flex items-center gap-[0.85vw]">
               <div

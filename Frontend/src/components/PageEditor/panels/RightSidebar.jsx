@@ -4,7 +4,7 @@ import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, 
 import { Icon } from '@iconify/react';
 import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import {
-  DimensionProperties,
+  TransformProperties,
   PageProperties,
   ShapeProperties,
   ElementShapesProperties,
@@ -166,16 +166,22 @@ const RightSidebar = ({
             newVal = Math.max(bounds.minX, Math.min(bounds.maxX - visW, newVal));
             const offsetX = bbox.x * m[0] + (m[0] < 0 ? bbox.width * m[0] : 0);
             m[4] = newVal - offsetX;
+            const matrixStr = `matrix(${m.join(', ')})`;
+            el.setAttribute('transform', matrixStr);
+            el.setAttribute('data-x', m[4].toString());
             updateElementAttribute(activePageIndex, selectedLayerId, {
-              'transform': `matrix(${m.join(', ')})`,
+              'transform': matrixStr,
               'data-x': m[4].toString()
             });
           } else {
             newVal = Math.max(bounds.minY, Math.min(bounds.maxY - visH, newVal));
             const offsetY = bbox.y * m[3] + (m[3] < 0 ? bbox.height * m[3] : 0);
             m[5] = newVal - offsetY;
+            const matrixStr = `matrix(${m.join(', ')})`;
+            el.setAttribute('transform', matrixStr);
+            el.setAttribute('data-y', m[5].toString());
             updateElementAttribute(activePageIndex, selectedLayerId, {
-              'transform': `matrix(${m.join(', ')})`,
+              'transform': matrixStr,
               'data-y': m[5].toString()
             });
           }
@@ -192,16 +198,24 @@ const RightSidebar = ({
     if (targetAttr === 'x') {
       if (selectedElementProps.tagName === 'circle' || selectedElementProps.tagName === 'ellipse') {
         const radius = parseFloat(selectedElementProps.tagName === 'circle' ? el.getAttribute('r') : el.getAttribute('rx')) || 0;
-        updateElementAttribute(activePageIndex, selectedLayerId, 'cx', (newVal + radius).toString());
+        const valStr = (newVal + radius).toString();
+        el.setAttribute('cx', valStr);
+        updateElementAttribute(activePageIndex, selectedLayerId, 'cx', valStr);
       } else {
-        updateElementAttribute(activePageIndex, selectedLayerId, 'x', newVal.toString());
+        const valStr = newVal.toString();
+        el.setAttribute('x', valStr);
+        updateElementAttribute(activePageIndex, selectedLayerId, 'x', valStr);
       }
     } else {
       if (selectedElementProps.tagName === 'circle' || selectedElementProps.tagName === 'ellipse') {
         const radius = parseFloat(selectedElementProps.tagName === 'circle' ? el.getAttribute('r') : el.getAttribute('ry')) || 0;
-        updateElementAttribute(activePageIndex, selectedLayerId, 'cy', (newVal + radius).toString());
+        const valStr = (newVal + radius).toString();
+        el.setAttribute('cy', valStr);
+        updateElementAttribute(activePageIndex, selectedLayerId, 'cy', valStr);
       } else {
-        updateElementAttribute(activePageIndex, selectedLayerId, 'y', newVal.toString());
+        const valStr = newVal.toString();
+        el.setAttribute('y', valStr);
+        updateElementAttribute(activePageIndex, selectedLayerId, 'y', valStr);
       }
     }
   };
@@ -213,92 +227,128 @@ const RightSidebar = ({
     return Number(val.toFixed(1)); // mm
   };
 
-  const updateDimensionWithScale = (val, targetAttr) => {
+  const updateDimensionWithScale = (val, targetAttr, extraVal, extraAttr) => {
     if (activeTopTool === 'interaction' || activeTopTool === 'animation') return;
     if (!selectedElementProps) return;
-    let scale = 1;
-    let m = [1, 0, 0, 1, 0, 0];
-    let hasMatrix = false;
+
+    let targetWidth = null;
+    let targetHeight = null;
+
+    if (typeof val === 'object' && val !== null) {
+      if (val.width !== undefined && val.width !== null) targetWidth = parseFloat(val.width);
+      if (val.height !== undefined && val.height !== null) targetHeight = parseFloat(val.height);
+    } else {
+      if (targetAttr === 'width') targetWidth = parseFloat(val);
+      else if (targetAttr === 'height') targetHeight = parseFloat(val);
+
+      if (extraAttr === 'width') targetWidth = parseFloat(extraVal);
+      else if (extraAttr === 'height') targetHeight = parseFloat(extraVal);
+    }
+
     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const el = editorDoc.getElementById(selectedLayerId);
-    if (el) {
-      const transform = el.getAttribute('transform');
-      if (transform && transform.includes('matrix')) {
-        const match = transform.match(/matrix\(([^)]+)\)/);
-        if (match) {
-          const parsedM = match[1].split(/[\s,]+/).map(parseFloat);
-          if (parsedM.length === 6) {
-            m = parsedM;
-            hasMatrix = true;
-            scale = Math.abs(targetAttr === 'width' ? m[0] : m[3]);
-          }
+    if (!el) return;
+
+    let scaleX = 1;
+    let scaleY = 1;
+    let m = [1, 0, 0, 1, 0, 0];
+    let hasMatrix = false;
+
+    const transform = el.getAttribute('transform');
+    if (transform && transform.includes('matrix')) {
+      const match = transform.match(/matrix\(([^)]+)\)/);
+      if (match) {
+        const parsedM = match[1].split(/[\s,]+/).map(parseFloat);
+        if (parsedM.length === 6) {
+          m = parsedM;
+          hasMatrix = true;
+          scaleX = Math.abs(m[0]) || 1;
+          scaleY = Math.abs(m[3]) || 1;
         }
       }
     }
-    const tag = selectedElementProps.tagName;
+
+    const tag = (selectedElementProps.tagName || el.tagName || '').toLowerCase();
 
     if (tag === 'line') {
-      if (!el) return;
       const x1 = parseFloat(el.getAttribute('x1')) || 0;
       const y1 = parseFloat(el.getAttribute('y1')) || 0;
       const x2 = parseFloat(el.getAttribute('x2')) || 0;
       const y2 = parseFloat(el.getAttribute('y2')) || 0;
 
-      const unscaledVal = parseFloat(val) / scale;
-
-      if (targetAttr === 'width') {
-        // Preserve direction if line was drawn right-to-left
+      const attrsToUpdate = {};
+      if (targetWidth !== null && !isNaN(targetWidth) && targetWidth > 0) {
+        const unscaledVal = targetWidth / scaleX;
         const direction = x2 >= x1 ? 1 : -1;
-        updateElementAttribute(activePageIndex, selectedLayerId, 'x2', (x1 + direction * unscaledVal).toString());
-      } else if (targetAttr === 'height') {
-        // Preserve direction if line was drawn bottom-to-top
+        const newX2 = (x1 + direction * unscaledVal).toString();
+        el.setAttribute('x2', newX2);
+        attrsToUpdate.x2 = newX2;
+      }
+      if (targetHeight !== null && !isNaN(targetHeight) && targetHeight > 0) {
+        const unscaledVal = targetHeight / scaleY;
         const direction = y2 >= y1 ? 1 : -1;
-        updateElementAttribute(activePageIndex, selectedLayerId, 'y2', (y1 + direction * unscaledVal).toString());
+        const newY2 = (y1 + direction * unscaledVal).toString();
+        el.setAttribute('y2', newY2);
+        attrsToUpdate.y2 = newY2;
+      }
+      if (Object.keys(attrsToUpdate).length > 0) {
+        updateElementAttribute(activePageIndex, selectedLayerId, attrsToUpdate);
       }
       return;
     }
 
-    if (tag === 'ellipse' || tag === 'circle') {
-      const unscaledVal = parseFloat(val) / scale;
-      if (targetAttr === 'width') {
-        updateElementAttribute(activePageIndex, selectedLayerId, 'rx', (unscaledVal / 2).toString());
-        // also try 'r' just in case it's a true circle without rx
-        if (tag === 'circle' && el && el.hasAttribute('r')) updateElementAttribute(activePageIndex, selectedLayerId, 'r', (unscaledVal / 2).toString());
-      } else if (targetAttr === 'height') {
-        updateElementAttribute(activePageIndex, selectedLayerId, 'ry', (unscaledVal / 2).toString());
+    if (tag === 'ellipse' || (tag === 'circle' && !hasMatrix)) {
+      const attrsToUpdate = {};
+      if (targetWidth !== null && !isNaN(targetWidth) && targetWidth > 0) {
+        const unscaledVal = targetWidth / scaleX;
+        const rx = (unscaledVal / 2).toString();
+        el.setAttribute('rx', rx);
+        attrsToUpdate.rx = rx;
+        if (tag === 'circle' && el.hasAttribute('r')) {
+          el.setAttribute('r', rx);
+          attrsToUpdate.r = rx;
+        }
+      }
+      if (targetHeight !== null && !isNaN(targetHeight) && targetHeight > 0) {
+        const unscaledVal = targetHeight / scaleY;
+        const ry = (unscaledVal / 2).toString();
+        el.setAttribute('ry', ry);
+        attrsToUpdate.ry = ry;
+        if (tag === 'circle' && targetWidth === null && el.hasAttribute('r')) {
+          el.setAttribute('r', ry);
+          attrsToUpdate.r = ry;
+        }
+      }
+      if (Object.keys(attrsToUpdate).length > 0) {
+        updateElementAttribute(activePageIndex, selectedLayerId, attrsToUpdate);
       }
       return;
     }
 
-    if (tag === 'path' || tag === 'polygon' || tag === 'g' || tag === 'rect' || tag === 'image' || tag === 'foreignobject' || hasMatrix) {
-      if (!el) return;
+    if (tag === 'path' || tag === 'polygon' || tag === 'g' || tag === 'rect' || tag === 'image' || tag === 'foreignobject' || tag === 'text' || hasMatrix) {
       const bbox = getVisualBBox(el);
-      const targetVal = parseFloat(val);
-      if (targetVal <= 0 || bbox.width === 0 || bbox.height === 0) return;
+      if (bbox.width === 0 || bbox.height === 0) return;
 
-      if (targetAttr === 'width') {
-        // Current world X of top-left (account for negative scale when flipped)
+      if (targetWidth !== null && !isNaN(targetWidth) && targetWidth > 0) {
         const oldWorldX = bbox.x * m[0] + (m[0] < 0 ? bbox.width * m[0] : 0) + m[4];
-        // New m[0] scale (preserve sign for flip)
-        const newM0 = (m[0] >= 0 ? 1 : -1) * (targetVal / bbox.width);
-        // New m[4] translation to keep top-left fixed
+        const newM0 = (m[0] >= 0 ? 1 : -1) * (targetWidth / bbox.width);
         const newM4 = oldWorldX - (bbox.x * newM0 + (newM0 < 0 ? bbox.width * newM0 : 0));
         m[0] = newM0;
         m[4] = newM4;
-      } else if (targetAttr === 'height') {
-        // Current world Y of top-left (account for negative scale when flipped)
+      }
+
+      if (targetHeight !== null && !isNaN(targetHeight) && targetHeight > 0) {
         const oldWorldY = bbox.y * m[3] + (m[3] < 0 ? bbox.height * m[3] : 0) + m[5];
-        // New m[3] scale (preserve sign for flip)
-        const newM3 = (m[3] >= 0 ? 1 : -1) * (targetVal / bbox.height);
-        // New m[5] translation to keep top-left fixed
+        const newM3 = (m[3] >= 0 ? 1 : -1) * (targetHeight / bbox.height);
         const newM5 = oldWorldY - (bbox.y * newM3 + (newM3 < 0 ? bbox.height * newM3 : 0));
         m[3] = newM3;
         m[5] = newM5;
       }
 
-      updateElementAttribute(activePageIndex, selectedLayerId, 'transform', `matrix(${m.join(', ')})`);
+      const matrixStr = `matrix(${m.join(', ')})`;
+      el.setAttribute('transform', matrixStr);
+      updateElementAttribute(activePageIndex, selectedLayerId, 'transform', matrixStr);
 
-      // Trigger overlay highlight update
       setTimeout(() => {
         if (typeof window.drawOverlayHighlight === 'function') {
           window.drawOverlayHighlight(el, 'selected');
@@ -307,15 +357,20 @@ const RightSidebar = ({
       return;
     }
 
-    const elementAttr = targetAttr;
-
-    // Note: for a circle, 'val' is the diameter. We want the unscaled radius.
-    // For other elements, 'val' is the width/height. We want the unscaled width/height.
-    const finalVal = tag === 'circle'
-      ? (parseFloat(val) / 2 / scale).toString()
-      : (parseFloat(val) / scale).toString();
-
-    updateElementAttribute(activePageIndex, selectedLayerId, elementAttr, finalVal);
+    const attrsToUpdate = {};
+    if (targetWidth !== null && !isNaN(targetWidth) && targetWidth > 0) {
+      const finalW = tag === 'circle' ? (targetWidth / 2 / scaleX).toString() : (targetWidth / scaleX).toString();
+      el.setAttribute('width', finalW);
+      attrsToUpdate.width = finalW;
+    }
+    if (targetHeight !== null && !isNaN(targetHeight) && targetHeight > 0) {
+      const finalH = tag === 'circle' ? (targetHeight / 2 / scaleY).toString() : (targetHeight / scaleY).toString();
+      el.setAttribute('height', finalH);
+      attrsToUpdate.height = finalH;
+    }
+    if (Object.keys(attrsToUpdate).length > 0) {
+      updateElementAttribute(activePageIndex, selectedLayerId, attrsToUpdate);
+    }
   };
 
   // Close unit dropdown on click outside
@@ -865,9 +920,9 @@ const RightSidebar = ({
         </div>
       )}
 
-      {/* Persistent Dimension Section (Common for all) */}
+      {/* Persistent Transform Section (Common for all properties) */}
       {!is3DModalOpen && (
-        <DimensionProperties
+        <TransformProperties
           selectedLayerId={selectedLayerId}
           selectedElementProps={selectedElementProps}
           isDimensionDisabled={isDimensionDisabled}
@@ -878,7 +933,7 @@ const RightSidebar = ({
         />
       )}
 
-      <div className={`flex-1 flex flex-col overflow-hidden bg-[#fbfbfb] ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`flex-1 flex flex-col overflow-hidden bg-white ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
         {is3DModalOpen ? (
           <CustomScrollbar
             color="#d1d5db"
@@ -1075,10 +1130,9 @@ const RightSidebar = ({
                   folderName={effectiveFolder}
                   flipbookName={effectiveBook}
                 />
-              ) : (
-                <div className="flex flex-col p-[1.5vw] gap-[1.5vw] overflow-x-hidden">
-                  {selectedElementProps ? (
-                    <div className="flex flex-col gap-[1.5vw]">
+              ) : selectedElementProps ? (
+                <div className="flex flex-col p-[1.5vw] gap-[1.5vw]">
+                  <div className="flex flex-col gap-[1.5vw]">
                       {(selectedElementProps?.isUserGroup || (multiSelectedIds && multiSelectedIds.size > 1)) ? (
                         <GroupProperties
                           selectedElement={(() => {
@@ -1621,19 +1675,18 @@ const RightSidebar = ({
                         </>
                       )}
                     </div>
-                  ) : (
-                    /* Page Properties (Default View) */
-                    <PageProperties
-                      pages={pages}
-                      activePageIndex={activePageIndex}
-                      updateElementAttribute={updateElementAttribute}
-                      baseWidth={baseWidth}
-                      baseHeight={baseHeight}
-                      presetColors={presetColors}
-                    />
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : (
+                  /* Page Properties (Default View) */
+                  <PageProperties
+                    pages={pages}
+                    activePageIndex={activePageIndex}
+                    updateElementAttribute={updateElementAttribute}
+                    baseWidth={baseWidth}
+                    baseHeight={baseHeight}
+                    presetColors={presetColors}
+                  />
+                )}
             </CustomScrollbar>
           )
         ) : activeTopTool === 'interaction' ? (

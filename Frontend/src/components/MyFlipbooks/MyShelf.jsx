@@ -28,6 +28,13 @@ import blueFrameBase from '../../assets/Bookshelf/blue_frame/base.png';
 import blueFrameRopeShelf from '../../assets/Bookshelf/blue_frame/rope_shelf.png';
 import blueFrameLight from '../../assets/Bookshelf/blue_frame/light.png';
 import blueFrameDecor from '../../assets/Bookshelf/blue_frame/decor.png';
+import windowShelfImg from '../../assets/Bookshelf/window_shelf/windowshelf.png';
+import windowShelfSheet from '../../assets/Bookshelf/window_shelf/bluesheet.png';
+import windowShelfWindow from '../../assets/Bookshelf/window_shelf/window.png';
+import windowShelfBase from '../../assets/Bookshelf/window_shelf/base.png';
+import windowShelfPlank from '../../assets/Bookshelf/window_shelf/shelf.png';
+import windowShelfPlant from '../../assets/Bookshelf/window_shelf/plant.png';
+import windowShelfLight from '../../assets/Bookshelf/window_shelf/light.png';
 import greenshade from '../../assets/Bookshelf/greenshelf/greenshade.svg';
 import greensheet from '../../assets/Bookshelf/greenshelf/Green_sheet.png';
 import greenLeftWood from '../../assets/Bookshelf/greenshelf/Leftwood.png';
@@ -90,7 +97,7 @@ const wallThemeList = [
 const lightThemeList = [
   { id: 'light1', img: lightTheme1, glowColor: 'rgba(245, 158, 11, 0.28)' },
   { id: 'light2', img: lightTheme2, glowColor: 'rgba(255, 255, 255, 0.25)' },
-  { id: 'light3', img: lightTheme3, glowColor: 'rgba(56, 189, 248, 0.28)' },
+  { id: 'light3', img: lightTheme3, glowColor: 'rgba(186, 230, 253, 0.40)' },
 ];
 
 const covers = [cover1, cover2, cover3, cover4, cover5];
@@ -105,6 +112,8 @@ const MyShelf = () => {
   const [currentView, setCurrentView] = useState('overview'); // 'overview' | 'shelf_detail'
   const [view, setView] = useState('shelf');
   const [showShelfModal, setShowShelfModal] = useState(false);
+  const [showShareShelfModal, setShowShareShelfModal] = useState(false);
+  const [shelfLinkCopied, setShelfLinkCopied] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [hoveredInfoId, setHoveredInfoId] = useState(null);
   const [folders, setFolders] = useState([
@@ -832,6 +841,13 @@ const MyShelf = () => {
           bgStretch: true,
           noZone: true,
         };
+      case 'customize_windowshelf':
+        return {
+          type: 'window_shelf',
+          bg: selectedWallTheme || windowShelfSheet,
+          bgStretch: true,
+          noZone: true,
+        };
       case 'customize4':
         return {
           type: 'rows',
@@ -1083,6 +1099,28 @@ const MyShelf = () => {
                         Blue Rope Shelf
                       </span>
                     </div>
+
+                    {/* Window Shelf card */}
+                    <div
+                      onClick={() => {
+                        setSelectedFolder(folder.name);
+                        setActiveShelfStyle('customize_windowshelf');
+                        setSelectedWallTheme(null);
+                        setCurrentView('shelf_detail');
+                      }}
+                      className="group cursor-pointer flex flex-col items-center"
+                    >
+                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-indigo-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
+                        <img
+                          src={windowShelfImg}
+                          alt="Window Shelf"
+                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
+                        />
+                      </div>
+                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-indigo-600 transition-colors">
+                        Window Shelf
+                      </span>
+                    </div>
                   </>
                 )}
               </React.Fragment>
@@ -1150,7 +1188,7 @@ const MyShelf = () => {
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
-                      {activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : (selectedFolder === 'My Flipbooks' ? 'Pumps based shelf' : selectedFolder)}
+                      {activeShelfStyle === 'customize_windowshelf' ? 'Window Shelf' : activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : (selectedFolder === 'My Flipbooks' ? 'Pumps based shelf' : selectedFolder)}
                     </h2>
                     <button className="text-gray-400 hover:text-gray-600 transition-colors p-0.5" title="Rename shelf">
                       <Icon icon="lucide:edit-3" className="w-3.5 h-3.5" />
@@ -1159,12 +1197,7 @@ const MyShelf = () => {
 
                   <div className="flex items-center gap-2.5">
                     <button
-                      onClick={() => {
-                        if (navigator.clipboard) {
-                          navigator.clipboard.writeText(window.location.href);
-                          alert('Shelf link copied to clipboard!');
-                        }
-                      }}
+                      onClick={() => setShowShareShelfModal(true)}
                       className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
                     >
                       <Icon icon="lucide:share-2" className="w-3.5 h-3.5 text-gray-600" />
@@ -1787,7 +1820,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.95) 0%, rgba(254, 240, 138, 0.52) 32%, rgba(251, 191, 36, 0.16) 75%, transparent 100%)'
                                         : selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 100%)'
-                                        : 'linear-gradient(to bottom, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.58) 32%, rgba(14, 165, 233, 0.16) 75%, transparent 100%)',
+                                        : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
                                     filter: 'blur(7.5px)',
                                     mixBlendMode: 'screen'
@@ -1807,7 +1840,7 @@ const MyShelf = () => {
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.60) 25%, rgba(251, 191, 36, 0.15) 70%, transparent 100%)'
                                         : selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
-                                        : 'linear-gradient(to bottom, rgba(224, 242, 254, 1.0) 0%, rgba(56, 189, 248, 0.65) 25%, rgba(14, 165, 233, 0.15) 70%, transparent 100%)',
+                                        : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
                                     filter: 'blur(4.5px)',
                                     mixBlendMode: 'screen'
@@ -1830,7 +1863,7 @@ const MyShelf = () => {
                                         ? '0 0 8px 2px rgba(251, 191, 36, 0.90)'
                                         : selectedLightTheme === 'light2'
                                         ? '0 0 8px 2px rgba(255, 255, 255, 0.95)'
-                                        : '0 0 8px 2px rgba(56, 189, 248, 0.90)'
+                                        : '0 0 8px 2px rgba(186, 230, 253, 0.85)'
                                   }}
                                 />
                               </React.Fragment>
@@ -2112,7 +2145,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.50) 30%, rgba(203, 213, 225, 0.12) 75%, transparent 100%)'
                                         : selectedLightTheme === 'light3'
-                                        ? 'linear-gradient(to bottom, rgba(224, 242, 254, 0.95) 0%, rgba(56, 189, 248, 0.50) 30%, rgba(14, 165, 233, 0.12) 75%, transparent 100%)'
+                                        ? 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(255, 240, 180, 0.82) 0%, rgba(252, 211, 77, 0.38) 32%, rgba(245, 158, 11, 0.12) 72%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
                                     filter: 'blur(7px)',
@@ -2132,7 +2165,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
                                         : selectedLightTheme === 'light3'
-                                        ? 'linear-gradient(to bottom, rgba(224, 242, 254, 1.0) 0%, rgba(56, 189, 248, 0.65) 25%, rgba(14, 165, 233, 0.15) 70%, transparent 100%)'
+                                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 100%)'
                                         : 'linear-gradient(to bottom, rgba(255, 250, 220, 0.90) 0%, rgba(253, 224, 71, 0.52) 25%, rgba(245, 158, 11, 0.16) 65%, transparent 100%)',
                                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
                                     filter: 'blur(4px)',
@@ -2155,7 +2188,7 @@ const MyShelf = () => {
                                       selectedLightTheme === 'light2'
                                         ? '0 0 8px 2px rgba(255, 255, 255, 0.95)'
                                         : selectedLightTheme === 'light3'
-                                        ? '0 0 8px 2px rgba(56, 189, 248, 0.90)'
+                                        ? '0 0 8px 2px rgba(186, 230, 253, 0.85)'
                                         : '0 0 8px 2px rgba(245, 158, 11, 0.75), 0 0 14px 4px rgba(251, 191, 36, 0.30)'
                                   }}
                                 />
@@ -2686,7 +2719,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(circle, rgba(251, 191, 36, 0.42) 0%, rgba(245, 158, 11, 0.20) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                    : 'radial-gradient(circle, rgba(56, 189, 248, 0.55) 0%, rgba(14, 165, 233, 0.28) 35%, rgba(2, 132, 199, 0.06) 60%, transparent 80%)',
+                                    : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                   filter: 'blur(22px)',
                                   mixBlendMode: 'screen'
                                 }}
@@ -2704,7 +2737,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.32) 40%, transparent 75%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.35) 40%, transparent 75%)'
-                                    : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.75) 0%, rgba(56, 189, 248, 0.45) 40%, rgba(14, 165, 233, 0.15) 65%, transparent 80%)',
+                                    : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
                                   filter: 'blur(12px)',
                                   mixBlendMode: 'screen'
                                 }}
@@ -2723,7 +2756,7 @@ const MyShelf = () => {
                                     ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.95) 0%, rgba(251, 191, 36, 0.70) 50%, rgba(217, 119, 6, 0.30) 85%, transparent 100%)'
                                     : selectedLightTheme === 'light2'
                                     ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.80) 50%, rgba(203, 213, 225, 0.30) 85%, transparent 100%)'
-                                    : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.85) 50%, rgba(14, 165, 233, 0.40) 85%, transparent 100%)',
+                                    : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
                                   mixBlendMode: 'screen',
                                   filter: 'blur(3px)'
                                 }}
@@ -2739,7 +2772,7 @@ const MyShelf = () => {
                                     width: '84%',
                                     height: '33%',
                                     borderRadius: '50% 50% 16% 16% / 78% 78% 22% 22%',
-                                    background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.70) 0%, rgba(14, 165, 233, 0.50) 100%)',
+                                    background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
                                     mixBlendMode: 'color'
                                   }}
                                 />
@@ -2873,7 +2906,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(248, 250, 252, 0.26) 35%, rgba(226, 232, 240, 0.06) 60%, transparent 80%)'
-                                : 'radial-gradient(circle, rgba(56, 189, 248, 0.55) 0%, rgba(14, 165, 233, 0.28) 35%, rgba(2, 132, 199, 0.06) 60%, transparent 80%)',
+                                : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                               filter: 'blur(16px)',
                               mixBlendMode: 'screen'
                             }}
@@ -2891,7 +2924,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.70) 0%, rgba(251, 191, 36, 0.35) 40%, transparent 75%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.80) 0%, rgba(241, 245, 249, 0.38) 40%, transparent 75%)'
-                                : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.80) 0%, rgba(56, 189, 248, 0.48) 40%, rgba(14, 165, 233, 0.16) 65%, transparent 80%)',
+                                : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
                               filter: 'blur(10px)',
                               mixBlendMode: 'screen'
                             }}
@@ -2910,7 +2943,7 @@ const MyShelf = () => {
                                 ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.98) 0%, rgba(251, 191, 36, 0.80) 50%, rgba(217, 119, 6, 0.35) 85%, transparent 100%)'
                                 : selectedLightTheme === 'light2'
                                 ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.85) 50%, rgba(203, 213, 225, 0.35) 85%, transparent 100%)'
-                                : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 0.98) 0%, rgba(56, 189, 248, 0.88) 50%, rgba(14, 165, 233, 0.45) 85%, transparent 100%)',
+                                : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
                               mixBlendMode: 'screen',
                               filter: 'blur(2px)'
                             }}
@@ -2926,7 +2959,7 @@ const MyShelf = () => {
                                 width: '42%',
                                 height: '40%',
                                 borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
-                                background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.70) 0%, rgba(14, 165, 233, 0.50) 100%)',
+                                background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
                                 mixBlendMode: 'color'
                               }}
                             />
@@ -3013,7 +3046,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(20px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3031,7 +3064,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(10px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3050,7 +3083,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3069,7 +3102,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(254, 240, 138, 0.70) 0%, rgba(245, 158, 11, 0.35) 60%, transparent 90%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 255, 0.75) 0%, rgba(203, 213, 225, 0.35) 60%, transparent 90%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(186, 230, 253, 0.75) 0%, rgba(56, 189, 248, 0.35) 60%, transparent 90%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(240, 249, 255, 0.75) 0%, rgba(186, 230, 253, 0.28) 60%, transparent 90%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(7px)'
                               }}
@@ -3157,7 +3190,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(18px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3175,7 +3208,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(9px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3194,7 +3227,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3296,7 +3329,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.50) 0%, rgba(56, 189, 248, 0.25) 35%, rgba(14, 165, 233, 0.06) 60%, transparent 80%)',
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.40) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
                                 filter: 'blur(20px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3314,7 +3347,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, transparent 75%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.32) 40%, transparent 75%)'
-                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(186, 230, 253, 0.70) 0%, rgba(56, 189, 248, 0.38) 40%, transparent 75%)',
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.65) 0%, rgba(186, 230, 253, 0.28) 40%, transparent 75%)',
                                 filter: 'blur(10px)',
                                 mixBlendMode: 'screen'
                               }}
@@ -3333,7 +3366,7 @@ const MyShelf = () => {
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 240, 0.98) 0%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.50) 75%, transparent 100%)'
                                   : selectedLightTheme === 'light2'
                                   ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(203, 213, 225, 0.40) 75%, transparent 100%)'
-                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(224, 242, 254, 1) 0%, rgba(56, 189, 248, 0.90) 45%, rgba(14, 165, 233, 0.45) 75%, transparent 100%)',
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 1) 0%, rgba(186, 230, 253, 0.68) 45%, rgba(147, 197, 253, 0.25) 75%, transparent 100%)',
                                 mixBlendMode: 'screen',
                                 filter: 'blur(3px)'
                               }}
@@ -3470,7 +3503,7 @@ const MyShelf = () => {
                       className="absolute z-20 flex items-end justify-center pointer-events-auto"
                       style={{
                         left: '23.8%',
-                        top: '16.5%',
+                        top: '19.8%',
                         width: '22.5%',
                         height: '24.8%',
                         gap: '5.2%'
@@ -3478,37 +3511,164 @@ const MyShelf = () => {
                     >
                       {[0, 1].map((slotIdx) => {
                         const book = filteredBooks && filteredBooks[slotIdx];
+                        if (!book) {
+                          return (
+                            <div
+                              key={`upper-rope-empty-${slotIdx}`}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, slotIdx)}
+                              className="relative flex-1 h-full flex flex-col justify-end items-center"
+                            >
+                              <div
+                                onClick={() => {
+                                  setSelectedBookIdsToAdd([]);
+                                  setAddBookSearch('');
+                                  setShowAddBookModal(true);
+                                }}
+                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                                title="Add Book"
+                              >
+                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                    +
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                  Add Book
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const targetShareId = book.shareId || book.v_id;
+                        const rawAcc = String(book.access || 'public').toLowerCase();
+
                         return (
                           <div
-                            key={`upper-rope-${slotIdx}`}
-                            className="relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer"
+                            key={book.v_id || `upper-rope-${slotIdx}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, slotIdx)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, slotIdx)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `bluerope-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
                             onClick={() => {
-                              if (book) {
-                                const targetShareId = book.shareId || book.v_id;
-                                const rawAcc = String(book.access || 'public').toLowerCase();
-                                if (targetShareId) {
-                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                }
-                              } else {
-                                setShowSelectBookModal(true);
+                              if (targetShareId) {
+                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
                               }
                             }}
                           >
-                            {book ? (
-                              <div className="relative w-full h-full flex items-end justify-center">
-                                <img
-                                  src={book.coverImage || book.cover || cover1}
-                                  alt={book.title || 'Book'}
-                                  className="w-full h-full object-fill rounded-xs shadow-md transition-transform duration-200 group-hover:scale-105"
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                className="w-full h-full border border-dashed border-white/50 hover:border-white/90 bg-white/10 hover:bg-white/20 rounded flex flex-col items-center justify-center gap-1 transition-all"
-                                title="Add Book"
+                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail || currentUserEmail}
+                                backendUrl={backendUrl}
+                                iframeBaseUrl=""
+                                title={book.title}
+                                imageUrl={null}
+                              />
+                            </div>
+
+                            {/* Hover Menu Pill */}
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === `bluerope-${slotIdx}` ? null : `bluerope-${slotIdx}`);
+                                }}
+                                className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
                               >
-                                <Icon icon="lucide:book-open" className="w-4 h-4 text-white/70" />
-                                <span className="text-[10px] text-white/80 font-medium">Add Book</span>
+                                <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                              </button>
+                              <div
+                                className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                onMouseEnter={() => setHoveredInfoId(`bluerope-${slotIdx}`)}
+                                onMouseLeave={() => setHoveredInfoId(null)}
+                              >
+                                <Icon icon="si:info-fill" className="w-4 h-4" />
+                                <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `bluerope-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                  <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                    <div className="flex items-center gap-2">
+                                      {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                        <img
+                                          src={book.authorPicture}
+                                          alt={book.authorName}
+                                          className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                          style={{ backgroundColor: book.authorBgColor }}
+                                        >
+                                          {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col min-w-0 pr-1">
+                                        <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                          <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                                        <span className="font-normal text-gray-500">Pages</span>
+                                      </div>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                        {book.views || '1.2k'}
+                                      </span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                        {book.rating || 4.5}
+                                      </span>
+                                    </div>
+                                    <div className="relative">
+                                      <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                      <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {openMenuId === `bluerope-${slotIdx}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (targetShareId) {
+                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                    }
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                >
+                                  Open Book
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveBook(book.v_id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Remove Book
+                                </button>
                               </div>
                             )}
                           </div>
@@ -3521,7 +3681,7 @@ const MyShelf = () => {
                       className="absolute z-20 flex items-end justify-center pointer-events-auto"
                       style={{
                         left: '62.8%',
-                        top: '46.5%',
+                        top: '49.8%',
                         width: '22.5%',
                         height: '24.8%',
                         gap: '5.2%'
@@ -3529,37 +3689,435 @@ const MyShelf = () => {
                     >
                       {[2, 3].map((slotIdx) => {
                         const book = filteredBooks && filteredBooks[slotIdx];
+                        if (!book) {
+                          return (
+                            <div
+                              key={`lower-rope-empty-${slotIdx}`}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, slotIdx)}
+                              className="relative flex-1 h-full flex flex-col justify-end items-center"
+                            >
+                              <div
+                                onClick={() => {
+                                  setSelectedBookIdsToAdd([]);
+                                  setAddBookSearch('');
+                                  setShowAddBookModal(true);
+                                }}
+                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                                title="Add Book"
+                              >
+                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                    +
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                  Add Book
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const targetShareId = book.shareId || book.v_id;
+                        const rawAcc = String(book.access || 'public').toLowerCase();
+
                         return (
                           <div
-                            key={`lower-rope-${slotIdx}`}
-                            className="relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer"
+                            key={book.v_id || `lower-rope-${slotIdx}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, slotIdx)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, slotIdx)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `bluerope-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
                             onClick={() => {
-                              if (book) {
-                                const targetShareId = book.shareId || book.v_id;
-                                const rawAcc = String(book.access || 'public').toLowerCase();
-                                if (targetShareId) {
-                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                }
-                              } else {
-                                setShowSelectBookModal(true);
+                              if (targetShareId) {
+                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
                               }
                             }}
                           >
-                            {book ? (
-                              <div className="relative w-full h-full flex items-end justify-center">
-                                <img
-                                  src={book.coverImage || book.cover || cover1}
-                                  alt={book.title || 'Book'}
-                                  className="w-full h-full object-fill rounded-xs shadow-md transition-transform duration-200 group-hover:scale-105"
-                                />
-                              </div>
-                            ) : (
+                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail || currentUserEmail}
+                                backendUrl={backendUrl}
+                                iframeBaseUrl=""
+                                title={book.title}
+                                imageUrl={null}
+                              />
+                            </div>
+
+                            {/* Hover Menu Pill */}
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === `bluerope-${slotIdx}` ? null : `bluerope-${slotIdx}`);
+                                }}
+                                className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
+                              >
+                                <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                              </button>
                               <div
-                                className="w-full h-full border border-dashed border-white/50 hover:border-white/90 bg-white/10 hover:bg-white/20 rounded flex flex-col items-center justify-center gap-1 transition-all"
+                                className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                onMouseEnter={() => setHoveredInfoId(`bluerope-${slotIdx}`)}
+                                onMouseLeave={() => setHoveredInfoId(null)}
+                              >
+                                <Icon icon="si:info-fill" className="w-4 h-4" />
+                                <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `bluerope-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                  <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                    <div className="flex items-center gap-2">
+                                      {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                        <img
+                                          src={book.authorPicture}
+                                          alt={book.authorName}
+                                          className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                          style={{ backgroundColor: book.authorBgColor }}
+                                        >
+                                          {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col min-w-0 pr-1">
+                                        <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                          <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                                        <span className="font-normal text-gray-500">Pages</span>
+                                      </div>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                        {book.views || '1.2k'}
+                                      </span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                        {book.rating || 4.5}
+                                      </span>
+                                    </div>
+                                    <div className="relative">
+                                      <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                      <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {openMenuId === `bluerope-${slotIdx}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (targetShareId) {
+                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                    }
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                >
+                                  Open Book
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveBook(book.v_id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Remove Book
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Window Shelf (customize_windowshelf): window on left, base along bottom, floating shelf, plant, lights on top right */}
+                {activeShelfStyle === 'customize_windowshelf' && (
+                  <>
+                    {/* 1. Window with Flower Vases docked on the left wall */}
+                    <div
+                      className="absolute left-0 top-0 pointer-events-none z-10"
+                      style={{
+                        width: '14.74%',
+                        height: '100%'
+                      }}
+                    >
+                      <img
+                        src={windowShelfWindow}
+                        alt="Window"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 2. White Skirting Base along the bottom wall */}
+                    <div
+                      className="absolute right-0 pointer-events-none z-10"
+                      style={{
+                        left: '14.7%',
+                        bottom: 0,
+                        height: '10%'
+                      }}
+                    >
+                      <img
+                        src={windowShelfBase}
+                        alt="Base"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 3. Triple Hanging Bulb Pendant Lights in Top-Right Corner */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        right: '4.9%',
+                        top: 0,
+                        width: '8.6%'
+                      }}
+                    >
+                      <img
+                        src={windowShelfLight}
+                        alt="Pendant Lights"
+                        className="w-full h-auto block drop-shadow-md"
+                        style={{
+                          filter: defaultLightType === 'Turn on'
+                            ? selectedLightTheme === 'light1'
+                              ? 'brightness(1.22) drop-shadow(0 0 16px rgba(245, 158, 11, 0.55))'
+                              : selectedLightTheme === 'light2'
+                              ? 'brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6))'
+                              : 'brightness(1.18) drop-shadow(0 0 16px rgba(186, 230, 253, 0.55))'
+                            : 'brightness(0.8) contrast(0.95)'
+                        }}
+                      />
+                    </div>
+
+                    {/* 4. White Wall Floating Shelf */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '33.65%',
+                        top: '42.22%',
+                        width: '67.55%'
+                      }}
+                    >
+                      <img
+                        src={windowShelfPlank}
+                        alt="Shelf"
+                        className="w-full h-auto block drop-shadow-lg"
+                      />
+                    </div>
+
+                    {/* 5. Hanging Vine Plant on the Left Edge of Shelf */}
+                    <div
+                      className="absolute pointer-events-none z-20"
+                      style={{
+                        left: '30.16%',
+                        top: '40.37%',
+                        width: '11.72%'
+                      }}
+                    >
+                      <img
+                        src={windowShelfPlant}
+                        alt="Plant"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 6. Interactive Books on the Floating Shelf */}
+                    <div
+                      className="absolute z-20 flex items-end justify-center pointer-events-auto"
+                      style={{
+                        left: '44.5%',
+                        top: '35.5%',
+                        width: '24.0%',
+                        height: '24.5%',
+                        gap: '12.5%'
+                      }}
+                    >
+                      {[0, 1].map((slotIdx) => {
+                        const book = filteredBooks && filteredBooks[slotIdx];
+                        if (!book) {
+                          return (
+                            <div
+                              key={`window-shelf-empty-${slotIdx}`}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, slotIdx)}
+                              className="relative flex-1 h-full flex flex-col justify-end items-center"
+                            >
+                              <div
+                                onClick={() => {
+                                  setSelectedBookIdsToAdd([]);
+                                  setAddBookSearch('');
+                                  setShowAddBookModal(true);
+                                }}
+                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
                                 title="Add Book"
                               >
-                                <Icon icon="lucide:book-open" className="w-4 h-4 text-white/70" />
-                                <span className="text-[10px] text-white/80 font-medium">Add Book</span>
+                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                    +
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                  Add Book
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const targetShareId = book.shareId || book.v_id;
+                        const rawAcc = String(book.access || 'public').toLowerCase();
+
+                        return (
+                          <div
+                            key={book.v_id || `window-shelf-${slotIdx}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, slotIdx)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, slotIdx)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `window-shelf-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (targetShareId) {
+                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                              }
+                            }}
+                          >
+                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail || currentUserEmail}
+                                backendUrl={backendUrl}
+                                iframeBaseUrl=""
+                                title={book.title}
+                                imageUrl={null}
+                              />
+                            </div>
+
+                            {/* Hover Menu Pill */}
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === `window-shelf-${slotIdx}` ? null : `window-shelf-${slotIdx}`);
+                                }}
+                                className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
+                              >
+                                <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                              </button>
+                              <div
+                                className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                onMouseEnter={() => setHoveredInfoId(`window-shelf-${slotIdx}`)}
+                                onMouseLeave={() => setHoveredInfoId(null)}
+                              >
+                                <Icon icon="si:info-fill" className="w-4 h-4" />
+                                <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `window-shelf-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                  <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                    <div className="flex items-center gap-2">
+                                      {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                        <img
+                                          src={book.authorPicture}
+                                          alt={book.authorName}
+                                          className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                          style={{ backgroundColor: book.authorBgColor }}
+                                        >
+                                          {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col min-w-0 pr-1">
+                                        <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                          <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                                        <span className="font-normal text-gray-500">Pages</span>
+                                      </div>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                        {book.views || '1.2k'}
+                                      </span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                        {book.rating || 4.5}
+                                      </span>
+                                    </div>
+                                    <div className="relative">
+                                      <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                      <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {openMenuId === `window-shelf-${slotIdx}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (targetShareId) {
+                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                    }
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                >
+                                  Open Book
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveBook(book.v_id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Remove Book
+                                </button>
                               </div>
                             )}
                           </div>
@@ -3625,74 +4183,85 @@ const MyShelf = () => {
 
             </div>
 
-            {/* Shelf Styles Carousel / Pagination matching Screenshot 2 */}
+            {/* Shelf Styles Carousel / Pagination */}
             <div className="mt-2.5 mb-1 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
-                <div className="flex items-center gap-1 text-[11px] font-semibold">
-                  {[1, 2, 3, 4].map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setShelfStylesPage(page)}
-                      className={`w-4 h-4 rounded flex items-center justify-center transition-all ${shelfStylesPage === page
-                        ? 'bg-[#FF5733] text-white shadow-sm'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {(() => {
+                const allStyles = [
+                  { id: 'customize4', img: blueshade, title: 'Pumps Shelf' },
+                  { id: 'customize_green', img: greenshade, title: 'Green Shelf' },
+                  { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf' },
+                  { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf' },
+                  { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf' },
+                  { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf' },
+                  { id: 'customize_windowshelf', img: windowShelfImg, title: 'Window Shelf' },
+                ];
+                const itemsPerPage = 5;
+                const totalPages = Math.ceil(allStyles.length / itemsPerPage);
+                const startIndex = (shelfStylesPage - 1) * itemsPerPage;
+                const visibleStyles = allStyles.slice(startIndex, startIndex + itemsPerPage);
 
-              {/* Thumbnail Strip */}
-              <div className="relative flex items-center gap-2">
-                <button
-                  onClick={() => setShelfStylesPage(prev => (prev > 1 ? prev - 1 : 4))}
-                  className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  <Icon icon="lucide:chevron-left" className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="grid grid-cols-5 gap-2 flex-1">
-                  {[
-                    { id: 'customize4', img: blueshade, title: 'Pumps Shelf' },
-                    { id: 'customize_green', img: greenshade, title: 'Green Shelf' },
-                    { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf' },
-                    { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf' },
-                    { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf' },
-                    { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf' },
-                  ].map((styleItem) => {
-                    const isSelected = activeShelfStyle === styleItem.id;
-                    return (
-                      <div
-                        key={styleItem.id}
-                        onClick={() => {
-                          if (styleItem.id === 'customize4' || styleItem.id === 'customize_green' || styleItem.id === 'customize_greenlight' || styleItem.id === 'customize_light' || styleItem.id === 'customize_plantlight' || styleItem.id === 'customize_bluerope') {
-                            setActiveShelfStyle(styleItem.id);
-                            setSelectedWallTheme(null);
-                          }
-                        }}
-                        className={`group cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-[16/9.5] max-h-[72px] bg-gray-100 relative shadow-xs ${isSelected ? 'border-[#FF5733] ring-1 ring-orange-200' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                      >
-                        <img
-                          src={styleItem.img}
-                          alt={styleItem.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
+                      <div className="flex items-center gap-1 text-[11px] font-semibold">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setShelfStylesPage(page)}
+                            className={`w-4 h-4 rounded flex items-center justify-center transition-all ${shelfStylesPage === page
+                              ? 'bg-[#FF5733] text-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
 
-                <button
-                  onClick={() => setShelfStylesPage(prev => (prev < 4 ? prev + 1 : 1))}
-                  className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5" />
-                </button>
-              </div>
+                    {/* Thumbnail Strip */}
+                    <div className="relative flex items-center gap-2">
+                      <button
+                        onClick={() => setShelfStylesPage(prev => (prev > 1 ? prev - 1 : totalPages))}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                      >
+                        <Icon icon="lucide:chevron-left" className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="grid grid-cols-5 gap-2 flex-1">
+                        {visibleStyles.map((styleItem) => {
+                          const isSelected = activeShelfStyle === styleItem.id;
+                          return (
+                            <div
+                              key={styleItem.id}
+                              onClick={() => {
+                                setActiveShelfStyle(styleItem.id);
+                                setSelectedWallTheme(null);
+                              }}
+                              className={`group cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-[16/9.5] max-h-[72px] bg-gray-100 relative shadow-xs ${isSelected ? 'border-[#FF5733] ring-1 ring-orange-200' : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                              <img
+                                src={styleItem.img}
+                                alt={styleItem.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={() => setShelfStylesPage(prev => (prev < totalPages ? prev + 1 : 1))}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                      >
+                        <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         ) : (
@@ -4313,6 +4882,125 @@ const MyShelf = () => {
         )}
       </div>
       </>
+      )}
+
+            {/* Share Shelf Modal */}
+      {showShareShelfModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4 transition-opacity animate-in fade-in"
+          onClick={() => setShowShareShelfModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-[540px] max-w-[95vw] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#FF5733]">
+                  <Icon icon="lucide:share-2" className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 leading-tight">Share Shelf</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Share this bookshelf collection with your audience or friends
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowShareShelfModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full p-2"
+                title="Close"
+              >
+                <Icon icon="mdi:close" className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 flex flex-col gap-5 bg-white">
+              {/* Dummy Link Box */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Shareable Shelf Link
+                </label>
+                <div className="flex items-center gap-2 p-1.5 pl-3 border border-gray-200 rounded-xl bg-gray-50/80 focus-within:border-[#FF5733] focus-within:bg-white transition-all">
+                  <Icon icon="lucide:link" className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type="text"
+                    readOnly
+                    value="https://flipibook.com/shelf/collection/sh-9382104"
+                    className="w-full bg-transparent text-xs text-gray-700 font-medium focus:outline-none select-all truncate"
+                  />
+                  <button
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText("https://flipibook.com/shelf/collection/sh-9382104");
+                      }
+                      setShelfLinkCopied(true);
+                      setTimeout(() => setShelfLinkCopied(false), 2000);
+                    }}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${
+                      shelfLinkCopied
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
+                    }`}
+                  >
+                    <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
+                    <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Social Media Apps */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2.5">
+                  Share on Social Media
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                  {[
+                    { name: 'WhatsApp', icon: 'logos:whatsapp-icon', bg: 'hover:bg-emerald-50 hover:border-emerald-200' },
+                    { name: 'Facebook', icon: 'logos:facebook', bg: 'hover:bg-blue-50 hover:border-blue-200' },
+                    { name: 'X / Twitter', icon: 'ri:twitter-x-fill', bg: 'hover:bg-gray-100 hover:border-gray-300', color: 'text-black' },
+                    { name: 'LinkedIn', icon: 'logos:linkedin-icon', bg: 'hover:bg-sky-50 hover:border-sky-200' },
+                    { name: 'Instagram', icon: 'skill-icons:instagram', bg: 'hover:bg-pink-50 hover:border-pink-200' },
+                    { name: 'Pinterest', icon: 'logos:pinterest', bg: 'hover:bg-red-50 hover:border-red-200' },
+                    { name: 'Telegram', icon: 'logos:telegram', bg: 'hover:bg-cyan-50 hover:border-cyan-200' },
+                    { name: 'Reddit', icon: 'logos:reddit-icon', bg: 'hover:bg-orange-50 hover:border-orange-200' },
+                    { name: 'Email', icon: 'fluent-emoji-flat:envelope', bg: 'hover:bg-gray-100 hover:border-gray-300' },
+                    { name: 'Embed', icon: 'lucide:code-2', bg: 'hover:bg-purple-50 hover:border-purple-200', color: 'text-purple-600' },
+                  ].map((app) => (
+                    <button
+                      key={app.name}
+                      type="button"
+                      onClick={() => {}}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
+                    >
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                        <Icon icon={app.icon} className={`w-6 h-6 ${app.color || ''}`} />
+                      </div>
+                      <span className="text-[11px] font-medium text-gray-700 mt-1.5 group-hover:text-gray-900 truncate max-w-full">
+                        {app.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/60">
+              <span className="text-[11px] text-gray-400">
+                Anyone with the link can view this shelf
+              </span>
+              <button
+                onClick={() => setShowShareShelfModal(false)}
+                className="px-4 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-800 transition-colors shadow-2xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Change Shelf Modal */}

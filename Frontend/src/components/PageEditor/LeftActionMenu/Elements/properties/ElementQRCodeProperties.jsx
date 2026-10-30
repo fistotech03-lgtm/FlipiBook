@@ -15,8 +15,8 @@ import {
 import { renderQRWithFrame, generateStyledQRImage, drawRoundRect, loadImg, FONT_WEIGHT_MAP } from '../utils/qrFrameRenderer';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../properties/ColorPicker';
-import MediaGalleryPopup from '../../../properties/MediaGalleryPopup';
-import ReplaceMediaModal from '../../../properties/ReplaceMediaModal';
+import MediaGalleryPopup from '../../../modals/MediaGalleryPopup';
+import ReplaceMediaModal from '../../../modals/ReplaceMediaModal';
 import { ElementToggle, ElementSlider } from './ElementUIControls';
 
 // Predefined brand logos (clean inline SVG data URIs)

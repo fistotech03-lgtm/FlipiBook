@@ -12,6 +12,7 @@ const Effect = ({
   activeColorPicker, setActiveColorPicker,
   setShowDetailedPicker,
   setPickerPosition,
+  noAccordion = false,
   ...props
 }) => {
   const [activeEffectPopupId, setActiveEffectPopupId] = useState(null);
@@ -201,81 +202,132 @@ const Effect = ({
 
   return (
     <div ref={containerRef} className="flex flex-col space-y-[0.60vw] font-sans">
-      <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm">
-        <div
-          onClick={() => setOpenSubSection(openSubSection === 'effect' ? null : 'effect')}
-          className={`flex items-center justify-between px-[1vw] py-[1vw] border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${openSubSection === 'effect' ? 'rounded-t-[0.75vw]' : 'rounded-[0.75vw]'}`}
-        >
-          <div className="flex items-center gap-[0.5vw]">
-            <span className={`font-semibold text-[0.85vw] ${openSubSection === 'effect' ? 'text-gray-900' : 'text-gray-500'}`}>Effect</span>
+      {noAccordion ? (
+        <div className="flex flex-col gap-[1vw]">
+          <div className="flex items-center gap-[0.8vw] mb-[0.2vw]">
+            <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Effects</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
           </div>
-          <div className="flex items-center gap-[0.5vw]">
-            {openSubSection === 'effect' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveEffectPopupId(null);
-                  if (setActiveEffects) setActiveEffects([]);
-                  updateAttr('data-effect-drop-shadow', 'false');
-                  updateAttr('data-effect-inner-shadow', 'false');
-                  updateAttr('data-effect-blur', 'false');
-                }}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw] cursor-pointer flex items-center justify-center"
-                title="Reset Effects"
-              >
-                <Icon icon="ix:reset" width="1.1vw" height="1.1vw" style={{ strokeWidth: 2.5 }} />
-              </button>
-            )}
-            <ChevronUp size="1vw" className={`transition-transform duration-200 ${openSubSection === 'effect' ? 'text-gray-900' : 'rotate-180 text-gray-500'}`} />
-          </div>
-        </div>
-
-        <div className={`grid transition-all duration-150 ease-in-out ${openSubSection === 'effect' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-          <div className="overflow-hidden">
-            <div className="p-[1vw] space-y-[0.6vw]">
-              {[
-                { id: 'drop-shadow', label: 'Drop Shadow' },
-                { id: 'inner-shadow', label: 'Inner Shadow' },
-                { id: 'blur', label: 'Blur' }
-              ].map(effect => {
-                const isActive = pseudoProps[`data-effect-${effect.id}`] === 'true';
-                return (
-                  <div
-                    key={effect.id}
-                    id={`effect-row-${effect.id}`}
+          <div className="flex flex-col gap-[0.65vw]">
+            {[
+              { id: 'drop-shadow', label: 'Drop Shadow' },
+              { id: 'inner-shadow', label: 'Inner Shadow' },
+              { id: 'blur', label: 'Blur' }
+            ].map(effect => {
+              const isActive = pseudoProps[`data-effect-${effect.id}`] === 'true';
+              return (
+                <div
+                  key={effect.id}
+                  id={`effect-row-${effect.id}`}
+                  onClick={(e) => {
+                    const target = e.currentTarget;
+                    if (!isActive) {
+                      setShouldOpenPopupId(effect.id);
+                      updateAttr(`data-effect-${effect.id}`, 'true');
+                    } else {
+                      handleEffectRowClick(target, effect.id);
+                    }
+                  }}
+                  className={`effect-row flex items-center justify-between px-[0.9vw] py-[0.7vw] bg-white rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs ${activeEffectPopupId === effect.id ? 'border-indigo-400 bg-indigo-50/20' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <span className={`text-[0.82vw] font-medium transition-colors ${activeEffectPopupId === effect.id ? 'text-indigo-600' : 'text-gray-800'}`}>{effect.label}</span>
+                  <button
+                    type="button"
                     onClick={(e) => {
-                      const target = e.currentTarget;
+                      e.stopPropagation();
                       if (!isActive) {
                         setShouldOpenPopupId(effect.id);
                         updateAttr(`data-effect-${effect.id}`, 'true');
                       } else {
-                        handleEffectRowClick(target, effect.id);
+                        updateAttr(`data-effect-${effect.id}`, 'false');
                       }
                     }}
-                    className={`effect-row flex items-center justify-between px-[1vw] py-[0.8vw] bg-gray-50/50 rounded-[0.8vw] border transition-all group cursor-pointer ${activeEffectPopupId === effect.id ? 'border-indigo-400 bg-indigo-50/30' : 'border-gray-100 hover:border-gray-300'}`}
+                    className={`transition-colors cursor-pointer ${isActive ? 'text-red-500 hover:text-red-700' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    <span className={`text-[0.85vw] font-semibold transition-colors ${activeEffectPopupId === effect.id ? 'text-indigo-600' : 'text-gray-800'}`}>{effect.label}</span>
-                    <button
+                    {isActive ? <Trash2 size="0.95vw" /> : <Plus size="0.95vw" />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm">
+          <div
+            onClick={() => setOpenSubSection(openSubSection === 'effect' ? null : 'effect')}
+            className={`flex items-center justify-between px-[1vw] py-[1vw] border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${openSubSection === 'effect' ? 'rounded-t-[0.75vw]' : 'rounded-[0.75vw]'}`}
+          >
+            <div className="flex items-center gap-[0.5vw]">
+              <span className={`font-semibold text-[0.85vw] ${openSubSection === 'effect' ? 'text-gray-900' : 'text-gray-500'}`}>Effect</span>
+            </div>
+            <div className="flex items-center gap-[0.5vw]">
+              {openSubSection === 'effect' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveEffectPopupId(null);
+                    if (setActiveEffects) setActiveEffects([]);
+                    updateAttr('data-effect-drop-shadow', 'false');
+                    updateAttr('data-effect-inner-shadow', 'false');
+                    updateAttr('data-effect-blur', 'false');
+                  }}
+                  className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw] cursor-pointer flex items-center justify-center"
+                  title="Reset Effects"
+                >
+                  <Icon icon="ix:reset" width="1.1vw" height="1.1vw" style={{ strokeWidth: 2.5 }} />
+                </button>
+              )}
+              <ChevronUp size="1vw" className={`transition-transform duration-200 ${openSubSection === 'effect' ? 'text-gray-900' : 'rotate-180 text-gray-500'}`} />
+            </div>
+          </div>
+
+          <div className={`grid transition-all duration-150 ease-in-out ${openSubSection === 'effect' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+              <div className="p-[1vw] space-y-[0.6vw]">
+                {[
+                  { id: 'drop-shadow', label: 'Drop Shadow' },
+                  { id: 'inner-shadow', label: 'Inner Shadow' },
+                  { id: 'blur', label: 'Blur' }
+                ].map(effect => {
+                  const isActive = pseudoProps[`data-effect-${effect.id}`] === 'true';
+                  return (
+                    <div
+                      key={effect.id}
+                      id={`effect-row-${effect.id}`}
                       onClick={(e) => {
-                        e.stopPropagation();
+                        const target = e.currentTarget;
                         if (!isActive) {
                           setShouldOpenPopupId(effect.id);
                           updateAttr(`data-effect-${effect.id}`, 'true');
                         } else {
-                          updateAttr(`data-effect-${effect.id}`, 'false');
+                          handleEffectRowClick(target, effect.id);
                         }
                       }}
-                      className={`transition-colors ${isActive ? 'text-red-500 hover:text-red-700' : 'text-gray-500 hover:text-indigo-600'}`}
+                      className={`effect-row flex items-center justify-between px-[1vw] py-[0.8vw] bg-gray-50/50 rounded-[0.8vw] border transition-all group cursor-pointer ${activeEffectPopupId === effect.id ? 'border-indigo-400 bg-indigo-50/30' : 'border-gray-100 hover:border-gray-300'}`}
                     >
-                      {isActive ? <Trash2 size="1vw" /> : <Plus size="1vw" />}
-                    </button>
-                  </div>
-                );
-              })}
+                      <span className={`text-[0.85vw] font-semibold transition-colors ${activeEffectPopupId === effect.id ? 'text-indigo-600' : 'text-gray-800'}`}>{effect.label}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isActive) {
+                            setShouldOpenPopupId(effect.id);
+                            updateAttr(`data-effect-${effect.id}`, 'true');
+                          } else {
+                            updateAttr(`data-effect-${effect.id}`, 'false');
+                          }
+                        }}
+                        className={`transition-colors ${isActive ? 'text-red-500 hover:text-red-700' : 'text-gray-500 hover:text-indigo-600'}`}
+                      >
+                        {isActive ? <Trash2 size="1vw" /> : <Plus size="1vw" />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {activeEffectPopupId && createPortal(
         <div

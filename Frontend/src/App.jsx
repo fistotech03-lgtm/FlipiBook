@@ -42,6 +42,7 @@ const Guide = lazy(() => import("./pages/Guide"));
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
 const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
 const ARView = lazy(() => import("./pages/ARView"));
+const ComingSoonBanner = lazy(() => import("./pages/ComingSoonBanner"));
 
 // Editor Components
 const EditorLayout = lazy(() => import("./Layouts/EditorLayout"));
@@ -151,6 +152,16 @@ export default function App() {
                       <PreviewPage />
                     </Suspense>
                   </ProtectedRoute>
+                }
+              />
+
+              {/* Public Coming Soon / Under Construction Banner Route */}
+              <Route
+                path="/newbanner"
+                element={
+                  <Suspense fallback={null}>
+                    <ComingSoonBanner />
+                  </Suspense>
                 }
               />
 

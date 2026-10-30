@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import ImageAdjustModal from './ImageAdjustModal';
 import SlideTextPopup from './SlideTextPopup';
-import ReplaceMediaModal from '../../../properties/ReplaceMediaModal';
+import ReplaceMediaModal from '../../../modals/ReplaceMediaModal';
 import { Icon } from '@iconify/react';
 import { getVisualBBox } from '../../../mainEditor/utils/geometryUtils';
 import PremiumDropdown from '../../../../CustomizedEditor/components/PremiumDropdown';

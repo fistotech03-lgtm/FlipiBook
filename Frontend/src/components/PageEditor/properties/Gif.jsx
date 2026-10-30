@@ -12,7 +12,7 @@ import { Icon } from '@iconify/react';
 import CornerRadius from './CornerRadius';
 import Adjustment from './Adjustment';
 import Effect from './Effect';
-import ReplaceMediaModal from './ReplaceMediaModal';
+import ReplaceMediaModal from '../modals/ReplaceMediaModal';
 import Color from './Color';
 import { parseGradient } from './ColorPicker';
 

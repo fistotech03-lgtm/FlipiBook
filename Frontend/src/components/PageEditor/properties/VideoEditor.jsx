@@ -11,7 +11,7 @@ import {
   Upload,
   ChevronDown
 } from "lucide-react";
-import ReplaceMediaModal from "./ReplaceMediaModal";
+import ReplaceMediaModal from "../modals/ReplaceMediaModal";
 import Color from './Color';
 import Adjustment from './Adjustment';
 import Effect from './Effect';

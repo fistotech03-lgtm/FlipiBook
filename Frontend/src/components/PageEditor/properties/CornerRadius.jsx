@@ -7,7 +7,8 @@ const CornerRadius = ({
   openSubSection, setOpenSubSection,
   radius, setRadius,
   isRadiusLinked, setIsRadiusLinked,
-  tagName = 'rect'
+  tagName = 'rect',
+  noAccordion = false
 }) => {
   const containerRef = useRef(null);
 
@@ -54,7 +55,96 @@ const CornerRadius = ({
     handleUpdate(undefined, undefined, attribute, value);
   };
 
+  const renderGridContent = () => (
+    <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.5vw] relative">
+      {[
+        { key: 'data-tl', roundedClass: 'rounded-tl-[1vw] rounded-tr-0 rounded-bl-0 rounded-br-0' },
+        { key: 'data-tr', roundedClass: 'rounded-tr-[1vw] rounded-tl-0 rounded-bl-0 rounded-br-0' },
+        { key: 'data-bl', roundedClass: 'rounded-bl-[1vw] rounded-tl-0 rounded-tr-0 rounded-br-0' },
+        { key: 'data-br', roundedClass: 'rounded-br-[1vw] rounded-tl-0 rounded-tr-0 rounded-bl-0' }
+      ].map((corner) => {
+        const val = parseInt(pseudoProps[corner.key] !== undefined ? pseudoProps[corner.key] : (pseudoProps.rx || 0));
+        const updateVal = (newVal) => {
+          const clamped = Math.max(0, newVal);
+          if (pseudoProps['data-corner-linked'] !== 'false') {
+            updateAttr('rx', clamped);
+            updateAttr('ry', clamped);
+            updateAttr('data-tl', clamped);
+            updateAttr('data-tr', clamped);
+            updateAttr('data-bl', clamped);
+            updateAttr('data-br', clamped);
+          } else {
+            updateAttr(corner.key, clamped);
+          }
+        };
 
+        return (
+          <div key={corner.key} className="flex flex-col items-center">
+            <div
+              onPointerDown={(e) => {
+                if (e.target.tagName === 'INPUT') return;
+                handleScrubHelper(e, val, (newVal) => updateVal(parseInt(newVal)));
+              }}
+              className={`w-[5.4vw] h-[2.3vw] border border-gray-300 ${corner.roundedClass} flex items-center justify-between px-[0.45vw] bg-white relative transition-colors hover:border-gray-400 cursor-ew-resize select-none shadow-2xs`}
+            >
+              <button
+                type="button"
+                onClick={() => updateVal(val - 1)}
+                className="text-gray-400 hover:text-black transition-colors pointer-events-auto cursor-pointer p-[0.1vw]"
+              >
+                <ChevronLeft size="0.8vw" />
+              </button>
+
+              <input
+                type="number"
+                min={0}
+                value={val}
+                onChange={(e) => updateVal(parseInt(e.target.value) || 0)}
+                className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none no-spin bg-transparent cursor-text"
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              <button
+                type="button"
+                onClick={() => updateVal(val + 1)}
+                className="text-gray-400 hover:text-black transition-colors pointer-events-auto cursor-pointer p-[0.1vw]"
+              >
+                <ChevronRight size="0.8vw" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+        <button
+          type="button"
+          onClick={() => updateAttr('data-corner-linked', pseudoProps['data-corner-linked'] === 'false' ? 'true' : 'false')}
+          className="bg-white p-[0.35vw] transition-all hover:scale-110 active:scale-95 rounded-full shadow-sm border border-gray-200 pointer-events-auto cursor-pointer"
+        >
+          {pseudoProps['data-corner-linked'] !== 'false' ? (
+            <Link2 size="1.3vw" className="text-black" />
+          ) : (
+            <Link2Off size="1.3vw" className="text-gray-300" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (noAccordion) {
+    return (
+      <div ref={containerRef} className="flex flex-col gap-[1vw] font-sans">
+        <div className="flex items-center gap-[0.8vw] mb-[0.2vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Corner Radius</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+        <div className="py-[1.2vw] pb-[0.8vw] relative flex flex-col items-center justify-center min-h-[7.5vw]">
+          {renderGridContent()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="flex flex-col font-sans">

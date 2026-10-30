@@ -389,7 +389,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
     <div 
       ref={popupRef}
       style={popupStyle} 
-      className="bg-white rounded-[0.8vw] w-[24vw] min-w-[320px] max-w-[90vw] shadow-2xl border border-gray-300 flex flex-col font-sans relative z-[100000]" 
+      className="bg-white rounded-[0.6vw] w-[25vw] min-w-[320px] max-w-[90vw] shadow-2xl border border-gray-200 flex flex-col font-sans select-none relative z-[100000]" 
       onClick={(e) => {
         e.stopPropagation();
         if (!e.target.closest('.rename-input')) {
@@ -400,41 +400,48 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-[1.5vw] pb-[1vw]">
-        <h2 className="text-[0.9vw] font-bold text-gray-900 mr-[1vw]">
-          {imageOnly ? 'Image Gallery' : 'Media Gallery'}
-        </h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="flex items-center justify-between p-[1.2vw] pb-[0.8vw] gap-[0.8vw]">
+        <div className="flex items-center flex-1 gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">
+            {imageOnly ? 'Image Gallery' : 'Media Gallery'}
+          </span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-[0.2vw] rounded-[0.3vw] transition-colors cursor-pointer flex-shrink-0"
+          title="Close"
+        >
           <Icon icon="lucide:x" className="w-[1vw] h-[1vw]" />
         </button>
       </div>
 
       {/* Content area */}
-      <div className="px-[1.5vw] pb-[1.5vw] pt-0 h-[19vw] flex flex-col">
+      <div className="px-[1.2vw] pb-[1.2vw] pt-0 h-[20vw] flex flex-col">
         <div className="flex flex-col flex-1 min-h-0">
           {/* Toolbar */}
-          <div className="flex flex-col gap-[0.75vw] mb-[1vw] pb-[1vw] px-[1.5vw] -mx-[1.5vw] border-b border-gray-100 shrink-0">
+          <div className="flex flex-col gap-[0.6vw] mb-[0.8vw] pb-[0.8vw] border-b border-gray-100 shrink-0">
             {/* Search and Sort Row */}
             <div className="flex items-center justify-between gap-[0.5vw]">
               {/* Search */}
               <div className="flex-1 relative">
-                <Icon icon="lucide:search" className="absolute left-[0.5vw] top-1/2 -translate-y-1/2 w-[0.8vw] h-[0.8vw] text-gray-400" />
+                <Icon icon="lucide:search" className="absolute left-[0.6vw] top-1/2 -translate-y-1/2 w-[0.8vw] h-[0.8vw] text-gray-400" />
                 <input 
                   type="text" 
                   placeholder="Search media..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-[1.8vw] pr-[0.5vw] py-[0.3vw] text-[0.75vw] border border-gray-200 rounded-[0.5vw] outline-none focus:border-[#4D47FF]"
+                  className="w-full pl-[1.8vw] pr-[0.6vw] py-[0.35vw] text-[0.75vw] font-normal text-gray-800 placeholder-gray-400 border border-gray-200 rounded-[0.4vw] outline-none focus:border-gray-900 transition-colors"
                 />
               </div>
               {/* Sort Dropdown */}
               <div className="relative inline-block cursor-pointer shrink-0" ref={sortDropdownRef}>
                 <div 
-                  className="flex items-center justify-between gap-[0.3vw] w-[6.5vw] bg-white border border-gray-200 rounded-[0.4vw] px-[0.55vw] py-[0.3vw] shadow-sm hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between gap-[0.3vw] w-[6.5vw] bg-white border border-gray-200 rounded-[0.4vw] px-[0.6vw] py-[0.35vw] shadow-2xs hover:bg-gray-50 transition-colors"
                   onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 >
                   <Icon icon="lucide:arrow-up-down" className="w-[0.75vw] h-[0.75vw] text-gray-500" />
-                  <span className="text-[0.7vw] font-medium ml-[-0.8vw] text-gray-700 truncate flex-1 text-center">{sortOrder === 'desc' ? 'Newest' : 'Oldest'}</span>
+                  <span className="text-[0.75vw] font-medium text-gray-700 truncate flex-1 text-center">{sortOrder === 'desc' ? 'Newest' : 'Oldest'}</span>
                   <Icon icon="lucide:chevron-down" className="w-[0.75vw] h-[0.75vw] text-gray-500 shrink-0" />
                 </div>
                 
@@ -443,7 +450,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                     {['Newest', 'Oldest'].map(option => (
                       <div 
                         key={option}
-                        className={`px-[0.55vw] py-[0.45vw] text-[0.7vw] font-medium cursor-pointer transition-colors ${
+                        className={`px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium cursor-pointer transition-colors ${
                           (sortOrder === 'desc' && option === 'Newest') || (sortOrder === 'asc' && option === 'Oldest') 
                             ? 'bg-[#F3F4F6] text-gray-900' : 'text-gray-700 hover:bg-gray-50'
                         }`}
@@ -464,10 +471,10 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
               {/* Dropdown */}
               <div className="relative inline-block cursor-pointer" ref={dropdownRef}>
                 <div 
-                  className="flex items-center justify-between gap-[0.3vw] w-[7vw] bg-white border border-gray-200 rounded-[0.4vw] px-[0.55vw] py-[0.3vw] shadow-sm hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between gap-[0.3vw] w-[7.5vw] bg-white border border-gray-200 rounded-[0.4vw] px-[0.6vw] py-[0.35vw] shadow-2xs hover:bg-gray-50 transition-colors"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
-                  <span className="text-[0.7vw] font-medium text-gray-700 truncate">{galleryType}</span>
+                  <span className="text-[0.75vw] font-medium text-gray-700 truncate">{galleryType}</span>
                   <Icon icon="lucide:chevron-down" className="w-[0.75vw] h-[0.75vw] text-gray-500 shrink-0" />
                 </div>
                 
@@ -476,7 +483,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                     {galleryOptions.map(option => (
                       <div 
                         key={option}
-                        className={`px-[0.55vw] py-[0.45vw] text-[0.7vw] font-medium cursor-pointer transition-colors ${galleryType === option ? 'bg-[#F3F4F6] text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                        className={`px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium cursor-pointer transition-colors ${galleryType === option ? 'bg-[#F3F4F6] text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => {
                           setGalleryType(option);
                           setIsDropdownOpen(false);
@@ -490,13 +497,13 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
               </div>
 
               {/* Browse Files Button */}
-              <div className="bg-[#4D47FF] hover:bg-[#3D38CC] rounded-[0.4vw] p-[0.15vw] shadow-sm transition-colors cursor-pointer inline-block">
+              <div className="bg-[#0c0f17] hover:bg-black rounded-[0.4vw] p-[0.15vw] shadow-2xs transition-colors cursor-pointer inline-block">
                 <div 
-                  className="flex items-center justify-center gap-[0.45vw] cursor-pointer text-white px-[0.7vw] py-[0.2vw] rounded-[0.3vw] border-[1.5px] border-dashed border-white/60 hover:border-white transition-colors"
+                  className="flex items-center justify-center gap-[0.45vw] cursor-pointer text-white px-[0.75vw] py-[0.25vw] rounded-[0.3vw] border-[1px] border-dashed border-white/40 hover:border-white transition-colors"
                   onClick={handleUploadClick}
                 >
                   <Icon icon="lucide:upload" className="w-[0.75vw] h-[0.75vw] stroke-[2]" />
-                  <span className="text-[0.7vw] font-medium">Browse Files</span>
+                  <span className="text-[0.75vw] font-medium">Browse Files</span>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/jpeg,image/png,image/webp,video/mp4,image/svg+xml,video/x-matroska,image/gif" multiple onChange={handleFileChange} onClick={(e) => { e.target.value = null; }} />
                 </div>
               </div>
@@ -535,7 +542,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                         }
                       }}
                       onDragEnd={() => onClose()}
-                      className={`group cursor-pointer w-full aspect-square rounded-[0.4vw] overflow-hidden bg-gray-100 relative shadow-sm ${selectedAsset?.id === item.id ? 'border-[0.15vw] border-[#4D47FF]' : 'border border-gray-200 group-hover:shadow-md'}`}
+                      className={`group cursor-pointer w-full aspect-square rounded-[0.4vw] overflow-hidden bg-gray-100 relative shadow-2xs transition-all ${selectedAsset?.id === item.id ? 'border-[0.15vw] border-gray-900 ring-2 ring-gray-900/10' : 'border border-gray-200 hover:border-gray-300'}`}
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         if (renamingItemId === item.id) return;
@@ -556,7 +563,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
                       {/* Hover Three Dots */}
                       <div 
-                        className={`absolute top-[0.3vw] right-[0.3vw] bg-white/90 rounded-[0.2vw] p-[0.2vw] shadow-sm hover:bg-white z-10 dots-menu-btn ${activeGalleryDropdown === item.id ? 'block' : 'hidden group-hover:block'}`}
+                        className={`absolute top-[0.3vw] right-[0.3vw] bg-white/90 rounded-[0.2vw] p-[0.2vw] shadow-2xs hover:bg-white z-10 dots-menu-btn ${activeGalleryDropdown === item.id ? 'block' : 'hidden group-hover:block'}`}
                         onClick={(e) => { 
                           e.stopPropagation(); 
                           setActiveGalleryDropdown(activeGalleryDropdown === item.id ? null : item.id); 
@@ -568,9 +575,9 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
                     {/* Dropdown Menu */}
                     {activeGalleryDropdown === item.id && (
-                      <div className={`absolute top-[1.5vw] ${idx % 4 < 2 ? 'left-0' : 'right-0'} bg-white rounded-[0.3vw] shadow-lg border border-gray-200 py-[0.2vw] w-[6vw] z-20 flex flex-col overflow-hidden`}>
+                      <div className={`absolute top-[1.5vw] ${idx % 4 < 2 ? 'left-0' : 'right-0'} bg-white rounded-[0.4vw] shadow-lg border border-gray-200 py-[0.3vw] w-[6.5vw] z-20 flex flex-col overflow-hidden`}>
                         <button 
-                          className="text-[0.7vw] font-medium text-gray-700 hover:bg-gray-50 text-left px-[0.5vw] py-[0.3vw]"
+                          className="text-[0.72vw] font-medium text-gray-700 hover:bg-gray-50 text-left px-[0.6vw] py-[0.35vw]"
                           onClick={(e) => {
                             e.stopPropagation();
                             setRenamingItemId(item.id);
@@ -581,7 +588,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                           Rename
                         </button>
                         <button 
-                          className="text-[0.7vw] font-medium text-gray-700 hover:bg-gray-50 text-left px-[0.5vw] py-[0.3vw]"
+                          className="text-[0.72vw] font-medium text-gray-700 hover:bg-gray-50 text-left px-[0.6vw] py-[0.35vw]"
                           onClick={(e) => {
                             e.stopPropagation();
                             setItemToReplaceId(item.id);
@@ -592,7 +599,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                           Replace {item.type === 'video' ? 'Video' : item.isAnimated ? 'Gif' : 'Image'}
                         </button>
                         <button 
-                          className="text-[0.7vw] font-medium text-red-600 hover:bg-red-50 text-left px-[0.5vw] py-[0.3vw]"
+                          className="text-[0.72vw] font-medium text-red-600 hover:bg-red-50 text-left px-[0.6vw] py-[0.35vw]"
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (user) {
@@ -637,11 +644,11 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
                             setRenamingItemId(null);
                           }
                         }}
-                        className="rename-input text-center text-[0.7vw] font-medium text-gray-900 border border-[#4D47FF] rounded-[0.2vw] px-[0.2vw] py-0 outline-none w-full"
+                        className="rename-input text-center text-[0.72vw] font-medium text-gray-900 border border-gray-900 rounded-[0.3vw] px-[0.2vw] py-[0.05vw] outline-none w-full"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <span className="text-center text-[0.7vw] font-medium text-gray-500 truncate w-full px-[0.2vw]">{item.name}</span>
+                      <span className="text-center text-[0.72vw] font-medium text-gray-700 truncate w-full px-[0.2vw]">{item.name}</span>
                     )}
                   </div>
                 )) : (
@@ -656,15 +663,15 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-[0.75vw] p-[1.5vw] border-t border-gray-100">
+      <div className="flex items-center gap-[0.75vw] p-[1.2vw] border-t border-gray-100">
         <button 
           onClick={onClose}
-          className="flex-1 py-[0.5vw] rounded-[0.3vw] border border-gray-200 text-gray-700 text-[0.8vw] font-medium hover:bg-gray-50 flex items-center justify-center gap-[0.5vw]"
+          className="flex-1 py-[0.55vw] rounded-[0.4vw] border border-gray-200 text-gray-700 text-[0.82vw] font-medium hover:bg-gray-50 flex items-center justify-center gap-[0.4vw] shadow-2xs transition-colors cursor-pointer"
         >
           <Icon icon="lucide:x" className="w-[0.8vw] h-[0.8vw]" /> Cancel
         </button>
         <button 
-          className={`flex-1 py-[0.5vw] rounded-[0.3vw] text-white text-[0.8vw] font-medium transition-colors ${selectedAsset ? 'bg-black hover:bg-gray-800' : 'bg-[#B1B1B1] cursor-not-allowed'}`}
+          className={`flex-1 py-[0.55vw] rounded-[0.4vw] text-white text-[0.82vw] font-semibold transition-colors shadow-2xs ${selectedAsset ? 'bg-black hover:bg-gray-800 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
           onClick={handleAddAssetToPage}
           disabled={!selectedAsset}
         >

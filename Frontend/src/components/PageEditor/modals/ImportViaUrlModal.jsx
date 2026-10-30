@@ -250,34 +250,34 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
         onClick={onClose} 
       />
 
-      <div className="bg-white w-[90%] max-w-[34vw] rounded-[1vw] shadow-2xl overflow-hidden p-[1.5vw] flex flex-col gap-[1.1vw] border border-gray-100 relative z-10 animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-[90%] max-w-[32vw] rounded-[0.6vw] shadow-2xl overflow-hidden p-[1.2vw] flex flex-col gap-[1vw] border border-gray-200 relative z-10 animate-in zoom-in-95 duration-200 select-none">
         
         {/* Header Section */}
         <div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-[0.8vw]">
             <div className="flex items-center flex-1 gap-[0.8vw]">
-              <h2 className="text-[1.25vw] font-bold text-gray-900 tracking-tight whitespace-nowrap">
+              <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">
                 Import via URL
-              </h2>
-              <div className="h-[1px] bg-gray-200 flex-1"></div>
+              </span>
+              <div className="flex-1 h-[1px] bg-gray-200"></div>
             </div>
             
             <button
               onClick={onClose}
-              className="w-[2vw] h-[2vw] flex items-center justify-center bg-white border border-[#EF4444] hover:bg-red-50 text-[#EF4444] rounded-[0.4vw] transition-colors cursor-pointer flex-shrink-0 ml-[0.8vw]"
+              className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-[0.2vw] rounded-[0.3vw] transition-colors cursor-pointer flex-shrink-0"
               title="Close"
             >
-              <X size="1.1vw" strokeWidth={2.5} />
+              <X size="1vw" strokeWidth={2} />
             </button>
           </div>
-          <p className="text-[0.75vw] text-gray-400 font-normal mt-[0.3vw]">
+          <p className="text-[0.75vw] text-gray-500 font-normal mt-[0.3vw]">
             Paste a direct link to import images, PDFs or videos from the web.
           </p>
         </div>
 
         {/* Media Preview Box (Screenshot 2 state) */}
         {isPreviewLoaded && (
-          <div className="w-full h-[15vw] max-h-[16vw] bg-[#1a1a1a] rounded-[0.8vw] flex items-center justify-center overflow-hidden border border-gray-200 relative group animate-in fade-in duration-200">
+          <div className="w-full h-[15vw] max-h-[16vw] bg-[#14161b] rounded-[0.5vw] flex items-center justify-center overflow-hidden border border-gray-200 relative group animate-in fade-in duration-200">
             {mediaType === 'image' && (
               <img 
                 src={url} 
@@ -304,8 +304,8 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
             )}
             {mediaType === 'pdf' && (
               <div className="flex flex-col items-center gap-[0.5vw] text-white">
-                <FileText size="3vw" className="text-red-400" />
-                <span className="text-[0.8vw] font-medium">PDF Document Ready</span>
+                <FileText size="2.8vw" className="text-red-400" />
+                <span className="text-[0.82vw] font-medium">PDF Document Ready</span>
               </div>
             )}
             {errorMsg && (
@@ -318,12 +318,12 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
 
         {/* Input Section */}
         <div>
-          <label className="block text-[0.85vw] font-bold text-gray-900 mb-[0.35vw]">
+          <label className="block text-[0.82vw] font-medium text-gray-800 mb-[0.35vw]">
             Paste URL
           </label>
           
-          <div className="relative flex items-center w-full bg-white border border-gray-300 rounded-[0.5vw] px-[0.8vw] py-[0.6vw] shadow-sm focus-within:border-black transition-colors">
-            <Link size="1.1vw" className="text-[#3195ff] flex-shrink-0 mr-[0.5vw]" />
+          <div className="relative flex items-center w-full bg-white border border-gray-300 rounded-[0.4vw] px-[0.7vw] py-[0.55vw] shadow-2xs focus-within:border-gray-900 transition-colors">
+            <Link size="1vw" className="text-[#3195ff] flex-shrink-0 mr-[0.5vw]" />
             <input
               type="text"
               value={url}
@@ -338,24 +338,24 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
                 }
               }}
               placeholder="https://example.com/your-file.jpg"
-              className="w-full bg-transparent outline-none text-[0.85vw] text-gray-800 placeholder-gray-400 font-normal"
+              className="w-full bg-transparent outline-none text-[0.82vw] text-gray-800 placeholder-gray-400 font-normal"
             />
           </div>
 
-          <p className="text-[0.72vw] text-gray-400 font-normal mt-[0.35vw]">
+          <p className="text-[0.72vw] text-gray-500 font-normal mt-[0.35vw]">
             Make sure the link is direct and publicly accessible.
           </p>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center gap-[0.75vw] mt-[0.3vw]">
+        <div className="flex items-center gap-[0.75vw] mt-[0.2vw]">
           {!isPreviewLoaded ? (
             <>
               {/* Initial State: Close & Get Preview */}
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-[0.65vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-semibold text-[0.85vw] rounded-[0.5vw] transition-colors cursor-pointer"
+                className="flex-1 py-[0.55vw] bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium text-[0.82vw] rounded-[0.4vw] shadow-2xs transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -364,7 +364,7 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
                 type="button"
                 onClick={handleGetPreview}
                 disabled={!url.trim() || isLoading}
-                className="flex-1 py-[0.65vw] bg-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-[0.85vw] rounded-[0.5vw] transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
+                className="flex-1 py-[0.55vw] bg-black hover:bg-gray-900 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold text-[0.82vw] rounded-[0.4vw] shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
               >
                 {isLoading ? (
                   <>
@@ -382,18 +382,18 @@ const ImportViaUrlModal = ({ isOpen, onClose, activePageIndex = 0 }) => {
               <button
                 type="button"
                 onClick={handleCancelPreview}
-                className="flex-1 py-[0.65vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-semibold text-[0.85vw] rounded-[0.75vw] transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
+                className="flex-1 py-[0.55vw] bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium text-[0.82vw] rounded-[0.4vw] shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
               >
-                <X size="1vw" />
+                <X size="0.9vw" />
                 <span>Cancel</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleAddToPage}
-                className="flex-1 py-[0.65vw] bg-black hover:bg-gray-800 text-white font-semibold text-[0.85vw] rounded-[0.75vw] transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
+                className="flex-1 py-[0.55vw] bg-black hover:bg-gray-900 text-white font-semibold text-[0.82vw] rounded-[0.4vw] shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-[0.4vw]"
               >
-                <Check size="1vw" />
+                <Check size="0.9vw" />
                 <span>Add to Page</span>
               </button>
             </>

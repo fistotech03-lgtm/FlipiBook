@@ -129,6 +129,7 @@ const Color = ({
   colorsOnPage,
   hideFill = false,
   standaloneMode = false,
+  noAccordion = false,
   selectedElement = null,
   onUpdate = null,
   isText = false,
@@ -157,6 +158,13 @@ const Color = ({
 
   const activeColorPicker = standaloneMode ? internalActiveColorPicker : externalActiveColorPicker;
   const setActiveColorPicker = standaloneMode ? setInternalActiveColorPicker : setExternalActiveColorPicker;
+
+  const [internalIsCornerOpen, setInternalIsCornerOpen] = useState(false);
+  const [internalIsAlignOpen, setInternalIsAlignOpen] = useState(false);
+  const isCornerOpen = isStrokeStyleOpen !== undefined ? isStrokeStyleOpen : internalIsCornerOpen;
+  const setIsCornerOpen = setIsStrokeStyleOpen !== undefined ? setIsStrokeStyleOpen : setInternalIsCornerOpen;
+  const isAlignOpen = isDashPosOpen !== undefined ? isDashPosOpen : internalIsAlignOpen;
+  const setIsAlignOpen = setIsDashPosOpen !== undefined ? setIsDashPosOpen : setInternalIsAlignOpen;
 
   // Sync state synchronously during render when selectedElement changes in standalone mode
   const prevElementRef = useRef(null);
@@ -677,6 +685,370 @@ const Color = ({
 
   return (
     <div ref={containerRef} className="flex flex-col gap-[0.4vw] font-sans">
+      {noAccordion ? (
+        <div className="flex flex-col gap-[1.7vw]">
+          {/* ── Fill Color ── */}
+          {!hideFill && (
+            <div className="flex flex-col gap-[0.85vw]">
+              <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
+                <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Fill Color</span>
+                <div className="flex-1 h-[1px] bg-gray-200" />
+              </div>
+
+              <div className="flex items-center gap-[0.6vw]">
+                {/* Swatch */}
+                <div
+                  className="w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+                  onClick={() => setActiveColorPicker(activeColorPicker === 'fill' ? null : 'fill')}
+                  title="Change fill color"
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: (pseudoProps.fill === 'none' || pseudoProps.fill === 'transparent' || pseudoProps.fill === '#' || !pseudoProps.fill)
+                        ? 'white'
+                        : (pseudoProps.fill.toString().toLowerCase().includes('url(#')
+                          ? (pseudoProps && pseudoProps[`fill-stops`]
+                            ? `linear-gradient(to right, ${JSON.parse(pseudoProps[`fill-stops`]).map(s => s.color).join(', ')})`
+                            : '#ccc')
+                          : pseudoProps.fill)
+                    }}
+                  />
+                  {(pseudoProps.fill === 'none' || pseudoProps.fill === 'transparent' || pseudoProps.fill === '#' || !pseudoProps.fill) && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+                  )}
+                </div>
+
+                {/* Input box */}
+                <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 transition-colors">
+                  <input
+                    type="text"
+                    value={(() => {
+                      const val = pseudoProps.fill;
+                      if (!val || val === 'none' || val === 'transparent') return '#';
+                      if (val.toString().toLowerCase().includes('gradient') || val.toString().toLowerCase().includes('url(#')) return 'Gradient';
+                      return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
+                    })()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || val === '#') {
+                        updateAttr('fill', 'none');
+                      } else {
+                        const finalVal = val.startsWith('#') ? val : '#' + val;
+                        updateAttr('fill', finalVal);
+                      }
+                    }}
+                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    maxLength={8}
+                  />
+                  <div
+                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                    onPointerDown={(e) => {
+                      const currentPct = Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100);
+                      handleScrubHelper(e, currentPct, (val) => {
+                        const num = parseInt(val);
+                        const clamped = Math.min(Math.max(num, 0), 100);
+                        updateAttr('opacity', (clamped / 100).toString());
+                      });
+                    }}
+                    title="Drag horizontally to adjust opacity"
+                  >
+                    <span className="text-[0.8vw] font-medium text-gray-700">
+                      {Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Stoke Color ── */}
+          <div className="flex flex-col gap-[1.1vw]">
+            <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
+              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Stoke Color</span>
+              <div className="flex-1 h-[1px] bg-gray-200" />
+            </div>
+
+            {/* Row 1: Swatch, Hex input */}
+            <div className="flex items-center gap-[0.6vw]">
+              {/* Swatch */}
+              <div
+                className="w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+                onClick={() => setActiveColorPicker(activeColorPicker === 'stroke' ? null : 'stroke')}
+                title="Change stroke color"
+              >
+                <div
+                  className="w-full h-full"
+                  style={{
+                    background: (pseudoProps.stroke === 'none' || pseudoProps.stroke === 'transparent' || pseudoProps.stroke === '#' || !pseudoProps.stroke)
+                      ? 'white'
+                      : (pseudoProps.stroke.toString().toLowerCase().includes('url(#')
+                        ? (pseudoProps && pseudoProps[`stroke-stops`]
+                          ? `linear-gradient(to right, ${JSON.parse(pseudoProps[`stroke-stops`]).map(s => s.color).join(', ')})`
+                          : '#ccc')
+                        : pseudoProps.stroke)
+                  }}
+                />
+                {(pseudoProps.stroke === 'none' || pseudoProps.stroke === 'transparent' || pseudoProps.stroke === '#' || !pseudoProps.stroke) && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+                )}
+              </div>
+
+              {/* Input box */}
+              <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 transition-colors">
+                <input
+                  type="text"
+                  value={(() => {
+                    const val = pseudoProps.stroke;
+                    if (!val || val === 'none' || val === 'transparent') return '#';
+                    if (val.toString().toLowerCase().includes('gradient') || val.toString().toLowerCase().includes('url(#')) return 'Gradient';
+                    return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
+                  })()}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val === '#') {
+                      updateAttr('stroke', 'none');
+                    } else {
+                      const finalVal = val.startsWith('#') ? val : '#' + val;
+                      updateAttr('stroke', finalVal);
+                    }
+                  }}
+                  className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                  maxLength={8}
+                />
+                <div
+                  className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                  onPointerDown={(e) => {
+                    const currentPct = Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100);
+                    handleScrubHelper(e, currentPct, (val) => {
+                      const num = parseInt(val);
+                      const clamped = Math.min(Math.max(num, 0), 100);
+                      updateAttr('stroke-opacity', (clamped / 100).toString());
+                    });
+                  }}
+                  title="Drag horizontally to adjust opacity"
+                >
+                  <span className="text-[0.8vw] font-medium text-gray-700">
+                    {Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Alignment & Stoke Width */}
+            <div className="flex items-center gap-[1vw]">
+              {/* Alignment */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Alignment</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsAlignOpen(!isAlignOpen)}
+                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
+                  >
+                    <span className="capitalize">{pseudoProps['data-stroke-position'] || 'Center'}</span>
+                    <ChevronDown size="0.75vw" className="text-gray-400" />
+                  </button>
+                  {isAlignOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setIsAlignOpen(false)} />
+                      <div className="absolute top-full left-0 right-0 mt-[0.2vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-40 py-1">
+                        {['Inside', 'Center', 'Outside'].map((pos) => (
+                          <div
+                            key={pos}
+                            onClick={() => {
+                              updateAttr('data-stroke-position', pos);
+                              setIsAlignOpen(false);
+                            }}
+                            className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                          >
+                            {pos}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Stoke Width */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Stoke Width</span>
+                <div className="flex items-center gap-[0.25vw] h-[2.1vw]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cur = parseFloat(pseudoProps.strokeWidth !== undefined ? pseudoProps.strokeWidth : 0);
+                      updateAttr('stroke-width', Math.max(0, cur - 1).toString());
+                    }}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+                  >
+                    <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
+                  </button>
+                  <div
+                    className="flex-grow h-full bg-white border border-gray-300 rounded-[0.45vw] flex items-center cursor-ew-resize shadow-2xs hover:border-gray-400 transition-colors"
+                    onPointerDown={(e) => {
+                      const cur = parseFloat(pseudoProps.strokeWidth !== undefined && !isNaN(parseFloat(pseudoProps.strokeWidth)) ? pseudoProps.strokeWidth : 0);
+                      handleScrubHelper(e, cur, (v) => updateAttr('stroke-width', Math.max(0, parseInt(v)).toString()));
+                    }}
+                  >
+                    <input
+                      type="number"
+                      value={parseFloat(pseudoProps.strokeWidth !== undefined ? pseudoProps.strokeWidth : 0)}
+                      onChange={(e) => updateAttr('stroke-width', Math.max(0, parseInt(e.target.value || 0)).toString())}
+                      className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cur = parseFloat(pseudoProps.strokeWidth !== undefined ? pseudoProps.strokeWidth : 0);
+                      updateAttr('stroke-width', (cur + 1).toString());
+                    }}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+                  >
+                    <span className="text-[0.9vw] leading-none mb-[0.1vw]">+</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Line style & Dash Property */}
+            <div className="flex items-center gap-[1vw]">
+              {/* Line style */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line style</span>
+                <div className="flex items-center justify-between gap-[0.3vw] h-[2.1vw]">
+                  {/* Solid */}
+                  <button
+                    type="button"
+                    onClick={() => updateAttr('stroke-dasharray', 'none')}
+                    className={`flex-1 h-full flex items-center justify-center rounded-[0.45vw] border transition-colors cursor-pointer ${
+                      (!pseudoProps.strokeDasharray || pseudoProps.strokeDasharray === 'none')
+                        ? 'bg-white border-gray-400 shadow-2xs'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="w-[1.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                  </button>
+                  {/* Dotted */}
+                  <button
+                    type="button"
+                    onClick={() => updateAttr('stroke-dasharray', '2,4')}
+                    className={`flex-1 h-full flex items-center justify-center rounded-[0.45vw] border transition-colors cursor-pointer ${
+                      (pseudoProps.strokeDasharray === '2,4' || pseudoProps.strokeDasharray === '1,3' || (pseudoProps.strokeDasharray && pseudoProps.strokeDasharray.split(',')[0] === '2'))
+                        ? 'bg-white border-gray-400 shadow-2xs'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex gap-[0.1vw]">
+                      <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                      <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                      <div className="w-[0.2vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                    </div>
+                  </button>
+                  {/* Dashed */}
+                  <button
+                    type="button"
+                    onClick={() => updateAttr('stroke-dasharray', '8,4')}
+                    className={`flex-1 h-full flex items-center justify-center rounded-[0.45vw] border transition-colors cursor-pointer ${
+                      (pseudoProps.strokeDasharray && pseudoProps.strokeDasharray !== 'none' && pseudoProps.strokeDasharray !== '2,4' && pseudoProps.strokeDasharray.split(',')[0] !== '2')
+                        ? 'bg-white border-gray-400 shadow-2xs'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex gap-[0.12vw]">
+                      <div className="w-[0.4vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                      <div className="w-[0.4vw] h-[0.1vw] bg-gray-700 rounded-full" />
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Dash Property */}
+              {(() => {
+                const dashParts = (pseudoProps.strokeDasharray && pseudoProps.strokeDasharray !== 'none') ? pseudoProps.strokeDasharray.split(',') : ['8', '4'];
+                const lVal = parseInt(dashParts[0]) || 8;
+                const gVal = parseInt(dashParts[1] || dashParts[0]) || 4;
+                return (
+                  <div className={`flex-1 flex flex-col gap-[0.35vw] ${(!pseudoProps.strokeDasharray || pseudoProps.strokeDasharray === 'none') ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <span className="text-[0.82vw] font-medium text-gray-800">Dash Property</span>
+                    <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
+                      <div
+                        className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs cursor-ew-resize hover:border-gray-400 transition-colors"
+                        onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}
+                      >
+                        <span className="text-gray-800 font-semibold text-[0.78vw] select-none">L</span>
+                        <input
+                          type="number"
+                          value={lVal}
+                          onChange={(e) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(e.target.value || 1))},${gVal}`)}
+                          className="w-[1.8vw] bg-transparent outline-none text-[0.8vw] font-medium text-gray-700 text-center no-spin cursor-text"
+                          onPointerDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <span className="text-[0.78vw] text-gray-400 font-bold">:</span>
+                      <div
+                        className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs cursor-ew-resize hover:border-gray-400 transition-colors"
+                        onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}
+                      >
+                        <span className="text-gray-800 font-semibold text-[0.78vw] select-none">G</span>
+                        <input
+                          type="number"
+                          value={gVal}
+                          onChange={(e) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(e.target.value || 1))}`)}
+                          className="w-[1.8vw] bg-transparent outline-none text-[0.8vw] font-medium text-gray-700 text-center no-spin cursor-text"
+                          onPointerDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Row 4: Line Corner */}
+            <div className="flex items-center gap-[1vw]">
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsCornerOpen(!isCornerOpen)}
+                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
+                  >
+                    <span>{(pseudoProps.strokeLinecap === 'round' || pseudoProps['stroke-linecap'] === 'round') ? 'Rounded' : 'Square'}</span>
+                    <ChevronDown size="0.75vw" className="text-gray-400" />
+                  </button>
+                  {isCornerOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setIsCornerOpen(false)} />
+                      <div className="absolute bottom-[110%] left-0 right-0 bg-white border border-gray-200 rounded-[0.4vw] shadow-xl z-40 py-1 overflow-hidden">
+                        {['Square', 'Rounded'].map((corner) => (
+                          <div
+                            key={corner}
+                            onClick={() => {
+                              const isRound = corner === 'Rounded';
+                              updateAttr('stroke-linecap', isRound ? 'round' : 'butt');
+                              updateAttr('stroke-linejoin', isRound ? 'round' : 'miter');
+                              setIsCornerOpen(false);
+                            }}
+                            className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer"
+                          >
+                            {corner}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {isText && (isScrollable === true || selectedElementProps?.['data-scrollable'] === 'true') && (sizingMode === 'fixed' || selectedElementProps?.['data-sizing-mode'] === 'fixed') && (
         <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm overflow-hidden">
           <div
@@ -767,12 +1139,6 @@ const Color = ({
                         {Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}%
                       </span>
                     </div>
-                  </div>
-
-                  {/* HEX Dropdown */}
-                  <div className="h-[2vw] flex items-center justify-between px-[0.5vw] border border-gray-200 rounded-[0.5vw] bg-white cursor-pointer hover:bg-gray-50 min-w-[3.5vw]">
-                    <span className="text-[0.7vw] text-gray-600 font-medium">HEX</span>
-                    <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.2vw]" />
                   </div>
                 </div>
 
@@ -1134,12 +1500,6 @@ const Color = ({
                     </span>
                   </div>
                 </div>
-
-                {/* HEX Dropdown */}
-                <div className="h-[2vw] flex items-center justify-between px-[0.5vw] border border-gray-200 rounded-[0.5vw] bg-white cursor-pointer hover:bg-gray-50 min-w-[3.5vw]">
-                  <span className="text-[0.7vw] text-gray-600 font-medium">HEX</span>
-                  <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.2vw]" />
-                </div>
               </div>
             </div>
           </div>
@@ -1232,12 +1592,6 @@ const Color = ({
                       {Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}%
                     </span>
                   </div>
-                </div>
-
-                {/* HEX Dropdown */}
-                <div className="h-[2vw] flex items-center justify-between px-[0.5vw] border border-gray-200 rounded-[0.5vw] bg-white cursor-pointer hover:bg-gray-50 min-w-[3.5vw]">
-                  <span className="text-[0.7vw] text-gray-600 font-medium">HEX</span>
-                  <ChevronDown size="0.8vw" className="text-gray-400 ml-[0.2vw]" />
                 </div>
               </div>
 
@@ -1461,6 +1815,8 @@ const Color = ({
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {activeColorPicker && !activeColorPicker.includes('effect-') && createPortal(
         <div

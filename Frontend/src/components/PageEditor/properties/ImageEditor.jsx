@@ -6,12 +6,11 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { parseGradient } from './ColorPicker';
-import SlideshowProperties from './SlideshowProperties';
 import Color from './Color';
 import CornerRadius from './CornerRadius';
-import Adjustment from './Adjustment';
 import Effect from './Effect';
-import ReplaceMediaModal from './ReplaceMediaModal';
+import ReplaceMediaModal from '../modals/ReplaceMediaModal';
+import ImageAdjustmentModal, { AdjustmentIcon } from '../modals/ImageAdjustmentModal';
 import { useAuth } from '../../../context/AuthContext';
 
 const ImageEditor = ({
@@ -160,6 +159,28 @@ const ImageEditor = ({
   }, [previewSrc]);
 
   const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+
+  const handleAdjustmentChange = (key, val) => {
+    hasUserInteractedRef.current = true;
+    setFilters((prev) => ({
+      ...prev,
+      [key]: val
+    }));
+  };
+
+  const handleResetAllAdjustments = () => {
+    hasUserInteractedRef.current = true;
+    setFilters({
+      exposure: 0,
+      contrast: 0,
+      saturation: 0,
+      temperature: 0,
+      tint: 0,
+      highlights: 0,
+      shadows: 0
+    });
+  };
 
   const [imageType, setImageType] = useState('Fit');
   const [opacity, setOpacity] = useState(100);
@@ -178,7 +199,6 @@ const ImageEditor = ({
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
-  const [isSlideshow, setIsSlideshow] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
@@ -186,34 +206,6 @@ const ImageEditor = ({
   const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
   const [isDashPosOpen, setIsDashPosOpen] = useState(false);
   const [colorsOnPage] = useState([]);
-
-  const lastHydratedElementRef = useRef(null);
-
-  // Resolve actual slideshow element if clicked on an inner child
-  const actualSlideshowEl = useMemo(() => {
-    if (!selectedElement) return null;
-    if (selectedElement.hasAttribute('data-is-slideshow') ||
-      selectedElement.getAttribute('data-is-slideshow') === 'true') {
-      return selectedElement;
-    }
-    const parent = selectedElement.closest && selectedElement.closest('[data-is-slideshow="true"]');
-    if (parent) return parent;
-    return selectedElement;
-  }, [selectedElement]);
-
-  // Hydrate Slideshow State from DOM
-  useEffect(() => {
-    if (actualSlideshowEl) {
-      if (actualSlideshowEl !== lastHydratedElementRef.current) {
-        const hasSlideshow = actualSlideshowEl.hasAttribute('data-is-slideshow') ||
-          actualSlideshowEl.getAttribute('data-is-slideshow') === 'true';
-        setIsSlideshow(!!hasSlideshow);
-        lastHydratedElementRef.current = actualSlideshowEl;
-      }
-    } else {
-      lastHydratedElementRef.current = null;
-    }
-  }, [actualSlideshowEl]);
 
 
   useEffect(() => {
@@ -694,7 +686,6 @@ const ImageEditor = ({
       const relevantMutation = mutations.some(m => m.type === 'attributes' && (
         m.attributeName === 'src' || m.attributeName === 'href' ||
         m.attributeName === 'opacity' || m.attributeName === 'style' ||
-        m.attributeName === 'data-slideshow' ||
         m.attributeName === 'data-fill-color' || m.attributeName === 'data-stroke-color' || m.attributeName === 'data-stroke-width' || m.attributeName === 'data-stroke-dasharray' || m.attributeName === 'stroke-dasharray' ||
         m.attributeName === 'width' || m.attributeName === 'height' ||
         m.attributeName === 'x' || m.attributeName === 'y'
@@ -886,6 +877,8 @@ const ImageEditor = ({
         liveElement.setAttribute('data-effect-saturation', saturation.toString());
         liveElement.setAttribute('data-effect-temperature', temperature.toString());
         liveElement.setAttribute('data-effect-tint', tint.toString());
+        liveElement.setAttribute('data-effect-highlights', h.toString());
+        liveElement.setAttribute('data-effect-shadows', s.toString());
       } else {
         liveElement.style.setProperty('filter', adjustmentFilters, 'important');
       }
@@ -1246,6 +1239,8 @@ const ImageEditor = ({
         liveElement.setAttribute('data-effect-tint', tint.toString());
         liveElement.setAttribute('data-effect-highlights', h.toString());
         liveElement.setAttribute('data-effect-shadows', s.toString());
+        liveElement.setAttribute('data-effect-highlights', h.toString());
+        liveElement.setAttribute('data-effect-shadows', s.toString());
 
         // Sync active effects list for the SVG filter generator
         const effectsAttr = activeEffects.filter(e => e !== 'effect').join(',');
@@ -1261,13 +1256,6 @@ const ImageEditor = ({
             liveElement.setAttribute(attr, val.toString());
           });
         });
-      }
-
-      // --- Persist isSlideshow mode so hydration survives onUpdate re-renders ---
-      if (isSlideshow) {
-        liveElement.setAttribute('data-is-slideshow', 'true');
-      } else {
-        liveElement.removeAttribute('data-is-slideshow');
       }
 
       // --- Opacity (works for both; also persist via SVG attribute) ---
@@ -2047,7 +2035,7 @@ const ImageEditor = ({
         }
       }
 
-      // --- Inner Shadow & Slideshow (HTML: overlays; SVG: sibling rect) ---
+      // --- Inner Shadow (HTML: overlays; SVG: sibling rect) ---
       let shadowString = '';
       if (activeEffects.includes('Inner Shadow')) {
         const ds = effectSettings['Inner Shadow'];
@@ -2243,38 +2231,8 @@ const ImageEditor = ({
           overlay.remove();
         }
       }
-      // Deck Effect for Slideshow (Only for HTML containers, skip for SVG)
       const isSvgParent = selectedElement.parentElement && selectedElement.parentElement instanceof SVGElement;
-      if (isSlideshow && selectedElement.parentElement && !isSvgParent) {
-        let stack1 = selectedElement.parentElement.querySelector('.slideshow-stack-1');
-        let stack2 = selectedElement.parentElement.querySelector('.slideshow-stack-2');
-        if (!stack1) {
-          stack1 = document.createElement('div');
-          stack1.className = 'slideshow-stack-1';
-          stack1.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;background:white;border:1px solid rgba(0,0,0,0.05);box-shadow:0 4px 12px rgba(0,0,0,0.08)';
-          selectedElement.parentElement.insertBefore(stack1, selectedElement);
-        }
-        if (!stack2) {
-          stack2 = document.createElement('div');
-          stack2.className = 'slideshow-stack-2';
-          stack2.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:-2;background:white;border:1px solid rgba(0,0,0,0.05);box-shadow:0 4px 12px rgba(0,0,0,0.08)';
-          selectedElement.parentElement.insertBefore(stack2, selectedElement);
-        }
-        const commonRadius = selectedElement.style.borderRadius || '12px';
-        stack1.style.borderRadius = commonRadius;
-        stack1.style.transform = 'translate(6px, 6px) rotate(1.5deg)';
-        stack1.style.display = 'block';
-        stack2.style.borderRadius = commonRadius;
-        stack2.style.transform = 'translate(12px, 12px) rotate(3deg)';
-        stack2.style.display = 'block';
-        selectedElement.style.setProperty('border', '4px solid white', 'important');
-        selectedElement.style.setProperty('box-shadow', '0 8px 25px rgba(0,0,0,0.12)', 'important');
-        selectedElement.style.setProperty('z-index', '1', 'important');
-        if (window.getComputedStyle(selectedElement.parentElement).position === 'static') {
-          selectedElement.parentElement.style.position = 'relative';
-        }
-        selectedElement.parentElement.style.setProperty('overflow', 'visible', 'important');
-      } else if (!isSvgParent) {
+      if (!isSvgParent) {
         selectedElement.parentElement?.querySelector('.slideshow-stack-1')?.remove();
         selectedElement.parentElement?.querySelector('.slideshow-stack-2')?.remove();
         selectedElement.style.removeProperty('border');
@@ -2538,7 +2496,7 @@ const ImageEditor = ({
         liveElement.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
         liveElement.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
 
-        // Dynamic Stroke Overlay for SVG images and foreignObjects (Slideshows)
+        // Dynamic Stroke Overlay for SVG images and foreignObjects
         if (svgImageEl && (svgImageEl.tagName?.toLowerCase() === 'image' || svgImageEl.tagName?.toLowerCase() === 'foreignobject')) {
           const isImageElement = liveElement.tagName?.toLowerCase() === 'image';
           const targetContainer = isImageElement ? (liveElement.parentElement || liveElement) : liveElement;
@@ -3051,7 +3009,6 @@ const ImageEditor = ({
     opacity,
     imageType,
     radius,
-    isSlideshow,
     backgroundColor,
     backgroundColor.fill,
     backgroundColor.fillOpacity,
@@ -3081,7 +3038,7 @@ const ImageEditor = ({
 
   return (
     <div
-      className="relative flex flex-col gap-[1vw] w-full max-w-[25vw] font-sans"
+      className="relative flex flex-col gap-[1.2vw] w-full max-w-[25vw] font-sans select-none"
       onPointerDownCapture={() => {
         hasUserInteractedRef.current = true;
       }}
@@ -3097,36 +3054,6 @@ const ImageEditor = ({
         .custom-range-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: inherit; }
         .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.55vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
         .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
-        
-        .image-editor-toggle {
-          appearance: none;
-          width: 2.75vw;
-          height: 1.35vw;
-          border-radius: 1vw;
-          position: relative;
-          cursor: pointer;
-          transition: 0.3s;
-          background: #E5E7EB;
-        }
-        .image-editor-toggle:checked {
-          background: #4D47FF;
-        }
-        .image-editor-toggle::before {
-          content: "";
-          position: absolute;
-          width: 1.1vw;
-          height: 1.1vw;
-          border-radius: 50%;
-          top: 50%;
-          left: 0.125vw;
-          transform: translateY(-50%);
-          background: white;
-          transition: 0.3s;
-          box-shadow: 0 0.1vw 0.2vw rgba(0,0,0,0.2);
-        }
-        .image-editor-toggle:checked::before {
-          left: 1.5vw;
-        }
       `}</style>
       <input
         id="image-editor-upload-input"
@@ -3134,253 +3061,29 @@ const ImageEditor = ({
         ref={fileInputRef}
         onChange={handleFileUpload}
         accept=".jpg, .jpeg, .png"
-        multiple={isSlideshow}
         className="hidden"
       />
 
-
-
       {isMainPanelOpen && (
-        <div className="flex flex-col gap-[0.4vw]">
+        <div className="flex flex-col gap-[1.7vw] pb-[2vw]">
 
-          {isSlideshow ? (
-            /* ── SLIDESHOW MODE: show only SlideshowProperties ── */
-            <SlideshowProperties
-              selectedElement={actualSlideshowEl}
-              activePageIndex={activePageIndex}
-              isOpen={openSubSection === 'slideshow'}
-              onToggle={() => setOpenSubSection(openSubSection === 'slideshow' ? null : 'slideshow')}
-              onUpdate={onUpdate}
-              opacity={opacity}
-              onUpdateOpacity={(v) => setOpacity(v)}
-              setPreviewSrc={setPreviewSrc}
-              setIsUpdatingDOM={(val) => { isUpdatingDOM.current = val; }}
-              currentPageVId={currentPageVId}
-              flipbookVId={flipbookVId}
-              folderName={folderName}
-              flipbookName={flipbookName}
-              onDisableSlideshow={() => {
-                setIsSlideshow(false);
-                if (actualSlideshowEl) {
-                  const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
-                  const liveEl = pageContainer?.querySelector(`[id="${actualSlideshowEl.id}"]`) || actualSlideshowEl;
+          {/* Header */}
+          <div className="flex items-center gap-[0.8vw]">
+            <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Image Properties</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
 
-                  let firstImageSrc = null;
-                  const rawSlideshow = liveEl.getAttribute('data-slideshow') || actualSlideshowEl.getAttribute('data-slideshow');
-                  if (rawSlideshow) {
-                    try {
-                      const parsed = JSON.parse(rawSlideshow);
-                      if (parsed.images && parsed.images.length > 0) {
-                        firstImageSrc = parsed.images[0].url || parsed.images[0].src;
-                      }
-                    } catch { }
-                  }
-
-                  // Remove from both to ensure sync
-                  const targets = [actualSlideshowEl, liveEl];
-                  targets.forEach(el => {
-                    el.removeAttribute('data-is-slideshow');
-                    el.removeAttribute('data-slideshow');
-                    el.removeAttribute('data-active-index');
-                    el._slideshowManual = false;
-                    delete el._lastSlideTime;
-                    if (el.dataset) {
-                      delete el.dataset.slideshowInitialized;
-                    }
-
-                    if (firstImageSrc) {
-                      const imgEl = el.tagName?.toLowerCase() === 'image' || el.tagName?.toLowerCase() === 'img' ? el : el.querySelector('image, img');
-                      if (imgEl) {
-                        imgEl.setAttribute('href', firstImageSrc);
-                        if (imgEl.hasAttribute('data-src')) {
-                          imgEl.setAttribute('data-src', firstImageSrc);
-                        }
-                      }
-                    }
-
-                    if (el.dataset) {
-                      delete el.dataset.isSlideshow;
-                    }
-                  });
-
-                  if (actualSlideshowEl?.id) {
-                    const localKey = `slideshow_${flipbookVId || 'local'}_${actualSlideshowEl.id}`;
-                    try { localStorage.removeItem(localKey); } catch { }
-                  }
-
-                  // Cleanup DOM artifacts and clones
-                  const container = liveEl.parentElement || liveEl;
-                  if (container) {
-                    const dots = container.querySelectorAll('.ss-dots-container, .editor-ss-dots-wrap');
-                    dots.forEach(d => d.remove());
-                    const btns = container.querySelectorAll('.ss-nav-btn, .editor-ss-nav');
-                    btns.forEach(b => b.remove());
-                  }
-
-                  // Aggressively remove any leftover clones that might have been mid-animation
-                  const svgRoot = liveEl.closest('svg');
-                  if (svgRoot) {
-                    svgRoot.querySelectorAll('[data-is-slideshow="true"]').forEach(ghost => {
-                      if (ghost !== actualSlideshowEl && ghost !== liveEl) ghost.remove();
-                    });
-                  }
-
-                  if (pageContainer) {
-                    pageContainer.querySelectorAll('.editor-ss-overlay').forEach(el => el.remove());
-                  }
-
-                  if (onUpdate) onUpdate({ shouldRefresh: true });
-                }
-              }}
-            />
-          ) : (
-            /* ── IMAGE MODE: full image panel ── */
-            <>
-              {/* Header */}
-              <div className="flex items-center gap-[0.5vw]">
-                <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Image Properties</span>
-                <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-              </div>
-
-              <div className="flex items-center justify-between py-[0.25vw]">
-                <span className="text-[0.75vw] text-gray-800">Turn on Slideshow to add more images</span>
-                <button
-                  onClick={() => {
-                    const next = !isSlideshow;
-                    setIsSlideshow(next);
-                    if (actualSlideshowEl) {
-                      const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
-                      const liveEl = pageContainer?.querySelector(`[id="${actualSlideshowEl.id}"]`) || actualSlideshowEl;
-
-                      if (next) {
-                        let dataStr = liveEl.getAttribute('data-slideshow') || actualSlideshowEl.getAttribute('data-slideshow');
-
-                        if (!dataStr) {
-                          const initialData = {
-                            settings: {
-                              imageFitType: 'Fill All',
-                              transitionEffect: 'Linear',
-                              showDots: true,
-                              showArrows: true,
-                              showNav: true,
-                              navStyle: 1,
-                              navIconColor: '#000000',
-                              dotColor: '#000000',
-                              dotOpacity: 100,
-                              autoSlide: true,
-                              autoPlay: true,
-                              speed: 3,
-                              infiniteLoop: true,
-                              dragToSlide: false
-                            },
-                            images: [{
-                              id: Date.now(),
-                              url: previewSrc,
-                              name: 'Slide 1',
-                              isUploading: false
-                            }]
-                          };
-                          dataStr = JSON.stringify(initialData);
-                        }
-
-                        // Apply to both to ensure sync
-                        [actualSlideshowEl, liveEl].forEach(el => {
-                          // Removed broken crop-baking logic. Slideshow handles patterns correctly.
-                          el.setAttribute('data-is-slideshow', 'true');
-                          el.setAttribute('data-slideshow', dataStr);
-                          el.setAttribute('data-active-index', '0');
-                        });
-                      } else {
-                        let firstImageSrc = null;
-                        const rawSlideshow = liveEl.getAttribute('data-slideshow') || actualSlideshowEl.getAttribute('data-slideshow');
-                        if (rawSlideshow) {
-                          try {
-                            const parsed = JSON.parse(rawSlideshow);
-                            if (parsed.images && parsed.images.length > 0) {
-                              firstImageSrc = parsed.images[0].url || parsed.images[0].src;
-                            }
-                          } catch { }
-                        }
-
-                        // Remove from both
-                        [actualSlideshowEl, liveEl].forEach(el => {
-                          el.removeAttribute('data-is-slideshow');
-                          el.removeAttribute('data-slideshow');
-                          el.removeAttribute('data-active-index');
-                          el._slideshowManual = false;
-                          delete el._lastSlideTime;
-                          if (el.dataset) {
-                            delete el.dataset.slideshowInitialized;
-                          }
-
-                          if (firstImageSrc) {
-                            const imgEl = el.tagName?.toLowerCase() === 'image' || el.tagName?.toLowerCase() === 'img' ? el : el.querySelector('image, img');
-                            if (imgEl) {
-                              imgEl.setAttribute('href', firstImageSrc);
-                              if (imgEl.hasAttribute('data-src')) {
-                                imgEl.setAttribute('data-src', firstImageSrc);
-                              }
-                            }
-                          }
-
-                          if (el.dataset) {
-                            delete el.dataset.slideshow;
-                            delete el.dataset.isSlideshow;
-                          }
-                        });
-
-                        if (actualSlideshowEl?.id) {
-                          const localKey = `slideshow_${flipbookVId || 'local'}_${actualSlideshowEl.id}`;
-                          try { localStorage.removeItem(localKey); } catch { }
-                        }
-
-                        // Cleanup DOM artifacts and clones
-                        const container = liveEl.parentElement || liveEl;
-                        if (container) {
-                          const dots = container.querySelectorAll('.ss-dots-container, .editor-ss-dots-wrap');
-                          dots.forEach(d => d.remove());
-                          const btns = container.querySelectorAll('.ss-nav-btn, .editor-ss-nav');
-                          btns.forEach(b => b.remove());
-                        }
-
-                        // Aggressively remove any leftover clones
-                        const svgRoot = liveEl.closest('svg');
-                        if (svgRoot) {
-                          svgRoot.querySelectorAll('[data-is-slideshow="true"]').forEach(ghost => {
-                            if (ghost !== actualSlideshowEl && ghost !== liveEl) ghost.remove();
-                          });
-                        }
-
-                        const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
-                        if (pageContainer) {
-                          pageContainer.querySelectorAll('.editor-ss-overlay').forEach(el => el.remove());
-                        }
-                      }
-                      if (onUpdate) onUpdate({ shouldRefresh: true });
-                    }
-                  }}
-                  className={`relative block w-[2.2vw] h-[1.2vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${isSlideshow ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-                >
-                  <div className={`absolute top-[0.1vw] w-[1vw] h-[1vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${isSlideshow ? 'left-[1.1vw]' : 'left-[0.1vw]'}`} />
-                </button>
-              </div>
-
-              {/* Image fix type + single image + upload */}
-              <div className="flex items-center justify-between relative z-20">
-                <div className="flex items-center gap-[0.5vw] flex-1">
-                  <span className="text-[0.8vw] font-semibold text-gray-800 whitespace-nowrap">Image fix type</span>
-                  <div className="h-[0px] flex-1 border-t border-dashed border-gray-300 mx-[0.25vw]" />
-                </div>
-                <div className="relative">
-                  <div className="flex gap-[0.25vw] items-center">
-                    <button
-                      onClick={() => setShowImageTypeDropdown(!showImageTypeDropdown)}
-                      className="flex items-center justify-between w-[6.5vw] py-[0.35vw] px-[0.75vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-xs hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-                    >
-                      <span className="text-[0.85vw] font-normal text-gray-700">{imageType}</span>
-                      <ChevronDown size="0.9vw" className={`text-gray-400 transition-transform ${showImageTypeDropdown ? 'rotate-180' : ''}`} />
-                    </button>
-                  </div>
+          {/* Image fix type */}
+          <div className="flex items-center justify-between relative z-20 py-[0.1vw]">
+            <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Image fix type</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowImageTypeDropdown(!showImageTypeDropdown)}
+                className="flex items-center justify-between w-[6.5vw] h-[2vw] px-[0.7vw] bg-white border border-gray-300 rounded-[0.4vw] shadow-2xs hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer"
+              >
+                <span className="text-[0.8vw] font-medium text-gray-700">{imageType}</span>
+                <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showImageTypeDropdown ? 'rotate-180' : ''}`} />
+              </button>
                   {showImageTypeDropdown && (
                     <>
                       <div className="fixed inset-0 z-[90]" onClick={() => setShowImageTypeDropdown(false)} />
@@ -3655,7 +3358,7 @@ const ImageEditor = ({
                               setImageType(type);
                               stateRef.current.imageType = type;
                             }}
-                            className="px-[1vw] py-[0.5vw] text-[0.8vw] font-medium text-gray-600 hover:bg-gray-50 hover:text-[#4D47FF] transition-colors text-left"
+                            className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left ${imageType === type ? 'text-[#4D47FF] bg-gray-50 font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                           >
                             {type}
                           </button>
@@ -3666,8 +3369,9 @@ const ImageEditor = ({
                 </div>
               </div>
 
+              {/* Thumbnail, Info & Actions */}
               <div
-                className="flex items-center gap-[1vw] pt-[0.5vw]"
+                className="flex items-center gap-[0.9vw] p-[0.8vw] bg-white rounded-[0.55vw] border border-gray-200 shadow-2xs"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -3684,7 +3388,7 @@ const ImageEditor = ({
                 }}
               >
                 {/* Thumbnail */}
-                <div className="relative w-[8.5vw] h-[6vw] rounded-[0.4vw] mt-[-1vw] overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="relative w-[7.6vw] h-[5.6vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group">
                   {previewSrc ? (
                     <img
                       src={previewSrc}
@@ -3692,46 +3396,65 @@ const ImageEditor = ({
                       className="w-full h-full object-cover"
                     />
                   ) : null}
+
+                  {/* Adjustment Icon Button (Top Right) */}
+                  <button
+                    type="button"
+                    data-adjustment-trigger="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAdjustmentModal(prev => !prev);
+                    }}
+                    className={`absolute top-[0.35vw] right-[0.35vw] w-[1.7vw] h-[1.7vw] rounded-[0.35vw] shadow-md border flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer z-10 ${
+                      showAdjustmentModal ? 'bg-gray-100 text-gray-900 border-gray-300' : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50'
+                    }`}
+                    title="Image Adjustments"
+                  >
+                    <AdjustmentIcon className="w-[0.95vw] h-[0.95vw]" />
+                  </button>
                 </div>
 
                 {/* Info & Actions */}
-                <div className="flex flex-col flex-1 gap-[0.4vw] py-[0.2vw] mb-[1.1vw]">
-                  <div className="flex flex-col gap-[0.1vw] mt-[0.6vw]">
-                    <span className="text-[0.9vw] font-medium text-gray-700 truncate w-[10vw] mt-[0.8vw]" title={displayImageName}>
+                <div className="flex flex-col flex-1 min-w-0 justify-between py-[0.15vw]">
+                  <div className="flex flex-col gap-[0.2vw]">
+                    <span className="text-[0.82vw] font-semibold text-gray-900 truncate" title={displayImageName}>
                       {displayImageName}
                     </span>
-                    <span className="text-[0.75vw] text-gray-400 mt-[0.3vw]">
+                    <span className="text-[0.75vw] text-gray-500 font-medium">
                       {imageResolution ? `${imageResolution} • ` : ''}{imageFileSize || 'Unknown Size'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-[0.5vw] mt-[0.3vw]">
+                  <div className="flex items-center gap-[0.5vw] mt-[0.7vw]">
                     <button
                       onClick={() => setShowReplaceModal(true)}
-                      className="px-[0.65vw] py-[0.35vw] bg-gray-100 hover:bg-gray-200 text-gray-600 text-[0.75vw] font-medium rounded-[0.3vw] cursor-pointer transition-colors border border-gray-200"
+                      className="px-[0.7vw] h-[1.9vw] bg-white hover:bg-gray-50 text-gray-700 text-[0.8vw] font-medium rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-gray-400 cursor-pointer transition-colors"
                     >
                       Replace image
                     </button>
-                    <button
-                      onClick={() => onDeleteLayer && onDeleteLayer()}
-                      className="p-[0.4vw] bg-gray-100 text-gray-500 rounded-[0.3vw] border border-gray-200 cursor-pointer transition-none"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.9vw] h-[0.9vw]">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                      </svg>
-                    </button>
+                    {onDeleteLayer && (
+                      <button
+                        onClick={() => onDeleteLayer()}
+                        className="h-[1.9vw] px-[0.5vw] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-red-200 cursor-pointer transition-colors"
+                        title="Delete layer"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.85vw] h-[0.85vw]">
+                          <path d="M3 6h18"></path>
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Opacity */}
-              <div className="flex items-center gap-[1vw] py-[0.5vw] mt-[-1vw]">
-                <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Opacity :</span>
-                <div className="flex-1 flex items-center h-[1.5vw] rounded-full outline-none">
+              <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Opacity</span>
+                <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
                   <input
                     type="range"
                     min="0"
@@ -3742,18 +3465,15 @@ const ImageEditor = ({
                     style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
                   />
                 </div>
-                <div className="min-w-[3.5vw] h-[2vw] border-[0.1vw] border-gray-200 rounded-[0.3vw] flex items-center justify-center text-[0.8vw] font-medium text-black bg-white shadow-sm px-[0.5vw]">
-                  {opacity} %
+                <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+                  {opacity}%
                 </div>
               </div>
 
-
-            </>
-          )}
-
-          {/* ── Color / Adjustments / Corner Radius / Effect ── always shown in both modes ── */}
+          {/* ── Color / Corner Radius / Effect ── */}
           <Color
             standaloneMode={true}
+            noAccordion={true}
             selectedElement={document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`)?.querySelector(`[id="${selectedLayerId}"]`) || selectedElement}
             onUpdate={(info) => {
               syncStateFromDOM();
@@ -3776,6 +3496,7 @@ const ImageEditor = ({
             colorsOnPage={colorsOnPage}
           />
           <CornerRadius
+            noAccordion={true}
             openSubSection={openSubSection}
             setOpenSubSection={setOpenSubSection}
             radius={radius}
@@ -3784,14 +3505,8 @@ const ImageEditor = ({
             setIsRadiusLinked={setIsRadiusLinked}
             tagName={selectedElement?.tagName?.toLowerCase() || 'image'}
           />
-          <Adjustment
-            openSubSection={openSubSection}
-            setOpenSubSection={setOpenSubSection}
-            filters={filters}
-            setFilters={setFilters}
-            tagName={selectedElement?.tagName?.toLowerCase() || 'image'}
-          />
           <Effect
+            noAccordion={true}
             openSubSection={openSubSection}
             setOpenSubSection={setOpenSubSection}
             activeEffects={activeEffects}
@@ -3815,6 +3530,15 @@ const ImageEditor = ({
         show={showReplaceModal}
         onClose={() => setShowReplaceModal(false)}
         onReplace={(file) => handleFileUpload({ target: { files: [file] } })}
+      />
+
+      {/* Image Adjustment Modal Popup */}
+      <ImageAdjustmentModal
+        isOpen={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        filters={filters}
+        onChange={handleAdjustmentChange}
+        onResetAll={handleResetAllAdjustments}
       />
 
     </div>

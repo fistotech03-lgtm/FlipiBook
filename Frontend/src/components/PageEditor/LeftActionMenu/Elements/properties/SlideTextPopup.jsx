@@ -350,7 +350,7 @@ const SlideTextPopup = ({
                     className="w-[1vw] h-[1vw] rounded-[0.2vw] border border-gray-300 shadow-2xs"
                     style={{ backgroundColor: textColor }}
                   />
-                  <span className="text-[0.68vw] text-gray-500 font-mono uppercase">{textColor}</span>
+                  <span className="text-[0.68vw] text-gray-500 font-mono uppercase font-normal">{textColor}</span>
                 </div>
               </div>
 

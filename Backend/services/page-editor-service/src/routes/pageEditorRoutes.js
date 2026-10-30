@@ -8,6 +8,9 @@ const assetRoutes = require('./assetRoutes');
 // Public status / health endpoint
 router.get('/status', pageEditorController.getServiceStatus);
 
+// Public route to resolve map URLs (expand shortlinks like maps.app.goo.gl)
+router.get('/resolve-map-url', pageEditorController.resolveMapUrl);
+
 // Protected routes (requires authenticated user)
 router.get('/data', authenticateUser, pageEditorController.getPageData);
 

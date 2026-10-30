@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const http = require('http');
 const Flipbook = require('../models/flipbook');
 const FlipbookAsset = require('../models/flipbookAsset');
 const { getAuthUser } = require('../utils/userHelper');
@@ -15,6 +17,119 @@ const getServiceStatus = (req, res) => {
     service: 'page-editor-service',
     timestamp: new Date().toISOString()
   });
+};
+
+/**
+ * Helper to recursively follow HTTP/HTTPS redirects
+ */
+const followRedirects = (url, maxRedirects = 5) => {
+  return new Promise((resolve) => {
+    if (maxRedirects <= 0) return resolve(url);
+    try {
+      const u = new URL(url);
+      const client = u.protocol === 'https:' ? https : http;
+      const options = {
+        hostname: u.hostname,
+        port: u.port || (u.protocol === 'https:' ? 443 : 80),
+        path: u.pathname + u.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      };
+
+      const request = client.request(options, (response) => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          let nextUrl = response.headers.location;
+          if (!nextUrl.startsWith('http')) {
+            nextUrl = new URL(nextUrl, url).href;
+          }
+          return followRedirects(nextUrl, maxRedirects - 1).then(resolve);
+        }
+        resolve(url);
+      });
+
+      request.on('error', () => resolve(url));
+      request.setTimeout(5000, () => {
+        request.destroy();
+        resolve(url);
+      });
+      request.end();
+    } catch (e) {
+      resolve(url);
+    }
+  });
+};
+
+/**
+ * Resolve Google Maps URL (especially shortlinks like maps.app.goo.gl)
+ * @route GET /api/page-editor/resolve-map-url or /api/flipbook/resolve-map-url
+ */
+const resolveMapUrl = async (req, res) => {
+  try {
+    const rawUrl = (req.query.url || '').trim();
+    if (!rawUrl) {
+      return res.status(400).json({ success: false, message: 'URL query parameter is required' });
+    }
+
+    const resolved = await followRedirects(rawUrl);
+
+    let place = '';
+    let coords = '';
+    const placeMatch = resolved.match(/\/maps\/place\/([^/@?]+)/i);
+    const searchMatch = resolved.match(/\/maps\/search\/([^/@?]+)/i);
+    const coordsMatch = resolved.match(/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+
+    if (placeMatch && placeMatch[1]) {
+      place = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+    } else if (searchMatch && searchMatch[1]) {
+      place = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
+    }
+
+    if (coordsMatch) {
+      coords = `${coordsMatch[1]}, ${coordsMatch[2]}`;
+    }
+
+    try {
+      const u = new URL(resolved.startsWith('http') ? resolved : `https://${resolved}`);
+      const q = u.searchParams.get('q') || u.searchParams.get('query');
+      if (q && !place) {
+        place = decodeURIComponent(q.replace(/\+/g, ' '));
+      }
+    } catch (e) {}
+
+    let embedUrl = '';
+    if (coords) {
+      embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(coords)}&t=&z=16&ie=UTF8&iwloc=near&output=embed`;
+    } else if (place) {
+      embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=15&ie=UTF8&iwloc=near&output=embed`;
+    } else {
+      embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(rawUrl)}&t=&z=14&ie=UTF8&iwloc=near&output=embed`;
+    }
+
+    const nameParts = (place || '').split(',');
+    const mainTitle = nameParts[0]?.trim() || place || 'Location';
+    const secondaryAddress = nameParts.length > 1 ? nameParts.slice(1).join(',').trim() : (coords ? `Coordinates: ${coords}` : mainTitle);
+
+    return res.status(200).json({
+      success: true,
+      resolvedUrl: resolved,
+      embedUrl,
+      place: mainTitle,
+      details: {
+        name: mainTitle,
+        address: secondaryAddress,
+        coords: coords || null
+      }
+    });
+  } catch (error) {
+    console.error('[Page Editor Controller] resolveMapUrl error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to resolve map URL',
+      error: error.message
+    });
+  }
 };
 
 /**
@@ -128,5 +243,6 @@ const getPageData = async (req, res) => {
 
 module.exports = {
   getServiceStatus,
-  getPageData
+  getPageData,
+  resolveMapUrl
 };

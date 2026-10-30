@@ -68,7 +68,7 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
           maxLength={color && color.includes('gradient') ? 10 : 7}
         />
         <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
@@ -100,7 +100,7 @@ const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, is
           if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
           onChange(val);
         }}
-        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
         maxLength={color && color.includes('gradient') ? 10 : 7}
       />
       <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>

@@ -17,16 +17,16 @@ export const DEFAULT_MAP_DATA = {
 
 export const MAP_TEMPLATES = [
   {
+    id: 'none',
+    name: 'Map Only',
+    description: 'Pure interactive map with no card overlay',
+    badge: 'Minimal'
+  },
+  {
     id: 'carousel',
     name: 'Location Carousel',
     description: 'Floating location card with next button & dots',
     badge: 'Popular'
-  },
-  {
-    id: 'actions',
-    name: 'Quick Actions',
-    description: 'Bottom sheet with Directions, Call & Share buttons',
-    badge: 'Action'
   },
   {
     id: 'callout',
@@ -35,16 +35,16 @@ export const MAP_TEMPLATES = [
     badge: 'Clean'
   },
   {
+    id: 'actions',
+    name: 'Quick Actions',
+    description: 'Bottom sheet with Directions, Call & Share buttons',
+    badge: 'Action'
+  },
+  {
     id: 'gallery',
     name: 'Photo Gallery',
     description: 'Bottom sheet with studio photos & View Details CTA',
     badge: 'Detailed'
-  },
-  {
-    id: 'none',
-    name: 'Map Only',
-    description: 'Pure interactive map with no card overlay',
-    badge: 'Minimal'
   }
 ];
 

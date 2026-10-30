@@ -270,13 +270,13 @@ export const AddElementsModal = ({
                 {activeCategoryObj.name}
               </span>
 
-              <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+              <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[1vw] gap-x-[0.8vw] gap-y-[1.5vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]'}`}>
                 {filteredElements.map((item) => (
                   <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                 ))}
 
                 {filteredElements.length === 0 && (
-                  <div className="col-span-3 py-[4vh] text-center text-gray-400 text-[0.75vw]">
+                  <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
                     No elements found in {activeCategoryObj.name}
                   </div>
                 )}

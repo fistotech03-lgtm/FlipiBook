@@ -879,6 +879,12 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               setEmbedCode(e.target.value);
               setErrorMessage('');
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleApplyEmbedCode();
+              }
+            }}
             onBlur={handleApplyEmbedCode}
             placeholder="Paste HTML code here"
             rows={3}
@@ -983,7 +989,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
               handleButtonColorChange(val);
             }}
-            className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+            className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
             maxLength={7}
           />
           <span className="text-gray-400 text-[0.75vw] font-semibold">{buttonOpacity}%</span>

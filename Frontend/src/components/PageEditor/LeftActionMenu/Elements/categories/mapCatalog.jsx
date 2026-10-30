@@ -16,7 +16,7 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
   return (
     <div className="relative w-full h-full bg-slate-100 overflow-hidden flex flex-col select-none">
       {/* Map Background Simulation */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center filter contrast-[1.05] brightness-[1.02]"
         style={{
           backgroundImage: `url('${DEFAULT_MAP_DATA.image}')`,
@@ -27,63 +27,27 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
       {/* Light Map overlay tint */}
       <div className={`absolute inset-0 ${isDark ? 'bg-black/20' : 'bg-sky-50/20'} backdrop-blur-[0.5px]`} />
 
-      {/* PREVIEW 1: Actions */}
-      {templateId === 'actions' && (
-        <>
-          <div className="absolute top-[5%] left-1/2 -translate-x-1/2 rounded-full py-[0.08vw] px-[0.35vw] flex items-center gap-[0.2vw] shadow-xs border z-10" style={{ backgroundColor: badgeBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
-            <div className="w-[0.75vw] h-[0.75vw] rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Icon icon="mdi:map-marker" className="text-red-500 text-[0.5vw]" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[0.42vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
-              <span className="text-[0.34vw]" style={{ color: textSubtitle }}>Coimbatore</span>
-            </div>
+      {/* PREVIEW 1: Map Only */}
+      {templateId === 'none' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-1">
+          <div className="w-[1.5vw] h-[1.5vw] rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#ef4444]">
+            <Icon icon="mdi:map-marker" className="text-[0.9vw]" />
           </div>
-
-          <div className="absolute bottom-0 inset-x-0 rounded-t-lg p-[0.3vw] shadow-md flex flex-col gap-[0.15vw] border-t" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
-            <div className="w-[1vw] h-[0.1vw] rounded-full mx-auto mb-[0.05vw]" style={{ backgroundColor: isDark ? '#475569' : '#d1d5db' }} />
-            <div className="flex items-center gap-[0.25vw]">
-              <img 
-                src={DEFAULT_MAP_DATA.image} 
-                alt="" 
-                className="w-[1.3vw] h-[1.3vw] rounded object-cover flex-shrink-0" 
-              />
-              <div className="flex-1 min-w-0 flex flex-col">
-                <span className="text-[0.45vw] font-bold truncate leading-tight" style={{ color: textTitle }}>Coimbatore</span>
-                <span className="text-[0.36vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
-                <div className="flex items-center gap-[0.12vw] mt-[0.02vw]">
-                  <span className="text-amber-500 text-[0.38vw]">★</span>
-                  <span className="text-[0.36vw] font-bold" style={{ color: textTitle }}>4.9</span>
-                  <span className="text-[0.32vw]" style={{ color: textSubtitle }}>(1500)</span>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-[0.15vw] mt-[0.05vw]">
-              <div className="text-white rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: buttonColor || '#000000' }}>
-                <Icon icon="mdi:directions" className="text-[0.38vw]" />
-                <span>Directions</span>
-              </div>
-              <div className="rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6', color: isDark ? '#f9fafb' : '#1f2937' }}>
-                <Icon icon="mdi:phone" className="text-[0.38vw]" />
-                <span>Call</span>
-              </div>
-              <div className="rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6', color: isDark ? '#f9fafb' : '#1f2937' }}>
-                <Icon icon="mdi:share-variant" className="text-[0.38vw]" />
-                <span>Share</span>
-              </div>
-            </div>
-          </div>
-        </>
+          <span className="text-[0.4vw] font-semibold text-gray-700 bg-white/85 px-[0.35vw] py-[0.08vw] rounded mt-[0.2vw] shadow-2xs">
+            Map Only
+          </span>
+        </div>
       )}
+
 
       {/* PREVIEW 2: Callout */}
       {templateId === 'callout' && (
         <>
           <div className="absolute top-[8%] left-1/2 -translate-x-1/2 w-[88%] rounded-md p-[0.25vw] shadow-sm border flex items-center gap-[0.25vw]" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
-            <img 
-              src={DEFAULT_MAP_DATA.image} 
-              alt="" 
-              className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
+            <img
+              src={DEFAULT_MAP_DATA.image}
+              alt=""
+              className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0"
             />
             <div className="flex-1 min-w-0 flex flex-col leading-tight">
               <span className="text-[0.44vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore</span>
@@ -115,10 +79,10 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
           <div className="absolute bottom-0 inset-x-0 rounded-t-lg p-[0.25vw] shadow-md flex flex-col gap-[0.15vw] border-t" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
             <div className="w-[1vw] h-[0.1vw] rounded-full mx-auto" style={{ backgroundColor: isDark ? '#475569' : '#d1d5db' }} />
             <div className="flex items-center gap-[0.25vw]">
-              <img 
-                src={DEFAULT_MAP_DATA.image} 
-                alt="" 
-                className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
+              <img
+                src={DEFAULT_MAP_DATA.image}
+                alt=""
+                className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0"
               />
               <div className="flex-1 min-w-0 flex flex-col leading-tight">
                 <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore</span>
@@ -154,10 +118,10 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
           </div>
 
           <div className="absolute bottom-[0.5vw] inset-x-[0.25vw] rounded-md p-[0.25vw] shadow-sm flex items-center gap-[0.25vw] border" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
-            <img 
-              src={DEFAULT_MAP_DATA.image} 
-              alt="" 
-              className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
+            <img
+              src={DEFAULT_MAP_DATA.image}
+              alt=""
+              className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0"
             />
             <div className="flex-1 min-w-0 flex flex-col leading-tight">
               <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore, India</span>
@@ -182,16 +146,53 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
         </>
       )}
 
-      {/* PREVIEW 5: Map Only */}
-      {templateId === 'none' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-1">
-          <div className="w-[1.5vw] h-[1.5vw] rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#ef4444]">
-            <Icon icon="mdi:map-marker" className="text-[0.9vw]" />
+      {/* PREVIEW 5: Actions */}
+      {templateId === 'actions' && (
+        <>
+          <div className="absolute top-[5%] left-1/2 -translate-x-1/2 rounded-full py-[0.08vw] px-[0.35vw] flex items-center gap-[0.2vw] shadow-xs border z-10" style={{ backgroundColor: badgeBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
+            <div className="w-[0.75vw] h-[0.75vw] rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Icon icon="mdi:map-marker" className="text-red-500 text-[0.5vw]" />
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-[0.42vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
+              <span className="text-[0.34vw]" style={{ color: textSubtitle }}>Coimbatore</span>
+            </div>
           </div>
-          <span className="text-[0.4vw] font-semibold text-gray-700 bg-white/85 px-[0.35vw] py-[0.08vw] rounded mt-[0.2vw] shadow-2xs">
-            Clean Map Only
-          </span>
-        </div>
+
+          <div className="absolute bottom-0 inset-x-0 rounded-t-lg p-[0.3vw] shadow-md flex flex-col gap-[0.15vw] border-t" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
+            <div className="w-[1vw] h-[0.1vw] rounded-full mx-auto mb-[0.05vw]" style={{ backgroundColor: isDark ? '#475569' : '#d1d5db' }} />
+            <div className="flex items-center gap-[0.25vw]">
+              <img
+                src={DEFAULT_MAP_DATA.image}
+                alt=""
+                className="w-[1.3vw] h-[1.3vw] rounded object-cover flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0 flex flex-col">
+                <span className="text-[0.45vw] font-bold truncate leading-tight" style={{ color: textTitle }}>Coimbatore</span>
+                <span className="text-[0.36vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
+                <div className="flex items-center gap-[0.12vw] mt-[0.02vw]">
+                  <span className="text-amber-500 text-[0.38vw]">★</span>
+                  <span className="text-[0.36vw] font-bold" style={{ color: textTitle }}>4.9</span>
+                  <span className="text-[0.32vw]" style={{ color: textSubtitle }}>(1500)</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-[0.15vw] mt-[0.05vw]">
+              <div className="text-white rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: buttonColor || '#000000' }}>
+                <Icon icon="mdi:directions" className="text-[0.38vw]" />
+                <span>Directions</span>
+              </div>
+              <div className="rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6', color: isDark ? '#f9fafb' : '#1f2937' }}>
+                <Icon icon="mdi:phone" className="text-[0.38vw]" />
+                <span>Call</span>
+              </div>
+              <div className="rounded text-[0.34vw] font-medium py-[0.1vw] flex items-center justify-center gap-[0.08vw]" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6', color: isDark ? '#f9fafb' : '#1f2937' }}>
+                <Icon icon="mdi:share-variant" className="text-[0.38vw]" />
+                <span>Share</span>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -206,7 +207,7 @@ export const MAP_ITEMS = MAP_TEMPLATES.map((tmpl) => ({
   renderPreview: () => {
     return (
       <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="relative w-full h-[88%] bg-slate-100 overflow-hidden rounded-[0.35vw] border border-gray-200/90 shadow-2xs group-hover:scale-105 transition-transform duration-200">
+        <div className="relative w-full h-[88%] bg-slate-100 overflow-hidden rounded-xl border border-gray-200/90 shadow-2xs group-hover:scale-105 transition-transform duration-200">
           <MapTemplateThumbnail templateId={tmpl.id} />
         </div>
       </div>

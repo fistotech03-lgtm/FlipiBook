@@ -9,9 +9,10 @@ import {
   Copy,
   Image as ImageIcon,
   ArrowRightLeft,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
-import { renderQRWithFrame } from '../utils/qrFrameRenderer';
+import { renderQRWithFrame, generateStyledQRImage, drawRoundRect, loadImg, FONT_WEIGHT_MAP } from '../utils/qrFrameRenderer';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../properties/ColorPicker';
 import MediaGalleryPopup from '../../../properties/MediaGalleryPopup';
@@ -117,6 +118,19 @@ const FONT_WEIGHT_OPTIONS = [
   { value: 'Medium', label: 'Medium' },
   { value: 'Semi Bold', label: 'Semi Bold' },
   { value: 'Bold', label: 'Bold' }
+];
+
+const DIMENSION_OPTIONS = [
+  { value: '200x200', label: '200 × 200 px' },
+  { value: '256x256', label: '256 × 256 px' },
+  { value: '512x512', label: '512 × 512 px' },
+  { value: 'custom', label: 'Custom' }
+];
+
+const DOWNLOAD_FORMAT_OPTIONS = [
+  { value: 'jpeg', label: 'JPEG' },
+  { value: 'png', label: 'PNG' },
+  { value: 'svg', label: 'SVG' }
 ];
 
 // Visual mini-icon representation for each style
@@ -409,7 +423,7 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-semibold"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
           maxLength={7}
         />
         <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
@@ -561,6 +575,180 @@ const ElementQRCodeProperties = ({
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [frameBgColor, setFrameBgColor] = useState('#FFFFFF');
   const [arrowColor, setArrowColor] = useState('#000000');
+
+  // Export / Dimension & Download states
+  const [dimension, setDimension] = useState('256x256');
+  const [customWidth, setCustomWidth] = useState(256);
+  const [customHeight, setCustomHeight] = useState(256);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDimensionOpen, setIsDimensionOpen] = useState(false);
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+  const dimensionRef = useRef(null);
+  const downloadRef = useRef(null);
+
+  // Close Dimension & Download dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dimensionRef.current && !dimensionRef.current.contains(e.target)) {
+        setIsDimensionOpen(false);
+      }
+      if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+        setIsDownloadOpen(false);
+      }
+    };
+    if (isDimensionOpen || isDownloadOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDimensionOpen, isDownloadOpen]);
+
+  // Handler to export / download the QR Code
+  const handleDownloadQR = async (format) => {
+    setIsDownloadOpen(false);
+    setIsDownloading(true);
+
+    try {
+      let targetW = 256;
+      let targetH = 256;
+      if (dimension === 'custom') {
+        targetW = Math.max(32, Math.min(4096, parseInt(customWidth) || 256));
+        targetH = Math.max(32, Math.min(4096, parseInt(customHeight) || 256));
+      } else {
+        const [w, h] = dimension.split('x').map(Number);
+        targetW = w || 256;
+        targetH = h || 256;
+      }
+
+      if (format === 'svg') {
+        // High quality vector SVG download
+        let svgContent = '';
+        if (previewDataUrl && previewDataUrl.startsWith('data:image/svg+xml')) {
+          const base64Part = previewDataUrl.split(',')[1];
+          svgContent = decodeURIComponent(base64Part ? atob(base64Part) : '');
+        } else {
+          // Render SVG wrapper
+          const currentDataUrl = previewDataUrl;
+          svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${targetW}" height="${targetH}" viewBox="0 0 ${targetW} ${targetH}">
+  <image width="${targetW}" height="${targetH}" href="${currentDataUrl}" xlink:href="${currentDataUrl}" preserveAspectRatio="xMidYMid meet" />
+</svg>`;
+        }
+
+        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `qrcode_${targetW}x${targetH}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } else {
+        // Render crisp raster at requested dimensions
+        // Compute scale so the output canvas precisely matches target dimensions
+        const testRender = await renderQRWithFrame({
+          url,
+          frame,
+          text,
+          logoSrc: hasLogo ? logoSrc : null,
+          logoSize: Math.round((logoSize / 100) * 28),
+          logoRadius,
+          logoBg: true,
+          logoBgColor,
+          qrColor,
+          backdrop,
+          patternStyle,
+          eyeFrame,
+          eyeBall,
+          fontFamily,
+          fontSize,
+          fontWeight,
+          textColor,
+          frameBgColor,
+          arrowColor,
+          scale: 1
+        });
+
+        const naturalW = testRender.totalWidth || 256;
+        const naturalH = testRender.totalHeight || 256;
+        const scaleX = targetW / naturalW;
+        const scaleY = targetH / naturalH;
+        const uniformScale = Math.max(scaleX, scaleY);
+
+        const rendered = await renderQRWithFrame({
+          url,
+          frame,
+          text,
+          logoSrc: hasLogo ? logoSrc : null,
+          logoSize: Math.round((logoSize / 100) * 28),
+          logoRadius,
+          logoBg: true,
+          logoBgColor,
+          qrColor,
+          backdrop,
+          patternStyle,
+          eyeFrame,
+          eyeBall,
+          fontFamily,
+          fontSize,
+          fontWeight,
+          textColor,
+          frameBgColor,
+          arrowColor,
+          scale: uniformScale
+        });
+
+        // Fit onto an exact targetW x targetH canvas
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = targetW;
+        exportCanvas.height = targetH;
+        const ctx = exportCanvas.getContext('2d');
+
+        if (format === 'jpeg') {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, targetW, targetH);
+        }
+
+        const img = await loadImg(rendered.dataUrl);
+        if (img) {
+          // Draw centered / fitted
+          const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+          const canvasAspect = targetW / targetH;
+          let drawW = targetW;
+          let drawH = targetH;
+          let drawX = 0;
+          let drawY = 0;
+
+          if (imgAspect > canvasAspect) {
+            drawW = targetW;
+            drawH = targetW / imgAspect;
+            drawY = (targetH - drawH) / 2;
+          } else {
+            drawH = targetH;
+            drawW = targetH * imgAspect;
+            drawX = (targetW - drawW) / 2;
+          }
+
+          ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        }
+
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const fileExt = format === 'jpeg' ? 'jpg' : 'png';
+        const exportDataUrl = exportCanvas.toDataURL(mimeType, 0.95);
+
+        const link = document.createElement('a');
+        link.href = exportDataUrl;
+        link.download = `qrcode_${targetW}x${targetH}.${fileExt}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Download QR Code error:', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const renderSeqRef = useRef(0);
 
@@ -1054,16 +1242,190 @@ const ElementQRCodeProperties = ({
         </div>
       </PropertyRow>
 
-      {/* 3. QR Code Preview Card */}
-      <div className="flex flex-col items-center justify-center my-[0.4vw]">
-        <div className="w-[10vw] h-[10vw] max-w-[200px] max-h-[200px] min-w-[120px] min-h-[120px] bg-white rounded-[0.5vw] p-[0.4vw] border border-gray-100 shadow-2xs flex items-center justify-center overflow-hidden">
-          {previewDataUrl ? (
-            <img src={previewDataUrl} alt="QR Code Preview" className="w-full h-full object-contain" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-[0.62vw]">Generating...</div>
-          )}
+      {/* 3. QR Code Preview with Dimension & Download */}
+      <div className="flex items-center justify-between gap-[0.8vw] my-[0.4vw] p-[0.3vw] bg-gray-50/50 rounded-[0.6vw] border border-gray-100">
+        {/* Left side: QR Code Preview */}
+        <div className="flex flex-col items-center">
+          <div className="w-[6.5vw] h-[6.5vw] max-w-[130px] max-h-[130px] min-w-[85px] min-h-[85px] bg-white rounded-[0.5vw] p-[0.3vw] border border-gray-200 shadow-2xs flex items-center justify-center overflow-hidden">
+            {previewDataUrl ? (
+              <img src={previewDataUrl} alt="QR Code Preview" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-[0.62vw]">Generating...</div>
+            )}
+          </div>
+          <span className="text-[0.68vw] text-gray-600 font-semibold mt-[0.25vw] text-center whitespace-nowrap">QR Code Preview</span>
         </div>
-        <span className="text-[0.72vw] text-gray-700 font-semibold mt-[0.3vw] text-center">QR Code Preview</span>
+
+        {/* Right side: Dimension and Download Controls */}
+        <div className="flex-1 flex flex-col gap-[0.45vw] justify-center min-w-0 pr-[0.2vw]">
+          {/* Dimension Dropdown */}
+          <div ref={dimensionRef} className="relative w-full">
+            <label className="text-[0.68vw] font-semibold text-gray-700 block mb-[0.15vw]">Dimension</label>
+            <button
+              type="button"
+              onClick={() => {
+                setIsDimensionOpen(!isDimensionOpen);
+                setIsDownloadOpen(false);
+              }}
+              className={`w-full h-[2.1vw] min-h-[30px] px-[0.6vw] flex items-center justify-between bg-white border ${
+                isDimensionOpen ? 'border-2 border-[#E05638] shadow-xs' : 'border border-gray-200 hover:border-gray-300'
+              } rounded-[0.45vw] text-[0.74vw] font-semibold text-gray-800 cursor-pointer transition-all shadow-2xs`}
+              title="Select Dimension"
+            >
+              <span className="truncate">
+                {dimension === 'custom'
+                  ? `${customWidth} × ${customHeight} px`
+                  : (DIMENSION_OPTIONS.find(d => d.value === dimension)?.label || 'Select size...')}
+              </span>
+              <ChevronDown
+                className={`w-[0.8vw] h-[0.8vw] text-gray-500 transition-transform duration-200 flex-shrink-0 ml-[0.2vw] ${
+                  isDimensionOpen ? 'rotate-180 text-[#E05638]' : ''
+                }`}
+              />
+            </button>
+
+            {isDimensionOpen && (
+              <div className="absolute right-0 left-0 top-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.55vw] shadow-xl overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
+                {DIMENSION_OPTIONS.map((opt) => {
+                  const isSelected = dimension === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setDimension(opt.value);
+                        if (opt.value !== 'custom') {
+                          setIsDimensionOpen(false);
+                        }
+                      }}
+                      className={`px-[0.7vw] py-[0.4vw] text-[0.74vw] font-semibold transition-colors text-left flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'text-[#E05638] bg-[#FFF2EE]'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check className="w-[0.8vw] h-[0.8vw] text-[#E05638]" />}
+                    </button>
+                  );
+                })}
+
+                {/* Custom Size Inputs */}
+                {dimension === 'custom' && (
+                  <div className="px-[0.6vw] pt-[0.4vw] pb-[0.3vw] border-t border-gray-100 flex flex-col gap-[0.3vw] bg-gray-50/70">
+                    <div className="flex items-center gap-[0.3vw]">
+                      <div className="flex-1">
+                        <label className="text-[0.6vw] text-gray-500 block mb-[0.1vw]">Width</label>
+                        <input
+                          type="number"
+                          min="32"
+                          max="4096"
+                          value={customWidth}
+                          onChange={(e) => setCustomWidth(parseInt(e.target.value) || 256)}
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-semibold text-gray-800 outline-none focus:border-[#E05638]"
+                        />
+                      </div>
+                      <span className="text-gray-400 text-[0.7vw] mt-[0.7vw]">×</span>
+                      <div className="flex-1">
+                        <label className="text-[0.6vw] text-gray-500 block mb-[0.1vw]">Height</label>
+                        <input
+                          type="number"
+                          min="32"
+                          max="4096"
+                          value={customHeight}
+                          onChange={(e) => setCustomHeight(parseInt(e.target.value) || 256)}
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-semibold text-gray-800 outline-none focus:border-[#E05638]"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsDimensionOpen(false)}
+                      className="w-full mt-[0.15vw] py-[0.25vw] bg-[#E05638] text-white rounded-[0.35vw] text-[0.68vw] font-semibold hover:bg-[#c94a2f] transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Download Dropdown */}
+          <div ref={downloadRef} className="relative w-full">
+            <label className="text-[0.68vw] font-semibold text-gray-700 block mb-[0.15vw]">Download</label>
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => {
+                setIsDownloadOpen(!isDownloadOpen);
+                setIsDimensionOpen(false);
+              }}
+              className={`w-full h-[2.1vw] min-h-[30px] px-[0.7vw] flex items-center justify-between bg-[#E05638] hover:bg-[#c94a2f] text-white rounded-[0.45vw] text-[0.74vw] font-semibold cursor-pointer transition-all shadow-2xs ${
+                isDownloading ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
+              title="Download QR Code"
+            >
+              <div className="flex items-center gap-[0.4vw]">
+                <Download className="w-[0.8vw] h-[0.8vw]" />
+                <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
+              </div>
+              <ChevronDown
+                className={`w-[0.8vw] h-[0.8vw] text-white/90 transition-transform duration-200 ${
+                  isDownloadOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {isDownloadOpen && (
+              <div className="absolute right-0 left-0 top-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.55vw] shadow-xl overflow-hidden z-[110] flex flex-col p-[0.35vw] gap-[0.25vw] animate-in fade-in zoom-in-95 duration-150">
+                {/* JPEG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('jpeg')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#E05638] hover:bg-[#FFF2EE] rounded-[0.4vw] text-gray-800 hover:text-[#E05638] text-[0.76vw] font-semibold cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#E05638] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>JPEG</span>
+                </button>
+
+                {/* PNG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('png')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#E05638] hover:bg-[#FFF2EE] rounded-[0.4vw] text-gray-800 hover:text-[#E05638] text-[0.76vw] font-semibold cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#E05638] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>PNG</span>
+                </button>
+
+                {/* SVG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('svg')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#E05638] hover:bg-[#FFF2EE] rounded-[0.4vw] text-gray-800 hover:text-[#E05638] text-[0.76vw] font-semibold cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#E05638] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <rect x="1" y="1" width="4" height="4" />
+                    <rect x="19" y="1" width="4" height="4" />
+                    <rect x="1" y="19" width="4" height="4" />
+                    <rect x="19" y="19" width="4" height="4" />
+                  </svg>
+                  <span>SVG</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 6. QR Color */}

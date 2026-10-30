@@ -222,7 +222,8 @@ export const createKineticElementNode = (preset, cx, cy) => {
   const posY = Math.round(cy - estHeight / 2);
 
   g.setAttribute('transform', `translate(${posX}, ${posY})`);
-  g.setAttribute('data-name', preset.name || 'Kinetic Typography');
+  g.setAttribute('data-name', 'Typography');
+  g.setAttribute('data-preset-title', preset.name || 'Kinetic Typography');
 
   return document.importNode(g, true);
 };

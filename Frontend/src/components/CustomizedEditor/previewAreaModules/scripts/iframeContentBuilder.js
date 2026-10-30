@@ -4,6 +4,9 @@ import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
 import getVideoControlsScript from './videoControlsScript';
+import getAudioControlsScript from './audioControlsScript';
+import getEmbedScript from './embedScript';
+import getDecoratorStyles from './decoratorScript';
 
 export const getIframeContent = (html, pageNumber, watermarkSettings = null, pagesCount = 0, singlePage = false, baseUrl = null) => {
     let rawCleanHtml = sanitizeHtmlForPreview(html);
@@ -18,6 +21,8 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
             rawCleanHtml = rawCleanHtml.split('nullassets/').join(`${baseUrl}assets/`);
         }
         rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, `$1=$2${baseUrl}assets/`);
+    } else {
+        rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, '$1=$2/assets/');
     }
     const cleanHtml = rewriteHtmlUploads(rawCleanHtml);
     // Extract and dynamically load Google Fonts found in the SVG
@@ -25,6 +30,7 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
     if (cleanHtml) {
         const cssRegex = /font-family\s*:\s*(?:['"]([^'"]+)['"]|([^;}'"\s]+))/g;
         const attrRegex = /font-family\s*=\s*['"]([^'"]+)['"]/g;
+        const dataFontRegex = /data-(?:[^"'>]*font-family|font)\s*=\s*['"]([^'"]+)['"]/g;
         let match;
         while ((match = cssRegex.exec(cleanHtml)) !== null) {
             let f = match[1] || match[2];
@@ -34,6 +40,10 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
         while ((match = attrRegex.exec(cleanHtml)) !== null) {
             let f = match[1].split(',')[0].replace(/['"]/g, '').trim();
             if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) fontsToLoad.add(f);
+        }
+        while ((match = dataFontRegex.exec(cleanHtml)) !== null) {
+            let f = match[1].split(',')[0].replace(/['"]/g, '').trim();
+            if (f && !['sans-serif', 'serif', 'monospace', 'inherit', 'initial'].includes(f.toLowerCase())) fontsToLoad.add(f);
         }
     }
 
@@ -192,9 +202,98 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         background: #1F2937 !important;
                     }
 
-                    foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div {
+                    foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div:not(.map-root-container):not(.embed-root-container):not(.table-card-wrapper):not(.table-container) {
                         width: 100% !important;
                         height: auto !important;
+                    }
+
+                    .map-root-container,
+                    .embed-root-container,
+                    .table-card-wrapper,
+                    .table-container {
+                        width: 100% !important;
+                        height: 100% !important;
+                        display: block !important;
+                        position: relative !important;
+                        box-sizing: border-box !important;
+                    }
+
+                    /* Disable editor selection/stroke overlay blockers in preview so embeds, maps and links can be clicked */
+                    .svg-image-stroke-overlay,
+                    .svg-table-overlay,
+                    .bbox-anchor,
+                    g[data-type="map"] > rect:last-child,
+                    g[data-type="embed-frame"] > rect.svg-image-stroke-overlay,
+                    g[data-type="qrcode"] > rect:last-child {
+                        pointer-events: none !important;
+                    }
+
+                    /* Enable pointer events on map controls & embeds in preview */
+                    .map-root-container,
+                    .map-root-container iframe,
+                    .map-overlay-wrapper,
+                    .map-open-maps-btn,
+                    .map-action-btn-circle,
+                    .map-card-overlay,
+                    .map-sheet-btn,
+                    .map-sheet-link-btn {
+                        pointer-events: auto !important;
+                    }
+
+                    foreignObject[data-type="embed-frame"],
+                    foreignObject[data-type="embed-frame"] iframe,
+                    g[data-type="embed-frame"] foreignObject,
+                    g[data-type="embed-frame"] foreignObject iframe,
+                    .embed-root-container,
+                    .embed-root-container iframe,
+                    .embed-overlay-wrapper,
+                    .embed-open-btn,
+                    .embed-open-btn *,
+                    .embed-fullscreen-btn,
+                    .embed-fullscreen-btn * {
+                        pointer-events: auto !important;
+                    }
+
+                    .embed-open-btn:hover,
+                    .embed-fullscreen-btn:hover {
+                        background: rgba(15, 23, 42, 0.98) !important;
+                        border-color: rgba(255, 255, 255, 0.38) !important;
+                        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important;
+                        transform: translateY(-1px);
+                    }
+
+                    .embed-open-btn:active,
+                    .embed-fullscreen-btn:active {
+                        transform: translateY(0);
+                        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+                    }
+
+                    .embed-root-container:fullscreen,
+                    .embed-root-container:-webkit-full-screen,
+                    .embed-root-container:-moz-full-screen {
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        background: #000000 !important;
+                        position: fixed !important;
+                        inset: 0 !important;
+                        z-index: 9999999 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    .embed-root-container:fullscreen iframe,
+                    .embed-root-container:-webkit-full-screen iframe,
+                    .embed-root-container:-moz-full-screen iframe {
+                        width: 100% !important;
+                        height: 100% !important;
+                    }
+
+                    .embed-root-container:fullscreen .embed-overlay-wrapper,
+                    .embed-root-container:-webkit-full-screen .embed-overlay-wrapper,
+                    .embed-root-container:-moz-full-screen .embed-overlay-wrapper {
+                        top: 16px !important;
+                        right: 16px !important;
+                        z-index: 10000000 !important;
                     }
 
                     foreignObject[data-sizing-mode="fixed"]>div {
@@ -262,16 +361,14 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         user-select: text !important;
                         pointer-events: auto !important;
                     }
-
-                    svg * {
-                        vector-effect: non-scaling-stroke !important;
-                    }
                 </style>
-                <base href="/">
+                ${getDecoratorStyles()}
                 ${getSlideshowScript()}
                 ${getAnimationScript(pageNumber)}
                 ${getInteractionScript(pageNumber)}
                 ${getVideoControlsScript()}
+                ${getAudioControlsScript()}
+                ${getEmbedScript()}
                 <script>
                     (function() {
                         const isRightPage = ${pageNumber} % 2 !== 0;

@@ -1,4 +1,4 @@
-const dns = require('dns');
+const dns = require('node:dns');
 const mongoose = require('mongoose');
 
 // Configure reliable DNS servers for Atlas SRV resolution

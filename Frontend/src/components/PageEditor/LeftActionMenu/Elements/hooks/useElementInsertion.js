@@ -12,6 +12,12 @@ export function useElementInsertion({
   baseHeight = 297,
   saveModifiedPageHtml,
   setSelectedLayerId,
+  selectedLayerIdRef,
+  setMultiSelectedIds,
+  multiSelectedIdsRef,
+  setCurrentFrameId,
+  currentFrameIdRef,
+  drawOverlayHighlight,
   setActiveMainTool,
   throttleMs = 250,
 }) {
@@ -49,10 +55,37 @@ export function useElementInsertion({
       }
       const finalId = el.getAttribute('id') || uniqueId;
       if (!el.getAttribute('data-name')) {
-        el.setAttribute('data-name', item.name || 'Element');
+        const defaultNamesByCategory = {
+          buttons: 'Button',
+          text: 'Typography',
+          shapes: 'Shape',
+          tables: 'Table',
+          'qr-code': 'QR Code',
+          'google-maps': 'Map',
+          slideshow: 'Slideshow',
+          masking: 'Image Frame',
+          decorators: 'Decorator',
+          audio: 'Audio',
+          embeds: 'Embed Frame'
+        };
+        const defaultName = defaultNamesByCategory[item.category] || item.name || 'Element';
+        el.setAttribute('data-name', defaultName);
       }
       if (!el.getAttribute('data-type')) {
-        el.setAttribute('data-type', 'shape');
+        const defaultTypeByCategory = {
+          buttons: 'button',
+          text: 'text',
+          shapes: 'shape',
+          tables: 'table-frame',
+          'qr-code': 'qrcode',
+          'google-maps': 'map',
+          slideshow: 'slideshow',
+          masking: 'image-frame',
+          decorators: 'decorator',
+          audio: 'audio-frame',
+          embeds: 'embed-frame'
+        };
+        el.setAttribute('data-type', defaultTypeByCategory[item.category] || 'shape');
       }
 
       // Target the page frame group rather than the root SVG
@@ -79,6 +112,10 @@ export function useElementInsertion({
         });
       }
 
+      if (!pageGroup.id && pageGroup !== svg) {
+        pageGroup.id = 'frame-' + Date.now();
+      }
+
       pageGroup.appendChild(el);
 
       if (typeof saveModifiedPageHtml === 'function') {
@@ -87,11 +124,36 @@ export function useElementInsertion({
       if (typeof setSelectedLayerId === 'function') {
         setSelectedLayerId(finalId);
       }
+      if (selectedLayerIdRef) {
+        selectedLayerIdRef.current = finalId;
+      }
+      if (typeof setMultiSelectedIds === 'function') {
+        setMultiSelectedIds(new Set([finalId]));
+      }
+      if (multiSelectedIdsRef) {
+        multiSelectedIdsRef.current = new Set([finalId]);
+      }
       if (typeof setActiveMainTool === 'function') {
         setActiveMainTool('select');
       }
+      const frameIdToSet = pageGroup && pageGroup !== svg && pageGroup.id ? pageGroup.id : null;
+      if (frameIdToSet) {
+        if (typeof setCurrentFrameId === 'function') {
+          setCurrentFrameId(frameIdToSet);
+        }
+        if (currentFrameIdRef) {
+          currentFrameIdRef.current = frameIdToSet;
+        }
+      }
+
+      setTimeout(() => {
+        const mountedEl = document.getElementById(finalId) || el;
+        if (mountedEl && typeof drawOverlayHighlight === 'function') {
+          drawOverlayHighlight(mountedEl, 'selected');
+        }
+      }, 50);
     },
-    [activePageIndex, baseWidth, baseHeight, saveModifiedPageHtml, setSelectedLayerId, setActiveMainTool, throttleMs]
+    [activePageIndex, baseWidth, baseHeight, saveModifiedPageHtml, setSelectedLayerId, selectedLayerIdRef, setMultiSelectedIds, multiSelectedIdsRef, setCurrentFrameId, currentFrameIdRef, drawOverlayHighlight, setActiveMainTool, throttleMs]
   );
 
   return { handleInsert };

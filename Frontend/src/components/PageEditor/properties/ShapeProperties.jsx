@@ -4,6 +4,8 @@ import { handleScrubHelper } from './Color';
 import Color from './Color';
 import CornerRadius from './CornerRadius';
 import Effect from './Effect';
+import { ElementSlider } from '../LeftActionMenu/Elements/properties/ElementUIControls';
+import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled = false }) => {
   const [localVal, setLocalVal] = useState(value);
@@ -40,9 +42,9 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
   };
 
   return (
-    <div className={`flex items-center gap-[1vw] py-[0.4vw] transition-opacity duration-200 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-[0.8vw] py-[0.4vw] transition-opacity duration-200 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       <span
-        className="text-[0.8vw] font-semibold text-gray-600 w-[4vw] flex-shrink-0 cursor-ew-resize select-none hover:text-indigo-600 transition-colors"
+        className="text-[0.78vw] font-semibold text-gray-700 w-[4vw] flex-shrink-0 cursor-ew-resize select-none hover:text-[#E05638] transition-colors"
         onPointerDown={(e) => {
           handleScrubHelper(e, value, (v) => {
             const num = parseFloat(v);
@@ -51,23 +53,18 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
           });
         }}
       >{label} :</span>
-      <div className="flex-grow flex items-center gap-[1vw]">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step="1"
-          value={value || 0}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-grow h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none disabled:cursor-not-allowed"
-          style={{
-            background: disabled
-              ? '#e5e7eb'
-              : `linear-gradient(to right, #6366f1 0%, #6366f1 ${((value || 0) - min) / (max - min) * 100}%, #e5e7eb ${((value || 0) - min) / (max - min) * 100}%, #e5e7eb 100%)`,
-          }}
-        />
-        <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-100 rounded-[0.4vw] shadow-sm overflow-hidden">
+      <div className="flex-grow flex items-center gap-[0.8vw]">
+        <div className="flex-1">
+          <ElementSlider
+            min={min}
+            max={max}
+            step={1}
+            value={value || 0}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+        <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs overflow-hidden">
           <input
             type="number"
             min={min}
@@ -124,6 +121,114 @@ const ShapeProperties = ({
   const shapeType = selectedElementProps['data-shape-type'] || selectedElementProps.tagName?.toLowerCase();
 
   const updateAttr = (attribute, value) => {
+    try {
+      const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const el = doc.getElementById(selectedLayerId) || doc.querySelector(`[data-name="${selectedLayerId}"]`);
+      if (el) {
+        let targetShape = el;
+        if (el.tagName?.toLowerCase() === 'g') {
+          const inner = el.querySelector('path, polygon, rect, circle, ellipse, line');
+          if (inner) targetShape = inner;
+        }
+
+        // Apply attribute to both outer element and inner targetShape
+        el.setAttribute(attribute, value);
+        if (targetShape !== el) {
+          targetShape.setAttribute(attribute, value);
+        }
+
+        // If this is a shape parameter (count, ratio, radius), recalculate the path immediately on live DOM
+        if (['data-count', 'data-ratio', 'data-radius'].includes(attribute)) {
+          const sType = targetShape.getAttribute('data-shape-type') || el.getAttribute('data-shape-type') || (shapeType === 'polygon' || shapeType === 'star' ? shapeType : null);
+          if (sType === 'polygon' || sType === 'star') {
+            let cx = parseFloat(targetShape.getAttribute('data-cx') || el.getAttribute('data-cx') || 0);
+            let cy = parseFloat(targetShape.getAttribute('data-cy') || el.getAttribute('data-cy') || 0);
+            let rx = parseFloat(targetShape.getAttribute('data-rx') || el.getAttribute('data-rx') || 0);
+            const count = parseInt(attribute === 'data-count' ? value : (targetShape.getAttribute('data-count') || el.getAttribute('data-count') || (sType === 'polygon' ? 3 : 5)));
+            const cr = parseFloat(attribute === 'data-radius' ? value : (targetShape.getAttribute('data-radius') || el.getAttribute('data-radius') || 0));
+            const ratioVal = parseFloat(attribute === 'data-ratio' ? value : (targetShape.getAttribute('data-ratio') || el.getAttribute('data-ratio') || 40));
+
+            if (!cx && !cy) { cx = 50; cy = 50; }
+            if (!rx || rx <= 0) { rx = 42; }
+
+            targetShape.setAttribute('data-cx', cx.toString());
+            targetShape.setAttribute('data-cy', cy.toString());
+            targetShape.setAttribute('data-rx', rx.toString());
+            if (el !== targetShape) {
+              el.setAttribute('data-cx', cx.toString());
+              el.setAttribute('data-cy', cy.toString());
+              el.setAttribute('data-rx', rx.toString());
+            }
+
+            const pts = [];
+            if (sType === 'polygon') {
+              for (let i = 0; i < count; i++) {
+                const angle = (i * 2 * Math.PI) / count - Math.PI / 2;
+                pts.push({ x: cx + rx * Math.cos(angle), y: cy + rx * Math.sin(angle) });
+              }
+            } else if (sType === 'star') {
+              const ratio = ratioVal / 100;
+              const ri = rx * ratio;
+              const sides = count * 2;
+              for (let i = 0; i < sides; i++) {
+                const r = (i % 2 === 0) ? rx : ri;
+                const angle = (Math.PI / count) * i - Math.PI / 2;
+                pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+              }
+            }
+
+            let pathData = "";
+            if (cr > 0 && pts.length > 2) {
+              const cornerPoints = pts.map((curr, i) => {
+                const prev = pts[(i + pts.length - 1) % pts.length];
+                const next = pts[(i + 1) % pts.length];
+                const d1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+                const d2 = { x: next.x - curr.x, y: next.y - curr.y };
+                const l1 = Math.hypot(d1.x, d1.y) || 1;
+                const l2 = Math.hypot(d2.x, d2.y) || 1;
+                const limit = Math.max(0, Math.min(cr, l1 / 2, l2 / 2));
+                return {
+                  limit,
+                  q: { x: curr.x, y: curr.y },
+                  p1: { x: curr.x - (d1.x / l1) * limit, y: curr.y - (d1.y / l1) * limit },
+                  p2: { x: curr.x + (d2.x / l2) * limit, y: curr.y + (d2.y / l2) * limit }
+                };
+              });
+              cornerPoints.forEach((cp, i) => {
+                if (i === 0) pathData += `M ${cp.p1.x.toFixed(2)} ${cp.p1.y.toFixed(2)}`;
+                else pathData += ` L ${cp.p1.x.toFixed(2)} ${cp.p1.y.toFixed(2)}`;
+                if (cp.limit > 0) {
+                  pathData += ` Q ${cp.q.x.toFixed(2)} ${cp.q.y.toFixed(2)}, ${cp.p2.x.toFixed(2)} ${cp.p2.y.toFixed(2)}`;
+                }
+              });
+              pathData += " Z";
+            } else {
+              pathData = `M ${pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' L ')} Z`;
+            }
+
+            targetShape.setAttribute('d', pathData);
+            if (el !== targetShape && el.tagName?.toLowerCase() !== 'g') {
+              el.setAttribute('d', pathData);
+            }
+          }
+        }
+
+        window.__skipCanvasUpdateForPage = activePageIndex;
+        let svgRoot = el;
+        while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') svgRoot = svgRoot.parentElement;
+        if (svgRoot) {
+          const cloneSvg = svgRoot.cloneNode(true);
+          cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(e => e.remove());
+          const serializer = new XMLSerializer();
+          const html = serializer.serializeToString(cloneSvg);
+          updateElementAttribute(activePageIndex, selectedLayerId, { [attribute]: value, '__dom_sync__': html });
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Error updating shape parameter live:', e);
+    }
+
     updateElementAttribute(activePageIndex, selectedLayerId, attribute, value);
   };
 
@@ -151,7 +256,7 @@ const ShapeProperties = ({
     strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0]) || 10,
     strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0])) || 10,
     strokeLinecap: selectedElementProps['stroke-linecap'] || 'butt',
-    strokePosition: selectedElementProps['data-stroke-position'] || 'Center',
+    strokePosition: selectedElementProps['data-stroke-position'] || 'Outside',
   };
 
   const handleSetBackgroundColor = (updater) => {
@@ -198,7 +303,8 @@ const ShapeProperties = ({
     if (backgroundColor.strokeRadius !== next.strokeRadius) updates['stroke-radius'] = next.strokeRadius;
 
     // Apply immediate live DOM updates for smooth scrubbing feedback
-    const liveEl = document.getElementById(selectedLayerId);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
     if (liveEl) {
       Object.entries(updates).forEach(([k, v]) => {
         if (v === 'none' && (k === 'fill' || k === 'stroke')) {
@@ -207,6 +313,13 @@ const ShapeProperties = ({
           liveEl.setAttribute(k, v);
         }
       });
+      if (updates['stroke-linecap'] || updates['stroke-linejoin']) {
+        const childShapes = liveEl.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline');
+        childShapes.forEach(child => {
+          if (updates['stroke-linecap']) child.setAttribute('stroke-linecap', updates['stroke-linecap']);
+          if (updates['stroke-linejoin']) child.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
+        });
+      }
     }
 
     if (Object.keys(updates).length > 0) {
@@ -235,7 +348,8 @@ const ShapeProperties = ({
     updates['ry'] = maxR.toString();
 
     // Immediate live DOM update for responsive slider/drag experience
-    const liveEl = document.getElementById(selectedLayerId);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
     if (liveEl) {
       Object.entries(updates).forEach(([k, v]) => liveEl.setAttribute(k, v));
       const shapeType = liveEl.getAttribute('data-shape-type') || (liveEl.tagName.toLowerCase() === 'rect' ? 'rectangle' : null);
@@ -325,20 +439,25 @@ const ShapeProperties = ({
 
   const handleSetEffectSettings = (updater) => {
     const next = typeof updater === 'function' ? updater(effectSettings) : updater;
+    if (!next) return;
     const updates = {};
     ['Drop Shadow', 'Inner Shadow'].forEach(type => {
       const prefix = type === 'Drop Shadow' ? 'drop-shadow' : 'inner-shadow';
-      if (effectSettings[type].x !== next[type].x) updates[`data-effect-${prefix}-x`] = next[type].x.toString();
-      if (effectSettings[type].y !== next[type].y) updates[`data-effect-${prefix}-y`] = next[type].y.toString();
-      if (effectSettings[type].blur !== next[type].blur) updates[`data-effect-${prefix}-blur`] = next[type].blur.toString();
-      if (effectSettings[type].spread !== next[type].spread) updates[`data-effect-${prefix}-spread`] = next[type].spread.toString();
-      if (effectSettings[type].color !== next[type].color) updates[`data-effect-${prefix}-color`] = next[type].color;
-      if (effectSettings[type].opacity !== next[type].opacity) updates[`data-effect-${prefix}-opacity`] = next[type].opacity.toString();
+      if (next[type] && effectSettings[type]) {
+        if (next[type].x !== undefined && effectSettings[type].x !== next[type].x) updates[`data-effect-${prefix}-x`] = next[type].x.toString();
+        if (next[type].y !== undefined && effectSettings[type].y !== next[type].y) updates[`data-effect-${prefix}-y`] = next[type].y.toString();
+        if (next[type].blur !== undefined && effectSettings[type].blur !== next[type].blur) updates[`data-effect-${prefix}-blur`] = next[type].blur.toString();
+        if (next[type].spread !== undefined && effectSettings[type].spread !== next[type].spread) updates[`data-effect-${prefix}-spread`] = next[type].spread.toString();
+        if (next[type].color !== undefined && effectSettings[type].color !== next[type].color) updates[`data-effect-${prefix}-color`] = next[type].color;
+        if (next[type].opacity !== undefined && effectSettings[type].opacity !== next[type].opacity) updates[`data-effect-${prefix}-opacity`] = next[type].opacity.toString();
+      }
     });
 
-    if (effectSettings['Blur'].blur !== next['Blur'].blur) updates[`data-effect-blur-value`] = next['Blur'].blur.toString();
-    if (effectSettings['Blur'].spread !== next['Blur'].spread) updates[`data-effect-blur-spread`] = next['Blur'].spread.toString();
-    if (effectSettings['Blur'].clipContent !== next['Blur'].clipContent) updates[`data-effect-blur-clip`] = next['Blur'].clipContent ? 'true' : 'false';
+    if (next['Blur'] && effectSettings['Blur']) {
+      if (next['Blur'].blur !== undefined && effectSettings['Blur'].blur !== next['Blur'].blur) updates[`data-effect-blur-value`] = next['Blur'].blur.toString();
+      if (next['Blur'].spread !== undefined && effectSettings['Blur'].spread !== next['Blur'].spread) updates[`data-effect-blur-spread`] = next['Blur'].spread.toString();
+      if (next['Blur'].clipContent !== undefined && effectSettings['Blur'].clipContent !== next['Blur'].clipContent) updates[`data-effect-blur-clip`] = next['Blur'].clipContent ? 'true' : 'false';
+    }
 
     if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
@@ -467,6 +586,45 @@ const ShapeProperties = ({
         showDetailedPicker={showDetailedPicker}
         setShowDetailedPicker={setShowDetailedPicker}
       />
+
+      {/* ===================== MASKING & FLATTEN ===================== */}
+      <div className="flex flex-col gap-[0.5vw] mt-[0.4vw]">
+        <div className="flex items-center gap-[0.75vw] mb-[0.2vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Masking & Flatten</span>
+          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+        </div>
+        <div className="grid grid-cols-2 gap-[0.6vw] pt-[0.2vw] px-[0.1vw]">
+          {/* Mask Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-mask'));
+            }}
+            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${
+              Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url'])
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+            }`}
+            title={Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'Click to Unmask' : 'Use as Mask'}
+          >
+            <MaskIcon size="1vw" className={Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'text-indigo-600' : 'text-gray-600'} />
+            <span className="truncate">{Boolean(selectedElementProps?.['data-mask-enabled'] === 'true' || selectedElementProps?.['data-masked-image-url']) ? 'Unmask' : 'Masking'}</span>
+          </button>
+
+          {/* Flatten Button */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('trigger-flatten'));
+            }}
+            className="flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw]"
+            title="Flatten shape to vector path and edit points"
+          >
+            <FlattenIcon size="1vw" className="text-gray-600" />
+            <span className="truncate">Flatten</span>
+          </button>
+        </div>
+      </div>
 
       {/* CUSTOM CSS */}
       <style>{`

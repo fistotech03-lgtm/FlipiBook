@@ -652,7 +652,8 @@ export const createMotionGraphicElementNode = (preset, cx, cy) => {
   const posY = Math.round(cy - estHeight / 2);
 
   g.setAttribute('transform', `translate(${posX}, ${posY})`);
-  g.setAttribute('data-name', preset.name || 'Motion Graphic');
+  g.setAttribute('data-name', 'Typography');
+  g.setAttribute('data-preset-title', preset.name || 'Motion Graphic');
 
   return document.importNode(g, true);
 };

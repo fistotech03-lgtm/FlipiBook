@@ -1,22 +1,335 @@
-import React, { useState } from 'react';
-import { Copy } from 'lucide-react';
-import Color from '../../../../PageEditor/properties/Color';
-import Effect from '../../../../PageEditor/properties/Effect';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Copy,
+  Check
+} from 'lucide-react';
+import ColorPicker from '../../../properties/ColorPicker';
+import Effect from '../../../properties/Effect';
+import { ElementToggle, ElementDropdown } from './ElementUIControls';
+import { getEmbedOverlayHtml } from '../utils/embedElementUtils';
 
+// Section header matching editor design standards
+// Helper to sync live SVG filters on the DOM element for Drop Shadow
+const syncLiveFilters = (el) => {
+  if (!el) return;
+  const doc = el.ownerDocument || document;
+  let svgRoot = el;
+  while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
+    svgRoot = svgRoot.parentElement;
+  }
+  if (!svgRoot) {
+    const container = el.closest('.page-svg-container');
+    if (container) {
+      const canvasContent = container.querySelector('[id^="canvas-content-"]');
+      svgRoot = canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+    }
+  }
+  if (!svgRoot) return;
 
-const ToggleButton = ({ label, checked, onChange }) => (
-  <div className="flex items-center justify-between w-full mt-[0.5vw]">
-    <span className="text-[0.75vw] text-gray-700">{label}</span>
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-[1.2vw] w-[2.2vw] items-center rounded-full transition-colors ${checked ? 'bg-blue-500' : 'bg-gray-200'}`}
-    >
-      <span
-        className={`inline-block h-[0.9vw] w-[0.9vw] transform rounded-full bg-white transition-transform ${checked ? 'translate-x-[1.1vw]' : 'translate-x-[0.15vw]'}`}
-      />
-    </button>
+  let defs = svgRoot.querySelector('defs');
+  if (!defs) {
+    defs = doc.createElementNS("http://www.w3.org/2000/svg", "defs");
+    svgRoot.insertBefore(defs, svgRoot.firstChild);
+  }
+
+  const baseFilterId = `filter-${el.id || 'embed'}`;
+  Array.from(defs.querySelectorAll(`[id^="${baseFilterId}"]`)).forEach(old => old.remove());
+
+  const hasDropShadow = el.getAttribute('data-effect-drop-shadow') === 'true';
+  if (!hasDropShadow) {
+    el.removeAttribute('filter');
+    el.style.filter = '';
+    return;
+  }
+
+  const getVal = (attr, def) => el.getAttribute(attr) || def;
+  const color = getVal('data-effect-drop-shadow-color', '#000000');
+  const opacity = parseFloat(getVal('data-effect-drop-shadow-opacity', '35')) / 100;
+  const dx = parseFloat(getVal('data-effect-drop-shadow-x', '2'));
+  const dy = parseFloat(getVal('data-effect-drop-shadow-y', '2'));
+  const blur = parseFloat(getVal('data-effect-drop-shadow-blur', '4'));
+  const spread = parseFloat(getVal('data-effect-drop-shadow-spread', '0'));
+
+  // Convert hex color to rgba for CSS filter backup (Chromium foreignObject rendering)
+  let rgbaColor = `rgba(0, 0, 0, ${opacity})`;
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 3) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    }
+    rgbaColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  } else if (color.startsWith('rgb')) {
+    rgbaColor = color;
+  }
+
+  // Set CSS filter on element (ensures foreignObject renders drop shadow in Chromium)
+  el.style.filter = `drop-shadow(${dx}px ${dy}px ${blur}px ${rgbaColor})`;
+
+  // Also construct SVG filter in <defs> for SVG serialization/rendering
+  const filterId = `${baseFilterId}-${Math.random().toString(36).substr(2, 4)}`;
+  const filterEl = doc.createElementNS("http://www.w3.org/2000/svg", "filter");
+  filterEl.id = filterId;
+  filterEl.setAttribute('x', '-50%');
+  filterEl.setAttribute('y', '-50%');
+  filterEl.setAttribute('width', '200%');
+  filterEl.setAttribute('height', '200%');
+  defs.appendChild(filterEl);
+
+  let dsSource = 'SourceAlpha';
+  if (spread !== 0) {
+    const morph = doc.createElementNS("http://www.w3.org/2000/svg", "feMorphology");
+    morph.setAttribute('operator', spread >= 0 ? 'dilate' : 'erode');
+    morph.setAttribute('radius', Math.abs(spread));
+    morph.setAttribute('in', 'SourceAlpha');
+    morph.setAttribute('result', 'ds_morph');
+    filterEl.appendChild(morph);
+    dsSource = 'ds_morph';
+  }
+
+  const gauss = doc.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+  gauss.setAttribute('stdDeviation', blur);
+  gauss.setAttribute('in', dsSource);
+  gauss.setAttribute('result', 'ds_blur');
+  filterEl.appendChild(gauss);
+
+  const offset = doc.createElementNS("http://www.w3.org/2000/svg", "feOffset");
+  offset.setAttribute('dx', dx.toString());
+  offset.setAttribute('dy', dy.toString());
+  offset.setAttribute('in', 'ds_blur');
+  offset.setAttribute('result', 'ds_offset');
+  filterEl.appendChild(offset);
+
+  const flood = doc.createElementNS("http://www.w3.org/2000/svg", "feFlood");
+  flood.setAttribute('flood-color', color);
+  flood.setAttribute('flood-opacity', opacity.toString());
+  flood.setAttribute('result', 'ds_flood');
+  filterEl.appendChild(flood);
+
+  const comp = doc.createElementNS("http://www.w3.org/2000/svg", "feComposite");
+  comp.setAttribute('in', 'ds_flood');
+  comp.setAttribute('in2', 'ds_offset');
+  comp.setAttribute('operator', 'in');
+  comp.setAttribute('result', 'ds_final');
+  filterEl.appendChild(comp);
+
+  const merge = doc.createElementNS("http://www.w3.org/2000/svg", "feMerge");
+  const nodeShadow = doc.createElementNS("http://www.w3.org/2000/svg", "feMergeNode");
+  nodeShadow.setAttribute('in', 'ds_final');
+  const nodeInput = doc.createElementNS("http://www.w3.org/2000/svg", "feMergeNode");
+  nodeInput.setAttribute('in', 'SourceGraphic');
+  merge.appendChild(nodeShadow);
+  merge.appendChild(nodeInput);
+  filterEl.appendChild(merge);
+
+  el.setAttribute('filter', `url(#${filterId})`);
+};
+
+const SectionHeader = ({ title }) => (
+  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.5vw]">
+    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
+
+// PropertyRow matching editor alignment
+const PropertyRow = ({ label, children, className = '' }) => (
+  <div className={`flex items-center gap-[0.5vw] ${className}`}>
+    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
+      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+        {label}
+      </span>
+      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+    </div>
+    <div className="flex-1 min-w-0">
+      {children}
+    </div>
+  </div>
+);
+
+// Custom Dropdown matching exact reference design
+const CustomSelect = ElementDropdown;
+
+// Color Swatch + Hex Input Box
+const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
+  const displayColor = color && color.startsWith('#') ? color.toUpperCase() : color || '#000000';
+
+  return (
+    <div className="flex items-center gap-[0.4vw] w-full">
+      <div
+        onClick={onOpenPicker}
+        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
+          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+        }`}
+        style={{ backgroundColor: color === 'none' || color === 'transparent' ? '#ffffff' : color }}
+        title="Click to open color palette"
+      >
+        {(color === 'none' || color === 'transparent') && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+        )}
+      </div>
+      <div className="flex-1 h-[2.4vw] min-h-[32px] flex items-center justify-between border border-gray-200 rounded-[0.45vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
+        <input
+          type="text"
+          value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
+          onChange={(e) => {
+            let val = e.target.value;
+            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
+            onChange(val);
+          }}
+          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          maxLength={color && color.includes('gradient') ? 10 : 9}
+        />
+        <span className="text-gray-500 text-[0.75vw] font-medium">{opacity}%</span>
+      </div>
+    </div>
+  );
+};
+
+// RadioButton component with signature accent
+const RadioButton = ({ label, checked, onChange }) => (
+  <label onClick={onChange} className="flex items-center gap-[0.4vw] cursor-pointer select-none">
+    <div
+      className={`w-[1.05vw] h-[1.05vw] rounded-full border-2 flex items-center justify-center transition-all ${
+        checked ? 'border-[#E05638]' : 'border-gray-400 hover:border-gray-600'
+      }`}
+    >
+      {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
+    </div>
+    <span className="text-[0.78vw] text-gray-700 font-medium">{label}</span>
+  </label>
+);
+
+const escapeHtml = (unsafe) => {
+  return (unsafe || '')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const formatEmbedUrl = (rawUrl, allowFs = true) => {
+  if (!rawUrl) return '';
+  let trimmed = String(rawUrl).trim();
+  if (!trimmed) return '';
+
+  // If user pasted an iframe tag in URL input, extract the src URL
+  if (trimmed.startsWith('<')) {
+    const srcMatch = trimmed.match(/src=["']([^"']*)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      trimmed = srcMatch[1];
+    }
+  }
+
+  // Prepend protocol if missing
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = 'https://' + trimmed;
+  }
+
+  // YouTube transformation
+  const ytMatch = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0${allowFs ? '&fs=1' : '&fs=0'}`;
+  }
+
+  // Vimeo transformation
+  const vimeoMatch = trimmed.match(/(?:vimeo\.com\/)(\d+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  return trimmed;
+};
+
+const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
+  const defaultPlaceholderHtml = `
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+      <div style="font-size:18px; font-weight:600; color:#1e293b; margin-bottom:4px;">3rd Party Embed Frame</div>
+      <div style="font-size:13px; color:#64748b;">Enter URL or HTML code in Properties to display live embed</div>
+    </div>
+  `.trim();
+
+  const placeholderDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body>${defaultPlaceholderHtml}</body></html>`;
+
+  const fsAttrs = allowFs ? 'allowfullscreen' : '';
+  const allowPolicy = `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture${allowFs ? '; fullscreen' : ''}`;
+
+  if (via === 'URL') {
+    const formatted = formatEmbedUrl(targetUrl, allowFs);
+    if (!formatted) {
+      return {
+        type: 'placeholder',
+        src: '',
+        srcdoc: placeholderDoc,
+        html: `<iframe srcdoc="${escapeHtml(placeholderDoc)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto"></iframe>`
+      };
+    }
+    return {
+      type: 'url',
+      src: formatted,
+      srcdoc: '',
+      html: `<iframe src="${escapeHtml(formatted)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto" allow="${allowPolicy}" ${fsAttrs} allowtransparency="true"></iframe>`
+    };
+  } else {
+    // Embed Code mode
+    const trimmedCode = (code || '').trim();
+    if (!trimmedCode) {
+      return {
+        type: 'placeholder',
+        src: '',
+        srcdoc: placeholderDoc,
+        html: `<iframe srcdoc="${escapeHtml(placeholderDoc)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto"></iframe>`
+      };
+    }
+
+    let processedContent = trimmedCode;
+    if (trimmedCode.startsWith('<')) {
+      if (!allowFs) {
+        processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
+      } else if (!processedContent.includes('allowfullscreen')) {
+        processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen');
+      }
+    } else {
+      // If user pasted a URL in embed code mode
+      const formatted = formatEmbedUrl(trimmedCode, allowFs);
+      processedContent = `<iframe src="${escapeHtml(formatted)}" width="100%" height="100%" frameborder="0" allow="${allowPolicy}" ${fsAttrs} allowtransparency="true" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0;"></iframe>`;
+    }
+
+    const rawHtmlDocument = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${processedContent}</body></html>`;
+
+    return {
+      type: 'code',
+      src: '',
+      srcdoc: rawHtmlDocument,
+      html: `<iframe srcdoc="${escapeHtml(rawHtmlDocument)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto" allow="${allowPolicy}" ${fsAttrs} allowtransparency="true"></iframe>`
+    };
+  }
+};
+
+// Toggle switch matching exact reference design
+const ToggleSwitch = ElementToggle;
+
+const BEHAVIOR_OPTIONS = [
+  { value: 'Open in - Current Tab', label: 'Open in - Current Tab' },
+  { value: 'Open in - New Tab', label: 'Open in - New Tab' }
+];
+
+const LINE_CORNER_OPTIONS = [
+  { value: 'Rounded', label: 'Rounded' },
+  { value: 'Square', label: 'Square' }
+];
 
 const ElementEmbedProperties = ({
   selectedElementProps,
@@ -25,432 +338,510 @@ const ElementEmbedProperties = ({
   updateElementAttribute,
   selectedElement
 }) => {
+  // --- 1. Embed Via & Source ---
+  const [embedVia, setEmbedVia] = useState('URL');
+  const [url, setUrl] = useState('');
   const [customCode, setCustomCode] = useState('');
-  const [webCodeType, setWebCodeType] = useState('Embed Code');
-  const [sources, setSources] = useState({
-    'Embed Code': '',
-    'URL Link': ''
-  });
-  const embedSrc = sources[webCodeType] || '';
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const handleSetEmbedSrc = (val) => {
-    setSources(prev => ({ ...prev, [webCodeType]: val }));
-  };
-  const [errorMessage, setErrorMessage] = useState('');
+  // --- 2. Embed Controls ---
+  const [openWebsiteBtn, setOpenWebsiteBtn] = useState(true);
+  const [allowFullscreen, setAllowFullscreen] = useState(true);
+  const [behavior, setBehavior] = useState('Open in - Current Tab');
+
+  // --- 3. Stoke Color & Width ---
+  const [strokeColor, setStrokeColor] = useState('#000000');
+  const [strokeOpacity, setStrokeOpacity] = useState(100);
+  const [strokeWidth, setStrokeWidth] = useState(1);
+  const [lineCorner, setLineCorner] = useState('Rounded');
+  const [activeColorPicker, setActiveColorPicker] = useState(null);
+
+  // --- Dimensions ---
   const [embedWidth, setEmbedWidth] = useState('650');
   const [embedHeight, setEmbedHeight] = useState('400');
-  const [url, setUrl] = useState('');
 
-  const [autoplay, setAutoplay] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [controls, setControls] = useState(true);
-  const [loop, setLoop] = useState(false);
-  const [startTime, setStartTime] = useState(0);
-  const [endTime, setEndTime] = useState(0);
-  const [fullscreen, setFullscreen] = useState(true);
-
-  const isYouTube = (embedSrc.includes('youtube.com') || embedSrc.includes('youtu.be'));
-
-  React.useEffect(() => {
-    let code = '';
-    let finalSrc = embedSrc.trim();
-    let error = '';
-
-    if (!finalSrc) {
-      setErrorMessage('');
-      setCustomCode(`<div style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; background:#f3f4f6; color:#9ca3af; font-family:sans-serif; font-size:24px; text-align:center;">Enter ${webCodeType === 'Embed Code' ? 'Code' : webCodeType + ' URL'}</div>`);
-      return;
-    }
-
-    if (finalSrc && webCodeType !== 'Embed Code') {
-      const isImage = /\.(jpeg|jpg|gif|png|svg|webp|bmp|ico)([\?#].*)?$/i.test(finalSrc);
-      const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)([\?#].*)?$/i.test(finalSrc) || /(?:youtube\.com|youtu\.be)/i.test(finalSrc) || /vimeo\.com/i.test(finalSrc);
-      
-      if (isImage || isVideo) {
-        error = 'Image and video links are not allowed.';
-      }
-    }
-
-    setErrorMessage(error);
-
-    if (error) {
-      setCustomCode(`<div style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; background:#fee2e2; color:#ef4444; font-family:sans-serif; font-size:24px; text-align:center;">Invalid ${webCodeType} URL</div>`);
-      return;
-    }
-
-    if (webCodeType !== 'Embed Code') {
-      if (!finalSrc.startsWith('http://') && !finalSrc.startsWith('https://') && !finalSrc.startsWith('<')) {
-        finalSrc = 'https://' + finalSrc;
-      }
-
-      const ytMatch = finalSrc.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-      const isImage = /\.(jpeg|jpg|gif|png|svg|webp|bmp|ico)([\?#].*)?$/i.test(finalSrc);
-      const isGenericVideo = /\.(mp4|webm|ogg|mov|avi|mkv)([\?#].*)?$/i.test(finalSrc);
-      
-      if (ytMatch && ytMatch[1]) {
-        finalSrc = `https://www.youtube.com/embed/${ytMatch[1]}`;
-        const queryParams = new URLSearchParams();
-        if (autoplay) queryParams.append('autoplay', '1');
-        if (muted) queryParams.append('mute', '1');
-        if (!controls) queryParams.append('controls', '0');
-        if (loop) {
-          queryParams.append('loop', '1');
-          queryParams.append('playlist', ytMatch[1]);
-        }
-        if (startTime > 0) queryParams.append('start', startTime);
-        if (endTime > 0) queryParams.append('end', endTime);
-        if (!fullscreen) queryParams.append('fs', '0');
-        
-        const queryString = queryParams.toString();
-        const srcWithParams = queryString ? `${finalSrc}?${queryString}` : finalSrc;
-        const allowAttr = `accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture${autoplay ? '; autoplay' : ''}`;
-        
-        code = `<iframe src="${srcWithParams}" width="100%" height="100%" frameborder="0" allow="${allowAttr}" ${fullscreen ? 'allowfullscreen' : ''} ${muted ? 'muted' : ''}></iframe>`;
-      } else if (isGenericVideo) {
-        code = `<video src="${finalSrc}" width="100%" height="100%" ${controls ? 'controls' : ''} ${autoplay ? 'autoplay' : ''} ${muted ? 'muted' : ''} ${loop ? 'loop' : ''} style="object-fit: contain;"></video>`;
-      } else if (isImage) {
-        code = `<img src="${finalSrc}" width="100%" height="100%" alt="embed" style="object-fit: cover;" />`;
-      } else {
-        code = `<iframe src="${finalSrc}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
-      }
-    } else {
-      code = finalSrc;
-    }
-    setCustomCode(code);
-  }, [webCodeType, embedSrc, embedWidth, embedHeight, autoplay, muted, controls, loop, startTime, endTime, fullscreen]);
-
-  React.useEffect(() => {
-    if (selectedElementProps) {
-      if (selectedElementProps.width !== undefined) {
-        setEmbedWidth(Math.round(parseFloat(selectedElementProps.width)).toString());
-      }
-      if (selectedElementProps.height !== undefined) {
-        setEmbedHeight(Math.round(parseFloat(selectedElementProps.height)).toString());
-      }
-    }
-  }, [selectedElementProps?.width, selectedElementProps?.height]);
-
-  // --- UI states for Color ---
-  const [openSubSection, setOpenSubSection] = useState('color');
-  const [activeColorPicker, setActiveColorPicker] = useState(null);
-  const [showStrokeSettings, setShowStrokeSettings] = useState(false);
-  const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
-  const [isDashPosOpen, setIsDashPosOpen] = useState(false);
-  const [activePopup, setActivePopup] = useState(null);
+  // --- 4. Effects ---
+  const [openSection, setOpenSection] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
 
-  // --- DERIVED STATE ---
-  const backgroundColor = selectedElementProps ? {
-    fill: selectedElementProps['data-fill-color'] || 'transparent',
-    fillOpacity: selectedElementProps['data-fill-opacity'] ? parseFloat(selectedElementProps['data-fill-opacity']) * 100 : 100,
-    stroke: selectedElementProps.stroke || 'none',
-    strokeOpacity: selectedElementProps['stroke-opacity'] ? parseFloat(selectedElementProps['stroke-opacity']) * 100 : 100,
-    fillType: selectedElementProps['fill-type'] || 'solid',
-    fillGradientType: selectedElementProps['fill-gradient-type'] || 'linear',
-    fillStops: selectedElementProps['fill-stops'],
-    fillAngle: parseFloat(selectedElementProps['fill-angle'] || 0),
-    fillRadius: parseFloat(selectedElementProps['fill-radius'] || 100),
-    strokeType: selectedElementProps['stroke-type'] || 'solid',
-    strokeGradientType: selectedElementProps['stroke-gradient-type'] || 'linear',
-    strokeStops: selectedElementProps['stroke-stops'],
-    strokeAngle: parseFloat(selectedElementProps['stroke-angle'] || 0),
-    strokeRadius: parseFloat(selectedElementProps['stroke-radius'] || 100),
-    strokeWeight: parseFloat(selectedElementProps['stroke-width'] || 0),
-    strokeDashStyle: ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) && (selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) !== 'none') ? 'Dashed' : 'Solid',
-    strokeDasharrayValue: selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray,
-    strokeDashLength: parseInt(((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0]) || 10,
-    strokeDashGap: parseInt((((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[1] || ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps['stroke-dasharray'] || selectedElementProps['data-stroke-dasharray'] || selectedElementProps.strokeDasharray) || '10,10')).split(',')[0])) || 10,
-    strokeLinecap: selectedElementProps['stroke-linecap'] || 'butt',
-    strokePosition: selectedElementProps['data-stroke-position'] || 'Center',
-  } : {};
-
-  const handleSetBackgroundColor = (updater) => {
-    const next = typeof updater === 'function' ? updater(backgroundColor) : updater;
-    const updates = {};
-    if (backgroundColor.fill !== next.fill) updates['data-fill-color'] = next.fill;
-    if (backgroundColor.fillOpacity !== next.fillOpacity) updates['data-fill-opacity'] = (next.fillOpacity / 100).toString();
-    if (backgroundColor.stroke !== next.stroke) updates['stroke'] = next.stroke;
-    if (backgroundColor.strokeOpacity !== next.strokeOpacity) updates['stroke-opacity'] = (next.strokeOpacity / 100).toString();
-    if (backgroundColor.strokeWeight !== next.strokeWeight) {
-      updates['stroke-width'] = next.strokeWeight.toString();
-      updates['strokeWidth'] = next.strokeWeight.toString();
-      updates['data-stroke-width'] = next.strokeWeight.toString();
+  // Active Effects and Drop Shadow settings state
+  const [activeEffects, setActiveEffects] = useState([]);
+  const [effectSettings, setEffectSettings] = useState({
+    'Drop Shadow': {
+      x: 2,
+      y: 2,
+      blur: 0,
+      spread: 0,
+      color: '#000000',
+      opacity: 35
     }
-    if (backgroundColor.strokeDashStyle !== next.strokeDashStyle || backgroundColor.strokeDashLength !== next.strokeDashLength || backgroundColor.strokeDashGap !== next.strokeDashGap || backgroundColor.strokeDasharrayValue !== next.strokeDasharrayValue) {
-      if (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') {
-        updates['stroke-dasharray'] = 'none';
-      } else {
-        updates['stroke-dasharray'] = next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`;
-      }
-    }
-    if (backgroundColor.strokePosition !== next.strokePosition) updates['data-stroke-position'] = next.strokePosition;
-    if (backgroundColor.strokeLinecap !== next.strokeLinecap) {
-      updates['stroke-linecap'] = next.strokeLinecap;
-      updates['stroke-linejoin'] = next.strokeLinecap === 'round' ? 'round' : 'miter';
-    }
-    if (backgroundColor.fillType !== next.fillType) updates['fill-type'] = next.fillType;
-    if (backgroundColor.fillGradientType !== next.fillGradientType) updates['fill-gradient-type'] = next.fillGradientType;
-    if (backgroundColor.fillStops !== next.fillStops) updates['fill-stops'] = next.fillStops;
-    if (backgroundColor.fillAngle !== next.fillAngle) updates['fill-angle'] = next.fillAngle;
-    if (backgroundColor.fillRadius !== next.fillRadius) updates['fill-radius'] = next.fillRadius;
+  });
 
-    if (backgroundColor.strokeType !== next.strokeType) updates['stroke-type'] = next.strokeType;
-    if (backgroundColor.strokeGradientType !== next.strokeGradientType) updates['stroke-gradient-type'] = next.strokeGradientType;
-    if (backgroundColor.strokeStops !== next.strokeStops) updates['stroke-stops'] = next.strokeStops;
-    if (backgroundColor.strokeAngle !== next.strokeAngle) updates['stroke-angle'] = next.strokeAngle;
-    if (backgroundColor.strokeRadius !== next.strokeRadius) updates['stroke-radius'] = next.strokeRadius;
-
-    if (Object.keys(updates).length > 0) {
-      updateElementAttribute(activePageIndex, selectedLayerId, updates);
-    }
-  };
-
-  const colorsOnPage = React.useMemo(() => {
+  // Colors on page list for ColorPicker
+  const colorsOnPageList = useMemo(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const elements = doc.querySelectorAll('[data-fill-color], [data-stroke-color]');
+    const elements = doc.querySelectorAll('[data-fill-color], [data-stroke-color], [fill], [stroke]');
     const colors = new Set();
     elements.forEach(el => {
-      const fill = el.getAttribute('data-fill-color');
-      const stroke = el.getAttribute('data-stroke-color');
+      const fill = el.getAttribute('data-fill-color') || el.getAttribute('fill');
+      const stroke = el.getAttribute('data-stroke-color') || el.getAttribute('stroke');
       if (fill && fill !== 'none' && fill !== '#' && !fill.includes('gradient')) colors.add(fill.toUpperCase());
       if (stroke && stroke !== 'none' && stroke !== '#' && !stroke.includes('gradient')) colors.add(stroke.toUpperCase());
     });
-    colors.add('#FFFFFF');
     colors.add('#000000');
+    colors.add('#FFFFFF');
     return Array.from(colors).slice(0, 12);
   }, [selectedElementProps, activePageIndex]);
 
-  // --- Effects State ---
-  const activeEffects = [];
-  if (selectedElementProps && selectedElementProps['data-effect-drop-shadow'] === 'true') activeEffects.push('Drop Shadow');
-  if (selectedElementProps && selectedElementProps['data-effect-inner-shadow'] === 'true') activeEffects.push('Inner Shadow');
-  if (selectedElementProps && selectedElementProps['data-effect-blur'] === 'true') activeEffects.push('Blur');
+  // Helper to sync changes to page state and trigger debounced DOM sync
+  const syncEmbedDomToPage = useCallback(() => {
+    if (!updateElementAttribute || !selectedElement) return;
+    let node = selectedElement;
+    let lastSvg = null;
+    while (node) {
+      if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+      node = node.parentElement;
+    }
+    if (lastSvg) {
+      window.__skipCanvasUpdateForPage = activePageIndex;
+      const cloneSvg = lastSvg.cloneNode(true);
+      cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
+      const serializer = new XMLSerializer();
+      const html = serializer.serializeToString(cloneSvg);
+      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+    }
+  }, [updateElementAttribute, selectedElement, activePageIndex, selectedLayerId]);
 
   const handleSetActiveEffects = (updater) => {
-    const currentActive = [];
-    if (selectedElementProps['data-effect-drop-shadow'] === 'true') currentActive.push('Drop Shadow');
-    if (selectedElementProps['data-effect-inner-shadow'] === 'true') currentActive.push('Inner Shadow');
-    if (selectedElementProps['data-effect-blur'] === 'true') currentActive.push('Blur');
-
-    const next = typeof updater === 'function' ? updater(currentActive) : updater;
-    const updates = {};
+    const next = typeof updater === 'function' ? updater(activeEffects) : updater;
+    setActiveEffects(next);
     const hasDropShadow = next.includes('Drop Shadow');
-    const hasInnerShadow = next.includes('Inner Shadow');
-    const hasBlur = next.includes('Blur');
 
-    if ((selectedElementProps['data-effect-drop-shadow'] === 'true') !== hasDropShadow) updates['data-effect-drop-shadow'] = hasDropShadow ? 'true' : 'false';
-    if ((selectedElementProps['data-effect-inner-shadow'] === 'true') !== hasInnerShadow) updates['data-effect-inner-shadow'] = hasInnerShadow ? 'true' : 'false';
-    if ((selectedElementProps['data-effect-blur'] === 'true') !== hasBlur) updates['data-effect-blur'] = hasBlur ? 'true' : 'false';
-
-    if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
-  };
-
-  const effectSettings = selectedElementProps ? {
-    'Drop Shadow': {
-      x: parseInt(selectedElementProps['data-effect-drop-shadow-x'] || 2),
-      y: parseInt(selectedElementProps['data-effect-drop-shadow-y'] || 2),
-      blur: parseInt(selectedElementProps['data-effect-drop-shadow-blur'] || 0),
-      spread: parseInt(selectedElementProps['data-effect-drop-shadow-spread'] || 0),
-      color: selectedElementProps['data-effect-drop-shadow-color'] || '#000000',
-      opacity: parseInt(selectedElementProps['data-effect-drop-shadow-opacity'] || 35),
-    },
-    'Inner Shadow': {
-      x: parseInt(selectedElementProps['data-effect-inner-shadow-x'] || 2),
-      y: parseInt(selectedElementProps['data-effect-inner-shadow-y'] || 2),
-      blur: parseInt(selectedElementProps['data-effect-inner-shadow-blur'] || 0),
-      spread: parseInt(selectedElementProps['data-effect-inner-shadow-spread'] || 0),
-      color: selectedElementProps['data-effect-inner-shadow-color'] || '#000000',
-      opacity: parseInt(selectedElementProps['data-effect-inner-shadow-opacity'] || 35),
-    },
-    'Blur': {
-      blur: parseFloat(selectedElementProps['data-effect-blur-value'] !== undefined ? selectedElementProps['data-effect-blur-value'] : (selectedElementProps['data-effect-blur-blur'] || 0.3)),
-      spread: parseInt(selectedElementProps['data-effect-blur-spread'] || 0),
-      clipContent: selectedElementProps['data-effect-blur-clip'] === 'true'
+    if (selectedElement) {
+      const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+      if (frameGroup) {
+        frameGroup.setAttribute('data-effect-drop-shadow', hasDropShadow ? 'true' : 'false');
+        syncLiveFilters(frameGroup);
+      }
     }
-  } : {};
+
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, {
+        'data-effect-drop-shadow': hasDropShadow ? 'true' : 'false'
+      });
+    }
+
+    syncEmbedDomToPage();
+  };
 
   const handleSetEffectSettings = (updater) => {
     const next = typeof updater === 'function' ? updater(effectSettings) : updater;
-    const updates = {};
-    ['Drop Shadow', 'Inner Shadow'].forEach(type => {
-      const prefix = type === 'Drop Shadow' ? 'drop-shadow' : 'inner-shadow';
-      if (effectSettings[type].x !== next[type].x) updates[`data-effect-${prefix}-x`] = next[type].x.toString();
-      if (effectSettings[type].y !== next[type].y) updates[`data-effect-${prefix}-y`] = next[type].y.toString();
-      if (effectSettings[type].blur !== next[type].blur) updates[`data-effect-${prefix}-blur`] = next[type].blur.toString();
-      if (effectSettings[type].spread !== next[type].spread) updates[`data-effect-${prefix}-spread`] = next[type].spread.toString();
-      if (effectSettings[type].color !== next[type].color) updates[`data-effect-${prefix}-color`] = next[type].color;
-      if (effectSettings[type].opacity !== next[type].opacity) updates[`data-effect-${prefix}-opacity`] = next[type].opacity.toString();
-    });
+    if (!next) return;
+    setEffectSettings(next);
 
-    if (effectSettings['Blur'].blur !== next['Blur'].blur) updates[`data-effect-blur-value`] = next['Blur'].blur.toString();
-    if (effectSettings['Blur'].spread !== next['Blur'].spread) updates[`data-effect-blur-spread`] = next['Blur'].spread.toString();
-    if (effectSettings['Blur'].clipContent !== next['Blur'].clipContent) updates[`data-effect-blur-clip`] = next['Blur'].clipContent ? 'true' : 'false';
+    const ds = next['Drop Shadow'];
+    if (!ds) return;
 
-    if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
-  };
+    const updates = {
+      'data-effect-drop-shadow-x': ds.x.toString(),
+      'data-effect-drop-shadow-y': ds.y.toString(),
+      'data-effect-drop-shadow-blur': ds.blur.toString(),
+      'data-effect-drop-shadow-spread': ds.spread.toString(),
+      'data-effect-drop-shadow-color': ds.color,
+      'data-effect-drop-shadow-opacity': ds.opacity.toString()
+    };
 
-
-  if (!selectedElementProps) return null;
-
-  // 1. Sync URL from DOM to State when selectedElement changes
-  React.useEffect(() => {
-    if (!selectedElement) return;
-    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
-    if (frameGroup) {
-      const currentUrl = frameGroup.getAttribute('data-url') || '';
-      setUrl(currentUrl);
-
-      const currentCode = frameGroup.getAttribute('data-custom-code') || '';
-      setCustomCode(currentCode);
-
-      let currentW = '650';
-      let currentH = '400';
-      const rect = frameGroup.querySelector('rect[pointer-events="all"]') || frameGroup.querySelector('rect.svg-image-stroke-overlay');
-      if (rect) {
-        currentW = Math.round(parseFloat(rect.getAttribute('width')) || 650).toString();
-        currentH = Math.round(parseFloat(rect.getAttribute('height')) || 400).toString();
-      }
-
-      const srcMatch = currentCode.match(/src="([^"]*)"/);
-      let parsedSrc = '';
-      if (srcMatch && !currentCode.startsWith('<iframe srcdoc')) {
-        parsedSrc = srcMatch[1];
-      } else {
-        parsedSrc = currentCode;
-      }
-
-      setEmbedWidth(currentW);
-      setEmbedHeight(currentH);
-
-      let detectedType = 'Embed Code';
-      if (currentCode.trim() !== '' && !currentCode.startsWith('<iframe srcdoc')) {
-        if (!currentCode.includes('<img') && !currentCode.includes('<video') && !currentCode.includes('<iframe')) {
-           detectedType = 'Embed Code';
-        } else {
-           detectedType = 'URL Link';
-        }
-      }
-
-      if (detectedType === 'URL Link') {
-        if (currentCode.includes('youtube.com/embed/')) {
-          try {
-            const srcUrlString = parsedSrc.replace(/&amp;/g, '&');
-            const urlObj = new URL(srcUrlString);
-            setAutoplay(urlObj.searchParams.get('autoplay') === '1');
-            setMuted(urlObj.searchParams.get('mute') === '1');
-            setControls(urlObj.searchParams.get('controls') !== '0');
-            setLoop(urlObj.searchParams.get('loop') === '1');
-            setStartTime(parseInt(urlObj.searchParams.get('start') || '0', 10));
-            setEndTime(parseInt(urlObj.searchParams.get('end') || '0', 10));
-            if (urlObj.searchParams.has('fs')) {
-              setFullscreen(urlObj.searchParams.get('fs') !== '0');
-            } else {
-              setFullscreen(currentCode.includes('allowfullscreen'));
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        } else if (currentCode.includes('<video')) {
-          setAutoplay(currentCode.includes('autoplay'));
-          setMuted(currentCode.includes('muted'));
-          setControls(currentCode.includes('controls'));
-          setLoop(currentCode.includes('loop'));
-        }
-      }
-
-      setWebCodeType(detectedType);
-      setSources(prev => ({ ...prev, [detectedType]: detectedType === 'Embed Code' ? currentCode : (currentCode.includes('youtube.com/embed/') ? parsedSrc.split('?')[0].replace('https://www.youtube.com/embed/', 'https://www.youtube.com/watch?v=') : parsedSrc) }));
-
-      // Force pointer-events fix on existing frames
-      const pointerRect = frameGroup.querySelector('rect[pointer-events="all"]');
-      if (pointerRect && (currentUrl.trim() !== '' || currentCode.trim() !== '')) {
-        pointerRect.setAttribute('pointer-events', 'none');
+    if (selectedElement) {
+      const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+      if (frameGroup) {
+        frameGroup.setAttribute('data-effect-drop-shadow-x', ds.x.toString());
+        frameGroup.setAttribute('data-effect-drop-shadow-y', ds.y.toString());
+        frameGroup.setAttribute('data-effect-drop-shadow-blur', ds.blur.toString());
+        frameGroup.setAttribute('data-effect-drop-shadow-spread', ds.spread.toString());
+        frameGroup.setAttribute('data-effect-drop-shadow-color', ds.color);
+        frameGroup.setAttribute('data-effect-drop-shadow-opacity', ds.opacity.toString());
+        syncLiveFilters(frameGroup);
       }
     }
-  }, [selectedElement]);
 
-  // 2. Sync State to DOM when URL changes
-  React.useEffect(() => {
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, updates);
+    }
+
+    syncEmbedDomToPage();
+  };
+
+  const isHydratingRef = useRef(false);
+  const lastElementIdRef = useRef(null);
+  const lastAppliedSnapshotRef = useRef(null);
+
+  // Sync state from DOM on element selection
+  useEffect(() => {
     if (!selectedElement) return;
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (!frameGroup) return;
 
-    const currentCode = frameGroup.getAttribute('data-custom-code') || '';
+    isHydratingRef.current = true;
+    lastElementIdRef.current = frameGroup.id || selectedLayerId;
 
-    let currentW = 400, currentH = 300;
-    const domRect = frameGroup.querySelector('rect[pointer-events="all"]') || frameGroup.querySelector('rect.svg-image-stroke-overlay');
-    if (domRect) {
-      currentW = parseFloat(domRect.getAttribute('width')) || 400;
-      currentH = parseFloat(domRect.getAttribute('height')) || 300;
+    let currentUrl = frameGroup.getAttribute('data-url') || '';
+    let currentCode = frameGroup.getAttribute('data-custom-code') || '';
+    const savedVia = frameGroup.getAttribute('data-embed-via') || 'URL';
+
+    // Backward-compatibility: if legacy element had URL stored only in data-custom-code
+    if (!currentUrl && currentCode && savedVia === 'URL' && !currentCode.startsWith('<')) {
+      currentUrl = currentCode;
     }
 
-    const inputW = parseFloat(embedWidth) || currentW;
-    const inputH = parseFloat(embedHeight) || currentH;
+    setUrl(currentUrl);
+    setCustomCode(currentCode);
+    setEmbedVia(savedVia);
 
-    if (customCode === currentCode && inputW === currentW && inputH === currentH) return;
+    // Width & height
+    let currentW = '650';
+    let currentH = '400';
+    const foEl = frameGroup.querySelector('foreignObject');
+    const fillEl = frameGroup.querySelector('.embed-fill-layer');
+    if (foEl && foEl.getAttribute('width')) {
+      currentW = Math.round(parseFloat(foEl.getAttribute('width')) || 650).toString();
+      currentH = Math.round(parseFloat(foEl.getAttribute('height')) || 400).toString();
+    } else if (fillEl && fillEl.getAttribute('width')) {
+      currentW = Math.round(parseFloat(fillEl.getAttribute('width')) || 650).toString();
+      currentH = Math.round(parseFloat(fillEl.getAttribute('height')) || 400).toString();
+    } else {
+      const rect = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (rect) {
+        const sW = parseFloat(frameGroup.getAttribute('data-stroke-width') || frameGroup.getAttribute('stroke-width') || '0') || 0;
+        const rawW = parseFloat(rect.getAttribute('width')) || 650;
+        const rawH = parseFloat(rect.getAttribute('height')) || 400;
+        currentW = Math.round(Math.max(10, rawW - sW)).toString();
+        currentH = Math.round(Math.max(10, rawH - sW)).toString();
+      }
+    }
+    setEmbedWidth(currentW);
+    setEmbedHeight(currentH);
+
+    // Embed Controls
+    const savedOpenBtn = frameGroup.getAttribute('data-open-website-btn');
+    if (savedOpenBtn !== null) setOpenWebsiteBtn(savedOpenBtn === 'true');
+
+    const savedAllowFs = frameGroup.getAttribute('data-allow-fullscreen');
+    if (savedAllowFs !== null) setAllowFullscreen(savedAllowFs === 'true');
+
+    const savedBehavior = frameGroup.getAttribute('data-behavior');
+    if (savedBehavior) setBehavior(savedBehavior);
+
+    // Stroke
+    const sColor = frameGroup.getAttribute('data-stroke-color') || frameGroup.getAttribute('stroke') || '#000000';
+    const sOp = frameGroup.getAttribute('data-stroke-opacity') || frameGroup.getAttribute('stroke-opacity');
+    const sW = frameGroup.getAttribute('data-stroke-width') || frameGroup.getAttribute('stroke-width') || '1';
+    const sCorner = frameGroup.getAttribute('data-line-corner') || (frameGroup.getAttribute('stroke-linecap') === 'round' ? 'Rounded' : 'Square');
+
+    const cleanStrokeCol = sColor === 'none' || sColor === 'transparent' ? '#000000' : sColor;
+    const cleanStrokeOp = sOp ? Math.round(parseFloat(sOp) * 100) : 100;
+    const cleanStrokeW = parseFloat(sW) || 1;
+    setStrokeColor(cleanStrokeCol);
+    setStrokeOpacity(cleanStrokeOp);
+    setStrokeWidth(cleanStrokeW);
+    setLineCorner(sCorner);
+
+    // Hydrate Drop Shadow Effect from element attributes
+    const hasDropShadow = frameGroup.getAttribute('data-effect-drop-shadow') === 'true';
+    setActiveEffects(hasDropShadow ? ['Drop Shadow'] : []);
+
+    const dsX = parseInt(frameGroup.getAttribute('data-effect-drop-shadow-x') || 2);
+    const dsY = parseInt(frameGroup.getAttribute('data-effect-drop-shadow-y') || 2);
+    const dsBlur = parseInt(frameGroup.getAttribute('data-effect-drop-shadow-blur') || 0);
+    const dsSpread = parseInt(frameGroup.getAttribute('data-effect-drop-shadow-spread') || 0);
+    const dsColor = frameGroup.getAttribute('data-effect-drop-shadow-color') || '#000000';
+    const dsOpacity = parseInt(frameGroup.getAttribute('data-effect-drop-shadow-opacity') || 35);
+
+    setEffectSettings({
+      'Drop Shadow': {
+        x: isNaN(dsX) ? 2 : dsX,
+        y: isNaN(dsY) ? 2 : dsY,
+        blur: isNaN(dsBlur) ? 0 : dsBlur,
+        spread: isNaN(dsSpread) ? 0 : dsSpread,
+        color: dsColor,
+        opacity: isNaN(dsOpacity) ? 35 : dsOpacity
+      }
+    });
+
+    // Make sure live canvas element has filter properly rendered
+    syncLiveFilters(frameGroup);
+
+    // Record hydrated snapshot to prevent redundant sync effects from modifying DOM
+    lastAppliedSnapshotRef.current = {
+      code: currentCode,
+      url: currentUrl,
+      w: currentW,
+      h: currentH,
+      sCol: cleanStrokeCol,
+      sOp: cleanStrokeOp,
+      sW: cleanStrokeW,
+      sCorner: sCorner,
+      allowFs: savedAllowFs !== null ? savedAllowFs === 'true' : true,
+      openBtn: savedOpenBtn !== null ? savedOpenBtn === 'true' : true,
+      beh: savedBehavior || 'Open in - Current Tab',
+      via: savedVia
+    };
+
+    const timer = setTimeout(() => {
+      isHydratingRef.current = false;
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [selectedElement, selectedLayerId]);
+
+  // Sync to DOM and Debounced History update (no blinking, in-place updates)
+  useEffect(() => {
+    if (!selectedElement) return;
+    if (isHydratingRef.current) return;
+
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (!frameGroup) return;
+
+    const snap = lastAppliedSnapshotRef.current;
+    const hasOverlayInDom = !!frameGroup.querySelector('.embed-overlay-wrapper');
+    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && !!(url || customCode);
+    const hasCorrectOverlay = !!frameGroup.querySelector('.embed-overlay-wrapper .svg-icon-override');
+    const overlayNeedsUpdate = hasOverlayInDom !== shouldHaveOverlay || (shouldHaveOverlay && !hasCorrectOverlay);
+
+    if (
+      !overlayNeedsUpdate &&
+      snap &&
+      snap.code === customCode &&
+      snap.url === url &&
+      snap.w === embedWidth &&
+      snap.h === embedHeight &&
+      snap.sCol === strokeColor &&
+      snap.sOp === strokeOpacity &&
+      snap.sW === strokeWidth &&
+      snap.sCorner === lineCorner &&
+      snap.allowFs === allowFullscreen &&
+      snap.openBtn === openWebsiteBtn &&
+      snap.beh === behavior &&
+      snap.via === embedVia
+    ) {
+      // Nothing changed: do not touch DOM or trigger canvas re-renders
+      return;
+    }
+
+    const isTextTyping = snap && (snap.url !== url || snap.code !== customCode);
+    const delay = isTextTyping ? 200 : 0;
 
     const timeoutId = setTimeout(() => {
       frameGroup.setAttribute('data-url', url);
       frameGroup.setAttribute('data-custom-code', customCode);
-      frameGroup.setAttribute('data-embed-type', 'embed-code');
+      frameGroup.setAttribute('data-embed-type', embedVia === 'URL' ? 'url' : 'embed-code');
+      frameGroup.setAttribute('data-embed-via', embedVia);
+      frameGroup.setAttribute('data-open-website-btn', openWebsiteBtn ? 'true' : 'false');
+      frameGroup.setAttribute('data-allow-fullscreen', allowFullscreen ? 'true' : 'false');
+      frameGroup.setAttribute('data-behavior', behavior);
+      frameGroup.setAttribute('data-stroke-color', strokeColor);
+      frameGroup.setAttribute('data-stroke-width', strokeWidth.toString());
+      frameGroup.setAttribute('data-stroke-opacity', (strokeOpacity / 100).toString());
+      frameGroup.setAttribute('data-line-corner', lineCorner);
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
+      frameGroup.setAttribute('stroke-linecap', lineCorner === 'Rounded' ? 'round' : 'square');
+      frameGroup.setAttribute('stroke-linejoin', lineCorner === 'Rounded' ? 'round' : 'miter');
+      frameGroup.removeAttribute('data-tl');
+      frameGroup.removeAttribute('data-tr');
+      frameGroup.removeAttribute('data-bl');
+      frameGroup.removeAttribute('data-br');
+      frameGroup.removeAttribute('rx');
 
-      let w = inputW, h = inputH;
+      let w = parseFloat(embedWidth) || 650;
+      let h = parseFloat(embedHeight) || 400;
 
-      const strokeColor = frameGroup.getAttribute('data-stroke-color') || 'transparent';
-      const strokeWidth = frameGroup.getAttribute('data-stroke-width') || '0';
-      const strokeDash = frameGroup.getAttribute('data-stroke-dasharray') || 'none';
-      const strokeOpacity = frameGroup.getAttribute('data-stroke-opacity') || '1';
-      const strokeAttrs = `stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-opacity="${strokeOpacity}" ${strokeDash !== 'none' ? `stroke-dasharray="${strokeDash}"` : ''}`;
+      const strokeCol = strokeColor === 'none' ? 'transparent' : strokeColor;
+      const strokeW = strokeWidth;
+      const strokeOp = strokeOpacity / 100;
+      const strokeCap = lineCorner === 'Rounded' ? 'round' : 'square';
+      const strokeJoin = lineCorner === 'Rounded' ? 'round' : 'miter';
 
+      const sHalf = strokeW > 0 ? strokeW / 2 : 0;
+      const sRectX = strokeW > 0 ? -sHalf : 0;
+      const sRectY = strokeW > 0 ? -sHalf : 0;
+      const sRectW = strokeW > 0 ? w + strokeW : w;
+      const sRectH = strokeW > 0 ? h + strokeW : h;
+
+      // 1. Update Stroke Layer in-place (without wiping innerHTML)
+      let strokeLayer = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (strokeLayer) {
+        if (strokeLayer.tagName.toLowerCase() === 'rect') {
+          strokeLayer.setAttribute('x', sRectX.toString());
+          strokeLayer.setAttribute('y', sRectY.toString());
+          strokeLayer.setAttribute('width', sRectW.toString());
+          strokeLayer.setAttribute('height', sRectH.toString());
+          strokeLayer.removeAttribute('rx');
+          strokeLayer.removeAttribute('ry');
+          strokeLayer.setAttribute('stroke', strokeCol);
+          strokeLayer.setAttribute('stroke-width', strokeW.toString());
+          strokeLayer.setAttribute('stroke-opacity', strokeOp.toString());
+          strokeLayer.setAttribute('stroke-linecap', strokeCap);
+          strokeLayer.setAttribute('stroke-linejoin', strokeJoin);
+        } else {
+          const newStrokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          newStrokeEl.setAttribute('class', 'svg-image-stroke-overlay');
+          newStrokeEl.setAttribute('fill', 'transparent');
+          newStrokeEl.setAttribute('pointer-events', 'all');
+          newStrokeEl.setAttribute('stroke', strokeCol);
+          newStrokeEl.setAttribute('stroke-width', strokeW.toString());
+          newStrokeEl.setAttribute('stroke-opacity', strokeOp.toString());
+          newStrokeEl.setAttribute('stroke-linecap', strokeCap);
+          newStrokeEl.setAttribute('stroke-linejoin', strokeJoin);
+          newStrokeEl.setAttribute('x', sRectX.toString());
+          newStrokeEl.setAttribute('y', sRectY.toString());
+          newStrokeEl.setAttribute('width', sRectW.toString());
+          newStrokeEl.setAttribute('height', sRectH.toString());
+          strokeLayer.replaceWith(newStrokeEl);
+        }
+      }
+
+      // 2. Update Fill Layer in-place
+      let fillLayer = frameGroup.querySelector('.embed-fill-layer');
       const fillColor = frameGroup.getAttribute('data-fill-color') || 'transparent';
       const fillOpacity = frameGroup.getAttribute('data-fill-opacity') || '1';
-      const iframeOpacity = frameGroup.getAttribute('data-iframe-opacity') ?? frameGroup.getAttribute('opacity') ?? '1';
+      if (fillLayer) {
+        if (fillLayer.tagName.toLowerCase() === 'rect') {
+          fillLayer.setAttribute('width', w.toString());
+          fillLayer.setAttribute('height', h.toString());
+          fillLayer.removeAttribute('rx');
+          fillLayer.removeAttribute('ry');
+        } else {
+          const newFillEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          newFillEl.setAttribute('class', 'embed-fill-layer');
+          newFillEl.setAttribute('x', '0');
+          newFillEl.setAttribute('y', '0');
+          newFillEl.setAttribute('width', w.toString());
+          newFillEl.setAttribute('height', h.toString());
+          newFillEl.setAttribute('fill', fillColor);
+          newFillEl.setAttribute('opacity', fillOpacity);
+          newFillEl.setAttribute('pointer-events', 'none');
+          fillLayer.replaceWith(newFillEl);
+        }
+      }
 
-      if (customCode.trim() !== '') {
-        const escapeHtml = (unsafe) => {
-          return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-        };
-        const srcdocHtml = escapeHtml(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; }</style></head><body>${customCode}</body></html>`);
+      // 3. Update foreignObject, rootContainer, iframe, and overlay in-place
+      const iframeInfo = getEmbedIframeContent({
+        via: embedVia,
+        targetUrl: url,
+        code: customCode,
+        allowFs: allowFullscreen
+      });
+
+      const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+      const overlayHtml = getEmbedOverlayHtml({
+        targetUrl: effectiveUrl,
+        openWebsiteBtn,
+        allowFullscreen,
+        behavior
+      });
+
+      let fo = frameGroup.querySelector('foreignObject');
+      if (fo) {
+        fo.setAttribute('width', w.toString());
+        fo.setAttribute('height', h.toString());
+        fo.style.borderRadius = '0px';
+        fo.style.overflow = 'hidden';
+
+        let rootContainer = fo.querySelector('.embed-root-container');
+        if (!rootContainer) {
+          const existingIframe = fo.querySelector('iframe');
+          rootContainer = document.createElement('div');
+          rootContainer.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+          rootContainer.className = 'embed-root-container';
+          rootContainer.setAttribute('style', 'position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;');
+          if (existingIframe) {
+            rootContainer.appendChild(existingIframe);
+          } else {
+            rootContainer.innerHTML = iframeInfo.html;
+          }
+          fo.innerHTML = '';
+          fo.appendChild(rootContainer);
+        }
+
+        const existingIframe = rootContainer.querySelector('iframe');
+        let needsReload = false;
+        if (!existingIframe) {
+          needsReload = true;
+        } else if (iframeInfo.type === 'url') {
+          if (existingIframe.getAttribute('src') !== iframeInfo.src || existingIframe.hasAttribute('srcdoc')) {
+            needsReload = true;
+          }
+        } else {
+          // 'placeholder' or 'code'
+          if (existingIframe.getAttribute('srcdoc') !== iframeInfo.srcdoc || existingIframe.hasAttribute('src')) {
+            needsReload = true;
+          }
+        }
+
+        if (needsReload) {
+          const temp = document.createElement('div');
+          temp.innerHTML = iframeInfo.html;
+          const newIframe = temp.querySelector('iframe');
+          if (existingIframe) {
+            existingIframe.replaceWith(newIframe);
+          } else {
+            rootContainer.insertBefore(newIframe, rootContainer.firstChild);
+          }
+        } else if (existingIframe) {
+          existingIframe.style.borderRadius = '0px';
+        }
+
+        // Update or insert overlay wrapper
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (overlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = overlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (overlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      } else {
+        const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}"`;
+        const fillLayerHtml = `<rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />`;
+        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="${sRectX}" y="${sRectY}" width="${sRectW}" height="${sRectH}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
 
         frameGroup.innerHTML = `
-          <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />
-          <g class="embed-content-group" opacity="${iframeOpacity}" pointer-events="none">
-            <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all">
-              <iframe srcdoc="${srcdocHtml}" width="100%" height="100%" style="border:none; background:transparent;" scrolling="auto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowtransparency="true"></iframe>
+          ${fillLayerHtml}
+          <g class="embed-content-group" pointer-events="none">
+            <foreignObject x="0" y="0" width="${w}" height="${h}" pointer-events="all" style="border-radius: 0px; overflow: hidden;">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="embed-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; background: transparent;">
+                ${iframeInfo.html}
+                ${overlayHtml}
+              </div>
             </foreignObject>
           </g>
-          <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="none" ${strokeAttrs} />
-        `;
-      } else {
-        const cx = (w - 300) / 2;
-        const cy = (h - 200) / 2;
-        frameGroup.innerHTML = `
-          <rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />
-          <g class="embed-content-group" opacity="${iframeOpacity}" pointer-events="none">
-            <rect width="${w}" height="${h}" fill="transparent" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,6" rx="8" />
-            <g transform="translate(${cx}, ${cy})">
-              <rect x="0" y="0" width="300" height="200" fill="#e5e7eb" rx="12" />
-              <path d="M 0 12 Q 0 0 12 0 L 288 0 Q 300 0 300 12 L 300 30 L 0 30 Z" fill="#d1d5db" />
-              <circle cx="20" cy="15" r="4" fill="#ffffff" opacity="0.8" />
-              <circle cx="35" cy="15" r="4" fill="#ffffff" opacity="0.8" />
-              <circle cx="50" cy="15" r="4" fill="#ffffff" opacity="0.8" />
-              <g transform="translate(110, 60) scale(3.5)" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-              </g>
-            </g>
-          </g>
-          <rect class="svg-image-stroke-overlay" width="${w}" height="${h}" fill="transparent" pointer-events="all" ${strokeAttrs} />
+          ${strokeLayerHtml}
         `;
       }
 
+      // Record snapshot of applied values
+      lastAppliedSnapshotRef.current = {
+        code: customCode,
+        url: url,
+        w: embedWidth,
+        h: embedHeight,
+        sCol: strokeColor,
+        sOp: strokeOpacity,
+        sW: strokeWidth,
+        sCorner: lineCorner,
+        allowFs: allowFullscreen,
+        openBtn: openWebsiteBtn,
+        beh: behavior,
+        via: embedVia
+      };
+
+      // Save to page state without wiping out canvas
       if (updateElementAttribute && selectedElement) {
         let node = selectedElement;
         let lastSvg = null;
@@ -459,6 +850,7 @@ const ElementEmbedProperties = ({
           node = node.parentElement;
         }
         if (lastSvg) {
+          window.__skipCanvasUpdateForPage = activePageIndex;
           const cloneSvg = lastSvg.cloneNode(true);
           cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
           const serializer = new XMLSerializer();
@@ -466,233 +858,471 @@ const ElementEmbedProperties = ({
           updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
         }
       }
-    }, 500);
+    }, delay);
 
     return () => clearTimeout(timeoutId);
-  }, [url, customCode, embedWidth, embedHeight, activePageIndex, selectedLayerId, updateElementAttribute]); // Removed selectedElement to prevent infinite loop
+  }, [
+    customCode,
+    url,
+    embedVia,
+    embedWidth,
+    embedHeight,
+    strokeColor,
+    strokeWidth,
+    strokeOpacity,
+    lineCorner,
+    openWebsiteBtn,
+    allowFullscreen,
+    behavior
+  ]);
 
-  // 3. Sync fill color to DOM in real-time
-  React.useEffect(() => {
+  // Handlers for Embed Via, URL, and Embed Code
+  const handleEmbedViaChange = (val) => {
+    setEmbedVia(val);
     if (!selectedElement) return;
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
-    if (!frameGroup) return;
-
-    const fillRect = frameGroup.querySelector('.embed-fill-layer');
-    if (fillRect) {
-      fillRect.setAttribute('fill', backgroundColor.fill);
-      fillRect.setAttribute('opacity', (backgroundColor.fillOpacity / 100).toString());
+    if (frameGroup) {
+      frameGroup.setAttribute('data-embed-via', val);
+      frameGroup.setAttribute('data-embed-type', val === 'URL' ? 'url' : 'embed-code');
     }
+  };
 
-    // Clean up legacy fill applied to the group which obscures the iframe
-    if (frameGroup.hasAttribute('fill')) {
-      frameGroup.removeAttribute('fill');
-    }
-  }, [backgroundColor.fill, backgroundColor.fillOpacity, selectedElement]);
+  const handleUrlChange = (val) => {
+    setUrl(val);
+  };
 
-  // 4. Debounced __dom_sync__ update for color changes
-  const prevColorRef = React.useRef(backgroundColor);
-  
-  React.useEffect(() => {
+  const handleCustomCodeChange = (val) => {
+    setCustomCode(val);
+  };
+
+  // Handlers for Embed Controls
+  const handleOpenWebsiteBtnChange = (val) => {
+    setOpenWebsiteBtn(val);
     if (!selectedElement) return;
-    
-    const bgChanged = 
-      prevColorRef.current.fill !== backgroundColor.fill ||
-      prevColorRef.current.fillOpacity !== backgroundColor.fillOpacity ||
-      prevColorRef.current.stroke !== backgroundColor.stroke ||
-      prevColorRef.current.strokeOpacity !== backgroundColor.strokeOpacity ||
-      prevColorRef.current.strokeWeight !== backgroundColor.strokeWeight ||
-      prevColorRef.current.strokeDashStyle !== backgroundColor.strokeDashStyle;
-      
-    if (!bgChanged) return;
-    
-    const timeoutId = setTimeout(() => {
-      if (updateElementAttribute) {
-        let node = selectedElement;
-        let lastSvg = null;
-        while (node) {
-          if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
-          node = node.parentElement;
-        }
-        if (lastSvg) {
-          const cloneSvg = lastSvg.cloneNode(true);
-          cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
-          const serializer = new XMLSerializer();
-          const html = serializer.serializeToString(cloneSvg);
-          updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
-          prevColorRef.current = backgroundColor;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-open-website-btn', val ? 'true' : 'false');
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn: val,
+          allowFullscreen,
+          behavior
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
         }
       }
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [backgroundColor, activePageIndex, selectedLayerId, updateElementAttribute]); // Removed selectedElement to prevent infinite loop
+      syncEmbedDomToPage();
+    }
+  };
+
+  const handleAllowFullscreenChange = (val) => {
+    setAllowFullscreen(val);
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-allow-fullscreen', val ? 'true' : 'false');
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn,
+          allowFullscreen: val,
+          behavior
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      }
+      syncEmbedDomToPage();
+    }
+  };
+
+  const handleBehaviorChange = (val) => {
+    setBehavior(val);
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-behavior', val);
+      const rootContainer = frameGroup.querySelector('.embed-root-container');
+      if (rootContainer) {
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const nextOverlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn,
+          allowFullscreen,
+          behavior: val
+        });
+        const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+        if (existingOverlay) {
+          if (nextOverlayHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = nextOverlayHtml;
+            existingOverlay.replaceWith(tempDiv.firstElementChild);
+          } else {
+            existingOverlay.remove();
+          }
+        } else if (nextOverlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = nextOverlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        }
+      }
+      syncEmbedDomToPage();
+    }
+  };
+
+  // Handlers for Stoke Color & Width
+  const handleStrokeColorChange = (newColor) => {
+    setStrokeColor(newColor);
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-stroke-color', newColor);
+      frameGroup.setAttribute('stroke', newColor);
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
+      const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (strokeOverlay) {
+        strokeOverlay.setAttribute('stroke', newColor);
+      }
+    }
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, {
+        'stroke': newColor,
+        'data-stroke-color': newColor,
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
+      });
+    }
+  };
+
+  const handleStrokeOpacityChange = (newOpacity) => {
+    setStrokeOpacity(newOpacity);
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-stroke-opacity', (newOpacity / 100).toString());
+      frameGroup.setAttribute('stroke-opacity', (newOpacity / 100).toString());
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
+      const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (strokeOverlay) {
+        strokeOverlay.setAttribute('stroke-opacity', (newOpacity / 100).toString());
+      }
+    }
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, {
+        'stroke-opacity': (newOpacity / 100).toString(),
+        'data-stroke-opacity': (newOpacity / 100).toString(),
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
+      });
+    }
+  };
+
+  const handleStrokeWidthChange = (newWidth) => {
+    const val = Math.max(0, newWidth);
+    setStrokeWidth(val);
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-stroke-width', val.toString());
+      frameGroup.setAttribute('stroke-width', val.toString());
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
+      const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (strokeOverlay) {
+        strokeOverlay.setAttribute('stroke-width', val.toString());
+        const fo = frameGroup.querySelector('foreignObject');
+        const fillLayer = frameGroup.querySelector('.embed-fill-layer');
+        const baseW = fo ? parseFloat(fo.getAttribute('width')) : (fillLayer ? parseFloat(fillLayer.getAttribute('width')) : parseFloat(frameGroup.getAttribute('width') || '650'));
+        const baseH = fo ? parseFloat(fo.getAttribute('height')) : (fillLayer ? parseFloat(fillLayer.getAttribute('height')) : parseFloat(frameGroup.getAttribute('height') || '400'));
+        if (baseW && baseH) {
+          const sHalf = val > 0 ? val / 2 : 0;
+          const sX = val > 0 ? -sHalf : 0;
+          const sY = val > 0 ? -sHalf : 0;
+          const sW = val > 0 ? baseW + val : baseW;
+          const sH = val > 0 ? baseH + val : baseH;
+          strokeOverlay.setAttribute('x', sX.toString());
+          strokeOverlay.setAttribute('y', sY.toString());
+          strokeOverlay.setAttribute('width', sW.toString());
+          strokeOverlay.setAttribute('height', sH.toString());
+        }
+      }
+    }
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, {
+        'stroke-width': val.toString(),
+        'data-stroke-width': val.toString(),
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
+      });
+    }
+  };
+
+  const handleLineCornerChange = (corner) => {
+    setLineCorner(corner);
+    const linecap = corner === 'Rounded' ? 'round' : 'square';
+    const linejoin = corner === 'Rounded' ? 'round' : 'miter';
+    if (!selectedElement) return;
+    const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
+    if (frameGroup) {
+      frameGroup.setAttribute('data-line-corner', corner);
+      frameGroup.setAttribute('stroke-linecap', linecap);
+      frameGroup.setAttribute('stroke-linejoin', linejoin);
+      frameGroup.setAttribute('data-stroke-alignment', 'Outside');
+      frameGroup.setAttribute('data-stroke-position', 'Outside');
+      const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
+      if (strokeOverlay) {
+        strokeOverlay.setAttribute('stroke-linecap', linecap);
+        strokeOverlay.setAttribute('stroke-linejoin', linejoin);
+      }
+    }
+    if (updateElementAttribute) {
+      updateElementAttribute(activePageIndex, selectedLayerId, {
+        'data-line-corner': corner,
+        'stroke-linecap': linecap,
+        'stroke-linejoin': linejoin,
+        'data-stroke-alignment': 'Outside',
+        'data-stroke-position': 'Outside'
+      });
+    }
+  };
 
   return (
-    <div className="flex flex-col font-sans h-full">
+    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
 
+      {/* ─── 1. 3RD PARTY EMBED PROPERTY ─── */}
+      <SectionHeader title="3rd Party Embed Property" />
 
-      {/* Web Settings */}
-      <div className="flex items-center gap-[0.5vw]">
-        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">3rd Party Embed Properties</span>
-        <div className="h-[0.0925vw] bg-gray-200 flex-1" > </div>
+      {/* Embed Via row */}
+      <PropertyRow label="Embed Via">
+        <div className="flex items-center gap-[1.2vw]">
+          <RadioButton
+            label="URL"
+            checked={embedVia === 'URL'}
+            onChange={() => handleEmbedViaChange('URL')}
+          />
+          <RadioButton
+            label="Embed Code"
+            checked={embedVia === 'Embed Code'}
+            onChange={() => handleEmbedViaChange('Embed Code')}
+          />
+        </div>
+      </PropertyRow>
+
+      <div className="flex flex-col gap-[0.25vw] pl-[0.5vw] pr-[0.2vw]">
+        <span className="text-[0.7vw] text-gray-500 font-medium">
+          {embedVia === 'Embed Code' ? 'Code' : 'Source URL'}
+        </span>
+
+        {embedVia === 'Embed Code' ? (
+          <textarea
+            placeholder="Paste HTML code here"
+            value={customCode}
+            onChange={(e) => handleCustomCodeChange(e.target.value)}
+            rows={3}
+            className="w-full border border-gray-200 rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-normal text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono"
+          />
+        ) : (
+          <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
+            <input
+              type="text"
+              placeholder="e.g. https://..."
+              value={url}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (url) {
+                  navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                  setCopiedUrl(true);
+                  setTimeout(() => setCopiedUrl(false), 1500);
+                }
+              }}
+              className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#E05638] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
+              title={copiedUrl ? 'Copied!' : 'Copy Link'}
+            >
+              {copiedUrl ? (
+                <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+              ) : (
+                <Copy className="w-[0.85vw] h-[0.85vw]" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col gap-[0.8vw] mt-[2vw] px-[1.3vw]">
-        <div className="flex flex-col" style={{ width: '100%' }}>
-          <div className="flex items-center gap-[0.7vw] mb-[0.6vw]">
-            {['Embed Code', 'URL Link'].map((type) => (
-              <label key={type} className="flex items-center gap-[0.3vw] cursor-pointer">
-                <input
-                  type="radio"
-                  name="web-code-type"
-                  checked={webCodeType === type}
-                  onChange={() => {
-                    setWebCodeType(type);
-                    setErrorMessage('');
-                  }}
-                  className="w-[0.8vw] h-[0.8vw] text-blue-500 border-gray-300 focus:ring-blue-500"
-                />
-                <span className="text-[0.75vw] text-gray-600">{type}</span>
-              </label>
-            ))}
-          </div>
-          <div className="flex flex-col gap-[0.6vw]">
-            <div className="flex flex-col gap-[0.2vw]">
-              <span className="text-[0.7vw] text-gray-500">{webCodeType === 'Embed Code' ? 'Code' : 'Source URL'}</span>
+      {/* ─── 2. EMBED CONTROLS ─── */}
+      <SectionHeader title="Embed Controls" />
 
-              {webCodeType === 'Embed Code' ? (
-                <textarea
-                  placeholder="Paste HTML code here"
-                  value={embedSrc}
-                  onChange={(e) => handleSetEmbedSrc(e.target.value)}
-                  className={`w-full border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.4vw] p-[0.6vw] text-[0.8vw] outline-none focus:border-blue-500 bg-white h-[6vw] resize-none`}
+      {/* Open website button */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium whitespace-nowrap">Open website button</span>
+        <ToggleSwitch
+          checked={openWebsiteBtn}
+          onChange={handleOpenWebsiteBtnChange}
+        />
+      </div>
+
+      {/* Allow Fullscreen */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <div className="flex items-center gap-[0.25vw]">
+          <span className="text-[0.78vw] text-gray-700 font-medium">Allow Fullscreen</span>
+         </div>
+        <ToggleSwitch
+          checked={allowFullscreen}
+          onChange={handleAllowFullscreenChange}
+        />
+      </div>
+
+      {/* Behavior */}
+      <PropertyRow label="Behavior">
+        <CustomSelect
+          value={behavior}
+          onChange={handleBehaviorChange}
+          options={BEHAVIOR_OPTIONS}
+        />
+      </PropertyRow>
+
+      {/* ─── 3. STROKE COLOR ─── */}
+      <SectionHeader title="Stroke Color" />
+
+      {/* Row 1: Swatch, Hex, Opacity */}
+      <div className="pl-[0.5vw]">
+        <ColorInput
+          color={strokeColor}
+          onChange={handleStrokeColorChange}
+          opacity={strokeOpacity}
+          onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
+          isActive={activeColorPicker === 'strokeColor'}
+        />
+      </div>
+
+      {/* Stroke Settings Grid */}
+      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
+        {/* Stroke Width & Line Corner */}
+        <div className="grid grid-cols-2 gap-[0.6vw]">
+          {/* Stroke Width */}
+          <div className="flex flex-col gap-[0.25vw]">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+              >
+                −
+              </button>
+              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                <input
+                  type="number"
+                  value={strokeWidth}
+                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
                 />
-              ) : (
-                <div className={`flex border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.4vw] overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-shadow bg-white`}>
-                  <input
-                    type="text"
-                    placeholder={webCodeType === 'URL Link' ? "e.g. https://..." : "e.g. https://..."}
-                    value={embedSrc}
-                    onChange={(e) => handleSetEmbedSrc(e.target.value)}
-                    className="flex-1 px-[0.6vw] py-[0.4vw] text-[0.8vw] outline-none text-gray-800 placeholder-gray-400 bg-transparent"
-                  />
-                  {webCodeType === 'URL Link' && (
-                    <button 
-                      onClick={() => navigator.clipboard.writeText(embedSrc.startsWith('http') ? embedSrc : 'https://' + embedSrc)} 
-                      className="px-[0.5vw] flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors bg-gray-50 border-l border-gray-200"
-                      title="Copy Link"
-                    >
-                      <Copy size={14} />
-                    </button>
-                  )}
-                </div>
-              )}
-              {errorMessage && <span className="text-red-500 text-[0.65vw] mt-[0.1vw]">{errorMessage}</span>}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+              >
+                +
+              </button>
             </div>
-            {webCodeType !== 'Embed Code' && (
-              <div className="flex gap-[0.5vw]">
-                <div className="w-1/2 flex flex-col gap-[0.2vw]">
-                  <span className="text-[0.7vw] text-gray-500">Width</span>
-                  <input
-                    type="text"
-                    value="100%"
-                    readOnly
-                    className="w-full border border-gray-200 rounded-[0.4vw] p-[0.4vw] text-[0.8vw] outline-none bg-gray-50 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                <div className="w-1/2 flex flex-col gap-[0.2vw]">
-                  <span className="text-[0.7vw] text-gray-500">Height</span>
-                  <input
-                    type="text"
-                    value="100%"
-                    readOnly
-                    className="w-full border border-gray-200 rounded-[0.4vw] p-[0.4vw] text-[0.8vw] outline-none bg-gray-50 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            )}
-            
-            {isYouTube && (
-              <div className="flex flex-col mt-[0.5vw]">
-                <ToggleButton label="Autoplay" checked={autoplay} onChange={setAutoplay} />
-                <ToggleButton label="Muted" checked={muted} onChange={setMuted} />
-                <ToggleButton label="Controls" checked={controls} onChange={setControls} />
-                <ToggleButton label="Loop" checked={loop} onChange={setLoop} />
-                
-                <div className="flex items-center justify-between w-full mt-[0.5vw]">
-                  <span className="text-[0.75vw] text-gray-700">Start Time</span>
-                  <div className="flex items-center gap-[0.2vw]">
-                    <input
-                      type="number"
-                      min="0"
-                      value={startTime}
-                      onChange={(e) => setStartTime(parseInt(e.target.value) || 0)}
-                      className="w-[3.5vw] border border-gray-200 rounded-[0.4vw] p-[0.2vw] text-[0.8vw] text-center outline-none focus:border-blue-500 bg-white"
-                    />
-                    <span className="text-[0.7vw] text-gray-500">sec</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between w-full mt-[0.5vw]">
-                  <span className="text-[0.75vw] text-gray-700">End Time</span>
-                  <div className="flex items-center gap-[0.2vw]">
-                    <input
-                      type="number"
-                      min="0"
-                      value={endTime}
-                      onChange={(e) => setEndTime(parseInt(e.target.value) || 0)}
-                      className="w-[3.5vw] border border-gray-200 rounded-[0.4vw] p-[0.2vw] text-[0.8vw] text-center outline-none focus:border-blue-500 bg-white"
-                    />
-                    <span className="text-[0.7vw] text-gray-500">sec</span>
-                  </div>
-                </div>
-                
-                <ToggleButton label="Fullscreen" checked={fullscreen} onChange={setFullscreen} />
-              </div>
-            )}
+          </div>
+
+          {/* Line Corner */}
+          <div className="flex flex-col gap-[0.25vw] relative">
+            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+            <ElementDropdown
+              value={lineCorner}
+              onChange={handleLineCornerChange}
+              options={['Square', 'Rounded']}
+              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
+            />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-100 mt-[1vw]"></div>
+      {/* ─── 4. EFFECTS ─── */}
+      <SectionHeader title="Effects" />
 
-      <div className="flex flex-col gap-[0.7vw]">
-        <Color
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          backgroundColor={backgroundColor}
-          setBackgroundColor={handleSetBackgroundColor}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showStrokeSettings={showStrokeSettings}
-          setShowStrokeSettings={setShowStrokeSettings}
-          isStrokeStyleOpen={isStrokeStyleOpen}
-          setIsStrokeStyleOpen={setIsStrokeStyleOpen}
-          dropdownPos={dropdownPos}
-          setDropdownPos={setDropdownPos}
-          strokeSettingsPos={strokeSettingsPos}
-          setStrokeSettingsPos={setStrokeSettingsPos}
-          isDashPosOpen={isDashPosOpen}
-          setIsDashPosOpen={setIsDashPosOpen}
-          activePopup={activePopup}
-          setActivePopup={setActivePopup}
-          colorsOnPage={colorsOnPage}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-          hideFill={true}
-          hideStrokeAlignment={true}
-        />
-
+      <div>
         <Effect
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
+          isShape={false}
+          openSubSection={openSection}
+          setOpenSubSection={setOpenSection}
           activeEffects={activeEffects}
           setActiveEffects={handleSetActiveEffects}
           effectSettings={effectSettings}
           setEffectSettings={handleSetEffectSettings}
+          activeColorPicker={activeColorPicker}
+          setActiveColorPicker={setActiveColorPicker}
+          showDetailedPicker={showDetailedPicker}
+          setShowDetailedPicker={setShowDetailedPicker}
           hideBlur={true}
           hideInnerShadow={true}
+          hideHeader={true}
         />
       </div>
+
+      {/* ─── PORTALS ─── */}
+      {/* Official ColorPicker Portal Popup */}
+      {activeColorPicker === 'strokeColor' && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{
+            top: '50%',
+            right: '19.5vw',
+            transform: 'translateY(-50%)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="animate-in fade-in zoom-in-95 duration-200">
+            <ColorPicker
+              color={strokeColor}
+              opacity={strokeOpacity}
+              onOpacityChange={handleStrokeOpacityChange}
+              onChange={handleStrokeColorChange}
+              onClose={() => setActiveColorPicker(null)}
+              disableGradient={false}
+              colorsOnPage={colorsOnPageList}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 };

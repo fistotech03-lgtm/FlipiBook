@@ -14,10 +14,10 @@ const Switch = ({ checked, enabled, onChange, disabled = false, className = '' }
         e.stopPropagation();
         if (onChange) onChange(!isChecked);
       }}
-      className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${isChecked ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'} ${className}`}
+      className={`relative block w-[1.8vw] h-[1vw] min-w-[32px] min-h-[18px] rounded-[1vw] border-2 transition-all duration-200 ease-in-out outline-none shrink-0 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${isChecked ? 'bg-[#E05638] border-[#E05638]' : 'bg-white border-[#E05638]'} ${className}`}
     >
       <div
-        className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${isChecked ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
+        className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] min-w-[12px] min-h-[12px] rounded-full transition-all duration-200 ease-in-out shadow-xs ${isChecked ? 'left-[0.9vw] bg-white' : 'left-[0.1vw] bg-[#E05638]'}`}
       />
     </button>
   );

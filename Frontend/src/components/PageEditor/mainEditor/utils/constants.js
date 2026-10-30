@@ -10,7 +10,7 @@ export const DIRECT_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://ww
 
 // Global style to ensure injected SVGs always fill their container perfectly
 export const svgGlobalStyles = `
-  .page-svg-container svg:not(.svg-icon-override) {
+  .page-svg-container svg:not(.svg-icon-override):not(foreignObject svg) {
     width: 100% !important;
     height: 100% !important;
     display: block !important;
@@ -110,7 +110,15 @@ export const svgGlobalStyles = `
   body.crop-modal-active .overlay-type-hover,
   body.crop-modal-active .overlay-type-child-hover,
   body.crop-modal-active .overlay-type-child-selected,
-  body.crop-modal-active .selection-handle {
+  body.crop-modal-active .selection-handle,
+  body.shape-adjust-active .overlay-type-selected,
+  body.shape-adjust-active .overlay-type-hover,
+  body.shape-adjust-active .overlay-type-child-hover,
+  body.shape-adjust-active .overlay-type-child-selected,
+  body.shape-adjust-active .resize-handle,
+  body.shape-adjust-active [id*="rotate-handle"],
+  body.shape-adjust-active [id*="resize-handle"],
+  body.shape-adjust-active .selection-handle {
     display: none !important;
     pointer-events: none !important;
   }

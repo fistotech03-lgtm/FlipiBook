@@ -4,6 +4,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, Palette, Type
 } from 'lucide-react';
 import { Icon } from '@iconify/react';
+import { ElementDropdown, ElementSlider } from './ElementUIControls';
 
 const FONT_FAMILIES = [
   'Arial', 'Inter', 'Poppins', 'Roboto', 'Montserrat', 'Open Sans',
@@ -209,37 +210,13 @@ const SlideTextPopup = ({
             {/* 1. Font Family Selector */}
             <div className="space-y-[0.25vw]">
               <span className="text-[0.72vw] font-semibold text-gray-700">Font Family</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsFontDropdownOpen(!isFontDropdownOpen)}
-                  className="w-full flex items-center justify-between px-[0.65vw] py-[0.4vw] bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs hover:border-gray-300 transition-colors text-[0.76vw] text-gray-800 cursor-pointer"
-                >
-                  <span style={{ fontFamily: `'${fontFamily}', sans-serif` }}>{fontFamily}</span>
-                  <ChevronDown size="0.85vw" className={`text-gray-400 transition-transform ${isFontDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isFontDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setIsFontDropdownOpen(false)} />
-                    <div className="absolute left-0 top-full mt-[0.2vw] w-full max-h-[9vw] overflow-y-auto bg-white border border-gray-200 rounded-[0.4vw] shadow-lg z-40 py-[0.2vw] custom-slide-text-scroll">
-                      {FONT_FAMILIES.map((font) => (
-                        <button
-                          key={font}
-                          type="button"
-                          onClick={() => handleFontSelect(font)}
-                          style={{ fontFamily: `'${font}', sans-serif` }}
-                          className={`w-full text-left px-[0.7vw] py-[0.35vw] text-[0.75vw] transition-colors cursor-pointer ${
-                            fontFamily === font ? 'bg-gray-100 text-gray-950 font-semibold' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {font}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <ElementDropdown
+                value={fontFamily}
+                onChange={handleFontSelect}
+                options={FONT_FAMILIES}
+                isFont={true}
+                buttonClassName="!h-[2vw] !text-[0.75vw]"
+              />
             </div>
 
             {/* 2. Font Size Slider */}
@@ -250,16 +227,11 @@ const SlideTextPopup = ({
                   {fontSize}px
                 </span>
               </div>
-              <input
-                type="range"
-                min="10"
-                max="50"
+              <ElementSlider
+                min={10}
+                max={50}
                 value={fontSize}
-                onChange={(e) => handleSizeChange(e.target.value)}
-                className="w-full h-[0.3vw] rounded-full appearance-none cursor-pointer accent-black"
-                style={{
-                  background: `linear-gradient(to right, #000000 0%, #000000 ${((fontSize - 10) / 40) * 100}%, #e5e7eb ${((fontSize - 10) / 40) * 100}%, #e5e7eb 100%)`
-                }}
+                onChange={(val) => handleSizeChange(val)}
               />
             </div>
 

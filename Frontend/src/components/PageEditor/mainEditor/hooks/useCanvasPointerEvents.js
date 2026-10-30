@@ -1796,17 +1796,24 @@ export const useCanvasPointerEvents = ({
 
   // ── Helper: set single selection and clear multi-selection ───────────────────
   const setSingleSelection = (id) => {
-    if (id) {
-      const el = document.getElementById(id);
-      const isFreeFrame = el ? (
-        el.getAttribute('data-name') === 'Free Frame' ||
-        el.getAttribute('data-type') === 'free-frame' ||
-        (el.id && el.id.startsWith('free-frame'))
-      ) : id.startsWith('free-frame');
+    let resolvedId = id;
+    if (resolvedId) {
+      const el = document.getElementById(resolvedId);
+      const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
+      if (buttonParent && buttonParent.id) {
+        resolvedId = buttonParent.id;
+      }
+      const finalEl = document.getElementById(resolvedId) || el;
+      const isFreeFrame = finalEl ? (
+        finalEl.getAttribute('data-name') === 'Free Frame' ||
+        finalEl.getAttribute('data-type') === 'free-frame' ||
+        (finalEl.id && finalEl.id.startsWith('free-frame'))
+      ) : resolvedId.startsWith('free-frame');
       if (isFreeFrame && activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation') {
         return;
       }
     }
+    id = resolvedId;
 
     if (setSelectedLayerId) {
       setSelectedLayerId(id);
@@ -2533,6 +2540,17 @@ export const useCanvasPointerEvents = ({
       }
     }
 
+    // Check if double click targets a compound element (button, audio, qr, map, embed, etc.)
+    const compoundParent = (directTextEl || e.target)?.closest?.(
+      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    );
+    if (compoundParent) {
+      if (compoundParent.id) {
+        setSingleSelection(compoundParent.id);
+      }
+      return;
+    }
+
     if (directTextEl && directTextEl.getAttribute('data-locked') !== 'true' && directTextEl.getAttribute('data-type') !== 'video' && !directTextEl.querySelector('video, iframe')) {
       const isModuleWithoutTextEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
       if (!isModuleWithoutTextEdit) {
@@ -2552,9 +2570,23 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // Text editing on double-click
-    // 1. First check if we directly hit text
-    let target = getDraggableElement(e.target, e.currentTarget);
+    // If user clicked on a selection overlay polygon, resolve the underlying element
+    let clickedEl = e.target;
+    if (clickedEl && clickedEl.tagName?.toLowerCase() === 'polygon' && clickedEl.id?.includes('overlay-poly-')) {
+      const polyId = clickedEl.id.replace(/^overlay-poly-(selected|child-selected|hover|child-hover|entered|multi-child-selected)-/, '');
+      const underlying = svg.querySelector(`[id="${polyId}"]`);
+      if (underlying) clickedEl = underlying;
+    }
+    let target = getDraggableElement(clickedEl, e.currentTarget) || (selectedLayerIdRef.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null);
+    const targetCompound = target?.closest?.(
+      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    );
+    if (targetCompound) {
+      if (targetCompound.id) {
+        setSingleSelection(targetCompound.id);
+      }
+      return;
+    }
 
     // 2. Proactively check if we are double-clicking while a text is selected
     const selIdContext = selectedLayerIdRef.current;
@@ -2572,23 +2604,61 @@ export const useCanvasPointerEvents = ({
       }
     }
 
+    // ── SHAPE WITH IMAGE MASK: Check if double-clicking an element shape with an image pattern/mask ───
+    if (target && !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase())) {
+      const shapeContainer = target.closest?.('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]') ||
+        (target.getAttribute?.('data-is-element-shape') === 'true' || target.getAttribute?.('data-shape-type') ? target : null);
+      const testShape = shapeContainer || target;
+      
+      const hasImageMask = Boolean(
+        testShape.getAttribute?.('data-mask-enabled') === 'true' ||
+        testShape.querySelector?.('[data-mask-enabled="true"]') !== null ||
+        (testShape.getAttribute?.('fill') && testShape.getAttribute?.('fill').includes('url(#pattern-')) ||
+        testShape.querySelector?.('[fill*="url(#pattern-"]') !== null
+      );
+
+      if (hasImageMask) {
+        const shapeId = shapeContainer?.id || target.id || selectedLayerIdRef.current;
+        if (shapeId) {
+          if (setSelectedLayerId) {
+            setSelectedLayerId(shapeId);
+            selectedLayerIdRef.current = shapeId;
+          }
+          window.dispatchEvent(new CustomEvent('trigger-shape-adjust', { detail: { elementId: shapeId } }));
+          return;
+        }
+      }
+    }
+
     // ── NODE EDIT MODE: Check if double-clicking a vector/path/shape element ───
     const isModuleWithoutPenEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
     if (!isModuleWithoutPenEdit && target && !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase())) {
+      // Restrict element shapes (which use Element Shape Properties) from entering pen tool node edit mode on double click
+      const isElementShapeTarget = Boolean(
+        target.getAttribute?.('data-is-element-shape') === 'true' ||
+        target.getAttribute?.('data-shape-type') !== null ||
+        target.getAttribute?.('data-type') === 'shape' ||
+        target.closest?.('[data-is-element-shape="true"]') !== null ||
+        target.closest?.('[data-shape-type]') !== null ||
+        target.closest?.('[data-type="shape"]') !== null ||
+        (typeof target.querySelector === 'function' && (
+          target.querySelector('[data-is-element-shape="true"]') !== null ||
+          target.querySelector('[data-shape-type]') !== null ||
+          target.querySelector('[data-type="shape"]') !== null
+        ))
+      );
+
       const tag = target.tagName?.toLowerCase();
-      const dataType = target.getAttribute('data-type') || '';
-      const isVectorOrPath = (
+      const dataType = target.getAttribute?.('data-type') || '';
+      const isVectorOrPath = !isElementShapeTarget && (
         tag === 'path' ||
-        dataType === 'vector-path' ||
-        dataType === 'shape' ||
-        (tag === 'ellipse' || tag === 'circle' || tag === 'rect' || tag === 'line' || tag === 'polyline' || tag === 'polygon')
-      ) && target.getAttribute('data-locked') !== 'true' &&
-        target.getAttribute('data-name') !== 'Overlay' &&
-        target.getAttribute('data-type') !== 'frame' &&
-        target.getAttribute('data-type') !== 'background';
+        dataType === 'vector-path'
+      ) && target.getAttribute?.('data-locked') !== 'true' &&
+        target.getAttribute?.('data-name') !== 'Overlay' &&
+        target.getAttribute?.('data-type') !== 'frame' &&
+        target.getAttribute?.('data-type') !== 'background';
 
       if (isVectorOrPath && target.id) {
-        // For non-path shapes (rect/ellipse/etc.), convert to path first or skip
         if (tag === 'path' || dataType === 'vector-path') {
           const container = target.closest('.page-svg-container');
           const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;

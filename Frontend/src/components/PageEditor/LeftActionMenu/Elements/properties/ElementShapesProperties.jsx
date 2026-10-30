@@ -7,13 +7,13 @@ import Effect from '../../../properties/Effect';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { syncGradient } from '../../../PageEditorModule/svgFilterUtils';
 import { getShapeCornerDefaults, buildCornerRadiusPath } from '../utils/shapeElementUtils';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Upload, 
-  Plus, 
-  GripVertical, 
-  Trash2, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  Plus,
+  GripVertical,
+  Trash2,
   Edit2,
   ArrowRightLeft,
   Link2,
@@ -131,7 +131,7 @@ const ShapeAppearanceControls = ({
         if (Array.isArray(stops) && stops.length > 0) {
           return `linear-gradient(to right, ${stops.map(s => s.color).join(', ')})`;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return (backgroundColor?.fill && backgroundColor.fill !== 'inherit') ? backgroundColor.fill : '#3194FC';
   })();
@@ -171,7 +171,7 @@ const ShapeAppearanceControls = ({
 
   return (
     <div className="flex flex-col gap-[1vw] font-sans select-none text-gray-800">
-      
+
       {/* ===================== 1. FILL COLOR ===================== */}
       <div className="flex flex-col gap-[0.5vw]">
         <div className="flex items-center mt-[0.5vw] gap-[0.5vw]">
@@ -414,7 +414,7 @@ const ShapeAppearanceControls = ({
                           parseFloat(backgroundColor.fillAngle || 0),
                           parseFloat(backgroundColor.fillRadius || 100)
                         );
-                      } catch (e) {}
+                      } catch (e) { }
                     }
                   }
                   return (backgroundColor?.fill && backgroundColor.fill !== 'inherit') ? backgroundColor.fill : '#3194FC';
@@ -721,245 +721,245 @@ const ElementShapesProperties = ({
     const listeners = [];
 
     const updateAdjustTransform = () => {
-        if (!adjustStateRef.current.matrix) return;
-        const m = adjustStateRef.current.matrix;
-        const transformStr = `${adjustStateRef.current.rotateStr || ''}matrix(${m[0]} ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]})`;
-        if (adjustStateRef.current.imgNode) {
-            adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
-        }
-        const ghost = selectedElement?.querySelector('#ghost-layer');
-        if (ghost) {
-            const ghostImg = ghost.querySelector('image, img');
-            if (ghostImg) ghostImg.setAttribute('transform', transformStr);
-        }
+      if (!adjustStateRef.current.matrix) return;
+      const m = adjustStateRef.current.matrix;
+      const transformStr = `${adjustStateRef.current.rotateStr || ''}matrix(${m[0]} ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]})`;
+      if (adjustStateRef.current.imgNode) {
+        adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
+      }
+      const ghost = selectedElement?.querySelector('#ghost-layer');
+      if (ghost) {
+        const ghostImg = ghost.querySelector('image, img');
+        if (ghostImg) ghostImg.setAttribute('transform', transformStr);
+      }
     };
 
     const enterAdjustMode = (patternId, path) => {
-        const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
-        if (!pattern) return;
-        let imgNode = pattern.querySelector('image, img');
-        if (!imgNode) {
-          const useNode = pattern.querySelector('use');
-          if (useNode) {
-            const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
-            const targetId = href.replace('#', '');
-            imgNode = (svgRoot || selectedElement).querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
-          }
+      const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
+      if (!pattern) return;
+      let imgNode = pattern.querySelector('image, img');
+      if (!imgNode) {
+        const useNode = pattern.querySelector('use');
+        if (useNode) {
+          const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+          const targetId = href.replace('#', '');
+          imgNode = (svgRoot || selectedElement).querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
         }
-        if (!imgNode) return; // Cannot adjust empty slot
+      }
+      if (!imgNode) return; // Cannot adjust empty slot
 
-        adjustStateRef.current.isAdjusting = true;
-        adjustStateRef.current.slotId = patternId;
-        adjustStateRef.current.imgNode = imgNode;
-        window.__isAdjustingShapeImage = true;
-        if (typeof document !== 'undefined' && document.body) {
-          document.body.classList.add('shape-adjust-active');
+      adjustStateRef.current.isAdjusting = true;
+      adjustStateRef.current.slotId = patternId;
+      adjustStateRef.current.imgNode = imgNode;
+      window.__isAdjustingShapeImage = true;
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.add('shape-adjust-active');
+      }
+      adjustStateRef.current.path = path;
+      adjustStateRef.current.bbox = path.getBBox();
+
+      const transformStr = imgNode.getAttribute('transform');
+      let matrix = [1, 0, 0, 1, 0, 0];
+      let rotateStr = '';
+      if (transformStr) {
+        const rMatch = transformStr.match(/rotate\([^)]+\)/);
+        if (rMatch) rotateStr = rMatch[0] + ' ';
+
+        const match = transformStr.match(/matrix\(([^)]+)\)/);
+        if (match) {
+          matrix = match[1].split(/[ ,]+/).map(parseFloat);
         }
-        adjustStateRef.current.path = path;
-        adjustStateRef.current.bbox = path.getBBox();
-        
-        const transformStr = imgNode.getAttribute('transform');
-        let matrix = [1, 0, 0, 1, 0, 0];
-        let rotateStr = '';
-        if (transformStr) {
-            const rMatch = transformStr.match(/rotate\([^)]+\)/);
-            if (rMatch) rotateStr = rMatch[0] + ' ';
-            
-            const match = transformStr.match(/matrix\(([^)]+)\)/);
-            if (match) {
-                matrix = match[1].split(/[ ,]+/).map(parseFloat);
-            }
-        }
-        adjustStateRef.current.matrix = matrix;
-        adjustStateRef.current.rotateStr = rotateStr;
+      }
+      adjustStateRef.current.matrix = matrix;
+      adjustStateRef.current.rotateStr = rotateStr;
 
-        let ghost = selectedElement.querySelector('#ghost-layer');
-        if (ghost) ghost.remove();
-        
-        ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        ghost.id = 'ghost-layer';
-        ghost.style.pointerEvents = 'none';
-        
-        // Inherit path's transform to match local coordinate space
-        let combinedTransform = path.getAttribute('transform') || '';
-        const pt = pattern.getAttribute('patternTransform');
-        if (pt) {
-            combinedTransform = `${combinedTransform} ${pt}`.trim();
-        }
-        if (combinedTransform) {
-            ghost.setAttribute('transform', combinedTransform);
-        }
+      let ghost = selectedElement.querySelector('#ghost-layer');
+      if (ghost) ghost.remove();
 
-        // Figma Masking Concept:
-        // Inside the shape, the image is rendered cleanly via the shape's fill pattern.
-        // The ghost layer ONLY shows the extent/overflow outside the shape with low opacity (0.35).
-        // To achieve this, mask the ghost layer with an inverted mask (everywhere white except shape cutout is black).
-        let defs = selectedElement.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
-        if (!defs) {
-            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            selectedElement.insertBefore(defs, selectedElement.firstChild);
-        }
+      ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      ghost.id = 'ghost-layer';
+      ghost.style.pointerEvents = 'none';
 
-        const invertMaskId = `ghost-extent-mask-${patternId}`;
-        let invertMask = defs.querySelector(`#${invertMaskId}`);
-        if (invertMask) invertMask.remove();
-        invertMask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
-        invertMask.id = invertMaskId;
-        invertMask.setAttribute('maskUnits', 'userSpaceOnUse');
+      // Inherit path's transform to match local coordinate space
+      let combinedTransform = path.getAttribute('transform') || '';
+      const pt = pattern.getAttribute('patternTransform');
+      if (pt) {
+        combinedTransform = `${combinedTransform} ${pt}`.trim();
+      }
+      if (combinedTransform) {
+        ghost.setAttribute('transform', combinedTransform);
+      }
 
-        const whiteBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        whiteBg.setAttribute('x', '-50000');
-        whiteBg.setAttribute('y', '-50000');
-        whiteBg.setAttribute('width', '100000');
-        whiteBg.setAttribute('height', '100000');
-        whiteBg.setAttribute('fill', '#ffffff');
-        invertMask.appendChild(whiteBg);
+      // Figma Masking Concept:
+      // Inside the shape, the image is rendered cleanly via the shape's fill pattern.
+      // The ghost layer ONLY shows the extent/overflow outside the shape with low opacity (0.35).
+      // To achieve this, mask the ghost layer with an inverted mask (everywhere white except shape cutout is black).
+      let defs = selectedElement.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+      if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        selectedElement.insertBefore(defs, selectedElement.firstChild);
+      }
 
-        const blackCutout = path.cloneNode(true);
-        blackCutout.removeAttribute('id');
-        blackCutout.setAttribute('fill', '#000000');
-        blackCutout.setAttribute('stroke', '#000000');
-        const origSw = parseFloat(path.getAttribute('stroke-width')) || 0;
-        blackCutout.setAttribute('stroke-width', String(Math.max(0, origSw)));
-        if (combinedTransform) {
-            blackCutout.setAttribute('transform', combinedTransform);
-        }
-        invertMask.appendChild(blackCutout);
+      const invertMaskId = `ghost-extent-mask-${patternId}`;
+      let invertMask = defs.querySelector(`#${invertMaskId}`);
+      if (invertMask) invertMask.remove();
+      invertMask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+      invertMask.id = invertMaskId;
+      invertMask.setAttribute('maskUnits', 'userSpaceOnUse');
 
-        defs.appendChild(invertMask);
-        ghost.setAttribute('mask', `url(#${invertMaskId})`);
-        
-        const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const bbox = adjustStateRef.current.bbox;
-        
-        const pcu = pattern.getAttribute('patternContentUnits');
-        if (!pcu || pcu === 'objectBoundingBox') {
-            wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
-        } else {
-            wrapper.setAttribute('transform', `translate(0, 0)`);
-        }
-        
-        const ghostImg = imgNode.cloneNode(true);
-        ghostImg.setAttribute('opacity', '0.4');
-        ghostImg.removeAttribute('id');
-        
-        wrapper.appendChild(ghostImg);
-        ghost.appendChild(wrapper);
+      const whiteBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      whiteBg.setAttribute('x', '-50000');
+      whiteBg.setAttribute('y', '-50000');
+      whiteBg.setAttribute('width', '100000');
+      whiteBg.setAttribute('height', '100000');
+      whiteBg.setAttribute('fill', '#ffffff');
+      invertMask.appendChild(whiteBg);
 
-        // Insert sibling to inherit group transforms
-        if (path.parentNode) {
-            path.parentNode.insertBefore(ghost, path.nextSibling);
-        } else {
-            selectedElement.appendChild(ghost);
-        }
+      const blackCutout = path.cloneNode(true);
+      blackCutout.removeAttribute('id');
+      blackCutout.setAttribute('fill', '#000000');
+      blackCutout.setAttribute('stroke', '#000000');
+      const origSw = parseFloat(path.getAttribute('stroke-width')) || 0;
+      blackCutout.setAttribute('stroke-width', String(Math.max(0, origSw)));
+      if (combinedTransform) {
+        blackCutout.setAttribute('transform', combinedTransform);
+      }
+      invertMask.appendChild(blackCutout);
 
-        path.style.cursor = 'grab';
-        if (selectedElement) selectedElement.style.cursor = 'grab';
+      defs.appendChild(invertMask);
+      ghost.setAttribute('mask', `url(#${invertMaskId})`);
+
+      const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const bbox = adjustStateRef.current.bbox;
+
+      const pcu = pattern.getAttribute('patternContentUnits');
+      if (!pcu || pcu === 'objectBoundingBox') {
+        wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
+      } else {
+        wrapper.setAttribute('transform', `translate(0, 0)`);
+      }
+
+      const ghostImg = imgNode.cloneNode(true);
+      ghostImg.setAttribute('opacity', '0.4');
+      ghostImg.removeAttribute('id');
+
+      wrapper.appendChild(ghostImg);
+      ghost.appendChild(wrapper);
+
+      // Insert sibling to inherit group transforms
+      if (path.parentNode) {
+        path.parentNode.insertBefore(ghost, path.nextSibling);
+      } else {
+        selectedElement.appendChild(ghost);
+      }
+
+      path.style.cursor = 'grab';
+      if (selectedElement) selectedElement.style.cursor = 'grab';
     };
 
     const exitAdjustMode = () => {
-        adjustStateRef.current.isAdjusting = false;
-        adjustStateRef.current.isPanning = false;
-        window.__isAdjustingShapeImage = false;
-        if (typeof document !== 'undefined' && document.body) {
-          document.body.classList.remove('shape-adjust-active');
-        }
-        if (adjustStateRef.current.path) {
-            adjustStateRef.current.path.style.cursor = '';
-        }
-        if (selectedElement) {
-            selectedElement.style.cursor = '';
-        }
-        const ghost = selectedElement?.querySelector('#ghost-layer');
-        if (ghost) ghost.remove();
-        
-        if (adjustStateRef.current.slotId) {
-            const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-            const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
-            if (highlight) highlight.remove();
+      adjustStateRef.current.isAdjusting = false;
+      adjustStateRef.current.isPanning = false;
+      window.__isAdjustingShapeImage = false;
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.remove('shape-adjust-active');
+      }
+      if (adjustStateRef.current.path) {
+        adjustStateRef.current.path.style.cursor = '';
+      }
+      if (selectedElement) {
+        selectedElement.style.cursor = '';
+      }
+      const ghost = selectedElement?.querySelector('#ghost-layer');
+      if (ghost) ghost.remove();
 
-            const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
-            const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
-            const invertMask = defs?.querySelector(`#${invertMaskId}`);
-            if (invertMask) invertMask.remove();
-        }
-        adjustStateRef.current.slotId = null;
-        syncDomChanges();
+      if (adjustStateRef.current.slotId) {
+        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
+        const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
+        if (highlight) highlight.remove();
+
+        const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
+        const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+        const invertMask = defs?.querySelector(`#${invertMaskId}`);
+        if (invertMask) invertMask.remove();
+      }
+      adjustStateRef.current.slotId = null;
+      syncDomChanges();
     };
 
     const handlePointerMove = (e) => {
-        if (!adjustStateRef.current.isPanning) return;
-        e.preventDefault();
-        e.stopPropagation();
-        
-        let dx = e.clientX - adjustStateRef.current.startX;
-        let dy = e.clientY - adjustStateRef.current.startY;
-        
-        let pcu = 'objectBoundingBox';
-        if (adjustStateRef.current.slotId && adjustStateRef.current.path) {
-            const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`) || doc.getElementById(adjustStateRef.current.slotId);
-            if (pattern) {
-                pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
-                
-                // Read rotation from patternTransform (old) OR from image transform (new)
-                let rot = 0;
-                const pt = pattern.getAttribute('patternTransform');
-                if (pt) {
-                    const match = pt.match(/rotate\(([-0-9.]+)/);
-                    if (match) rot = parseFloat(match[1]);
-                } else if (adjustStateRef.current.rotateStr) {
-                    const match = adjustStateRef.current.rotateStr.match(/rotate\(([-0-9.]+)/);
-                    if (match) rot = parseFloat(match[1]);
-                }
-                
-                if (rot !== 0) {
-                    const rad = -rot * Math.PI / 180;
-                    const dxRot = dx * Math.cos(rad) - dy * Math.sin(rad);
-                    const dyRot = dx * Math.sin(rad) + dy * Math.cos(rad);
-                    dx = dxRot;
-                    dy = dyRot;
-                }
-            }
-        }
+      if (!adjustStateRef.current.isPanning) return;
+      e.preventDefault();
+      e.stopPropagation();
 
-        let scaleX = 1;
-        let scaleY = 1;
-        if (adjustStateRef.current.path) {
-            const ctm = adjustStateRef.current.path.getScreenCTM();
-            if (ctm) {
-                scaleX = ctm.a || 1;
-                scaleY = ctm.d || 1;
-            }
+      let dx = e.clientX - adjustStateRef.current.startX;
+      let dy = e.clientY - adjustStateRef.current.startY;
+
+      let pcu = 'objectBoundingBox';
+      if (adjustStateRef.current.slotId && adjustStateRef.current.path) {
+        const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`) || doc.getElementById(adjustStateRef.current.slotId);
+        if (pattern) {
+          pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
+
+          // Read rotation from patternTransform (old) OR from image transform (new)
+          let rot = 0;
+          const pt = pattern.getAttribute('patternTransform');
+          if (pt) {
+            const match = pt.match(/rotate\(([-0-9.]+)/);
+            if (match) rot = parseFloat(match[1]);
+          } else if (adjustStateRef.current.rotateStr) {
+            const match = adjustStateRef.current.rotateStr.match(/rotate\(([-0-9.]+)/);
+            if (match) rot = parseFloat(match[1]);
+          }
+
+          if (rot !== 0) {
+            const rad = -rot * Math.PI / 180;
+            const dxRot = dx * Math.cos(rad) - dy * Math.sin(rad);
+            const dyRot = dx * Math.sin(rad) + dy * Math.cos(rad);
+            dx = dxRot;
+            dy = dyRot;
+          }
         }
-        
-        const bbox = adjustStateRef.current.bbox;
-        let tx_delta, ty_delta;
-        
-        if (pcu === 'userSpaceOnUse') {
-            tx_delta = dx / scaleX;
-            ty_delta = dy / scaleY;
-        } else {
-            tx_delta = (dx / scaleX) / (bbox?.width || 1);
-            ty_delta = (dy / scaleY) / (bbox?.height || 1);
+      }
+
+      let scaleX = 1;
+      let scaleY = 1;
+      if (adjustStateRef.current.path) {
+        const ctm = adjustStateRef.current.path.getScreenCTM();
+        if (ctm) {
+          scaleX = ctm.a || 1;
+          scaleY = ctm.d || 1;
         }
-        
-        const m = adjustStateRef.current.startMatrix;
-        if (!m || !adjustStateRef.current.matrix) return;
-        const newTx = m[4] + tx_delta;
-        const newTy = m[5] + ty_delta;
-        
-        adjustStateRef.current.matrix[4] = newTx;
-        adjustStateRef.current.matrix[5] = newTy;
-        
-        updateAdjustTransform();
+      }
+
+      const bbox = adjustStateRef.current.bbox;
+      let tx_delta, ty_delta;
+
+      if (pcu === 'userSpaceOnUse') {
+        tx_delta = dx / scaleX;
+        ty_delta = dy / scaleY;
+      } else {
+        tx_delta = (dx / scaleX) / (bbox?.width || 1);
+        ty_delta = (dy / scaleY) / (bbox?.height || 1);
+      }
+
+      const m = adjustStateRef.current.startMatrix;
+      if (!m || !adjustStateRef.current.matrix) return;
+      const newTx = m[4] + tx_delta;
+      const newTy = m[5] + ty_delta;
+
+      adjustStateRef.current.matrix[4] = newTx;
+      adjustStateRef.current.matrix[5] = newTy;
+
+      updateAdjustTransform();
     };
 
     const handlePointerUp = (e) => {
-        if (adjustStateRef.current.isPanning) {
-            adjustStateRef.current.isPanning = false;
-            if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grab';
-            if (selectedElement) selectedElement.style.cursor = 'grab';
-        }
+      if (adjustStateRef.current.isPanning) {
+        adjustStateRef.current.isPanning = false;
+        if (adjustStateRef.current.path) adjustStateRef.current.path.style.cursor = 'grab';
+        if (selectedElement) selectedElement.style.cursor = 'grab';
+      }
     };
 
     window.addEventListener('pointermove', handlePointerMove);
@@ -1013,18 +1013,18 @@ const ElementShapesProperties = ({
     const updateImageFromDOM = () => {
       let shapes = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
       if (['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-          shapes.unshift(selectedElement);
+        shapes.unshift(selectedElement);
       }
-      
+
       let foundImage = false;
-      
+
       listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
         targetEl.removeEventListener('dblclick', handleDoubleClick);
         if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
         if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
       });
       listeners.length = 0;
-      
+
       for (const shapeEl of shapes) {
         if (shapeEl.getAttribute('data-mask-enabled') === 'true') {
           setIsMaskEnabled(true);
@@ -1059,32 +1059,44 @@ const ElementShapesProperties = ({
                 }
 
                 // Seamless upgrade from legacy objectBoundingBox to userSpaceOnUse if needed
+                const pu = pattern.getAttribute('patternUnits');
                 const pcu = pattern.getAttribute('patternContentUnits');
-                if (pcu !== 'userSpaceOnUse') {
+                if (pcu !== 'userSpaceOnUse' || pu !== 'objectBoundingBox') {
                   try {
                     const b = shapeEl.getBBox();
                     if (b.width && b.height) {
+                      pattern.setAttribute('patternUnits', 'objectBoundingBox');
+                      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+                      pattern.setAttribute('width', '1');
+                      pattern.setAttribute('height', '1');
+                      pattern.removeAttribute('x');
+                      pattern.removeAttribute('y');
+                      pattern.removeAttribute('patternTransform');
+                      pattern.removeAttribute('viewBox');
+
                       const imgW = parseFloat(imgNode.getAttribute('width')) || b.width;
                       const imgH = parseFloat(imgNode.getAttribute('height')) || b.height;
                       let m = [1, 0, 0, 1, 0, 0];
                       const mMatch = tf.match(/matrix\(([^)]+)\)/);
                       if (mMatch) {
                         m = mMatch[1].split(/[ ,]+/).map(parseFloat);
-                        m[0] = m[0] * b.width;
-                        m[2] = m[2] * b.width;
-                        m[1] = m[1] * b.height;
-                        m[3] = m[3] * b.height;
-                        m[4] = b.x + m[4] * b.width;
-                        m[5] = b.y + m[5] * b.height;
+                        if (pcu !== 'userSpaceOnUse') {
+                          m[0] = m[0] * b.width;
+                          m[2] = m[2] * b.width;
+                          m[1] = m[1] * b.height;
+                          m[3] = m[3] * b.height;
+                          m[4] = m[4] * b.width;
+                          m[5] = m[5] * b.height;
+                        } else if (pu === 'userSpaceOnUse') {
+                          if (m[4] >= b.x) m[4] -= b.x;
+                          if (m[5] >= b.y) m[5] -= b.y;
+                        }
                       } else {
                         const scale = Math.max(b.width / imgW, b.height / imgH);
                         const finalW = imgW * scale;
                         const finalH = imgH * scale;
-                        m = [scale, 0, 0, scale, b.x + (b.width - finalW) / 2, b.y + (b.height - finalH) / 2];
+                        m = [scale, 0, 0, scale, (b.width - finalW) / 2, (b.height - finalH) / 2];
                       }
-                      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-                      pattern.removeAttribute('patternTransform');
-                      pattern.removeAttribute('viewBox');
                       imgNode.removeAttribute('preserveAspectRatio');
                       imgNode.removeAttribute('x');
                       imgNode.removeAttribute('y');
@@ -1093,24 +1105,24 @@ const ElementShapesProperties = ({
                       let rotStr = rMatch ? rMatch[0] + ' ' : '';
                       imgNode.setAttribute('transform', `${rotStr}matrix(${m.join(' ')})`);
                     }
-                  } catch (e) {}
+                  } catch (e) { }
                 }
 
-                foundImage = true;
+                  foundImage = true;
 
-                const handleDoubleClick = (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                    exitAdjustMode();
-                  } else {
-                    if (adjustStateRef.current.isAdjusting) exitAdjustMode();
-                    enterAdjustMode(patternId, shapeEl);
-                  }
-                };
-      
-                const handlePointerDown = (e) => {
-                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                  const handleDoubleClick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                      exitAdjustMode();
+                    } else {
+                      if (adjustStateRef.current.isAdjusting) exitAdjustMode();
+                      enterAdjustMode(patternId, shapeEl);
+                    }
+                  };
+
+                  const handlePointerDown = (e) => {
+                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
                       e.preventDefault();
                       e.stopPropagation();
                       adjustStateRef.current.isPanning = true;
@@ -1119,110 +1131,110 @@ const ElementShapesProperties = ({
                       adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
                       if (shapeEl) shapeEl.style.cursor = 'grabbing';
                       if (selectedElement) selectedElement.style.cursor = 'grabbing';
-                  }
-                };
-      
-                const handleWheel = (e) => {
-                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                    }
+                  };
+
+                  const handleWheel = (e) => {
+                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
                       e.preventDefault();
                       e.stopPropagation();
                       const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
                       const m = adjustStateRef.current.matrix;
-                      
+
                       let pcuVal = 'objectBoundingBox';
                       const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
                       if (pat) pcuVal = pat.getAttribute('patternContentUnits') || 'objectBoundingBox';
-                      
+
                       let cx = 0.5;
                       let cy = 0.5;
                       if (pcuVal === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                          cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
-                          cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
+                        cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
+                        cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
                       }
-      
+
                       m[0] *= zoomDelta;
                       m[3] *= zoomDelta;
                       m[4] = cx + (m[4] - cx) * zoomDelta;
                       m[5] = cy + (m[5] - cy) * zoomDelta;
-                      
+
                       updateAdjustTransform();
+                    }
+                  };
+
+                  shapeEl.addEventListener('dblclick', handleDoubleClick);
+                  shapeEl.addEventListener('pointerdown', handlePointerDown);
+                  shapeEl.addEventListener('wheel', handleWheel, { passive: false });
+                  listeners.push({ targetEl: shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
+
+                  if (selectedElement && selectedElement !== shapeEl) {
+                    selectedElement.addEventListener('dblclick', handleDoubleClick);
+                    selectedElement.addEventListener('pointerdown', handlePointerDown);
+                    selectedElement.addEventListener('wheel', handleWheel, { passive: false });
+                    listeners.push({ targetEl: selectedElement, handleDoubleClick, handlePointerDown, handleWheel });
                   }
-                };
 
-                shapeEl.addEventListener('dblclick', handleDoubleClick);
-                shapeEl.addEventListener('pointerdown', handlePointerDown);
-                shapeEl.addEventListener('wheel', handleWheel, { passive: false });
-                listeners.push({ targetEl: shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
-
-                if (selectedElement && selectedElement !== shapeEl) {
-                  selectedElement.addEventListener('dblclick', handleDoubleClick);
-                  selectedElement.addEventListener('pointerdown', handlePointerDown);
-                  selectedElement.addEventListener('wheel', handleWheel, { passive: false });
-                  listeners.push({ targetEl: selectedElement, handleDoubleClick, handlePointerDown, handleWheel });
+                  break;
                 }
-
-                break;
               }
             }
           }
         }
-      }
-      
-      if (!foundImage) {
-        setSlotImage(null);
-        const hasMaskAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
-          selectedElement.querySelector('[data-mask-enabled="true"]') !== null;
-        setIsMaskEnabled(hasMaskAttr);
-      }
-    };
 
-    updateImageFromDOM();
+        if (!foundImage) {
+          setSlotImage(null);
+          const hasMaskAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
+            selectedElement.querySelector('[data-mask-enabled="true"]') !== null;
+          setIsMaskEnabled(hasMaskAttr);
+        }
+      };
 
-    let observer = null;
-    if (svgRoot) {
-      observer = new MutationObserver(() => {
-        updateImageFromDOM();
-      });
-      observer.observe(svgRoot, { 
-        childList: true, 
-        subtree: true, 
-        attributes: true, 
-        attributeFilter: ['fill', 'href', 'xlink:href', 'data-mask-enabled'] 
-      });
-    }
+      updateImageFromDOM();
 
-    return () => {
-      if (observer) observer.disconnect();
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('pointerdown', handleOutsideClick, true);
-      window.removeEventListener('trigger-shape-adjust', handleTriggerAdjust);
-      window.__isAdjustingShapeImage = false;
-      if (typeof document !== 'undefined' && document.body) {
-        document.body.classList.remove('shape-adjust-active');
+      let observer = null;
+      if (svgRoot) {
+        observer = new MutationObserver(() => {
+          updateImageFromDOM();
+        });
+        observer.observe(svgRoot, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['fill', 'href', 'xlink:href', 'data-mask-enabled']
+        });
       }
-      listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
-        targetEl.removeEventListener('dblclick', handleDoubleClick);
-        if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
-        if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
-      });
-      const ghost = selectedElement?.querySelector('#ghost-layer');
-      if (ghost) ghost.remove();
-      if (adjustStateRef.current.slotId) {
-        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-        const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) highlight.remove();
 
-        const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
-        const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
-        const invertMask = defs?.querySelector(`#${invertMaskId}`);
-        if (invertMask) invertMask.remove();
-      }
-      adjustStateRef.current.isAdjusting = false;
-      adjustStateRef.current.isPanning = false;
-    };
-  }, [selectedLayerId, activePageIndex, selectedElementProps?.fill]);
+      return () => {
+        if (observer) observer.disconnect();
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('pointerdown', handleOutsideClick, true);
+        window.removeEventListener('trigger-shape-adjust', handleTriggerAdjust);
+        window.__isAdjustingShapeImage = false;
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.classList.remove('shape-adjust-active');
+        }
+        listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
+          targetEl.removeEventListener('dblclick', handleDoubleClick);
+          if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
+          if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
+        });
+        const ghost = selectedElement?.querySelector('#ghost-layer');
+        if (ghost) ghost.remove();
+        if (adjustStateRef.current.slotId) {
+          const highlightId = `highlight-${adjustStateRef.current.slotId}`;
+          const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
+          if (highlight) highlight.remove();
+
+          const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
+          const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+          const invertMask = defs?.querySelector(`#${invertMaskId}`);
+          if (invertMask) invertMask.remove();
+        }
+        adjustStateRef.current.isAdjusting = false;
+        adjustStateRef.current.isPanning = false;
+      };
+    }, [selectedLayerId, activePageIndex, selectedElementProps?.fill]);
 
   const handleRemoveMask = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -1395,9 +1407,9 @@ const ElementShapesProperties = ({
     if (!pattern) return;
 
     let bbox = { x: 0, y: 0, width: 100, height: 100 };
-    try { bbox = shapeEl.getBBox(); } catch(e) {}
-    const cx = (bbox.x || 0) + bbox.width / 2;
-    const cy = (bbox.y || 0) + bbox.height / 2;
+    try { bbox = shapeEl.getBBox(); } catch (e) { }
+    const cx = bbox.width / 2;
+    const cy = bbox.height / 2;
 
     const pcu = pattern.getAttribute('patternContentUnits');
     const imgNode = pattern.querySelector('image, img');
@@ -1443,7 +1455,7 @@ const ElementShapesProperties = ({
 
     let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
     if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-        shapeEl = selectedElement;
+      shapeEl = selectedElement;
     }
     if (!shapeEl) return;
 
@@ -1471,6 +1483,8 @@ const ElementShapesProperties = ({
     pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
     pattern.setAttribute('width', '1');
     pattern.setAttribute('height', '1');
+    pattern.removeAttribute('x');
+    pattern.removeAttribute('y');
     pattern.removeAttribute('patternTransform');
     pattern.removeAttribute('viewBox');
 
@@ -1503,7 +1517,7 @@ const ElementShapesProperties = ({
       let bbox = { width: 100, height: 100, x: 0, y: 0 };
       try {
         bbox = shapeEl.getBBox();
-      } catch(e) {}
+      } catch (e) { }
       if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100, x: 0, y: 0 };
 
       const slotW = bbox.width;
@@ -1533,7 +1547,7 @@ const ElementShapesProperties = ({
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
 
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${bbox.x + tx_user} ${bbox.y + ty_user})`);
+      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${tx_user} ${ty_user})`);
       imageNode.setAttribute('href', dataUrl);
       imageNode.setAttribute('xlink:href', dataUrl);
 
@@ -1550,8 +1564,8 @@ const ElementShapesProperties = ({
         const serializer = new XMLSerializer();
         const html = serializer.serializeToString(cloneSvg);
         updateElementAttribute(activePageIndex, selectedLayerId, {
-            '__dom_sync__': html,
-            'fill': `url(#${patternId})`
+          '__dom_sync__': html,
+          'fill': `url(#${patternId})`
         });
       }
     };
@@ -1671,12 +1685,12 @@ const ElementShapesProperties = ({
             let rx = parseFloat(targetShape.getAttribute('data-rx') || el.getAttribute('data-rx') || 0);
             const defaultCount = is4SidedShape ? 4 : (sType === 'polygon' ? 3 : 5);
             const count = parseInt(attribute === 'data-count' ? value : (targetShape.getAttribute('data-count') || el.getAttribute('data-count') || defaultCount));
-            const isStarFish = targetShape.getAttribute('data-shape-id') === 'star-fish' || 
-                               el.getAttribute('data-shape-id') === 'star-fish' ||
-                               targetShape.getAttribute('data-shape-title') === 'Star Fish' ||
-                               el.getAttribute('data-shape-title') === 'Star Fish' ||
-                               selectedElementProps['data-shape-id'] === 'star-fish' ||
-                               selectedElementProps['data-shape-title'] === 'Star Fish';
+            const isStarFish = targetShape.getAttribute('data-shape-id') === 'star-fish' ||
+              el.getAttribute('data-shape-id') === 'star-fish' ||
+              targetShape.getAttribute('data-shape-title') === 'Star Fish' ||
+              el.getAttribute('data-shape-title') === 'Star Fish' ||
+              selectedElementProps['data-shape-id'] === 'star-fish' ||
+              selectedElementProps['data-shape-title'] === 'Star Fish';
             const defaultRatio = isStarFish ? 20 : 40;
             const defaultRadius = isStarFish ? 25 : 0;
             const cr = parseFloat(attribute === 'data-radius' ? value : (targetShape.getAttribute('data-radius') || el.getAttribute('data-radius') || defaultRadius));
@@ -1793,7 +1807,7 @@ const ElementShapesProperties = ({
             parseFloat(selectedElementProps['fill-radius'] || 100)
           );
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return (selectedElementProps.fill && selectedElementProps.fill !== 'inherit') ? selectedElementProps.fill : (selectedElementProps['data-fill-color'] || '#000000');
   };
@@ -1835,7 +1849,7 @@ const ElementShapesProperties = ({
           if (domCap === 'round' || domJoin === 'round') return 'round';
           if (domCap === 'square' || domCap === 'butt' || domJoin === 'miter') return 'square';
         }
-      } catch (e) {}
+      } catch (e) { }
       return 'square';
     })(),
     strokePosition: 'Outside',
@@ -1934,8 +1948,8 @@ const ElementShapesProperties = ({
             bgRect.setAttribute('data-stroke-width', sw.toString());
           }
           if (next.strokeDashStyle !== undefined) {
-            const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') 
-              ? 'none' 
+            const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
+              ? 'none'
               : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
             bgRect.setAttribute('stroke-dasharray', dashValue);
           }
@@ -1945,7 +1959,7 @@ const ElementShapesProperties = ({
             if (k === 'fill' || k === 'stroke') return;
             selectedElement.setAttribute(k, v);
           });
-          
+
           window.__skipCanvasUpdateForPage = activePageIndex;
           let svgRoot = selectedElement;
           while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') svgRoot = svgRoot.parentElement;
@@ -2100,7 +2114,7 @@ const ElementShapesProperties = ({
           return;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
@@ -2210,11 +2224,10 @@ const ElementShapesProperties = ({
             onClick={() => {
               window.dispatchEvent(new CustomEvent('trigger-mask'));
             }}
-            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${
-              isMaskEnabled
+            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${isMaskEnabled
                 ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
                 : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
-            }`}
+              }`}
             title={isMaskEnabled ? 'Click to Unmask' : 'Use as Mask (or add image)'}
           >
             <MaskIcon size="1vw" className={isMaskEnabled ? 'text-indigo-600' : 'text-gray-600'} />
@@ -2383,10 +2396,10 @@ const ElementShapesProperties = ({
             value={
               shapeType === 'star'
                 ? Math.round(parseFloat(
-                    selectedElementProps['data-ratio'] !== undefined
-                      ? selectedElementProps['data-ratio']
-                      : ((selectedElementProps['data-shape-id'] === 'star-fish' || selectedElementProps['data-shape-title'] === 'Star Fish') ? 20 : 40)
-                  ))
+                  selectedElementProps['data-ratio'] !== undefined
+                    ? selectedElementProps['data-ratio']
+                    : ((selectedElementProps['data-shape-id'] === 'star-fish' || selectedElementProps['data-shape-title'] === 'Star Fish') ? 20 : 40)
+                ))
                 : 0
             }
             onChange={(val) => updateAttr('data-ratio', val)}
@@ -2451,7 +2464,7 @@ const ElementShapesProperties = ({
                     return bbox.width / bbox.height;
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
             return 1;
           })()}

@@ -123,10 +123,27 @@ const fontSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 50,
 const extractColorOrGradient = (element, attrName, defaultColor) => {
   if (!element) return defaultColor;
   const buttonG = element.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
-  const dataColor = element.getAttribute(`data-${attrName}-color`) || buttonG?.getAttribute(`data-${attrName}-color`);
-  if (dataColor) return dataColor;
+  // First check data attribute on the element itself (e.g. data-fill-color on <text>)
+  const ownDataColor = element.getAttribute(`data-${attrName}-color`);
+  if (ownDataColor) return ownDataColor;
 
-  const rawVal = element.getAttribute(attrName) || element.style?.[attrName] || defaultColor;
+  // Next, if element is text, check for standard data-text-color
+  if (element.tagName?.toLowerCase() === 'text') {
+    const textDataColor = element.getAttribute('data-text-color') || buttonG?.getAttribute('data-text-color');
+    if (textDataColor) return textDataColor;
+  }
+
+  // Next, check the raw style or attribute on the element directly
+  const directVal = element.style?.[attrName] || element.getAttribute(attrName);
+  if (directVal && directVal !== 'none' && !directVal.startsWith('url(#')) {
+    return directVal;
+  }
+
+  // Next check container buttonG attribute if not shape fill
+  const parentDataColor = buttonG?.getAttribute(`data-${attrName}-color`);
+  if (parentDataColor && element.tagName?.toLowerCase() !== 'text') return parentDataColor;
+
+  const rawVal = directVal || defaultColor;
   if (rawVal && rawVal.startsWith('url(#')) {
     const gradId = rawVal.match(/url\(#([^)]+)\)/)?.[1];
     const svgRoot = element.closest('svg');
@@ -900,10 +917,8 @@ export const ButtonEditor = ({
     // Padding scaling
     const horizPad = Math.max(currentPaddingW * 4, 16);
     const vertPad = Math.max(currentPaddingH * 3, 10);
-    const curW = parseFloat(rectEl.getAttribute('width') || 0);
-    const curH = parseFloat(rectEl.getAttribute('height') || 0);
-    const minW = curW > 0 ? Math.max(140, curW) : 140;
-    const minH = curH > 0 ? Math.max(42, curH) : 42;
+    const minW = 100;
+    const minH = 32;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
 

@@ -1,23 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  Link2,
-  Link2Off,
   Pencil,
-  ArrowLeftRight,
-  Check,
-  Trash2,
-  Plus
+  ArrowLeftRight
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
-import CornerRadius from '../../../properties/CornerRadius';
-import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
+import { ElementToggle, ElementDropdown } from './ElementUIControls';
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
@@ -273,7 +264,7 @@ export const ButtonEditor = ({
   // ─── 1. Button Content States ───────────────────────────────────
   const [buttonText, setButtonText] = useState('Button');
   const [fontFamily, setFontFamily] = useState('Poppins');
-  const [fontSize, setFontSize] = useState(14);
+  const [fontSize, setFontSize] = useState(12);
   const [fontWeight, setFontWeight] = useState('600'); // Semi Bold
   const [textFillColor, setTextFillColor] = useState('#000000');
   const [textOpacity, setTextOpacity] = useState(100);
@@ -407,12 +398,12 @@ export const ButtonEditor = ({
       setFontWeight(fw);
 
       const fs = textEl.getAttribute('font-size') || textEl.style.fontSize;
-      parsedFs = fs ? parseInt(fs) : 14;
-      if (!parsedFs || parsedFs <= 0 || parsedFs === 12 || parsedFs === 13) {
-        parsedFs = 14;
+      parsedFs = fs ? parseInt(fs) : 12;
+      if (!parsedFs || parsedFs <= 0) {
+        parsedFs = 12;
         textWasHidden = true;
-        textEl.setAttribute('font-size', '14');
-        if (textEl.style) textEl.style.fontSize = '14px';
+        textEl.setAttribute('font-size', '12');
+        if (textEl.style) textEl.style.fontSize = '12px';
       }
       setFontSize(parsedFs);
 
@@ -884,7 +875,7 @@ export const ButtonEditor = ({
       measuredWidth = (textVal.length || 1) * (currentFontSize * charRatio);
     }
 
-    const iconSize = Math.max(16, Math.round(currentFontSize * 0.9));
+    const iconSize = Math.max(10, Math.round(currentFontSize));
 
     // Check if icon has a badge circle or background
     let badgeEl = el.querySelector('.btn-badge-circle, .btn-badge-block, .btn-icon-bg') ||
@@ -2070,63 +2061,6 @@ export const ButtonEditor = ({
         </>
       )}
 
-      {/* ─── 2. SIZE & SPACING SECTION ──────────────────────────── */}
-      <SectionHeader title="Size & Spacing" />
-
-      {/* Padding */}
-      <PropertyRow label="Padding">
-        <div className="flex items-center gap-[0.4vw] w-full">
-          {/* W input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-semibold">W</span>
-            <input
-              type="number"
-              value={paddingW}
-              onChange={(e) => handlePaddingChange('w', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-semibold no-spin"
-            />
-          </div>
-
-          {/* Link button */}
-          <button
-            type="button"
-            onClick={() => handleTogglePaddingLink(!isPaddingLinked)}
-            className="text-gray-400 hover:text-gray-600 p-[0.2vw] transition-colors cursor-pointer flex-shrink-0"
-            title={isPaddingLinked ? "Unlink padding" : "Link padding"}
-          >
-            {isPaddingLinked ? <Link2 size="0.95vw" className="text-gray-700" /> : <Link2Off size="0.95vw" className="text-gray-400" />}
-          </button>
-
-          {/* H input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-semibold">H</span>
-            <input
-              type="number"
-              value={paddingH}
-              onChange={(e) => handlePaddingChange('h', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-semibold no-spin"
-            />
-          </div>
-        </div>
-      </PropertyRow>
-
-      {/* Icon Gap */}
-      <PropertyRow label="Icon Gap">
-        <div className="flex items-center gap-[0.6vw] w-full">
-          <div className="flex-1 relative flex items-center">
-            <ElementSlider
-              min={0}
-              max={40}
-              value={iconGap}
-              onChange={(val) => handleIconGapChange(parseInt(val) || 0)}
-            />
-          </div>
-          <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-semibold shadow-2xs flex-shrink-0">
-            {iconGap}px
-          </div>
-        </div>
-      </PropertyRow>
-
       {/* ─── 3. BUTTON COLOR SECTION ────────────────────────────── */}
       <SectionHeader title="Button Color" />
 
@@ -2199,15 +2133,6 @@ export const ButtonEditor = ({
           </div>
         </div>
       </div>
-
-      {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
-      <CornerRadius
-        radius={radius}
-        onCornerChange={handleCornerChange}
-        isRadiusLinked={isRadiusLinked}
-        onToggleLinked={handleToggleRadiusLink}
-        className="pl-[0.5vw]"
-      />
 
       {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
       <SectionHeader title="Effects" />

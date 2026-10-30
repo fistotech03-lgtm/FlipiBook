@@ -27,7 +27,7 @@ export * from './utils/mapElementUtils';
 export * from './utils/embedElementUtils';
 export * from './utils/slideshowElementUtils';
 export * from './utils/decoratorElementUtils';
-export { MAP_ITEMS } from './categories/mapCatalog.jsx';
+export { MAP_ITEMS, MapTemplateThumbnail } from './categories/mapCatalog.jsx';
 export { EMBED_ITEMS } from './categories/embedsCatalog.jsx';
 export { SLIDESHOW_ITEMS } from './categories/slideshowCatalog.jsx';
 export { DECORATOR_ITEMS } from './categories/decoratorsCatalog.jsx';

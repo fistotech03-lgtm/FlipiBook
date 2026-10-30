@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
+import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library, Images } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
 import { FolderSkeleton } from './FlipbookSkeleton';
 
@@ -324,6 +324,7 @@ export default function FlipbooksSidebar({
     const isBooksActive = dashboardMode === 'books' && activeFolder !== 'Favorites' && activeFolder !== 'Trash';
     const is3dActive = dashboardMode === '3d';
     const isShelfActive = dashboardMode === 'shelf';
+    const isGalleryActive = dashboardMode === 'gallery';
     const isFavoritesActive = dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites');
     const isTrashActive = dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash');
 
@@ -408,6 +409,29 @@ export default function FlipbooksSidebar({
                         <div className="flex items-center gap-[0.75vw]">
                             <Library size="1.15vw" className={`shrink-0 ${isShelfActive ? 'text-white' : 'text-gray-300'}`} />
                             <span>My Shelf</span>
+                        </div>
+                    </div>
+
+                    {/* Gallery Page Switcher */}
+                    <div
+                        onClick={() => {
+                            if (setDashboardMode) {
+                                setDashboardMode('gallery');
+                            }
+                            if (activeFolder === 'Favorites' || activeFolder === 'Trash') {
+                                setActiveFolder('All Flipbook');
+                            }
+                            setSelectedBooks([]);
+                        }}
+                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                            isGalleryActive
+                                ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                        }`}
+                    >
+                        <div className="flex items-center gap-[0.75vw]">
+                            <Images size="1.15vw" className={`shrink-0 ${isGalleryActive ? 'text-white' : 'text-gray-300'}`} />
+                            <span>Gallery</span>
                         </div>
                     </div>
 

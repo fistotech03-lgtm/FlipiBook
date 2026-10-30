@@ -698,6 +698,7 @@ const MainEditor = ({
     nodeEditSelectedHandleSideRef,
     nodeEditSelectedCurveIdxRef,
     paperScopeRef,
+    enterNodeEditMode,
     exitNodeEditMode,
     drawNodeEditOverlay,
     drawOverlayHighlight,
@@ -1008,6 +1009,15 @@ const getDraggableElement = (target, canvasRoot) => {
       return buttonGroup;
     }
 
+    // Audio elements are single compound elements; always drag/select the whole audio group
+    const audioGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="audio-frame"], g[id^="audio-"]') : null;
+    if (audioGroup) {
+      if (!audioGroup.id) {
+        audioGroup.id = `audio-${Date.now()}`;
+      }
+      return audioGroup;
+    }
+
     // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
     const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
     if (typographyGroup) {
@@ -1018,6 +1028,15 @@ const getDraggableElement = (target, canvasRoot) => {
     }
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group
+    // Element shapes are single compound elements; always drag/select the whole shape group (ensure never inside audio frame)
+    const shapeGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]') : null;
+    if (shapeGroup && !shapeGroup.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
+      if (!shapeGroup.id) {
+        shapeGroup.id = `shape-${Date.now()}`;
+      }
+      return shapeGroup;
+    }
+
     const decoratorGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-animated-decorator="true"], [data-type="animated-decorator"], [data-type="decorator"], g[id^="decorator-"]') : null;
     if (decoratorGroup) {
       if (!decoratorGroup.id) {
@@ -1062,14 +1081,6 @@ const getDraggableElement = (target, canvasRoot) => {
       return slideshowGroup;
     }
 
-    // Audio elements are single compound elements; always drag/select the whole audio group
-    const audioGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="audio-frame"], g[id^="audio-"]') : null;
-    if (audioGroup) {
-      if (!audioGroup.id) {
-        audioGroup.id = `audio-${Date.now()}`;
-      }
-      return audioGroup;
-    }
 
     // Embed elements are single compound elements; always drag/select the whole embed group
     const embedGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="embed-frame"], g[id^="embed-"]') : null;
@@ -1348,6 +1359,7 @@ const getDraggableElement = (target, canvasRoot) => {
         canUndo={canUndo}
         canRedo={canRedo}
         onAlign={handleAlign}
+        selectedLayerId={selectedLayerId}
         hideTools={isPdfProject}
 
         hasSelection={(() => {
@@ -1572,10 +1584,36 @@ const getDraggableElement = (target, canvasRoot) => {
         <div
           className={`w-full h-full flex items-center justify-center relative ${isPopupEditor ? 'overflow-visible' : 'overflow-hidden'} bg-transparent`}
           onMouseDown={(e) => {
-            if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input')) {
+            if (e.button === 0 && !isSpaceDownRef.current && activeMainTool !== 'hand' && !e.target.closest('[id^="canvas-content-"]') && !e.target.closest('.resize-handle') && !e.target.closest('button') && !e.target.closest('input') && !e.target.closest('.z-50')) {
               if (handleSvgMouseDown) {
                 handleSvgMouseDown(activePageIndex, e);
               }
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }}
+          onDrop={(e) => {
+            if (e.target.closest('.page-svg-container')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              const rawJson = e.dataTransfer.getData('application/json');
+              if (rawJson) {
+                const data = JSON.parse(rawJson);
+                if (data.type === 'element' || data.elementId) {
+                  window.dispatchEvent(new CustomEvent('add-element-to-editor', {
+                    detail: {
+                      pageIndex: activePageIndex,
+                      elementId: data.elementId,
+                      dropPoint: null
+                    }
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error('Background drop error:', err);
             }
           }}
         >
@@ -1628,6 +1666,12 @@ const getDraggableElement = (target, canvasRoot) => {
               pages={pages}
               saveModifiedPageHtml={saveModifiedPageHtml}
               setSelectedLayerId={setSelectedLayerId}
+              selectedLayerIdRef={selectedLayerIdRef}
+              setMultiSelectedIds={setMultiSelectedIds}
+              multiSelectedIdsRef={multiSelectedIdsRef}
+              setCurrentFrameId={setCurrentFrameId}
+              currentFrameIdRef={currentFrameIdRef}
+              drawOverlayHighlight={(...args) => drawOverlayHighlightRef.current?.(...args)}
               setActiveMainTool={setActiveMainTool}
               baseWidth={baseWidth}
               baseHeight={baseHeight}

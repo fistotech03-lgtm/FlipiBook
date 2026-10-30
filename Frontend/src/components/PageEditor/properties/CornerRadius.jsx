@@ -1,253 +1,176 @@
-import React, { useRef, useEffect } from 'react';
-import { ChevronUp, ChevronLeft, ChevronRight, Link2, Link2Off } from 'lucide-react';
-import { Icon } from '@iconify/react';
+import React, { useRef, useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Link2, Link2Off } from 'lucide-react';
 import { handleScrubHelper } from './Color';
 
 const CornerRadius = ({
-  openSubSection, setOpenSubSection,
-  radius, setRadius,
-  isRadiusLinked, setIsRadiusLinked,
+  radius,
+  setRadius,
+  onCornerChange,
+  isRadiusLinked = false,
+  setIsRadiusLinked,
+  onToggleLinked,
+  hideHeader = false,
+  title = 'Corner Radius',
+  className = '',
+  openSubSection,
+  setOpenSubSection,
   tagName = 'rect',
   noAccordion = false
 }) => {
   const containerRef = useRef(null);
+  const [internalLinked, setInternalLinked] = useState(Boolean(isRadiusLinked));
 
   useEffect(() => {
-    if (openSubSection === 'corner' && containerRef.current) {
-      const timer = setTimeout(() => {
-        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 350);
-      return () => clearTimeout(timer);
+    if (isRadiusLinked !== undefined) {
+      setInternalLinked(Boolean(isRadiusLinked));
     }
-  }, [openSubSection]);
-  const pseudoProps = {
-    'data-tl': radius?.tl || 0,
-    'data-tr': radius?.tr || 0,
-    'data-bl': radius?.bl || 0,
-    'data-br': radius?.br || 0,
-    'data-corner-linked': isRadiusLinked ? 'true' : 'false',
-    rx: Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0),
-    ry: Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0),
-    tagName: tagName
+  }, [isRadiusLinked]);
+
+  const effectiveLinked = isRadiusLinked !== undefined ? Boolean(isRadiusLinked) : internalLinked;
+
+  const handleCornerValueChange = (corner, nextVal) => {
+    const clamped = Math.max(0, parseInt(nextVal, 10) || 0);
+
+    if (onCornerChange) {
+      onCornerChange(corner, clamped);
+      return;
+    }
+
+    if (effectiveLinked) {
+      const allLinked = { tl: clamped, tr: clamped, bl: clamped, br: clamped };
+      if (setRadius) setRadius(allLinked);
+    } else {
+      const updated = {
+        tl: parseInt(radius?.tl || 0, 10),
+        tr: parseInt(radius?.tr || 0, 10),
+        bl: parseInt(radius?.bl || 0, 10),
+        br: parseInt(radius?.br || 0, 10),
+        [corner]: clamped
+      };
+      if (setRadius) setRadius(updated);
+    }
   };
 
-  const handleUpdate = (page, layer, attr, value) => {
-    if (attr === 'data-tl' && setRadius) setRadius(p => ({ ...p, tl: parseFloat(value) }));
-    if (attr === 'data-tr' && setRadius) setRadius(p => ({ ...p, tr: parseFloat(value) }));
-    if (attr === 'data-bl' && setRadius) setRadius(p => ({ ...p, bl: parseFloat(value) }));
-    if (attr === 'data-br' && setRadius) setRadius(p => ({ ...p, br: parseFloat(value) }));
-    if ((attr === 'rx' || attr === 'ry') && setRadius) {
-      setRadius(p => ({ ...p, tl: parseFloat(value), tr: parseFloat(value), bl: parseFloat(value), br: parseFloat(value) }));
+  const handleStepCorner = (corner, delta) => {
+    const currentVal = parseInt(radius?.[corner] || 0, 10);
+    handleCornerValueChange(corner, currentVal + delta);
+  };
+
+  const handleToggle = () => {
+    const nextLinked = !effectiveLinked;
+    setInternalLinked(nextLinked);
+    if (onToggleLinked) {
+      onToggleLinked(nextLinked);
+      return;
     }
-    if (attr === 'data-corner-linked' && setIsRadiusLinked) {
-      setIsRadiusLinked(value === 'true');
-      if (value === 'true' && setRadius) {
-        // Equalize all corners to the max radius when linking
-        setRadius(p => {
-          const maxR = Math.max(p.tl || 0, p.tr || 0, p.bl || 0, p.br || 0);
-          return { tl: maxR, tr: maxR, bl: maxR, br: maxR };
-        });
+
+    if (setIsRadiusLinked) {
+      setIsRadiusLinked(nextLinked);
+    }
+    if (nextLinked) {
+      const maxR = Math.max(
+        parseInt(radius?.tl || 0, 10),
+        parseInt(radius?.tr || 0, 10),
+        parseInt(radius?.bl || 0, 10),
+        parseInt(radius?.br || 0, 10)
+      );
+      if (setRadius) {
+        setRadius({ tl: maxR, tr: maxR, bl: maxR, br: maxR });
+      } else if (onCornerChange) {
+        ['tl', 'tr', 'bl', 'br'].forEach(k => onCornerChange(k, maxR));
       }
     }
   };
 
-  const updateAttr = (attribute, value) => {
-    handleUpdate(undefined, undefined, attribute, value);
-  };
+  const corners = [
+    { key: 'tl', label: 'Top-Left', roundedClass: 'rounded-tl-[0.9vw] rounded-tr-none rounded-bl-none rounded-br-none' },
+    { key: 'tr', label: 'Top-Right', roundedClass: 'rounded-tr-[0.9vw] rounded-tl-none rounded-bl-none rounded-br-none' },
+    { key: 'bl', label: 'Bottom-Left', roundedClass: 'rounded-bl-[0.9vw] rounded-tl-none rounded-tr-none rounded-br-none' },
+    { key: 'br', label: 'Bottom-Right', roundedClass: 'rounded-br-[0.9vw] rounded-tl-none rounded-tr-none rounded-bl-none' },
+  ];
 
-  const renderGridContent = () => (
-    <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.5vw] relative">
-      {[
-        { key: 'data-tl', roundedClass: 'rounded-tl-[1vw] rounded-tr-0 rounded-bl-0 rounded-br-0' },
-        { key: 'data-tr', roundedClass: 'rounded-tr-[1vw] rounded-tl-0 rounded-bl-0 rounded-br-0' },
-        { key: 'data-bl', roundedClass: 'rounded-bl-[1vw] rounded-tl-0 rounded-tr-0 rounded-br-0' },
-        { key: 'data-br', roundedClass: 'rounded-br-[1vw] rounded-tl-0 rounded-tr-0 rounded-bl-0' }
-      ].map((corner) => {
-        const val = parseInt(pseudoProps[corner.key] !== undefined ? pseudoProps[corner.key] : (pseudoProps.rx || 0));
-        const updateVal = (newVal) => {
-          const clamped = Math.max(0, newVal);
-          if (pseudoProps['data-corner-linked'] !== 'false') {
-            updateAttr('rx', clamped);
-            updateAttr('ry', clamped);
-            updateAttr('data-tl', clamped);
-            updateAttr('data-tr', clamped);
-            updateAttr('data-bl', clamped);
-            updateAttr('data-br', clamped);
-          } else {
-            updateAttr(corner.key, clamped);
-          }
-        };
+  return (
+    <div ref={containerRef} className={`flex flex-col gap-[0.5vw] font-sans ${className}`}>
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      `}</style>
 
-        return (
-          <div key={corner.key} className="flex flex-col items-center">
+      {!hideHeader && (
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          <div className="h-[1px] flex-1 bg-gray-200" />
+        </div>
+      )}
+
+      <div className="relative flex items-center justify-center my-[0.4vw]">
+        <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.2vw] relative">
+          {corners.map(({ key, roundedClass }) => (
             <div
+              key={key}
               onPointerDown={(e) => {
-                if (e.target.tagName === 'INPUT') return;
-                handleScrubHelper(e, val, (newVal) => updateVal(parseInt(newVal)));
+                if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
+                handleScrubHelper(e, radius?.[key] ?? 0, (newVal) => handleCornerValueChange(key, newVal));
               }}
-              className={`w-[5.4vw] h-[2.3vw] border border-gray-300 ${corner.roundedClass} flex items-center justify-between px-[0.45vw] bg-white relative transition-colors hover:border-gray-400 cursor-ew-resize select-none shadow-2xs`}
+              className={`w-[5.2vw] h-[2.3vw] bg-white border border-gray-300 ${roundedClass} flex items-center justify-between px-[0.4vw] shadow-2xs hover:border-gray-400 transition-colors cursor-ew-resize select-none relative`}
             >
               <button
                 type="button"
-                onClick={() => updateVal(val - 1)}
-                className="text-gray-400 hover:text-black transition-colors pointer-events-auto cursor-pointer p-[0.1vw]"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStepCorner(key, -1);
+                }}
+                className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
+                title="Decrease"
               >
                 <ChevronLeft size="0.8vw" />
               </button>
-
               <input
                 type="number"
-                min={0}
-                value={val}
-                onChange={(e) => updateVal(parseInt(e.target.value) || 0)}
-                className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none no-spin bg-transparent cursor-text"
+                min="0"
+                max="100"
+                value={radius?.[key] ?? 0}
+                onChange={(e) => handleCornerValueChange(key, e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
+                className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text z-10"
               />
-
               <button
                 type="button"
-                onClick={() => updateVal(val + 1)}
-                className="text-gray-400 hover:text-black transition-colors pointer-events-auto cursor-pointer p-[0.1vw]"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStepCorner(key, 1);
+                }}
+                className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
+                title="Increase"
               >
                 <ChevronRight size="0.8vw" />
               </button>
             </div>
-          </div>
-        );
-      })}
+          ))}
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-        <button
-          type="button"
-          onClick={() => updateAttr('data-corner-linked', pseudoProps['data-corner-linked'] === 'false' ? 'true' : 'false')}
-          className="bg-white p-[0.35vw] transition-all hover:scale-110 active:scale-95 rounded-full shadow-sm border border-gray-200 pointer-events-auto cursor-pointer"
-        >
-          {pseudoProps['data-corner-linked'] !== 'false' ? (
-            <Link2 size="1.3vw" className="text-black" />
-          ) : (
-            <Link2Off size="1.3vw" className="text-gray-300" />
-          )}
-        </button>
-      </div>
-    </div>
-  );
-
-  if (noAccordion) {
-    return (
-      <div ref={containerRef} className="flex flex-col gap-[1vw] font-sans">
-        <div className="flex items-center gap-[0.8vw] mb-[0.2vw]">
-          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Corner Radius</span>
-          <div className="flex-1 h-[1px] bg-gray-200" />
-        </div>
-        <div className="py-[1.2vw] pb-[0.8vw] relative flex flex-col items-center justify-center min-h-[7.5vw]">
-          {renderGridContent()}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={containerRef} className="flex flex-col font-sans">
-      <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm overflow-hidden">
-        <div
-          onClick={() => setOpenSubSection(openSubSection === 'corner' ? null : 'corner')}
-          className={`flex items-center justify-between px-[1vw] py-[1vw] border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${openSubSection === 'corner' ? 'rounded-t-[0.75vw]' : 'rounded-[0.75vw]'}`}
-        >
-          <div className="flex items-center gap-[0.5vw]">
-            <span className={`font-semibold text-[0.85vw] ${openSubSection === 'corner' ? 'text-gray-900' : 'text-gray-500'}`}>Corner Radius</span>
-          </div>
-          <div className="flex items-center gap-[0.5vw]">
-            {openSubSection === 'corner' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateAttr('rx', '0');
-                }}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw] cursor-pointer flex items-center justify-center"
-                title="Reset Corner Radius"
-              >
-                <Icon icon="ix:reset" width="1.1vw" height="1.1vw" style={{ strokeWidth: 2.5 }} />
-              </button>
-            )}
-            <ChevronUp size="1vw" className={`transition-transform duration-200 ${openSubSection === 'corner' ? 'text-gray-900' : 'rotate-180 text-gray-500'}`} />
-          </div>
-        </div>
-
-        <div className={`grid transition-all duration-300 ease-in-out ${openSubSection === 'corner' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-          <div className="overflow-hidden">
-            <div className="p-[1.5vw] relative flex flex-col items-center justify-center min-h-[9vw] bg-white">
-              <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.5vw] relative">
-                {[
-                  { key: 'data-tl', roundedClass: 'rounded-tl-[1vw] rounded-tr-0 rounded-bl-0 rounded-br-0' },
-                  { key: 'data-tr', roundedClass: 'rounded-tr-[1vw] rounded-tl-0 rounded-bl-0 rounded-br-0' },
-                  { key: 'data-bl', roundedClass: 'rounded-bl-[1vw] rounded-tl-0 rounded-tr-0 rounded-br-0' },
-                  { key: 'data-br', roundedClass: 'rounded-br-[1vw] rounded-tl-0 rounded-tr-0 rounded-bl-0' }
-                ].map((corner) => {
-                  const val = parseInt(pseudoProps[corner.key] !== undefined ? pseudoProps[corner.key] : (pseudoProps.rx || 0));
-                  const updateVal = (newVal) => {
-                    const clamped = Math.max(0, newVal);
-                    if (pseudoProps['data-corner-linked'] !== 'false') {
-                      updateAttr('rx', clamped);
-                      updateAttr('ry', clamped);
-                      updateAttr('data-tl', clamped);
-                      updateAttr('data-tr', clamped);
-                      updateAttr('data-bl', clamped);
-                      updateAttr('data-br', clamped);
-                    } else {
-                      updateAttr(corner.key, clamped);
-                    }
-                  };
-
-                  return (
-                    <div key={corner.key} className="flex flex-col items-center">
-                      <div
-                        onPointerDown={(e) => {
-                          if (e.target.tagName === 'INPUT') return;
-                          handleScrubHelper(e, val, (newVal) => updateVal(parseInt(newVal)));
-                        }}
-                        className={`w-[5.2vw] h-[2.8vw] border border-gray-400 ${corner.roundedClass} flex items-center justify-between px-[0.4vw] bg-white relative transition-colors hover:border-gray-600 cursor-ew-resize select-none`}
-                      >
-                        <button
-                          onClick={() => updateVal(val - 1)}
-                          className="text-gray-300 hover:text-gray-600 transition-colors pointer-events-auto"
-                        >
-                          <ChevronLeft size="0.9vw" />
-                        </button>
-
-                        <input
-                          type="number"
-                          min={0}
-                          value={val}
-                          onChange={(e) => updateVal(parseInt(e.target.value) || 0)}
-                          className="w-full text-center text-[1vw] font-semibold text-gray-700 outline-none no-spin bg-transparent cursor-text"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-
-                        <button
-                          onClick={() => updateVal(val + 1)}
-                          className="text-gray-300 hover:text-gray-600 transition-colors pointer-events-auto"
-                        >
-                          <ChevronRight size="0.9vw" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                  <button
-                    onClick={() => updateAttr('data-corner-linked', pseudoProps['data-corner-linked'] === 'false' ? 'true' : 'false')}
-                    className="bg-white p-[0.3vw] transition-all hover:scale-110 active:scale-95 rounded-full shadow-sm border border-gray-50 pointer-events-auto"
-                  >
-                    {pseudoProps['data-corner-linked'] !== 'false' ? (
-                      <Link2 size="1.4vw" className="text-black" />
-                    ) : (
-                      <Link2Off size="1.4vw" className="text-gray-300" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Center Link Icon Button */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-auto">
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggle();
+              }}
+              className="bg-white p-[0.35vw] rounded-full shadow-sm border border-gray-200 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+              title={effectiveLinked ? 'Unlink Corners' : 'Link All Corners'}
+            >
+              {effectiveLinked ? (
+                <Link2 size="1.1vw" className="text-black" />
+              ) : (
+                <Link2Off size="1.1vw" className="text-gray-400" />
+              )}
+            </button>
           </div>
         </div>
       </div>

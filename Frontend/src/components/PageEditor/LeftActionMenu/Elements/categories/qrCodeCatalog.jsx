@@ -39,6 +39,14 @@ const MiniQRMatrix = ({ x = 12, y = 12, size = 36 }) => {
 
 export const FrameVectorThumbnail = ({ frameId }) => {
   switch (frameId) {
+    case 'frame-none':
+    default:
+      return (
+        <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
+          <rect x="2" y="2" width="56" height="56" rx="3" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+          <MiniQRMatrix x="12" y="12" size="36" />
+        </svg>
+      );
     case 'frame-bottom-bar':
       return (
         <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
@@ -78,16 +86,6 @@ export const FrameVectorThumbnail = ({ frameId }) => {
           <text x="30" y="70" fill="#ffffff" fontSize="4.8" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
         </svg>
       );
-    case 'frame-bottom-pointer':
-      return (
-        <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
-          <rect x="5" y="4" width="50" height="51" rx="4" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
-          <MiniQRMatrix x="12" y="11" size="36" />
-          <polygon points="26,57 30,53 34,57" fill="#000000" />
-          <rect x="13" y="57" width="34" height="9.5" rx="2" fill="#000000" />
-          <text x="30" y="63.5" fill="#ffffff" fontSize="4.2" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
-        </svg>
-      );
     case 'frame-simple-text':
       return (
         <svg viewBox="0 0 60 70" className="w-full h-full p-[0.2vw]">
@@ -96,55 +94,63 @@ export const FrameVectorThumbnail = ({ frameId }) => {
           <text x="30" y="64" fill="#000000" fontSize="5.5" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
         </svg>
       );
-    case 'frame-top-header':
-      return (
-        <svg viewBox="0 0 60 72" className="w-full h-full p-[0.2vw]">
-          <rect x="3" y="3" width="54" height="66" rx="4" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
-          <path d="M 3 7 A 4 4 0 0 1 7 3 L 53 3 A 4 4 0 0 1 57 7 L 57 17 L 3 17 Z" fill="#000000" />
-          <text x="30" y="12.5" fill="#ffffff" fontSize="5.2" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
-          <MiniQRMatrix x="12" y="24" size="36" />
-        </svg>
-      );
-    case 'frame-none':
-    default:
-      return (
-        <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
-          <rect x="2" y="2" width="56" height="56" rx="3" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-          <MiniQRMatrix x="12" y="12" size="36" />
-        </svg>
-      );
   }
 };
 
-export const QR_ITEMS = QR_FRAMES.map((frame) => ({
-  id: `qr-${frame.id}`,
-  name: frame.shortName,
-  category: 'qr-code',
-  type: 'qrcode',
-  renderPreview: () => (
-    <div className="w-full h-full flex items-center justify-center p-[0.3vw] pointer-events-none select-none">
-      <div className="w-[85%] h-[85%] flex items-center justify-center transition-transform group-hover:scale-105">
-        <FrameVectorThumbnail frameId={frame.id} />
+// Explicit default order of the 6 frame elements matching switch (frameId)
+export const QR_FRAME_IDS = [
+  'frame-none',
+  'frame-bottom-bar',
+  'frame-top-bubble',
+  'frame-curved-arrow',
+  'frame-phone',
+  'frame-simple-text'
+];
+
+export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
+  const frame = QR_FRAMES.find((f) => f.id === frameId) || {
+    id: frameId,
+    shortName: frameId === 'frame-none' ? 'No Frame' : frameId,
+    defaultText: frameId === 'frame-curved-arrow' ? 'Scan me' : (frameId === 'frame-none' ? '' : 'SCAN ME')
+  };
+  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
+  const defaultTextColor = isLightBg ? '#000000' : '#FFFFFF';
+  const defaultFontFamily = frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
+
+  return {
+    id: `qr-${frame.id}`,
+    name: frame.shortName,
+    category: 'qr-code',
+    type: 'qrcode',
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] pointer-events-none select-none">
+        <div className="w-[85%] h-[85%] flex items-center justify-center transition-transform group-hover:scale-105">
+          <FrameVectorThumbnail frameId={frame.id} />
+        </div>
       </div>
-    </div>
-  ),
-  insert: (cx, cy) =>
-    createQRCodeElementNode(
-      {
-        frameId: frame.id,
-        text: frame.defaultText,
-        url: 'https://example.com'
-      },
-      cx,
-      cy
     ),
-  getSvgString: (isDrag) =>
-    getQRCodeSvgString(
-      {
-        frameId: frame.id,
-        text: frame.defaultText,
-        url: 'https://example.com'
-      },
-      isDrag
-    )
-}));
+    insert: (cx, cy) =>
+      createQRCodeElementNode(
+        {
+          frameId: frame.id,
+          text: frame.defaultText,
+          textColor: defaultTextColor,
+          fontFamily: defaultFontFamily,
+          url: 'https://'
+        },
+        cx,
+        cy
+      ),
+    getSvgString: (isDrag) =>
+      getQRCodeSvgString(
+        {
+          frameId: frame.id,
+          text: frame.defaultText,
+          textColor: defaultTextColor,
+          fontFamily: defaultFontFamily,
+          url: 'https://'
+        },
+        isDrag
+      )
+  };
+});

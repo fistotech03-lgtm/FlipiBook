@@ -621,7 +621,7 @@ const ImageEditor = ({
       const parsedGap = parts.length > 1 ? parseInt(parts[1]) : parsedLen;
       dashGap = isNaN(parsedGap) ? dashLen : parsedGap;
     }
-    const dashPos = activeEl.getAttribute('data-stroke-position') || 'Center';
+    const dashPos = activeEl.getAttribute('data-stroke-position') || 'Outside';
     const dashCap = activeEl.getAttribute('stroke-linecap') || 'butt';
 
     const existingStrokeType = activeEl.getAttribute('data-stroke-type') || 'solid';
@@ -813,7 +813,7 @@ const ImageEditor = ({
       strokeDashLength: dashLen,
       strokeDashGap: dashGap,
       strokeDasharrayValue: strokeArray,
-      strokePosition: liveElement.getAttribute('data-stroke-position') || 'Center',
+      strokePosition: liveElement.getAttribute('data-stroke-position') || 'Outside',
       strokeLinecap: liveElement.getAttribute('stroke-linecap') || 'butt',
       strokeType: liveElement.getAttribute('data-stroke-type') || 'solid'
     };
@@ -2433,7 +2433,7 @@ const ImageEditor = ({
 
         liveElement.setAttribute('data-stroke-color', backgroundColor.stroke);
         liveElement.setAttribute('data-stroke-opacity', (backgroundColor.strokeOpacity / 100).toString());
-        liveElement.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Center');
+        liveElement.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
         liveElement.setAttribute('data-stroke-width', backgroundColor.strokeWeight.toString());
 
         if (backgroundColor.strokeDashStyle === 'Dashed') {
@@ -2583,7 +2583,7 @@ const ImageEditor = ({
             } catch { }
 
             const swSync = backgroundColor.strokeWeight || 0;
-            const posSync = backgroundColor.strokePosition || 'Center';
+            const posSync = backgroundColor.strokePosition || 'Outside';
             const offsetX = (swSync / 2) / scaleX;
             const offsetY = (swSync / 2) / scaleY;
 
@@ -2681,7 +2681,7 @@ const ImageEditor = ({
             } catch { }
           }
 
-          const pos = backgroundColor.strokePosition || 'Center';
+          const pos = backgroundColor.strokePosition || 'Outside';
           const sw = backgroundColor.strokeWeight || 0;
 
           // Calculate exact local offset needed by querying the current screen transform matrix.
@@ -2896,7 +2896,7 @@ const ImageEditor = ({
             }
             return hex;
           };
-          const pos = backgroundColor.strokePosition || 'Center';
+          const pos = backgroundColor.strokePosition || 'Outside';
           const color = hexToRgba(backgroundColor.stroke, backgroundColor.strokeOpacity / 100);
           const weight = backgroundColor.strokeWeight;
           const style = backgroundColor.strokeDashStyle === 'Dashed' ? 'dashed' : 'solid';

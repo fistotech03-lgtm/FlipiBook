@@ -60,4 +60,21 @@ userSchema.pre('save', async function () {
   }
 });
 
+// Asynchronous non-blocking backup mirror hook
+userSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncUser(doc);
+  } catch (_) {}
+});
+
+userSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncUser(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = mongoose.model('user', userSchema);

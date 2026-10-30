@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Undo2, Redo2, RotateCcw, Plus, Minus } from 'lucide-react';
 import { Icon } from '@iconify/react';
+import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
 const TopToolbar = ({ 
   zoom, 
@@ -13,6 +14,7 @@ const TopToolbar = ({
   canRedo,
   onAlign,
   hasSelection,
+  selectedLayerId,
   hideTools = false
 }) => {
   return (

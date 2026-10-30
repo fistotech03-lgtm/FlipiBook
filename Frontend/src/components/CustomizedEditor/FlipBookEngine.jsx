@@ -247,14 +247,6 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     user-select: text !important;
     pointer-events: auto !important;
   }
-
-  svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) {
-    vector-effect: non-scaling-stroke !important;
-  }
-  [data-type="pdf-vector-layer"],
-  [data-type="pdf-vector-layer"] * {
-    vector-effect: none !important;
-  }
 </style>
 </head>
 <body>${rewriteHtmlUploads(sanitizePageHtmlForPreview(rawHtml || ''))}</body>
@@ -503,7 +495,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                             <div
                                 className="fbe-static-bg"
                                 style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: page.isTransparentSheet ? 'transparent' : '#fff', borderRadius: 'inherit', pointerEvents: 'none' }}
-                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg * { vector-effect: non-scaling-stroke !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
+                                dangerouslySetInnerHTML={{ __html: `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; }</style>` + cleanStaticHtml(page.html || page.content || '') }}
                             />
                             {/* VIRTUALIZATION: For large books, only mount heavy iframes within ±3 pages of active spread */}
                             {(augmentedPages.length <= 12 || Math.abs(i - currentPage) <= 3) && (
@@ -724,7 +716,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                 staticBg.className = 'fbe-static-bg';
                 const bgStyleColor = page.isTransparentSheet ? 'transparent' : '#fff';
                 staticBg.style.cssText = `position:absolute;inset:0;overflow:hidden;background:${bgStyleColor};pointer-events:none;border-radius:inherit;`;
-                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; } .fbe-static-bg svg *:not([data-type="pdf-vector-layer"] *):not([data-type="pdf-vector-layer"]) { vector-effect: non-scaling-stroke !important; } .fbe-static-bg [data-type="pdf-vector-layer"], .fbe-static-bg [data-type="pdf-vector-layer"] * { vector-effect: none !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
+                staticBg.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; }</style>` + cleanStaticHtml(page.html || page.content || '');
                 inner.appendChild(staticBg);
 
                 const iframe = document.createElement('iframe');

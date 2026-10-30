@@ -42,23 +42,23 @@ export const AdjustmentSlider = ({ label, value, onChange, onReset, min = -100, 
           <span className="text-[0.85vw] text-gray-600 font-medium">{label}</span>
           <button
             onClick={onReset}
-            className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw] pt-[0.4vw] cursor-pointer"
+            className="text-gray-600 hover:text-[#E05638] transition-colors p-[0.1vw] pt-[0.4vw] cursor-pointer"
             title="Reset"
           >
             <Icon icon="ix:reset" width="0.9vw" height="0.9vw" style={{ strokeWidth: 2.5 }} />
           </button>
         </div>
-        <span className="text-[0.76vw] font-medium text-gray-500">{num}</span>
+        <span className={`text-[0.76vw] font-medium transition-colors ${num !== 0 ? 'text-[#E05638]' : 'text-gray-500'}`}>{num}</span>
       </div>
 
       <div className="relative flex items-center h-[1.5vw] w-full group">
         {/* Inactive thin gray track */}
         <div className="absolute w-full h-[0.25vw] bg-[#E2E8F0] rounded-full" />
 
-        {/* Active thick blue track */}
+        {/* Active thick track */}
         {num !== 0 && (
           <div
-            className="absolute h-[0.25vw] bg-[#4D47FF] rounded-full pointer-events-none"
+            className="absolute h-[0.25vw] bg-[#E05638] rounded-full pointer-events-none"
             style={{
               left: `${activeLeft}%`,
               width: `${activeWidth}%`,
@@ -72,7 +72,7 @@ export const AdjustmentSlider = ({ label, value, onChange, onReset, min = -100, 
 
         {/* Thumb */}
         <div
-          className="absolute w-[1vw] h-[1vw] bg-[#4D47FF] rounded-full pointer-events-none shadow-[0_0.15vw_0.5vw_rgba(77,71,255,0.4)] group-hover:shadow-[0_0.15vw_0.75vw_rgba(77,71,255,0.6)] transition-shadow duration-150"
+          className="absolute w-[1vw] h-[1vw] bg-[#E05638] rounded-full pointer-events-none shadow-[0_0.15vw_0.5vw_rgba(224,86,56,0.4)] group-hover:shadow-[0_0.15vw_0.75vw_rgba(224,86,56,0.6)] transition-shadow duration-150"
           style={{ 
             left: `calc(${percentage}% - 0.5vw)`,
             border: '0.02vw solid #ffffff'
@@ -161,7 +161,7 @@ const Adjustment = ({
             {openSubSection === 'adjustment' && (
               <button
                 onClick={handleResetAll}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw] cursor-pointer flex items-center justify-center"
+                className="text-gray-600 hover:text-[#E05638] transition-colors p-[0.1vw] cursor-pointer flex items-center justify-center"
                 title="Reset All"
               >
                 <Icon icon="ix:reset" width="1.1vw" height="1.1vw" style={{ strokeWidth: 2.5 }} />

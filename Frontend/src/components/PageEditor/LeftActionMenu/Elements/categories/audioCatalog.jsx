@@ -1,44 +1,40 @@
 /**
  * audioCatalog.jsx
  * Audio Presets Catalog for FlipiBook Elements Panel
+ * Uses the Audio Element UI templates from Audio.jsx
  */
 import React from 'react';
-import { AUDIO_OPTIONS, createAudioElementNode } from '../utils/audioElementUtils';
+import { AUDIO_TEMPLATES, createAudioElementNode, getAudioSvgCode } from '../utils/audioElementUtils';
 
-export const AUDIO_ITEMS = AUDIO_OPTIONS.map((opt) => ({
-  id: `audio-${opt.id}`,
-  name: opt.name,
+/**
+ * AudioPreview
+ * Renders the accurate vector SVG preview matching each Audio player template
+ */
+export const AudioPreview = ({ template }) => {
+  const tpl = template;
+  const svgContent = getAudioSvgCode(tpl, `preview-${tpl.id}`);
+
+  return (
+    <div className="w-full h-full flex items-center justify-center p-[0.2vw] pointer-events-none select-none">
+      <svg
+        viewBox={`0 0 ${tpl.width || 360} ${tpl.height || 100}`}
+        className="w-full h-auto max-h-[2.8vw] pointer-events-none select-none transition-transform duration-200 group-hover:scale-105 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
+        preserveAspectRatio="xMidYMid meet"
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
+    </div>
+  );
+};
+
+export const AUDIO_ITEMS = AUDIO_TEMPLATES.map((tpl) => ({
+  id: `audio-${tpl.id}`,
+  name: tpl.name,
   category: 'audio',
   type: 'audio',
-  renderPreview: () => (
-    <div className="w-full h-full flex flex-col items-center justify-between p-[0.35vw] pointer-events-none select-none">
-      <div className="w-full h-[65%] rounded-[0.25vw] bg-emerald-50/60 border border-emerald-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform">
-        {opt.id === 'audio-icon' ? (
-          <div className="flex items-center gap-[0.2vw] bg-white border border-gray-200 px-[0.5vw] py-[0.25vw] rounded-full shadow-xs">
-            <svg width="0.9vw" height="0.9vw" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            <span className="text-[0.5vw] font-bold text-gray-700">Audio Pill</span>
-          </div>
-        ) : (
-          <div className="w-[85%] h-[1.4vw] bg-white rounded-full border border-gray-200 flex items-center px-[0.3vw] gap-[0.2vw] shadow-xs">
-            <div className="w-[0.8vw] h-[0.8vw] bg-emerald-600 rounded-full flex items-center justify-center">
-              <svg width="0.35vw" height="0.35vw" viewBox="0 0 24 24" fill="white">
-                <polygon points="6 4 18 12 6 20 6 4" />
-              </svg>
-            </div>
-            <div className="flex-1 h-[2px] bg-gray-200 rounded-full"></div>
-            <span className="text-[0.45vw] text-gray-500 font-medium">0:00</span>
-          </div>
-        )}
-      </div>
-      <div className="w-full text-center py-[0.1vw]">
-        <span className="text-[0.58vw] font-medium text-gray-700 group-hover:text-emerald-600 transition-colors truncate block">
-          {opt.name}
-        </span>
-      </div>
-    </div>
-  ),
-  insert: (cx, cy) => createAudioElementNode(opt.id, cx, cy),
-  getSvgString: (isDrag) => opt.svg
+  template: tpl,
+  renderPreview: () => <AudioPreview template={tpl} />,
+  insert: (cx, cy) => createAudioElementNode(tpl, cx, cy),
+  getSvgString: (isDrag) => getAudioSvgCode(tpl, Date.now())
 }));
+
+export default AUDIO_ITEMS;

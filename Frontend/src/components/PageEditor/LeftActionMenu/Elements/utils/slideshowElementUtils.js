@@ -31,7 +31,7 @@ const defaultSlideshowSettings = {
   bgOpacity: 100,
   strokeColor: '#9ca3af',
   strokeOpacity: 100,
-  strokeAlignment: 'Center',
+  strokeAlignment: 'Outside',
   strokeWidth: 1,
   strokeLineStyle: 'Solid',
   strokeDashLength: 8,
@@ -58,6 +58,98 @@ export const isElementSlideshow = (el) => {
   );
 };
 
+export const getFilmstripSvg = (uniqueId = Date.now(), transformAttr = '') => {
+  const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
+  const img0 = escapeXml(defaultSampleImages[0].url);
+  const img1 = escapeXml(defaultSampleImages[1].url);
+  const img2 = escapeXml(defaultSampleImages[2].url);
+
+  return `
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="filmstrip" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+      <defs>
+        <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(48, 0)" width="114" height="140" viewBox="0 0 114 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="114" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-center-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(48, 0)" width="114" height="140" viewBox="0 0 114 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="114" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-left-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(0, 10)" width="42" height="120">
+          <image href="${img2}" xlink:href="${img2}" x="0" y="0" width="42" height="120" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+        <pattern id="slideshow-pattern-right-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(168, 10)" width="42" height="120">
+          <image href="${img1}" xlink:href="${img1}" x="0" y="0" width="42" height="120" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+      </defs>
+      <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="160" rx="12" fill="transparent" />
+      <rect x="0" y="10" width="42" height="120" rx="8" stroke="#9ca3af" stroke-width="1" fill="url(#slideshow-pattern-left-${uniqueId})" style="opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;"/>
+      <rect x="168" y="10" width="42" height="120" rx="8" stroke="#9ca3af" stroke-width="1" fill="url(#slideshow-pattern-right-${uniqueId})" style="opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;"/>
+      <rect x="48" y="0" width="114" height="140" rx="12" stroke="#3b82f6" stroke-width="2" fill="url(#slideshow-pattern-center-${uniqueId})" style="transition: all 0.3s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.3);"/>
+      
+      <!-- Filmstrip Chevrons -->
+      <g class="slideshow-chevron left" transform="translate(4, 60)" style="pointer-events: none;">
+        <circle cx="8" cy="8" r="8" fill="#3b82f6" fill-opacity="0.85" />
+        <path d="M9.5 5L6.5 8L9.5 11" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </g>
+      <g class="slideshow-chevron right" transform="translate(192, 60)" style="pointer-events: none;">
+        <circle cx="8" cy="8" r="8" fill="#3b82f6" fill-opacity="0.85" />
+        <path d="M6.5 5L9.5 8L6.5 11" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </g>
+      
+      <!-- Dots Indicator -->
+      <g class="slideshow-dots" transform="translate(90, 146)">
+        <rect x="0" y="0" width="14" height="4" rx="2" fill="#3b82f6" />
+        <circle cx="20" cy="2" r="2" fill="#94a3b8" />
+        <circle cx="28" cy="2" r="2" fill="#94a3b8" />
+      </g>
+
+      <rect class="bbox-anchor" x="-5" y="-5" width="220" height="160" fill="transparent" />
+    </g>
+  `.trim();
+};
+
+export const get3DStackSvg = (uniqueId = Date.now(), transformAttr = '') => {
+  const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
+  const img0 = escapeXml(defaultSampleImages[0].url);
+  const img1 = escapeXml(defaultSampleImages[1].url);
+  const img2 = escapeXml(defaultSampleImages[2].url);
+
+  return `
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="stack" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+      <defs>
+        <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(42, 0)" width="126" height="140" viewBox="0 0 126 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="126" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-center-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(42, 0)" width="126" height="140" viewBox="0 0 126 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="126" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-left-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(6, 8)" width="82" height="124">
+          <image href="${img2}" xlink:href="${img2}" x="0" y="0" width="82" height="124" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+        <pattern id="slideshow-pattern-right-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(122, 8)" width="82" height="124">
+          <image href="${img1}" xlink:href="${img1}" x="0" y="0" width="82" height="124" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+      </defs>
+      <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="150" rx="14" fill="transparent" />
+      <rect x="6" y="8" width="82" height="124" rx="10" stroke="#06b6d4" stroke-opacity="0.4" stroke-width="1" fill="url(#slideshow-pattern-left-${uniqueId})" style="transform: perspective(400px) rotateY(18deg); transform-origin: 100% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;"/>
+      <rect x="122" y="8" width="82" height="124" rx="10" stroke="#06b6d4" stroke-opacity="0.4" stroke-width="1" fill="url(#slideshow-pattern-right-${uniqueId})" style="transform: perspective(400px) rotateY(-18deg); transform-origin: 0% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;"/>
+      <rect x="42" y="0" width="126" height="140" rx="14" stroke="#06b6d4" stroke-width="2" fill="url(#slideshow-pattern-center-${uniqueId})" style="transform: perspective(400px) rotateY(0deg) translateZ(30px); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.4);"/>
+      
+      <!-- Nested Dots in Pop Card -->
+      <g class="slideshow-dots" transform="translate(93, 126)">
+        <circle cx="4" cy="4" r="3" fill="#06b6d4" />
+        <circle cx="14" cy="4" r="2.5" fill="#ffffff" fill-opacity="0.6" />
+        <circle cx="24" cy="4" r="2.5" fill="#ffffff" fill-opacity="0.6" />
+      </g>
+
+      <rect class="bbox-anchor" x="-5" y="-5" width="220" height="150" fill="transparent" />
+    </g>
+  `.trim();
+};
+
 export const get3DCoverflowSvg = (uniqueId = Date.now(), transformAttr = '') => {
   const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
   const img0 = escapeXml(defaultSampleImages[0].url);
@@ -65,7 +157,7 @@ export const get3DCoverflowSvg = (uniqueId = Date.now(), transformAttr = '') => 
   const img2 = escapeXml(defaultSampleImages[2].url);
 
   return `
-    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="coverflow" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
       <defs>
         <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(40, 0)" width="130" height="140" viewBox="0 0 130 140">
           <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="130" height="140" preserveAspectRatio="xMidYMid slice" />
@@ -85,7 +177,143 @@ export const get3DCoverflowSvg = (uniqueId = Date.now(), transformAttr = '') => 
       <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="150" rx="12" fill="transparent" />
       <rect x="0" y="8" width="80" height="124" rx="10" stroke="#9ca3af" stroke-width="1" fill="url(#slideshow-pattern-left-${uniqueId})" style="transform: perspective(400px) rotateY(25deg); transform-origin: 100% 50%; transform-box: fill-box; transition: all 0.3s ease;"/>
       <rect x="120" y="8" width="110" height="124" rx="10" stroke="#9ca3af" stroke-width="1" fill="url(#slideshow-pattern-right-${uniqueId})" style="transform: perspective(400px) rotateY(-22deg); transform-origin: 0% 50%; transform-box: fill-box; transition: all 0.3s ease;"/>
-      <rect x="40" y="0" width="130" height="140" rx="12" stroke="#9ca3af" stroke-width="2" fill="url(#slideshow-pattern-center-${uniqueId})" style="transform: perspective(400px) rotateY(0deg); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease;"/>
+      <rect x="40" y="0" width="130" height="140" rx="12" stroke="#a855f7" stroke-width="2" fill="url(#slideshow-pattern-center-${uniqueId})" style="transform: perspective(400px) rotateY(0deg); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease;"/>
+      <rect class="bbox-anchor" x="-5" y="-5" width="220" height="150" fill="transparent" />
+    </g>
+  `.trim();
+};
+
+export const getFadeshowSvg = (uniqueId = Date.now(), transformAttr = '') => {
+  const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
+  const img0 = escapeXml(defaultSampleImages[0].url);
+  const img1 = escapeXml(defaultSampleImages[1].url);
+  const img2 = escapeXml(defaultSampleImages[2].url);
+
+  return `
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="fade" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+      <defs>
+        <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(5, 0)" width="210" height="140" viewBox="0 0 210 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="210" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-center-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(5, 0)" width="210" height="140" viewBox="0 0 210 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="210" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-left-${uniqueId}" patternUnits="userSpaceOnUse" width="10" height="10">
+          <image href="${img2}" xlink:href="${img2}" width="10" height="10" />
+        </pattern>
+        <pattern id="slideshow-pattern-right-${uniqueId}" patternUnits="userSpaceOnUse" width="10" height="10">
+          <image href="${img1}" xlink:href="${img1}" width="10" height="10" />
+        </pattern>
+        <linearGradient id="fade-grad-${uniqueId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+          <stop offset="100%" stop-color="#000000" stop-opacity="0.8" />
+        </linearGradient>
+      </defs>
+      <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="150" rx="12" fill="transparent" />
+      <rect x="0" y="0" width="1" height="1" display="none" fill="url(#slideshow-pattern-left-${uniqueId})" />
+      <rect x="0" y="0" width="1" height="1" display="none" fill="url(#slideshow-pattern-right-${uniqueId})" />
+      <rect x="5" y="0" width="210" height="140" rx="12" stroke="#f97316" stroke-width="1.5" fill="url(#slideshow-pattern-center-${uniqueId})" style="transition: opacity 0.5s ease-in-out;"/>
+      
+      <!-- Gradient overlay for text reading -->
+      <rect x="5" y="70" width="210" height="70" rx="12" fill="url(#fade-grad-${uniqueId})" style="pointer-events: none; opacity: 0.65;" />
+      
+      <!-- Chevrons -->
+      <path d="M18 64L13 70L18 76" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8" />
+      <path d="M202 64L207 70L202 76" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8" />
+      
+      <!-- Dots -->
+      <g class="slideshow-dots" transform="translate(97, 126)">
+        <circle cx="4" cy="4" r="3.5" fill="#f97316" />
+        <circle cx="14" cy="4" r="2.5" fill="#ffffff" fill-opacity="0.6" />
+        <circle cx="24" cy="4" r="2.5" fill="#ffffff" fill-opacity="0.6" />
+      </g>
+
+      <rect class="bbox-anchor" x="-5" y="-5" width="220" height="150" fill="transparent" />
+    </g>
+  `.trim();
+};
+
+export const getInfiniteCarouselSvg = (uniqueId = Date.now(), transformAttr = '') => {
+  const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
+  const img0 = escapeXml(defaultSampleImages[0].url);
+  const img1 = escapeXml(defaultSampleImages[1].url);
+  const img2 = escapeXml(defaultSampleImages[2].url);
+
+  return `
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="pure" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+      <defs>
+        <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(64, 0)" width="82" height="140" viewBox="0 0 82 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="82" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-center-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(64, 0)" width="82" height="140" viewBox="0 0 82 140">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="82" height="140" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-left-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(0, 10)" width="58" height="120">
+          <image href="${img2}" xlink:href="${img2}" x="0" y="0" width="58" height="120" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+        <pattern id="slideshow-pattern-right-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(152, 10)" width="58" height="120">
+          <image href="${img1}" xlink:href="${img1}" x="0" y="0" width="58" height="120" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+      </defs>
+      <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="150" rx="14" fill="transparent" />
+      <rect x="0" y="10" width="58" height="120" rx="8" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="1" fill="url(#slideshow-pattern-left-${uniqueId})" style="opacity: 0.75; transition: all 0.3s ease;"/>
+      <rect x="152" y="10" width="58" height="120" rx="8" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="1" fill="url(#slideshow-pattern-right-${uniqueId})" style="opacity: 0.75; transition: all 0.3s ease;"/>
+      <rect x="64" y="0" width="82" height="140" rx="12" stroke="#60a5fa" stroke-width="2" fill="url(#slideshow-pattern-center-${uniqueId})" style="transition: all 0.3s ease; box-shadow: 0 0 15px rgba(96,165,250,0.4);"/>
+      
+      <!-- Infinite marquee stream indicator bar -->
+      <line x1="10" y1="144" x2="200" y2="144" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6" />
+
+      <rect class="bbox-anchor" x="-5" y="-5" width="220" height="150" fill="transparent" />
+    </g>
+  `.trim();
+};
+
+export const getMonochromeMinimalSvg = (uniqueId = Date.now(), transformAttr = '') => {
+  const dataJson = escapeXml(JSON.stringify({ settings: defaultSlideshowSettings, images: defaultSampleImages }));
+  const img0 = escapeXml(defaultSampleImages[0].url);
+  const img1 = escapeXml(defaultSampleImages[1].url);
+  const img2 = escapeXml(defaultSampleImages[2].url);
+
+  return `
+    <g id="slideshow-${uniqueId}" data-type="slideshow" data-is-slideshow="true" data-style="mono" data-active-index="0" data-slideshow="${dataJson}" cursor="pointer" ${transformAttr}>
+      <defs>
+        <pattern id="slideshow-pattern-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(10, 8)" width="190" height="124" viewBox="0 0 190 124">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="190" height="124" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-center-${uniqueId}" patternUnits="userSpaceOnUse" patternTransform="translate(10, 8)" width="190" height="124" viewBox="0 0 190 124">
+          <image href="${img0}" xlink:href="${img0}" x="0" y="0" width="190" height="124" preserveAspectRatio="xMidYMid slice" />
+          <g class="overlay-text-group"></g>
+        </pattern>
+        <pattern id="slideshow-pattern-left-${uniqueId}" patternUnits="userSpaceOnUse" width="10" height="10">
+          <image href="${img2}" xlink:href="${img2}" width="10" height="10" />
+        </pattern>
+        <pattern id="slideshow-pattern-right-${uniqueId}" patternUnits="userSpaceOnUse" width="10" height="10">
+          <image href="${img1}" xlink:href="${img1}" width="10" height="10" />
+        </pattern>
+      </defs>
+      <rect class="slideshow-container-bg" x="-5" y="-5" width="220" height="150" rx="10" fill="transparent" />
+      <rect x="0" y="0" width="1" height="1" display="none" fill="url(#slideshow-pattern-left-${uniqueId})" />
+      <rect x="0" y="0" width="1" height="1" display="none" fill="url(#slideshow-pattern-right-${uniqueId})" />
+      <rect x="10" y="8" width="190" height="124" rx="8" stroke="#cbd5e1" stroke-width="1.5" fill="url(#slideshow-pattern-center-${uniqueId})" style="filter: grayscale(100%) contrast(1.1); transition: all 0.5s ease;"/>
+      
+      <!-- Frosted Chevron Controls -->
+      <circle cx="24" cy="70" r="9" fill="#000000" fill-opacity="0.35" />
+      <path d="M26 66L22 70L26 74" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <circle cx="186" cy="70" r="9" fill="#000000" fill-opacity="0.35" />
+      <path d="M184 66L188 70L184 74" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+      <!-- Minimal dots -->
+      <g class="slideshow-dots" transform="translate(96, 120)">
+        <circle cx="4" cy="4" r="2.5" fill="#ffffff" />
+        <circle cx="12" cy="4" r="2" fill="#ffffff" fill-opacity="0.4" />
+        <circle cx="20" cy="4" r="2" fill="#ffffff" fill-opacity="0.4" />
+      </g>
+
       <rect class="bbox-anchor" x="-5" y="-5" width="220" height="150" fill="transparent" />
     </g>
   `.trim();
@@ -147,13 +375,39 @@ export const getFlatGallerySvg = (uniqueId = Date.now(), transformAttr = '') => 
 
 export function createSlideshowElementNode(styleId = 'coverflow', cx = 200, cy = 150) {
   const uniqueId = Date.now();
-  const svgString = styleId === 'flat' ? getFlatGallerySvg(uniqueId) : get3DCoverflowSvg(uniqueId);
+  let svgString = '';
+  let title = '3D Coverflow';
+
+  if (styleId === 'filmstrip') {
+    svgString = getFilmstripSvg(uniqueId);
+    title = 'Card Filmstrip';
+  } else if (styleId === 'stack') {
+    svgString = get3DStackSvg(uniqueId);
+    title = '3D Pop Stack';
+  } else if (styleId === 'fade') {
+    svgString = getFadeshowSvg(uniqueId);
+    title = 'CSS Fadeshow';
+  } else if (styleId === 'pure') {
+    svgString = getInfiniteCarouselSvg(uniqueId);
+    title = 'Infinite Carousel';
+  } else if (styleId === 'mono') {
+    svgString = getMonochromeMinimalSvg(uniqueId);
+    title = 'Monochrome Minimal';
+  } else if (styleId === 'flat') {
+    svgString = getFlatGallerySvg(uniqueId);
+    title = 'Flat Gallery';
+  } else {
+    svgString = get3DCoverflowSvg(uniqueId);
+    title = '3D Coverflow';
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${svgString}</svg>`, 'image/svg+xml');
   const el = doc.querySelector(`g#slideshow-${uniqueId}`) || doc.firstElementChild?.firstElementChild;
   if (el) {
     el.setAttribute('transform', `translate(${Math.round(cx - 110)}, ${Math.round(cy - 75)})`);
-    el.setAttribute('data-name', styleId === 'flat' ? 'Flat Gallery' : '3D Coverflow');
+    el.setAttribute('data-name', 'Slideshow');
+    el.setAttribute('data-slideshow-title', title);
     el.setAttribute('data-type', 'slideshow');
     el.setAttribute('data-is-slideshow', 'true');
     return document.importNode(el, true);
@@ -184,8 +438,19 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
   const rightRect = rects[1];
   const centerRect = rects[2];
 
+  if (leftRect) leftRect.removeAttribute('display');
+  if (rightRect) rightRect.removeAttribute('display');
+  if (centerRect) {
+    centerRect.removeAttribute('display');
+    centerRect.style.filter = 'none';
+  }
+
   const slideStyle = el.getAttribute('data-style');
+  let baseW = 210;
+  let baseH = 140;
+
   if (slideStyle === 'flat') {
+    baseH = 190;
     if (centerRect) {
       centerRect.setAttribute('x', '50');
       centerRect.setAttribute('y', '0');
@@ -207,13 +472,112 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
       rightRect.setAttribute('height', '140');
       rightRect.setAttribute('style', 'opacity: 0.5; transition: all 0.3s ease;');
     }
+  } else if (slideStyle === 'filmstrip') {
+    baseH = 155;
+    if (centerRect) {
+      centerRect.setAttribute('x', '48');
+      centerRect.setAttribute('y', '0');
+      centerRect.setAttribute('width', '114');
+      centerRect.setAttribute('height', '140');
+      centerRect.setAttribute('rx', '12');
+      centerRect.setAttribute('style', 'transition: all 0.3s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.3);');
+    }
+    if (leftRect) {
+      leftRect.setAttribute('x', '0');
+      leftRect.setAttribute('y', '10');
+      leftRect.setAttribute('width', '42');
+      leftRect.setAttribute('height', '120');
+      leftRect.setAttribute('rx', '8');
+      leftRect.setAttribute('style', 'opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;');
+    }
+    if (rightRect) {
+      rightRect.setAttribute('x', '168');
+      rightRect.setAttribute('y', '10');
+      rightRect.setAttribute('width', '42');
+      rightRect.setAttribute('height', '120');
+      rightRect.setAttribute('rx', '8');
+      rightRect.setAttribute('style', 'opacity: 0.6; filter: saturate(0.8); transition: all 0.3s ease;');
+    }
+  } else if (slideStyle === 'stack') {
+    if (centerRect) {
+      centerRect.setAttribute('x', '42');
+      centerRect.setAttribute('y', '0');
+      centerRect.setAttribute('width', '126');
+      centerRect.setAttribute('height', '140');
+      centerRect.setAttribute('rx', '14');
+      centerRect.setAttribute('style', 'transform: perspective(400px) rotateY(0deg) translateZ(30px); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.4);');
+    }
+    if (leftRect) {
+      leftRect.setAttribute('x', '6');
+      leftRect.setAttribute('y', '8');
+      leftRect.setAttribute('width', '82');
+      leftRect.setAttribute('height', '124');
+      leftRect.setAttribute('rx', '10');
+      leftRect.setAttribute('style', 'transform: perspective(400px) rotateY(18deg); transform-origin: 100% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;');
+    }
+    if (rightRect) {
+      rightRect.setAttribute('x', '122');
+      rightRect.setAttribute('y', '8');
+      rightRect.setAttribute('width', '82');
+      rightRect.setAttribute('height', '124');
+      rightRect.setAttribute('rx', '10');
+      rightRect.setAttribute('style', 'transform: perspective(400px) rotateY(-18deg); transform-origin: 0% 50%; transform-box: fill-box; opacity: 0.8; transition: all 0.3s ease;');
+    }
+  } else if (slideStyle === 'fade') {
+    if (centerRect) {
+      centerRect.setAttribute('x', '5');
+      centerRect.setAttribute('y', '0');
+      centerRect.setAttribute('width', '210');
+      centerRect.setAttribute('height', '140');
+      centerRect.setAttribute('rx', '12');
+      centerRect.setAttribute('style', 'transition: opacity 0.5s ease-in-out;');
+    }
+    if (leftRect) leftRect.setAttribute('display', 'none');
+    if (rightRect) rightRect.setAttribute('display', 'none');
+  } else if (slideStyle === 'pure') {
+    if (centerRect) {
+      centerRect.setAttribute('x', '64');
+      centerRect.setAttribute('y', '0');
+      centerRect.setAttribute('width', '82');
+      centerRect.setAttribute('height', '140');
+      centerRect.setAttribute('rx', '12');
+      centerRect.setAttribute('style', 'transition: all 0.3s ease; box-shadow: 0 0 15px rgba(96,165,250,0.4);');
+    }
+    if (leftRect) {
+      leftRect.setAttribute('x', '0');
+      leftRect.setAttribute('y', '10');
+      leftRect.setAttribute('width', '58');
+      leftRect.setAttribute('height', '120');
+      leftRect.setAttribute('rx', '8');
+      leftRect.setAttribute('style', 'opacity: 0.75; transition: all 0.3s ease;');
+    }
+    if (rightRect) {
+      rightRect.setAttribute('x', '152');
+      rightRect.setAttribute('y', '10');
+      rightRect.setAttribute('width', '58');
+      rightRect.setAttribute('height', '120');
+      rightRect.setAttribute('rx', '8');
+      rightRect.setAttribute('style', 'opacity: 0.75; transition: all 0.3s ease;');
+    }
+  } else if (slideStyle === 'mono') {
+    if (centerRect) {
+      centerRect.setAttribute('x', '10');
+      centerRect.setAttribute('y', '8');
+      centerRect.setAttribute('width', '190');
+      centerRect.setAttribute('height', '124');
+      centerRect.setAttribute('rx', '8');
+      centerRect.setAttribute('style', 'filter: grayscale(100%) contrast(1.1); transition: all 0.5s ease;');
+    }
+    if (leftRect) leftRect.setAttribute('display', 'none');
+    if (rightRect) rightRect.setAttribute('display', 'none');
   } else {
-    // 3D Coverflow
+    // 3D Coverflow (coverflow)
     if (centerRect) {
       centerRect.setAttribute('x', '40');
       centerRect.setAttribute('y', '0');
       centerRect.setAttribute('width', '130');
       centerRect.setAttribute('height', '140');
+      centerRect.setAttribute('rx', '12');
       centerRect.setAttribute('style', 'transform: perspective(400px) rotateY(0deg); transform-origin: 50% 50%; transform-box: fill-box; transition: all 0.3s ease;');
     }
     if (leftRect) {
@@ -221,6 +585,7 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
       leftRect.setAttribute('y', '8');
       leftRect.setAttribute('width', '80');
       leftRect.setAttribute('height', '124');
+      leftRect.setAttribute('rx', '10');
       leftRect.setAttribute('style', 'transform: perspective(400px) rotateY(25deg); transform-origin: 100% 50%; transform-box: fill-box; transition: all 0.3s ease;');
     }
     if (rightRect) {
@@ -228,6 +593,7 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
       rightRect.setAttribute('y', '8');
       rightRect.setAttribute('width', '110');
       rightRect.setAttribute('height', '124');
+      rightRect.setAttribute('rx', '10');
       rightRect.setAttribute('style', 'transform: perspective(400px) rotateY(-22deg); transform-origin: 0% 50%; transform-box: fill-box; transition: all 0.3s ease;');
     }
   }
@@ -240,9 +606,6 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
     el.appendChild(bboxAnchor);
   }
   const pad = 5;
-  const baseW = slideStyle === 'flat' ? 210 : 210;
-  const baseH = slideStyle === 'flat' ? 190 : 140;
-
   bboxAnchor.setAttribute('x', (-pad).toString());
   bboxAnchor.setAttribute('y', (-pad).toString());
   bboxAnchor.setAttribute('width', (baseW + pad * 2).toString());
@@ -275,7 +638,7 @@ export const update3FrameSlideshow = (el, images = [], activeIdx = 0, settings =
   }
   const sCap = settings.strokeLineCorner === 'Rounded' ? 'round' : 'square';
   const sJoin = settings.strokeLineCorner === 'Rounded' ? 'round' : 'miter';
-  const sAlign = settings.strokeAlignment || 'Center';
+  const sAlign = settings.strokeAlignment || 'Outside';
   let alignOffset = 0;
   if (sAlign === 'Inside') alignOffset = sWidth / 2;
   else if (sAlign === 'Outside') alignOffset = -sWidth / 2;

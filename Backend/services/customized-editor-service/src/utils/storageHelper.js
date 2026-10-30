@@ -85,30 +85,31 @@ const toPublicStorageUrl = (filePath) => {
 };
 
 /**
- * Deletes an asset file from disk given its URL or disk path
+ * Deletes an asset file from disk given its URL or disk path (non-blocking)
  */
 const deleteAssetFile = (fileUrlOrPath) => {
-  try {
-    if (!fileUrlOrPath) return false;
-    const root = getStorageRoot();
-    let absPath = fileUrlOrPath;
+  if (!fileUrlOrPath) return false;
+  setImmediate(async () => {
+    try {
+      const root = getStorageRoot();
+      let absPath = fileUrlOrPath;
 
-    if (fileUrlOrPath.startsWith('/storage/')) {
-      const rel = decodeURIComponent(fileUrlOrPath.replace('/storage/', ''));
-      absPath = path.join(root, rel);
-    } else if (fileUrlOrPath.startsWith('/uploads/')) {
-      const rel = decodeURIComponent(fileUrlOrPath.replace('/uploads/', ''));
-      absPath = path.join(root, rel);
-    }
+      if (fileUrlOrPath.startsWith('/storage/')) {
+        const rel = decodeURIComponent(fileUrlOrPath.replace('/storage/', ''));
+        absPath = path.join(root, rel);
+      } else if (fileUrlOrPath.startsWith('/uploads/')) {
+        const rel = decodeURIComponent(fileUrlOrPath.replace('/uploads/', ''));
+        absPath = path.join(root, rel);
+      }
 
-    if (fs.existsSync(absPath) && fs.statSync(absPath).isFile()) {
-      fs.unlinkSync(absPath);
-      return true;
+      if (fs.existsSync(absPath)) {
+        await fs.promises.unlink(absPath).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('[Storage Helper] Warning deleting asset file:', err.message);
     }
-  } catch (err) {
-    console.warn('[Storage Helper] Warning deleting asset file:', err.message);
-  }
-  return false;
+  });
+  return true;
 };
 
 module.exports = {

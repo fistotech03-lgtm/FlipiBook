@@ -1218,6 +1218,50 @@ const PageEditor = () => {
                     syncFilters(doc, el);
                   }
 
+                  // Guard & auto-heal: Audio elements & their controls must never be converted to shapes
+                  const isAudioOrInsideAudio =
+                    (el.classList && el.classList.contains("audio-fill-layer")) ||
+                    (typeof el.closest === "function" && (el.closest('[data-type="audio-frame"]') || el.closest('g[id^="audio-"]'))) ||
+                    (() => {
+                      let p = el.parentNode;
+                      while (p && p.getAttribute) {
+                        if (
+                          p.getAttribute("data-type") === "audio-frame" ||
+                          (p.id && p.id.startsWith("audio-"))
+                        ) {
+                          return true;
+                        }
+                        p = p.parentNode;
+                      }
+                      return false;
+                    })();
+
+                  if (isAudioOrInsideAudio) {
+                    if (el.classList && el.classList.contains("audio-fill-layer")) {
+                      el.removeAttribute("data-shape-type");
+                      if (el.tagName && el.tagName.toLowerCase() === "path") {
+                        const rect = doc.createElementNS(
+                          "http://www.w3.org/2000/svg",
+                          "rect",
+                        );
+                        Array.from(el.attributes).forEach((a) => {
+                          if (a.name !== "d" && a.name !== "data-shape-type") {
+                            rect.setAttribute(a.name, a.value);
+                          }
+                        });
+                        if (!rect.getAttribute("rx")) {
+                          const audioParent = typeof el.closest === "function" ? el.closest('[data-audio-template]') : null;
+                          const tpl = audioParent ? audioParent.getAttribute("data-audio-template") : null;
+                          if (tpl === "sunset-vibrant") rect.setAttribute("rx", "27");
+                          else if (tpl === "silver-mono") rect.setAttribute("rx", "26");
+                          else rect.setAttribute("rx", "24");
+                        }
+                        if (el.parentNode) el.parentNode.replaceChild(rect, el);
+                      }
+                    }
+                    return; // Skip shape processing for all audio children
+                  }
+
                   const shapeType =
                     el.getAttribute("data-shape-type") ||
                     (el.tagName === "rect" ? "rectangle" : null);

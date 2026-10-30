@@ -110,7 +110,15 @@ export const svgGlobalStyles = `
   body.crop-modal-active .overlay-type-hover,
   body.crop-modal-active .overlay-type-child-hover,
   body.crop-modal-active .overlay-type-child-selected,
-  body.crop-modal-active .selection-handle {
+  body.crop-modal-active .selection-handle,
+  body.shape-adjust-active .overlay-type-selected,
+  body.shape-adjust-active .overlay-type-hover,
+  body.shape-adjust-active .overlay-type-child-hover,
+  body.shape-adjust-active .overlay-type-child-selected,
+  body.shape-adjust-active .resize-handle,
+  body.shape-adjust-active [id*="rotate-handle"],
+  body.shape-adjust-active [id*="resize-handle"],
+  body.shape-adjust-active .selection-handle {
     display: none !important;
     pointer-events: none !important;
   }

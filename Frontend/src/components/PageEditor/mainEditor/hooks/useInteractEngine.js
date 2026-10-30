@@ -112,6 +112,11 @@ export const useInteractEngine = ({
             if (!svgElement) return;
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
+            // If adjusting shape image mask/crop, stop interact.js drag so user can pan the inner image
+            if (window.__isAdjustingShapeImage || document.body.classList.contains("shape-adjust-active")) {
+              safeStopInteraction(event.interaction);
+              return;
+            }
             // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
             if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
@@ -346,10 +351,15 @@ export const useInteractEngine = ({
               }
             }
 
-            // If dragging an element inside a button, always target the root button!
-            const buttonParent = elementToDrag?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
-            if (buttonParent) {
-              elementToDrag = buttonParent;
+            // If dragging an element inside a button, shape, or compound element, always target the parent element!
+            const compoundParent = elementToDrag?.closest?.(
+              '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+              '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
+              '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
+              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+            );
+            if (compoundParent) {
+              elementToDrag = compoundParent;
             }
 
             // Safety check for metadata-based 'locked' or 'hidden'

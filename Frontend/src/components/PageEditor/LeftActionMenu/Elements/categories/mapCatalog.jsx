@@ -35,7 +35,7 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
               <Icon icon="mdi:map-marker" className="text-red-500 text-[0.5vw]" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-[0.42vw] font-bold" style={{ color: textTitle }}>Fisto Tech</span>
+              <span className="text-[0.42vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
               <span className="text-[0.34vw]" style={{ color: textSubtitle }}>Coimbatore</span>
             </div>
           </div>
@@ -49,8 +49,8 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
                 className="w-[1.3vw] h-[1.3vw] rounded object-cover flex-shrink-0" 
               />
               <div className="flex-1 min-w-0 flex flex-col">
-                <span className="text-[0.45vw] font-bold truncate leading-tight" style={{ color: textTitle }}>Fisto Tech Private Limited</span>
-                <span className="text-[0.36vw] truncate" style={{ color: textSubtitle }}>Coimbatore , India</span>
+                <span className="text-[0.45vw] font-bold truncate leading-tight" style={{ color: textTitle }}>Coimbatore</span>
+                <span className="text-[0.36vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
                 <div className="flex items-center gap-[0.12vw] mt-[0.02vw]">
                   <span className="text-amber-500 text-[0.38vw]">★</span>
                   <span className="text-[0.36vw] font-bold" style={{ color: textTitle }}>4.9</span>
@@ -86,8 +86,8 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
               className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
             />
             <div className="flex-1 min-w-0 flex flex-col leading-tight">
-              <span className="text-[0.44vw] font-bold truncate" style={{ color: textTitle }}>Fisto Tech Private Limited</span>
-              <span className="text-[0.35vw] truncate" style={{ color: textSubtitle }}>Coimbatore , India</span>
+              <span className="text-[0.44vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore</span>
+              <span className="text-[0.35vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
               <div className="flex items-center gap-[0.12vw] mt-[0.03vw]">
                 <span className="text-amber-500 text-[0.35vw]">★</span>
                 <span className="text-[0.35vw] font-bold" style={{ color: textTitle }}>4.9</span>
@@ -99,7 +99,7 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
 
           <div className="absolute top-[58%] left-1/2 -translate-x-1/2 rounded-full py-[0.08vw] px-[0.3vw] flex items-center gap-[0.15vw] shadow-xs border" style={{ backgroundColor: badgeBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'transparent' }}>
             <Icon icon="mdi:map-marker" className="text-red-500 text-[0.5vw]" />
-            <span className="text-[0.38vw] font-bold" style={{ color: textTitle }}>Fisto Tech</span>
+            <span className="text-[0.38vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
           </div>
         </>
       )}
@@ -109,7 +109,7 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
         <>
           <div className="absolute top-[5%] left-1/2 -translate-x-1/2 rounded-full py-[0.08vw] px-[0.35vw] flex items-center gap-[0.15vw] shadow-xs border z-10" style={{ backgroundColor: badgeBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'transparent' }}>
             <Icon icon="mdi:map-marker" className="text-red-500 text-[0.48vw]" />
-            <span className="text-[0.4vw] font-bold" style={{ color: textTitle }}>Fisto Tech</span>
+            <span className="text-[0.4vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
           </div>
 
           <div className="absolute bottom-0 inset-x-0 rounded-t-lg p-[0.25vw] shadow-md flex flex-col gap-[0.15vw] border-t" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
@@ -121,8 +121,8 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
                 className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
               />
               <div className="flex-1 min-w-0 flex flex-col leading-tight">
-                <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Fisto Tech Private Limited</span>
-                <span className="text-[0.34vw] truncate" style={{ color: textSubtitle }}>Coimbatore , India</span>
+                <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore</span>
+                <span className="text-[0.34vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
                 <div className="flex items-center gap-[0.1vw]">
                   <span className="text-amber-500 text-[0.35vw]">★</span>
                   <span className="text-[0.34vw] font-bold" style={{ color: textTitle }}>4.9</span>
@@ -150,7 +150,7 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
         <>
           <div className="absolute top-[12%] left-1/2 -translate-x-1/2 rounded-full py-[0.08vw] px-[0.3vw] flex items-center gap-[0.15vw] shadow-xs border z-10" style={{ backgroundColor: badgeBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'transparent' }}>
             <Icon icon="mdi:map-marker" className="text-red-500 text-[0.48vw]" />
-            <span className="text-[0.4vw] font-bold" style={{ color: textTitle }}>Fisto Tech</span>
+            <span className="text-[0.4vw] font-bold" style={{ color: textTitle }}>Coimbatore</span>
           </div>
 
           <div className="absolute bottom-[0.5vw] inset-x-[0.25vw] rounded-md p-[0.25vw] shadow-sm flex items-center gap-[0.25vw] border" style={{ backgroundColor: cardBg, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }}>
@@ -160,8 +160,8 @@ export const MapTemplateThumbnail = ({ templateId, theme = 'Light Theme', button
               className="w-[1.2vw] h-[1.2vw] rounded object-cover flex-shrink-0" 
             />
             <div className="flex-1 min-w-0 flex flex-col leading-tight">
-              <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Fisto Tech Private L...</span>
-              <span className="text-[0.34vw] truncate" style={{ color: textSubtitle }}>Coimbatore , India</span>
+              <span className="text-[0.42vw] font-bold truncate" style={{ color: textTitle }}>Coimbatore, India</span>
+              <span className="text-[0.34vw] truncate" style={{ color: textSubtitle }}>Tamil Nadu, India</span>
               <div className="flex items-center gap-[0.08vw]">
                 <span className="text-amber-500 text-[0.35vw]">★</span>
                 <span className="text-[0.34vw] font-bold" style={{ color: textTitle }}>4.9</span>

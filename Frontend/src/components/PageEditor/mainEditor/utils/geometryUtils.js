@@ -335,6 +335,7 @@ export const getVisualBBox = (el) => {
       )) {
         continue;
       }
+      if (child.id === 'ghost-layer' || child.hasAttribute?.('data-highlight-id')) continue;
       if (child.tagName.toLowerCase() === 'defs') continue;
       if (child.style.display === 'none' || child.style.visibility === 'hidden') continue;
       if (typeof child.getBBox !== 'function') continue;

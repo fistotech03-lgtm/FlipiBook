@@ -1666,6 +1666,12 @@ const getDraggableElement = (target, canvasRoot) => {
               pages={pages}
               saveModifiedPageHtml={saveModifiedPageHtml}
               setSelectedLayerId={setSelectedLayerId}
+              selectedLayerIdRef={selectedLayerIdRef}
+              setMultiSelectedIds={setMultiSelectedIds}
+              multiSelectedIdsRef={multiSelectedIdsRef}
+              setCurrentFrameId={setCurrentFrameId}
+              currentFrameIdRef={currentFrameIdRef}
+              drawOverlayHighlight={(...args) => drawOverlayHighlightRef.current?.(...args)}
               setActiveMainTool={setActiveMainTool}
               baseWidth={baseWidth}
               baseHeight={baseHeight}

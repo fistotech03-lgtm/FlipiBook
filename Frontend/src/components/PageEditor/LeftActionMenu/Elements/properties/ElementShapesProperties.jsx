@@ -730,9 +730,7 @@ const ElementShapesProperties = ({
         const ghost = selectedElement?.querySelector('#ghost-layer');
         if (ghost) {
             const ghostImg = ghost.querySelector('image, img');
-            const outline = ghost.querySelector('rect');
             if (ghostImg) ghostImg.setAttribute('transform', transformStr);
-            if (outline) outline.setAttribute('transform', transformStr);
         }
     };
 
@@ -753,6 +751,10 @@ const ElementShapesProperties = ({
         adjustStateRef.current.isAdjusting = true;
         adjustStateRef.current.slotId = patternId;
         adjustStateRef.current.imgNode = imgNode;
+        window.__isAdjustingShapeImage = true;
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.classList.add('shape-adjust-active');
+        }
         adjustStateRef.current.path = path;
         adjustStateRef.current.bbox = path.getBBox();
         
@@ -787,6 +789,45 @@ const ElementShapesProperties = ({
         if (combinedTransform) {
             ghost.setAttribute('transform', combinedTransform);
         }
+
+        // Figma Masking Concept:
+        // Inside the shape, the image is rendered cleanly via the shape's fill pattern.
+        // The ghost layer ONLY shows the extent/overflow outside the shape with low opacity (0.35).
+        // To achieve this, mask the ghost layer with an inverted mask (everywhere white except shape cutout is black).
+        let defs = selectedElement.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            selectedElement.insertBefore(defs, selectedElement.firstChild);
+        }
+
+        const invertMaskId = `ghost-extent-mask-${patternId}`;
+        let invertMask = defs.querySelector(`#${invertMaskId}`);
+        if (invertMask) invertMask.remove();
+        invertMask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+        invertMask.id = invertMaskId;
+        invertMask.setAttribute('maskUnits', 'userSpaceOnUse');
+
+        const whiteBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        whiteBg.setAttribute('x', '-50000');
+        whiteBg.setAttribute('y', '-50000');
+        whiteBg.setAttribute('width', '100000');
+        whiteBg.setAttribute('height', '100000');
+        whiteBg.setAttribute('fill', '#ffffff');
+        invertMask.appendChild(whiteBg);
+
+        const blackCutout = path.cloneNode(true);
+        blackCutout.removeAttribute('id');
+        blackCutout.setAttribute('fill', '#000000');
+        blackCutout.setAttribute('stroke', '#000000');
+        const origSw = parseFloat(path.getAttribute('stroke-width')) || 0;
+        blackCutout.setAttribute('stroke-width', String(Math.max(0, origSw)));
+        if (combinedTransform) {
+            blackCutout.setAttribute('transform', combinedTransform);
+        }
+        invertMask.appendChild(blackCutout);
+
+        defs.appendChild(invertMask);
+        ghost.setAttribute('mask', `url(#${invertMaskId})`);
         
         const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         const bbox = adjustStateRef.current.bbox;
@@ -802,26 +843,7 @@ const ElementShapesProperties = ({
         ghostImg.setAttribute('opacity', '0.4');
         ghostImg.removeAttribute('id');
         
-        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        outline.setAttribute('fill', 'none');
-        outline.setAttribute('stroke', '#f59e0b');
-        outline.setAttribute('vector-effect', 'non-scaling-stroke');
-        outline.setAttribute('stroke-dasharray', '5,5');
-        outline.setAttribute('stroke-width', '1.5');
-        
-        let iw = imgNode.getAttribute('width');
-        let ih = imgNode.getAttribute('height');
-        if (!iw || iw.includes('%')) iw = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.width.toString();
-        if (!ih || ih.includes('%')) ih = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.height.toString();
-        
-        outline.setAttribute('width', iw);
-        outline.setAttribute('height', ih);
-        
-        const imgTransform = ghostImg.getAttribute('transform');
-        if (imgTransform) outline.setAttribute('transform', imgTransform);
-        
         wrapper.appendChild(ghostImg);
-        wrapper.appendChild(outline);
         ghost.appendChild(wrapper);
 
         // Insert sibling to inherit group transforms
@@ -833,32 +855,15 @@ const ElementShapesProperties = ({
 
         path.style.cursor = 'grab';
         if (selectedElement) selectedElement.style.cursor = 'grab';
-
-        const highlightId = `highlight-${patternId}`;
-        let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (!highlight) {
-            highlight = path.cloneNode(true);
-            highlight.setAttribute('data-highlight-id', highlightId);
-            highlight.setAttribute('pointer-events', 'none');
-            highlight.setAttribute('fill', 'none');
-            highlight.setAttribute('stroke', '#f59e0b');
-            highlight.setAttribute('stroke-width', '2');
-            highlight.setAttribute('vector-effect', 'non-scaling-stroke');
-            highlight.setAttribute('stroke-dasharray', '8,4');
-            if (path.parentNode) {
-                path.parentNode.insertBefore(highlight, path.nextSibling);
-            } else {
-                selectedElement.appendChild(highlight);
-            }
-        } else {
-            highlight.setAttribute('stroke', '#f59e0b');
-            highlight.setAttribute('stroke-dasharray', '8,4');
-        }
     };
 
     const exitAdjustMode = () => {
         adjustStateRef.current.isAdjusting = false;
         adjustStateRef.current.isPanning = false;
+        window.__isAdjustingShapeImage = false;
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.classList.remove('shape-adjust-active');
+        }
         if (adjustStateRef.current.path) {
             adjustStateRef.current.path.style.cursor = '';
         }
@@ -872,6 +877,11 @@ const ElementShapesProperties = ({
             const highlightId = `highlight-${adjustStateRef.current.slotId}`;
             const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
             if (highlight) highlight.remove();
+
+            const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
+            const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+            const invertMask = defs?.querySelector(`#${invertMaskId}`);
+            if (invertMask) invertMask.remove();
         }
         adjustStateRef.current.slotId = null;
         syncDomChanges();
@@ -954,6 +964,51 @@ const ElementShapesProperties = ({
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+
+    const handleKeyDown = (e) => {
+      if ((e.key === 'Enter' || e.key === 'Escape') && adjustStateRef.current.isAdjusting) {
+        e.preventDefault();
+        e.stopPropagation();
+        exitAdjustMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    const handleOutsideClick = (e) => {
+      if (!adjustStateRef.current.isAdjusting) return;
+      // If clicking inside the right sidebar / properties panel or adjustments, don't exit
+      if (e.target.closest?.('[data-image-slots="true"], .right-sidebar, #properties-panel')) return;
+      // If clicking outside the canvas or on another canvas element, exit adjust mode
+      if (!selectedElement.contains(e.target)) {
+        exitAdjustMode();
+      }
+    };
+    window.addEventListener('pointerdown', handleOutsideClick, true);
+
+    const handleTriggerAdjust = (e) => {
+      const targetId = e.detail?.elementId;
+      if (!targetId || targetId === selectedLayerId) {
+        let shapes = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
+        if (['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
+          shapes.unshift(selectedElement);
+        }
+        for (const shapeEl of shapes) {
+          const fill = shapeEl.getAttribute('fill') || '';
+          const match = fill.match(/url\(['"]?#([^)'"]+)['"]?\)/);
+          if (match && match[1]) {
+            const patId = match[1];
+            if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patId) {
+              exitAdjustMode();
+            } else {
+              if (adjustStateRef.current.isAdjusting) exitAdjustMode();
+              enterAdjustMode(patId, shapeEl);
+            }
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('trigger-shape-adjust', handleTriggerAdjust);
 
     const updateImageFromDOM = () => {
       let shapes = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
@@ -1140,6 +1195,13 @@ const ElementShapesProperties = ({
       if (observer) observer.disconnect();
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointerdown', handleOutsideClick, true);
+      window.removeEventListener('trigger-shape-adjust', handleTriggerAdjust);
+      window.__isAdjustingShapeImage = false;
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.remove('shape-adjust-active');
+      }
       listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
         targetEl.removeEventListener('dblclick', handleDoubleClick);
         if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
@@ -1151,6 +1213,11 @@ const ElementShapesProperties = ({
         const highlightId = `highlight-${adjustStateRef.current.slotId}`;
         const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
         if (highlight) highlight.remove();
+
+        const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
+        const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+        const invertMask = defs?.querySelector(`#${invertMaskId}`);
+        if (invertMask) invertMask.remove();
       }
       adjustStateRef.current.isAdjusting = false;
       adjustStateRef.current.isPanning = false;

@@ -124,7 +124,7 @@ export const generateOverlayHtml = (style, data = {}) => {
 
   const directionsUrl = `https://maps.google.com/maps?daddr=${encodeURIComponent(location)}`;
   const shareUrl = `https://maps.google.com/maps?q=${encodeURIComponent(location)}`;
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location || name)}`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(location || name)}`;
   const shortName = name.split(' ')[0] || 'Location';
 
   const showOpenMapBtn = data.showOpenMapBtn !== false && data.showOpenMapBtn !== 'false';
@@ -256,7 +256,7 @@ export const generateOverlayHtml = (style, data = {}) => {
         </div>
       </div>
 
-      <!-- Bottom Sheet with Gallery & Action CTA -->
+      <!-- Bottom Sheet with Gallery and Action CTA -->
       <div class="map-card-overlay map-card-gallery" style="position: absolute; bottom: 0; left: 0; right: 0; background: ${cardBg}; ${cardBorder} border-radius: 14px 14px 0 0; padding: 5px 8px 6px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 52%; display: flex; flex-direction: column; justify-content: flex-end;">
         <div class="map-drag-pill" style="width: 24px; height: 2.5px; background: ${dragPill}; border-radius: 999px; margin: 0 auto 4px; flex-shrink: 0;"></div>
         <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; min-width: 0;">
@@ -400,11 +400,12 @@ export const isElementMap = (el) => {
 };
 
 export function createMapElementNode(templateId = 'carousel', customData = {}, cx = 200, cy = 150) {
-  const svgString = getMapSvgCode(templateId, true, customData);
+  let svgString = getMapSvgCode(templateId, true, customData);
+  svgString = svgString.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/g, "&amp;");
   const parser = new DOMParser();
   let doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${svgString}</svg>`, 'image/svg+xml');
   let el = doc.querySelector('g[data-type="map"]') || doc.querySelector('g[id^="map-"]');
-  if (!el && doc.querySelector('parsererror')) {
+  if (!el || doc.querySelector('parsererror')) {
     doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${svgString}</svg>`, 'text/html');
     el = doc.querySelector('g[data-type="map"]') || doc.querySelector('g[id^="map-"]');
   }

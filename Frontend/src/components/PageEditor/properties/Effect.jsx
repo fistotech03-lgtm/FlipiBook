@@ -571,6 +571,7 @@ const Effect = ({
           <div className="animate-in fade-in zoom-in-95 duration-200">
             <ColorPicker
               color={pseudoProps[activeColorPicker] || '#000000'}
+              disableGradient={true}
               onChange={(newVal) => updateAttr(activeColorPicker, newVal)}
               onClose={() => {
                 if (setActiveColorPicker) setActiveColorPicker(null);

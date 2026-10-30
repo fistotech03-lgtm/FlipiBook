@@ -45,7 +45,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   // --- 1. Map Source Settings ---
   const [sourceType, setSourceType] = useState('Location'); // 'Location' | 'URL' | 'Embed Code'
   const [location, setLocation] = useState('Coimbatore, Tamil Nadu');
-  const [locationInput, setLocationInput] = useState('');
+  const [locationInput, setLocationInput] = useState('Coimbatore, Tamil Nadu');
   const [urlInput, setUrlInput] = useState('');
   const [embedCode, setEmbedCode] = useState('');
   const [iframeUrl, setIframeUrl] = useState('');
@@ -279,7 +279,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
     const newRating = details.rating && details.rating !== '4.8' ? details.rating : (businessRating || '4.9');
     const newReviews = details.reviews && details.reviews !== '500+' ? details.reviews : (businessReviews || '1500');
-    const newCategory = details.category && details.category !== 'Location' ? details.category : (businessCategory || 'Animation Studio');
+    const newCategory = details.category && details.category !== 'Location' ? details.category : (businessCategory || 'City in Tamil Nadu');
     const newPhone = details.phone || businessPhone;
     const newImage = details.image || businessImage;
 
@@ -375,8 +375,16 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         setLayoutStyle(savedStyle);
         setTempStyle(savedStyle);
       }
-      if (savedName) setBusinessName(savedName);
-      if (savedAddress) setBusinessAddress(savedAddress);
+      if (savedName && !savedName.toLowerCase().includes('fisto')) {
+        setBusinessName(savedName);
+      } else {
+        setBusinessName('Coimbatore');
+      }
+      if (savedAddress && !savedAddress.toLowerCase().includes('fisto')) {
+        setBusinessAddress(savedAddress);
+      } else {
+        setBusinessAddress('Tamil Nadu, India');
+      }
       if (savedRating) setBusinessRating(savedRating);
       if (savedReviews) setBusinessReviews(savedReviews);
       if (savedCategory) setBusinessCategory(savedCategory);
@@ -395,7 +403,12 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       } else if (savedName) {
         setLocation(savedName);
         setLocationInput(savedName);
-      } else if (url.includes('maps.google.com') && url.includes('q=')) {
+      } else {
+        setLocation('Coimbatore, Tamil Nadu');
+        setLocationInput('Coimbatore, Tamil Nadu');
+      }
+
+      if (!savedLocation && !savedName && url.includes('maps.google.com') && url.includes('q=')) {
         try {
           const parsed = new URL(url);
           const q = parsed.searchParams.get('q');
@@ -443,6 +456,27 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           stage.style.removeProperty('transform-origin');
         }
 
+        // Ensure overlay is present and in sync with current map properties
+        const overlayWrapper = fo.querySelector('.map-overlay-wrapper');
+        const effectiveStyle = savedStyle || layoutStyle || 'carousel';
+        const freshOverlayHtml = generateOverlayHtml(effectiveStyle, {
+          name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
+          address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
+          rating: savedRating || businessRating || DEFAULT_MAP_DATA.rating,
+          reviews: savedReviews || businessReviews || DEFAULT_MAP_DATA.reviews,
+          category: savedCategory || businessCategory || DEFAULT_MAP_DATA.category,
+          phone: savedPhone || businessPhone || DEFAULT_MAP_DATA.phone,
+          image: savedImage || businessImage || DEFAULT_MAP_DATA.image,
+          location: savedLocation || location,
+          theme: savedTheme,
+          buttonColor: savedButtonColor,
+          showOpenMapBtn: savedShowOpenMapBtn !== null ? savedShowOpenMapBtn !== 'false' : showOpenMapBtn
+        });
+
+        if (overlayWrapper) {
+          overlayWrapper.innerHTML = freshOverlayHtml;
+        }
+
         if (iframe) {
           iframe.style.removeProperty('transform');
           iframe.style.setProperty('position', 'absolute', 'important');
@@ -460,15 +494,25 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           } else {
             iframe.style.removeProperty('filter');
           }
-          if (stage && onUpdate) {
+
+          // If overlay was missing inside existing iframe root container, recreate it
+          if (!overlayWrapper && rootDiv) {
+            const newOverlayWrapper = document.createElement('div');
+            newOverlayWrapper.className = 'map-overlay-wrapper';
+            newOverlayWrapper.style.cssText = 'position: absolute; inset: 0; pointer-events: none;';
+            newOverlayWrapper.innerHTML = freshOverlayHtml;
+            rootDiv.appendChild(newOverlayWrapper);
+          }
+
+          if (onUpdate) {
             onUpdate(selectedElement.outerHTML);
           }
         } else {
           // Re-render map root container with theme & overlay
           const effectiveStyle = savedStyle || layoutStyle || 'carousel';
           const overlayHtml = generateOverlayHtml(effectiveStyle, {
-            name: savedName || businessName || DEFAULT_MAP_DATA.name,
-            address: savedAddress || businessAddress || DEFAULT_MAP_DATA.address,
+            name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
+            address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
             rating: savedRating || businessRating || DEFAULT_MAP_DATA.rating,
             reviews: savedReviews || businessReviews || DEFAULT_MAP_DATA.reviews,
             category: savedCategory || businessCategory || DEFAULT_MAP_DATA.category,

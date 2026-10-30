@@ -80,6 +80,7 @@ threedModelSchema.pre('save', function (next) {
   if (typeof next === 'function') next();
 });
 
-const ThreedModel = (mongoose.models.threedModel || mongoose.models.ThreedModel) || mongoose.model('threedModel', threedModelSchema);
+const ThreedModel = (mongoose.models.threedModel || mongoose.models.ThreedModel) || mongoose.model('threedModel', threedModelSchema, 'threedmodels');
 
 module.exports = ThreedModel;
+

@@ -36,7 +36,7 @@ const pageEditorSettingsSchema = new mongoose.Schema(
 // Asynchronous non-blocking backup mirror hook
 pageEditorSettingsSchema.post('save', function (doc) {
   try {
-    const backupService = require('../../../../shared/backupService');
+    const backupService = require('../backupService');
     backupService.syncPageEditorSettings(doc);
   } catch (_) {}
 });
@@ -44,7 +44,7 @@ pageEditorSettingsSchema.post('save', function (doc) {
 pageEditorSettingsSchema.post('findOneAndUpdate', function (doc) {
   if (doc) {
     try {
-      const backupService = require('../../../../shared/backupService');
+      const backupService = require('../backupService');
       backupService.syncPageEditorSettings(doc);
     } catch (_) {}
   }
@@ -53,3 +53,4 @@ pageEditorSettingsSchema.post('findOneAndUpdate', function (doc) {
 module.exports =
   (mongoose.models.pageEditorSettings || mongoose.models.PageEditorSettings) ||
   mongoose.model('pageEditorSettings', pageEditorSettingsSchema, 'pageEditorSettings');
+

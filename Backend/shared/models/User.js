@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
-const Counter = require('./counter');
+const Counter = require('./Counter');
 
 const userSchema = new mongoose.Schema(
   {
+    userID: {
+      type: String,
+      default: '',
+      index: true
+    },
     emailId: {
       type: String,
       required: true,
@@ -10,6 +15,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       index: true
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true
     },
     password: {
       type: String,
@@ -23,17 +33,31 @@ const userSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      default: ''
-    },
-    userID: {
-      type: String,
-      default: '',
-      index: true
+      default: null
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
+      enum: ['user', 'admin', 'moderator', 'staff'],
+      default: 'user',
+      index: true
+    },
+    status: {
+      type: String,
+      enum: ['active', 'suspended', 'banned'],
+      default: 'active',
+      index: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    provider: {
+      type: String,
+      default: 'local'
     },
     phone: {
       type: String,
@@ -77,9 +101,15 @@ const userSchema = new mongoose.Schema(
       github: { type: String, default: '' },
       instagram: { type: String, default: '' }
     },
-    isActive: {
-      type: Boolean,
-      default: true
+    otp: {
+      code: {
+        type: String,
+        default: null
+      },
+      expiresAt: {
+        type: Date,
+        default: null
+      }
     }
   },
   {
@@ -89,6 +119,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Auto-generate userID (e.g. FLIPI0001) if not set
 userSchema.pre('save', async function () {
   if (this.userID) return;
 
@@ -105,4 +136,22 @@ userSchema.pre('save', async function () {
   }
 });
 
+// Asynchronous non-blocking backup mirror hook
+userSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../backupService');
+    backupService.syncUser(doc);
+  } catch (_) {}
+});
+
+userSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../backupService');
+      backupService.syncUser(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.user || mongoose.models.User) || mongoose.model('user', userSchema, 'users');
+

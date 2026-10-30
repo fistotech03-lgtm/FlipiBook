@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { ToastProvider } from "./components/CustomToast";
 import { ModernToastProvider } from "./components/ModernToast";
+import { ConfirmationProvider } from "./context/ConfirmationContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthModal } from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -80,7 +81,8 @@ export default function App() {
     <ToastProvider>
       <AuthProvider>
         <ModernToastProvider>
-          <Router>
+          <ConfirmationProvider>
+            <Router>
             <AuthModal />
             <Routes>
               {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
@@ -466,6 +468,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
+          </ConfirmationProvider>
         </ModernToastProvider>
       </AuthProvider>
     </ToastProvider>

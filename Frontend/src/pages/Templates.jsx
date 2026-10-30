@@ -695,13 +695,15 @@ export default function Templates() {
       pages,
       overwrite: true,
       folderName: targetFolder,
+      bookType: 'template',
       meta: {
         v_id: generatedVId,
         width: targetW,
         height: targetH,
         templateId: selectedPaperSizeId,
         orientation: finalOrientation,
-        templateName: chosenTpl?.title || ''
+        templateName: chosenTpl?.title || '',
+        isTemplate: true
       }
     };
 
@@ -714,6 +716,8 @@ export default function Templates() {
       folderName: targetFolder,
       flipbookName: finalFlipbookName,
       templateName: chosenTpl?.title || '',
+      bookType: 'template',
+      isTemplate: true,
       width: targetW,
       height: targetH,
       orientation: finalOrientation,
@@ -797,13 +801,15 @@ export default function Templates() {
       pages,
       overwrite: true,
       folderName: targetFolder,
+      bookType: 'template',
       meta: {
         v_id: generatedVId,
         width: targetW,
         height: targetH,
         templateId: chosenTpl?.templateId || chosenTpl?.formatId || 'corporate',
         orientation: targetW > targetH ? 'landscape' : 'portrait',
-        templateName: chosenTpl?.title || ''
+        templateName: chosenTpl?.title || '',
+        isTemplate: true
       }
     };
 
@@ -816,6 +822,8 @@ export default function Templates() {
       folderName: targetFolder,
       flipbookName: finalFlipbookName,
       templateName: chosenTpl?.title || '',
+      bookType: 'template',
+      isTemplate: true,
       width: targetW,
       height: targetH,
       orientation: targetW > targetH ? 'landscape' : 'portrait',
@@ -927,13 +935,15 @@ export default function Templates() {
       pages,
       overwrite: true,
       folderName: targetFolder,
+      bookType: 'template',
       meta: {
         v_id: generatedVId,
         width: targetW,
         height: targetH,
         templateId: templateData.templateId || chosenTpl?.templateId || 'corporate',
         orientation: templateData.orientation || 'portrait',
-        templateName: chosenTpl?.title || ''
+        templateName: chosenTpl?.title || '',
+        isTemplate: true
       }
     };
 
@@ -947,6 +957,8 @@ export default function Templates() {
       folderName: targetFolder,
       flipbookName: finalFlipbookName,
       templateName: chosenTpl?.title || '',
+      bookType: 'template',
+      isTemplate: true,
       width: targetW,
       height: targetH
     };

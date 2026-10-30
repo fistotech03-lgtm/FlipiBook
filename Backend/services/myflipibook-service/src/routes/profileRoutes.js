@@ -1,6 +1,6 @@
 const express = require('express');
-const Profile = require('../models/profile');
-const Flipbook = require('../models/flipbook');
+const Profile = require('../../../../shared/models/Profile');
+const Flipbook = require('../../../../shared/models/Flipbook');
 const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();

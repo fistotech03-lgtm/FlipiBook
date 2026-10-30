@@ -158,6 +158,7 @@ forumPostSchema.index({ status: 1, createdAt: -1 });
 forumPostSchema.index({ postType: 1, createdAt: -1 });
 forumPostSchema.index({ title: 'text', description: 'text' });
 
-const ForumPost = mongoose.models.ForumPost || mongoose.model('ForumPost', forumPostSchema);
+const ForumPost = (mongoose.models.ForumPost || mongoose.models.forumPost) || mongoose.model('ForumPost', forumPostSchema, 'forumposts');
 
 module.exports = ForumPost;
+

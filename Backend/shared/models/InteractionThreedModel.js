@@ -3,11 +3,16 @@ const crypto = require('crypto');
 
 const generateId = () => crypto.randomBytes(10).toString('hex');
 
-const threedModelSchema = new mongoose.Schema({
-  modelId: {
+const InteractionThreedModelSchema = new mongoose.Schema({
+  v_id: {
     type: String,
     default: generateId,
     unique: true,
+    index: true
+  },
+  flipbook_v_id: {
+    type: String,
+    default: null,
     index: true
   },
   userEmail: {
@@ -15,34 +20,33 @@ const threedModelSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // Alias for compatibility
-  emailId: {
-    type: String,
-    index: true
-  },
-  name: {
+  flipbookName: {
     type: String,
     required: true
+  },
+  folderName: {
+    type: String,
+    required: true
+  },
+  fileName: {
+    type: String,
+    required: true
+  },
+  displayName: {
+    type: String,
+    default: null
   },
   url: {
     type: String,
     required: true
   },
-  thumbnailUrl: {
-    type: String,
-    default: null
-  },
   size: {
     type: String,
-    required: true
+    default: '0 MB'
   },
   type: {
     type: String,
     default: 'glb'
-  },
-  displayName: {
-    type: String,
-    default: null
   },
   hotspots: {
     type: Array,
@@ -70,16 +74,9 @@ const threedModelSchema = new mongoose.Schema({
   }
 });
 
-threedModelSchema.pre('save', function (next) {
-  if (this.userEmail && !this.emailId) {
-    this.emailId = this.userEmail;
-  } else if (this.emailId && !this.userEmail) {
-    this.userEmail = this.emailId;
-  }
-  this.updatedAt = new Date();
-  if (typeof next === 'function') next();
-});
+const InteractionThreedModel =
+  (mongoose.models.interactionThreedModel || mongoose.models.InteractionThreedModel) ||
+  mongoose.model('interactionThreedModel', InteractionThreedModelSchema, 'interactionthreedmodels');
 
-const ThreedModel = (mongoose.models.threedModel || mongoose.models.ThreedModel) || mongoose.model('threedModel', threedModelSchema);
+module.exports = InteractionThreedModel;
 
-module.exports = ThreedModel;

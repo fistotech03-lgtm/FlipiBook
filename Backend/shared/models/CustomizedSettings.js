@@ -294,7 +294,8 @@ const customizedSettingsSchema = new mongoose.Schema(
     // 8. Visibility & Access Protection
     Visibility: {
       shareId: {
-        type: String
+        type: String,
+        index: true
       },
       access: {
         type: String,
@@ -347,7 +348,7 @@ customizedSettingsSchema.index({ userEmail: 1, v_id: 1 });
 // Asynchronous non-blocking backup mirror hook
 customizedSettingsSchema.post('save', function (doc) {
   try {
-    const backupService = require('../../../../shared/backupService');
+    const backupService = require('../backupService');
     backupService.syncCustomizedSettings(doc);
   } catch (_) {}
 });
@@ -355,7 +356,7 @@ customizedSettingsSchema.post('save', function (doc) {
 customizedSettingsSchema.post('findOneAndUpdate', function (doc) {
   if (doc) {
     try {
-      const backupService = require('../../../../shared/backupService');
+      const backupService = require('../backupService');
       backupService.syncCustomizedSettings(doc);
     } catch (_) {}
   }
@@ -363,4 +364,5 @@ customizedSettingsSchema.post('findOneAndUpdate', function (doc) {
 
 module.exports =
   (mongoose.models.customizedSettings || mongoose.models.CustomizedSettings) ||
-  mongoose.model('customizedSettings', customizedSettingsSchema);
+  mongoose.model('customizedSettings', customizedSettingsSchema, 'customizedsettings');
+

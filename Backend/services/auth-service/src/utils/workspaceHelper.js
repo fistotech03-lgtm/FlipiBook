@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const UserGallery = require('../models/userGallery');
+const UserGallery = require('../../../../shared/models/UserGallery');
 
 /**
  * Resolve root storage directory
@@ -247,7 +247,39 @@ const createUserWorkspace = (user) => {
       safeMigrateDirectory(src, dest);
     }
 
-    // 5. Unconditionally ensure the complete aligned folder hierarchy exists
+    // 5. Clean up obsolete books/fol_* directories and merge any missing books into books/default
+    const booksDir = path.join(userDir, 'books');
+    if (fs.existsSync(booksDir)) {
+      try {
+        const subdirs = fs.readdirSync(booksDir);
+        for (const sd of subdirs) {
+          if (sd.startsWith('fol_')) {
+            const strayFolPath = path.join(booksDir, sd);
+            if (fs.statSync(strayFolPath).isDirectory()) {
+              const bookItems = fs.readdirSync(strayFolPath);
+              ensureDir(defaultBooksDir);
+              for (const b of bookItems) {
+                if (b === '.DS_Store') continue;
+                const srcBook = path.join(strayFolPath, b);
+                const destBook = path.join(defaultBooksDir, b);
+                if (!fs.existsSync(destBook)) {
+                  fs.renameSync(srcBook, destBook);
+                  console.log(`[Workspace Helper] Moved book "${b}" from ${sd} to books/default`);
+                }
+              }
+              try {
+                fs.rmSync(strayFolPath, { recursive: true, force: true });
+                console.log(`[Workspace Helper] Removed legacy stray folder: ${strayFolPath}`);
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (folErr) {
+        console.warn(`[Workspace Helper] Warning migrating stray fol_* dirs for ${dirName}:`, folErr.message);
+      }
+    }
+
+    // 6. Unconditionally ensure the complete aligned folder hierarchy exists
     for (const relPath of WORKSPACE_FOLDERS) {
       const fullPath = path.join(userDir, relPath);
       ensureDir(fullPath);

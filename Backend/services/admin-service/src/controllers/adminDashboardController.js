@@ -1,6 +1,6 @@
-const User = require('../models/User');
-const Flipbook = require('../models/Flipbook');
-const ForumPost = require('../models/ForumPost');
+const User = require('../../../../shared/models/User');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const ForumPost = require('../../../../shared/models/ForumPost');
 const AdminLog = require('../models/AdminLog');
 const http = require('http');
 

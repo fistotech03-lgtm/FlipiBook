@@ -945,6 +945,73 @@ const PageEditor = () => {
         });
       }
 
+      // 0. Instantly initialize new books in memory (zero latency, no upfront DB creation)
+      if (location.state?.isNewBook) {
+        console.log("[PageEditor] Instantly initializing new book:", activeVId);
+        const count = location.state.pageCount || 12;
+        const newBookPages = Array.from({ length: count }, (_, i) => {
+          const name = `Page ${i + 1}`;
+          let html, layers;
+          if (location.state?.templatePages?.[i]) {
+            html = location.state.templatePages[i];
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "image/svg+xml");
+            const svgEl = doc.querySelector("svg");
+            layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+          } else {
+            const def = createDefaultPageDataRef.current(
+              name,
+              location.state.width || 210,
+              location.state.height || 297,
+            );
+            html = def.html;
+            layers = def.layers;
+          }
+          const pageUniqueId = `page_${i + 1}_${activeVId}`;
+          return {
+            id: pageUniqueId,
+            v_id: pageUniqueId,
+            name,
+            html,
+            layers,
+          };
+        });
+
+        setPages(newBookPages);
+        const newFirstRootId = newBookPages[0]?.layers?.[0]?.id;
+        if (newFirstRootId) {
+          setSelectedLayerIdRaw(newFirstRootId);
+          setMultiSelectedIds(new Set([newFirstRootId]));
+          setCurrentFrameId(newFirstRootId);
+        }
+        setCurrentBook({
+          v_id: activeVId,
+          flipbookName: location.state?.flipbookName || "Untitled Flipbook",
+          folderName: resolvePhysicalFolder(location.state?.folderName),
+          folder_v_id: location.state?.folder_v_id || folder,
+          templateId: location.state?.templateId,
+          orientation: location.state?.orientation,
+          width: location.state?.width || 210,
+          height: location.state?.height || 297,
+          bookType: location.state?.bookType || (location.state?.isTemplate ? 'template' : 'plain'),
+          isTemplate: Boolean(location.state?.isTemplate),
+          templateName: location.state?.templateName || '',
+        });
+
+        setIsLoading(false);
+        isFirstLoadRef.current = false;
+        setHasUnsavedChanges(true);
+
+        // If auto-save is enabled, sync in the background to the backend
+        if (isAutoSaveEnabled) {
+          console.log("[PageEditor] Auto-save enabled, initiating background sync to backend...");
+          setTimeout(() => {
+            saveFlipbook(false, newBookPages);
+          }, 800);
+        }
+        return;
+      }
+
       let hasLocalCachedPages = false;
       let loadedCachedPages = null;
       try {
@@ -1496,6 +1563,8 @@ const PageEditor = () => {
                 orientation: location.state?.orientation,
                 width: location.state?.width,
                 height: location.state?.height,
+                bookType: location.state?.bookType || prev?.bookType || (location.state?.isTemplate || prev?.isTemplate ? 'template' : 'plain'),
+                isTemplate: Boolean(location.state?.isTemplate || prev?.isTemplate),
               }));
               setIsLoading(false);
               return;

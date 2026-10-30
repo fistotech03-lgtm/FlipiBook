@@ -185,6 +185,9 @@ export default function Home() {
 
       if (isUploadCancelledRef.current) return;
 
+      const extractedPagesBytes = allPages.reduce((sum, p) => sum + (p.content ? (new Blob([p.content])).size : 0), 0);
+      const resolvedBookType = initialDocType === 'powerpoint' ? 'pptx' : initialDocType === 'word' ? 'word' : 'pdf';
+
       if (allPages.length <= 20) {
         setProcessingProgress({
           current: allPages.length,
@@ -201,7 +204,8 @@ export default function Home() {
           overwrite: true,
           folderName: targetFolder,
           keepBase64: true,
-          fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
+          bookType: resolvedBookType,
+          fileSize: extractedPagesBytes > 0 ? extractedPagesBytes : (totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0))
         });
         const v_id = createRes.data.v_id;
         createdFlipbookVIdRef.current = v_id;
@@ -236,7 +240,8 @@ export default function Home() {
         overwrite: true,
         folderName: targetFolder,
         keepBase64: true,
-        fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0)
+        bookType: resolvedBookType,
+        fileSize: extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize
       });
       const v_id = createRes.data.v_id;
       createdFlipbookVIdRef.current = v_id;
@@ -261,7 +266,7 @@ export default function Home() {
           v_id,
           pages: batchPages,
           keepBase64: true,
-          fileSize: totalPdfSize
+          fileSize: extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize
         });
       }
 
@@ -341,11 +346,13 @@ export default function Home() {
         pages: pages,
         overwrite: true,
         folderName: targetFolder,
+        bookType: templateData.bookType || (templateData.isTemplate ? 'template' : 'plain'),
         meta: {
           width: templateData.width,
           height: templateData.height,
           templateId: templateData.templateId,
-          orientation: templateData.orientation
+          orientation: templateData.orientation,
+          isTemplate: Boolean(templateData.isTemplate)
         }
       });
 

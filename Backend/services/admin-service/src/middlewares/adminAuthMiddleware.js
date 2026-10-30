@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../../../../shared/models/User');
 const AdminLog = require('../models/AdminLog');
 const { verifyToken } = require('../utils/jwtHelper');
 

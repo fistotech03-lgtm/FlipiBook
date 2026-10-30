@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
-const PageEditorSettings = require('../models/pageEditorSettings');
-const User = require('../models/user');
-const Flipbook = require('../models/flipbook');
+const PageEditorSettings = require('../../../../shared/models/PageEditorSettings');
+const User = require('../../../../shared/models/User');
+const Flipbook = require('../../../../shared/models/Flipbook');
 const { calculateUserStorage } = require('../utils/storageHelper');
 const { getAuthUser, resolveAuthUser, getFlipbookUserQuery } = require('../utils/userHelper');
 
@@ -48,9 +48,26 @@ exports.getStorageSettings = async (req, res) => {
       }).catch(() => null);
     }
 
-    // Fetch user books to calculate storage accurately
-    const userBooks = flipQuery ? await Flipbook.find({ ...flipQuery, trash: false }) : [];
-    const usedStorage = calculateUserStorage(rawId || customUserId, emailId, userBooks);
+    // Fetch all user books that are not permanently deleted (matching objectId, customUserId, rawId, or emailId)
+    const bookConds = [];
+    if (objectId) bookConds.push({ userObjectID: objectId });
+    if (customUserId) bookConds.push({ userID: customUserId });
+    if (rawId && rawId !== customUserId) bookConds.push({ userID: rawId });
+    if (emailId) bookConds.push({ userEmail: emailId });
+
+    const bookQuery = bookConds.length === 1 ? bookConds[0] : bookConds.length > 1 ? { $or: bookConds } : (flipQuery || {});
+
+    const userBooks = await Flipbook.find({
+      ...bookQuery,
+      isDeleted: { $ne: true }
+    }).select('fileSize pages size sizeBytes flipbookName trash v_id book_v_id').lean();
+
+    const usedStorage = await calculateUserStorage(
+      customUserId || rawId,
+      emailId,
+      userBooks,
+      objectId
+    );
 
     res.status(200).json({
       success: true,

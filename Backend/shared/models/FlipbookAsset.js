@@ -89,3 +89,4 @@ const flipbookAssetSchema = new mongoose.Schema(
 );
 
 module.exports = (mongoose.models.flipbookAsset || mongoose.models.FlipbookAsset) || mongoose.model('flipbookAsset', flipbookAssetSchema, 'flipbookAssets');
+

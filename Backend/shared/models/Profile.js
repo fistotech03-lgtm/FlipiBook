@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const profileSchema = new mongoose.Schema(
   {
+    userID: {
+      type: String,
+      default: '',
+      index: true
+    },
     emailId: {
       type: String,
       required: true,
@@ -14,37 +19,15 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    displayName: {
+      type: String,
+      default: ''
+    },
     picture: {
       type: String,
       default: null
     },
-    avatarBgColor: {
-      type: String,
-      default: '#E8D4C8'
-    },
-    bannerBg: {
-      type: {
-        type: String,
-        default: 'gradient'
-      },
-      value: {
-        type: String,
-        default: 'linear-gradient(to bottom right, #c1e8d7, #85d8c3, #60bba3)'
-      }
-    },
     about: {
-      type: String,
-      default: ''
-    },
-    mobile: {
-      type: String,
-      default: ''
-    },
-    company_logo_url: {
-      type: String,
-      default: ''
-    },
-    companyLogo: {
       type: String,
       default: ''
     },
@@ -56,31 +39,23 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
-    companyEmail: {
+    mobile: {
       type: String,
       default: ''
     },
-    website: {
+    countryCode: {
+      type: String,
+      default: '+91'
+    },
+    company_logo_url: {
       type: String,
       default: ''
     },
-    services: {
-      type: [String],
-      default: []
-    },
-    address1: {
+    avatarBgColor: {
       type: String,
-      default: ''
-    },
-    address2: {
-      type: String,
-      default: ''
+      default: '#E8D4C8'
     },
     city: {
-      type: String,
-      default: ''
-    },
-    pincode: {
       type: String,
       default: ''
     },
@@ -92,12 +67,27 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: 'INDIA'
     },
+    pincode: {
+      type: String,
+      default: ''
+    },
+    website: {
+      type: String,
+      default: ''
+    },
     socials: {
-      website: { type: String, default: '' },
-      instagram: { type: String, default: '' },
       linkedin: { type: String, default: '' },
+      twitter: { type: String, default: '' },
+      github: { type: String, default: '' },
+      instagram: { type: String, default: '' },
       facebook: { type: String, default: '' },
       whatsapp: { type: String, default: '' }
+    },
+    visibilitySettings: {
+      showInExplore: { type: Boolean, default: true },
+      showContact: { type: Boolean, default: true },
+      showAddress: { type: Boolean, default: true },
+      showSocial: { type: Boolean, default: true }
     },
     followers: {
       type: [String],
@@ -145,8 +135,27 @@ const profileSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    strict: false
   }
 );
 
+// Asynchronous non-blocking backup mirror hook
+profileSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../backupService');
+    backupService.syncProfile(doc);
+  } catch (_) {}
+});
+
+profileSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../backupService');
+      backupService.syncProfile(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.profile || mongoose.models.Profile) || mongoose.model('profile', profileSchema, 'Profiles');
+

@@ -47,7 +47,7 @@ const userDetailImageSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      default: 'profile', // 'profile', 'company_logo', etc.
+      default: 'profile',
       trim: true
     },
     originalName: {
@@ -209,7 +209,7 @@ const threeDGallerySectionSchema = new mongoose.Schema(
 );
 
 /**
- * Main UserGallery Schema - Single document per user containing 4 structured gallery sections
+ * Main UserGallery Schema
  */
 const userGallerySchema = new mongoose.Schema(
   {
@@ -263,7 +263,7 @@ const userGallerySchema = new mongoose.Schema(
 // Asynchronous non-blocking backup mirror hook
 userGallerySchema.post('save', function (doc) {
   try {
-    const backupService = require('../../../../shared/backupService');
+    const backupService = require('../backupService');
     backupService.syncUserGallery(doc);
   } catch (_) {}
 });
@@ -271,7 +271,7 @@ userGallerySchema.post('save', function (doc) {
 userGallerySchema.post('findOneAndUpdate', function (doc) {
   if (doc) {
     try {
-      const backupService = require('../../../../shared/backupService');
+      const backupService = require('../backupService');
       backupService.syncUserGallery(doc);
     } catch (_) {}
   }
@@ -280,3 +280,4 @@ userGallerySchema.post('findOneAndUpdate', function (doc) {
 module.exports =
   (mongoose.models.userGallery || mongoose.models.UserGallery) ||
   mongoose.model('userGallery', userGallerySchema, 'userGallery');
+

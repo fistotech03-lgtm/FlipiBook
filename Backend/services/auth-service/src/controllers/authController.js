@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const User = require("../models/user");
+const User = require("../../../../shared/models/User");
 const LoginLog = require("../models/loginLog");
 const SignupOtp = require("../models/signupOtp");
 const {

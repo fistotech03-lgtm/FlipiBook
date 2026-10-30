@@ -274,6 +274,7 @@ export default function GalleryScreen({
                 .catch(() => {});
 
             setAssets((prev) => prev.filter((a) => a.id !== deleteTarget.id && a.url !== deleteTarget.url));
+            window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
             showToast('Asset deleted successfully');
             setDeleteTarget(null);
         } catch (err) {
@@ -341,6 +342,7 @@ export default function GalleryScreen({
         if (successCount > 0) {
             showToast(`Successfully uploaded ${successCount} asset${successCount > 1 ? 's' : ''}`);
             await fetchAssets();
+            window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
         } else {
             showToast('Failed to upload selected file(s)');
         }

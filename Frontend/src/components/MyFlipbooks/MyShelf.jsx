@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Icon } from '@iconify/react';
-import ReplaceMediaModal from '../PageEditor/properties/ReplaceMediaModal';
+import ReplaceMediaModal from '../PageEditor/modals/ReplaceMediaModal';
 import { useAuth } from '../../context/AuthContext';
 import { getInitialUser } from '../../utils/authUtils';
 const resolveUploadsPath = (path) => path || '';

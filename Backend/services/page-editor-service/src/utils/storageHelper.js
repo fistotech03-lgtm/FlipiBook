@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const Flipbook = require('../models/flipbook');
+const Flipbook = require('../../../../shared/models/Flipbook');
 
 /**
  * Generate unique ID (nanoid replacement)
@@ -64,11 +64,13 @@ const resolveFolder = (folderName) => {
     const realFolders = flat.filter(
       (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
-    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'default';
+    return realFolders.length > 0 ? resolveFolder(realFolders[0]) : 'default';
   }
   if (typeof folderName === 'string' && folderName.trim()) {
     const clean = folderName.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'default';
+    const lower = clean.toLowerCase();
+    if (VIRTUAL_FOLDERS.has(lower) || lower === 'my flipbooks' || lower === 'default' || lower === 'fol_default') return 'default';
+    if (clean.startsWith('fol_')) return 'default';
     return clean;
   }
   return 'default';

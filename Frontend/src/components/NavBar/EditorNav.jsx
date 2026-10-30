@@ -23,6 +23,7 @@ import EditorSettingsModal from "../PageEditor/modals/EditorSettingsModal";
 
 import { useAuth, useActiveBook, useUIModals } from "../../store/hooks";
 import { queryClient } from "../../queryClient";
+import { useConfirm } from "../../context/ConfirmationContext";
 
 const EditorNavbar = ({
   onExport: onExportProp,
@@ -148,41 +149,48 @@ const EditorNavbar = ({
     return location.pathname === path;
   };
 
-  // Timer: Run only when unsaved changes exist
+  // Timer: count seconds since last successful save
   useEffect(() => {
-    let interval;
-    if (hasUnsavedChanges) {
-      interval = setInterval(() => {
-        setSecondsSinceSave((prev) => prev + 1);
-      }, 1000);
-    } else {
+    const interval = setInterval(() => {
+      setSecondsSinceSave((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // When save completes or no unsaved changes exist, reset seconds counter to 0
+  useEffect(() => {
+    if (saveSuccessInfo || !hasUnsavedChanges) {
       setSecondsSinceSave(0);
     }
-    return () => clearInterval(interval);
-  }, [hasUnsavedChanges]);
+  }, [saveSuccessInfo, hasUnsavedChanges]);
 
   const formatTime = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${mins}:${secs}`;
+    if (totalSeconds < 5) return "Just now";
+    if (totalSeconds < 60) return `${totalSeconds}s ago`;
+    const mins = Math.floor(totalSeconds / 60);
+    return `${mins}m ago`;
   };
 
   // Check if we are in 3D Editor or Customized Editor
   const isThreedEditor = location.pathname.includes("threed_editor");
   const isCustomizedEditor = location.pathname.includes("customized_editor");
 
-  const handleLinkClick = (e) => {
+  const confirm = useConfirm();
+
+  const handleNavigateWithConfirm = async (to) => {
     queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
-      if (
-        !window.confirm("Leave site?\n\nChanges you made may not be saved.")
-      ) {
-        if (e && e.preventDefault) e.preventDefault();
-      }
+      const ok = await confirm({
+        title: "Leave Site?",
+        message: "Changes you made may not be saved.",
+        confirmText: "Leave",
+        cancelText: "Stay",
+        type: "danger"
+      });
+      if (!ok) return;
     }
+    navigate(to);
   };
 
   return (
@@ -193,7 +201,7 @@ const EditorNavbar = ({
       >
         {/* Left Section - Logo and Navigation */}
         <div className="flex items-center gap-[1.5vw]">
-          <Link to="/" className="flex-shrink-0" onClick={handleLinkClick}>
+          <Link to="/" className="flex-shrink-0" onClick={(e) => { e.preventDefault(); handleNavigateWithConfirm("/"); }}>
             <img
               className="h-[4.5vh] w-auto object-contain"
               src={logo}
@@ -205,7 +213,7 @@ const EditorNavbar = ({
           <div className="flex items-center gap-[1vw]">
             <Link
               to="/my-flipbooks"
-              onClick={handleLinkClick}
+              onClick={(e) => { e.preventDefault(); handleNavigateWithConfirm("/my-flipbooks"); }}
               className="flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[0.5vw] hover:bg-gray-50 transition-colors text-gray-700"
             >
               <Icon
@@ -219,19 +227,10 @@ const EditorNavbar = ({
 
             <button
               onClick={() => {
-                if (hasUnsavedChanges) {
-                  if (
-                    !window.confirm(
-                      "Leave site?\n\nChanges you made may not be saved.",
-                    )
-                  ) {
-                    return;
-                  }
-                }
-                navigate(
+                handleNavigateWithConfirm(
                   isThreedEditor
                     ? localStorage.getItem("lastEditorPath") || "/editor"
-                    : "/editor/threed_editor",
+                    : "/editor/threed_editor"
                 );
               }}
               className="flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[0.5vw] hover:bg-gray-50 transition-colors text-gray-700"
@@ -263,20 +262,8 @@ const EditorNavbar = ({
           </div>
         </div>
 
-        {/* Center Section - Saved Status & Device Switcher */}
+        {/* Center Section - Device Switcher / Placeholder */}
         <div className="absolute left-[45%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-[0.75vw]">
-          {isAutoSaveEnabled && !isCustomizedEditor && (
-            <div className="flex items-center gap-[0.4vw] whitespace-nowrap bg-gray-50/50 px-[0.8vw] py-[0.4vw] rounded-full border border-gray-100">
-              <span className="text-gray-900 font-medium text-[0.85vw]">
-                Saved :
-              </span>
-              <span className="text-[#373d8a] font-bold text-[0.85vw]">
-                {formatTime(secondsSinceSave)} ago
-              </span>
-            </div>
-          )}
-
-          {/* Device switcher moved to right section */}
         </div>
 
         {/* Right Section - Actions */}
@@ -369,44 +356,36 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Save & Toast Container */}
-          {location.pathname.includes("customized_editor") ? (
-            <div className="relative group/tooltip flex items-center ml-[0.2vw]">
-              <button
-                onClick={onSave}
-                disabled={isSaving}
-                className="transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 cursor-pointer hover:bg-gray-50 flex-shrink-0"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 size="1.2vw" className="animate-spin text-yellow-500" />
-                    <span className="font-medium text-[0.85vw]">Saving</span>
-                  </>
-                ) : hasUnsavedChanges ? (
-                  <>
-                    <Save size="1.2vw" className="text-yellow-500" />
-                    <span className="font-medium text-[0.85vw]">Save</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      icon="reicon:tick-circle-filled"
-                      className="w-[1.2vw] h-[1.2vw] text-[#22c55e]"
-                    />
-                    <span className="font-medium text-[0.85vw]">Saved</span>
-                  </>
-                )}
-              </button>
+          {/* Save / Sync Status Area: When auto-save is enabled, ONLY show last sync time instead of Save button */}
+          {isAutoSaveEnabled ? (
+            <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 border border-gray-200 rounded-[2vw] text-gray-700 select-none ml-[0.2vw]">
+              {isSaving ? (
+                <>
+                  <Loader2 size="1.1vw" className="animate-spin text-[#ea543a]" />
+                  <span className="font-medium text-[0.8vw] text-gray-700">Syncing...</span>
+                </>
+              ) : (
+                <>
+                  <Icon
+                    icon="reicon:tick-circle-filled"
+                    className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
+                  />
+                  <span className="font-medium text-[0.8vw] text-gray-600">
+                    Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
+                  </span>
+                </>
+              )}
             </div>
           ) : (
+            /* When AutoSave is DISABLED: Show the manual Save button */
             <div className="relative group/tooltip flex items-center ml-[0.2vw]">
               <button
                 onClick={onSave}
-                disabled={!hasUnsavedChanges}
+                disabled={!hasUnsavedChanges || isSaving}
                 className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 flex-shrink-0 ${
-                  hasUnsavedChanges
-                    ? "cursor-pointer hover:bg-gray-50"
-                    : "cursor-default"
+                  hasUnsavedChanges && !isSaving
+                    ? "cursor-pointer hover:bg-gray-50 border-[#ea543a]/50 text-gray-900 shadow-sm"
+                    : "cursor-default text-gray-500"
                 }`}
               >
                 {isSaving ? (
@@ -442,30 +421,29 @@ const EditorNavbar = ({
               </div>
 
               {/* Success Toast Popup */}
-              {saveSuccessInfo &&
-                (saveSuccessInfo.isManual || !isAutoSaveEnabled) && (
-                  <div className="absolute top-full right-0 mt-[0.5vw] w-[12vw] z-[99999] animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="bg-[#5CBC49] rounded-[0.5vw] shadow-2xl p-[0.6vw] text-white relative">
-                      <div className="absolute -top-[0.2vw] right-[1vw] w-[0.6vw] h-[0.6vw] bg-[#5CBC49] rotate-45 transform"></div>
-                      <div className="flex items-center gap-[0.4vw]">
-                        <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="lucide:check"
-                            className="w-[0.8vw] h-[0.8vw] text-white"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[0.75vw] font-semibold truncate">
-                            {saveSuccessInfo.name || "Flipbook"}
-                          </p>
-                          <p className="text-[0.65vw] text-white/90">
-                            Saved successfully
-                          </p>
-                        </div>
+              {saveSuccessInfo && (
+                <div className="absolute top-full right-0 mt-[0.5vw] w-[12vw] z-[99999] animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="bg-[#5CBC49] rounded-[0.5vw] shadow-2xl p-[0.6vw] text-white relative">
+                    <div className="absolute -top-[0.2vw] right-[1vw] w-[0.6vw] h-[0.6vw] bg-[#5CBC49] rotate-45 transform"></div>
+                    <div className="flex items-center gap-[0.4vw]">
+                      <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                        <Icon
+                          icon="lucide:check"
+                          className="w-[0.8vw] h-[0.8vw] text-white"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.75vw] font-semibold truncate">
+                          {saveSuccessInfo.name || "Flipbook"}
+                        </p>
+                        <p className="text-[0.65vw] text-white/90">
+                          Saved successfully
+                        </p>
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           )}
 

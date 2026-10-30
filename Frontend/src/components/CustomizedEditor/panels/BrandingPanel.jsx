@@ -6,7 +6,7 @@ import axios from 'axios';
 import PremiumDropdown from '../components/PremiumDropdown';
 import AlertModal from '../../AlertModal';
 import { AdjustmentSlider, ImageCropOverlay, CustomColorPicker } from '../AppearanceShared';
-import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import ReplaceMediaModal from '../../PageEditor/modals/ReplaceMediaModal';
 import { useAuth } from '../../../context/AuthContext';
 import { fontFamilies } from '../utils/fontConstants';
 

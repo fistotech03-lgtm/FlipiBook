@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Check,
     Heart,
     Lock,
     Globe,
     Trash2,
-    Eye,
     Wrench,
     PenTool,
     BarChart2,
     Share2,
     Download,
     MoreVertical,
-    RotateCcw
+    RotateCcw,
+    Pencil
 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import LazyPreview from './LazyPreview';
@@ -21,8 +21,11 @@ import { getAssetBaseUrl } from '../../utils/assetUtils';
 const defaultFormatDisplayDate = (dateVal) => {
     if (!dateVal) return 'Recently';
     try {
+        if (typeof dateVal === 'string' && dateVal.includes('-') && dateVal.includes(' ')) {
+            return dateVal.replace(/-/g, '/');
+        }
         const d = new Date(dateVal);
-        if (isNaN(d.getTime())) return String(dateVal);
+        if (isNaN(d.getTime())) return String(dateVal).replace(/-/g, '/');
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
@@ -30,20 +33,99 @@ const defaultFormatDisplayDate = (dateVal) => {
         const minutes = String(d.getMinutes()).padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12 || 12;
-        return `${day}-${month}-${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+        return `${day}/${month}/${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
     } catch {
-        return String(dateVal);
+        return String(dateVal).replace(/-/g, '/');
     }
 };
 
 const defaultFormatDisplaySize = (book) => {
-    const raw = book.size || book.fileSize || book.pdfSize;
-    if (typeof raw === 'string') return raw;
-    if (typeof raw === 'number' && raw > 0) {
-        if (raw >= 1024 * 1024) return `${(raw / (1024 * 1024)).toFixed(2)} MB`;
-        return `${(raw / 1024).toFixed(2)} KB`;
+    const raw = book?.sizeBytes ?? book?.fileSize ?? book?.size ?? book?.pdfSize;
+    if (typeof raw === 'string' && !/^\d+(\.\d+)?$/.test(raw.trim())) return raw;
+    const num = Number(raw);
+    if (!isNaN(num) && num > 0) {
+        if (num >= 1000000000) {
+            const gb = num / 1000000000;
+            return `${parseFloat(gb.toFixed(gb >= 10 ? 1 : 2))} GB`;
+        }
+        if (num >= 1000000) {
+            const mb = num / 1000000;
+            return `${parseFloat(mb.toFixed(mb >= 10 ? 1 : 2))} MB`;
+        }
+        if (num >= 1000) {
+            return `${Math.round(num / 1000)} KB`;
+        }
+        return `${num} B`;
     }
     return '0 B';
+};
+
+const PAPER_SIZE_FORMATS = new Set([
+    'a4', 'a3', 'a5', 'letter', 'legal', 'dl', 'square',
+    'corporate', 'large_catalogue', 'mini', 'blank', 'custom'
+]);
+
+const defaultRenderBookTypeBadge = (book) => {
+    let type = (book?.bookType || '').toLowerCase().trim();
+    const rawTpl = String(book?.templateId || '').toLowerCase().trim();
+    const isRealTemplate = Boolean(
+        book?.isTemplate ||
+        book?.templateName ||
+        book?.templateCategory ||
+        (rawTpl && !PAPER_SIZE_FORMATS.has(rawTpl) && !rawTpl.startsWith('a') && rawTpl !== 'letter' && rawTpl !== 'legal' && rawTpl !== 'dl' && rawTpl !== 'square')
+    );
+
+    if (type === 'template' && !isRealTemplate) {
+        type = 'plain';
+    }
+
+    if (!type || type === 'unknown') {
+        const title = (book?.title || book?.flipbookName || book?.name || '').toLowerCase();
+        if (title.startsWith('word_flipbook_') || title.endsWith('.docx') || title.endsWith('.doc')) type = 'word';
+        else if (title.startsWith('ppt_flipbook_') || title.endsWith('.pptx') || title.endsWith('.ppt')) type = 'pptx';
+        else if (isRealTemplate || (title.includes('template') && !title.includes('scratch'))) type = 'template';
+        else if (title.startsWith('pdf_flipbook_') || title.endsWith('.pdf')) type = 'pdf';
+        else type = 'plain';
+    }
+
+    switch (type) {
+        case 'pdf':
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-rose-50 text-rose-600 border border-rose-200/60" title="PDF Document">
+                    <Icon icon="lucide:file-text" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>PDF</span>
+                </span>
+            );
+        case 'pptx':
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-amber-50 text-amber-600 border border-amber-200/60" title="PowerPoint Presentation">
+                    <Icon icon="lucide:presentation" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>PPTX</span>
+                </span>
+            );
+        case 'word':
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-blue-50 text-blue-600 border border-blue-200/60" title="Word Document">
+                    <Icon icon="lucide:file-type-2" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>Word</span>
+                </span>
+            );
+        case 'template':
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-purple-50 text-purple-600 border border-purple-200/60" title="Template Preset">
+                    <Icon icon="lucide:layout-template" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>Template</span>
+                </span>
+            );
+        case 'plain':
+        default:
+            return (
+                <span className="flex items-center gap-[0.25vw] px-[0.5vw] py-[0.12vw] rounded-full text-[0.62vw] font-semibold bg-slate-100 text-slate-600 border border-slate-200/60" title="Blank Canvas / Plain Flipbook">
+                    <Icon icon="lucide:file-plus-2" className="w-[0.6vw] h-[0.6vw]" />
+                    <span>Plain</span>
+                </span>
+            );
+    }
 };
 
 const defaultRenderStatusBadge = (book) => {
@@ -107,6 +189,8 @@ function FlipbookCard({
     setTempBookTitle,
     saveBookEdit,
     handleBookKeyDown,
+    onStartEdit,
+    startEditingBook,
     handleToggleFavorite,
     onToggleFavorite,
     activeFolder,
@@ -116,6 +200,7 @@ function FlipbookCard({
     formatDisplayDate = defaultFormatDisplayDate,
     formatDisplaySize = defaultFormatDisplaySize,
     renderStatusBadge = defaultRenderStatusBadge,
+    renderBookTypeBadge = defaultRenderBookTypeBadge,
     handleShareClick,
     onShareClick,
     handleDownloadClick,
@@ -156,6 +241,37 @@ function FlipbookCard({
             ? physical.folder
             : 'My_Flipbooks';
     }
+
+    // Check if entered rename title already exists in the current folder
+    const isDuplicateName = useMemo(() => {
+        if (!isBookEditing || !tempBookTitle) return false;
+        const trimmed = tempBookTitle.trim().toLowerCase();
+        const currentTitle = (book.title || book.realName || book.flipbookName || '').trim().toLowerCase();
+        if (!trimmed || trimmed === currentTitle) return false;
+
+        const targetFolder = (actualFolder || book.folder || 'My Flipbooks').trim().toLowerCase();
+
+        return (books || []).some((b) => {
+            if (b.id === book.id || b.v_id === book.v_id || b._id === book._id) return false;
+            if (book.realName && b.realName === book.realName) return false;
+            if (b.trash || b.folder === 'Trash') return false;
+
+            const bName = (b.title || b.realName || b.flipbookName || '').trim().toLowerCase();
+            const bFolder = (b.folder || b.folderName || 'My Flipbooks').trim().toLowerCase();
+
+            const isSameFolder =
+                targetFolder === 'all flipbook' || targetFolder === 'all flipbooks' || targetFolder === 'recent' || targetFolder === 'recent book'
+                    ? true
+                    : bFolder === targetFolder;
+
+            return bName === trimmed && isSameFolder;
+        });
+    }, [isBookEditing, tempBookTitle, book, actualFolder, books]);
+
+    const handleSaveEditWithCheck = () => {
+        if (isDuplicateName) return;
+        saveBookEdit?.();
+    };
 
     // Resolve Base URL for LazyPreview
     const userFolder = book.userID || book.userId || emailId?.replace(/[@.]/g, '_');
@@ -307,7 +423,7 @@ function FlipbookCard({
               (Array.isArray(book.pagesList) ? book.pagesList.length : 1)) || 1;
 
     return (
-        <div className="flex items-center group w-full">
+        <div className="flex items-center group w-full" data-card-item="true">
             {/* Checkbox Outside Card - Visible When Selection Mode Active */}
             <div
                 className={`transition-all duration-200 ease-in-out cursor-pointer flex items-center justify-center overflow-hidden flex-shrink-0 ${
@@ -329,10 +445,25 @@ function FlipbookCard({
                 </div>
             </div>
 
-            {/* The Card - Double click toggles selection */}
+            {/* The Card - Double click toggles selection, and once selected, single click also toggles */}
             <div
-                onDoubleClick={() => onToggleSelect?.(bookKey)}
-                className="flex-1 bg-white rounded-[0.9vw] p-[0.9vw] flex gap-[1.2vw] items-center border border-gray-100 shadow-sm hover:shadow-md transition-all relative cursor-pointer select-none"
+                onClick={(e) => {
+                    if (isBookEditing) return;
+                    if (selectionList && selectionList.length > 0) {
+                        e.stopPropagation();
+                        onToggleSelect?.(bookKey);
+                    }
+                }}
+                onDoubleClick={(e) => {
+                    if (isBookEditing) return;
+                    e.stopPropagation();
+                    if (!selectionList || selectionList.length === 0) {
+                        onToggleSelect?.(bookKey);
+                    }
+                }}
+                className={`flex-1 bg-white rounded-[0.9vw] p-[0.9vw] flex gap-[1.2vw] items-center border transition-all relative cursor-pointer select-none ${
+                    isSelected ? 'border-gray-400 shadow-md ring-1 ring-gray-300' : 'border-gray-100 shadow-sm hover:shadow-md'
+                }`}
             >
                 {/* Thumbnail Box (4:3 Aspect Ratio with Stroke) */}
                 <div className="w-[7.6vw] h-[5.7vw] aspect-[4/3] bg-gray-100 rounded-[0.6vw] overflow-hidden flex-shrink-0 border border-gray-200 shadow-xs flex items-center justify-center relative">
@@ -350,64 +481,85 @@ function FlipbookCard({
 
                 {/* Content Details */}
                 <div className="flex-1 flex flex-col justify-between min-h-[5.8vw] py-[0.1vw]">
-                    {/* Top Line: Title + Heart + Status + Meta Details */}
+                    {/* Top Line: Title + Pencil + Status + BookType Badge ... Right: Views + Size */}
                     <div className="flex items-start justify-between w-full">
-                        <div className="flex items-center gap-[0.5vw]">
+                        <div className="flex items-start gap-[0.5vw] flex-wrap">
                             {isBookEditing ? (
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    value={tempBookTitle}
-                                    onChange={(e) => setTempBookTitle?.(e.target.value)}
-                                    onBlur={saveBookEdit}
-                                    onKeyDown={handleBookKeyDown}
-                                    className="text-[1.1vw] font-bold text-gray-800 border-b border-[#ea543a] focus:outline-none w-[16vw]"
-                                />
+                                <div className="flex flex-col" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={tempBookTitle}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onDoubleClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => setTempBookTitle?.(e.target.value)}
+                                        onBlur={handleSaveEditWithCheck}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSaveEditWithCheck();
+                                            } else if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                if (setTempBookTitle) setTempBookTitle(book.title || book.realName || '');
+                                                saveBookEdit?.();
+                                            }
+                                        }}
+                                        className={`text-[1.1vw] font-bold bg-transparent border-b ${
+                                            isDuplicateName
+                                                ? 'border-red-500 text-red-500 focus:border-red-500'
+                                                : 'border-black text-gray-900 focus:border-black'
+                                        } focus:outline-none min-w-[12vw] max-w-[20vw] px-[0.1vw] py-0`}
+                                    />
+                                    {isDuplicateName && (
+                                        <p className="text-red-500 text-[0.62vw] font-medium mt-[0.2vw] whitespace-nowrap">
+                                            This name already exists
+                                        </p>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="flex items-center gap-[0.4vw]">
                                     <h3 className="text-[1.1vw] font-bold text-[#1f2937] leading-tight">
                                         {book.title || book.realName || book.flipbookName}
                                     </h3>
-                                    {!isTrash && (
+                                    {!isTrash && !book.isOtherUserBook && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onStartEdit) onStartEdit(book);
+                                                else if (startEditingBook) startEditingBook(book);
+                                            }}
+                                            onDoubleClick={(e) => e.stopPropagation()}
+                                            className="p-[0.2vw] text-gray-400 hover:text-gray-700 transition-colors cursor-pointer rounded hover:bg-gray-100"
+                                            title="Rename Flipbook"
+                                        >
+                                            <Pencil size="0.75vw" />
+                                        </button>
+                                    )}
+                                    {isFavorites && (
                                         <button
                                             type="button"
                                             onClick={handleFavoriteClick}
                                             onDoubleClick={(e) => e.stopPropagation()}
-                                            className="p-[0.15vw] text-gray-300 hover:text-red-500 transition-colors cursor-pointer"
-                                            title={
-                                                isFavorites || book.isFavorite
-                                                    ? 'Remove from Favorites'
-                                                    : 'Add to Favorites'
-                                            }
+                                            className="p-[0.15vw] text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+                                            title="Remove from Favorites"
                                         >
                                             <Heart
                                                 size="0.85vw"
-                                                className={
-                                                    isFavorites || book.isFavorite
-                                                        ? 'text-red-500 fill-red-500'
-                                                        : 'hover:text-red-500'
-                                                }
+                                                className="text-red-500 fill-red-500 hover:scale-110 transition-transform"
                                             />
                                         </button>
                                     )}
                                 </div>
                             )}
-                            {renderStatusBadge(book)}
+                            <div className="flex items-center gap-[0.5vw] pt-[0.1vw]">
+                                {renderStatusBadge(book)}
+                                {renderBookTypeBadge(book)}
+                            </div>
                         </div>
 
-                        {/* Right: Meta Details */}
+                        {/* Right: Meta Details (Views and Size) */}
                         <div className="flex items-center gap-[1.5vw] text-[0.72vw] text-gray-400 font-medium whitespace-nowrap">
-                            <span>
-                                {activeFolder === 'Recent Book' || activeFolder === 'Recent'
-                                    ? 'Last Updated on'
-                                    : 'Created on'}{' '}
-                                :{' '}
-                                {formatDisplayDate(
-                                    activeFolder === 'Recent Book' || activeFolder === 'Recent'
-                                        ? book.mtime || book.updatedAt || book.updated || book.createdAt || book.created
-                                        : book.createdAt || book.created || book.trashedAt
-                                )}
-                            </span>
                             <span>
                                 Views :{' '}
                                 {book.viewsCount !== undefined
@@ -416,14 +568,34 @@ function FlipbookCard({
                                     ? book.views
                                     : 0}
                             </span>
-                            <span>Size : {formatDisplaySize(book)}</span>
+                            <span
+                                title={
+                                    book.originalFileSize && book.originalFileSize !== book.fileSize
+                                        ? `Extracted Flipbook: ${formatDisplaySize(book)} (Imported PDF: ${(book.originalFileSize / (1024 * 1024)).toFixed(2)} MB)`
+                                        : undefined
+                                }
+                            >
+                                Size : {formatDisplaySize(book)}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Subtitle: Pages */}
-                    <p className="text-[0.72vw] text-gray-400 font-normal mt-[0.1vw] mb-[0.6vw]">
-                        {pageCountDisplay} Pages
-                    </p>
+                    {/* Subtitle: Pages and Created on moved below book title */}
+                    <div className="flex items-center gap-[0.75vw] text-[0.72vw] text-gray-400 font-normal mt-[0.2vw] mb-[0.6vw]">
+                        <span>{pageCountDisplay} Pages</span>
+                        <span className="text-gray-300">•</span>
+                        <span>
+                            {activeFolder === 'Recent Book' || activeFolder === 'Recent'
+                                ? 'Last Updated on'
+                                : 'Created on'}{' '}
+                            :{' '}
+                            {formatDisplayDate(
+                                activeFolder === 'Recent Book' || activeFolder === 'Recent'
+                                    ? book.mtime || book.updatedAt || book.updated || book.createdAt || book.created
+                                    : book.createdAt || book.created || book.trashedAt
+                            )}
+                        </span>
+                    </div>
 
                     {/* Action Buttons Row */}
                     {isTrash ? (
@@ -465,77 +637,54 @@ function FlipbookCard({
                                     handleView();
                                 }}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center cursor-pointer gap-[0.35vw] text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
+                                className="flex items-center cursor-pointer text-[0.75vw] font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap shrink-0"
                             >
-                                <Eye size="0.85vw" />
                                 <span>View Book</span>
                             </button>
 
-                            {/* Customize */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCustomEdit();
-                                }}
-                                onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-[#ea543a] hover:text-[#d4452d] transition-colors whitespace-nowrap shrink-0"
-                            >
-                                <Wrench size="0.85vw" className="text-[#ea543a]" />
-                                <span>Customize</span>
-                            </button>
+                            {/* Customize (Normal text-gray-600 color like others) */}
+                            {!isFavorites && !book.isOtherUserBook && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCustomEdit();
+                                    }}
+                                    onDoubleClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
+                                >
+                                    <Wrench size="0.85vw" />
+                                    <span>Customize</span>
+                                </button>
+                            )}
 
                             {/* Open in Editor */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStandardEdit();
-                                }}
-                                onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
-                            >
-                                <PenTool size="0.85vw" />
-                                <span>Open in Editor</span>
-                            </button>
+                            {!isFavorites && !book.isOtherUserBook && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStandardEdit();
+                                    }}
+                                    onDoubleClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
+                                >
+                                    <PenTool size="0.85vw" />
+                                    <span>Open in Editor</span>
+                                </button>
+                            )}
 
                             {/* Statistic */}
-                            <button
-                                type="button"
-                                onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
-                            >
-                                <BarChart2 size="0.85vw" />
-                                <span>Statistic</span>
-                            </button>
-
-                            {/* Share */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShare();
-                                }}
-                                onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
-                            >
-                                <Share2 size="0.85vw" />
-                                <span>Share</span>
-                            </button>
-
-                            {/* Download */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownload();
-                                }}
-                                onDoubleClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
-                            >
-                                <Download size="0.85vw" />
-                                <span>Download</span>
-                            </button>
+                            {!isFavorites && !book.isOtherUserBook && (
+                                <button
+                                    type="button"
+                                    onDoubleClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-[0.35vw] cursor-pointer text-[0.75vw] font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap shrink-0"
+                                >
+                                    <BarChart2 size="0.85vw" />
+                                    <span>Statistic</span>
+                                </button>
+                            )}
 
                             {/* More Menu Trigger */}
                             <div className="relative shrink-0">

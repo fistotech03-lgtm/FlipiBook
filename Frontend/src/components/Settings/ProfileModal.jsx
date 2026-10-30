@@ -221,14 +221,14 @@ export default function ProfileModal({
 
   const formatMB = (bytes) => {
     if (!bytes || bytes <= 0) return "0 MB";
-    const mb = bytes / (1024 * 1024);
+    const mb = bytes / 1000000;
     if (mb < 0.1) return "0.1 MB";
     if (mb < 100) return `${parseFloat(mb.toFixed(1))} MB`;
     return `${Math.round(mb)} MB`;
   };
 
   const usedFormatted = formatMB(storage.used);
-  const totalFormatted = `${Math.round(storage.total / (1024 * 1024))}MB`;
+  const totalFormatted = `${Math.round(storage.total / 1000000)}MB`;
   const percentage =
     storage.total > 0
       ? Math.min(100, Math.round((storage.used / storage.total) * 100))

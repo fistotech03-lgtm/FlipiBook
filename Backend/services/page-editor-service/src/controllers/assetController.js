@@ -2,11 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
-const Flipbook = require("../models/flipbook");
-const FlipbookAsset = require("../models/flipbookAsset");
-const UserGallery = require("../models/userGallery");
-const ThreedModel = require("../models/threedModel");
-const InteractionThreedModel = require("../models/interactionThreedModel");
+const Flipbook = require("../../../../shared/models/Flipbook");
+const FlipbookAsset = require("../../../../shared/models/FlipbookAsset");
+const UserGallery = require("../../../../shared/models/UserGallery");
+const ThreedModel = require("../../../../shared/models/ThreedModel");
+const InteractionThreedModel = require("../../../../shared/models/InteractionThreedModel");
 const backupService = require('../../../../shared/backupService');
 const { getAuthUser } = require("../utils/userHelper");
 const {

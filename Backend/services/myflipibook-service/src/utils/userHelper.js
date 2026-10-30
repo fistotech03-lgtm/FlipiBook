@@ -106,7 +106,7 @@ const resolveAuthUser = async (req) => {
 
   if (!auth.objectId || !auth.customUserId || !auth.emailId) {
     try {
-      const User = require('../models/user');
+      const User = require('../../../../shared/models/User');
       const conds = [];
       if (auth.objectId) conds.push({ _id: auth.objectId });
       if (auth.customUserId) conds.push({ userID: auth.customUserId });

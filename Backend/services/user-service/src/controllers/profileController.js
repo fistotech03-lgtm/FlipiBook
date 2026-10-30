@@ -1,7 +1,7 @@
 // Backend/services/user-service/src/controllers/profileController.js
 const mongoose = require('mongoose');
-const Profile = require('../models/profile');
-const User = require('../models/user');
+const Profile = require('../../../../shared/models/Profile');
+const User = require('../../../../shared/models/User');
 const {
   resolveUserFolder,
   saveProfileAsset,

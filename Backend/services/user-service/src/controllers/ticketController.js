@@ -7,12 +7,7 @@ const {
   deleteTicketAttachments
 } = require('../utils/ticketStorageHelper');
 
-let User;
-try {
-  User = mongoose.models.User || mongoose.models.user || require('../models/user');
-} catch (e) {
-  User = mongoose.models.User || mongoose.models.user || mongoose.model('user', new mongoose.Schema({ emailId: String, email: String, role: String }, { strict: false }));
-}
+const User = require('../../../../shared/models/User');
 
 /**
  * Check if the user is an admin

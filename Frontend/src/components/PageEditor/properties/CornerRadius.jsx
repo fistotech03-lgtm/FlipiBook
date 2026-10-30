@@ -11,7 +11,11 @@ const CornerRadius = ({
   onToggleLinked,
   hideHeader = false,
   title = 'Corner Radius',
-  className = ''
+  className = '',
+  openSubSection,
+  setOpenSubSection,
+  tagName = 'rect',
+  noAccordion = false
 }) => {
   const containerRef = useRef(null);
   const [internalLinked, setInternalLinked] = useState(Boolean(isRadiusLinked));
@@ -79,10 +83,10 @@ const CornerRadius = ({
   };
 
   const corners = [
-    { key: 'tl', label: 'Top-Left', roundedClass: 'rounded-tl-[1vw] rounded-tr-none rounded-bl-none rounded-br-none' },
-    { key: 'tr', label: 'Top-Right', roundedClass: 'rounded-tr-[1vw] rounded-tl-none rounded-bl-none rounded-br-none' },
-    { key: 'bl', label: 'Bottom-Left', roundedClass: 'rounded-bl-[1vw] rounded-tl-none rounded-tr-none rounded-br-none' },
-    { key: 'br', label: 'Bottom-Right', roundedClass: 'rounded-br-[1vw] rounded-tl-none rounded-tr-none rounded-bl-none' },
+    { key: 'tl', label: 'Top-Left', roundedClass: 'rounded-tl-[0.9vw] rounded-tr-none rounded-bl-none rounded-br-none' },
+    { key: 'tr', label: 'Top-Right', roundedClass: 'rounded-tr-[0.9vw] rounded-tl-none rounded-bl-none rounded-br-none' },
+    { key: 'bl', label: 'Bottom-Left', roundedClass: 'rounded-bl-[0.9vw] rounded-tl-none rounded-tr-none rounded-br-none' },
+    { key: 'br', label: 'Bottom-Right', roundedClass: 'rounded-br-[0.9vw] rounded-tl-none rounded-tr-none rounded-bl-none' },
   ];
 
   return (
@@ -95,8 +99,8 @@ const CornerRadius = ({
       `}</style>
 
       {!hideHeader && (
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">{title}</span>
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
           <div className="h-[1px] flex-1 bg-gray-200" />
         </div>
       )}
@@ -110,7 +114,7 @@ const CornerRadius = ({
                 if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
                 handleScrubHelper(e, radius?.[key] ?? 0, (newVal) => handleCornerValueChange(key, newVal));
               }}
-              className={`w-[5vw] h-[2.5vw] min-h-[38px] bg-white border border-gray-300 ${roundedClass} flex items-center justify-between px-[0.4vw] shadow-2xs hover:border-gray-400 transition-colors cursor-ew-resize select-none relative`}
+              className={`w-[5.2vw] h-[2.3vw] bg-white border border-gray-300 ${roundedClass} flex items-center justify-between px-[0.4vw] shadow-2xs hover:border-gray-400 transition-colors cursor-ew-resize select-none relative`}
             >
               <button
                 type="button"
@@ -122,7 +126,7 @@ const CornerRadius = ({
                 className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
                 title="Decrease"
               >
-                <ChevronLeft size="0.9vw" />
+                <ChevronLeft size="0.8vw" />
               </button>
               <input
                 type="number"
@@ -132,7 +136,7 @@ const CornerRadius = ({
                 onChange={(e) => handleCornerValueChange(key, e.target.value)}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full text-center text-[0.85vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text z-10"
+                className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text z-10"
               />
               <button
                 type="button"
@@ -144,7 +148,7 @@ const CornerRadius = ({
                 className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
                 title="Increase"
               >
-                <ChevronRight size="0.9vw" />
+                <ChevronRight size="0.8vw" />
               </button>
             </div>
           ))}

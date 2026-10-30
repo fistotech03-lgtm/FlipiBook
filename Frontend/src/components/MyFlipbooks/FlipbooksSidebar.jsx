@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library, Images } from 'lucide-react';
+import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Library, Images } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
 import { FolderSkeleton } from './FlipbookSkeleton';
 
@@ -26,7 +26,6 @@ export default function FlipbooksSidebar({
     onCreateFolder,
     onRenameFolder,
     onDeleteFolder,
-    onDuplicateFolder,
     onReorderFolders,
     creatingFolderName,
     storage,
@@ -69,6 +68,38 @@ export default function FlipbooksSidebar({
     const [isStorageBoxOpen, setIsStorageBoxOpen] = useState(false);
     const storageContainerRef = useRef(null);
 
+    // Real-time Duplicate Detection for Folder Creation
+    const isNewFolderDuplicate = useMemo(() => {
+        const trimmed = newFolderInputName.trim().toLowerCase();
+        if (!trimmed) return false;
+        const reserved = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+        if (reserved.includes(trimmed)) return true;
+        return (folders || []).some(f => {
+            const name = (f.name || '').trim().toLowerCase();
+            if ((f.isDefault || name === 'default') && (trimmed === 'my flipbooks' || trimmed === 'default')) return true;
+            return name === trimmed;
+        });
+    }, [newFolderInputName, folders]);
+
+    // Real-time Duplicate Detection for Folder Renaming
+    const isEditFolderDuplicate = useMemo(() => {
+        if (!editingId) return false;
+        const trimmed = tempName.trim().toLowerCase();
+        if (!trimmed) return false;
+        const currentFolder = (folders || []).find(f => f.id === editingId);
+        if (currentFolder && (currentFolder.name || '').trim().toLowerCase() === trimmed) {
+            return false;
+        }
+        const reserved = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+        if (reserved.includes(trimmed)) return true;
+        return (folders || []).some(f => {
+            if (f.id === editingId) return false;
+            const name = (f.name || '').trim().toLowerCase();
+            if ((f.isDefault || name === 'default') && (trimmed === 'my flipbooks' || trimmed === 'default')) return true;
+            return name === trimmed;
+        });
+    }, [editingId, tempName, folders]);
+
     useEffect(() => {
         if (!isStorageBoxOpen) return;
         const handleOutsideClick = (e) => {
@@ -99,11 +130,7 @@ export default function FlipbooksSidebar({
             setNewFolderInputName('');
             return;
         }
-        const duplicate = folders?.some(f => (f.name || '').toLowerCase().trim() === trimmed.toLowerCase());
-        if (duplicate) {
-            setIsCreatingFolder(false);
-            setNewFolderInputName('');
-            alert('A folder with this name already exists.');
+        if (isNewFolderDuplicate) {
             return;
         }
         setIsCreatingFolder(false);
@@ -122,19 +149,16 @@ export default function FlipbooksSidebar({
             return;
         }
         const folder = folders.find(f => f.id === editingId);
-        if (!folder || folder.name === tempName.trim()) {
+        if (!folder || folder.name.trim() === tempName.trim()) {
             setEditingId(null);
+            return;
+        }
+        if (isEditFolderDuplicate) {
             return;
         }
         const currentFolderId = folder.id;
         const oldName = folder.name;
         const newName = tempName.trim();
-        const duplicate = folders?.some(f => f.id !== currentFolderId && (f.name || '').toLowerCase().trim() === newName.toLowerCase());
-        if (duplicate) {
-            setEditingId(null);
-            alert('A folder with this name already exists.');
-            return;
-        }
         setEditingId(null);
         onRenameFolder?.(currentFolderId, oldName, newName);
     });
@@ -142,6 +166,9 @@ export default function FlipbooksSidebar({
     const handleKeyDown = rest.handleKeyDown || ((e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            if (isEditFolderDuplicate) {
+                return;
+            }
             saveEdit();
         } else if (e.key === 'Escape') {
             setEditingId(null);
@@ -204,14 +231,6 @@ export default function FlipbooksSidebar({
         }
     };
 
-    const handleDuplicateFolder = (folder) => {
-        if (onDuplicateFolder) {
-            onDuplicateFolder(folder);
-        } else if (rest.handleDuplicateFolder) {
-            rest.handleDuplicateFolder(folder);
-        }
-    };
-
     useEffect(() => {
         if ((isCreatingFolder || creatingFolderName) && folderListRef.current) {
             folderListRef.current.scrollTo({
@@ -223,28 +242,68 @@ export default function FlipbooksSidebar({
 
 
     // Quick Access counts
-    const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
+    const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent' && !b.isOtherUserBook).length;
     const recentCount = books.filter(b => !b.trash && (b.folder === 'Recent Book' || b.folder === 'Recent')).length;
     const favoritesCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent' && Boolean(b.isFavorite || b.favorite || b.isFav)).length;
     const trashCount = books.filter(b => Boolean(b.trash || b.folder === 'Trash') && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
 
-    // Storage formatting
-    const fallbackBooksSize = Array.isArray(books) ? books.reduce((acc, b) => acc + (b.sizeBytes || b.fileSize || 0), 0) : 0;
-    const effectiveUsed = (typeof storage?.used === 'number' && !isNaN(storage.used)) ? storage.used : fallbackBooksSize;
-    const effectiveTotal = storage?.total > 0 ? storage.total : (300 * 1024 * 1024);
+    // Helper to safely parse sizes to bytes (supports numbers or formatted strings like "36.8 MB", "500 KB")
+    const parseSizeToBytes = (val) => {
+        if (typeof val === 'number' && !isNaN(val)) return Math.max(0, Math.round(val));
+        if (typeof val === 'string') {
+            const trimmed = val.trim();
+            const match = trimmed.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i);
+            if (match) {
+                const num = parseFloat(match[1]);
+                if (isNaN(num)) return 0;
+                const unit = (match[2] || 'B').toUpperCase();
+                const mult = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024, TB: 1024 * 1024 * 1024 * 1024 };
+                return Math.round(num * (mult[unit] || 1));
+            }
+        }
+        return 0;
+    };
+
+    // Calculate real-time active storage consumed by flipbooks on screen (excluding duplicate Recent pointers & favorited external books)
+    const liveBooksSize = useMemo(() => {
+        if (!Array.isArray(books)) return 0;
+        return books.reduce((acc, b) => {
+            if (b.isOtherUserBook || b.folder === 'Recent Book' || b.folder === 'Recent' || String(b.id || '').startsWith('Recent_')) {
+                return acc;
+            }
+            const pagesBytes = Array.isArray(b.pagesList)
+                ? b.pagesList.reduce((s, p) => s + parseSizeToBytes(p?.size), 0)
+                : 0;
+            const bookBytes = Math.max(
+                parseSizeToBytes(b.sizeBytes),
+                parseSizeToBytes(b.fileSize),
+                parseSizeToBytes(b.size),
+                pagesBytes
+            );
+            return acc + bookBytes;
+        }, 0);
+    }, [books]);
+
+    // Effective used storage: The greater of backend quota (which includes Gallery + Flipbook Assets + Disk)
+    // or the live sum of active books visible on the user dashboard
+    const effectiveUsed = Math.max(
+        (typeof storage?.used === 'number' && !isNaN(storage.used)) ? storage.used : 0,
+        liveBooksSize
+    );
+    const effectiveTotal = storage?.total > 0 ? storage.total : (300 * 1000 * 1000);
 
     const formatMB = (bytes) => {
         if (!bytes || bytes <= 0) return '0 MB';
-        const mb = bytes / (1024 * 1024);
+        const mb = bytes / 1000000;
         if (mb < 0.1) return '0.1 MB';
         if (mb < 100) return `${parseFloat(mb.toFixed(1))} MB`;
         return `${Math.round(mb)} MB`;
     };
 
     const usedFormatted = formatMB(effectiveUsed);
-    const totalFormatted = effectiveTotal >= 1024 * 1024 * 1024
-        ? `${Math.round(effectiveTotal / (1024 * 1024 * 1024))} GB`
-        : `${Math.round(effectiveTotal / (1024 * 1024))} MB`;
+    const totalFormatted = effectiveTotal >= 1000000000
+        ? `${Math.round(effectiveTotal / 1000000000)} GB`
+        : `${Math.round(effectiveTotal / 1000000)} MB`;
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
 
     // Dynamic storage gradient flow and theme
@@ -607,19 +666,34 @@ export default function FlipbooksSidebar({
                                 const folderColor = FOLDER_COLORS[index % FOLDER_COLORS.length];
 
                                 return isEditing ? (
-                                    <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
+                                    <div
+                                        key={folder.id}
+                                        style={{ border: isEditFolderDuplicate ? '1.5px solid #ef4444' : '1.5px solid #ffffff' }}
+                                        className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] shadow-sm flex flex-col"
+                                    >
                                         <input
                                             autoFocus
                                             type="text"
                                             value={tempName}
-
-                                        onChange={(e) => setTempName(e.target.value)}
-                                        onBlur={saveEdit}
-                                        onKeyDown={handleKeyDown}
-                                        className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
-                                    />
-                                </div>
-                            ) : (
+                                            onChange={(e) => setTempName(e.target.value)}
+                                            onBlur={() => {
+                                                if (isEditFolderDuplicate) {
+                                                    setEditingId(null);
+                                                    setTempName('');
+                                                } else {
+                                                    saveEdit();
+                                                }
+                                            }}
+                                            onKeyDown={handleKeyDown}
+                                            className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
+                                        />
+                                        {isEditFolderDuplicate && (
+                                            <p className="text-[#ef4444] text-[0.65vw] font-medium mt-[0.2vw] px-[0.1vw]">
+                                                This folder name already exists
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
                                 <div
                                     key={folder.id}
                                     draggable={!isEditing}
@@ -688,37 +762,54 @@ export default function FlipbooksSidebar({
 
                         {/* New Folder Input */}
                         {isCreatingFolder && (
-                            <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div
+                                style={{ border: isNewFolderDuplicate ? '1.5px solid #ef4444' : '1.5px solid #ffffff' }}
+                                className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] shadow-sm flex flex-col animate-in fade-in slide-in-from-top-2 duration-300"
+                            >
                                 <input
                                     autoFocus
                                     type="text"
                                     placeholder="Folder Name..."
                                     value={newFolderInputName}
                                     onChange={(e) => setNewFolderInputName(e.target.value)}
-                                    onBlur={saveNewFolder}
+                                    onBlur={() => {
+                                        if (isNewFolderDuplicate) {
+                                            setIsCreatingFolder(false);
+                                            setNewFolderInputName('');
+                                        } else {
+                                            saveNewFolder();
+                                        }
+                                    }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
+                                            if (isNewFolderDuplicate) {
+                                                return;
+                                            }
                                             saveNewFolder();
-                                        }
-                                        if (e.key === 'Escape') {
+                                        } else if (e.key === 'Escape') {
                                             setIsCreatingFolder(false);
                                             setNewFolderInputName('');
                                         }
                                     }}
                                     className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none placeholder-gray-500"
                                 />
+                                {isNewFolderDuplicate && (
+                                    <p className="text-[#ef4444] text-[0.65vw] font-medium mt-[0.2vw] px-[0.1vw]">
+                                        This folder name already exists
+                                    </p>
+                                )}
                             </div>
                         )}
 
                         {/* Creating Folder Loading Row */}
                         {creatingFolderName && (
-                            <div className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] text-[#ec5137] text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
+                            <div style={{ border: '1.5px solid #ffffff' }} className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] text-white text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
                                 <div className="flex items-center gap-[0.75vw] min-w-0 flex-1">
-                                    <Folder size="1.15vw" className="text-[#ec5137] fill-current shrink-0" />
+                                    <Folder size="1.15vw" className="text-amber-500 fill-current shrink-0" />
                                     <span className="truncate">{creatingFolderName}</span>
                                 </div>
-                                <div className="w-[1.1vw] h-[1.1vw] border-[2px] border-[#ec5137] border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                <div className="w-[1.1vw] h-[1.1vw] border-[2px] border-white border-t-transparent rounded-full animate-spin shrink-0"></div>
                             </div>
                         )}
                     </div>
@@ -904,23 +995,12 @@ export default function FlipbooksSidebar({
                                             setActiveMenuId(null);
                                             startEditing(folder);
                                         }}
-                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors border-b border-[#253346] group cursor-pointer"
-                                    >
-                                        <Edit2 size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
-                                        <span>Rename</span>
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveMenuId(null);
-                                            handleDuplicateFolder(folder);
-                                        }}
                                         className={`w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors group cursor-pointer ${
                                             !isDefault ? 'border-b border-[#253346]' : ''
                                         }`}
                                     >
-                                        <Copy size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
-                                        <span>Duplicate</span>
+                                        <Edit2 size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
+                                        <span>Rename</span>
                                     </button>
                                     {!isDefault && (
                                         <button

@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
-const Flipbook = require('../models/flipbook');
-const FlipbookAsset = require('../models/flipbookAsset');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const FlipbookAsset = require('../../../../shared/models/FlipbookAsset');
 const { getAuthUser } = require('../utils/userHelper');
 const { resolveFlipbookPaths } = require('../utils/storageHelper');
 
@@ -96,7 +96,7 @@ const resolveMapUrl = async (req, res) => {
       if (q && !place) {
         place = decodeURIComponent(q.replace(/\+/g, ' '));
       }
-    } catch (e) {}
+    } catch (e) { }
 
     let embedUrl = '';
     if (coords) {
@@ -199,7 +199,7 @@ const getPageData = async (req, res) => {
                 pageContent = str;
                 break;
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 

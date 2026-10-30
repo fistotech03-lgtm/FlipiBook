@@ -37,10 +37,6 @@ export const flipbookApi = {
         }
         return api.delete('/api/flipbook/folder', { data: { folderName, folderId } });
     },
-    duplicateFolder: (arg1, arg2) => {
-        const folderName = arg2 !== undefined ? arg2 : arg1;
-        return api.post('/api/flipbook/folder/duplicate', { folderName });
-    },
     reorderFolders: (arg1, arg2) => {
         const folders = Array.isArray(arg1) ? arg1 : arg2;
         return api.post('/api/flipbook/folder/reorder', { folders });
@@ -69,7 +65,6 @@ export const flipbookApi = {
         }
         return api.post('/api/flipbook/restore', { bookName, folder });
     },
-    duplicateBook: (payload) => api.post('/api/flipbook/duplicate', payload),
     toggleFavorite: (payload) => api.post('/api/flipbook/favorite', payload),
     removeRecent: (payload) => api.post('/api/flipbook/remove-recent', payload),
     emptyTrash: () => api.post('/api/flipbook/empty-trash'),
@@ -79,9 +74,8 @@ export const flipbookApi = {
     moveBook: (payload) => api.post('/api/flipbook/move', payload),
     deleteBookPermanently: (payload) => api.delete('/api/flipbook/delete', { data: payload }),
 
-    // Storage Settings API
-    getStorageSettings: () =>
-        api.get('/api/usersetting/get-settings'),
+    // Storage Settings API (Authenticated via Access Token / Session Cookie)
+    getStorageSettings: () => api.get('/api/usersetting/get-settings'),
 };
 
 export default flipbookApi;

@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 let User;
 try {
-  User = require('../models/user');
+  User = require('../../../../shared/models/User');
 } catch (_) {}
 
 const userFolderCache = new Map();

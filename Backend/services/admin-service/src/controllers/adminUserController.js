@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Flipbook = require('../models/Flipbook');
+const backupService = require('../../../../shared/backupService');
 const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 
 /**
@@ -227,6 +228,13 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found or already deleted' });
     }
+
+    // Record user deletion in backup database
+    backupService.recordUserDeletion(user, {
+      req,
+      user: req.admin,
+      reason: 'ADMIN_DELETE'
+    });
 
     await recordAdminLog({
       adminEmail: req.admin?.emailId || 'admin@flipibook.com',

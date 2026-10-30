@@ -85,11 +85,64 @@ const ensureDir = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     try {
       fs.mkdirSync(dirPath, { recursive: true, mode: 0o777 });
-    } catch (e) {}
+    } catch (e) {
+      console.warn(`[Workspace Helper] Warning creating dir ${dirPath}:`, e.message);
+    }
   }
   try {
     fs.chmodSync(dirPath, 0o777);
   } catch (e) {}
+};
+
+/**
+ * Safely migrate files/folders from srcDir to destDir.
+ * Case-sensitive and APFS/NTFS safe: never deletes destDir, and checks actual parent entries.
+ */
+const safeMigrateDirectory = (srcDir, destDir) => {
+  try {
+    if (srcDir === destDir) return;
+    const srcParent = path.dirname(srcDir);
+    const srcBase = path.basename(srcDir);
+    if (!fs.existsSync(srcParent)) return;
+
+    // Check actual directory table entry to avoid case-insensitive collisions on macOS / Windows
+    const parentEntries = fs.readdirSync(srcParent);
+    if (!parentEntries.includes(srcBase)) return;
+
+    const destParent = path.dirname(destDir);
+    const destBase = path.basename(destDir);
+    const isSameParent = path.resolve(srcParent) === path.resolve(destParent);
+
+    // If it is the exact same directory differing only by casing (e.g. Profile vs profile):
+    if (isSameParent && srcBase.toLowerCase() === destBase.toLowerCase()) {
+      if (srcBase !== destBase) {
+        const tempName = `${srcBase}_mig_tmp_${Date.now()}`;
+        const tempDir = path.join(srcParent, tempName);
+        fs.renameSync(srcDir, tempDir);
+        fs.renameSync(tempDir, destDir);
+      }
+      return;
+    }
+
+    // Otherwise, move all files from srcDir to destDir
+    ensureDir(destDir);
+    const files = fs.readdirSync(srcDir);
+    for (const file of files) {
+      const srcFile = path.join(srcDir, file);
+      const destFile = path.join(destDir, file);
+      if (!fs.existsSync(destFile)) {
+        fs.renameSync(srcFile, destFile);
+      }
+    }
+
+    if (path.resolve(srcDir) !== path.resolve(destDir)) {
+      try {
+        fs.rmdirSync(srcDir);
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn(`[Workspace Helper] Migration note (${srcDir} -> ${destDir}):`, err.message);
+  }
 };
 
 /**
@@ -117,18 +170,13 @@ const createUserWorkspace = (user) => {
     const userDir = path.join(storageRoot, dirName);
     ensureDir(userDir);
 
-    // Create aligned folder hierarchy
-    for (const relPath of WORKSPACE_FOLDERS) {
-      const fullPath = path.join(userDir, relPath);
-      ensureDir(fullPath);
-    }
-
     // Self-healing migration for existing servers (Production / Testing):
     // 1. Move legacy My_Flipbooks contents to books/default if present
     const legacyMyFlipbooks = path.join(userDir, 'My_Flipbooks');
     const defaultBooksDir = path.join(userDir, 'books', 'default');
     if (fs.existsSync(legacyMyFlipbooks)) {
       try {
+        ensureDir(defaultBooksDir);
         const items = fs.readdirSync(legacyMyFlipbooks);
         for (const item of items) {
           const srcPath = path.join(legacyMyFlipbooks, item);
@@ -175,7 +223,11 @@ const createUserWorkspace = (user) => {
       }
     }
 
-    // 3. Migrate any legacy uppercase folder names to lowercase
+    // 3. Move legacy root Profile / Company_logo (created by user-service) into userdetails/profile & company_logo
+    safeMigrateDirectory(path.join(userDir, 'Profile'), path.join(userDir, 'userdetails', 'profile'));
+    safeMigrateDirectory(path.join(userDir, 'Company_logo'), path.join(userDir, 'userdetails', 'company_logo'));
+
+    // 4. Safely migrate legacy uppercase folder names to lowercase
     const lowercaseMigrations = [
       { src: path.join(userDir, 'userdetails', 'Profile'), dest: path.join(userDir, 'userdetails', 'profile') },
       { src: path.join(userDir, 'userdetails', 'Company_logo'), dest: path.join(userDir, 'userdetails', 'company_logo') },
@@ -192,28 +244,20 @@ const createUserWorkspace = (user) => {
     ];
 
     for (const { src, dest } of lowercaseMigrations) {
-      if (src !== dest && fs.existsSync(src)) {
-        try {
-          ensureDir(dest);
-          const entries = fs.readdirSync(src);
-          for (const ent of entries) {
-            const sPath = path.join(src, ent);
-            const dPath = path.join(dest, ent);
-            if (!fs.existsSync(dPath)) {
-              fs.renameSync(sPath, dPath);
-            }
-          }
-          try { fs.rmdirSync(src); } catch (_) {}
-        } catch (_) {}
-      }
+      safeMigrateDirectory(src, dest);
     }
 
-    // Ensure UserGallery document in MongoDB is initialized
+    // 5. Unconditionally ensure the complete aligned folder hierarchy exists
+    for (const relPath of WORKSPACE_FOLDERS) {
+      const fullPath = path.join(userDir, relPath);
+      ensureDir(fullPath);
+    }
+
+    // Ensure UserGallery document in MongoDB is initialized (strictly keyed by userObjectID and userID, no emailId)
     try {
       const orConds = [];
       if (user._id) orConds.push({ userObjectID: user._id });
       if (user.userID) orConds.push({ userID: user.userID });
-      if (user.emailId) orConds.push({ emailId: user.emailId.trim().toLowerCase() });
 
       if (orConds.length > 0) {
         UserGallery.findOneAndUpdate(
@@ -222,14 +266,14 @@ const createUserWorkspace = (user) => {
             $setOnInsert: {
               userObjectID: user._id || null,
               userID: user.userID || null,
-              emailId: user.emailId ? user.emailId.trim().toLowerCase() : null,
               userdetails: { images: [] },
               pageEditorgallery: { images: [], video: [], gif: [] },
               CustomizationGallery: { images: [], videos: [] },
               '3DGallery': { models: [], texture: [], snapshot: [] }
-            }
+            },
+            $unset: { emailId: "" }
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: 'after' }
         ).catch(err => console.warn('[Workspace Helper] UserGallery init note:', err.message));
       }
     } catch (ugErr) {}

@@ -20,7 +20,6 @@ router.post('/folder/create', folderController.createFolder);
 router.post('/folder/rename', folderController.renameFolder);
 router.post('/folder/reorder', folderController.reorderFolders);
 router.delete('/folder', folderController.deleteFolder);
-router.post('/folder/duplicate', folderController.duplicateFolder);
 
 // --- Flipbook CRUD & Actions ---
 router.get('/list', bookController.getBooks);
@@ -29,7 +28,6 @@ router.post('/trash', bookController.trashBook);
 router.post('/restore', bookController.restoreBook);
 router.post('/empty-trash', bookController.emptyTrash);
 router.post('/rename', bookController.renameBook);
-router.post('/duplicate', bookController.duplicateBook);
 router.delete('/delete/:v_id', bookController.deleteBookPermanently);
 router.delete('/delete', bookController.deleteBookPermanently);
 router.post('/remove-recent', bookController.removeRecent);

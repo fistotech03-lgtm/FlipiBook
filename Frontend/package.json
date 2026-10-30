@@ -33,6 +33,7 @@
     "flipibook": "file:..",
     "framer-motion": "^12.31.0",
     "gifuct-js": "^2.1.2",
+    "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",
     "interactjs": "^1.10.27",
     "js-binary-schema-parser": "^2.0.3",

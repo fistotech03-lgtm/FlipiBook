@@ -2,6 +2,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
+// Text-effects engine added in the new AnimationRunner (adjust path if the file lives elsewhere)
+import { initTextEffectsRunner } from '../utils/AnimationRunner';
 import {
   ChevronDown,
   ArrowRightLeft,
@@ -62,36 +64,36 @@ const WAAPI_ANIMATIONS = {
   'fade-in': [{ opacity: 0 }, { opacity: 1 }],
   'fade-out': [{ opacity: 1 }, { opacity: 0 }],
   'blur-in': [{ filter: 'blur(20px)', opacity: 0 }, { filter: 'blur(0)', opacity: 1 }],
-  'focus-in': [{ filter: 'blur(12px)', opacity: 0, scale: 1.2 }, { filter: 'blur(0)', opacity: 1, scale: 1 }],
-  'glass-reveal': [{ opacity: 0, backdropFilter: 'blur(20px)' }, { opacity: 1, backdropFilter: 'blur(0px)' }],
+  'focus-in': [{ filter: 'blur(12px)', opacity: 0, scale: '1.2' }, { filter: 'blur(0)', opacity: 1, scale: '1' }],
+  'glass-reveal': [{ opacity: 0, backdropFilter: 'blur(20px)', webkitBackdropFilter: 'blur(20px)' }, { opacity: 1, backdropFilter: 'blur(0px)', webkitBackdropFilter: 'blur(0px)' }],
   'perspective-in': [{ transform: 'perspective(400px) rotateX(-60deg) translateZ(-500px)', opacity: 0 }, { transform: 'perspective(400px) rotateX(0deg) translateZ(0)', opacity: 1 }],
   'slide-up': [{ translate: '0 100px', opacity: 0 }, { translate: '0 0', opacity: 1 }],
   'slide-down': [{ translate: '0 -100px', opacity: 0 }, { translate: '0 0', opacity: 1 }],
   'slide-left': [{ translate: '100px 0', opacity: 0 }, { translate: '0 0', opacity: 1 }],
   'slide-right': [{ translate: '-100px 0', opacity: 0 }, { translate: '0 0', opacity: 1 }],
-  'back-in-up': [{ translate: '0 500px', scale: 0.7, opacity: 0 }, { translate: '0 0', scale: 0.7, opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'back-in-down': [{ translate: '0 -500px', scale: 0.7, opacity: 0 }, { translate: '0 0', scale: 0.7, opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'back-in-left': [{ translate: '-500px 0', scale: 0.7, opacity: 0 }, { translate: '0 0', scale: 0.7, opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'back-in-right': [{ translate: '500px 0', scale: 0.7, opacity: 0 }, { translate: '0 0', scale: 0.7, opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'zoom-in': [{ scale: 0, opacity: 0 }, { scale: 1, opacity: 1 }],
-  'zoom-out': [{ scale: 1, opacity: 1 }, { scale: 0, opacity: 0 }],
-  'zoom-in-up': [{ translate: '0 100px', scale: 0.1, opacity: 0 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'zoom-in-down': [{ translate: '0 -100px', scale: 0.1, opacity: 0 }, { translate: '0 0', scale: 1, opacity: 1 }],
-  'rotate-in': [{ rotate: '-200deg', scale: 0, opacity: 0 }, { rotate: '0deg', scale: 1, opacity: 1 }],
+  'back-in-up': [{ translate: '0 500px', scale: '0.7', opacity: 0 }, { translate: '0 0', scale: '0.7', opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: '1', opacity: 1 }],
+  'back-in-down': [{ translate: '0 -500px', scale: '0.7', opacity: 0 }, { translate: '0 0', scale: '0.7', opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: '1', opacity: 1 }],
+  'back-in-left': [{ translate: '-500px 0', scale: '0.7', opacity: 0 }, { translate: '0 0', scale: '0.7', opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: '1', opacity: 1 }],
+  'back-in-right': [{ translate: '500px 0', scale: '0.7', opacity: 0 }, { translate: '0 0', scale: '0.7', opacity: 0.7, offset: 0.8 }, { translate: '0 0', scale: '1', opacity: 1 }],
+  'zoom-in': [{ scale: '0', opacity: 0 }, { scale: '1', opacity: 1 }],
+  'zoom-out': [{ scale: '1', opacity: 1 }, { scale: '0', opacity: 0 }],
+  'zoom-in-up': [{ scale: '0.1', translate: '0 100px', opacity: 0 }, { scale: '1', translate: '0 0', opacity: 1 }],
+  'zoom-in-down': [{ scale: '0.1', translate: '0 -100px', opacity: 0 }, { scale: '1', translate: '0 0', opacity: 1 }],
+  'rotate-in': [{ rotate: '-200deg', scale: '0', opacity: 0 }, { rotate: '0deg', scale: '1', opacity: 1 }],
   'rotate-in-down-left': [{ rotate: '-45deg', transformOrigin: 'left bottom', opacity: 0 }, { rotate: '0deg', transformOrigin: 'left bottom', opacity: 1 }],
   'rotate-in-up-right': [{ rotate: '-90deg', transformOrigin: 'right bottom', opacity: 0 }, { rotate: '0deg', transformOrigin: 'right bottom', opacity: 1 }],
-  'bounce-in': [{ scale: 0.3, opacity: 0 }, { scale: 1.1, opacity: 0.8, offset: 0.5 }, { scale: 0.9, opacity: 1, offset: 0.7 }, { scale: 1, opacity: 1 }],
-  'bounce-out': [{ scale: 1, opacity: 1 }, { scale: 1.1, opacity: 0.8, offset: 0.2 }, { scale: 0.3, opacity: 0, offset: 1 }],
+  'bounce-in': [{ scale: '0.3', opacity: 0 }, { scale: '1.1', opacity: 0.8, offset: 0.5 }, { scale: '0.9', opacity: 1, offset: 0.7 }, { scale: '1', opacity: 1 }],
+  'bounce-out': [{ scale: '1', opacity: 1 }, { scale: '1.1', opacity: 0.8, offset: 0.2 }, { scale: '0.3', opacity: 0, offset: 1 }],
   'flip-in': [{ transform: 'perspective(400px) rotateX(90deg)', opacity: 0 }, { transform: 'perspective(400px) rotateX(0deg)', opacity: 1 }],
   'flip-in-y': [{ transform: 'perspective(400px) rotateY(90deg)', opacity: 0 }, { transform: 'perspective(400px) rotateY(0deg)', opacity: 1 }],
   'roll-in': [{ translate: '-100px 0', rotate: '-120deg', opacity: 0 }, { translate: '0 0', rotate: '0deg', opacity: 1 }],
-  'pulse': [{ scale: 1 }, { scale: 1.1, offset: 0.5 }, { scale: 1 }],
-  'heartbeat': [{ scale: 1 }, { scale: 1.3, offset: 0.14 }, { scale: 1, offset: 0.28 }, { scale: 1.3, offset: 0.42 }, { scale: 1, offset: 0.7 }],
+  'pulse': [{ scale: '1' }, { scale: '1.1', offset: 0.5 }, { scale: '1' }],
+  'heartbeat': [{ scale: '1' }, { scale: '1.3', offset: 0.14 }, { scale: '1', offset: 0.28 }, { scale: '1.3', offset: 0.42 }, { scale: '1', offset: 0.7 }],
   'float': [{ translate: '0 0' }, { translate: '0 -15px', offset: 0.5 }, { translate: '0 0' }],
   'neon-glow': [{ filter: 'brightness(1) drop-shadow(0 0 0px rgba(79, 70, 229, 0))' }, { filter: 'brightness(1.5) drop-shadow(0 0 10px rgba(79, 70, 229, 0.8))', offset: 0.5 }, { filter: 'brightness(1) drop-shadow(0 0 0px rgba(79, 70, 229, 0))' }],
-  'tada': [{ scale: 1, rotate: '0deg' }, { scale: 0.9, rotate: '-3deg', offset: 0.1 }, { scale: 0.9, rotate: '-3deg', offset: 0.2 }, { scale: 1.1, rotate: '3deg', offset: 0.3 }, { scale: 1.1, rotate: '-3deg', offset: 0.4 }, { scale: 1.1, rotate: '3deg', offset: 0.5 }, { scale: 1.1, rotate: '-3deg', offset: 0.6 }, { scale: 1.1, rotate: '3deg', offset: 0.7 }, { scale: 1.1, rotate: '-3deg', offset: 0.8 }, { scale: 1.1, rotate: '3deg', offset: 0.9 }, { scale: 1, rotate: '0deg' }],
+  'tada': [{ scale: '1', rotate: '0deg' }, { scale: '0.9', rotate: '-3deg', offset: 0.1 }, { scale: '0.9', rotate: '-3deg', offset: 0.2 }, { scale: '1.1', rotate: '3deg', offset: 0.3 }, { scale: '1.1', rotate: '-3deg', offset: 0.4 }, { scale: '1.1', rotate: '3deg', offset: 0.5 }, { scale: '1.1', rotate: '-3deg', offset: 0.6 }, { scale: '1.1', rotate: '3deg', offset: 0.7 }, { scale: '1.1', rotate: '-3deg', offset: 0.8 }, { scale: '1.1', rotate: '3deg', offset: 0.9 }, { scale: '1', rotate: '0deg' }],
   'rubber-band': [{ scale: '1 1' }, { scale: '1.25 0.75', offset: 0.3 }, { scale: '0.75 1.25', offset: 0.4 }, { scale: '1.15 0.85', offset: 0.5 }, { scale: '0.95 1.05', offset: 0.65 }, { scale: '1.05 0.95', offset: 0.75 }, { scale: '1 1' }],
-  'jello': [{ skew: '0,0' }, { skew: '-12.5deg, -12.5deg', offset: 0.22 }, { skew: '6.25deg, 6.25deg', offset: 0.33 }, { skew: '-3.125deg, -3.125deg', offset: 0.44 }, { skew: '1.5625deg, 1.5625deg', offset: 0.55 }, { skew: '-0.78deg, -0.78deg', offset: 0.66 }, { skew: '0.39deg, 0.39deg', offset: 0.77 }, { skew: '-0.2deg, -0.2deg', offset: 0.88 }, { skew: '0,0' }],
+  'jello': [{ transform: 'skew(0,0)' }, { transform: 'skew(-12.5deg, -12.5deg)', offset: 0.22 }, { transform: 'skew(6.25deg, 6.25deg)', offset: 0.33 }, { transform: 'skew(-3.125deg, -3.125deg)', offset: 0.44 }, { transform: 'skew(1.5625deg, 1.5625deg)', offset: 0.55 }, { transform: 'skew(-0.78deg, -0.78deg)', offset: 0.66 }, { transform: 'skew(0.39deg, 0.39deg)', offset: 0.77 }, { transform: 'skew(-0.2deg, -0.2deg)', offset: 0.88 }, { transform: 'skew(0,0)' }],
   'swing': [{ rotate: '0deg' }, { rotate: '15deg', offset: 0.2 }, { rotate: '-10deg', offset: 0.4 }, { rotate: '5deg', offset: 0.6 }, { rotate: '-5deg', offset: 0.8 }, { rotate: '0deg' }],
   'wobble': [{ translate: '0 0', rotate: '0deg' }, { translate: '-25% 0', rotate: '-5deg', offset: 0.15 }, { translate: '20% 0', rotate: '3deg', offset: 0.3 }, { translate: '-15% 0', rotate: '-3deg', offset: 0.45 }, { translate: '10% 0', rotate: '2deg', offset: 0.6 }, { translate: '-5% 0', rotate: '-1deg', offset: 0.75 }, { translate: '0 0', rotate: '0deg' }],
   'glitch': [{ translate: '0' }, { translate: '-2px 2px', offset: 0.2 }, { translate: '2px -2px', offset: 0.4 }, { translate: '-2px 2px', offset: 0.6 }, { translate: '2px -2px', offset: 0.8 }, { translate: '0' }],
@@ -126,6 +128,114 @@ const EASING_OPTIONS = [
 ];
 
 /* -------------------------------------------------------------------------- */
+/*                         TEXT EFFECTS (new runner)                          */
+/* -------------------------------------------------------------------------- */
+
+// Every id here must exist in TE_EFFECT_CSS inside AnimationRunner.js
+const TEXT_EFFECT_IDS = [
+  'slots',
+  'carousel',
+  'bloat',
+  'roulette',
+  'hinged',
+  'mexiwave',
+  'enter',
+  'random',
+  'swapsies',
+  'fading',
+  'flipping',
+  'slide',
+  'karaoke',
+  'filling',
+  'blocks',
+  'scaling',
+  'turning',
+  'folding',
+  'bulge',
+  'perspective',
+  'zipping',
+  'spinning',
+  'tumbling',
+  'bubbling',
+  'swinging',
+  'rolling',
+  'blowing',
+  'meeting',
+  'conveyor',
+  'cascade',
+  'tossing',
+  'wave',
+  'rising',
+  'twirl',
+  'backflip',
+  'jump',
+  'glare',
+  'expanding',
+  'falling',
+  'scrolled',
+  'bloom',
+  'bloom-north',
+  'bloom-north-east',
+  'bloom-east',
+  'bloom-south-east',
+  'bloom-south',
+  'bloom-south-west',
+  'bloom-west',
+  'bloom-north-west',
+  'stream',
+  'reflective',
+  'glitch',
+  'glitchy',
+  'strikethrough',
+  'taste'
+];
+
+const TEXT_EFFECT_GALLERY_ITEMS = [
+  { id: 'none', label: 'None', icon: 'None' },
+  ...TEXT_EFFECT_IDS.map(id => ({
+    id,
+    label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+    icon: 'Text'
+  }))
+];
+
+const TEXT_FX_ATTR_MAP = {
+  effect: 'data-text-effect',
+  speed: 'data-text-effect-speed',
+  step: 'data-text-effect-step',
+  color: 'data-text-effect-color'
+};
+const TEXT_FX_DEFAULTS = { speed: 0.25, step: 0.1 };
+
+const resolveLiveElement = (el) => {
+  if (el && !document.body.contains(el)) {
+    const id = el.id || el.getAttribute('data-name');
+    if (id) {
+      const activePage = document.querySelector('.active-page-outline') || document.querySelector('.page-svg-container');
+      const fresh = activePage?.querySelector(`[id="${id}"], [data-name="${id}"]`) || document.getElementById(id);
+      if (fresh) return fresh;
+    }
+  }
+  return el;
+};
+
+const readTextFx = (el) => {
+  const speed = parseFloat(el?.getAttribute('data-text-effect-speed'));
+  const step = parseFloat(el?.getAttribute('data-text-effect-step'));
+  return {
+    effect: el?.getAttribute('data-text-effect') || 'none',
+    speed: isNaN(speed) ? TEXT_FX_DEFAULTS.speed : speed,
+    step: isNaN(step) ? TEXT_FX_DEFAULTS.step : step,
+    color: el?.getAttribute('data-text-effect-color') || ''
+  };
+};
+
+// True for plain SVG <text>/<tspan>: the runner builds HTML <span>s, which SVG text cannot render
+const isPlainSvgText = (el) =>
+  !!el && el.namespaceURI === 'http://www.w3.org/2000/svg' &&
+  !el.closest?.('foreignObject') && !el.querySelector?.('foreignObject');
+
+/* -------------------------------------------------------------------------- */
 /*                                SUB-COMPONENTS                              */
 /* -------------------------------------------------------------------------- */
 
@@ -146,7 +256,7 @@ const SliderControl = React.memo(({ label, value, onChange, min = 0, max = 10, s
           className="flex-1 cursor-pointer custom-range-slider"
           style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${percentage}%, #E2E8F0 ${percentage}%, #E2E8F0 100%)` }}
         />
-        <span className="text-[0.7vw] font-medium text-gray-800 w-[1.5vw] text-right">{value}{unit}</span>
+        <span className="text-[0.7vw] font-medium text-gray-800 min-w-[1.5vw] text-right">{Math.round(value * 100) / 100}{unit}</span>
       </div>
     </div>
   );
@@ -156,7 +266,7 @@ const SliderControl = React.memo(({ label, value, onChange, min = 0, max = 10, s
 /*                        SINGLE ELEMENT EDITOR                               */
 /* -------------------------------------------------------------------------- */
 
-const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGallery, previewAnimation, ANIMATION_GALLERY_ITEMS, EASING_OPTIONS }) => {
+const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGallery, previewAnimation, previewTextEffects, ANIMATION_GALLERY_ITEMS, EASING_OPTIONS }) => {
   const [showEasingSelector, setShowEasingSelector] = React.useState(false);
   const [showRepeatSelector, setShowRepeatSelector] = React.useState(false);
   const [showTriggerSelector, setShowTriggerSelector] = React.useState(false);
@@ -176,6 +286,15 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
   const [showActionSelector, setShowActionSelector] = React.useState(false);
 
   const getPrefix = (t) => (t === 'While Opening' ? 'open' : 'interact');
+
+  // 'animation' = classic entrance/interaction animations, 'text' = new cascading text effects
+  const [mode, setMode] = React.useState(() => {
+    const hasFx = primaryElement.hasAttribute('data-text-effect');
+    const hasAnim = (primaryElement.getAttribute('data-animation-open-type') || 'none') !== 'none' ||
+      (primaryElement.getAttribute('data-animation-interact-type') || 'none') !== 'none';
+    return hasFx && !hasAnim ? 'text' : 'animation';
+  });
+  const [textFx, setTextFx] = React.useState(() => readTextFx(primaryElement));
 
   const [settings, setSettings] = React.useState({
     type: primaryElement.getAttribute(`data-animation-${getPrefix(trigger)}-type`) || 'none',
@@ -200,6 +319,32 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
       everyVisit: primaryElement.getAttribute(`data-animation-${p}-every-visit`) !== 'false'
     });
   }, [primaryElement]);
+
+  React.useEffect(() => {
+    setTextFx(readTextFx(primaryElement));
+  }, [primaryElement]);
+
+  const updateTextFx = (key, value) => {
+    const isRemoval = value === null || value === '' || (key === 'effect' && value === 'none');
+    setTextFx(prev => key === 'effect' && isRemoval
+      ? { ...prev, effect: 'none', ...TEXT_FX_DEFAULTS, color: '' }
+      : { ...prev, [key]: value });
+
+    targetList.forEach(el => {
+      const target = resolveLiveElement(el);
+      const id = target.id || target.getAttribute('data-name');
+      const attr = TEXT_FX_ATTR_MAP[key];
+      if (isRemoval) target.removeAttribute(attr); else target.setAttribute(attr, String(value));
+      if (onUpdate) onUpdate(id, attr, isRemoval ? null : String(value));
+
+      if (key === 'effect' && isRemoval) {
+        ['speed', 'step', 'color'].forEach(k => {
+          target.removeAttribute(TEXT_FX_ATTR_MAP[k]);
+          if (onUpdate) onUpdate(id, TEXT_FX_ATTR_MAP[k], null);
+        });
+      }
+    });
+  };
 
   const updateSetting = (key, value) => {
     const newSettings = { ...settings, [key]: value };
@@ -323,6 +468,24 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
     setShowActionSelector(false);
   };
 
+  const handleDeleteTextFx = () => {
+    targetList.forEach(el => {
+      const target = resolveLiveElement(el);
+      const id = target.id || target.getAttribute('data-name');
+      Object.values(TEXT_FX_ATTR_MAP).forEach(attr => {
+        target.removeAttribute(attr);
+        if (onUpdate) onUpdate(id, attr, null);
+      });
+    });
+    setTextFx({ effect: 'none', ...TEXT_FX_DEFAULTS, color: '' });
+    const stillAnimated = targetList.some(el => {
+      const t = resolveLiveElement(el);
+      return t.getAttribute('data-animation-intent') === 'true' ||
+        (t.getAttribute('data-animation-open-type') || 'none') !== 'none';
+    });
+    if (!stillAnimated && onDelete) onDelete(targetList);
+  };
+
   const handleDelete = () => {
     targetList.forEach(el => {
       let target = el;
@@ -349,15 +512,106 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
       }
     });
     setSettings({ type: 'none', delay: 0, duration: 1, easing: 'Linear', repeat: 'None', everyVisit: true });
-    if (onDelete) {
+    const keepsTextFx = targetList.some(el => resolveLiveElement(el).hasAttribute('data-text-effect'));
+    if (onDelete && !keepsTextFx) {
       onDelete(targetList);
     }
   };
 
   const galleryItem = ANIMATION_GALLERY_ITEMS.find(a => a.id === settings.type);
+  const textFxItem = TEXT_EFFECT_GALLERY_ITEMS.find(a => a.id === textFx.effect);
 
   return (
     <div className="flex flex-col gap-[0.75vw]">
+      {/* Mode toggle: Animation | Text Effect */}
+      <div className="flex p-[0.2vw] bg-gray-100 rounded-[0.6vw] gap-[0.2vw]">
+        {[['animation', 'Animation'], ['text', 'Text Effect']].map(([key, label]) => (
+          <button
+            key={key}
+            onClick={(e) => { e.stopPropagation(); setMode(key); }}
+            className={`flex-1 h-[1.9vw] rounded-[0.45vw] text-[0.7vw] font-medium transition-all ${mode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'text' ? (
+        <div className="flex flex-col gap-[0.75vw]">
+          {isPlainSvgText(primaryElement) && (
+            <div className="text-[0.62vw] leading-snug text-amber-700 bg-amber-50 border border-amber-200 rounded-[0.5vw] px-[0.6vw] py-[0.45vw]">
+              Text effects need HTML text. Plain SVG &lt;text&gt; cannot show split letters, so use a text box / foreignObject element.
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-[0.75vw]">
+            <span className="text-[0.65vw] text-gray-500 leading-tight">Plays each time the text scrolls into view</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); previewTextEffects(targetList); }}
+              disabled={textFx.effect === 'none'}
+              className="w-[2.5vw] h-[2.5vw] flex items-center justify-center bg-indigo-50 border border-indigo-600 rounded-[0.75vw] text-indigo-600 shadow-sm hover:bg-indigo-200 disabled:opacity-40 transition-colors flex-shrink-0"
+              title="Preview Text Effect"
+            >
+              <ScanEye size="1vw" />
+            </button>
+          </div>
+
+          <div className="flex gap-[1vw] items-center">
+            <div className="anim-panel-preview-card w-[5.8vw] h-[7vw] relative group rounded-[0.8vw] overflow-hidden border border-gray-200 bg-white shadow-[0_0.05vw_0.4vw_rgba(0,0,0,0.04)] flex-shrink-0 flex flex-col">
+              <div className="flex-1 relative w-full flex items-center justify-center">
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenGallery(primaryElement, (newEffect) => updateTextFx('effect', newEffect), 'text');
+                  }}
+                  className="anim-panel-replace-btn absolute top-[0.5vw] right-[0.5vw] w-[1.75vw] h-[1.75vw] rounded-[0.4vw] flex items-center justify-center cursor-pointer transition-all duration-200 z-20 group-hover:bg-white group-hover:shadow-sm"
+                  title="Replace Text Effect"
+                >
+                  <Icon icon="ph:arrows-left-right" width="0.85vw" height="0.85vw" className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+                </div>
+                <div className="pt-[1.5vw] group-hover:opacity-40 transition-opacity duration-100">
+                  {textFx.effect === 'none'
+                    ? <Icon icon="radix-icons:shadow-none" width="2vw" height="2vw" className="text-gray-500" />
+                    : <span className="text-[1.6vw] font-semibold text-gray-700 leading-none">Aa</span>}
+                </div>
+              </div>
+              <div className="h-[0.05vw] w-full bg-gray-100" />
+              <div className="h-[2.25vw] w-full flex items-center justify-center bg-white">
+                <span className="text-[0.6vw] font-medium text-gray-500 truncate px-[0.5vw]">{textFxItem?.label || 'None'}</span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-[0.5vw]">
+              <SliderControl label="Speed" value={textFx.speed} onChange={(v) => updateTextFx('speed', v)} unit="s" min={0.05} max={2} step={0.05} />
+              <SliderControl label="Letter Delay" value={textFx.step} onChange={(v) => updateTextFx('step', v)} unit="s" min={0} max={0.5} step={0.01} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-[0.7vw] font-medium text-gray-800 ml-[0.3vw] leading-none">Text Color :</span>
+            <div className="flex items-center gap-[0.5vw]">
+              {textFx.color && (
+                <button onClick={() => updateTextFx('color', '')} className="text-[0.65vw] text-gray-400 hover:text-gray-700 transition-colors">Auto</button>
+              )}
+              <input
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(textFx.color) ? textFx.color : '#000000'}
+                onChange={(e) => updateTextFx('color', e.target.value)}
+                className="w-[2vw] h-[1.5vw] p-0 border border-gray-200 rounded-[0.3vw] cursor-pointer bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col pt-[0.25vw] mt-[0.75vw] border-t border-gray-100 -mx-[1vw] px-[1vw]">
+            <div className="flex items-center justify-end pt-[0.5vw]">
+              <button onClick={handleDeleteTextFx} className="text-red-400 hover:text-red-500 transition-colors p-[0.25vw]" title="Remove text effect">
+                <Icon icon="lucide:trash-2" width="1vw" height="1vw" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Top Dropdowns & Preview */}
       <div className="flex gap-[0.75vw]">
         <div className="flex-1 relative">
@@ -550,6 +804,8 @@ const SingleAnimationEditor = ({ element, elements, onUpdate, onDelete, onOpenGa
           </button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
@@ -571,6 +827,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
   const [tempSelectedAnim, setTempSelectedAnim] = React.useState(null);
   const [editingElement, setEditingElement] = React.useState(null);
   const [galleryCallback, setGalleryCallback] = React.useState(null);
+  const [galleryKind, setGalleryKind] = React.useState('animation'); // 'animation' | 'text'
 
   const [forceIncludeIds, setForceIncludeIds] = React.useState(new Set());
   const previewCleanupRef = React.useRef([]);
@@ -578,9 +835,61 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
   const [previewMaxTime, setPreviewMaxTime] = React.useState(0);
   const [previewKey, setPreviewKey] = React.useState(0);
 
+  /* ---------------------------- TEXT EFFECT PREVIEW ---------------------------- */
+  // The runner splits text into letter spans inside the live canvas, so every preview
+  // is torn down (destroy() restores the original markup) when it ends.
+  const textPreviewRef = React.useRef(null);
+
+  const stopTextPreview = React.useCallback(() => {
+    const s = textPreviewRef.current;
+    if (!s) return;
+    textPreviewRef.current = null;
+    clearTimeout(s.timer);
+    try { s.handle?.destroy(); } catch { }
+    s.restore.forEach(fn => { try { fn(); } catch { } });
+  }, []);
+
+  // override: optional attribute map applied only while previewing (e.g. gallery hover/click)
+  // returns preview length in seconds (0 when nothing to play)
+  const previewTextEffects = React.useCallback((targets, override = null) => {
+    stopTextPreview();
+    const list = (targets || []).filter(Boolean).map(resolveLiveElement);
+    if (!list.length) return 0;
+
+    const restore = [];
+    let maxMs = 0;
+
+    list.forEach(el => {
+      if (override) {
+        const prev = {};
+        Object.keys(override).forEach(attr => { prev[attr] = el.getAttribute(attr); el.setAttribute(attr, override[attr]); });
+        restore.push(() => Object.keys(prev).forEach(attr => (prev[attr] === null ? el.removeAttribute(attr) : el.setAttribute(attr, prev[attr]))));
+      }
+      if (!el.getAttribute('data-text-effect')) return;
+      const fx = readTextFx(el);
+      const chars = (el.textContent || '').replace(/\s+/g, '').length;
+      const ms = (fx.speed * 4 + chars * fx.step + 1.5) * 1000;
+      if (ms > maxMs) maxMs = ms;
+    });
+
+    if (!maxMs) { restore.forEach(fn => fn()); return 0; }
+    maxMs = Math.min(Math.max(maxMs, 3000), 12000);
+
+    let handle = null;
+    try { handle = initTextEffectsRunner(document); } catch (err) { console.error('Text effect preview error:', err); }
+    textPreviewRef.current = { handle, restore, timer: setTimeout(stopTextPreview, maxMs) };
+    return maxMs / 1000;
+  }, [stopTextPreview]);
+
+  // Never leave a half-previewed gallery value on the element once the gallery closes
+  React.useEffect(() => {
+    if (!showGallery) stopTextPreview();
+  }, [showGallery, stopTextPreview]);
+
   // Stop and cancel all active WAAPI animations when the Animation panel is closed / unmounted
   React.useEffect(() => {
     return () => {
+      stopTextPreview();
       // 1. Run all registered preview cleanup functions
       if (previewCleanupRef.current && previewCleanupRef.current.length > 0) {
         previewCleanupRef.current.forEach(cancel => {
@@ -602,7 +911,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
         } catch { }
       });
     };
-  }, []);
+  }, [stopTextPreview]);
 
 
   React.useEffect(() => {
@@ -629,7 +938,8 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       const hasAnim = el.getAttribute('data-animation-open-type') && el.getAttribute('data-animation-open-type') !== 'none';
       const hasIntent = el.getAttribute('data-animation-intent') === 'true';
       const isForced = id && forceIncludeIds.has(id);
-      return hasAnim || hasIntent || isForced;
+      const hasTextFx = el.hasAttribute('data-text-effect');
+      return hasAnim || hasIntent || isForced || hasTextFx;
     });
 
     if (selectedElement) {
@@ -637,8 +947,9 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
       const hasAnim = selectedElement.getAttribute('data-animation-open-type') && selectedElement.getAttribute('data-animation-open-type') !== 'none';
       const hasIntent = selectedElement.getAttribute('data-animation-intent') === 'true';
       const isForced = id && forceIncludeIds.has(id);
+      const hasTextFx = selectedElement.hasAttribute('data-text-effect');
 
-      if (hasAnim || hasIntent || isForced) {
+      if (hasAnim || hasIntent || isForced || hasTextFx) {
         const isAlreadyInList = relevantEls.some(el => el === selectedElement || (id && (el.id === id || el.getAttribute('data-name') === id)));
         if (!isAlreadyInList) {
           relevantEls = [selectedElement, ...relevantEls];
@@ -893,11 +1204,16 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
     });
   }, []);
 
-  const handleOpenGallery = (el, callback) => {
+  const handleOpenGallery = (el, callback, kind = 'animation') => {
     setEditingElement(el);
-    const trigger = el.getAttribute('data-animation-trigger') || 'While Opening';
-    const prefix = trigger === 'While Opening' ? 'open' : 'interact';
-    setTempSelectedAnim(el.getAttribute(`data-animation-${prefix}-type`) || 'none');
+    setGalleryKind(kind);
+    if (kind === 'text') {
+      setTempSelectedAnim(el.getAttribute('data-text-effect') || 'none');
+    } else {
+      const trigger = el.getAttribute('data-animation-trigger') || 'While Opening';
+      const prefix = trigger === 'While Opening' ? 'open' : 'interact';
+      setTempSelectedAnim(el.getAttribute(`data-animation-${prefix}-type`) || 'none');
+    }
     setGalleryCallback(() => callback);
     setShowGallery(true);
   };
@@ -981,6 +1297,14 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
         previewAnimation(null, type, settings, el, true);
       }
     });
+
+    const textEls = animatableElements.filter(el => el.hasAttribute('data-text-effect'));
+    if (textEls.length) {
+      const t = previewTextEffects(textEls);
+      if (t > maxT) maxT = t;
+    } else {
+      stopTextPreview();
+    }
 
     if (maxT > 0) {
       setPreviewMaxTime(maxT);
@@ -1146,6 +1470,8 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                         const p = t === 'While Opening' ? 'open' : 'interact';
                         previewAnimation(e, el.getAttribute(`data-animation-${p}-type`), { delay: parseFloat(el.getAttribute(`data-animation-${p}-delay`)) || 0, duration: parseFloat(el.getAttribute(`data-animation-${p}-duration`)) || 1, easing: el.getAttribute(`data-animation-${p}-easing`) || 'Linear', repeat: el.getAttribute(`data-animation-${p}-repeat`) || 'None' }, el);
                       }
+                      const fxTargets = (isGroup ? item.elements : [el]).filter(t => t.hasAttribute('data-text-effect'));
+                      if (fxTargets.length) previewTextEffects(fxTargets);
                     }} />}
                     <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width="1vw" height="1vw" className="text-gray-400" />
                   </div>
@@ -1158,8 +1484,8 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                       elements={isGroup ? item.elements : null}
                       onUpdate={onUpdate}
                       onDelete={handleDeleteAnimation}
-                      onOpenGallery={(target, cb) => {
-                        if (isGroup) {
+                      onOpenGallery={(target, cb, kind) => {
+                        if (isGroup && kind !== 'text') {
                           handleOpenGallery(target, (newType) => {
                             // 1. Close gallery immediately for better UX
                             setShowGallery(false);
@@ -1200,10 +1526,11 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                             }, 200);
                           });
                         } else {
-                          handleOpenGallery(target, cb);
+                          handleOpenGallery(target, cb, kind);
                         }
                       }}
                       previewAnimation={previewAnimation}
+                      previewTextEffects={previewTextEffects}
                       ANIMATION_GALLERY_ITEMS={ANIMATION_GALLERY_ITEMS}
                       EASING_OPTIONS={EASING_OPTIONS}
                     />
@@ -1225,7 +1552,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
           />
           <div className="anim-panel-gallery-modal fixed z-[50] bg-white rounded-[0.8vw] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200" style={{ width: '20vw', height: '32vw', top: '55%', left: '80%', transform: 'translate(-50%, -50%)' }}>
             <div className="anim-panel-gallery-header flex items-center gap-[1vw] px-[1vw] py-[1vw] border-b border-gray-100 shadow-[0_4px_6px_1px_rgba(0,0,0,0.10)]">
-              <h2 className="text-[1vw] font-semibold text-gray-900">Animation Gallery</h2>
+              <h2 className="text-[1vw] font-semibold text-gray-900">{galleryKind === 'text' ? 'Text Effect Gallery' : 'Animation Gallery'}</h2>
               <div className="h-[0.1vw] flex-1 bg-gray-200 opacity-50"></div>
               <button onClick={() => setShowGallery(false)} className="anim-panel-close-btn w-[1.5vw] h-[1.5vw] flex items-center justify-center rounded-lg border border-red-500 hover:bg-red-50 transition-colors">
                 <X size="1vw" className="text-red-500" strokeWidth={2} />
@@ -1234,9 +1561,14 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
 
             <div className="anim-panel-gallery-content flex-1 px-[1vw] py-[1vw] overflow-y-auto custom-scrollbar">
               <div className="anim-panel-gallery-grid grid grid-cols-4 gap-x-[0.5vw] gap-y-[0.5vw]">
-                {ANIMATION_GALLERY_ITEMS.map((anim, idx) => (
-                  <div key={idx} className="anim-panel-gallery-item group cursor-pointer flex flex-col items-center" onClick={(e) => {
+                {(galleryKind === 'text' ? TEXT_EFFECT_GALLERY_ITEMS : ANIMATION_GALLERY_ITEMS).map((anim, idx) => (
+                  <div key={anim.id} className="anim-panel-gallery-item group cursor-pointer flex flex-col items-center" onClick={(e) => {
                     setTempSelectedAnim(anim.id);
+                    if (galleryKind === 'text') {
+                      if (anim.id === 'none') stopTextPreview();
+                      else previewTextEffects([editingElement], { 'data-text-effect': anim.id });
+                      return;
+                    }
                     const t = editingElement?.getAttribute('data-animation-trigger') || 'While Opening';
                     const p = t === 'While Opening' ? 'open' : 'interact';
                     previewAnimation(e, anim.id, {
@@ -1249,7 +1581,9 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                     <div className={`anim-panel-item-card aspect-square w-full rounded-[0.2vw] border flex flex-col items-center justify-center transition-all bg-white shadow-sm overflow-hidden ${tempSelectedAnim === anim.id ? 'border-gray-700 border-[0.1vw]' : 'border-gray-100 hover:border-gray-300'
                       }`}>
                       <div className="anim-panel-item-icon flex-1 flex items-center justify-center p-[0.25vw]">
-                        {anim.icon === 'None' ? (
+                        {galleryKind === 'text' && anim.id !== 'none' ? (
+                          <span className="text-[1.3vw] font-semibold text-gray-600 leading-none">Aa</span>
+                        ) : anim.icon === 'None' ? (
                           <Icon icon="radix-icons:shadow-none" width="2.2vw" height="2.2vw" className="text-gray-500" />
                         ) : anim.icon === 'Circle' ? (
                           <motion.div
@@ -1291,6 +1625,8 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                 disabled={!tempSelectedAnim}
                 onClick={() => {
                   if (tempSelectedAnim && editingElement) {
+                    // A running gallery preview must be stopped first, otherwise its restore step would undo the new value
+                    stopTextPreview();
                     // Execute callback if present
                     if (typeof galleryCallback === 'function') {
                       try {
@@ -1298,6 +1634,9 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                       } catch (err) {
                         console.error('Gallery callback error:', err);
                       }
+                    } else if (galleryKind === 'text') {
+                      editingElement.setAttribute('data-text-effect', tempSelectedAnim);
+                      if (onUpdate) onUpdate(editingElement.id || editingElement.getAttribute('data-name'), 'data-text-effect', tempSelectedAnim);
                     } else {
                       // Fallback for direct single element edit
                       editingElement.setAttribute('data-animation-open-type', tempSelectedAnim);

@@ -1,4 +1,4 @@
-const ForumPost = require('../models/ForumPost');
+const ForumPost = require('../../../../shared/models/ForumPost');
 const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 const crypto = require('crypto');
 const nanoid = (n = 8) => crypto.randomBytes(Math.ceil(n / 2)).toString('hex').slice(0, n);

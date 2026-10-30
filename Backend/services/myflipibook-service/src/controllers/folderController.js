@@ -3,7 +3,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const UserFolder = require('../models/userFolder');
-const Flipbook = require('../models/flipbook');
+const Flipbook = require('../../../../shared/models/Flipbook');
 const backupService = require('../../../../shared/backupService');
 const { deleteFolderStorage, getStorageRoot } = require('../utils/storageHelper');
 const { getAuthUser, resolveAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
@@ -206,7 +206,7 @@ exports.createFolder = async (req, res) => {
         return fLow === lowerSafe;
       });
       if (exists) {
-        return res.status(400).json({ success: false, message: 'Folder with this name already exists' });
+        return res.status(409).json({ success: false, message: 'Folder with this name already exists' });
       }
 
       if (objectId) userFolderDoc.userObjectID = objectId;
@@ -312,7 +312,7 @@ exports.renameFolder = async (req, res) => {
     });
 
     if (duplicate) {
-      return res.status(400).json({ success: false, message: 'Folder with this name already exists' });
+      return res.status(409).json({ success: false, message: 'Folder with this name already exists' });
     }
 
     const isDefault = Boolean(targetFolder.isDefault);

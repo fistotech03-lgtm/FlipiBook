@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const ThreedModel = require('../models/threedModel');
-const InteractionThreedModel = require('../models/interactionThreedModel');
+const ThreedModel = require('../../../../shared/models/ThreedModel');
+const InteractionThreedModel = require('../../../../shared/models/InteractionThreedModel');
 const {
   generateId,
   getUser3DDir,

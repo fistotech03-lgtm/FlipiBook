@@ -4,13 +4,13 @@ import { Icon } from '@iconify/react';
 
 export default function FlipbooksToolbar({
     activeFolder,
-    setActiveFolder,
     searchQuery,
     setSearchQuery,
-    folders,
-    isFolderDropdownOpen,
-    setIsFolderDropdownOpen,
-    folderDropdownRef,
+    categoryFilter = 'All Categories',
+    setCategoryFilter,
+    isCategoryDropdownOpen,
+    setIsCategoryDropdownOpen,
+    categoryDropdownRef,
     statusFilter,
     setStatusFilter,
     isStatusDropdownOpen,
@@ -31,7 +31,7 @@ export default function FlipbooksToolbar({
 }) {
 
     return (
-        <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
+        <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0" data-selection-keep="true">
             <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">
                 {activeFolder === 'All Flipbook' || activeFolder === 'All' || !activeFolder ? 'All Flipbooks' : (activeFolder === 'Recent Book' ? 'Recent' : activeFolder)}
             </h2>
@@ -51,39 +51,29 @@ export default function FlipbooksToolbar({
                         />
                     </div>
 
-                    {/* All Folders Dropdown */}
-                    <div className="relative" ref={folderDropdownRef}>
+                    {/* Category Filter Dropdown */}
+                    <div className="relative" ref={categoryDropdownRef}>
                         <button
-                            onClick={() => { setIsFolderDropdownOpen(!isFolderDropdownOpen); setIsStatusDropdownOpen(false); setIsSortDropdownOpen(false); }}
+                            onClick={() => { setIsCategoryDropdownOpen(!isCategoryDropdownOpen); setIsStatusDropdownOpen(false); setIsSortDropdownOpen(false); }}
                             className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
                         >
-                            <Folder size="0.9vw" className="text-[#ec5137]" />
-                            <span>{activeFolder === 'All Flipbook' || activeFolder === 'All' ? 'All Folders' : activeFolder}</span>
+                            <Icon icon="lucide:shapes" className="w-[0.9vw] h-[0.9vw] text-[#ec5137]" />
+                            <span>{categoryFilter}</span>
                             <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.3vw]" />
                         </button>
-                        {isFolderDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-[0.25vw] min-w-[10vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 max-h-[14vw] overflow-y-auto overflow-x-hidden custom-scrollbar">
-                                <button
-                                    onClick={() => { setActiveFolder('All Flipbook'); setIsFolderDropdownOpen(false); }}
-                                    className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
-                                        activeFolder === 'All Flipbook' || activeFolder === 'All'
-                                            ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                                            : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
-                                    }`}
-                                >
-                                    All Folders
-                                </button>
-                                {folders.map(f => (
+                        {isCategoryDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-[0.25vw] min-w-[10vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 overflow-hidden">
+                                {['All Categories', 'PDF', 'Word', 'PPTX', 'Template', 'Plain'].map((cat) => (
                                     <button
-                                        key={f.id}
-                                        onClick={() => { setActiveFolder(f.name); setIsFolderDropdownOpen(false); }}
-                                        className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors truncate cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
-                                            activeFolder === f.name
+                                        key={cat}
+                                        onClick={() => { setCategoryFilter(cat); setIsCategoryDropdownOpen(false); }}
+                                        className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
+                                            categoryFilter === cat
                                                 ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
                                                 : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
                                         }`}
                                     >
-                                        {f.name}
+                                        {cat}
                                     </button>
                                 ))}
                             </div>
@@ -195,12 +185,12 @@ export default function FlipbooksToolbar({
                         </div>
                     )}
 
-                    {/* Checkbox for multiple selection */}
+                    {/* Checkbox for Select All */}
                     <label className="flex items-center gap-[0.5vw] cursor-pointer select-none" onClick={(e) => { e.preventDefault(); handleSelectAll(); }}>
                         <div className={`w-[1.1vw] h-[1.1vw] rounded-[0.2vw] border flex items-center justify-center transition-all ${isAllSelected ? 'bg-gray-700 border-gray-700' : 'border-gray-400 bg-white'}`}>
                             {isAllSelected && <Check size="0.75vw" className="text-white" strokeWidth={3} />}
                         </div>
-                        <span className="text-[0.85vw] font-medium text-gray-600">Multiple Selection</span>
+                        <span className="text-[0.85vw] font-medium text-gray-600">Select All</span>
                     </label>
 
 

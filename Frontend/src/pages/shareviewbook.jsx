@@ -4,7 +4,7 @@ import axios from 'axios';
 import FlipbookPreview from '../components/PageEditor/modals/FlipbookPreview';
 import { LAYOUT_DEFAULT_COLORS } from '../components/CustomizedEditor/utils/layoutColors';
 import { Icon } from '@iconify/react';
-import { Ghost, ArrowLeft, Home, BookOpen, Clock, X } from 'lucide-react';
+import { Ghost, ArrowLeft, Home, BookOpen, Clock, X, Heart } from 'lucide-react';
 import { resolveUploadsPath, rewriteHtmlUploadsToSupabase } from '../utils/assetUtils';
 import { useToast } from '../components/CustomToast';
 import { useAuth } from '../context/AuthContext';
@@ -137,6 +137,53 @@ const ShareViewBook = () => {
     const [viewsCount, setViewsCount] = useState(0);
 
     const [isAddedToShelf, setIsAddedToShelf] = useState(false);
+    const [isFavorited, setIsFavorited] = useState(false);
+
+    useEffect(() => {
+        if (!bookData) return;
+        const favList = Array.isArray(bookData.isFavorite) ? bookData.isFavorite : [];
+        if (currentUserEmail && favList.some(u => String(u).trim().toLowerCase() === currentUserEmail.trim().toLowerCase())) {
+            setIsFavorited(true);
+        }
+    }, [currentUserEmail, bookData]);
+
+    const isBookOwner = Boolean(
+        currentUserEmail && bookData && (
+            (bookData.userEmail && bookData.userEmail.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) ||
+            (bookData.emailId && bookData.emailId.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) ||
+            (bookData.userObjectID && authUser?._id && String(bookData.userObjectID) === String(authUser._id))
+        )
+    );
+
+    const handleFavoriteToggle = async () => {
+        if (!currentUserEmail) {
+            toast.error("Please log in to add books to your favorites.");
+            return;
+        }
+        if (isBookOwner) {
+            toast.error("You cannot favorite your own book.");
+            return;
+        }
+        const next = !isFavorited;
+        setIsFavorited(next);
+        try {
+            const backendUrl = getBackendUrl();
+            const res = await axios.post(`${backendUrl}/api/flipbook/favorite`, {
+                emailId: currentUserEmail,
+                v_id: bookData?.v_id || shareId,
+                isFavorite: next
+            }, { withCredentials: true });
+            if (res.data?.success) {
+                toast.success(next ? "Added to your Favorites!" : "Removed from your Favorites.");
+            } else {
+                setIsFavorited(!next);
+                toast.error(res.data?.message || "Failed to update favorites.");
+            }
+        } catch (err) {
+            setIsFavorited(!next);
+            toast.error(err.response?.data?.message || "Failed to update favorites.");
+        }
+    };
 
     useEffect(() => {
         if (!currentUserEmail || !bookData) return;
@@ -1214,6 +1261,17 @@ const ShareViewBook = () => {
                             {isAddedToShelf ? <>Book<br />Added</> : <>Add to<br />Shelf</>}
                         </span>
                     </button>
+                    {!isBookOwner && (
+                        <>
+                            <div className="w-[60%] h-[1px] bg-gray-100 pointer-events-none"></div>
+                            <button onMouseDown={e => e.stopPropagation()} onClick={handleFavoriteToggle} className="flex flex-col items-center gap-[0.2vw] hover:bg-red-50 py-[0.2vw] px-[0.4vw] rounded-xl group transition-all cursor-pointer w-full text-red-500">
+                                <Heart className={`w-[1.2vw] h-[1.2vw] transition-transform group-hover:scale-110 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-[#2F296D] hover:text-red-500'}`} />
+                                <span className="text-[0.7vw] font-medium text-[#2F296D] text-center leading-tight">
+                                    {isFavorited ? 'Favorited' : 'Favorite'}
+                                </span>
+                            </button>
+                        </>
+                    )}
                     <div className="w-[60%] h-[1px] bg-gray-100 pointer-events-none"></div>
                     <button onMouseDown={e => e.stopPropagation()} onClick={() => window.history.back()} className="flex flex-col items-center gap-[0.2vw] hover:bg-red-50 py-[0.2vw] px-[0.4vw] rounded-xl group transition-all cursor-pointer mt-[0.2vw] w-full text-red-600">
                         <Icon icon="lucide:log-out" className="w-[1vw] h-[1vw] transition-transform group-hover:scale-110" />

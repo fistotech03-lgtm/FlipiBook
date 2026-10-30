@@ -728,3 +728,1068 @@ export const initGifRunner = function(doc) {
     });
   }
 };
+
+/* ==========================================================================
+ * TEXT EFFECTS RUNNER  (scroll-triggered cascading text effects)
+ * --------------------------------------------------------------------------
+ * Added WITHOUT touching initAnimationRunner / initGifRunner above.
+ *
+ * Usage (call once, next to initAnimationRunner(doc)):
+ *
+ *     import { initAnimationRunner, initTextEffectsRunner } from './AnimationRunner';
+ *     initAnimationRunner(doc);
+ *     initTextEffectsRunner(doc);
+ *
+ * Markup:   <h1 data-text-effect="wave">Wave</h1>
+ *
+ * Optional attributes
+ *   data-text-effect-speed="0.25"     seconds  (default 0.25)
+ *   data-text-effect-step="0.1"       seconds  (default 0.1)
+ *   data-text-effect-color="#fff"     text colour (default: element's own colour)
+ *
+ * It is self-contained: no Splitting / ScrollOut / Open Props needed.
+ *  - Splitting  -> teSplitText()           (words / chars + CSS index variables)
+ *  - ScrollOut  -> IntersectionObserver    (data-scroll="in" | "out")
+ *  - Open Props -> fallbacks in TE_BASE_CSS (override with your own variables)
+ * All CSS is scoped to [data-text-effect="..."] so it cannot clash with the page.
+ * ========================================================================== */
+
+const TE_STYLE_ID = 'te-text-effects-style';
+
+const TE_BASE_CSS = `
+[data-text-effect] {
+  --te-speed: 0s;
+  --te-step: 0s;
+  --te-color: #f8f9fa;
+  --te-color-dim: color-mix(in srgb, var(--te-color) 25%, transparent);
+  --te-color-half: color-mix(in srgb, var(--te-color) 50%, transparent);
+  --te-shade: var(--gray-9, #212529);
+  --te-ease-1: var(--ease-elastic-1, cubic-bezier(0.34, 1.56, 0.64, 1));
+  --te-ease-5: var(--ease-elastic-5, cubic-bezier(0.2, 2.2, 0.45, 1));
+  --te-font-size: 1em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-text-effect] { --te-speed: 0.25s; --te-step: 0.1s; }
+}
+
+/* Splitting base styles (scoped) */
+[data-text-effect] .word,
+[data-text-effect] .char { display: inline-block; }
+[data-text-effect] .char { position: relative; }
+[data-text-effect] .char:before,
+[data-text-effect] .char:after {
+  content: attr(data-char);
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  transition: inherit;
+  user-select: none;
+}
+
+/* Util */
+:where([data-text-effect][data-scroll], [data-text-effect] [data-scroll]) .char {
+  transition: all var(--te-speed) calc((var(--char-index) + 1) * var(--te-step));
+}
+
+/* Used by replay(): snap to the "out" state without animating */
+[data-text-effect][data-te-reset],
+[data-text-effect][data-te-reset] *,
+[data-text-effect][data-te-reset] *:before,
+[data-text-effect][data-te-reset] *:after {
+  transition: none !important;
+  animation: none !important;
+}
+`;
+
+// "&" is replaced by the effect's root selector: [data-text-effect="<name>"]
+const TE_EFFECT_CSS = {
+  slots: `
+& {
+  --color: var(--te-color);
+  --speed: 0.5s;
+  --delay: var(--te-speed);
+  --size: var(--te-font-size);
+  height: calc(var(--size) * 3);
+  overflow: hidden;
+}
+& .char {
+  text-transform: uppercase;
+  color: var(--color);
+  animation: te-slots var(--speed) var(--delay) infinite linear;
+  text-shadow: 0 calc(var(--size) * -1) 0 var(--color),
+    0 calc(var(--size) * -2) 0 var(--color),
+    0 calc(var(--size) * -3) 0 var(--color),
+    0 calc(var(--size) * 1) 0 var(--color),
+    0 calc(var(--size) * 2) 0 var(--color),
+    0 calc(var(--size) * 3) 0 var(--color);
+}
+& .char:nth-of-type(odd) {
+  animation: te-slots calc(var(--speed) * 0.75) var(--delay) infinite linear reverse;
+}
+@keyframes te-slots { to { transform: translate(0, calc(var(--size) * -1)); } }
+`,
+
+  carousel: `
+& { height: var(--te-font-size); width: var(--te-font-size); text-transform: uppercase; }
+& .word { transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(0); height: 100%; width: 100%; }
+& .char {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotateY(calc(((360 / var(--char-total)) * var(--char-index)) * 1deg)) translate(var(--te-font-size), 0);
+}
+& [data-scroll="in"] { animation: te-carousel-spin calc(var(--te-speed) * 8) infinite linear reverse; }
+@keyframes te-carousel-spin { to { transform: rotateX(-24deg) rotateY(360deg); } }
+`,
+
+  bloat: `
+& { display: grid; grid-auto-rows: auto; }
+& .word { display: grid; grid-template-columns: repeat(var(--chars, 5), auto); }
+& [data-scroll="in"] .char {
+  animation-delay: calc(var(--te-speed) + (var(--word-index) * var(--te-step)));
+  animation-name: te-bloat;
+  animation-timing-function: ease-out;
+  animation-duration: calc(2 * var(--te-speed));
+}
+& .char {
+  --offset: calc((var(--char-index) - var(--word-start, 0)) - var(--center, 2));
+  transform: translate(0, 0);
+}
+@keyframes te-bloat { 50% { transform: translate(calc(var(--offset) * 150%), 0); } }
+`,
+
+  roulette: `
+& { position: relative; }
+& [data-scroll="in"] { animation: te-roulette calc(var(--te-speed) * 8) var(--te-speed) infinite linear; }
+& .word { height: var(--te-font-size); width: var(--te-font-size); }
+& .char {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(calc((var(--char-index) * (360 / var(--char-total)) * 1deg))) translate(0, -150%);
+}
+@keyframes te-roulette { to { transform: rotate(-360deg); } }
+`,
+
+  hinged: `
+& .char { --rotation: -180deg; transform-origin: 0 100%; transform: rotate(var(--rotation)); }
+& [data-scroll="in"] .char { --rotation: 0deg; }
+`,
+
+  mexiwave: `
+& [data-scroll="in"] .char { animation: te-mexiwave var(--te-speed) calc(var(--char-index) * var(--te-step)) ease; }
+@keyframes te-mexiwave { 50% { transform: translate(0, -50%); } }
+`,
+
+  enter: `
+& .char { opacity: var(--opacity, 1); transform: translateY(var(--y, 0%)); }
+& [data-scroll="out"] { --opacity: 0; --y: -150%; }
+`,
+
+  random: `
+& .char { transition: transform var(--te-speed) calc((var(--char-index) + 1) * var(--te-speed)); }
+& [data-scroll="out"] .char { transform: translate(calc(var(--x) * 1%), calc(var(--y) * 1%)); }
+`,
+
+  swapsies: `
+& .char { transform: translateX(var(--translate)); }
+& .char:nth-of-type(even) { --translate: -100%; }
+& .char:nth-of-type(odd) { --translate: 100%; }
+& [data-scroll="in"] .char { animation: te-swapsies 0.5s calc(var(--char-index) * var(--te-step)) both; }
+@keyframes te-swapsies {
+  25% { transform: translate(var(--translate), var(--translate)); }
+  75% { transform: translate(0, var(--translate)); }
+  100% { transform: translate(0, 0); }
+}
+`,
+
+  fading: `
+& [data-scroll="out"] .char { opacity: 0; }
+`,
+
+  flipping: `
+& [data-scroll='out'] .char { transform: rotateX(360deg); }
+`,
+
+  slide: `
+& .char {
+  transition: opacity var(--te-step), transform var(--te-speed);
+  transition-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+}
+& [data-scroll='out'] .char { opacity: 0; transform: translate(-300%, 0) skewX(20deg); }
+`,
+
+  karaoke: `
+& .char { color: var(--te-color-dim); }
+& .char:after {
+  color: var(--te-color);
+  visibility: visible;
+  clip-path: inset(0 calc((100 - (var(--reveal, 1) * 100)) * 1%) 0 0);
+}
+& [data-scroll="out"] .char:after { --reveal: 0; }
+`,
+
+  filling: `
+& .char { color: var(--te-color-dim); }
+& .char:after {
+  color: var(--te-color);
+  visibility: visible;
+  clip-path: inset(calc((100 - (var(--reveal, 1) * 100)) * 1%) 0 0 0);
+}
+& [data-scroll="out"] .char:after { --reveal: 0; }
+`,
+
+  blocks: `
+& [data-scroll='out'] .char { --show: 0; }
+& [data-scroll] { overflow: hidden; position: relative; }
+& .char { opacity: var(--show); transition: opacity 0s calc(var(--te-speed) * 2); }
+& [data-scroll="in"] .char { --show: 1; }
+& [data-scroll="in"]:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--te-color);
+  animation: te-blocks calc(var(--te-speed) * 2) calc((var(--te-speed) * 2) * 0.5) both;
+  visibility: visible;
+}
+@keyframes te-blocks {
+  0% { transform: translate(-110%, 0); }
+  45%, 55% { transform: translate(0, 0); }
+  100% { transform: translate(110%, 0); }
+}
+`,
+
+  scaling: `
+& [data-scroll="out"] .char { transform: scale(0); }
+`,
+
+  turning: `
+& [data-scroll="out"] .char { transform: rotateY(90deg); }
+`,
+
+  folding: `
+& .word { transform-style: preserve-3d; perspective: var(--te-font-size); }
+& .char {
+  transform-style: preserve-3d;
+  transform: rotateX(calc((90 - (var(--show, 1) * 90)) * 1deg));
+  transform-origin: 50% 100%;
+}
+& [data-scroll="out"] .char { --show: 0; }
+`,
+
+  bulge: `
+& [data-scroll="in"] .char {
+  animation-name: te-bulge;
+  animation-duration: var(--te-speed);
+  animation-delay: calc(var(--te-speed) + (var(--char-index) * var(--te-step)));
+}
+@keyframes te-bulge { 50% { transform: scale(1.5); } }
+`,
+
+  perspective: `
+&, & .word { transform-style: preserve-3d; perspective: 100vmax; perspective-origin: 50% 200%; }
+& .char {
+  transition: transform var(--te-speed) calc(var(--te-speed) + var(--char-index) * var(--te-step)),
+              opacity var(--te-step) calc(var(--te-speed) + var(--char-index) * var(--te-step));
+}
+& [data-scroll="out"] .char { opacity: 0; transform: translate3d(-10%, -10%, -90vmax); }
+`,
+
+  zipping: `
+& .char {
+  transition: transform var(--te-speed) calc(var(--te-speed) + var(--char-index) * var(--te-step)),
+              opacity calc(var(--te-step) * 0.5) calc(var(--te-speed) + var(--char-index) * var(--te-step));
+}
+& [data-scroll="out"] .char { opacity: 0; transform: translateY(var(--y, -100%)) scale(0); }
+& .char:nth-of-type(even) { --y: 100%; }
+`,
+
+  spinning: `
+& [data-scroll="out"] .char { transform: rotateY(-360deg); }
+`,
+
+  tumbling: `
+& .char { transition-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step)); }
+& [data-scroll='out'] .char { opacity: 0; transform: translate(-500%, 0%) rotate(-1080deg) scale(1); }
+& .char, & .char:after {
+  animation-duration: calc(var(--te-speed) * 4);
+  animation-fill-mode: both;
+  animation-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+}
+& [data-scroll="in"] .char { animation-name: te-tumbling; animation-timing-function: linear; color: transparent; }
+& [data-scroll="in"] .char:after { animation-name: te-tumbling-after; }
+& .char:after { color: var(--te-color); visibility: visible; }
+@keyframes te-tumbling { 0% { transform: translateX(-500%); } }
+@keyframes te-tumbling-after {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  25% { opacity: 1; transform: translateY(-50%) rotate(360deg); }
+  50% { transform: translateY(0) rotate(360deg); }
+  75% { transform: translateY(-25%) rotate(720deg); }
+  100% { transform: translateY(0%) rotate(720deg); }
+}
+`,
+
+  bubbling: `
+& .char {
+  transform-origin: 50% 85%;
+  transition-timing-function: var(--te-ease-5);
+  transition-delay: calc(var(--te-speed) + var(--delay, 0) * var(--te-step));
+}
+& .char:nth-of-type(1) { --delay: 3; }
+& .char:nth-of-type(2) { --delay: 2; }
+& .char:nth-of-type(3) { --delay: 5; }
+& .char:nth-of-type(4) { --delay: 8; }
+& .char:nth-of-type(5) { --delay: 7; }
+& .char:nth-of-type(6) { --delay: 6; }
+& .char:nth-of-type(7) { --delay: 1; }
+& .char:nth-of-type(8) { --delay: 4; }
+& [data-scroll="out"] .char { transform: scale(0.35); }
+`,
+
+  swinging: `
+& .char {
+  transform-origin: calc((var(--char-total) - var(--char-index)) * 100%) calc(100% * -4);
+  transition-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+}
+& [data-scroll="out"] .char { opacity: 0; transform: rotate(90deg); }
+`,
+
+  rolling: `
+& .char {
+  transition: transform calc(var(--te-speed) * 2), opacity calc(var(--te-step) * 2);
+  transition-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+  transition-timing-function: var(--te-ease-1);
+}
+& [data-scroll="out"] .char { opacity: 0; transform: translate(-500%, 0) rotate(-1080deg); }
+`,
+
+  blowing: `
+& .char {
+  animation-duration: calc(var(--te-speed) * 4);
+  animation-fill-mode: both;
+  transform-origin: 0 100%;
+  animation-delay: calc(var(--char-index) * (var(--te-step) * 0.25));
+}
+& [data-scroll="in"] .char { animation-name: te-blowing; }
+@keyframes te-blowing {
+  50%, 60%, 70% { transform: skewX(-35deg); }
+  55%, 65%, 75% { transform: skewX(-40deg); }
+}
+`,
+
+  meeting: `
+& .char { transform-origin: var(--origin, 100% 0); }
+& .char:nth-of-type(odd) { --origin: 0 100%; }
+& [data-scroll="out"] .char { transform: rotate(-180deg); }
+`,
+
+  conveyor: `
+& .char {
+  transform-origin: 0 100%;
+  animation-duration: calc(var(--te-step) * 4);
+  animation-fill-mode: both;
+  animation-timing-function: linear;
+  animation-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+  transition: none;
+}
+& [data-scroll="in"] .char { animation-name: te-conveyor; }
+@keyframes te-conveyor {
+  0% { transform: translate(calc((var(--char-total) - (var(--char-total) - var(--char-index))) * -100%), 0) rotate(-180deg) translate(calc((var(--char-total) - var(--char-index)) * -100%), 0); }
+  40% { transform: translate(calc((var(--char-total) - (var(--char-total) - var(--char-index))) * -100%), 0) rotate(-180deg) translate(0, 0); }
+  50% { transform: translate(calc((var(--char-total) - (var(--char-total) - var(--char-index))) * -100%), 0) rotate(0deg) translate(0, 0); }
+  100% { transform: translate(0, 0) rotate(0deg) translate(0, 0); }
+}
+`,
+
+  cascade: `
+& .char {
+  animation-duration: calc(var(--te-speed) * 4);
+  animation-fill-mode: both;
+  animation-delay: calc((var(--char-total) - var(--char-index)) * var(--te-step));
+}
+& [data-scroll="in"] .char { animation-name: te-cascade; }
+@keyframes te-cascade {
+  0% { opacity: 0; transform: translate(-300%, -300%); }
+  10% { transform: translate(-200%, -300%); }
+  30% { transform: translate(-200%, -200%); }
+  50% { opacity: 1; transform: translate(-100%, -200%); }
+  70% { transform: translate(-100%, -100%); }
+  90% { transform: translate(0%, -100%); }
+  100% { transform: translate(0, 0); }
+}
+`,
+
+  tossing: `
+& .char {
+  animation-duration: calc(var(--te-speed) * 2);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--char-index) * var(--te-step));
+}
+& [data-scroll="in"] .char { animation-name: te-tossing; }
+@keyframes te-tossing {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-50%) rotate(360deg) scale(1.1); }
+  100% { transform: translateY(0) rotateY(360deg) scale(1); }
+}
+`,
+
+  wave: `
+& .char {
+  animation-duration: calc(var(--te-speed) * 8);
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+  animation-delay: calc((var(--char-index) * var(--te-step)) * -1);
+}
+& [data-scroll="in"] .char { animation-name: te-wave; }
+@keyframes te-wave { 25% { transform: translateY(-75%); } }
+`,
+
+  rising: `
+& .char {
+  opacity: calc(1 - var(--hide, 0));
+  transform: translate(calc(var(--hide, 0) * -150%), calc(var(--hide, 0) * 300%));
+  transition-property: transform, opacity;
+  transition-duration: calc(var(--te-speed) * 2), calc(var(--te-speed) * 0.5);
+}
+& [data-scroll="out"] { --hide: 1; }
+`,
+
+  twirl: `
+& .char {
+  animation-duration: calc(var(--te-speed) * 2);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--char-index) * var(--te-step));
+  animation-timing-function: var(--te-ease-5);
+}
+& [data-scroll="in"] .char { animation-name: te-twirl; }
+@keyframes te-twirl {
+  0% { opacity: 0; transform: translateY(200%) rotateY(0deg); }
+  25% { opacity: 1; }
+  100% { transform: translateY(0%) rotateY(360deg); }
+}
+`,
+
+  backflip: `
+& { transform-style: preserve-3d; perspective: var(--te-font-size); }
+& .char {
+  color: transparent;
+  transform-style: preserve-3d;
+  perspective: var(--te-font-size);
+  transition-duration: calc(var(--te-speed) * 3);
+  transition-timing-function: var(--te-ease-5);
+}
+& [data-scroll="out"] .char { opacity: 0; transform: translateY(500%) scale(0); }
+& .char:after {
+  transform-style: preserve-3d;
+  visibility: visible;
+  color: var(--te-color);
+  animation-duration: calc(var(--te-speed) * 3);
+  animation-delay: calc(var(--char-index) * var(--te-step));
+  animation-fill-mode: both;
+}
+& [data-scroll="in"] .char:after { animation-name: te-backflip-after; }
+@keyframes te-backflip-after {
+  0%, 40% { transform: rotateX(0deg); }
+  100% { transform: rotateX(360deg); }
+}
+`,
+
+  jump: `
+& .word { clip-path: inset(-100% 0 0 0); }
+& .char { transition-timing-function: var(--te-ease-5); }
+& [data-scroll="out"] .char { transform: translateY(100%); }
+`,
+
+  glare: `
+& {
+  -webkit-text-fill-color: transparent;
+  clip-path: inset(0 0 0 100%);
+  transition: clip-path var(--te-speed) var(--te-speed);
+  background: linear-gradient(55deg, transparent 33%, var(--te-color), transparent 66%) 0 0 / 200% 100%, var(--te-color-dim);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+&[data-scroll="in"] {
+  clip-path: inset(0 0 0 0);
+  animation: te-glare calc(4 * var(--te-speed)) infinite linear;
+}
+@keyframes te-glare {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 200% 0, 0 0; }
+}
+`,
+
+  expanding: `
+& { position: relative; }
+& .word:not(:first-of-type) {
+  position: absolute;
+  transform: translateY(calc(var(--expansion-position, 0) * (var(--reveal, 0)) * 100%));
+  inset: 0;
+  -webkit-text-stroke: calc(var(--te-font-size) * 0.05) var(--te-color-half);
+  color: transparent;
+  transition: transform var(--te-speed) calc(var(--expansion-index, 0) * var(--te-step));
+  transition-timing-function: var(--te-ease-1);
+}
+& .word[data-scroll="in"] { --reveal: 1; }
+`,
+
+  /* The demo wrapped this one in a perspective wrapper element. To avoid adding
+     wrapper elements to your page, perspective() is used inside the transform. */
+  falling: `
+& {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transform: perspective(calc(var(--te-font-size) * 2)) translateY(50%) rotateX(calc((1 - var(--reveal, 0)) * 65deg)) translateY(-50%);
+  transition: transform var(--te-speed) calc(var(--te-speed) + (7 * var(--te-step)));
+}
+& .word { transform-style: preserve-3d; perspective: 100000vmin; }
+& .char { display: inline-block; transform-style: preserve-3d; color: transparent; }
+& .char:before {
+  transform-style: preserve-3d;
+  color: var(--te-shade);
+  opacity: var(--reveal, 0);
+  visibility: visible;
+  transition: opacity var(--te-speed) calc(var(--char-index) * var(--te-step));
+}
+& .char:after {
+  transform-style: preserve-3d;
+  color: var(--te-color);
+  visibility: visible;
+  transform: rotateX(calc((1 - var(--reveal, 0)) * -45deg))
+    translate3d(0, calc((1 - var(--reveal, 0)) * -200%), calc((1 - var(--reveal, 0)) * 30vmin));
+  display: inline-block;
+}
+&[data-scroll="out"], & [data-scroll="out"], & [data-scroll="out"] .char:before, & [data-scroll="out"] .char:after { --reveal: 0; }
+&[data-scroll="in"], & [data-scroll="in"], & [data-scroll="in"] .char:before, & [data-scroll="in"] .char:after { --reveal: 1; }
+`,
+
+  scrolled: `
+& {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transform: perspective(calc(var(--te-font-size) * 3)) translateY(50%) rotateX(45deg) translateY(-50%);
+  transition: transform var(--te-speed) calc(var(--te-speed) + (8 * var(--te-step)));
+}
+&[data-scroll="in"] {
+  transform: perspective(calc(var(--te-font-size) * 3)) translateY(50%) rotateX(0deg) translateY(-50%);
+}
+& .char { transition-property: opacity, transform; transition-duration: var(--te-step), var(--te-speed); }
+& [data-scroll="out"] .char { transform: translateY(200%); opacity: 0; }
+`,
+
+  bloom: `
+& { --clip: 150; position: relative; }
+& [data-scroll="out"] { --clip: 0; }
+& .word {
+  --path: circle(calc(var(--clip, 0) * 1%) at var(--origin, 50% 50%));
+  transition: clip-path calc(var(--te-speed) * 3) calc(var(--te-speed) * 2) ease-in;
+  clip-path: var(--path);
+}
+&:before {
+  content: attr(data-word);
+  position: absolute;
+  color: color-mix(in srgb, var(--te-color) 5%, transparent);
+  inset: 0;
+}
+`,
+  'bloom-north':      '& { --origin: 50% 0; }',
+  'bloom-north-east': '& { --origin: 100% 0; }',
+  'bloom-east':       '& { --origin: 100% 50%; }',
+  'bloom-south-east': '& { --origin: 100% 100%; }',
+  'bloom-south':      '& { --origin: 50% 100%; }',
+  'bloom-south-west': '& { --origin: 0% 100%; }',
+  'bloom-west':       '& { --origin: 0% 50%; }',
+  'bloom-north-west': '& { --origin: 0% 0%; }',
+
+  stream: `
+& { text-transform: uppercase; letter-spacing: 0.2ch; }
+& .char {
+  --speed: calc(var(--te-speed) * 3);
+  --delay: calc(0.65s + (var(--char-index) * 0.03s));
+  --shadow: hsl(0, 0%, 46%);
+  transition: none;
+  color: hsl(6, 89%, 100%);
+  opacity: 0;
+}
+&[data-scroll=in] .char {
+  animation: te-stream-shadow var(--speed) var(--delay),
+             te-stream-alpha var(--speed) var(--delay) both,
+             te-stream-color var(--speed) var(--delay) both,
+             te-stream-scale var(--speed) var(--delay);
+}
+@keyframes te-stream-alpha { 25%, 100% { opacity: 1; } }
+@keyframes te-stream-scale { 25%, 75% { scale: 1.25; } }
+@keyframes te-stream-color {
+  0%, 75% { color: hsl(6 89% 100%); }
+  100% { color: hsl(6 89% 42%); }
+}
+@keyframes te-stream-shadow {
+  25%, 75% {
+    text-shadow:
+      1px 2px 0px var(--shadow), 2px 4px 0px var(--shadow), 3px 6px 0px var(--shadow),
+      4px 8px 0px var(--shadow), 5px 10px 0px var(--shadow), 6px 12px 0px var(--shadow),
+      7px 14px 0px var(--shadow), 8px 16px 0px var(--shadow), 9px 18px 0px var(--shadow),
+      10px 20px 0px var(--shadow);
+  }
+}
+`,
+
+  reflective: `
+& { position: relative; line-height: 0.8; }
+& .char { transform: translateY(110%); letter-spacing: 0.15ch; }
+& [data-scroll=in] .char {
+  animation: te-reflective-jump
+    calc(var(--te-speed) * 1.25)
+    calc(0.5s + (var(--char-index) - ((var(--char-total) / var(--word-total)) * var(--word-index))) * (1.25 * var(--te-step)))
+    cubic-bezier(0, 1.4, 1, 1.6)
+    both;
+}
+& > span:first-of-type .word { clip-path: inset(-50% 0 0 0); }
+& > span:last-of-type .word {
+  position: absolute;
+  clip-path: inset(0 0 -50% 0);
+  top: 100%;
+  width: 100%;
+  left: 0;
+  transform: rotateX(180deg);
+  mask: linear-gradient(transparent, black);
+  -webkit-mask: linear-gradient(transparent, black);
+}
+@keyframes te-reflective-jump { to { transform: translateY(0%); } }
+`,
+
+  glitch: `
+& [data-scroll=in] .char {
+  --split: 0;
+  --shift: 0;
+  --shadow: 0;
+  color: transparent;
+  animation: te-glitch 1s calc(var(--char-index) * 0.1s) 2 ease-in-out alternate-reverse;
+  position: relative;
+  transition: none;
+}
+& .char:before, & .char:after {
+  content: attr(data-char);
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  height: 100%;
+  width: 100%;
+  color: var(--te-color);
+  visibility: visible;
+  -webkit-clip-path: var(--clip);
+  clip-path: var(--clip);
+}
+& .char:before { --clip: inset(calc((95 - var(--split)) * 1%) 0 0 0); }
+& .char:after {
+  transform: translate(calc(var(--shift) * 1%), 0);
+  --clip: inset(0 0 calc(var(--split) * 1%) 0);
+  text-shadow: calc(var(--shadow) * 1px) calc(var(--shadow) * 1px) #000;
+}
+@keyframes te-glitch {
+  0% { --split: 20; --shift: 20; --shadow: -4; }
+  5% { --split: 30; --shift: 20; --shadow: -4; }
+  10% { --split: 80; --shift: 10; --shadow: -4; }
+  15% { --split: 55; --shift: 10; --shadow: -4; }
+  20%, 50% { --split: 0; --shift: 0; --shadow: 0; }
+  100% { --split: 0; --shift: 0; --shadow: 0; }
+}
+`,
+
+  glitchy: `
+& .char {
+  --speed: calc(var(--te-speed) * 0.75);
+  color: transparent;
+  position: relative;
+  transition: none;
+}
+& [data-scroll=in] .char:after {
+  --txt: attr(data-char);
+  content: var(--txt);
+  animation-duration: var(--speed);
+  animation-name: te-glitchy;
+  animation-fill-mode: backwards;
+  animation-iteration-count: calc(1 + var(--char-index));
+  animation-delay: 0.5s;
+  animation-timing-function: steps(1);
+  color: var(--te-color);
+  position: absolute;
+  inset: 0;
+  visibility: visible;
+}
+@keyframes te-glitchy {
+  0%   { content: var(--char-0); }
+  10%  { content: var(--char-1); }
+  20%  { content: var(--char-2); }
+  30%  { content: var(--char-3); }
+  40%  { content: var(--char-4); }
+  50%  { content: var(--char-5); }
+  60%  { content: var(--char-6); }
+  70%  { content: var(--char-7); }
+  80%  { content: var(--char-8); }
+  90%  { content: var(--char-9); }
+  100% { content: var(--char-0); }
+}
+`,
+
+  strikethrough: `
+& .word {
+  --start: 23%;
+  --end: 43%;
+  --progress: 0%;
+  transition: clip-path var(--te-speed) calc(0.5s + var(--te-speed));
+  text-transform: uppercase;
+  font-style: italic;
+  clip-path: polygon(0 0, 0 var(--start), var(--progress) var(--start), var(--progress) var(--end), 0 var(--end), 0 100%, 100% 100%, 100% 0);
+}
+& [data-scroll=in] { --progress: 100%; }
+`,
+
+  taste: `
+& {
+  --red: hsl(5, 87%, 45%);
+  --orange: hsl(31, 88%, 46%);
+  --yellow: hsl(65, 52%, 58%);
+  --green: hsl(168, 95%, 28%);
+  --blue: hsl(217, 81%, 42%);
+  --purple: hsl(250, 72%, 46%);
+  position: relative;
+  text-transform: lowercase;
+  letter-spacing: -0.1ch;
+}
+& > span:first-of-type { color: transparent; }
+& > span:nth-of-type(3) { -webkit-text-stroke: 2px var(--red); }
+& > span:not(:first-of-type) {
+  --color: red;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(0, calc((var(--word-index) - 1) * var(--step, 0)));
+  z-index: calc(var(--word-total) - var(--word-index));
+}
+& [data-scroll=in].word { --step: 8%; }
+& .char { color: var(--color, red); transition: none; }
+& .word { transition: transform var(--te-speed) calc(0.5s + var(--te-speed)); }
+& > span:nth-of-type(3) { --color: white; }
+& > span:nth-of-type(5) { --color: var(--red); }
+& > span:nth-of-type(7) { --color: var(--orange); }
+& > span:nth-of-type(9) { --color: var(--yellow); }
+& > span:nth-of-type(11) { --color: var(--green); }
+& > span:nth-of-type(13) { --color: var(--blue); }
+& > span:nth-of-type(15) { --color: var(--purple); }
+`,
+};
+
+/** Every effect name you can put in data-text-effect="..." */
+export const TEXT_EFFECT_NAMES = Object.keys(TE_EFFECT_CSS);
+
+// Effects whose root selector is not simply [data-text-effect="<name>"]
+const TE_ROOT_SELECTOR = { bloom: '[data-text-effect^="bloom"]' };
+// Effects designed around one word repeated N times (text is repeated for you)
+const TE_REPEAT = { taste: 8, bloat: 5, expanding: 5 };
+// Effects that look best with a trailing separator so the ring has a gap
+const TE_RING = ['carousel', 'roulette'];
+// Effects applied to the element itself (no per-word targets needed)
+const TE_NO_SPLIT = ['glare'];
+// Effects whose CSS also reads data-scroll on the root element itself
+const TE_OBSERVE_SELF = ['falling', 'scrolled', 'glare', 'stream'];
+
+const TE_GLITCH_CHARS = '`¡™£¢∞§¶•ªº–≠åß∂ƒ©˙∆˚¬…æ≈ç√∫˜µ≤≥÷/?░▒▓<>/'.split('');
+const TE_OWN_ATTRS = ['data-text-effect', 'data-text-effect-speed', 'data-text-effect-step', 'data-text-effect-color'];
+
+const teBuildCss = () =>
+  TE_BASE_CSS +
+  Object.entries(TE_EFFECT_CSS)
+    .map(([name, css]) => css.split('&').join(TE_ROOT_SELECTOR[name] || `[data-text-effect="${name}"]`))
+    .join('\n');
+
+const teRandomInRange = (min, max) =>
+  Math.floor(Math.random() * (Math.floor(max) - Math.ceil(min) + 1) + Math.ceil(min));
+
+const teInjectStyle = (doc) => {
+  if (doc.getElementById(TE_STYLE_ID)) return;
+  const style = doc.createElement('style');
+  style.id = TE_STYLE_ID;
+  style.textContent = teBuildCss();
+  (doc.head || doc.documentElement).appendChild(style);
+};
+
+/**
+ * Splitting-style splitter. Walks text nodes (keeps nested elements such as the
+ * two <span>s used by "reflective") and builds:
+ *   <span class="word" data-word style="--word-index">
+ *     <span class="char" data-char style="--char-index">x</span> ...
+ * plus <span class="whitespace"> </span> between words, and sets
+ * --word-total / --char-total on the root.
+ */
+const teSplitText = (root, doc) => {
+  let wordIndex = 0;
+  let charIndex = 0;
+  const isBlank = (n) => !n || (n.nodeType === 3 && !n.textContent.trim());
+
+  const makeSpace = () => {
+    const ws = doc.createElement('span');
+    ws.className = 'whitespace';
+    ws.textContent = ' ';
+    return ws;
+  };
+
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach((child) => {
+      if (child.nodeType === 1) { walk(child); return; }
+      if (child.nodeType !== 3) return;
+
+      const text = child.textContent;
+      const words = text.split(/\s+/).filter(Boolean);
+      if (!words.length) return;
+
+      const frag = doc.createDocumentFragment();
+      if (/^\s/.test(text) && !isBlank(child.previousSibling)) frag.appendChild(makeSpace());
+
+      words.forEach((w, i) => {
+        if (i > 0) frag.appendChild(makeSpace());
+        const wordEl = doc.createElement('span');
+        wordEl.className = 'word';
+        wordEl.setAttribute('data-word', w);
+        wordEl.style.setProperty('--word-index', String(wordIndex++));
+        Array.from(w).forEach((ch) => {
+          const c = doc.createElement('span');
+          c.className = 'char';
+          c.setAttribute('data-char', ch);
+          c.style.setProperty('--char-index', String(charIndex++));
+          c.textContent = ch;
+          wordEl.appendChild(c);
+        });
+        frag.appendChild(wordEl);
+      });
+
+      if (/\s$/.test(text) && !isBlank(child.nextSibling)) frag.appendChild(makeSpace());
+      node.replaceChild(frag, child);
+    });
+  };
+
+  walk(root);
+  root.style.setProperty('--word-total', String(wordIndex));
+  root.style.setProperty('--char-total', String(charIndex));
+  return wordIndex;
+};
+
+const teSetProp = (el, name, value) => {
+  el.style.setProperty(name, value);
+  (el.__teProps = el.__teProps || []).push(name);
+};
+
+/** Effect-specific JS (the CSS needs a few per-character / per-word values). */
+const teApplyExtras = (el, name) => {
+  if (name === 'glitchy') {
+    el.querySelectorAll('.char').forEach((c) => {
+      for (let g = 0; g < 10; g++) {
+        c.style.setProperty(`--char-${g}`, `"${TE_GLITCH_CHARS[Math.floor(Math.random() * TE_GLITCH_CHARS.length)]}"`);
+      }
+    });
+  }
+  if (name === 'random') {
+    el.querySelectorAll('.char').forEach((c) => {
+      c.style.setProperty('--x', teRandomInRange(-1000, 1000));
+      c.style.setProperty('--y', teRandomInRange(-1000, 1000));
+    });
+  }
+  if (name === 'expanding') {
+    el.querySelectorAll('.word').forEach((word, index) => {
+      const exp = (index % 2) + 1;
+      if (index !== 0) {
+        word.style.setProperty('--expansion-position', index > 2.5 ? exp : exp * -1);
+        word.style.setProperty('--expansion-index', exp);
+      }
+    });
+  }
+  if (name === 'bloat') {
+    el.querySelectorAll('.word').forEach((word) => {
+      const chars = word.querySelectorAll('.char');
+      word.style.setProperty('--chars', chars.length);
+      word.style.setProperty('--center', Math.floor(chars.length / 2));
+      word.style.setProperty('--word-start', chars.length ? chars[0].style.getPropertyValue('--char-index') : 0);
+    });
+  }
+  if (name.indexOf('bloom') === 0) {
+    if (!el.hasAttribute('data-word')) {
+      el.setAttribute('data-word', el.__teText);
+      el.__teAttrs.push('data-word');
+    }
+  }
+};
+
+const teTeardown = (el, state) => {
+  (el.__teTargets || []).forEach((t) => {
+    state.io.unobserve(t);
+    t.removeAttribute('data-scroll');
+  });
+  el.removeAttribute('data-scroll');
+  // Only restore the original markup if our split markup is still there
+  if (el.__teOriginalHTML !== undefined && el.querySelector('.word')) {
+    el.innerHTML = el.__teOriginalHTML;
+  }
+  (el.__teProps || []).forEach((p) => el.style.removeProperty(p));
+  (el.__teAttrs || []).forEach((a) => el.removeAttribute(a));
+  ['--word-total', '--char-total'].forEach((p) => el.style.removeProperty(p));
+  if (el.__teAddedRole) el.removeAttribute('role');
+  if (el.__teAddedLabel) el.removeAttribute('aria-label');
+  ['__teName', '__teText', '__teOriginalHTML', '__teTargets', '__teProps', '__teAttrs',
+    '__teHasWords', '__teAddedRole', '__teAddedLabel'].forEach((k) => { delete el[k]; });
+  state.els.delete(el);
+};
+
+const teProcess = (el, doc, state) => {
+  const name = (el.getAttribute('data-text-effect') || '').trim().toLowerCase();
+
+  if (el.__teName) {
+    const upToDate = el.__teName === name && (!el.__teHasWords || el.querySelector('.word'));
+    if (upToDate) return;
+    teTeardown(el, state);
+  }
+  if (!TE_EFFECT_CSS[name]) return;
+
+  const win = doc.defaultView || window;
+
+  // Read the element's own colour BEFORE we change anything
+  const color = el.getAttribute('data-text-effect-color') || win.getComputedStyle(el).color;
+
+  el.__teOriginalHTML = el.innerHTML;
+  el.__teProps = [];
+  el.__teAttrs = [];
+
+  const originalText = (el.textContent || '').replace(/\s+/g, ' ').trim();
+  let text = originalText;
+  if (TE_REPEAT[name] && text.split(' ').length === 1) {
+    text = Array(TE_REPEAT[name]).fill(text).join(' ');
+  }
+  if (TE_RING.includes(name) && text && !text.endsWith('•')) text += '•';
+  el.__teText = text;
+
+  let wordCount = 0;
+  if (!TE_NO_SPLIT.includes(name) && text) {
+    if (name === 'reflective') {
+      el.textContent = '';
+      for (let i = 0; i < 2; i++) {
+        const s = doc.createElement('span');
+        s.textContent = text;
+        el.appendChild(s);
+      }
+    } else if (text !== originalText) {
+      el.textContent = text;
+    }
+    wordCount = teSplitText(el, doc);
+  }
+  el.__teHasWords = wordCount > 0;
+
+  // Colour / timing
+  if (color) teSetProp(el, '--te-color', color);
+  const speed = parseFloat(el.getAttribute('data-text-effect-speed'));
+  const step = parseFloat(el.getAttribute('data-text-effect-step'));
+  if (!isNaN(speed)) teSetProp(el, '--te-speed', `${speed}s`);
+  if (!isNaN(step)) teSetProp(el, '--te-step', `${step}s`);
+
+  teApplyExtras(el, name);
+
+  // Accessibility: the split markup is meaningless to screen readers
+  if (originalText) {
+    if (!el.hasAttribute('aria-label')) { el.setAttribute('aria-label', originalText); el.__teAddedLabel = true; }
+    if (!el.hasAttribute('role')) { el.setAttribute('role', 'img'); el.__teAddedRole = true; }
+  }
+
+  // Scroll targets (same list ScrollOut used: .word + the root for a few effects)
+  const targets = Array.from(el.querySelectorAll('.word'));
+  if (TE_OBSERVE_SELF.includes(name) || TE_NO_SPLIT.includes(name)) targets.push(el);
+  el.__teTargets = targets;
+  targets.forEach((t) => {
+    t.setAttribute('data-scroll', 'out');
+    state.io.observe(t);
+  });
+
+  el.__teName = name;
+  state.els.add(el);
+};
+
+/**
+ * Re-run every effect from its hidden state (used when a flipbook page turns,
+ * or you can call the returned `replay()` yourself).
+ */
+const teReplay = (doc, state) => {
+  state.els.forEach((el) => {
+    const targets = el.__teTargets || [];
+    el.setAttribute('data-te-reset', '');
+    targets.forEach((t) => { state.io.unobserve(t); t.setAttribute('data-scroll', 'out'); });
+    void el.offsetWidth; // commit the "out" state with transitions disabled
+    el.removeAttribute('data-te-reset');
+    void el.offsetWidth;
+    targets.forEach((t) => state.io.observe(t)); // observe() re-fires -> "in" if visible
+  });
+};
+
+export const initTextEffectsRunner = function (doc) {
+  // Re-initialisation is allowed (doc.write wipes the body but the doc object may persist)
+  if (doc.__textEffectsState) {
+    const old = doc.__textEffectsState;
+    Array.from(old.els).forEach((el) => teTeardown(el, old));
+    old.io.disconnect();
+    old.mo.disconnect();
+    if (old.win && old.onMessage) old.win.removeEventListener('message', old.onMessage);
+  }
+
+  const win = doc.defaultView || window;
+  teInjectStyle(doc);
+
+  const state = { els: new Set(), win };
+
+  state.io = new win.IntersectionObserver((entries) => {
+    entries.forEach((entry) => entry.target.setAttribute('data-scroll', entry.isIntersecting ? 'in' : 'out'));
+  }, { threshold: 0 });
+
+  const scan = () => {
+    teInjectStyle(doc);
+    // Drop elements that were removed or lost their attribute
+    Array.from(state.els).forEach((el) => {
+      if (!el.isConnected || !el.hasAttribute('data-text-effect')) teTeardown(el, state);
+    });
+    doc.querySelectorAll('[data-text-effect]').forEach((el) => teProcess(el, doc, state));
+  };
+
+  state.mo = new win.MutationObserver(scan);
+  state.mo.observe(doc.body || doc.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: TE_OWN_ATTRS,
+  });
+
+  // Flipbook / page-turn support (mirrors the messages the other runners use)
+  state.onMessage = (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'RETRIGGER_ANIMATIONS') {
+      teReplay(doc, state);
+    } else if (e.data.type === 'PAGE_TURNED') {
+      const pageNum = win._pageNumber;
+      const visible = e.data.visiblePages || [];
+      if (pageNum === undefined || visible.includes(pageNum)) teReplay(doc, state);
+    }
+  };
+  win.addEventListener('message', state.onMessage);
+
+  doc.__textEffectsState = state;
+  scan();
+
+  return {
+    replay: () => teReplay(doc, state),
+    refresh: scan,
+    destroy: () => {
+      Array.from(state.els).forEach((el) => teTeardown(el, state));
+      state.io.disconnect();
+      state.mo.disconnect();
+      win.removeEventListener('message', state.onMessage);
+      const s = doc.getElementById(TE_STYLE_ID);
+      if (s) s.remove();
+      delete doc.__textEffectsState;
+    },
+  };
+};

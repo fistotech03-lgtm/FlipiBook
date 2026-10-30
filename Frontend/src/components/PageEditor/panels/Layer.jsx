@@ -18,6 +18,7 @@ import { Icon as FileReplaceIcon, Icon } from '@iconify/react';
 import pageCacheManager from '../utils/PageCacheManager';
 import { parseLayersFromSVG } from '../utils/editorUtils';
 import { useAuth } from '../../../context/AuthContext';
+import { useConfirm } from '../../../context/ConfirmationContext';
 import CustomScrollbar from '../../CustomScrollbar';
 import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
@@ -607,9 +608,18 @@ const Layer = ({
     type: 'error'
   });
 
-  const handleGoToCustomize = () => {
+  const confirm = useConfirm();
+
+  const handleGoToCustomize = async () => {
     if (hasUnsavedChanges) {
-      if (!window.confirm("Leave site?\n\nChanges you made may not be saved.")) {
+      const ok = await confirm({
+        title: "Leave Site?",
+        message: "Changes you made may not be saved.",
+        confirmText: "Leave",
+        cancelText: "Stay",
+        type: "danger"
+      });
+      if (!ok) {
         return;
       }
     }

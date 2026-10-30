@@ -27,11 +27,11 @@ const resolvePhysicalFolder = (folderInput) => {
     const real = folderInput.find(
       (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase()),
     );
-    return real ? String(real).trim() : "My_Flipbooks";
+    return real ? resolvePhysicalFolder(real) : "My_Flipbooks";
   }
   if (folderInput && typeof folderInput === "string") {
     const clean = folderInput.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return "My_Flipbooks";
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase()) || clean.startsWith("fol_")) return "My_Flipbooks";
     return clean || "My_Flipbooks";
   }
   return "My_Flipbooks";
@@ -1024,6 +1024,17 @@ export const useSaveEngine = ({
         }));
 
         const activeDims = getFlipbookDimensions();
+        const isRealTemplate = Boolean(
+          currentBook?.isTemplate ||
+          location.state?.isTemplate ||
+          currentBook?.templateName ||
+          location.state?.templateName
+        );
+        const resolvedType =
+          currentBook?.bookType ||
+          location.state?.bookType ||
+          (isRealTemplate ? "template" : "plain");
+
         const payload = {
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
@@ -1034,6 +1045,7 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          bookType: resolvedType,
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -1043,6 +1055,11 @@ export const useSaveEngine = ({
             templateId: currentBook?.templateId || location.state?.templateId,
             orientation:
               currentBook?.orientation || location.state?.orientation,
+            isTemplate: isRealTemplate,
+            templateName:
+              currentBook?.templateName ||
+              location.state?.templateName ||
+              undefined,
           },
         };
 
@@ -1116,6 +1133,17 @@ export const useSaveEngine = ({
         );
 
         const activeDims = getFlipbookDimensions();
+        const isRealTemplate = Boolean(
+          currentBook?.isTemplate ||
+          location.state?.isTemplate ||
+          currentBook?.templateName ||
+          location.state?.templateName
+        );
+        const resolvedType =
+          currentBook?.bookType ||
+          location.state?.bookType ||
+          (isRealTemplate ? "template" : "plain");
+
         const payload = {
           emailId: user?.emailId || user?.email,
           v_id: currentVId,
@@ -1126,6 +1154,7 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          bookType: resolvedType,
           overwrite: true,
           keepBase64: false,
           pages: payloadPages,
@@ -1135,6 +1164,11 @@ export const useSaveEngine = ({
             templateId: currentBook?.templateId || location.state?.templateId,
             orientation:
               currentBook?.orientation || location.state?.orientation,
+            isTemplate: isRealTemplate,
+            templateName:
+              currentBook?.templateName ||
+              location.state?.templateName ||
+              undefined,
           },
         };
 

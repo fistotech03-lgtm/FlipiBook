@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getVisualBBox, getCanvasBounds } from '../mainEditor/utils/geometryUtils';
-import { SquarePlay, Image as ImageIcon, CloudUpload, Minus, Plus, ChevronLeft, ChevronRight, Upload, Link, Check, FileText, Video } from 'lucide-react';
 import { Icon } from '@iconify/react';
-import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import {
   TransformProperties,
   PageProperties,
@@ -20,13 +18,13 @@ import {
   ElementAudioProperties,
   PenToolProperties,
   ImageEditor,
+  TextProperties,
   TextEditor,
   VideoEditor,
   GifEditor,
   Model3DEditor,
   GroupProperties,
-  ImportViaUrlModal,
-  MediaGalleryPopup
+  UploadProperties
 } from '../properties';
 import AnimationPanel from './AnimationPanel';
 import InteractionPanel from './InteractionPanel';
@@ -34,7 +32,6 @@ import PopupTemplateSelection from '../modals/PopupTemplateSelection';
 import CustomScrollbar from '../../CustomScrollbar';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { useToast } from '../../CustomToast';
 import { useAuth } from '../../../context/AuthContext';
 
 const RightSidebar = ({
@@ -127,13 +124,8 @@ const RightSidebar = ({
     window.addEventListener('node-edit-mode-changed', handleNodeEditChange);
     return () => window.removeEventListener('node-edit-mode-changed', handleNodeEditChange);
   }, []);
-  const fileInputRef = useRef(null);
-  const toast = useToast();
   const [activePreviewDevice, setActivePreviewDevice] = useState(localStorage.getItem('previewDevice') || 'Desktop');
   const [dimensionUnit, setDimensionUnit] = useState('mm');
-  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
-  const [isMediaGalleryOpen, setIsMediaGalleryOpen] = useState(false);
-  const browseGalleryBtnRef = useRef(null);
   const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
   const [isPageBgPickerOpen, setIsPageBgPickerOpen] = useState(false);
   const unitRef = useRef(null);
@@ -414,141 +406,6 @@ const RightSidebar = ({
     '#fff7ed', '#ffedd5', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c',
     '#fef2f2', '#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c'
   ];
-
-  const [showUrlImport, setShowUrlImport] = useState(false);
-  const [urlInputText, setUrlInputText] = useState('');
-
-  const handleUrlImportSubmit = () => {
-    if (!urlInputText.trim()) return;
-    alert("Importing media from URL: " + urlInputText);
-    setUrlInputText('');
-    setShowUrlImport(false);
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Switch to cursor tool instantly
-    if (setActiveMainTool) {
-      setActiveMainTool('select');
-    }
-
-    // Optional: Limit raw file size to 15MB
-    if (file.size > 20 * 1024 * 1024) {
-      alert("File is too large! Please upload images smaller than 20MB.");
-      e.target.value = '';
-      return;
-    }
-
-    const isVideo = file.type.startsWith('video/');
-    let isGif = file.type === 'image/gif';
-    if (!isGif && file.type.includes('webp')) {
-      isGif = await checkIsAnimatedWebp(file);
-    }
-    const isSvg = file.type === 'image/svg+xml';
-
-    if (!file.type.startsWith('image/') && !isVideo && !isGif && !isSvg) {
-      toast.error('Only Image, Video, and GIF formats are allowed.');
-      e.target.value = '';
-      return;
-    }
-
-    if ((isVideo || isGif) && !user) {
-      alert(`You must be logged in to upload ${isVideo ? 'videos' : 'GIFs'}.`);
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target.result;
-
-      let finalUrl = dataUrl;
-      // Skip compression for GIFs, SVGs, and Videos to preserve quality
-      if (!isGif && !isSvg && !isVideo) {
-        finalUrl = await compressImage(dataUrl);
-      }
-
-      if (isVideo) {
-        const tempVid = document.createElement('video');
-        tempVid.onloadedmetadata = () => {
-          window.dispatchEvent(new CustomEvent('upload-video-to-editor', {
-            detail: {
-              videoUrl: finalUrl,
-              pageIndex: activePageIndex,
-              file,
-              isTemporary: true,
-              videoWidth: tempVid.videoWidth,
-              videoHeight: tempVid.videoHeight,
-              isPortrait: tempVid.videoHeight > tempVid.videoWidth
-            }
-          }));
-        };
-        tempVid.onerror = () => {
-          window.dispatchEvent(new CustomEvent('upload-video-to-editor', {
-            detail: { videoUrl: finalUrl, pageIndex: activePageIndex, file, isTemporary: true }
-          }));
-        };
-        tempVid.src = finalUrl;
-      } else {
-        // Dispatch event to MainEditor
-        window.dispatchEvent(new CustomEvent('upload-image-to-editor', {
-          detail: {
-            dataUrl: finalUrl,
-            pageIndex: activePageIndex,
-            dataType: isSvg ? 'svg' : (isGif ? 'gif' : 'image')
-          }
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; // Reset input
-  };
-
-  const compressImage = (dataUrl, maxWidth = 1200, maxHeight = 1200) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        const isPng = dataUrl.startsWith('data:image/png');
-
-        // If it's already small enough, no need to downscale
-        if (width <= maxWidth && height <= maxHeight) {
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.75));
-          return;
-        }
-
-        if (width > maxWidth) {
-          height *= maxWidth / width;
-          width = maxWidth;
-        }
-        if (height > maxHeight) {
-          width *= maxHeight / height;
-          height = maxHeight;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.75));
-      };
-      img.src = dataUrl;
-    });
-  };
 
   const selectedElementProps = useMemo(() => {
     if (!selectedLayerId) return null;
@@ -964,149 +821,10 @@ const RightSidebar = ({
           </CustomScrollbar>
         ) : activeTopTool === 'editor' ? (
           activeMainTool === 'upload' ? (
-            <CustomScrollbar
-              color="#d1d5db"
-              hoverColor="#9ca3af"
-              width="0.32vw"
-              className="p-[1.5vw] flex flex-col gap-[0.75vw] h-full justify-between"
-            >
-              {/* Top Content */}
-              <div className="flex flex-col gap-[0.75vw]">
-                {/* Header */}
-                <div className="flex items-center gap-[0.5vw] mb-[0.1vw]">
-                  <h2 className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Upload Files</h2>
-                  <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}></div>
-                </div>
-
-                {/* Drag & Drop Box */}
-                <div
-                  onClick={handleUploadClick}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const files = e.dataTransfer.files;
-                    if (files && files.length > 0) {
-                      handleFileChange({ target: { files: files } });
-                    }
-                  }}
-                  className="w-full border-2 border-dashed border-gray-400 rounded-[0.75vw] bg-white p-[0.9vw] flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:border-[#4c5add] hover:bg-gray-50/50 group shadow-sm"
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,video/*,.gif,.svg"
-                    onChange={handleFileChange}
-                  />
-                  <div className="text-[0.75vw] font-medium text-gray-700 mb-[0.5vw]">
-                    Drag & Drop or <span className="text-[#4c5add] font-bold">Upload</span>
-                  </div>
-                  <div className="mb-[0.5vw] text-gray-400 group-hover:text-[#4c5add] transition-colors">
-                    <Upload size="1.3vw" strokeWidth={1.5} />
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[0.65vw] font-semibold text-gray-600 mb-[0.05vw]">Supported File</div>
-                    <div className="text-[0.58vw] text-gray-400 font-normal">Image, Video, GIF, SVG</div>
-                  </div>
-                </div>
-
-                {/* OR Divider */}
-                <div className="text-[0.6vw] font-medium text-gray-400 text-center uppercase tracking-wider my-[0.15vw]">
-                  OR
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-[0.5vw]">
-                  {/* Browse by Gallery */}
-                  <button
-                    ref={browseGalleryBtnRef}
-                    onClick={() => setIsMediaGalleryOpen(true)}
-                    className="w-full rounded-[0.65vw] p-[0.6vw] px-[0.75vw] bg-[#0c0f17] hover:bg-black text-white flex items-center justify-between shadow-md cursor-pointer transition-all border border-gray-800 group relative overflow-hidden"
-                  >
-                    <div className="flex items-center gap-[0.6vw]">
-                      <div className="w-[1.8vw] h-[1.8vw] rounded-[0.45vw] bg-white text-gray-900 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <ImageIcon size="0.95vw" />
-                      </div>
-                      <span className="text-[0.75vw] font-semibold text-white tracking-wide">Browse by Gallery</span>
-                    </div>
-                    <ChevronRight size="0.8vw" className="text-gray-400 group-hover:text-white transition-colors" />
-                  </button>
-
-                  {/* Import via URL */}
-                  <button
-                    onClick={() => setIsUrlModalOpen(true)}
-                    className="w-full rounded-[0.65vw] p-[0.6vw] px-[0.75vw] bg-[#3195ff] hover:bg-[#2087f5] text-white flex items-center justify-between shadow-md cursor-pointer transition-all group"
-                  >
-                    <div className="flex items-center gap-[0.6vw]">
-                      <div className="w-[1.8vw] h-[1.8vw] rounded-[0.45vw] bg-white text-[#3195ff] flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Link size="0.95vw" />
-                      </div>
-                      <span className="text-[0.75vw] font-semibold text-white tracking-wide">Import via URL</span>
-                    </div>
-                    <ChevronRight size="0.8vw" className="text-white/80 group-hover:text-white transition-colors" />
-                  </button>
-                </div>
-              </div>
-
-              {/* URL Import Card (Pushed to bottom) */}
-              <div className="mt-auto border border-gray-100 rounded-[0.75vw] p-[0.75vw] shadow-sm bg-white flex flex-col gap-[0.45vw]">
-                <div className="flex items-center gap-[0.4vw]">
-                  <Link size="0.9vw" className="text-[#3195ff]" />
-                  <span className="text-[0.78vw] font-bold text-[#3195ff]">URL Import</span>
-                </div>
-                <p className="text-[0.6vw] text-gray-500 font-normal">
-                  You can import the following from a URL:
-                </p>
-
-                {/* 3 Horizontal Mini Cards */}
-                <div className="grid grid-cols-3 gap-[0.35vw] my-[0.1vw]">
-                  {/* Images */}
-                  <div className="bg-gray-50/70 border border-gray-200/80 rounded-[0.45vw] p-[0.35vw] flex items-center gap-[0.3vw]">
-                    <div className="w-[1.3vw] h-[1.3vw] rounded-[0.3vw] bg-blue-100/60 text-blue-600 flex items-center justify-center flex-shrink-0">
-                      <ImageIcon size="0.7vw" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[0.55vw] font-bold text-gray-800 leading-tight">Images</span>
-                      <span className="text-[0.45vw] text-gray-400 font-normal truncate">JPG, PNG, SVG</span>
-                    </div>
-                  </div>
-
-                  {/* PDF */}
-                  <div className="bg-gray-50/70 border border-gray-200/80 rounded-[0.45vw] p-[0.35vw] flex items-center gap-[0.3vw]">
-                    <div className="w-[1.3vw] h-[1.3vw] rounded-[0.3vw] bg-red-100/60 text-red-500 flex items-center justify-center flex-shrink-0">
-                      <FileText size="0.7vw" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[0.55vw] font-bold text-gray-800 leading-tight">PDF</span>
-                      <span className="text-[0.45vw] text-gray-400 font-normal truncate">PDF Documents</span>
-                    </div>
-                  </div>
-
-                  {/* Videos */}
-                  <div className="bg-gray-50/70 border border-gray-200/80 rounded-[0.45vw] p-[0.35vw] flex items-center gap-[0.3vw]">
-                    <div className="w-[1.3vw] h-[1.3vw] rounded-[0.3vw] bg-amber-100/60 text-amber-500 flex items-center justify-center flex-shrink-0">
-                      <Video size="0.7vw" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[0.55vw] font-bold text-gray-800 leading-tight">Videos</span>
-                      <span className="text-[0.45vw] text-gray-400 font-normal truncate">YouTube, Vimeo</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Note Banner */}
-                <div className="bg-blue-50/70 border border-blue-100 rounded-[0.4vw] p-[0.35vw] px-[0.5vw] flex items-center gap-[0.35vw]">
-                  <Icon icon="lucide:info" className="w-[0.7vw] h-[0.7vw] text-blue-500 flex-shrink-0" />
-                  <p className="text-[0.55vw] text-gray-600 leading-tight">
-                    <strong className="font-bold text-blue-600">Note:</strong> Use direct, publicly accessible links for best results.
-                  </p>
-                </div>
-              </div>
-            </CustomScrollbar>
+            <UploadProperties
+              activePageIndex={activePageIndex}
+              setActiveMainTool={setActiveMainTool}
+            />
           ) : (
             <CustomScrollbar
               color="#d1d5db"
@@ -1524,7 +1242,7 @@ const RightSidebar = ({
                           activePageIndex={activePageIndex}
                         />
                       ) : selectedElementProps?.isText ? (
-                        <TextEditor
+                        <TextProperties
                           selectedElement={selectedTextElement}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
@@ -1733,23 +1451,6 @@ const RightSidebar = ({
           </CustomScrollbar>
         )}
       </div>
-
-      {/* Import Via URL Modal */}
-      <ImportViaUrlModal
-        isOpen={isUrlModalOpen}
-        onClose={() => setIsUrlModalOpen(false)}
-        activePageIndex={activePageIndex}
-      />
-
-      <MediaGalleryPopup
-        isOpen={isMediaGalleryOpen}
-        onClose={() => setIsMediaGalleryOpen(false)}
-        anchorRef={browseGalleryBtnRef}
-        onFileSelect={(file) => {
-          handleFileChange({ target: { files: [file] } });
-          setIsMediaGalleryOpen(false);
-        }}
-      />
     </div>
   );
 };

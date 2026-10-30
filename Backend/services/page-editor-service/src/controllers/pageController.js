@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const Flipbook = require('../models/flipbook');
-const FlipbookAsset = require('../models/flipbookAsset');
-const InteractionThreedModel = require('../models/interactionThreedModel');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const FlipbookAsset = require('../../../../shared/models/FlipbookAsset');
+const InteractionThreedModel = require('../../../../shared/models/InteractionThreedModel');
 const { getAuthUser } = require('../utils/userHelper');
 const {
   generateId,

@@ -20,7 +20,7 @@ const getStorageRoot = () => {
 };
 
 /**
- * Recursively calculate directory size in bytes
+ * Recursively calculate directory size in bytes, safely ignoring hidden system files
  */
 const getDirSize = (dirPath) => {
   let size = 0;
@@ -28,6 +28,7 @@ const getDirSize = (dirPath) => {
     if (!fs.existsSync(dirPath)) return 0;
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     for (const entry of entries) {
+      if (entry.name === '.DS_Store' || entry.name === 'Thumbs.db' || entry.name.startsWith('._')) continue;
       const fullPath = path.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         size += getDirSize(fullPath);
@@ -43,53 +44,159 @@ const getDirSize = (dirPath) => {
 };
 
 /**
- * Calculate user's active disk storage usage in bytes by ObjectId or custom UserID
+ * Safely parse size to integer bytes (supports numbers or strings like "36.8 MB", "500 KB", "1024")
  */
-const calculateUserStorage = (userId, emailId, userBooks = []) => {
+const parseSizeToBytes = (val) => {
+  if (typeof val === 'number' && !isNaN(val)) return Math.max(0, Math.round(val));
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    const match = trimmed.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i);
+    if (match) {
+      const num = parseFloat(match[1]);
+      if (isNaN(num)) return 0;
+      const unit = (match[2] || 'B').toUpperCase();
+      const mult = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024, TB: 1024 * 1024 * 1024 * 1024 };
+      return Math.round(num * (mult[unit] || 1));
+    }
+  }
+  return 0;
+};
+
+/**
+ * Scan all media items in a gallery document to calculate total bytes
+ */
+const calculateGallerySize = (galleryDoc) => {
+  if (!galleryDoc) return 0;
+  let total = 0;
+
+  const processItem = (item) => {
+    if (!item) return;
+    const size = parseSizeToBytes(item.size || item.fileSize || item.file_size || 0);
+    total += size;
+  };
+
+  const scan = (obj) => {
+    if (!obj || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        if (item && typeof item === 'object') {
+          if (item.size !== undefined || item.fileSize !== undefined || item.url || item.filePath || item.originalName) {
+            processItem(item);
+          } else {
+            scan(item);
+          }
+        }
+      }
+    } else {
+      for (const key of Object.keys(obj)) {
+        if (['_id', 'userObjectID', 'userID', '__v', 'createdAt', 'updatedAt'].includes(key)) continue;
+        scan(obj[key]);
+      }
+    }
+  };
+
+  scan(galleryDoc.toObject ? galleryDoc.toObject() : galleryDoc);
+  return total;
+};
+
+/**
+ * Scan all flipbook asset items to calculate total bytes
+ */
+const calculateFlipbookAssetsSize = (assetDocs = []) => {
+  if (!Array.isArray(assetDocs)) return 0;
+  let total = 0;
+  for (const doc of assetDocs) {
+    if (!doc || !doc.assets) continue;
+    const assets = doc.assets;
+    ['images', 'video', 'gif', 'audio', 'threed'].forEach(type => {
+      if (Array.isArray(assets[type])) {
+        for (const item of assets[type]) {
+          total += parseSizeToBytes(item.size || item.fileSize || 0);
+        }
+      }
+    });
+  }
+  return total;
+};
+
+/**
+ * Calculate user's active disk and database storage usage in bytes:
+ * - Flipbook main files and SVG pages
+ * - Flipbook attached media resources (flipbookAssets)
+ * - User Gallery media assets (images, videos, gifs, audio, 3D models)
+ * - Physical workspace files on disk
+ */
+const calculateUserStorage = async (userId, emailId, userBooks = [], userObjectId = null) => {
   try {
     const storageRoot = getStorageRoot();
     let diskSize = 0;
 
-    // 1. Primary: Check by userId workspace directory (e.g. storage/<userId>/books)
-    if (userId) {
-      const userDirById = path.join(storageRoot, String(userId));
-      if (fs.existsSync(userDirById)) {
-        diskSize = getDirSize(userDirById);
-      }
-      const legacyDirById = path.join(storageRoot, 'flipbooks', String(userId));
-      if (diskSize === 0 && fs.existsSync(legacyDirById)) {
-        diskSize = getDirSize(legacyDirById);
+    // 1. Measure physical files on disk for this user (excluding hidden files)
+    const userDirs = new Set([
+      userId ? path.join(storageRoot, String(userId)) : null,
+      userId ? path.join(storageRoot, 'flipbooks', String(userId)) : null,
+      emailId ? path.join(storageRoot, emailId.replace(/[@.]/g, '_')) : null,
+      emailId ? path.join(storageRoot, 'flipbooks', emailId.replace(/[@.]/g, '_')) : null,
+      userObjectId ? path.join(storageRoot, String(userObjectId)) : null
+    ]);
+
+    for (const dir of userDirs) {
+      if (dir && fs.existsSync(dir)) {
+        diskSize += getDirSize(dir);
       }
     }
 
-    // 2. Fallback: Check by sanitized email directory
-    if (diskSize === 0 && emailId) {
-      const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const userDirByEmail = path.join(storageRoot, sanitizedEmail);
-      if (fs.existsSync(userDirByEmail)) {
-        diskSize = getDirSize(userDirByEmail);
-      }
-      const legacyDirByEmail = path.join(storageRoot, 'flipbooks', sanitizedEmail);
-      if (diskSize === 0 && fs.existsSync(legacyDirByEmail)) {
-        diskSize = getDirSize(legacyDirByEmail);
+    // 2. Calculate Total Flipbooks & Pages Size from DB
+    let booksSize = 0;
+    if (Array.isArray(userBooks)) {
+      for (const book of userBooks) {
+        const pagesSum = Array.isArray(book.pages)
+          ? book.pages.reduce((acc, p) => acc + parseSizeToBytes(p?.size), 0)
+          : 0;
+        const mainFileSize = parseSizeToBytes(book.fileSize || book.size || book.sizeBytes);
+        booksSize += Math.max(mainFileSize, pagesSum);
       }
     }
 
-    if (diskSize > 0) {
-      return diskSize;
+    // 3. Calculate Flipbook Resources (flipbookAssets)
+    let flipbookAssetsSize = 0;
+    try {
+      const FlipbookAsset = require('../../../../shared/models/FlipbookAsset');
+      const assetConds = [];
+      if (userObjectId) assetConds.push({ userObjectID: userObjectId });
+      if (userId) assetConds.push({ userID: String(userId) });
+      if (assetConds.length > 0) {
+        const assets = await FlipbookAsset.find({ $or: assetConds }).lean();
+        flipbookAssetsSize = calculateFlipbookAssetsSize(assets);
+      }
+    } catch (e) {
+      console.warn('[Storage Helper] Warning querying flipbookAssets:', e.message);
     }
 
-    // 3. Fallback: calculate sum from database pages / fileSize
-    let dbSize = 0;
-    for (const book of userBooks) {
-      if (Array.isArray(book.pages) && book.pages.length > 0) {
-        const pagesSum = book.pages.reduce((acc, p) => acc + (p.size || 0), 0);
-        dbSize += (pagesSum || book.fileSize || 0);
-      } else {
-        dbSize += (book.fileSize || 0);
+    // 4. Calculate User Gallery Usages (userGallery)
+    let gallerySize = 0;
+    try {
+      const UserGallery = require('../../../../shared/models/UserGallery');
+      const galleryConds = [];
+      if (userObjectId) galleryConds.push({ userObjectID: userObjectId });
+      if (userId) galleryConds.push({ userID: String(userId) });
+      if (galleryConds.length > 0) {
+        const galleries = await UserGallery.find({ $or: galleryConds }).lean();
+        for (const g of galleries) {
+          gallerySize += calculateGallerySize(g);
+        }
       }
+    } catch (e) {
+      console.warn('[Storage Helper] Warning querying userGallery:', e.message);
     }
-    return dbSize;
+
+    // Total database-tracked usage
+    const dbTotal = booksSize + flipbookAssetsSize + gallerySize;
+
+    // Reconciliation: If disk has physical files, take the greater of disk vs DB to ensure nothing is missed
+    const finalUsed = Math.max(diskSize, dbTotal);
+
+    return finalUsed;
   } catch (err) {
     console.error('[Storage Helper] Error calculating storage:', err);
     return 0;
@@ -290,6 +397,33 @@ const ensureUserWorkspace = (userId, emailId, folderName = null) => {
       ensureDirPerms(customF);
     }
 
+    // Clean up any legacy books/fol_* directories and merge books into books/default
+    const booksDir = path.join(userDir, 'books');
+    if (fs.existsSync(booksDir)) {
+      try {
+        const subdirs = fs.readdirSync(booksDir);
+        for (const sd of subdirs) {
+          if (sd.startsWith('fol_')) {
+            const strayFolPath = path.join(booksDir, sd);
+            if (fs.statSync(strayFolPath).isDirectory()) {
+              const bookItems = fs.readdirSync(strayFolPath);
+              for (const b of bookItems) {
+                if (b === '.DS_Store') continue;
+                const srcBook = path.join(strayFolPath, b);
+                const destBook = path.join(defaultBooks, b);
+                if (!fs.existsSync(destBook)) {
+                  fs.renameSync(srcBook, destBook);
+                }
+              }
+              try {
+                fs.rmSync(strayFolPath, { recursive: true, force: true });
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     return userDir;
   } catch (err) {
     console.error('[Storage Helper] Error ensuring user workspace:', err.message);
@@ -300,6 +434,9 @@ const ensureUserWorkspace = (userId, emailId, folderName = null) => {
 module.exports = {
   getStorageRoot,
   getDirSize,
+  parseSizeToBytes,
+  calculateGallerySize,
+  calculateFlipbookAssetsSize,
   calculateUserStorage,
   deleteBookStorage,
   deleteFolderStorage,

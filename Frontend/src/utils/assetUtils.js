@@ -37,7 +37,7 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
   }
 
   const lowerFolder = folder.toLowerCase();
-  if (!lowerFolder || lowerFolder === 'my flipbooks' || lowerFolder === 'my_flipbooks' || lowerFolder === 'all flipbook' || lowerFolder === 'all flipbooks' || lowerFolder === 'recent' || lowerFolder === 'recent book') {
+  if (!lowerFolder || lowerFolder === 'my flipbooks' || lowerFolder === 'my_flipbooks' || lowerFolder === 'all flipbook' || lowerFolder === 'all flipbooks' || lowerFolder === 'recent' || lowerFolder === 'recent book' || lowerFolder.startsWith('fol_')) {
     folder = 'default';
   }
 

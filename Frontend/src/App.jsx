@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { ToastProvider } from "./components/CustomToast";
 import { ModernToastProvider } from "./components/ModernToast";
+import { ConfirmationProvider } from "./context/ConfirmationContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthModal } from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -42,6 +43,7 @@ const Guide = lazy(() => import("./pages/Guide"));
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
 const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
 const ARView = lazy(() => import("./pages/ARView"));
+const ComingSoonBanner = lazy(() => import("./pages/ComingSoonBanner"));
 
 // Editor Components
 const EditorLayout = lazy(() => import("./Layouts/EditorLayout"));
@@ -79,7 +81,8 @@ export default function App() {
     <ToastProvider>
       <AuthProvider>
         <ModernToastProvider>
-          <Router>
+          <ConfirmationProvider>
+            <Router>
             <AuthModal />
             <Routes>
               {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
@@ -151,6 +154,16 @@ export default function App() {
                       <PreviewPage />
                     </Suspense>
                   </ProtectedRoute>
+                }
+              />
+
+              {/* Public Coming Soon / Under Construction Banner Route */}
+              <Route
+                path="/newbanner"
+                element={
+                  <Suspense fallback={null}>
+                    <ComingSoonBanner />
+                  </Suspense>
                 }
               />
 
@@ -455,6 +468,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
+          </ConfirmationProvider>
         </ModernToastProvider>
       </AuthProvider>
     </ToastProvider>

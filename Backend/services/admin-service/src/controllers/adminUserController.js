@@ -1,5 +1,5 @@
-const User = require('../models/User');
-const Flipbook = require('../models/Flipbook');
+const User = require('../../../../shared/models/User');
+const Flipbook = require('../../../../shared/models/Flipbook');
 const backupService = require('../../../../shared/backupService');
 const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 

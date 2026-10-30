@@ -5,7 +5,7 @@
 
 export { default as TransformProperties, DimensionInput } from './TransformProperties';
 export { default as PageProperties, getDocumentInfo } from './PageProperties';
-export { default as TextEditor } from './TextEditor';
+export { default as TextProperties, default as TextEditor } from './TextProperties';
 export { default as VideoEditor } from './VideoEditor';
 export { default as ShapeProperties } from './ShapeProperties';
 export { default as ElementShapesProperties, ShapeAppearanceControls } from '../LeftActionMenu/Elements/properties/ElementShapesProperties';
@@ -21,7 +21,6 @@ export { default as GifEditor } from './Gif';
 export { default as Model3DEditor, CustomQRCode } from './Model3DEditor';
 export { default as PenToolProperties } from './PenToolProperties';
 export { default as GroupProperties } from './GroupProperties';
-export { default as SlideshowProperties } from './SlideshowProperties';
 
 export { default as Color, handleScrubHelper, ColorField } from './Color';
 export { default as ColorPicker, parseGradient } from './ColorPicker';
@@ -29,9 +28,10 @@ export { default as Adjustment } from './Adjustment';
 export { default as Crop, default as CropController, isElementCropped } from './Crop';
 export { default as CornerRadius } from './CornerRadius';
 export { default as Effect } from './Effect';
-export { default as MediaGalleryPopup } from './MediaGalleryPopup';
-export { default as ReplaceMediaModal } from './ReplaceMediaModal';
-export { default as ImportViaUrlModal } from './ImportViaUrlModal';
+export { default as MediaGalleryPopup } from '../modals/MediaGalleryPopup';
+export { default as ReplaceMediaModal } from '../modals/ReplaceMediaModal';
+export { default as ImportViaUrlModal } from '../modals/ImportViaUrlModal';
+export { default as UploadProperties } from './UploadProperties';
 
 
 export { default as ElementMapProperties } from '../LeftActionMenu/Elements/properties/ElementMapProperties';

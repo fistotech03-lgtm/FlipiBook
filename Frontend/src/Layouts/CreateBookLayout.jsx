@@ -18,6 +18,7 @@ export default function CreateBookLayout({
   initialView: controlledInitialView = 'upload',
   initialTemplateId,
   existingFlipbooks = [],
+  currentFolder = 'My Flipbooks',
   initialFiles = null,
   storage = null,
   emailId = '',
@@ -74,6 +75,7 @@ export default function CreateBookLayout({
           initialView={controlledInitialView || modalView}
           initialTemplateId={initialTemplateId}
           existingFlipbooks={existingFlipbooks}
+          currentFolder={currentFolder}
           initialFiles={initialFiles || droppedFiles}
           storage={storage}
           emailId={emailId}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, FolderInput, Plus, Heart, Trash2 } from 'lucide-react';
+import { Share2, Download, Heart, Trash2 } from 'lucide-react';
 
 export default function FlipbookActionMenu({
     activeBookMenu,
@@ -7,9 +7,8 @@ export default function FlipbookActionMenu({
     menuPosition,
     books,
     activeFolder,
-    startEditingBook,
-    handleMoveBookClick,
-    handleDuplicateBook,
+    handleShareClick,
+    handleDownloadClick,
     handleToggleFavorite,
     handleRemoveFromRecent,
     handleTrashBookClick
@@ -31,55 +30,65 @@ export default function FlipbookActionMenu({
         <>
             <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setActiveBookMenu(null); }}></div>
             <div
-                className="fixed z-[101] w-[12vw] min-w-[165px] bg-white rounded-[0.75vw] shadow-xl border border-gray-500 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                className="fixed z-[101] w-[12vw] min-w-[165px] bg-white rounded-[0.75vw] shadow-xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
                 style={{
                     top: menuPosition.top,
                     left: menuPosition.left,
                     transform: menuPosition.isDropup ? 'translate(-100%, -100%)' : 'translate(-100%, 0)'
                 }}
             >
-                <>
-                        <button
-                            onClick={() => startEditingBook(book)}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-semibold text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                        >
-                            <Edit2 size="0.9vw" className="group-hover:text-white" />
-                            Rename
-                        </button>
+                {/* Share Option */}
+                <button
+                    onClick={() => {
+                        setActiveBookMenu(null);
+                        handleShareClick?.(book);
+                    }}
+                    className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-100 group cursor-pointer"
+                >
+                    <Share2 size="0.9vw" className="group-hover:text-white" />
+                    Share
+                </button>
 
-                        {activeFolder !== 'Recent Book' && activeFolder !== 'Recent' && (
-                            <button
-                                onClick={() => handleDuplicateBook(book)}
-                                className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-600 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                            >
-                                <Plus size="0.9vw" className="border border-current rounded-[0.125vw] p-[0.0625vw] group-hover:border-white" />
-                                Duplicate
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                handleToggleFavorite(book);
-                                setActiveBookMenu(null);
-                            }}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-600 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                        >
-                            <Heart size="0.9vw" className={book.isFavorite ? "text-red-500 fill-red-500" : "group-hover:text-white"} />
-                            {book.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
-                                    handleRemoveFromRecent(book);
-                                } else {
-                                    handleTrashBookClick(book);
-                                }
-                            }}
-                            className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors group cursor-pointer"
-                        >
-                            <Trash2 size="0.9vw" className="group-hover:text-white" />
-                            {(activeFolder === 'Recent Book' || activeFolder === 'Recent') ? 'Remove' : 'Move to trash'}
-                        </button>
-                    </>
+                {/* Download Option */}
+                <button
+                    onClick={() => {
+                        setActiveBookMenu(null);
+                        handleDownloadClick?.(book);
+                    }}
+                    className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-100 group cursor-pointer"
+                >
+                    <Download size="0.9vw" className="group-hover:text-white" />
+                    Download
+                </button>
+
+                {/* Trash / Remove Option */}
+                {book?.isOtherUserBook || activeFolder === 'Favorites' ? (
+                    <button
+                        onClick={() => {
+                            handleToggleFavorite?.(book);
+                            setActiveBookMenu(null);
+                        }}
+                        className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors group cursor-pointer"
+                    >
+                        <Heart size="0.9vw" className="text-red-500 fill-red-500 group-hover:text-white group-hover:fill-white" />
+                        Remove from Favorites
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => {
+                            setActiveBookMenu(null);
+                            if (activeFolder === 'Recent Book' || activeFolder === 'Recent') {
+                                handleRemoveFromRecent(book);
+                            } else {
+                                handleTrashBookClick(book);
+                            }
+                        }}
+                        className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors group cursor-pointer"
+                    >
+                        <Trash2 size="0.9vw" className="group-hover:text-white" />
+                        {(activeFolder === 'Recent Book' || activeFolder === 'Recent') ? 'Remove' : 'Move to trash'}
+                    </button>
+                )}
             </div>
         </>
     );

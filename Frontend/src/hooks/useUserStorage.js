@@ -23,12 +23,9 @@ export function useUserStorage(emailId) {
     });
 
     const fetchLiveStorageSettings = useCallback(async () => {
-        const targetEmail = emailId;
-        if (!targetEmail || targetEmail === 'No Email' || targetEmail === 'guest@example.com') return;
-
         setIsLoadingStorage(true);
         try {
-            const res = await flipbookApi.getStorageSettings(targetEmail);
+            const res = await flipbookApi.getStorageSettings();
             if (res.data) {
                 const newStorage = {
                     used: typeof res.data.usedStorage === 'number' ? res.data.usedStorage : 0,
@@ -45,10 +42,43 @@ export function useUserStorage(emailId) {
         } finally {
             setIsLoadingStorage(false);
         }
-    }, [emailId]);
+    }, []);
 
     useEffect(() => {
         fetchLiveStorageSettings();
+    }, [fetchLiveStorageSettings]);
+
+    // Real-time synchronization: listen for custom and cross-tab storage update events
+    useEffect(() => {
+        const handleStorageEvent = (e) => {
+            if (e?.detail && typeof e.detail.used === 'number') {
+                setStorage((prev) => ({
+                    ...prev,
+                    used: e.detail.used,
+                    ...(e.detail.total ? { total: e.detail.total } : {})
+                }));
+            }
+            fetchLiveStorageSettings();
+        };
+
+        const handleStorageKeyChange = (e) => {
+            if (e.key === 'user_storage_settings' && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue);
+                    if (parsed && typeof parsed.used === 'number') {
+                        setStorage(parsed);
+                    }
+                } catch (_) {}
+            }
+        };
+
+        window.addEventListener('flipibook_storage_updated', handleStorageEvent);
+        window.addEventListener('storage', handleStorageKeyChange);
+
+        return () => {
+            window.removeEventListener('flipibook_storage_updated', handleStorageEvent);
+            window.removeEventListener('storage', handleStorageKeyChange);
+        };
     }, [fetchLiveStorageSettings]);
 
     const updateStorageOptimistically = useCallback((calculatorFn) => {

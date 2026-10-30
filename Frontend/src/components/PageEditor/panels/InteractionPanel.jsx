@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ColorPicker from '../properties/ColorPicker';
 import HotspotCustomizationPopup from '../modals/HotspotCustomizationPopup';
 import { generateHotspotSVG, generateButtonSVG } from '../utils/hotspotSvgUtils';
-import MediaGalleryPopup from '../properties/MediaGalleryPopup';
+import MediaGalleryPopup from '../modals/MediaGalleryPopup';
 import { useAuth } from '../../../context/AuthContext';
 
 const GlbModelScene = ({ url }) => {

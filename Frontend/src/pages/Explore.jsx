@@ -96,7 +96,7 @@ const CustomDropdown = ({ options, value, onChange, className, buttonClassName, 
     );
 };
 
-const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, authorPicture, authorBgColor, bookName, authorName, location, pages, views, rating, description, onShare, onDownload, onProfileClick, onAddToShelf, isAddedToShelf }) => {
+const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, authorPicture, authorBgColor, bookName, authorName, location, pages, views, rating, description, onShare, onDownload, onProfileClick, onAddToShelf, isAddedToShelf, onToggleFavorite, isFavorited, isOwner }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
@@ -152,6 +152,7 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
         { name: 'View Book', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> },
         { name: 'Creator Profile', icon: <Icon icon="solar:user-bold" className="w-[1vw] h-[1vw]" /> },
         { name: isAddedToShelf ? 'Book Added' : 'Add to Shelf', icon: isAddedToShelf ? <Icon icon="lucide:check" className="w-[1vw] h-[1vw] text-green-500" /> : <Icon icon="ri:book-shelf-line" className="w-[1vw] h-[1vw]" /> },
+        ...(!isOwner ? [{ name: isFavorited ? 'Favorited' : 'Add to Favorites', icon: <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] ${isFavorited ? 'text-red-500 fill-red-500' : ''}`} /> }] : []),
         ...(canShare ? [{ name: 'Share', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg> }] : []),
         ...(canDownload ? [{ name: 'Download', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> }] : []),
         { name: 'Report', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> }
@@ -162,6 +163,23 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
             {/* Thumbnail Container */}
             <div className="relative w-full aspect-[4/4] flex items-center justify-center">
                 <img src={coverImg} alt="Flipbook Cover" className="w-full h-full object-cover" />
+
+                {/* Favorite Heart Button for other creators' books */}
+                {!isOwner && (
+                    <div className={`absolute top-[0.8vw] left-[0.8vw] transition-opacity duration-200 z-10 ${isFavorited ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite?.(rawBook);
+                            }}
+                            className="bg-white/90 backdrop-blur-sm p-[0.35vw] rounded-full hover:bg-white text-gray-700 hover:text-red-500 focus:outline-none transition-all shadow-sm cursor-pointer"
+                            title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+                        >
+                            <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] ${isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-500 hover:text-red-500'}`} />
+                        </button>
+                    </div>
+                )}
 
                 {/* Menu Button */}
                 <div className={`absolute top-[0.8vw] right-[0.8vw] transition-opacity duration-200 ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} ref={menuRef}>
@@ -190,6 +208,8 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
                                             if (onDownload) onDownload(rawBook);
                                         } else if (menuItem.name === 'Add to Shelf' || menuItem.name === 'Book Added') {
                                             if (onAddToShelf) onAddToShelf(rawBook);
+                                        } else if (menuItem.name === 'Add to Favorites' || menuItem.name === 'Favorited') {
+                                            if (onToggleFavorite) onToggleFavorite(rawBook);
                                         }
                                     }}
                                     className="w-[8.8vw] min-w-[130px] flex items-center mx-[0.5vw] gap-[0.8vw] px-[0.8vw] py-[0.8vh] transition-colors text-left rounded-md text-gray-600 hover:text-black hover:bg-gray-50 cursor-pointer"
@@ -432,6 +452,7 @@ const Explore = () => {
     const [error, setError] = useState(null);
     const toast = useToast();
     const [shelfBookIds, setShelfBookIds] = useState([]);
+    const [favoriteBookIds, setFavoriteBookIds] = useState([]);
 
     // Mobile/Tab Filter Drawer State
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -522,7 +543,22 @@ const Explore = () => {
                 console.error("Error fetching shelf books:", err);
             }
         };
+
+        const fetchFavBooks = async () => {
+            try {
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                const res = await axios.get(`${backendUrl}/api/flipbook/list?emailId=${encodeURIComponent(currentUserEmail)}`, { withCredentials: true });
+                if (res.data && res.data.books) {
+                    const favIds = res.data.books.filter(b => b.isFavorite).map(b => b.v_id);
+                    setFavoriteBookIds(favIds);
+                }
+            } catch (err) {
+                console.error("Error fetching favorite books:", err);
+            }
+        };
+
         fetchShelfBooks();
+        fetchFavBooks();
     }, [currentUserEmail]);
 
     const handleToggleFollow = async (targetEmail) => {
@@ -653,6 +689,46 @@ const Explore = () => {
         }
     };
 
+    const handleToggleFavorite = async (rawBook) => {
+        if (!currentUserEmail) {
+            toast.error("Please log in to add books to your favorites.");
+            return;
+        }
+        const isOwner = Boolean(
+            (rawBook?.userEmail && rawBook.userEmail.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) ||
+            (rawBook?.emailId && rawBook.emailId.trim().toLowerCase() === currentUserEmail.trim().toLowerCase())
+        );
+        if (isOwner) {
+            toast.error("You cannot favorite your own book.");
+            return;
+        }
+        const isFav = favoriteBookIds.includes(rawBook.v_id);
+        const next = !isFav;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+        try {
+            if (next) {
+                setFavoriteBookIds(prev => [...prev, rawBook.v_id]);
+            } else {
+                setFavoriteBookIds(prev => prev.filter(id => id !== rawBook.v_id));
+            }
+            const res = await axios.post(`${backendUrl}/api/flipbook/favorite`, {
+                emailId: currentUserEmail,
+                v_id: rawBook.v_id,
+                isFavorite: next
+            }, { withCredentials: true });
+            if (res.data?.success) {
+                toast.success(next ? "Book added to your Favorites!" : "Book removed from your Favorites.");
+            } else {
+                setFavoriteBookIds(prev => next ? prev.filter(id => id !== rawBook.v_id) : [...prev, rawBook.v_id]);
+                toast.error(res.data?.message || "Failed to update favorites");
+            }
+        } catch (err) {
+            setFavoriteBookIds(prev => next ? prev.filter(id => id !== rawBook.v_id) : [...prev, rawBook.v_id]);
+            toast.error(err.response?.data?.message || "Error updating favorites");
+        }
+    };
+
     useEffect(() => {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -747,7 +823,7 @@ const Explore = () => {
     const filteredBooks = booksData.filter(book => {
         if (searchQuery && !book.bookName.toLowerCase().includes(searchQuery.toLowerCase()) && !book.authorName?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
-        if (isFavoritesOnly && !shelfBookIds.includes(book.v_id)) {
+        if (isFavoritesOnly && !favoriteBookIds.includes(book.v_id)) {
             return false;
         }
 
@@ -2060,6 +2136,14 @@ const Explore = () => {
                                     onProfileClick={handleProfileClick}
                                     onAddToShelf={handleAddToShelf}
                                     isAddedToShelf={shelfBookIds.includes(book.v_id)}
+                                    onToggleFavorite={handleToggleFavorite}
+                                    isFavorited={favoriteBookIds.includes(book.v_id)}
+                                    isOwner={Boolean(
+                                        currentUserEmail && (
+                                            (book.rawBook?.userEmail && book.rawBook.userEmail.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) ||
+                                            (book.rawBook?.emailId && book.rawBook.emailId.trim().toLowerCase() === currentUserEmail.trim().toLowerCase())
+                                        )
+                                    )}
                                 />
                             ))}
                             {sortedBooks.length === 0 && (

@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
 import { getAvatarColor } from '../SettingsLayout';
 import { getClientDeviceInfo, getPublicClientIpAndLocation, isIPv4 } from '../../../utils/deviceUtils';
+import { useConfirm } from '../../../context/ConfirmationContext';
 
 const AccountOverview = ({
   contextUser,
@@ -135,6 +136,8 @@ const AccountOverview = ({
     }
   };
 
+  const confirm = useConfirm();
+
   // Revoke all other sessions
   const handleRevokeOtherSessions = async () => {
     const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
@@ -143,7 +146,14 @@ const AccountOverview = ({
       return;
     }
 
-    if (!window.confirm('Are you sure you want to log out of all other devices?')) {
+    const confirmed = await confirm({
+      title: 'Log Out Other Devices',
+      message: 'Are you sure you want to log out of all other devices?',
+      confirmText: 'Log Out Others',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!confirmed) {
       return;
     }
 

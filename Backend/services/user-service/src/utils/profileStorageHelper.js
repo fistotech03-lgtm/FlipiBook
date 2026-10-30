@@ -23,7 +23,7 @@ const resolveUserFolder = async (emailId) => {
 
   if (emailId) {
     try {
-      const User = mongoose.models.User || mongoose.models.user || require('../models/user');
+      const User = require('../../../../shared/models/User');
       const user = await User.findOne({
         emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
       }).select('userID');

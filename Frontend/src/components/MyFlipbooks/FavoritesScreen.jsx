@@ -38,7 +38,6 @@ export default function FavoritesScreen({
     onShareClick,
     onDownloadClick,
     onTrashBook,
-    onDuplicateBook,
     onRenameBook,
     editingBookId,
     tempBookTitle,
@@ -111,11 +110,11 @@ export default function FavoritesScreen({
         if (!dateVal) return '';
         if (typeof dateVal === 'string' && dateVal.includes('-') && dateVal.includes(' ')) {
             const parts = dateVal.split(' ')[0].split('-');
-            if (parts.length === 3 && parts[2].length === 4) return dateVal;
+            if (parts.length === 3 && parts[2].length === 4) return dateVal.replace(/-/g, '/');
         }
 
         const d = new Date(dateVal);
-        if (isNaN(d.getTime())) return String(dateVal);
+        if (isNaN(d.getTime())) return String(dateVal).replace(/-/g, '/');
 
         const pad = (n) => n.toString().padStart(2, '0');
         const day = pad(d.getDate());
@@ -128,20 +127,29 @@ export default function FavoritesScreen({
         hours = hours % 12;
         hours = hours ? hours : 12;
 
-        return `${day}-${month}-${year} ${pad(hours)}:${minutes} ${ampm}`;
+        return `${day}/${month}/${year} ${pad(hours)}:${minutes} ${ampm}`;
     };
 
     const formatDisplaySize = (book) => {
         if (propFormatSize) return propFormatSize(book);
         const bytes = book?.fileSize || book?.sizeBytes || 0;
-        if (bytes > 0) {
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        const num = Number(bytes);
+        if (!isNaN(num) && num > 0) {
+            if (num >= 1000000000) {
+                const gb = num / 1000000000;
+                return `${parseFloat(gb.toFixed(gb >= 10 ? 1 : 2))} GB`;
+            }
+            if (num >= 1000000) {
+                const mb = num / 1000000;
+                return `${parseFloat(mb.toFixed(mb >= 10 ? 1 : 2))} MB`;
+            }
+            if (num >= 1000) {
+                return `${Math.round(num / 1000)} KB`;
+            }
+            return `${num} B`;
         }
         if (book?.size) return book.size;
-        return '2.4 MB';
+        return '0 B';
     };
 
     const getVisibilityType = (book) => {
@@ -267,6 +275,38 @@ export default function FavoritesScreen({
             prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
         );
     };
+
+    // Clear selection when clicking outside cards and bulk controls
+    useEffect(() => {
+        if (!selectedIds || selectedIds.length === 0) return;
+
+        const handleOutsideClick = (e) => {
+            const target = e.target;
+            if (
+                target.closest('[data-card-item="true"]') ||
+                target.closest('[data-selection-keep="true"]') ||
+                target.closest('[role="dialog"]') ||
+                target.closest('.modal-content') ||
+                target.closest('[data-modal="true"]')
+            ) {
+                return;
+            }
+            setSelectedIds([]);
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setSelectedIds([]);
+            }
+        };
+
+        document.addEventListener('click', handleOutsideClick);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('click', handleOutsideClick);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedIds]);
 
     const handleMultipleSelectionToggle = (e) => {
         if (e) {
@@ -401,7 +441,7 @@ export default function FavoritesScreen({
             <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">Favorites</h2>
 
             {/* Toolbar Row */}
-            <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
+            <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0" data-selection-keep="true">
                 <div className="flex items-center justify-between w-full">
                     {/* Left Controls: Search, Folder, Status, Sort */}
                     <div className="flex items-center gap-[0.55vw] flex-shrink-0">
@@ -568,7 +608,7 @@ export default function FavoritesScreen({
                             </div>
                         )}
 
-                        {/* Multiple Selection Checkbox */}
+                        {/* Select All Checkbox */}
                         <label
                             onClick={handleMultipleSelectionToggle}
                             className="flex items-center gap-[0.45vw] cursor-pointer select-none whitespace-nowrap flex-shrink-0"
@@ -583,7 +623,7 @@ export default function FavoritesScreen({
                                 {isAllSelected && <Check size="0.75vw" className="text-white" strokeWidth={3} />}
                                 {isSomeSelected && <Minus size="0.75vw" className="text-white" strokeWidth={3} />}
                             </div>
-                            <span className="text-[0.84vw] font-medium text-gray-600 whitespace-nowrap">Multiple Selection</span>
+                            <span className="text-[0.84vw] font-medium text-gray-600 whitespace-nowrap">Select All</span>
                         </label>
                     </div>
                 </div>
@@ -613,6 +653,7 @@ export default function FavoritesScreen({
                             setTempBookTitle={setTempBookTitle}
                             saveBookEdit={saveBookEdit}
                             handleBookKeyDown={handleBookKeyDown}
+                            onStartEdit={onRenameBook}
                             onToggleFavorite={onToggleFavorite}
                             activeFolder={book.folder || 'Favorites'}
                             emailId={emailId}
@@ -640,8 +681,8 @@ export default function FavoritesScreen({
                         <Heart size="2.2vw" className="fill-red-400 text-red-400" />
                     </div>
                     <h3 className="text-[1.1vw] font-bold text-gray-800 mb-[0.3vw]">No favorite flipbooks yet</h3>
-                    <p className="text-[0.82vw] text-gray-400 max-w-[22vw]">
-                        Click the heart icon on any flipbook to add it to your favorites for quick access.
+                    <p className="text-[0.82vw] text-gray-400 max-w-[24vw]">
+                        Discover flipbooks from other creators and click the heart icon to save them to your favorites for quick access.
                     </p>
                 </div>
             )}
@@ -667,34 +708,30 @@ export default function FavoritesScreen({
                                 transform: localMenuPosition.isDropup ? 'translate(-100%, -100%)' : 'translate(-100%, 0)'
                             }}
                         >
-                            {onRenameBook && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveMenuBookId(null);
-                                        onRenameBook(activeBook);
-                                    }}
-                                    className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-semibold text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                                >
-                                    <Edit2 size="0.9vw" className="group-hover:text-white" />
-                                    <span>Rename</span>
-                                </button>
-                            )}
-                            {onDuplicateBook && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveMenuBookId(null);
-                                        onDuplicateBook(activeBook);
-                                    }}
-                                    className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-600 hover:bg-black hover:text-white transition-colors border-b border-gray-50 group cursor-pointer"
-                                >
-                                    <Plus size="0.9vw" className="border border-current rounded-[0.125vw] p-[0.0625vw] group-hover:border-white" />
-                                    <span>Duplicate</span>
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuBookId(null);
+                                    onShareClick?.(activeBook);
+                                }}
+                                className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-100 group cursor-pointer"
+                            >
+                                <Share2 size="0.9vw" className="group-hover:text-white" />
+                                <span>Share</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuBookId(null);
+                                    onDownloadClick?.(activeBook);
+                                }}
+                                className="w-full flex items-center gap-[0.5vw] px-[0.75vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-700 hover:bg-black hover:text-white transition-colors border-b border-gray-100 group cursor-pointer"
+                            >
+                                <Download size="0.9vw" className="group-hover:text-white" />
+                                <span>Download</span>
+                            </button>
                             <button
                                 type="button"
                                 onClick={(e) => {

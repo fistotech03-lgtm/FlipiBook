@@ -580,6 +580,7 @@ export default function ColorPicker({
   const hueDrag = useDrag(handleHueChange);
   const hexInputRef = useRef(null);
   const nativeColorRef = useRef(null);
+  const [localOpacityInput, setLocalOpacityInput] = useState(null);
 
   const displayOpacity = Math.round(opacity !== undefined && opacity !== null ? opacity : 100);
   const hueColor = hsvToHex({ h: hsv.h, s: 100, v: 100 });
@@ -704,9 +705,9 @@ export default function ColorPicker({
 
           {/* Color Code Input Row */}
           <div className="flex items-center gap-[0.5vw] w-full mt-[0.2vw]">
-            <span className="w-[4.8vw] text-[0.75vw] font-semibold text-gray-800 flex-shrink-0">Color Code :</span>
+            <span className="text-[0.78vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Color Code :</span>
             <div className="flex-1 flex items-center gap-[0.4vw]">
-              <div className="h-[1.9vw] border border-gray-300 rounded-[0.4vw] flex items-center px-[0.4vw] justify-between bg-white hover:border-[#5d5efc] focus-within:border-[#5d5efc] transition-colors flex-1 min-w-0">
+              <div className="h-[2vw] border border-gray-300 rounded-[0.45vw] flex items-center px-[0.5vw] justify-between bg-white hover:border-gray-400 focus-within:border-[#4D47FF] shadow-2xs transition-colors flex-1 min-w-0">
                 <div className="flex items-center gap-[0.1vw] min-w-0 flex-1">
                   <span className="text-gray-700 text-[0.75vw] font-medium">#</span>
                   <input
@@ -832,7 +833,7 @@ export default function ColorPicker({
 
                 <div className="mb-[0.5vw]">
                   <div className="flex items-center gap-[1vw] mb-[1.25vw]">
-                    <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap">Pick Colors From Pallet</span>
+                    <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap">Pick Colors From Palette</span>
                     <div className="h-[0.0925vw] bg-gray-200 flex-1"></div>
                   </div>
 
@@ -841,7 +842,7 @@ export default function ColorPicker({
                       <span className="text-[0.75vw] font-semibold text-gray-700 whitespace-nowrap flex-shrink-0">Fill :</span>
                       <div className="flex-1 flex gap-[0.5vw] items-center min-w-0">
                         <div
-                          className="w-[2vw] h-[2vw] border border-gray-300 rounded-[0.5vw] shadow-sm cursor-pointer hover:border-[#5d5efc] transition-colors overflow-hidden relative flex-shrink-0"
+                          className="w-[2vw] h-[2vw] border border-gray-300 rounded-[0.45vw] shadow-2xs cursor-pointer hover:border-[#4D47FF] transition-colors overflow-hidden relative flex-shrink-0"
                           onClick={() => setView("custom")}
                         >
                           {(!color || color === 'none' || color === 'transparent' || color === '#') ? (
@@ -850,12 +851,12 @@ export default function ColorPicker({
                             <div className="absolute inset-0" style={{ background: color, opacity: displayOpacity / 100 }} />
                           )}
                         </div>
-                        <div className="flex-1 h-[2vw] border border-gray-300 rounded-[0.5vw] flex items-center px-[0.5vw] justify-between bg-white hover:border-black transition-colors min-w-0">
+                        <div className="flex-1 h-[2vw] border border-gray-300 rounded-[0.45vw] shadow-2xs flex items-center px-[0.6vw] justify-between bg-white hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors min-w-0">
                           <input
                             type="text"
                             value={(!color || color === 'none' || color === 'transparent' || color === '#') ? 'NONE' : color.toUpperCase()}
                             onChange={(e) => onChange(e.target.value)}
-                            className="flex-1 min-w-0 text-[0.75vw] font-medium text-gray-700 font-mono text-uppercase bg-transparent outline-none tracking-wide"
+                            className="flex-1 min-w-0 text-[0.78vw] font-medium text-gray-800 font-mono bg-transparent outline-none tracking-wide"
                           />
                           <div
                             className="flex items-center gap-[0.1vw] cursor-ew-resize select-none px-[0.15vw] hover:bg-gray-50 rounded flex-shrink-0"
@@ -867,7 +868,7 @@ export default function ColorPicker({
                               });
                             }}
                           >
-                            <span className="text-[0.7vw] font-semibold text-gray-500">{displayOpacity}%</span>
+                            <span className="text-[0.75vw] font-semibold text-gray-600">{displayOpacity}%</span>
                           </div>
                         </div>
                         <button
@@ -883,9 +884,9 @@ export default function ColorPicker({
                               if (solidColorFallbackRef.current) solidColorFallbackRef.current.click();
                             }
                           }}
-                          className="w-[2vw] h-[2vw] border border-gray-300 rounded-[0.5vw] flex items-center justify-center bg-white shadow-sm hover:border-black transition-colors flex-shrink-0 group/btn"
+                          className="w-[2vw] h-[2vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-center bg-white shadow-2xs hover:border-gray-400 hover:bg-gray-50 transition-colors flex-shrink-0 cursor-pointer"
                         >
-                          <Icon icon="lucide:pipette" className="w-[0.9vw] h-[0.9vw] text-gray-500 group-hover/btn:text-black" />
+                          <Icon icon="lucide:pipette" className="w-[0.95vw] h-[0.95vw] text-gray-600 hover:text-black" />
                         </button>
                         <input
                           type="color"
@@ -1172,7 +1173,7 @@ export default function ColorPicker({
 
           {view === "custom" && (
             <div
-              className="absolute top-[3vw] left-[calc(100%-5vw)] w-[16vw] p-[0.8vw] bg-white border border-gray-400 rounded-[0.8vw] shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-left-2 z-[9999]"
+              className="absolute top-[3vw] left-[calc(100%-5vw)] w-[18vw] p-[1vw] bg-white border border-gray-200 rounded-[0.8vw] shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.25)] animate-in fade-in slide-in-from-left-2 z-[9999]"
               style={{
                 transform: `translate(${customDragPosition.x - dragPosition.x}px, ${customDragPosition.y - dragPosition.y}px)`,
                 ...(isCustomPopupDragging || isPopupDragging ? { transition: 'none' } : {})
@@ -1181,17 +1182,17 @@ export default function ColorPicker({
             >
               <>
                 {/* Custom Picker Header (Back Button) */}
-                <div className="flex items-center justify-between mb-[1vw]">
+                <div className="flex items-center justify-between mb-[0.9vw]">
                   <button
                     type="button"
                     onClick={() => {
                       setView("palette");
                       setEditingStopIndex(null);
                     }}
-                    className="flex items-center gap-[0.4vw] text-[0.85vw] font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-[0.35vw] text-[0.82vw] font-semibold text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
                   >
-                    <Icon icon="heroicons:chevron-left" className="w-[1vw] h-[1vw]" />
-                    {editingStopIndex !== null ? `Edit Stop ${editingStopIndex + 1}` : 'Back to Palette'}
+                    <Icon icon="heroicons:chevron-left" className="w-[1.05vw] h-[1.05vw]" />
+                    <span>{editingStopIndex !== null ? `Edit Stop ${editingStopIndex + 1}` : 'Back to Palette'}</span>
                   </button>
                   {onClose && (
                     <button
@@ -1200,61 +1201,78 @@ export default function ColorPicker({
                         setView("palette");
                         setEditingStopIndex(null);
                       }}
-                      className="p-[0.4vw] rounded-[0.5vw] text-gray-400 hover:bg-gray-100 transition-all"
+                      className="p-[0.3vw] rounded-[0.4vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer"
                     >
-                      <Icon icon="heroicons:x-mark" width="1.2vw" />
+                      <Icon icon="heroicons:x-mark" width="1.1vw" height="1.1vw" />
                     </button>
                   )}
                 </div>
 
-                {/* Main Area */}
-                <div className="flex gap-[0.65vw] h-[8.2vw] mb-[1.1vw]">
+                {/* Main Area: Saturation / Value Box & Hue Slider */}
+                <div className="flex gap-[0.7vw] h-[8.5vw] mb-[1.1vw]">
+                  {/* Saturation Area */}
                   <div
                     ref={satDrag.ref}
                     onMouseDown={satDrag.onMouseDown}
-                    className="flex-1 rounded-[0.6vw] relative cursor-crosshair overflow-hidden"
+                    className="flex-1 rounded-[0.5vw] relative cursor-crosshair overflow-hidden border border-gray-200 shadow-2xs"
                     style={{ backgroundColor: hueColor }}
                   >
                     <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #fff, transparent)' }}></div>
                     <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #000, transparent)' }}></div>
                     <div
-                      className="absolute w-[0.75vw] h-[0.75vw] border-2 border-white rounded-full shadow-lg -ml-[0.375vw] -mt-[0.375vw] pointer-events-none"
-                      style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }}
+                      className="absolute w-[0.8vw] h-[0.8vw] border-2 border-white rounded-full shadow-md -ml-[0.4vw] -mt-[0.4vw] pointer-events-none"
+                      style={{
+                        left: `${Math.min(Math.max(hsv.s, 0), 100)}%`,
+                        top: `${Math.min(Math.max(100 - hsv.v, 0), 100)}%`,
+                        backgroundColor: hsvToHex(hsv)
+                      }}
                     />
                   </div>
 
+                  {/* Hue Slider */}
                   <div
                     ref={hueDrag.ref}
                     onMouseDown={hueDrag.onMouseDown}
-                    className="w-[1.1vw] rounded-full relative cursor-pointer"
+                    className="w-[1.2vw] rounded-full relative cursor-pointer border border-gray-200 shadow-2xs overflow-hidden"
                     style={{ background: "linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)" }}
                   >
                     <div
-                      className="absolute left-1/2 -translate-x-1/2 w-[1.35vw] h-[1.35vw] pointer-events-none"
-                      style={{ top: `${(hsv.h / 360) * 100}%`, marginTop: '-0.675vw' }}
-                    >
-                      <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white"></div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[0.675vw] h-[0.675vw] bg-white border-2 border-white rounded-full shadow-md">
-                        <div className="w-full h-full rounded-full border border-gray-200" style={{ backgroundColor: hsvToHex(hsv) }} />
-                      </div>
-                    </div>
+                      className="absolute left-1/2 -translate-x-1/2 w-[1.1vw] h-[1.1vw] rounded-full border-2 border-white shadow-md pointer-events-none -mt-[0.55vw]"
+                      style={{
+                        top: `${Math.min(Math.max((hsv.h / 360) * 100, 0), 100)}%`,
+                        backgroundColor: hsvToHex(hsv)
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Controls */}
-                <div className="space-y-[0.5vw]">
-                  <div className="flex items-center gap-[0.5vw] w-full">
-                    <span className="w-[4.5vw] text-[0.75vw] font-semibold text-gray-800 flex-shrink-0">Color Code :</span>
-                    <div className="flex-1 flex items-center gap-[0.4vw]">
-                      <div className="h-[1.9vw] border border-gray-300 rounded-[0.4vw] flex items-center px-[0.4vw] justify-between bg-white hover:border-[#5d5efc] focus-within:border-[#5d5efc] transition-colors flex-1 min-w-0">
-                        <div className="flex items-center gap-[0.1vw] min-w-0 flex-1">
-                          <span className="text-gray-700 text-[0.75vw] font-mono font-medium">#</span>
+                <div className="space-y-[0.6vw]">
+                  {/* Color Code Row */}
+                  <div className="flex items-center gap-[0.6vw] w-full">
+                    <span className="w-[5vw] text-[0.8vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Color Code :</span>
+                    <div className="flex-1 flex items-center gap-[0.4vw] min-w-0">
+                      <div className="h-[2.1vw] border border-gray-300 rounded-[0.45vw] flex items-center px-[0.6vw] justify-between bg-white hover:border-gray-400 focus-within:border-[#4D47FF] shadow-2xs transition-colors flex-1 min-w-0">
+                        <div className="flex items-center gap-[0.2vw] min-w-0 flex-1">
+                          <span className="text-gray-400 text-[0.8vw] font-mono font-medium select-none">#</span>
                           <input
                             type="text"
                             ref={hexInputRef}
-                            value={(editingStopIndex !== null ? gradientStops[editingStopIndex].color : color)?.replace("#", "").toUpperCase() || ""}
+                            value={(() => {
+                              const raw = (editingStopIndex !== null ? gradientStops[editingStopIndex].color : color) || "";
+                              if (!raw || raw === 'none' || raw === 'transparent' || raw === '#') return "NONE";
+                              return raw.replace("#", "").toUpperCase();
+                            })()}
                             onChange={(e) => {
-                              let val = e.target.value;
+                              let val = e.target.value.trim();
+                              if (val.toUpperCase() === 'NONE' || val === '' || val === '#') {
+                                if (editingStopIndex !== null) {
+                                  updateGradientStop(editingStopIndex, { color: 'none' });
+                                } else {
+                                  onChange('none');
+                                }
+                                return;
+                              }
                               if (!val.startsWith('#')) val = '#' + val;
                               if (editingStopIndex !== null) {
                                 updateGradientStop(editingStopIndex, { color: val });
@@ -1262,7 +1280,7 @@ export default function ColorPicker({
                                 onChange(val);
                               }
                             }}
-                            className="w-full text-[0.75vw] font-medium text-gray-700 outline-none uppercase font-mono bg-transparent tracking-wide"
+                            className="w-full text-[0.8vw] font-medium text-gray-800 outline-none uppercase font-mono bg-transparent tracking-wide"
                             maxLength={7}
                           />
                         </div>
@@ -1284,10 +1302,10 @@ export default function ColorPicker({
                             nativeColorRef.current?.click();
                           }
                         }}
-                        className="w-[2vw] h-[2vw] border border-gray-300 rounded-[0.5vw] flex items-center justify-center bg-white shadow-sm hover:border-black transition-colors flex-shrink-0 group/btn"
+                        className="w-[2.1vw] h-[2.1vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-center bg-white shadow-2xs hover:border-gray-400 hover:bg-gray-50 transition-colors flex-shrink-0 cursor-pointer"
                         title="Pick Color"
                       >
-                        <Icon icon="lucide:pipette" className="w-[1vw] h-[1vw] text-gray-500 group-hover/btn:text-black" />
+                        <Icon icon="lucide:pipette" className="w-[1vw] h-[1vw] text-gray-600 hover:text-black" />
                       </button>
                       <input
                         type="color"
@@ -1305,17 +1323,18 @@ export default function ColorPicker({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-[0.5vw] w-full">
-                    <span className="w-[4.5vw] text-[0.75vw] font-semibold text-gray-800 flex-shrink-0">Opacity :</span>
-                    <div className="flex-1 flex items-center gap-[0.4vw]">
-                      <div className="flex-1 flex items-center h-[1.5vw]">
+                  {/* Opacity Row */}
+                  <div className="flex items-center gap-[0.6vw] w-full">
+                    <span className="w-[5vw] text-[0.8vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Opacity :</span>
+                    <div className="flex-1 flex items-center gap-[0.5vw] min-w-0">
+                      <div className="flex-1 flex items-center h-[1.6vw] px-[0.1vw]">
                         <input
                           type="range"
                           min="0"
                           max="100"
                           value={editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}
                           onChange={(e) => {
-                            const op = parseInt(e.target.value);
+                            const op = parseInt(e.target.value, 10);
                             if (editingStopIndex !== null) {
                               updateGradientStop(editingStopIndex, { opacity: op });
                             } else if (onOpacityChange) {
@@ -1326,25 +1345,48 @@ export default function ColorPicker({
                           style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%, #E2E8F0 ${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%, #E2E8F0 100%)` }}
                         />
                       </div>
-                      <div className="h-[1.5vw] w-[2.5vw] border border-gray-200 bg-white rounded-[0.3vw] shadow-sm flex items-center justify-center gap-[0.05vw] flex-shrink-0">
+                      <div className="h-[2.1vw] w-[3.5vw] border border-gray-300 rounded-[0.45vw] bg-white shadow-2xs flex items-center justify-center px-[0.2vw] flex-shrink-0 hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors">
                         <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}
-                          onChange={(e) => {
-                            let op = parseInt(e.target.value);
-                            if (isNaN(op)) op = 0;
-                            op = Math.min(Math.max(op, 0), 100);
-                            if (editingStopIndex !== null) {
-                              updateGradientStop(editingStopIndex, { opacity: op });
-                            } else if (onOpacityChange) {
-                              onOpacityChange(op);
+                          type="text"
+                          inputMode="numeric"
+                          value={localOpacityInput !== null ? localOpacityInput : `${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%`}
+                          onFocus={(e) => {
+                            const currentOp = editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity;
+                            setLocalOpacityInput(currentOp.toString());
+                            e.target.select();
+                          }}
+                          onBlur={() => {
+                            if (localOpacityInput !== null) {
+                              let op = parseInt(localOpacityInput, 10);
+                              if (isNaN(op)) op = 0;
+                              op = Math.min(Math.max(op, 0), 100);
+                              if (editingStopIndex !== null) {
+                                updateGradientStop(editingStopIndex, { opacity: op });
+                              } else if (onOpacityChange) {
+                                onOpacityChange(op);
+                              }
+                              setLocalOpacityInput(null);
                             }
                           }}
-                          className="w-[1vw] text-center text-[0.65vw] font-semibold text-gray-800 outline-none no-spin bg-transparent"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                            }
+                          }}
+                          onChange={(e) => {
+                            const clean = e.target.value.replace(/[^0-9]/g, '');
+                            setLocalOpacityInput(clean);
+                            if (clean !== '') {
+                              let op = Math.min(Math.max(parseInt(clean, 10), 0), 100);
+                              if (editingStopIndex !== null) {
+                                updateGradientStop(editingStopIndex, { opacity: op });
+                              } else if (onOpacityChange) {
+                                onOpacityChange(op);
+                              }
+                            }
+                          }}
+                          className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent"
                         />
-                        <span className="text-[0.5vw] font-medium text-gray-600">%</span>
                       </div>
                     </div>
                   </div>
@@ -1363,6 +1405,15 @@ export default function ColorPicker({
         input[type="range"].custom-angle-slider { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type="range"].custom-angle-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: #E2E8F0; border: none; }
         input[type="range"].custom-angle-slider::-webkit-slider-thumb { -webkit-appearance: none !important; height: 0.9vw !important; width: 0.9vw !important; border-radius: 50% !important; background: #5d5efc !important; cursor: pointer !important; margin-top: -0.35vw !important; border: none !important; box-shadow: 0 0.1vw 0.3vw rgba(0,0,0,0.2); }
+
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
       `}</style>
     </div>
   );

@@ -16,6 +16,7 @@ const Effect = ({
   hideInnerShadow = false,
   hideHeader = false,
   setPickerPosition: externalSetPickerPosition,
+  noAccordion = false,
   ...props
 }) => {
   const [activeEffectPopupId, setActiveEffectPopupId] = useState(null);
@@ -264,7 +265,56 @@ const Effect = ({
 
   return (
     <div ref={containerRef} className="flex flex-col space-y-[0.60vw] font-sans">
-      {hideHeader ? (
+      {noAccordion ? (
+        <div className="flex flex-col gap-[1vw]">
+          <div className="flex items-center gap-[0.8vw] mb-[0.2vw]">
+            <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Effects</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
+          <div className="flex flex-col gap-[0.65vw]">
+            {[
+              { id: 'drop-shadow', label: 'Drop Shadow' },
+              { id: 'inner-shadow', label: 'Inner Shadow' },
+              { id: 'blur', label: 'Blur' }
+            ].map(effect => {
+              const isActive = pseudoProps[`data-effect-${effect.id}`] === 'true';
+              return (
+                <div
+                  key={effect.id}
+                  id={`effect-row-${effect.id}`}
+                  onClick={(e) => {
+                    const target = e.currentTarget;
+                    if (!isActive) {
+                      setShouldOpenPopupId(effect.id);
+                      updateAttr(`data-effect-${effect.id}`, 'true');
+                    } else {
+                      handleEffectRowClick(target, effect.id);
+                    }
+                  }}
+                  className={`effect-row flex items-center justify-between px-[0.9vw] py-[0.7vw] bg-white rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs ${activeEffectPopupId === effect.id ? 'border-indigo-400 bg-indigo-50/20' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <span className={`text-[0.82vw] font-medium transition-colors ${activeEffectPopupId === effect.id ? 'text-indigo-600' : 'text-gray-800'}`}>{effect.label}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isActive) {
+                        setShouldOpenPopupId(effect.id);
+                        updateAttr(`data-effect-${effect.id}`, 'true');
+                      } else {
+                        updateAttr(`data-effect-${effect.id}`, 'false');
+                      }
+                    }}
+                    className={`transition-colors cursor-pointer ${isActive ? 'text-red-500 hover:text-red-700' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    {isActive ? <Trash2 size="0.95vw" /> : <Plus size="0.95vw" />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : hideHeader ? (
         effectRowsList
       ) : (
         <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm">

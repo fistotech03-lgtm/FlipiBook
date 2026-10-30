@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const Flipbook = require('../models/flipbook');
-const FlipbookAsset = require('../models/flipbookAsset');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const FlipbookAsset = require('../../../../shared/models/FlipbookAsset');
 const { getAuthUser } = require('../utils/userHelper');
 const { resolveFlipbookPaths } = require('../utils/storageHelper');
 

@@ -138,27 +138,28 @@ export default function MyFlipbooks() {
     const [active3dFolder, setActive3dFolder] = useState('All Models');
     const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
     const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('All Categories');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [sortOption, setSortOption] = useState('Recently Created');
     const [activeSortCategory, setActiveSortCategory] = useState(null);
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-    const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
     const [showUpgradeCard, setShowUpgradeCard] = useState(() => localStorage.getItem('hide_upgrade_card') !== 'true');
+    const categoryDropdownRef = useRef(null);
     const statusDropdownRef = useRef(null);
     const sortDropdownRef = useRef(null);
-    const folderDropdownRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+                setIsCategoryDropdownOpen(false);
+            }
             if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
                 setIsStatusDropdownOpen(false);
             }
             if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
                 setIsSortDropdownOpen(false);
-            }
-            if (folderDropdownRef.current && !folderDropdownRef.current.contains(event.target)) {
-                setIsFolderDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -483,19 +484,26 @@ export default function MyFlipbooks() {
             const maxWidth = firstW;
             const maxHeight = firstH;
 
+            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
+            const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
             const defaultPrefix = initialDocType === 'word' ? 'Word_Flipbook_' : initialDocType === 'powerpoint' ? 'PPT_Flipbook_' : 'PDF_Flipbook_';
-            let uniqueName = customName;
-            if (!uniqueName || (uniqueName.startsWith('PDF_Flipbook_') && initialDocType !== 'pdf')) {
-                uniqueName = customName ? customName.replace(/^PDF_Flipbook_/, defaultPrefix) : `${defaultPrefix}${timeString}`;
+            let uniqueName = (customName || '').trim();
+            if (!uniqueName) {
+                uniqueName = `${defaultPrefix}${timeString}`;
             }
 
-            // Ensure uniqueName does not collide with existing flipbooks
+            // Ensure uniqueName does not collide with existing flipbooks in the target folder
             const existingBookNames = new Set(
-                (books || []).map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase()).filter(Boolean)
+                (books || [])
+                    .filter(b => !b.trash && (b.folder || b.folderName || 'My Flipbooks').trim().toLowerCase() === targetFolder.trim().toLowerCase())
+                    .map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase())
+                    .filter(Boolean)
             );
-            let candidateBookName = (uniqueName || `${defaultPrefix}${timeString}`).trim();
+            let candidateBookName = uniqueName;
             if (existingBookNames.has(candidateBookName.toLowerCase())) {
                 let counter = 1;
                 while (existingBookNames.has(`${candidateBookName} (${counter})`.toLowerCase())) {
@@ -504,10 +512,6 @@ export default function MyFlipbooks() {
                 candidateBookName = `${candidateBookName} (${counter})`;
             }
             uniqueName = candidateBookName;
-
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
-            const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
 
             // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
@@ -594,6 +598,9 @@ export default function MyFlipbooks() {
                 })
             ]).catch(err => console.warn('[MyFlipbooks] Pre-cache save error:', err));
 
+            const extractedPagesBytes = allPages.reduce((sum, p) => sum + (p.content ? (new Blob([p.content])).size : 0), 0);
+            const resolvedBookType = initialDocType === 'powerpoint' ? 'pptx' : initialDocType === 'word' ? 'word' : 'pdf';
+
             const createRes = await flipbookApi.saveBook({
                 emailId,
                 flipbookName: uniqueName,
@@ -602,7 +609,8 @@ export default function MyFlipbooks() {
                 folderName: targetFolder,
                 keepBase64: true,
                 v_id: cryptoVId,
-                fileSize: totalPdfSize || allImages.reduce((sum, img) => sum + (img.blob?.size || 0), 0),
+                bookType: resolvedBookType,
+                fileSize: extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize,
                 meta: {
                     width: maxWidth,
                     height: maxHeight,
@@ -652,7 +660,7 @@ export default function MyFlipbooks() {
 
             // Queue remaining pages for non-blocking asynchronous cloud sync
             if (remainingPages.length > 0) {
-                backgroundSyncManager.enqueue(v_id, emailId, remainingPages, totalPdfSize);
+                backgroundSyncManager.enqueue(v_id, emailId, remainingPages, extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize);
             }
 
             setProcessingProgress({
@@ -668,6 +676,8 @@ export default function MyFlipbooks() {
             // Invalidate React Query cache so newly created book appears immediately
             queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
             queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
+            fetchLiveStorageSettings();
+            window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
 
             // Smooth transition: small delay to let progress hit 100% cleanly
             await new Promise(res => setTimeout(res, 80));
@@ -754,84 +764,50 @@ export default function MyFlipbooks() {
             return;
         }
 
-        // Always pre-create the flipbook record to ensure we have a stable v_id
-        // for assets and saves, regardless of whether periodic auto-save is enabled.
-        setIsLoading(true);
-        console.log("Pre-creating flipbook record...");
+        const pageCount = templateData.pageCount || 12;
+        const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
+        const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
 
-        try {
-            const pageCount = templateData.pageCount || 12;
-            const pages = Array.from({ length: pageCount }, (_, i) => ({
-                pageName: `Page ${i + 1}`,
-                content: ''
-            }));
-
-            const now = new Date();
-            const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            let uniqueName = templateData.flipbookName || `Flipbook_${timeString}`;
-            const existingBookNames = new Set(
-                (books || []).map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase()).filter(Boolean)
-            );
-            if (existingBookNames.has(uniqueName.toLowerCase())) {
-                let counter = 1;
-                while (existingBookNames.has(`${uniqueName} (${counter})`.toLowerCase())) {
-                    counter++;
-                }
-                uniqueName = `${uniqueName} (${counter})`;
+        const now = new Date();
+        const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        let uniqueName = (templateData.flipbookName || `Flipbook_${timeString}`).trim();
+        const existingBookNames = new Set(
+            (books || [])
+                .filter(b => !b.trash && (b.folder || b.folderName || 'My Flipbooks').trim().toLowerCase() === targetFolder.trim().toLowerCase())
+                .map(b => (b.realName || b.title || b.flipbookName || '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+        if (existingBookNames.has(uniqueName.toLowerCase())) {
+            let counter = 1;
+            while (existingBookNames.has(`${uniqueName} (${counter})`.toLowerCase())) {
+                counter++;
             }
-
-            const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
-            const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-
-            console.log(`Saving new flipbook "${uniqueName}" to "${targetFolder}" with v_id: ${generatedVId}...`);
-            const res = await flipbookApi.saveBook({
-                emailId,
-                v_id: generatedVId,
-                flipbookName: uniqueName,
-                pages: pages,
-                overwrite: false,
-                folderName: targetFolder,
-                meta: {
-                    v_id: generatedVId,
-                    width: templateData.width,
-                    height: templateData.height,
-                    templateId: templateData.templateId,
-                    orientation: templateData.orientation
-                }
-            });
-
-            console.log("Creation result:", res.data);
-            const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
-            const finalVId = res.data?.v_id || generatedVId;
-            const finalFolderVId = (isFolId(res.data?.folder_v_id) ? res.data.folder_v_id : null) ||
-                (isFolId(res.data?.folder_id) ? res.data.folder_id : null) ||
-                (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
-                (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
-                'fol_default';
-
-            // Invalidate React Query cache so newly created book appears immediately
-            queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
-            queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
-
-            const redirectUrl = `/editor/${encodeURIComponent(finalFolderVId)}/${finalVId}`;
-            console.log("Navigating with v_id:", redirectUrl);
-            navigate(redirectUrl, { state: { ...templateData, v_id: finalVId, folder_v_id: finalFolderVId, emailId } });
-        } catch (e) {
-            console.error("Creation failed", e);
-            showAlert('Creation Warning', 'Backend save warning. Continuing to Editor with generated book ID.', 'warning');
-            const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
-            const fallbackVId = generatedVId || Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-            const fallbackFolderVId = (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
-                (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
-                'fol_default';
-            navigate(`/editor/${encodeURIComponent(fallbackFolderVId)}/${fallbackVId}`, {
-                state: { ...templateData, v_id: fallbackVId, folder_v_id: fallbackFolderVId, emailId }
-            });
-        } finally {
-            setIsLoading(false);
+            uniqueName = `${uniqueName} (${counter})`;
         }
+
+        const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const finalFolderVId = (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
+            (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
+            'fol_default';
+
+        const redirectUrl = `/editor/${encodeURIComponent(finalFolderVId)}/${generatedVId}`;
+        console.log("Instantly opening editor with v_id:", redirectUrl);
+        navigate(redirectUrl, {
+            state: {
+                ...templateData,
+                pageCount,
+                flipbookName: uniqueName,
+                folderName: targetFolder,
+                v_id: generatedVId,
+                folder_v_id: finalFolderVId,
+                emailId,
+                isNewBook: true,
+                shouldAutoSync: isAutoSave,
+                bookType: templateData.bookType || (templateData.isTemplate ? 'template' : 'plain'),
+                isTemplate: Boolean(templateData.isTemplate)
+            }
+        });
     };
 
     // Save custom folder order to MongoDB UserFolder schema in backend
@@ -849,22 +825,29 @@ export default function MyFlipbooks() {
 
     // Create Folder - Fast, responsive, and shows inline loader
     const handleCreateFolder = async (name) => {
-        setCreatingFolderName(name);
+        const trimmed = name?.trim();
+        if (!trimmed) return;
+        const lower = trimmed.toLowerCase();
+        if (folders.some(f => (f.name || '').trim().toLowerCase() === lower)) {
+            return;
+        }
+        setCreatingFolderName(trimmed);
         try {
-            const res = await flipbookApi.createFolder(emailId, name);
-            const createdId = res.data?.id || name;
+            const res = await flipbookApi.createFolder(emailId, trimmed);
+            const createdId = res.data?.id || trimmed;
             
             // Instantly update folder list locally without heavy fetchData() flipbook reloads
             setFolders(prev => {
-                const existing = prev.filter(f => f.name.toLowerCase() !== name.toLowerCase());
-                const updated = [...existing, { id: createdId, name }];
+                const existing = prev.filter(f => f.name.toLowerCase() !== trimmed.toLowerCase());
+                const updated = [...existing, { id: createdId, name: trimmed }];
                 saveFolderOrder(updated);
                 return updated;
             });
-            setActiveFolder(name);
+            setActiveFolder(trimmed);
         } catch (err) {
             console.error(err);
-            showAlert('Create Failed', err.response?.data?.message || err.message);
+            const msg = err.response?.status === 409 ? 'A folder with this name already exists.' : (err.response?.data?.message || err.message);
+            showAlert('Create Failed', msg);
         } finally {
             setCreatingFolderName(null);
         }
@@ -872,19 +855,27 @@ export default function MyFlipbooks() {
 
     // Rename Folder
     const handleRenameFolder = async (currentFolderId, oldName, newName) => {
+        const trimmed = newName?.trim();
+        if (!trimmed || trimmed === oldName) return;
+        const lower = trimmed.toLowerCase();
+        if (folders.some(f => f.id !== currentFolderId && (f.name || '').trim().toLowerCase() === lower)) {
+            showAlert('Rename Failed', 'A folder with this name already exists.');
+            return;
+        }
+
         // Optimistic UI updates: update folder name and matching books immediately
-        setFolders(prev => prev.map(f => f.id === currentFolderId ? { ...f, name: newName } : f));
-        if (activeFolder === oldName) setActiveFolder(newName);
-        setBooks(prev => prev.map(b => b.folder === oldName ? { ...b, folder: newName } : b));
+        setFolders(prev => prev.map(f => f.id === currentFolderId ? { ...f, name: trimmed } : f));
+        if (activeFolder === oldName) setActiveFolder(trimmed);
+        setBooks(prev => prev.map(b => b.folder === oldName ? { ...b, folder: trimmed } : b));
 
         try {
-            await flipbookApi.renameFolder(emailId, oldName, newName, currentFolderId);
+            await flipbookApi.renameFolder(emailId, oldName, trimmed, currentFolderId);
         } catch (err) {
             console.error(err);
             // Revert state on failure
             setFolders(prev => prev.map(f => f.id === currentFolderId ? { ...f, name: oldName } : f));
-            if (activeFolder === newName) setActiveFolder(oldName);
-            setBooks(prev => prev.map(b => b.folder === newName ? { ...b, folder: oldName } : b));
+            if (activeFolder === trimmed) setActiveFolder(oldName);
+            setBooks(prev => prev.map(b => b.folder === trimmed ? { ...b, folder: oldName } : b));
             const msg = err.response?.status === 409 ? 'Folder name already exists.' : (err.response?.data?.message || err.message);
             showAlert('Rename Failed', msg);
         }
@@ -939,19 +930,6 @@ export default function MyFlipbooks() {
         }
     };
 
-    const handleDuplicateFolder = async (folder) => {
-        setIsLoading(true);
-        try {
-            await flipbookApi.duplicateFolder(emailId, folder.name);
-            await fetchData();
-        } catch (err) {
-            console.error(err);
-            showAlert('Duplicate Failed', err.response?.data?.message || err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     /* Selection State */
     const [selectedBooks, setSelectedBooks] = useState([]);
 
@@ -999,6 +977,38 @@ export default function MyFlipbooks() {
             prev.includes(id) ? prev.filter(bookId => bookId !== id) : [...prev, id]
         );
     };
+
+    // Clear selection when clicking outside cards and bulk controls
+    useEffect(() => {
+        if (!selectedBooks || selectedBooks.length === 0) return;
+
+        const handleOutsideClick = (e) => {
+            const target = e.target;
+            if (
+                target.closest('[data-card-item="true"]') ||
+                target.closest('[data-selection-keep="true"]') ||
+                target.closest('[role="dialog"]') ||
+                target.closest('.modal-content') ||
+                target.closest('[data-modal="true"]')
+            ) {
+                return;
+            }
+            setSelectedBooks([]);
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setSelectedBooks([]);
+            }
+        };
+
+        document.addEventListener('click', handleOutsideClick);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('click', handleOutsideClick);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedBooks]);
 
     const handleBulkTrash = () => {
         if (selectedBooks.length === 0) return;
@@ -1075,46 +1085,14 @@ export default function MyFlipbooks() {
 
     // --- Book Handlers ---
 
-    const handleDuplicateBook = async (book) => {
-        setActiveBookMenu(null);
-        setIsLoading(true);
-        try {
-            const res = await flipbookApi.duplicateBook({
-                emailId,
-                folderName: book.folder,
-                bookName: book.realName
-            });
-
-            // Optimistic / Instant update: Insert the duplicated book into local state
-            const newName = res.data.newBookName;
-            const newId = `${book.folder}_${newName}`;
-            const duplicatedBook = {
-                ...book,
-                id: newId,
-                title: newName,
-                realName: newName,
-                created: new Date().toLocaleDateString("en-GB").replace(/\//g, "-") + " " + new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }),
-                views: 0,
-                viewsCount: 0,
-                viewersCount: 0,
-                mtime: new Date().toISOString()
-            };
-
-            setBooks(prev => [duplicatedBook, ...prev]);
-
-            startEditingBook({ id: newId, title: newName, folder: book.folder, realName: newName });
-        } catch (err) {
-            console.error(err);
-            showAlert('Duplicate Failed', err.response?.data?.message || err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const handleToggleFavorite = async (book) => {
         const nextFav = !book.isFavorite;
-        // Optimistically update all occurrences of this book in state (both real folder and recent view)
-        setBooks(prev => prev.map(b => (b.v_id && b.v_id === book.v_id) || (book.realName && b.realName === book.realName) ? { ...b, isFavorite: nextFav } : b));
+        // Optimistically update all occurrences of this book in state
+        if (!nextFav) {
+            setBooks(prev => prev.filter(b => !(b.isOtherUserBook && ((b.v_id && b.v_id === book.v_id) || (book.realName && b.realName === book.realName)))));
+        } else {
+            setBooks(prev => prev.map(b => (b.v_id && b.v_id === book.v_id) || (book.realName && b.realName === book.realName) ? { ...b, isFavorite: true } : b));
+        }
         try {
             await flipbookApi.toggleFavorite({
                 emailId,
@@ -1125,7 +1103,7 @@ export default function MyFlipbooks() {
         } catch (err) {
             console.error("Failed to toggle favorite:", err);
             // Revert if failed
-            setBooks(prev => prev.map(b => (b.v_id && b.v_id === book.v_id) || (book.realName && b.realName === book.realName) ? { ...b, isFavorite: !nextFav } : b));
+            fetchBooks();
         }
     };
 
@@ -1243,6 +1221,7 @@ export default function MyFlipbooks() {
             try {
                 await flipbookApi.emptyTrash(emailId);
                 await fetchLiveStorageSettings();
+                window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
             } catch (err) {
                 console.error(err);
                 setBooks(previousBooks);
@@ -1356,6 +1335,7 @@ export default function MyFlipbooks() {
                 try {
                     localStorage.setItem('user_storage_settings', JSON.stringify(updated));
                     window.dispatchEvent(new Event('storage'));
+                    window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
                 } catch (e) {}
                 return updated;
             });
@@ -1382,6 +1362,7 @@ export default function MyFlipbooks() {
                 }
             } else {
                 await fetchLiveStorageSettings();
+                window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
             }
         } catch (err) {
             console.error(err);
@@ -1403,25 +1384,33 @@ export default function MyFlipbooks() {
         if (editingBookId && tempBookTitle.trim()) {
             const book = books.find(b => b.id === editingBookId);
 
-            // Frontend duplicate check (Global Uniqueness)
-            const isDuplicate = books.some(b =>
-                b.title.toLowerCase() === tempBookTitle.trim().toLowerCase() &&
-                b.id !== editingBookId
-            );
+            // Frontend duplicate check within current folder
+            const targetFolder = (book?.folder || activeFolder || 'My Flipbooks').trim().toLowerCase();
+            const isDuplicate = books.some(b => {
+                if (b.id === editingBookId) return false;
+                if (b.trash || b.folder === 'Trash') return false;
+                const bName = (b.title || b.realName || b.flipbookName || '').trim().toLowerCase();
+                const bFolder = (b.folder || b.folderName || 'My Flipbooks').trim().toLowerCase();
+                const isSameFolder = (targetFolder === 'all flipbook' || targetFolder === 'all flipbooks' || targetFolder === 'recent' || targetFolder === 'recent book')
+                    ? true
+                    : bFolder === targetFolder;
+                return bName === tempBookTitle.trim().toLowerCase() && isSameFolder;
+            });
 
             if (isDuplicate) {
-                showAlert('Name Exists', 'A flipbook with this name already exists (possibly in another folder). Please choose a unique name.');
-                setEditingBookId(null); // Revert to previous name
-                return; // Stop execution
+                return; // Stop execution without saving duplicate name
             }
 
-            if (book && book.title !== tempBookTitle.trim()) {
+            if (book && (book.title || book.realName) !== tempBookTitle.trim()) {
                 setIsLoading(true);
                 try {
                     await flipbookApi.renameBook({
                         emailId,
+                        v_id: book.v_id || book.id,
                         folderName: book.folder,
-                        oldName: book.realName,
+                        bookName: book.realName || book.title,
+                        oldName: book.realName || book.title,
+                        newBookName: tempBookTitle.trim(),
                         newName: tempBookTitle.trim()
                     });
                     await fetchData();
@@ -1521,8 +1510,11 @@ export default function MyFlipbooks() {
             // 1. Rename in Source
             await flipbookApi.renameBook({
                 emailId,
+                v_id: book.v_id || book.id,
                 folderName: book.folder,
-                oldName: book.realName,
+                bookName: book.realName || book.title,
+                oldName: book.realName || book.title,
+                newBookName: trimmedNewName,
                 newName: trimmedNewName
             });
 
@@ -1576,13 +1568,13 @@ export default function MyFlipbooks() {
     const filteredBooks = books.filter(book => {
         let matchesFolder = false;
         if (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') {
-            matchesFolder = !book.trash && book.folder !== 'Trash' && book.folder !== 'Recent Book' && book.folder !== 'Recent';
+            matchesFolder = !book.trash && book.folder !== 'Trash' && book.folder !== 'Recent Book' && book.folder !== 'Recent' && !book.isOtherUserBook;
         } else if (activeFolder === 'Recent' || activeFolder === 'Recent Book') {
-            matchesFolder = !book.trash && (book.folder === 'Recent Book' || book.folder === 'Recent');
+            matchesFolder = !book.trash && (book.folder === 'Recent Book' || book.folder === 'Recent') && !book.isOtherUserBook;
         } else if (activeFolder === 'Favorites') {
             matchesFolder = !book.trash && book.folder !== 'Trash' && book.folder !== 'Recent Book' && book.folder !== 'Recent' && Boolean(book.isFavorite || book.favorite || book.isFav);
         } else {
-            matchesFolder = !book.trash && book.folder === activeFolder;
+            matchesFolder = !book.trash && book.folder === activeFolder && !book.isOtherUserBook;
         }
 
         if (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Favorites') {
@@ -1614,7 +1606,38 @@ export default function MyFlipbooks() {
             else if (statusFilter === 'Protected') matchesStatus = rawAcc.includes('password') || rawAcc.includes('protect');
             else if (statusFilter === 'Email' || statusFilter === 'Invite') matchesStatus = rawAcc.includes('invite') || rawAcc.includes('email');
         }
-        return matchesFolder && matchesSearch && matchesStatus;
+
+        let matchesCategory = true;
+        if (categoryFilter !== 'All Categories') {
+            const PAPER_SIZE_FORMATS = new Set([
+                'a4', 'a3', 'a5', 'letter', 'legal', 'dl', 'square',
+                'corporate', 'large_catalogue', 'mini', 'blank', 'custom'
+            ]);
+            let type = (book?.bookType || '').toLowerCase().trim();
+            const rawTpl = String(book?.templateId || '').toLowerCase().trim();
+            const isRealTemplate = Boolean(
+                book?.isTemplate ||
+                book?.templateName ||
+                book?.templateCategory ||
+                (rawTpl && !PAPER_SIZE_FORMATS.has(rawTpl) && !rawTpl.startsWith('a') && rawTpl !== 'letter' && rawTpl !== 'legal' && rawTpl !== 'dl' && rawTpl !== 'square')
+            );
+
+            if (type === 'template' && !isRealTemplate) {
+                type = 'plain';
+            }
+
+            if (!type || type === 'unknown') {
+                const title = (book?.title || book?.flipbookName || book?.name || '').toLowerCase();
+                if (title.startsWith('word_flipbook_') || title.endsWith('.docx') || title.endsWith('.doc')) type = 'word';
+                else if (title.startsWith('ppt_flipbook_') || title.endsWith('.pptx') || title.endsWith('.ppt')) type = 'pptx';
+                else if (isRealTemplate || (title.includes('template') && !title.includes('scratch'))) type = 'template';
+                else if (title.startsWith('pdf_flipbook_') || title.endsWith('.pdf')) type = 'pdf';
+                else type = 'plain';
+            }
+            matchesCategory = type === categoryFilter.toLowerCase();
+        }
+
+        return matchesFolder && matchesSearch && matchesStatus && matchesCategory;
     }).sort((a, b) => {
         const parseDate = (dateVal) => {
             if (!dateVal) return 0;
@@ -1719,11 +1742,11 @@ export default function MyFlipbooks() {
         if (!dateVal) return '';
         if (typeof dateVal === 'string' && dateVal.includes('-') && dateVal.includes(' ')) {
             const parts = dateVal.split(' ')[0].split('-');
-            if (parts.length === 3 && parts[2].length === 4) return dateVal;
+            if (parts.length === 3 && parts[2].length === 4) return dateVal.replace(/-/g, '/');
         }
         
         const d = new Date(dateVal);
-        if (isNaN(d.getTime())) return dateVal;
+        if (isNaN(d.getTime())) return String(dateVal).replace(/-/g, '/');
         
         const pad = (n) => n.toString().padStart(2, '0');
         const day = pad(d.getDate());
@@ -1736,24 +1759,28 @@ export default function MyFlipbooks() {
         hours = hours % 12;
         hours = hours ? hours : 12;
         
-        return `${day}-${month}-${year} ${pad(hours)}:${minutes} ${ampm}`;
+        return `${day}/${month}/${year} ${pad(hours)}:${minutes} ${ampm}`;
     };
 
     const formatDisplaySize = (book) => {
-        if (book.size && book.size !== '0 B' && book.size !== '0B' && book.size !== '0 Bytes') {
+        const raw = book?.sizeBytes ?? book?.fileSize ?? (typeof book?.size === 'number' ? book?.size : 0);
+        const num = Number(raw);
+        if (!isNaN(num) && num > 0) {
+            if (num >= 1000000000) {
+                const gb = num / 1000000000;
+                return `${parseFloat(gb.toFixed(gb >= 10 ? 1 : 2))} GB`;
+            }
+            if (num >= 1000000) {
+                const mb = num / 1000000;
+                return `${parseFloat(mb.toFixed(mb >= 10 ? 1 : 2))} MB`;
+            }
+            if (num >= 1000) {
+                return `${Math.round(num / 1000)} KB`;
+            }
+            return `${num} B`;
+        }
+        if (typeof book?.size === 'string' && book.size !== '0 B' && book.size !== '0B' && book.size !== '0 Bytes') {
             return book.size;
-        }
-        if (book.sizeBytes && book.sizeBytes > 0) {
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(book.sizeBytes) / Math.log(k));
-            return `${parseFloat((book.sizeBytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-        }
-        if (book.fileSize && book.fileSize > 0) {
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(book.fileSize) / Math.log(k));
-            return `${parseFloat((book.fileSize / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
         }
         return '0 B';
     };
@@ -1768,7 +1795,8 @@ export default function MyFlipbooks() {
             onTemplate={handleUseTemplate}
             initialView={createModalInitialView}
             initialTemplateId={selectedTemplateIdForModal}
-            existingFlipbooks={books.map(b => b.realName || b.title)}
+            existingFlipbooks={books}
+            currentFolder={activeFolder}
             initialFiles={initialDroppedFiles}
             storage={storage}
             emailId={emailId}
@@ -1786,7 +1814,6 @@ export default function MyFlipbooks() {
                     onCreateFolder={handleCreateFolder}
                     onRenameFolder={handleRenameFolder}
                     onDeleteFolder={handleDeleteFolderClick}
-                    onDuplicateFolder={handleDuplicateFolder}
                     onReorderFolders={saveFolderOrder}
                     creatingFolderName={creatingFolderName}
                     storage={storage}
@@ -1837,7 +1864,6 @@ export default function MyFlipbooks() {
                         onShareClick={handleShareClick}
                         onDownloadClick={handleDownloadClick}
                         onTrashBook={handleTrashBookClick}
-                        onDuplicateBook={handleDuplicateBook}
                         onRenameBook={startEditingBook}
                         editingBookId={editingBookId}
                         tempBookTitle={tempBookTitle}
@@ -1882,13 +1908,13 @@ export default function MyFlipbooks() {
                 {/* Title & Filters Row */}
                 <FlipbooksToolbar
                     activeFolder={activeFolder}
-                    setActiveFolder={setActiveFolder}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
-                    folders={folders}
-                    isFolderDropdownOpen={isFolderDropdownOpen}
-                    setIsFolderDropdownOpen={setIsFolderDropdownOpen}
-                    folderDropdownRef={folderDropdownRef}
+                    categoryFilter={categoryFilter}
+                    setCategoryFilter={setCategoryFilter}
+                    isCategoryDropdownOpen={isCategoryDropdownOpen}
+                    setIsCategoryDropdownOpen={setIsCategoryDropdownOpen}
+                    categoryDropdownRef={categoryDropdownRef}
                     statusFilter={statusFilter}
                     setStatusFilter={setStatusFilter}
                     isStatusDropdownOpen={isStatusDropdownOpen}
@@ -1943,6 +1969,7 @@ export default function MyFlipbooks() {
                                     setTempBookTitle={setTempBookTitle}
                                     saveBookEdit={saveBookEdit}
                                     handleBookKeyDown={handleBookKeyDown}
+                                    onStartEdit={startEditingBook}
                                     handleToggleFavorite={handleToggleFavorite}
                                     activeFolder={activeFolder}
                                     emailId={emailId}
@@ -1978,9 +2005,8 @@ export default function MyFlipbooks() {
                 menuPosition={menuPosition}
                 books={books}
                 activeFolder={activeFolder}
-                startEditingBook={startEditingBook}
-                handleMoveBookClick={handleMoveBookClick}
-                handleDuplicateBook={handleDuplicateBook}
+                handleShareClick={handleShareClick}
+                handleDownloadClick={handleDownloadClick}
                 handleToggleFavorite={handleToggleFavorite}
                 handleRemoveFromRecent={handleRemoveFromRecent}
                 handleTrashBookClick={handleTrashBookClick}

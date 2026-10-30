@@ -379,6 +379,7 @@ export default function ThreeDDashboard({
             }
           } catch (_) {}
           fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
         }
       };
     } catch (e) {
@@ -388,6 +389,7 @@ export default function ThreeDDashboard({
     // Also re-fetch when returning to the dashboard tab/window to ensure fresh data
     const handleFocus = () => {
       fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
     };
     window.addEventListener('focus', handleFocus);
 
@@ -615,6 +617,7 @@ export default function ThreeDDashboard({
       setModelNameInput('');
       setDuplicateConfirm(null);
       fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
 
       const newModelId = res.data?.modelId || res.data?.model?.modelId;
       if (newModelId) {
@@ -681,6 +684,7 @@ export default function ThreeDDashboard({
       setRenamingModel(null);
       setNewNameInput('');
       fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
     } catch (err) {
       console.error('Rename error:', err);
     } finally {
@@ -701,6 +705,7 @@ export default function ThreeDDashboard({
       });
       setDeletingModel(null);
       fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
     } catch (err) {
       console.error('Delete error:', err);
     } finally {
@@ -724,6 +729,7 @@ export default function ThreeDDashboard({
       setSelectedModelIds([]);
       setIsMultipleSelection(false);
       fetchModels();
+      window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
     } catch (err) {
       console.error('Bulk delete error:', err);
     }
@@ -934,7 +940,7 @@ export default function ThreeDDashboard({
                   <Check size="0.75vw" className="text-white" strokeWidth={3} />
                 )}
               </div>
-              <span className="text-[0.85vw] font-medium text-gray-600">Multiple Selection</span>
+              <span className="text-[0.85vw] font-medium text-gray-600">Select All</span>
             </label>
           </div>
         </div>

@@ -1,8 +1,7 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const User = require('../models/user');
-const Profile = require('../models/profile');
-const UserPreference = require('../models/userPreference');
+const User = require('../../../../shared/models/User');
+const Profile = require('../../../../shared/models/Profile');
 
 /**
  * Helper to extract email from request
@@ -28,10 +27,9 @@ const getMe = async (req, res) => {
       return res.status(400).json({ success: false, message: 'User email is required' });
     }
 
-    const [user, profile, preferences] = await Promise.all([
+    const [user, profile] = await Promise.all([
       User.findOne({ emailId: email }).select('+password').lean(),
-      Profile.findOne({ emailId: email }).lean(),
-      UserPreference.findOne({ emailId: email }).lean()
+      Profile.findOne({ emailId: email }).lean()
     ]);
 
     if (!user && !profile) {
@@ -59,7 +57,7 @@ const getMe = async (req, res) => {
       website: user?.website || profile?.website || '',
       socials: { ...(profile?.socials || {}), ...(user?.socials || {}) },
       hasPassword,
-      preferences: preferences || {
+      preferences: {
         theme: 'system',
         language: 'en',
         autoSaveInterval: 30,
@@ -359,17 +357,14 @@ const getPreferences = async (req, res) => {
     const email = getRequestEmail(req);
     if (!email) return res.status(400).json({ success: false, message: 'User email is required' });
 
-    let prefs = await UserPreference.findOne({ emailId: email }).lean();
-    if (!prefs) {
-      prefs = {
-        emailId: email,
-        theme: 'system',
-        language: 'en',
-        autoSaveInterval: 30,
-        editorSettings: { isAutoSaveEnabled: true, isTrimViewEnabled: false, isRulerEnabled: true },
-        notifications: { emailMarketing: false, bookViews: true, securityAlerts: true, systemUpdates: true }
-      };
-    }
+    const prefs = {
+      emailId: email,
+      theme: 'system',
+      language: 'en',
+      autoSaveInterval: 30,
+      editorSettings: { isAutoSaveEnabled: true, isTrimViewEnabled: false, isRulerEnabled: true },
+      notifications: { emailMarketing: false, bookViews: true, securityAlerts: true, systemUpdates: true }
+    };
 
     return res.status(200).json({
       success: true,
@@ -390,20 +385,17 @@ const updatePreferences = async (req, res) => {
     const email = getRequestEmail(req);
     if (!email) return res.status(400).json({ success: false, message: 'User email is required' });
 
-    const updates = req.body;
+    const updates = req.body || {};
     delete updates._id;
     delete updates.emailId;
-
-    const prefs = await UserPreference.findOneAndUpdate(
-      { emailId: email },
-      { $set: updates },
-      { new: true, upsert: true }
-    );
 
     return res.status(200).json({
       success: true,
       message: 'Preferences updated successfully',
-      data: prefs
+      data: {
+        emailId: email,
+        ...updates
+      }
     });
   } catch (error) {
     console.error('[User Service] updatePreferences error:', error);

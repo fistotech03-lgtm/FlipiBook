@@ -16,7 +16,7 @@ import {
   DraggableSpan,
   ImageCropOverlay
 } from '../AppearanceShared';
-import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import ReplaceMediaModal from '../../PageEditor/modals/ReplaceMediaModal';
 import { useAuth } from '../../../context/AuthContext';
 
 const themeStaticCache = {};

@@ -1,16 +1,11 @@
 // Backend/services/user-service/src/controllers/forumAdminController.js
-const ForumPost = require('../models/ForumPost');
+const ForumPost = require('../../../../shared/models/ForumPost');
 const { FORUM_MODULES } = require('../constants/forumConstants');
 const crypto = require('crypto');
 const nanoid = (n = 8) => crypto.randomBytes(Math.ceil(n / 2)).toString('hex').slice(0, n);
 const mongoose = require('mongoose');
 
-let User;
-try {
-  User = mongoose.models.User || mongoose.models.user || require('../models/user');
-} catch (e) {
-  User = mongoose.models.User || mongoose.models.user || mongoose.model('user', new mongoose.Schema({ emailId: String, email: String, role: String }, { strict: false }));
-}
+let User = require('../../../../shared/models/User');
 
 // Verification helper
 const verifyAdminAccess = async (req) => {

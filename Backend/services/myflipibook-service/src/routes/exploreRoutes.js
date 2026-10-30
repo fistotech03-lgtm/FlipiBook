@@ -1,9 +1,9 @@
 const express = require('express');
-const Flipbook = require('../models/flipbook');
-const Profile = require('../models/profile');
-const User = require('../models/user');
-const InteractionThreedModel = require('../models/interactionThreedModel');
-const CustomizedSettings = require('../models/customizedSettings');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const Profile = require('../../../../shared/models/Profile');
+const User = require('../../../../shared/models/User');
+const InteractionThreedModel = require('../../../../shared/models/InteractionThreedModel');
+const CustomizedSettings = require('../../../../shared/models/CustomizedSettings');
 const { optionalAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();

@@ -17,6 +17,18 @@ export default function MoveToFolderModal({
 }) {
     if (!moveBookModal.isOpen) return null;
 
+    const isDuplicateMoveFolder = React.useMemo(() => {
+        const trimmed = (newMoveFolderName || '').trim().toLowerCase();
+        if (!trimmed) return false;
+        const reserved = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+        if (reserved.includes(trimmed)) return true;
+        return (folders || []).some(f => {
+            const name = (f.name || '').trim().toLowerCase();
+            if ((f.isDefault || name === 'default') && (trimmed === 'my flipbooks' || trimmed === 'default')) return true;
+            return name === trimmed;
+        });
+    }, [newMoveFolderName, folders]);
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-[1.5vw] w-full max-w-[25vw] p-[1.5vw] shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
@@ -44,7 +56,9 @@ export default function MoveToFolderModal({
                     {isCreatingInMove && (
                         <div className="animate-in fade-in slide-in-from-top-2 duration-300 mb-[0.75vw]">
                             <label className="block text-[0.75vw] font-medium text-gray-500 mb-[0.25vw]">New Folder Name</label>
-                            <div className="w-full flex items-center gap-[0.5vw] p-[0.35vw] rounded-[0.75vw] border border-[#3b4190] bg-[#3b4190]/5">
+                            <div className={`w-full flex items-center gap-[0.5vw] p-[0.35vw] rounded-[0.75vw] border transition-colors ${
+                                isDuplicateMoveFolder ? 'border-red-500 bg-red-50/40' : 'border-[#3b4190] bg-[#3b4190]/5'
+                            }`}>
                                 <input
                                     autoFocus
                                     type="text"
@@ -52,12 +66,33 @@ export default function MoveToFolderModal({
                                     value={newMoveFolderName}
                                     onChange={(e) => setNewMoveFolderName(e.target.value)}
                                     className="flex-1 px-[0.5vw] py-[0.25vw] bg-transparent text-[0.85vw] font-medium focus:outline-none text-[#343868] placeholder-gray-400"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateFolderAndMove()}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            if (isDuplicateMoveFolder) return;
+                                            handleCreateFolderAndMove();
+                                        }
+                                    }}
                                 />
-                                <button onClick={handleCreateFolderAndMove} className="p-[0.35vw] bg-[#3b4190] text-white rounded-[0.5vw] hover:bg-[#2f3575] transition-colors cursor-pointer">
+                                <button
+                                    onClick={() => {
+                                        if (isDuplicateMoveFolder) return;
+                                        handleCreateFolderAndMove();
+                                    }}
+                                    disabled={isDuplicateMoveFolder}
+                                    className={`p-[0.35vw] rounded-[0.5vw] transition-colors cursor-pointer ${
+                                        isDuplicateMoveFolder
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-[#3b4190] text-white hover:bg-[#2f3575]'
+                                    }`}
+                                >
                                     <Check size="0.9vw" />
                                 </button>
                             </div>
+                            {isDuplicateMoveFolder && (
+                                <p className="text-red-500 text-[0.68vw] font-medium mt-[0.2vw] px-[0.2vw]">
+                                    This folder name already exists
+                                </p>
+                            )}
                         </div>
                     )}
 

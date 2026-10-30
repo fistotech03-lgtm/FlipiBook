@@ -20,7 +20,7 @@ import { ImageCropOverlay } from '../AppearanceShared';
 import { CoverPicturePopup } from '../../FlipbookInfoModal';
 import BookmarkStylesPopup from './BookmarkStylesPopup';
 import AlertModal from '../../AlertModal';
-import ReplaceMediaModal from '../../PageEditor/properties/ReplaceMediaModal';
+import ReplaceMediaModal from '../../PageEditor/modals/ReplaceMediaModal';
 import cover1 from '../../../assets/cover/cover1.svg';
 import Switch from './Switch';
 import { fontFamilies } from '../utils/fontConstants';

@@ -162,4 +162,21 @@ flipbookSchema.index({ userObjectID: 1, trash: 1, updatedAt: -1 });
 flipbookSchema.index({ userObjectID: 1, folder_id: 1, trash: 1 });
 flipbookSchema.index({ isFavorite: 1, trash: 1 });
 
+// Asynchronous non-blocking backup mirror hook
+flipbookSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncFlipbook(doc);
+  } catch (_) {}
+});
+
+flipbookSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncFlipbook(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.flipbook || mongoose.models.Flipbook) || mongoose.model('flipbook', flipbookSchema, 'flipbooks');

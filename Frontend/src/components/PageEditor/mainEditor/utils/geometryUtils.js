@@ -143,19 +143,45 @@ export const getVisualBBox = (el) => {
   // ── AUDIO ELEMENT BOUNDING BOX ──
   const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
                   (el.id && el.id.startsWith('audio-')) ||
-                  !!el.querySelector?.('[data-type="audio-frame"]');
+                  (el.classList && el.classList.contains('audio-fill-layer')) ||
+                  !!el.querySelector?.('[data-type="audio-frame"]') ||
+                  (typeof el.closest === 'function' && !!el.closest('[data-type="audio-frame"], g[id^="audio-"]'));
   if (isAudio) {
-    const bgRect = el.querySelector?.('rect.audio-fill-layer, rect.svg-image-stroke-overlay, rect');
-    if (bgRect) {
-      const rw = parseFloat(bgRect.getAttribute('width')) || (bgRect.classList?.contains('audio-fill-layer') ? 420 : 0);
-      const rh = parseFloat(bgRect.getAttribute('height')) || 60;
-      const rx = parseFloat(bgRect.getAttribute('x') || '0');
-      const ry = parseFloat(bgRect.getAttribute('y') || '0');
+    const audioRoot = (el.getAttribute?.('data-type') === 'audio-frame' || (el.id && el.id.startsWith('audio-')))
+      ? el
+      : (el.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || el.querySelector?.('[data-type="audio-frame"], g[id^="audio-"]') || el);
+
+    const tplId = audioRoot.getAttribute?.('data-audio-template') || 'sunset-vibrant';
+    const TEMPLATE_DIMS = {
+      'glassmorphism': { width: 360, height: 152 },
+      'forest-moss': { width: 440, height: 124 },
+      'cyber-blue': { width: 360, height: 114 },
+      'silver-mono': { width: 450, height: 52 },
+      'sunset-vibrant': { width: 460, height: 54 },
+      'cyberpunk-wide': { width: 460, height: 74 },
+    };
+    const tplDim = TEMPLATE_DIMS[tplId] || { width: 460, height: 54 };
+
+    // Find the audio background layer specifically (.audio-fill-layer) - NEVER fall back to generic child rects (like control icons)!
+    const fillLayer = audioRoot.querySelector?.('.audio-fill-layer, rect.audio-fill-layer, path.audio-fill-layer');
+    if (fillLayer) {
+      const rw = parseFloat(fillLayer.getAttribute('width')) || 0;
+      const rh = parseFloat(fillLayer.getAttribute('height')) || 0;
+      const rx = parseFloat(fillLayer.getAttribute('x') || '0');
+      const ry = parseFloat(fillLayer.getAttribute('y') || '0');
       if (rw > 0 && rh > 0) {
         return { x: rx, y: ry, width: rw, height: rh };
       }
+      if (typeof fillLayer.getBBox === 'function') {
+        try {
+          const pb = fillLayer.getBBox();
+          if (pb && pb.width > 0 && pb.height > 0) {
+            return { x: pb.x, y: pb.y, width: pb.width, height: pb.height };
+          }
+        } catch { /* ignore */ }
+      }
     }
-    return { x: 0, y: 0, width: 420, height: 60 };
+    return { x: 0, y: 0, width: tplDim.width, height: tplDim.height };
   }
 
   // ── EMBED ELEMENT BOUNDING BOX ──
@@ -163,7 +189,7 @@ export const getVisualBBox = (el) => {
                   (el.id && el.id.startsWith('embed-')) ||
                   !!el.querySelector?.('[data-type="embed-frame"]');
   if (isEmbed) {
-    const bgRect = el.querySelector?.('rect.embed-fill-layer, rect.svg-image-stroke-overlay, foreignObject, rect');
+    const bgRect = el.querySelector?.('rect.embed-fill-layer, foreignObject, rect:not(.svg-image-stroke-overlay)');
     if (bgRect) {
       const rw = parseFloat(bgRect.getAttribute('width')) || 0;
       const rh = parseFloat(bgRect.getAttribute('height')) || 0;
@@ -309,6 +335,7 @@ export const getVisualBBox = (el) => {
       )) {
         continue;
       }
+      if (child.id === 'ghost-layer' || child.hasAttribute?.('data-highlight-id')) continue;
       if (child.tagName.toLowerCase() === 'defs') continue;
       if (child.style.display === 'none' || child.style.visibility === 'hidden') continue;
       if (typeof child.getBBox !== 'function') continue;

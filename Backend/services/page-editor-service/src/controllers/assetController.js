@@ -7,6 +7,7 @@ const FlipbookAsset = require("../models/flipbookAsset");
 const UserGallery = require("../models/userGallery");
 const ThreedModel = require("../models/threedModel");
 const InteractionThreedModel = require("../models/interactionThreedModel");
+const backupService = require('../../../../shared/backupService');
 const { getAuthUser } = require("../utils/userHelper");
 const {
   generateId,
@@ -24,9 +25,6 @@ const {
 const findOrCreateUserGallery = async (emailId, userFolder = null) => {
   let userGallery = null;
   const orConds = [];
-  if (emailId) {
-    orConds.push({ emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
-  }
   if (userFolder) {
     orConds.push({ userID: userFolder });
     if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
@@ -34,29 +32,46 @@ const findOrCreateUserGallery = async (emailId, userFolder = null) => {
     }
   }
 
+  let userObjectID = null;
+  let resolvedUserID = userFolder;
+
+  // Resolve userObjectID / userID from users collection if needed
+  try {
+    if (mongoose.connection && mongoose.connection.db) {
+      const userQuery = [];
+      if (userFolder) {
+        userQuery.push({ userID: userFolder });
+        if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+          userQuery.push({ _id: new mongoose.Types.ObjectId(userFolder) });
+        }
+      }
+      if (emailId) {
+        userQuery.push({ emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+      }
+      if (userQuery.length > 0) {
+        const u = await mongoose.connection.db.collection('users').findOne({ $or: userQuery });
+        if (u) {
+          userObjectID = u._id;
+          resolvedUserID = u.userID || resolvedUserID;
+          if (!orConds.some(c => c.userObjectID && String(c.userObjectID) === String(u._id))) {
+            orConds.push({ userObjectID: u._id });
+          }
+          if (u.userID && !orConds.some(c => c.userID === u.userID)) {
+            orConds.push({ userID: u.userID });
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
   if (orConds.length > 0) {
     userGallery = await UserGallery.findOne({ $or: orConds });
   }
 
   if (!userGallery) {
-    let userObjectID = null;
-    let resolvedUserID = userFolder;
-    try {
-      if (mongoose.connection && mongoose.connection.db && emailId) {
-        const u = await mongoose.connection.db.collection('users').findOne({
-          emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-        });
-        if (u) {
-          userObjectID = u._id;
-          resolvedUserID = u.userID || resolvedUserID;
-        }
-      }
-    } catch (e) {}
-
     userGallery = new UserGallery({
       userObjectID: userObjectID || null,
       userID: resolvedUserID || null,
-      emailId: emailId ? emailId.toLowerCase() : undefined,
       userdetails: { images: [] },
       pageEditorgallery: { images: [], video: [], gif: [] },
       CustomizationGallery: { images: [], videos: [] },
@@ -65,7 +80,7 @@ const findOrCreateUserGallery = async (emailId, userFolder = null) => {
     try {
       await userGallery.save();
     } catch (saveErr) {
-      if (saveErr.code === 11000) {
+      if (saveErr.code === 11000 && orConds.length > 0) {
         userGallery = await UserGallery.findOne({ $or: orConds });
       }
     }
@@ -263,13 +278,16 @@ const uploadAsset = async (req, res) => {
           if (repName) matchConds.push({ convertedName: repName });
           if (replacing_file_url) matchConds.push({ url: replacing_file_url });
 
+          const ugConds = [];
+          if (userFolder) {
+            ugConds.push({ userID: userFolder });
+            if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+              ugConds.push({ userObjectID: new mongoose.Types.ObjectId(userFolder) });
+            }
+          }
+
           await UserGallery.updateMany(
-            {
-              $or: [
-                { emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-                { userID: userFolder }
-              ]
-            },
+            ugConds.length > 0 ? { $or: ugConds } : {},
             {
               $pull: {
                 'pageEditorgallery.images': { $or: matchConds },
@@ -306,6 +324,8 @@ const uploadAsset = async (req, res) => {
       let category = 'images';
       if (assetType === 'video' || assetType === 'videos') category = 'video';
       else if (assetType === 'gif' || assetType === 'gifs') category = 'gif';
+      else if (assetType === 'audio') category = 'audio';
+      else if (assetType === '3d' || assetType === '3d_model') category = '3d';
 
       const userGallery = await findOrCreateUserGallery(emailId, userFolder);
       if (userGallery) {
@@ -491,12 +511,17 @@ const deleteAsset = async (req, res) => {
         if (fileVId) pullConds.push({ convertedName: fileVId });
         if (assetUrl) pullConds.push({ url: assetUrl });
 
-        const ugQuery = {};
+        const ugConds = [];
         if (emailId) {
-          ugQuery.emailId = new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+          const { resolvedUserId, userFolder } = await resolveUserFolder(emailId);
+          if (resolvedUserId) ugConds.push({ userID: resolvedUserId });
+          if (userFolder) ugConds.push({ userID: userFolder });
+          if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+            ugConds.push({ userObjectID: new mongoose.Types.ObjectId(userFolder) });
+          }
         }
 
-        await UserGallery.updateMany(ugQuery, {
+        await UserGallery.updateMany(ugConds.length > 0 ? { $or: ugConds } : {}, {
           $pull: {
             'pageEditorgallery.images': { $or: pullConds },
             'pageEditorgallery.video': { $or: pullConds },
@@ -682,7 +707,7 @@ const renameGalleryAsset = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing newName parameter' });
     }
 
-    const { userFolder } = await resolveUserFolder(emailId);
+    const { userFolder, resolvedUserId } = await resolveUserFolder(emailId);
     const targetName = fileName || file_v_id;
     if (!targetName) {
       return res.status(400).json({ success: false, message: 'Missing file identifier' });
@@ -690,12 +715,13 @@ const renameGalleryAsset = async (req, res) => {
 
     // 1. Update in UserGallery
     let foundInGallery = false;
-    const galleries = await UserGallery.find({
-      $or: [
-        { emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-        { userID: userFolder }
-      ]
-    });
+    const ugConds = [];
+    if (resolvedUserId) ugConds.push({ userID: resolvedUserId });
+    if (userFolder) ugConds.push({ userID: userFolder });
+    if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+      ugConds.push({ userObjectID: new mongoose.Types.ObjectId(userFolder) });
+    }
+    const galleries = await UserGallery.find(ugConds.length > 0 ? { $or: ugConds } : {});
 
     for (const ug of galleries) {
       let changed = false;
@@ -761,7 +787,7 @@ const deleteGalleryAsset = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing emailId' });
     }
 
-    const { userFolder, candidateDirs } = await resolveUserFolder(emailId);
+    const { userFolder, resolvedUserId, candidateDirs } = await resolveUserFolder(emailId);
     const storageRoot = getStorageRoot();
     const targetName = fileName || file_v_id || (url ? path.basename(url) : null);
 
@@ -772,13 +798,15 @@ const deleteGalleryAsset = async (req, res) => {
       if (file_v_id) matchCriteria.push({ convertedName: file_v_id });
       if (url) matchCriteria.push({ url });
 
+      const ugConds = [];
+      if (resolvedUserId) ugConds.push({ userID: resolvedUserId });
+      if (userFolder) ugConds.push({ userID: userFolder });
+      if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+        ugConds.push({ userObjectID: new mongoose.Types.ObjectId(userFolder) });
+      }
+
       await UserGallery.updateMany(
-        {
-          $or: [
-            { emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-            { userID: userFolder }
-          ]
-        },
+        ugConds.length > 0 ? { $or: ugConds } : {},
         {
           $pull: {
             'pageEditorgallery.images': { $or: matchCriteria },
@@ -787,41 +815,56 @@ const deleteGalleryAsset = async (req, res) => {
           }
         }
       );
+
+      // Record gallery asset deletion in backup DB
+      backupService.recordGalleryAssetDeletion({
+        userFolder,
+        userID: resolvedUserId || userFolder,
+        category: 'pageEditorgallery',
+        targetName,
+        file_v_id,
+        url,
+        matchCriteria,
+        ugConds
+      }, {
+        req,
+        user: { customUserId: resolvedUserId || userFolder, emailId },
+        reason: 'USER_GALLERY_DELETE'
+      });
     }
 
-    // 2. Delete DB records where isGallery is true ONLY in FlipbookAsset (protects in-page assets)
+    // 2. Delete DB records where isGallery is true ONLY in FlipbookAsset (protects in-page assets) concurrently
+    const assetQueries = [];
+    const emailRegex = new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     if (file_v_id) {
-      await FlipbookAsset.deleteMany({
-        file_v_id,
-        isGallery: true,
-        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      });
+      assetQueries.push(FlipbookAsset.deleteMany({ file_v_id, isGallery: true, userEmail: emailRegex }).catch(() => {}));
     }
     if (fileName) {
-      await FlipbookAsset.deleteMany({
-        fileName,
-        isGallery: true,
-        userEmail: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      });
+      assetQueries.push(FlipbookAsset.deleteMany({ fileName, isGallery: true, userEmail: emailRegex }).catch(() => {}));
+    }
+    if (assetQueries.length > 0) {
+      await Promise.allSettled(assetQueries);
     }
 
-    // 3. Delete file from disk across gallery locations ONLY (never touches books)
+    // 3. Delete file from disk across gallery locations in background (non-blocking)
     if (targetName) {
-      const subs = ['images', 'videos', 'gifs', 'audio', '3d_models', 'Images', 'Videos', '3D_Models'];
-      for (const uDir of candidateDirs) {
-        for (const sub of subs) {
-          const p0 = path.join(storageRoot, uDir, 'gallery', 'pageEditorgallery', sub, targetName);
-          const p1 = path.join(storageRoot, uDir, 'Gallery', 'pageEditorgallery', sub, targetName);
-          const p2 = path.join(storageRoot, uDir, sub, targetName);
-          const p3 = path.join(storageRoot, uDir, 'gallery', sub, targetName);
-          const p4 = path.join(storageRoot, uDir, 'Gallery', sub, targetName);
-          [p0, p1, p2, p3, p4].forEach(p => {
-            if (fs.existsSync(p)) {
-              try { fs.unlinkSync(p); } catch (e) {}
+      setImmediate(async () => {
+        const subs = ['images', 'videos', 'gifs', 'audio', '3d_models', 'Images', 'Videos', '3D_Models'];
+        for (const uDir of candidateDirs) {
+          for (const sub of subs) {
+            const p0 = path.join(storageRoot, uDir, 'gallery', 'pageEditorgallery', sub, targetName);
+            const p1 = path.join(storageRoot, uDir, 'Gallery', 'pageEditorgallery', sub, targetName);
+            const p2 = path.join(storageRoot, uDir, sub, targetName);
+            const p3 = path.join(storageRoot, uDir, 'gallery', sub, targetName);
+            const p4 = path.join(storageRoot, uDir, 'Gallery', sub, targetName);
+            for (const p of [p0, p1, p2, p3, p4]) {
+              if (fs.existsSync(p)) {
+                await fs.promises.unlink(p).catch(() => {});
+              }
             }
-          });
+          }
         }
-      }
+      });
     }
 
     return res.status(200).json({ success: true, message: 'Gallery asset deleted successfully' });

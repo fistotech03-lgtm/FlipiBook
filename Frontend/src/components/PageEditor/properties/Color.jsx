@@ -147,7 +147,7 @@ const Color = ({
     strokeOpacity: 100,
     strokeWeight: 0,
     strokeDashStyle: 'Solid',
-    strokePosition: 'Center',
+    strokePosition: 'Outside',
     strokeLinecap: 'butt'
   });
   const [internalActiveColorPicker, setInternalActiveColorPicker] = useState(null);
@@ -197,7 +197,7 @@ const Color = ({
       strokeDasharrayValue: strokeArray !== 'none' ? strokeArray : undefined,
       strokeDashLength: dashLen,
       strokeDashGap: dashGap,
-      strokePosition: el.getAttribute('data-stroke-position') || 'Center',
+      strokePosition: el.getAttribute('data-stroke-position') || 'Outside',
       strokeLinecap: el.getAttribute('stroke-linecap') || 'butt'
     };
 
@@ -249,7 +249,7 @@ const Color = ({
         strokeDasharrayValue: strokeArray !== 'none' ? strokeArray : undefined,
         strokeDashLength: dashLen,
         strokeDashGap: dashGap,
-        strokePosition: el.getAttribute('data-stroke-position') || 'Center',
+        strokePosition: el.getAttribute('data-stroke-position') || 'Outside',
         strokeLinecap: el.getAttribute('stroke-linecap') || 'butt',
         bgStrokeDasharray: strokeArray !== 'none' ? strokeArray : undefined,
       };
@@ -385,7 +385,7 @@ const Color = ({
           : 'none';
 
         el.setAttribute('data-stroke-dasharray', dashArray);
-        el.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Center');
+        el.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
         el.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
         el.setAttribute('data-stroke-type', backgroundColor.strokeType || 'solid');
 
@@ -402,7 +402,7 @@ const Color = ({
         }
 
         if (!isImage) {
-          const pos = backgroundColor.strokePosition || 'Center';
+          const pos = backgroundColor.strokePosition || 'Outside';
           const sw = backgroundColor.strokeWeight || 0;
           const isEligibleShape = ['rect', 'ellipse', 'path', 'circle', 'polygon'].includes(el.tagName?.toLowerCase());
 
@@ -590,7 +590,7 @@ const Color = ({
     'stroke-dasharray': backgroundColor?.strokeDashStyle === 'Dashed' ? (backgroundColor?.strokeDasharrayValue || `${backgroundColor?.strokeDashLength ?? 10},${backgroundColor?.strokeDashGap ?? 10}`) : 'none',
     strokeDasharray: backgroundColor?.strokeDashStyle === 'Dashed' ? (backgroundColor?.strokeDasharrayValue || `${backgroundColor?.strokeDashLength ?? 10},${backgroundColor?.strokeDashGap ?? 10}`) : 'none',
     'stroke-linecap': backgroundColor?.strokeLinecap || 'butt',
-    'data-stroke-position': backgroundColor?.strokePosition || 'Center',
+    'data-stroke-position': backgroundColor?.strokePosition || 'Outside',
   };
 
   const handleUpdate = (page, layer, attr, value) => {
@@ -844,33 +844,8 @@ const Color = ({
                     {/* Alignment */}
                     <div className="flex-1 flex flex-col gap-[0.3vw]">
                       <span className="text-[0.7vw] text-gray-500 font-medium">Alignment</span>
-                      <div className="relative">
-                        <div
-                          className={`h-[2vw] px-[0.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-between bg-white ${isText ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
-                          onClick={() => !isText && setIsDashPosOpen(!isDashPosOpen)}
-                        >
-                          <span className="text-[0.75vw] font-medium text-gray-700 capitalize">{backgroundColor?.bgStrokePosition || 'Center'}</span>
-                          <ChevronDown size="0.8vw" className="text-gray-400" />
-                        </div>
-                        {isDashPosOpen && (
-                          <>
-                            <div className="fixed inset-0 z-[40]" onClick={(e) => { e.stopPropagation(); setIsDashPosOpen(false); }} />
-                            <div className="absolute top-[110%] left-0 right-0 bg-white border border-gray-100 rounded-[0.5vw] shadow-xl z-50 py-1 overflow-hidden">
-                              {['Inside', 'Center', 'Outside'].map(pos => (
-                                <div
-                                  key={pos}
-                                  onClick={() => {
-                                    if (setBackgroundColor) setBackgroundColor(p => ({ ...p, bgStrokePosition: pos }));
-                                    setIsDashPosOpen(false);
-                                  }}
-                                  className="px-[1vw] py-[0.4vw] text-[0.7vw] font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer"
-                                >
-                                  {pos}
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
+                      <div className="h-[2vw] px-[0.5vw] border border-gray-200 rounded-[0.5vw] flex items-center bg-white shadow-2xs select-none">
+                        <span className="text-[0.75vw] font-medium text-gray-700 capitalize">Outside</span>
                       </div>
                     </div>
 
@@ -1248,33 +1223,8 @@ const Color = ({
                   {/* Alignment */}
                   <div className="flex-1 flex flex-col gap-[0.3vw]">
                     <span className="text-[0.7vw] text-gray-500 font-medium">Alignment</span>
-                    <div className="relative">
-                      <div
-                        className={`h-[2vw] px-[0.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-between bg-white ${isText ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
-                        onClick={() => !isText && setIsDashPosOpen(!isDashPosOpen)}
-                      >
-                        <span className="text-[0.75vw] font-medium text-gray-700 capitalize">{pseudoProps['data-stroke-position'] || 'Center'}</span>
-                        <ChevronDown size="0.8vw" className="text-gray-400" />
-                      </div>
-                      {isDashPosOpen && (
-                        <>
-                          <div className="fixed inset-0 z-[40]" onClick={(e) => { e.stopPropagation(); setIsDashPosOpen(false); }} />
-                          <div className="absolute top-[110%] left-0 right-0 bg-white border border-gray-100 rounded-[0.5vw] shadow-xl z-50 py-1 overflow-hidden">
-                            {['Inside', 'Center', 'Outside'].map(pos => (
-                              <div
-                                key={pos}
-                                onClick={() => {
-                                  updateAttr('data-stroke-position', pos);
-                                  setIsDashPosOpen(false);
-                                }}
-                                className="px-[1vw] py-[0.4vw] text-[0.7vw] font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer"
-                              >
-                                {pos}
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
+                    <div className="h-[2vw] px-[0.5vw] border border-gray-200 rounded-[0.5vw] flex items-center bg-white shadow-2xs select-none">
+                      <span className="text-[0.75vw] font-medium text-gray-700 capitalize">Outside</span>
                     </div>
                   </div>
 

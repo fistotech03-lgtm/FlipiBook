@@ -148,7 +148,7 @@ const saveProfile = async (req, res) => {
           await deleteOldAsset(existingProfile.bannerBg.value);
         }
         const rawBase64 = bBg.value.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-        const savedUrl = await saveProfileAsset(userFolder, rawBase64, 'banner', 'Profile');
+        const savedUrl = await saveProfileAsset(userFolder, rawBase64, 'banner', 'userdetails/profile');
         bBg.value = `url(${savedUrl})`;
       } else if (existingProfile?.bannerBg?.value && bBg?.value && existingProfile.bannerBg.value !== bBg.value) {
         await deleteOldAsset(existingProfile.bannerBg.value);
@@ -165,7 +165,7 @@ const saveProfile = async (req, res) => {
         if (oldLogo && oldLogo !== rawLogo) {
           await deleteOldAsset(oldLogo);
         }
-        const savedLogo = await saveProfileAsset(userFolder, rawLogo, 'logo', 'Company_logo');
+        const savedLogo = await saveProfileAsset(userFolder, rawLogo, 'logo', 'userdetails/company_logo');
         updateFields.company_logo_url = savedLogo;
         updateFields.companyLogo = savedLogo;
       } else {
@@ -185,7 +185,7 @@ const saveProfile = async (req, res) => {
         if (oldPicture && oldPicture !== rawPicture) {
           await deleteOldAsset(oldPicture);
         }
-        const savedAvatar = await saveProfileAsset(userFolder, rawPicture, 'avatar', 'Profile');
+        const savedAvatar = await saveProfileAsset(userFolder, rawPicture, 'avatar', 'userdetails/profile');
         updateFields.picture = savedAvatar;
       } else if (rawPicture === null || rawPicture === '') {
         if (oldPicture) {
@@ -261,14 +261,14 @@ const updateAvatar = async (req, res) => {
       if (existingProfile.picture) {
         await deleteOldAsset(existingProfile.picture);
       }
-      finalPictureUrl = await saveProfileAsset(userFolder, req.file, 'avatar', 'Profile');
+      finalPictureUrl = await saveProfileAsset(userFolder, req.file, 'avatar', 'userdetails/profile');
     }
     // Case 2: Base64 string in req.body.picture
     else if (req.body.picture && typeof req.body.picture === 'string' && req.body.picture.startsWith('data:')) {
       if (existingProfile.picture && existingProfile.picture !== req.body.picture) {
         await deleteOldAsset(existingProfile.picture);
       }
-      finalPictureUrl = await saveProfileAsset(userFolder, req.body.picture, 'avatar', 'Profile');
+      finalPictureUrl = await saveProfileAsset(userFolder, req.body.picture, 'avatar', 'userdetails/profile');
     }
     // Case 3: Explicit null or empty string (deleting avatar)
     else if (req.body.picture === null || req.body.picture === '') {
@@ -341,7 +341,7 @@ const updateBanner = async (req, res) => {
       if (existingProfile?.bannerBg?.value) {
         await deleteOldAsset(existingProfile.bannerBg.value);
       }
-      const savedUrl = await saveProfileAsset(userFolder, req.file, 'banner', 'Profile');
+      const savedUrl = await saveProfileAsset(userFolder, req.file, 'banner', 'userdetails/profile');
       finalBannerBg = {
         type: 'media',
         value: `url(${savedUrl})`
@@ -359,7 +359,7 @@ const updateBanner = async (req, res) => {
           await deleteOldAsset(existingProfile.bannerBg.value);
         }
         const rawBase64 = bBg.value.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-        const savedUrl = await saveProfileAsset(userFolder, rawBase64, 'banner', 'Profile');
+        const savedUrl = await saveProfileAsset(userFolder, rawBase64, 'banner', 'userdetails/profile');
         bBg.value = `url(${savedUrl})`;
         finalBannerBg = bBg;
       } else {

@@ -785,6 +785,8 @@ export function createDecoratorElementNode(preset, cx = 200, cy = 150) {
   g.setAttribute('id', uniqueId);
   g.setAttribute('data-type', 'animated-decorator');
   g.setAttribute('data-is-animated-decorator', 'true');
+  g.setAttribute('data-name', 'Decorator');
+  g.setAttribute('data-decorator-title', preset.name || 'Decorator');
   g.setAttribute('data-preset-id', preset.id);
   g.setAttribute('data-anim', preset.anim || 'none');
   g.setAttribute('data-duration', preset.duration || '1.6s');

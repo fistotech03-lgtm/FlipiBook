@@ -191,77 +191,110 @@ export const useCanvasAssetInsertion = ({
         const shapeEl = svg.querySelector(`[id="${targetShapeId}"]`);
         if (shapeEl) {
           try {
-            if (!shapeEl.hasAttribute('data-original-fill')) {
-              shapeEl.setAttribute('data-original-fill', shapeEl.getAttribute('fill') || '#d0ccff');
+            // Find inner path or the shape itself
+            let innerShape = shapeEl.querySelector('path, polygon, rect, circle, ellipse');
+            if (!innerShape && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(shapeEl.tagName?.toLowerCase())) {
+              innerShape = shapeEl;
             }
-            shapeEl.setAttribute('data-masked-image-url', dataUrl);
-            shapeEl.setAttribute('data-masked-image-type', dataType);
 
-            let defs = svg.querySelector('defs');
+            const targetNode = innerShape || shapeEl;
+            if (!targetNode.hasAttribute('data-original-fill')) {
+              targetNode.setAttribute('data-original-fill', targetNode.getAttribute('fill') || shapeEl.getAttribute('fill') || '#3194FC');
+            }
+
+            shapeEl.setAttribute('data-mask-enabled', 'true');
+            if (innerShape) innerShape.setAttribute('data-mask-enabled', 'true');
+
+            const imgName = file?.name || 'Image.webp';
+            const sizeStr = file?.size ? (file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)}MB` : `${Math.round(file.size / 1024)}KB`) : '24MB';
+            const meta = `${sizeStr}`;
+
+            shapeEl.setAttribute('data-slot-image-name', imgName);
+            shapeEl.setAttribute('data-slot-image-meta', meta);
+            shapeEl.setAttribute('data-slot-original-url', dataUrl);
+            shapeEl.setAttribute('data-slot-fix-type', 'Fill All');
+
+            if (innerShape) {
+              innerShape.setAttribute('data-slot-image-name', imgName);
+              innerShape.setAttribute('data-slot-image-meta', meta);
+              innerShape.setAttribute('data-slot-original-url', dataUrl);
+              innerShape.setAttribute('data-slot-fix-type', 'Fill All');
+            }
+
+            // Clean up any old clipPath/detached masked-img elements
+            const safeShapeId = (targetShapeId || 'unknown').replace(/[^a-zA-Z0-9-_]/g, '_');
+            const oldClip = svg.querySelector(`clipPath[id="clip-shape-${safeShapeId}"]`);
+            if (oldClip) oldClip.remove();
+            const oldImg = svg.querySelector(`image[id="masked-img-${safeShapeId}"]`);
+            if (oldImg) oldImg.remove();
+
+            // Set up SVG pattern inside shape's defs or root defs
+            let defs = shapeEl.querySelector('defs');
             if (!defs) {
               defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-              svg.insertBefore(defs, svg.firstChild);
+              shapeEl.insertBefore(defs, shapeEl.firstChild);
             }
 
-            const safeShapeId = (targetShapeId || 'unknown').replace(/[^a-zA-Z0-9-_]/g, '_');
-            const clipId = `clip-shape-${safeShapeId}`;
-            let clip = defs.querySelector(`clipPath[id="${clipId}"]`);
-            if (!clip) {
-              clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-              clip.id = clipId;
-              defs.appendChild(clip);
-            } else {
-              clip.innerHTML = '';
+            const patternId = `pattern-${targetShapeId}`;
+            let pattern = defs.querySelector(`pattern[id="${patternId}"]`);
+            if (!pattern) {
+              pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+              pattern.setAttribute('id', patternId);
+              defs.appendChild(pattern);
             }
 
-            const cleanClipShape = shapeEl.cloneNode(true);
-            cleanClipShape.removeAttribute('id');
-            cleanClipShape.removeAttribute('fill');
-            cleanClipShape.removeAttribute('stroke');
-            cleanClipShape.removeAttribute('stroke-width');
-            cleanClipShape.removeAttribute('transform');
-            clip.appendChild(cleanClipShape);
-
-            const imageId = `masked-img-${safeShapeId}`;
-            let imageEl = svg.querySelector(`image[id="${imageId}"]`);
-            if (!imageEl) {
-              imageEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-              imageEl.id = imageId;
-              shapeEl.parentNode.insertBefore(imageEl, shapeEl);
-            }
-
+            let bbox = { width: 100, height: 100, x: 0, y: 0 };
             try {
-              const bbox = shapeEl.getBBox();
-              imageEl.setAttribute('x', bbox.x);
-              imageEl.setAttribute('y', bbox.y);
-              imageEl.setAttribute('width', bbox.width);
-              imageEl.setAttribute('height', bbox.height);
+              bbox = targetNode.getBBox();
+            } catch(e) {}
+            if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100, x: 0, y: 0 };
 
-              const transform = shapeEl.getAttribute('transform');
-              if (transform) {
-                imageEl.setAttribute('transform', transform);
-              } else {
-                imageEl.removeAttribute('transform');
-              }
-            } catch {
-              imageEl.setAttribute('x', '0');
-              imageEl.setAttribute('y', '0');
-              imageEl.setAttribute('width', '100%');
-              imageEl.setAttribute('height', '100%');
+            const slotW = bbox.width;
+            const slotH = bbox.height;
+
+            pattern.setAttribute('patternUnits', 'objectBoundingBox');
+            pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+            pattern.setAttribute('width', '1');
+            pattern.setAttribute('height', '1');
+            pattern.removeAttribute('patternTransform');
+            pattern.removeAttribute('viewBox');
+
+            let imageNode = pattern.querySelector('image, img');
+            if (!imageNode) {
+              imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+              pattern.appendChild(imageNode);
             }
 
-            imageEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
-            imageEl.setAttribute('href', dataUrl);
-            imageEl.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-            imageEl.setAttribute('clip-path', `url(#${clipId})`);
-            imageEl.setAttribute('data-is-mask-image', 'true');
-            imageEl.setAttribute('data-target-shape', safeShapeId);
+            imageNode.removeAttribute('preserveAspectRatio');
+            imageNode.removeAttribute('x');
+            imageNode.removeAttribute('y');
+            imageNode.setAttribute('href', dataUrl);
+            imageNode.setAttribute('xlink:href', dataUrl);
+            imageNode.setAttribute('opacity', '1');
 
-            shapeEl.setAttribute('fill', 'none');
+            const tempImg = new window.Image();
+            tempImg.onload = () => {
+              const imgW = tempImg.naturalWidth || tempImg.width || slotW;
+              const imgH = tempImg.naturalHeight || tempImg.height || slotH;
+              const scale = Math.max(slotW / imgW, slotH / imgH);
+              const finalW = imgW * scale;
+              const finalH = imgH * scale;
+              const tx = (slotW - finalW) / 2;
+              const ty = (slotH - finalH) / 2;
+              imageNode.setAttribute('width', imgW);
+              imageNode.setAttribute('height', imgH);
+              imageNode.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${tx} ${ty})`);
+              if (saveModifiedPageHtml) {
+                saveModifiedPageHtml(pageIdx, svg);
+              } else if (updatePageHtml) {
+                updatePageHtml(pageIdx, svg.outerHTML);
+              }
+            };
+            tempImg.src = dataUrl;
 
-            const patternId = `pattern-shape-${safeShapeId}`;
-            const oldPattern = defs.querySelector(`pattern[id="${patternId}"]`);
-            if (oldPattern) oldPattern.remove();
+            // Set pattern fill on both target node and group
+            targetNode.setAttribute('fill', `url(#${patternId})`);
+            shapeEl.setAttribute('fill', `url(#${patternId})`);
 
             if (saveModifiedPageHtml) {
               saveModifiedPageHtml(pageIdx, svg);
@@ -269,7 +302,9 @@ export const useCanvasAssetInsertion = ({
               updatePageHtml(pageIdx, svg.outerHTML);
             }
 
-            uploadAssetInBackground(imageEl, shapeEl, file, dataUrl);
+            uploadAssetInBackground(imageNode, shapeEl, file, dataUrl);
+
+            window.dispatchEvent(new CustomEvent('shape-mask-toggled', { detail: { layerId: targetShapeId, enabled: true, url: dataUrl } }));
 
             if (setSelectedLayerId) setSelectedLayerId(targetShapeId);
             if (selectedLayerIdRef) selectedLayerIdRef.current = targetShapeId;

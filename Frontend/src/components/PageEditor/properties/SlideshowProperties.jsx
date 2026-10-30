@@ -25,25 +25,14 @@ import NavIconStylesPopup, { NavIconRenderer } from '../../CustomizedEditor/popu
 import DotStylesPopup, { DotRenderer } from '../../CustomizedEditor/popups/DotStylesPopup';
 import axios from 'axios';
 import ColorPicker from './ColorPicker';
+import { ElementToggle, ElementSlider } from '../LeftActionMenu/Elements/properties/ElementUIControls';
 
-const Switch = ({ enabled, onChange }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange(!enabled);
-    }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
-  >
-    <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
-  </button>
-);
+const Switch = ElementToggle;
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.5vw] py-[0.25vw] mt-[0.25vw]">
     <span className="text-[0.8vw] font-semibold text-gray-800 whitespace-nowrap">{title}</span>
-    <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-2vw' }}> </div>
+    <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
   </div>
 );
 
@@ -1494,7 +1483,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
   }, [activePageIndex]);
 
   return (
-    <div className="space-y-[1vw]">
+    <div className="space-y-[1vw] overflow-x-hidden">
       <style>{`
         .ss-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .ss-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
@@ -1529,7 +1518,7 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
       {/* ── Slideshow header ── */}
       <div className="flex items-center gap-[0.5vw]">
         <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Slideshow Properties</span>
-        <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.6vw' }}> </div>
+        <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
       </div>
 
       {/* ── Slideshow Mode Toggle ── */}
@@ -1700,11 +1689,10 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
         {/* Opacity */}
         <div className="flex items-center gap-[1vw] py-[0.5vw] mt-[0.5vw]">
           <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Opacity :</span>
-          <div className="flex-1 flex items-center h-[1.5vw] rounded-full outline-none">
-            <input
-              type="range"
-              min="0"
-              max="100"
+          <div className="flex-1 flex items-center h-[1.5vw]">
+            <ElementSlider
+              min={0}
+              max={100}
               value={localOpacity}
               onChange={(e) => {
                 const val = Number(e.target.value);
@@ -1726,8 +1714,6 @@ const SlideshowProperties = ({ selectedElement, activePageIndex, onUpdate, isOpe
               }}
               onMouseUp={(e) => onUpdateOpacity(Number(e.target.value))}
               onTouchEnd={(e) => onUpdateOpacity(Number(e.target.value))}
-              className="w-full cursor-pointer custom-range-slider"
-              style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${localOpacity}%, #E2E8F0 ${localOpacity}%, #E2E8F0 100%)` }}
             />
           </div>
           <div className="min-w-[3.5vw] h-[2vw] border-[0.1vw] border-gray-200 rounded-[0.3vw] flex items-center justify-center text-[0.8vw] font-medium text-black bg-white shadow-sm px-[0.5vw]">

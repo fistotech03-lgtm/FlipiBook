@@ -344,6 +344,23 @@ customizedSettingsSchema.index({ userID: 1, v_id: 1 }, { unique: true });
 customizedSettingsSchema.index({ 'Visibility.shareId': 1 }, { sparse: true });
 customizedSettingsSchema.index({ userEmail: 1, v_id: 1 });
 
+// Asynchronous non-blocking backup mirror hook
+customizedSettingsSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncCustomizedSettings(doc);
+  } catch (_) {}
+});
+
+customizedSettingsSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncCustomizedSettings(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports =
   (mongoose.models.customizedSettings || mongoose.models.CustomizedSettings) ||
   mongoose.model('customizedSettings', customizedSettingsSchema);

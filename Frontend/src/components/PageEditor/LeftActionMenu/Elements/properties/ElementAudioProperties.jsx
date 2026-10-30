@@ -1,630 +1,1931 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Volume2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Play,
+  Pause
+} from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Play, Pause, X } from 'lucide-react';
 import { resolveUploadsPath } from '../../../../../utils/assetUtils';
+import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
+import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
+import Effect from '../../../properties/Effect';
+import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
+import {
+  AUDIO_TEMPLATES,
+  getAudioSvgCode,
+  getTemplatePlayIconSvg,
+  getTemplatePauseIconSvg
+} from '../utils/audioElementUtils';
 
-const ElementAudioProperties = ({ selectedElement, selectedLayerId, activePageIndex, updateElementAttribute }) => {
-  const { v_id: paramVId } = useParams();
+// Helper to sync live SVG filters on the DOM element for Drop Shadow
+const syncLiveFilters = (el) => {
+  if (!el) return;
+  const doc = el.ownerDocument || document;
+  let svgRoot = el;
+  while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
+    svgRoot = svgRoot.parentElement;
+  }
+  if (!svgRoot) {
+    const container = el.closest('.page-svg-container');
+    if (container) {
+      const canvasContent = container.querySelector('[id^="canvas-content-"]');
+      svgRoot = canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+    }
+  }
+  if (!svgRoot) return;
+
+  let defs = svgRoot.querySelector('defs');
+  if (!defs) {
+    defs = doc.createElementNS("http://www.w3.org/2000/svg", "defs");
+    svgRoot.insertBefore(defs, svgRoot.firstChild);
+  }
+
+  const baseFilterId = `filter-${el.id || 'audio'}`;
+  Array.from(defs.querySelectorAll(`[id^="${baseFilterId}"]`)).forEach(old => old.remove());
+
+  const hasDropShadow = el.getAttribute('data-effect-drop-shadow') === 'true';
+  if (!hasDropShadow) {
+    el.removeAttribute('filter');
+    return;
+  }
+
+  const filterId = `${baseFilterId}-${Math.random().toString(36).substr(2, 4)}`;
+  const filterEl = doc.createElementNS("http://www.w3.org/2000/svg", "filter");
+  filterEl.id = filterId;
+  filterEl.setAttribute('x', '-50%');
+  filterEl.setAttribute('y', '-50%');
+  filterEl.setAttribute('width', '200%');
+  filterEl.setAttribute('height', '200%');
+  defs.appendChild(filterEl);
+
+  const getVal = (attr, def) => el.getAttribute(attr) || def;
+  const color = getVal('data-effect-drop-shadow-color', '#000000');
+  const opacity = parseFloat(getVal('data-effect-drop-shadow-opacity', '35')) / 100;
+  const dx = getVal('data-effect-drop-shadow-x', '2');
+  const dy = getVal('data-effect-drop-shadow-y', '2');
+  const blur = parseFloat(getVal('data-effect-drop-shadow-blur', '4'));
+  const spread = parseFloat(getVal('data-effect-drop-shadow-spread', '0'));
+
+  let dsSource = 'SourceAlpha';
+  if (spread !== 0) {
+    const morph = doc.createElementNS("http://www.w3.org/2000/svg", "feMorphology");
+    morph.setAttribute('operator', spread >= 0 ? 'dilate' : 'erode');
+    morph.setAttribute('radius', Math.abs(spread));
+    morph.setAttribute('in', 'SourceAlpha');
+    morph.setAttribute('result', 'ds_morph');
+    filterEl.appendChild(morph);
+    dsSource = 'ds_morph';
+  }
+
+  const gauss = doc.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+  gauss.setAttribute('stdDeviation', blur);
+  gauss.setAttribute('in', dsSource);
+  gauss.setAttribute('result', 'ds_blur');
+  filterEl.appendChild(gauss);
+
+  const offset = doc.createElementNS("http://www.w3.org/2000/svg", "feOffset");
+  offset.setAttribute('dx', dx);
+  offset.setAttribute('dy', dy);
+  offset.setAttribute('in', 'ds_blur');
+  offset.setAttribute('result', 'ds_offset');
+  filterEl.appendChild(offset);
+
+  const flood = doc.createElementNS("http://www.w3.org/2000/svg", "feFlood");
+  flood.setAttribute('flood-color', color);
+  flood.setAttribute('flood-opacity', opacity);
+  flood.setAttribute('result', 'ds_flood');
+  filterEl.appendChild(flood);
+
+  const comp = doc.createElementNS("http://www.w3.org/2000/svg", "feComposite");
+  comp.setAttribute('in', 'ds_flood');
+  comp.setAttribute('in2', 'ds_offset');
+  comp.setAttribute('operator', 'in');
+  comp.setAttribute('result', 'ds_final');
+  filterEl.appendChild(comp);
+
+  const merge = doc.createElementNS("http://www.w3.org/2000/svg", "feMerge");
+  const nodeShadow = doc.createElementNS("http://www.w3.org/2000/svg", "feMergeNode");
+  nodeShadow.setAttribute('in', 'ds_final');
+  const nodeInput = doc.createElementNS("http://www.w3.org/2000/svg", "feMergeNode");
+  nodeInput.setAttribute('in', 'SourceGraphic');
+  merge.appendChild(nodeShadow);
+  merge.appendChild(nodeInput);
+  filterEl.appendChild(merge);
+
+  el.setAttribute('filter', `url(#${filterId})`);
+};
+
+// Section Header matching standard styling
+const SectionHeader = ({ title }) => (
+  <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
+    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+  </div>
+);
+
+// PropertyRow matching exact alignment (w-[5.6vw] pl-[0.5vw])
+const PropertyRow = ({ label, children, className = '' }) => (
+  <div className={`flex items-center gap-[0.5vw] ${className}`}>
+    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
+      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+        {label}
+      </span>
+      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+    </div>
+    <div className="flex-1 min-w-0">
+      {children}
+    </div>
+  </div>
+);
+
+// Toggle Switch matching exact reference design
+const Toggle = ElementToggle;
+
+// Custom Dropdown matching exact reference design
+const CustomDropdown = ElementDropdown;
+
+// Color Swatch + Hex Input Box
+const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
+  const isGradient = Boolean(color && typeof color === 'string' && color.includes('gradient'));
+  const isNone = color === 'none' || color === 'transparent';
+  const displayColor = isGradient
+    ? 'GRADIENT'
+    : isNone
+    ? 'NONE'
+    : (color && color.startsWith('#') ? color.toUpperCase() : (color || '#000000'));
+
+  return (
+    <div className="flex items-center gap-[0.4vw] w-full">
+      <div
+        onClick={onOpenPicker}
+        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
+          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+        }`}
+        style={{ background: isNone ? '#ffffff' : (color || '#000000') }}
+        title="Click to open color palette"
+      >
+        {isNone && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+        )}
+      </div>
+      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
+        <input
+          type="text"
+          value={displayColor}
+          onChange={(e) => {
+            let val = e.target.value;
+            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
+            onChange(val);
+          }}
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          maxLength={isGradient ? 10 : 7}
+        />
+        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+      </div>
+    </div>
+  );
+};
+
+const parseStopOffset = (raw) => {
+  if (!raw) return 0;
+  const str = String(raw).trim();
+  const num = parseFloat(str);
+  if (isNaN(num)) return 0;
+  if (!str.includes('%') && num <= 1 && num > 0) {
+    return Math.round(num * 100);
+  }
+  return Math.round(num);
+};
+
+const parseStopOpacity = (raw) => {
+  if (raw === null || raw === undefined || raw === '') return 100;
+  const str = String(raw).trim();
+  const num = parseFloat(str);
+  if (isNaN(num)) return 100;
+  if (!str.includes('%') && num <= 1 && num >= 0) {
+    return Math.round(num * 100);
+  }
+  return Math.round(num);
+};
+
+export const extractGradientFromSvg = (urlRef, root) => {
+  if (!urlRef || typeof urlRef !== 'string' || !urlRef.startsWith('url(#')) return null;
+  const gradId = urlRef.match(/url\(#([^)]+)\)/)?.[1];
+  if (!gradId) return null;
+
+  const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+  const svgRoot = root?.closest?.('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
+
+  const gradEl = (root?.querySelector ? root.querySelector(`#${gradId}`) : null) ||
+    (svgRoot?.querySelector ? svgRoot.querySelector(`#${gradId}`) : null) ||
+    (editorDoc?.getElementById ? editorDoc.getElementById(gradId) : null) ||
+    document.getElementById(gradId);
+
+  if (gradEl) {
+    const isRadial = gradEl.tagName.toLowerCase().includes('radial');
+    const stops = Array.from(gradEl.querySelectorAll('stop')).map((stop) => ({
+      color: stop.getAttribute('stop-color') || '#ffffff',
+      offset: parseStopOffset(stop.getAttribute('offset')),
+      opacity: parseStopOpacity(stop.getAttribute('stop-opacity'))
+    }));
+    if (stops.length > 0) {
+      if (isRadial) {
+        const r = parseFloat(gradEl.getAttribute('r') || 50);
+        return generateGradientString('Radial', stops, 0, r);
+      } else {
+        const x1 = parseFloat(gradEl.getAttribute('x1') || 0);
+        const y1 = parseFloat(gradEl.getAttribute('y1') || 0);
+        const x2 = parseFloat(gradEl.getAttribute('x2') || 100);
+        const y2 = parseFloat(gradEl.getAttribute('y2') || 0);
+        const angle = Math.round((Math.atan2(x2 - x1, -(y2 - y1)) * 180) / Math.PI + 360) % 360;
+        return generateGradientString('Linear', stops, angle, 100);
+      }
+    }
+  }
+  return null;
+};
+
+const SPEED_OPTIONS = [
+  { value: '0.25', label: '0.25x' },
+  { value: '0.5', label: '0.5x' },
+  { value: '0.75', label: '0.75x' },
+  { value: '1', label: '1x' },
+  { value: '1.25', label: '1.25x' },
+  { value: '1.5', label: '1.5x' },
+  { value: '2', label: '2x' }
+];
+
+const BEHAVIOUR_OPTIONS = [
+  { value: 'Auto Play on Page Open', label: 'Auto Play on Page Open' },
+  { value: 'Play on Click', label: 'Play on Click' },
+  { value: 'Play on Hover', label: 'Play on Hover' },
+  { value: 'Loop on Page', label: 'Loop on Page' }
+];
+
+
+// Preset color palettes for each audio template style
+export const AUDIO_TEMPLATE_PALETTES = {
+  'glassmorphism': { icon: '#334155', bg: '#ffffff', stroke: '#e2e8f0' },
+  'forest-moss': { icon: '#c9e4b7', bg: '#16291a', stroke: '#23422a' },
+  'cyber-blue': { icon: '#00f2fe', bg: '#0c1421', stroke: '#182840' },
+  'silver-mono': {
+    icon: '#1e293b',
+    bg: 'linear-gradient(180deg, rgba(184, 184, 184, 1) 0%, rgba(140, 140, 140, 1) 50%, rgba(116, 116, 116, 1) 100%)',
+    stroke: '#ffffff'
+  },
+  'sunset-vibrant': {
+    icon: '#ffffff',
+    bg: 'linear-gradient(90deg, rgba(255, 67, 40, 1) 0%, rgba(255, 42, 85, 1) 35%, rgba(230, 25, 114, 1) 70%, rgba(196, 24, 139, 1) 100%)',
+    stroke: 'none'
+  },
+  'cyberpunk-wide': { icon: '#00f2fe', bg: '#080d15', stroke: '#162133' },
+  'audio-icon': { icon: '#000000', bg: '#ffffff', stroke: '#900000' }
+};
+
+/**
+ * Extracts the audio colors (icon color, background fill, border/stroke color)
+ * from the live audio element node on canvas
+ */
+export const extractAudioColors = (el) => {
+  if (!el) {
+    return { iconColor: '#334155', bgColor: '#ffffff', strokeColor: '#e2e8f0' };
+  }
+  const root = el.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || el;
+  const tplId = root.getAttribute('data-audio-template') || 'glassmorphism';
+  const defaults = AUDIO_TEMPLATE_PALETTES[tplId] || AUDIO_TEMPLATE_PALETTES['glassmorphism'];
+
+  const rawStroke = root.getAttribute('data-stroke-color');
+  const rawIcon = root.getAttribute('data-icon-color');
+  const wasCorrupted = tplId !== 'audio-icon' && rawStroke === '#900000' && rawIcon === '#000000';
+
+  // 1. Extract Icon Color
+  let icon = wasCorrupted ? null : rawIcon;
+  if (!icon) {
+    const progFill = root.querySelector('.progress-fill');
+    const playIconPoly = root.querySelector('.play-pause-icon polygon');
+    const timeText = root.querySelector('.audio-current-time');
+    const prevPoly = root.querySelector('.prev-icon polygon');
+    const volPoly = root.querySelector('.volume-icon polygon');
+    const candidate = progFill?.getAttribute('fill') ||
+      playIconPoly?.getAttribute('fill') ||
+      timeText?.getAttribute('fill') ||
+      prevPoly?.getAttribute('fill') ||
+      volPoly?.getAttribute('fill');
+
+    if (candidate && candidate !== 'none' && candidate !== 'transparent' && (!wasCorrupted || candidate !== '#000000')) {
+      icon = candidate;
+    } else {
+      icon = defaults.icon;
+    }
+  }
+
+  // 2. Extract Background Color
+  let bg = null;
+  const fillLayer = root.querySelector('.audio-fill-layer');
+  const layerFill = fillLayer?.getAttribute('fill');
+  const savedFillColor = wasCorrupted ? null : root.getAttribute('data-fill-color');
+
+  // If layerFill references a gradient in <defs>, extract it
+  if (layerFill && layerFill.startsWith('url(#')) {
+    if (savedFillColor && savedFillColor.includes('gradient')) {
+      bg = savedFillColor;
+    } else {
+      const gradCss = extractGradientFromSvg(layerFill, root);
+      if (gradCss) {
+        bg = gradCss;
+        root.setAttribute('data-fill-color', gradCss);
+      }
+    }
+  } else if (layerFill && layerFill !== 'none' && layerFill !== 'transparent') {
+    bg = layerFill;
+  }
+
+  // If not extracted from layerFill, fall back to saved data-fill-color
+  if (!bg && savedFillColor && savedFillColor !== 'none') {
+    if (savedFillColor.startsWith('url(#')) {
+      bg = extractGradientFromSvg(savedFillColor, root) || defaults.bg;
+    } else {
+      bg = savedFillColor;
+    }
+  }
+
+  // Fallback to template defaults
+  if (!bg) {
+    bg = defaults.bg;
+  }
+
+  // 3. Extract Stroke Color
+  let stroke = wasCorrupted ? null : rawStroke;
+  if (!stroke) {
+    const layerStroke = fillLayer?.getAttribute('stroke');
+    if (layerStroke && layerStroke !== 'none' && (!wasCorrupted || layerStroke !== '#900000')) {
+      stroke = layerStroke;
+    } else {
+      stroke = defaults.stroke;
+    }
+  }
+
+  return {
+    iconColor: icon || defaults.icon,
+    bgColor: bg || defaults.bg,
+    strokeColor: stroke || defaults.stroke
+  };
+};
+
+/**
+ * Updates fill, stroke, and icon colors directly on the canvas SVG element
+ */
+export const applyColorsToCanvas = (el, { icon, bg, stroke }) => {
+  if (!el) return;
+  const root = el.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || el;
+  const ownerDoc = root.ownerDocument || document;
+
+  if (bg !== undefined) {
+    const fillLayer = root.querySelector('.audio-fill-layer');
+    if (fillLayer) {
+      if (bg && typeof bg === 'string' && bg.includes('gradient')) {
+        const parsed = parseGradient(bg);
+        if (parsed && parsed.stops && parsed.stops.length > 0) {
+          let defs = root.querySelector(':scope > defs') || root.querySelector('defs');
+          if (!defs) {
+            defs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+            root.insertBefore(defs, root.firstChild);
+          }
+          const baseGradId = `grad-${root.id || 'audio'}-bg`;
+          Array.from(defs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+
+          const gradId = `${baseGradId}-${Math.random().toString(36).substr(2, 4)}`;
+          let gradEl;
+          if (parsed.type === 'Linear') {
+            gradEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+            const angleRad = ((parsed.angle || 0) * Math.PI) / 180;
+            const dx = Math.sin(angleRad) * 50;
+            const dy = -Math.cos(angleRad) * 50;
+            gradEl.setAttribute('x1', `${Math.round(50 - dx)}%`);
+            gradEl.setAttribute('y1', `${Math.round(50 - dy)}%`);
+            gradEl.setAttribute('x2', `${Math.round(50 + dx)}%`);
+            gradEl.setAttribute('y2', `${Math.round(50 + dy)}%`);
+          } else {
+            gradEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+            gradEl.setAttribute('cx', '50%');
+            gradEl.setAttribute('cy', '50%');
+            gradEl.setAttribute('r', `${parsed.radius || 50}%`);
+          }
+          gradEl.setAttribute('id', gradId);
+
+          parsed.stops.forEach((stop) => {
+            const stopEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "stop");
+            stopEl.setAttribute('offset', `${stop.offset}%`);
+            stopEl.setAttribute('stop-color', stop.color);
+            stopEl.setAttribute('stop-opacity', ((stop.opacity !== undefined ? stop.opacity : 100) / 100).toString());
+            gradEl.appendChild(stopEl);
+          });
+
+          defs.appendChild(gradEl);
+
+          // Also mirror in top-level SVG defs if present
+          const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+          const svgRoot = root.closest('svg') || editorDoc.querySelector('.page-svg-container svg') || editorDoc.querySelector('svg');
+          if (svgRoot && svgRoot !== root) {
+            let rootDefs = svgRoot.querySelector(':scope > defs') || svgRoot.querySelector('defs');
+            if (!rootDefs) {
+              rootDefs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+              svgRoot.insertBefore(rootDefs, svgRoot.firstChild);
+            }
+            Array.from(rootDefs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+            rootDefs.appendChild(gradEl.cloneNode(true));
+          }
+
+          fillLayer.setAttribute('fill', `url(#${gradId})`);
+        } else {
+          fillLayer.setAttribute('fill', bg);
+        }
+      } else if (bg && typeof bg === 'string' && bg.startsWith('url(#')) {
+        fillLayer.setAttribute('fill', bg);
+      } else {
+        // Solid color or 'none' - remove dynamic gradient defs if present
+        const defs = root.querySelector(':scope > defs') || root.querySelector('defs');
+        if (defs) {
+          const baseGradId = `grad-${root.id || 'audio'}-bg`;
+          Array.from(defs.querySelectorAll(`[id^="${baseGradId}"]`)).forEach((old) => old.remove());
+        }
+        fillLayer.setAttribute('fill', bg);
+      }
+    }
+    root.setAttribute('data-fill-color', bg);
+  }
+
+  if (stroke !== undefined) {
+    const fillLayer = root.querySelector('.audio-fill-layer');
+    if (fillLayer) {
+      fillLayer.setAttribute('paint-order', 'stroke fill');
+      fillLayer.style.paintOrder = 'stroke fill';
+      fillLayer.setAttribute('stroke', stroke);
+      fillLayer.setAttribute('stroke-width', stroke === 'none' ? '0' : '3');
+    }
+    root.setAttribute('data-stroke-color', stroke);
+    root.setAttribute('data-stroke-position', 'Outside');
+    root.setAttribute('data-stroke-alignment', 'Outside');
+  }
+
+  if (icon !== undefined) {
+    const iconElements = root.querySelectorAll(
+      '.prev-icon polygon, .next-icon polygon, .audio-current-time, .audio-total-time, .progress-fill, .progress-knob, .volume-icon polygon, .volume-fill, .volume-knob, .play-pause-bg'
+    );
+    iconElements.forEach((item) => {
+      item.setAttribute('fill', icon);
+    });
+
+    const strokeElements = root.querySelectorAll(
+      '.volume-icon path, .loop-icon path'
+    );
+    strokeElements.forEach((item) => {
+      item.setAttribute('stroke', icon);
+    });
+
+    const squareIconPolygon = root.querySelectorAll('.play-pause-icon polygon');
+    squareIconPolygon.forEach((item) => {
+      if (!root.querySelector('.play-pause-bg')) {
+        item.setAttribute('fill', icon);
+        item.setAttribute('stroke', icon);
+      }
+    });
+
+    root.setAttribute('data-icon-color', icon);
+  }
+};
+
+const SKIP_STEPS = [1, 2, 3, 5, 10, 15, 30, 60];
+
+const ElementAudioProperties = ({
+  selectedElement,
+  selectedLayerId,
+  activePageIndex,
+  updateElementAttribute,
+  selectedElementProps,
+  onUpdate
+}) => {
   const fileInputRef = useRef(null);
-  
-  // State for the uploaded file(s)
-  const [audioFiles, setAudioFiles] = useState([]);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const audioRef = useRef(null);
+  const { v_id: paramVId } = useParams();
+
+  // Uploaded Audio Metadata State
+  const [audioName, setAudioName] = useState('bg music1.mp3');
+  const [audioDurationText, setAudioDurationText] = useState('00:19 Mins');
+  const [audioSizeText, setAudioSizeText] = useState('614 kb');
+  const [audioFormatText, setAudioFormatText] = useState('MP3');
+  const [audioSrc, setAudioSrc] = useState(sampleAudio);
   const [isUploading, setIsUploading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [speed, setSpeed] = useState(1);
-  const audioRef = useRef(null);
 
+  // Stable references to prevent infinite render loops in async/event callbacks
+  const selectedElementRef = useRef(selectedElement);
+  const onUpdateRef = useRef(onUpdate);
+  const updateElementAttributeRef = useRef(updateElementAttribute);
+  const activePageIndexRef = useRef(activePageIndex);
+  const selectedLayerIdRef = useRef(selectedLayerId);
+  const audioDurationTextRef = useRef(audioDurationText);
+  const isUpdatingDurationRef = useRef(false);
+
+  useEffect(() => {
+    selectedElementRef.current = selectedElement;
+    onUpdateRef.current = onUpdate;
+    updateElementAttributeRef.current = updateElementAttribute;
+    activePageIndexRef.current = activePageIndex;
+    selectedLayerIdRef.current = selectedLayerId;
+    audioDurationTextRef.current = audioDurationText;
+  });
+
+  // Audio Properties States
+  const [playerStyle, setPlayerStyle] = useState('glassmorphism');
+  const [playbackSpeed, setPlaybackSpeed] = useState('1');
+  const [behaviour, setBehaviour] = useState('Auto Play on Page Open');
+  const [defaultVolume, setDefaultVolume] = useState(80);
+
+  // Audio Player Controls Sub-section States
+  const [controlPlayPause, setControlPlayPause] = useState(true);
+  const [controlSkip, setControlSkip] = useState(true);
+  const [skipSeconds, setSkipSeconds] = useState(5);
+  const [controlDuration, setControlDuration] = useState(true);
+  const [controlVolume, setControlVolume] = useState(true);
+  const [controlLoop, setControlLoop] = useState(true);
+  const [controlMute, setControlMute] = useState(true);
+
+  // Colors States (dynamically extracted from the selected audio element)
+  const initialColors = extractAudioColors(selectedElement);
+  const [iconColor, setIconColor] = useState(() => initialColors.iconColor);
+  const [bgColor, setBgColor] = useState(() => initialColors.bgColor);
+  const [strokeColor, setStrokeColor] = useState(() => initialColors.strokeColor);
+
+  // ColorPicker & Effects States
+  const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [openSubSection, setOpenSubSection] = useState(null);
+  const [showDetailedPicker, setShowDetailedPicker] = useState(false);
+  const [activeEffects, setActiveEffects] = useState(['Drop Shadow']);
+  const [effectSettings, setEffectSettings] = useState({
+    'Drop Shadow': {
+      x: 2,
+      y: 2,
+      blur: 4,
+      spread: 0,
+      color: '#000000',
+      opacity: 35
+    }
+  });
+
+  // Helper to persist attribute on element & editor state
+  const updateAttribute = useCallback(
+    (attr, value) => {
+      if (selectedElement) {
+        selectedElement.setAttribute(attr, value);
+        if (typeof updateElementAttribute === 'function') {
+          if (activePageIndex !== undefined && selectedLayerId) {
+            updateElementAttribute(activePageIndex, selectedLayerId, attr, value);
+          } else {
+            updateElementAttribute(attr, value);
+          }
+        }
+      }
+    },
+    [selectedElement, updateElementAttribute, activePageIndex, selectedLayerId]
+  );
+
+  // Format seconds to mm:ss
   const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds)) return "0:00";
+    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds) || timeInSeconds < 0) return '0:00';
     const m = Math.floor(timeInSeconds / 60);
     const s = Math.floor(timeInSeconds % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const currentFile = audioFiles[currentFileIndex] || { name: '', url: '' };
+  // Helper to parse "00:19 Mins" or "02:59 Mins" into "0:19" or "2:59"
+  const parseDurationTextToDisplay = (text) => {
+    if (!text) return null;
+    const match = text.match(/(\d+):(\d+)/);
+    if (match) {
+      const m = parseInt(match[1], 10);
+      const s = match[2];
+      return `${m}:${s}`;
+    }
+    return null;
+  };
 
-  useEffect(() => {
-    if (selectedElement) {
-      const filesAttr = selectedElement.getAttribute('data-audio-files');
-      if (filesAttr) {
-        try {
-          const files = JSON.parse(filesAttr);
-          setAudioFiles(files);
-          const indexAttr = parseInt(selectedElement.getAttribute('data-current-index') || '0', 10);
-          setCurrentFileIndex(indexAttr);
-        } catch (e) {
-          console.error("Error parsing audio files", e);
+  // Synchronize audio duration to canvas element & sidebar with strict equality guards
+  const syncDuration = useCallback((dur) => {
+    if (!dur || isNaN(dur) || !isFinite(dur) || dur <= 0) return;
+    const el = selectedElementRef.current;
+    if (!el) return;
+
+    const durationStr = formatTime(dur);
+    const mins = Math.floor(dur / 60);
+    const secs = Math.floor(dur % 60);
+    const formattedMinText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs} Mins`;
+    const durSecStr = Math.round(dur).toString();
+
+    let hasChanged = false;
+
+    // 1. Update canvas total time text if different
+    const totalTimeEl = el.querySelector('.audio-total-time');
+    if (totalTimeEl && durationStr !== '0:00' && totalTimeEl.textContent !== durationStr) {
+      totalTimeEl.textContent = durationStr;
+      hasChanged = true;
+    }
+
+    // 2. Update React state if different
+    if (audioDurationTextRef.current !== formattedMinText) {
+      audioDurationTextRef.current = formattedMinText;
+      setAudioDurationText(formattedMinText);
+      hasChanged = true;
+    }
+
+    // 3. Update DOM attributes on canvas element
+    if (el.getAttribute('data-audio-duration-text') !== formattedMinText) {
+      el.setAttribute('data-audio-duration-text', formattedMinText);
+      hasChanged = true;
+    }
+    if (el.getAttribute('data-audio-duration-seconds') !== durSecStr) {
+      el.setAttribute('data-audio-duration-seconds', durSecStr);
+      hasChanged = true;
+    }
+
+    // 4. Update parent element attribute and onUpdate ONLY if something actually changed
+    if (hasChanged && !isUpdatingDurationRef.current) {
+      isUpdatingDurationRef.current = true;
+      try {
+        if (typeof updateElementAttributeRef.current === 'function') {
+          if (activePageIndexRef.current !== undefined && selectedLayerIdRef.current) {
+            updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-audio-duration-text', formattedMinText);
+            updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-audio-duration-seconds', durSecStr);
+          } else {
+            updateElementAttributeRef.current('data-audio-duration-text', formattedMinText);
+            updateElementAttributeRef.current('data-audio-duration-seconds', durSecStr);
+          }
         }
-      } else {
-        const url = selectedElement.getAttribute('data-audio-src') || '';
-        const name = selectedElement.getAttribute('data-filename') || '';
-        if (url) {
-          setAudioFiles([{ url, name }]);
-          setCurrentFileIndex(0);
-        } else {
-          setAudioFiles([]);
-          setCurrentFileIndex(0);
+        if (onUpdateRef.current) {
+          onUpdateRef.current();
         }
+      } finally {
+        setTimeout(() => {
+          isUpdatingDurationRef.current = false;
+        }, 120);
       }
-      
-      const loopAttr = selectedElement.getAttribute('data-audio-loop') === 'true';
-      setIsLooping(loopAttr);
-      const mutedAttr = selectedElement.getAttribute('data-audio-muted') === 'true';
-      setIsMuted(mutedAttr);
-      const volAttr = selectedElement.getAttribute('data-audio-volume');
-      setVolume(volAttr !== null ? parseFloat(volAttr) : 1);
-      const speedAttr = selectedElement.getAttribute('data-audio-speed');
-      setSpeed(speedAttr !== null ? parseFloat(speedAttr) : 1);
+    }
+  }, []);
+
+  const effectiveSrc = audioSrc || sampleAudio;
+
+  // Helper to update play/pause icon on canvas
+  const updatePlayPauseIconOnCanvas = useCallback((playing) => {
+    if (!selectedElement) return;
+    const iconContainer = selectedElement.querySelector('.play-pause-icon');
+    if (!iconContainer) return;
+    const tplId = selectedElement.getAttribute('data-audio-template') || playerStyle || 'sunset-vibrant';
+    const filterEl = selectedElement.querySelector('defs filter');
+    const filterId = filterEl ? filterEl.id : '';
+    const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
+
+    if (playing) {
+      iconContainer.innerHTML = getTemplatePauseIconSvg(tplId, color, filterId);
+    } else {
+      iconContainer.innerHTML = getTemplatePlayIconSvg(tplId, color, filterId);
+    }
+  }, [selectedElement, playerStyle, iconColor]);
+
+  // Helper to update mute/speaker icon on canvas
+  const updateMuteIconOnCanvas = useCallback((muted) => {
+    if (!selectedElement) return;
+    const volIcon = selectedElement.querySelector('.volume-icon');
+    if (!volIcon) return;
+    const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
+    if (muted) {
+      volIcon.innerHTML = `
+        <rect x="-4" y="-4" width="28" height="28" fill="transparent"></rect>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${color}"></polygon>
+        <line x1="18" y1="8" x2="14" y2="16" stroke="${color}" stroke-width="2" stroke-linecap="round"></line>
+        <line x1="14" y1="8" x2="18" y2="16" stroke="${color}" stroke-width="2" stroke-linecap="round"></line>
+      `;
+    } else {
+      volIcon.innerHTML = `
+        <rect x="-4" y="-4" width="28" height="28" fill="transparent"></rect>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="${color}"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      `;
+    }
+  }, [selectedElement, iconColor]);
+
+  // Helper to update loop icon opacity on canvas
+  const updateLoopIconOnCanvas = useCallback((looping) => {
+    if (!selectedElement) return;
+    const loopIcon = selectedElement.querySelector('.loop-icon');
+    if (loopIcon) {
+      loopIcon.style.opacity = looping ? '1' : '0.5';
     }
   }, [selectedElement]);
 
-  useEffect(() => {
-    if (currentFile.url) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(currentFile.url);
-        audioRef.current.loop = isLooping;
-        audioRef.current.volume = volume;
-        audioRef.current.playbackRate = speed;
-        audioRef.current.onended = () => {
-          if (audioFiles.length > 1 && currentFileIndex < audioFiles.length - 1) {
-            handleNext();
-          } else {
-            setIsPlaying(false);
-          }
-        };
-        audioRef.current.ontimeupdate = () => {
-          if (!selectedElement || !audioRef.current) return;
-          const currentTimeStr = formatTime(audioRef.current.currentTime);
-          const durationStr = formatTime(audioRef.current.duration);
-          
-          const currentTimeEl = selectedElement.querySelector('.audio-current-time');
-          if (currentTimeEl) currentTimeEl.textContent = currentTimeStr;
-          
-          const totalTimeEl = selectedElement.querySelector('.audio-total-time');
-          if (totalTimeEl && durationStr !== "0:00" && durationStr !== "NaN:NaN") totalTimeEl.textContent = durationStr;
-          
-          const progressFill = selectedElement.querySelector('.progress-fill');
-          const progressKnob = selectedElement.querySelector('.progress-knob');
-          if (progressFill && progressKnob && audioRef.current.duration) {
-            const ratio = audioRef.current.currentTime / audioRef.current.duration;
-            const maxWidth = 125;
-            const fillWidth = ratio * maxWidth;
-            progressFill.setAttribute('width', fillWidth.toString());
-            progressKnob.setAttribute('cx', (160 + fillWidth).toString());
-          }
-        };
-        audioRef.current.onloadedmetadata = () => {
-          if (!selectedElement || !audioRef.current) return;
-          const durationStr = formatTime(audioRef.current.duration);
-          const totalTimeEl = selectedElement.querySelector('.audio-total-time');
-          if (totalTimeEl && durationStr !== "0:00" && durationStr !== "NaN:NaN") totalTimeEl.textContent = durationStr;
-        };
-      } else {
-        const wasPlaying = isPlaying;
-        audioRef.current.src = currentFile.url;
-        if (wasPlaying) {
-          audioRef.current.play().catch(e => console.error(e));
-        }
-      }
-    }
-  }, [currentFile.url, currentFileIndex]); // eslint-disable-line
-
-  // Clean up audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.loop = isLooping;
-      audioRef.current.volume = volume;
-      audioRef.current.playbackRate = speed;
-      audioRef.current.muted = isMuted;
-    }
-    if (selectedElement) {
-      const volFill = selectedElement.querySelector('.volume-fill');
-      const volKnob = selectedElement.querySelector('.volume-knob');
-      const volIcon = selectedElement.querySelector('.volume-icon');
-      if (volFill && volKnob) {
-        const maxWidth = 75;
-        const effectiveVolume = isMuted ? 0 : volume;
-        const fillWidth = effectiveVolume * maxWidth;
-        volFill.setAttribute('width', fillWidth.toString());
-        volKnob.setAttribute('cx', (370 + fillWidth).toString());
-      }
-      if (volIcon) {
-        if (isMuted || volume === 0) {
-          volIcon.innerHTML = `
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#222"></polygon>
-            <line x1="19" y1="9" x2="15" y2="15" stroke="#222" stroke-width="2" stroke-linecap="round"></line>
-            <line x1="15" y1="9" x2="19" y2="15" stroke="#222" stroke-width="2" stroke-linecap="round"></line>
-          `;
-        } else {
-          volIcon.innerHTML = `
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#222"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-          `;
-        }
-      }
-    }
-  }, [isLooping, isMuted, volume, speed, selectedElement]);
-
-  useEffect(() => {
-    if (selectedElement) {
-      const prevIcon = selectedElement.querySelector('.prev-icon');
-      const nextIcon = selectedElement.querySelector('.next-icon');
-      const hasAudio = audioFiles.length > 0;
-      
-      if (prevIcon) {
-        prevIcon.style.pointerEvents = hasAudio ? 'all' : 'none';
-        prevIcon.style.opacity = hasAudio ? '1' : '0.5';
-        prevIcon.style.cursor = hasAudio ? 'pointer' : 'default';
-      }
-      if (nextIcon) {
-        nextIcon.style.pointerEvents = hasAudio ? 'all' : 'none';
-        nextIcon.style.opacity = hasAudio ? '1' : '0.5';
-        nextIcon.style.cursor = hasAudio ? 'pointer' : 'default';
-      }
-    }
-  }, [audioFiles.length, selectedElement]);
-
-  // Ref to access current toggle function inside event listeners
-  const togglePlayPauseRef = useRef(null);
-  const nextRef = useRef(null);
-  const prevRef = useRef(null);
-  const handleProgressClickRef = useRef(null);
-  const handleVolumeClickRef = useRef(null);
-  const handleLoopClickRef = useRef(null);
-
-  useEffect(() => {
-    togglePlayPauseRef.current = togglePlayPause;
-    nextRef.current = handleNext;
-    prevRef.current = handlePrev;
-    
-    handleProgressClickRef.current = (e, groupEl) => {
-      if (!audioRef.current || !audioRef.current.duration) return;
-      const bg = groupEl.querySelector('.progress-bg');
-      if (!bg) return;
-      const rect = bg.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const ratio = Math.max(0, Math.min(1, x / rect.width));
-      audioRef.current.currentTime = ratio * audioRef.current.duration;
-    };
-    
-    handleVolumeClickRef.current = (e, groupEl) => {
-      const bg = groupEl.querySelector('.volume-bg');
-      if (!bg) return;
-      const rect = bg.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      
-      if (x < -10) {
-        const newMuted = !isMuted;
-        setIsMuted(newMuted);
-        updateAttribute('data-audio-muted', newMuted.toString());
-        return;
-      }
-      
-      const ratio = Math.max(0, Math.min(1, x / rect.width));
-      setVolume(ratio);
-      updateAttribute('data-audio-volume', ratio.toString());
-      
-      if (ratio > 0 && isMuted) {
-        setIsMuted(false);
-        updateAttribute('data-audio-muted', 'false');
-      }
-    };
-    
-    handleLoopClickRef.current = () => {
-      const newLoop = !isLooping;
-      setIsLooping(newLoop);
-      updateAttribute('data-audio-loop', newLoop.toString());
-    };
-  }, [isPlaying, currentFile.url, currentFileIndex, audioFiles, isLooping, isMuted, volume]);
-
-  useEffect(() => {
-    if (selectedElement) {
-      const iconContainer = selectedElement.querySelector('.play-pause-icon');
-      const isSquare = selectedElement.querySelector('.audio-fill-layer')?.getAttribute('height') === '48';
-      if (iconContainer) {
-        if (isPlaying) {
-          if (isSquare) {
-            iconContainer.innerHTML = '<rect x="18" y="16" width="4" height="16" fill="#737373" rx="1" /><rect x="26" y="16" width="4" height="16" fill="#737373" rx="1" />';
-          } else {
-            iconContainer.innerHTML = '<rect x="6" y="4" width="4" height="14" fill="#ffffff" rx="1" /><rect x="14" y="4" width="4" height="14" fill="#ffffff" rx="1" />';
-          }
-        } else {
-          if (isSquare) {
-            iconContainer.innerHTML = '<polygon points="20 16 32 24 20 32" fill="#737373" stroke="#737373" stroke-width="2" stroke-linejoin="round"></polygon>';
-          } else {
-            iconContainer.innerHTML = '<polygon points="7 4 17 11 7 18 7 4" fill="#ffffff"></polygon>';
-          }
-        }
-      }
-    }
-  }, [isPlaying, selectedElement]);
-
+  // Initialize state from selectedElement DOM attributes & auto-sanitize
   useEffect(() => {
     if (!selectedElement) return;
 
-    const handlePlayPauseClick = (e) => {
-      // Check if clicked on next/prev
-      const target = e.target;
-      if (target.closest('.next-icon')) {
-        e.stopPropagation();
-        if (nextRef.current) nextRef.current();
-        return;
+    // Auto-fix bounding box & hitboxes on canvas element
+    const fillLayer = selectedElement.querySelector('.audio-fill-layer');
+    if (fillLayer) {
+      const templateId = selectedElement.getAttribute('data-audio-template') || 'sunset-vibrant';
+      const TEMPLATE_WIDTHS = {
+        'glassmorphism': 360,
+        'forest-moss': 440,
+        'cyber-blue': 360,
+        'silver-mono': 450,
+        'sunset-vibrant': 460,
+        'cyberpunk-wide': 460,
+      };
+      const defW = TEMPLATE_WIDTHS[templateId] || 460;
+      if (!fillLayer.getAttribute('width') || fillLayer.getAttribute('width') === '0') {
+        fillLayer.setAttribute('width', String(defW));
       }
-      if (target.closest('.prev-icon')) {
-        e.stopPropagation();
-        if (prevRef.current) prevRef.current();
-        return;
+    }
+    const oversizedHitbox = selectedElement.querySelector('.volume-group > rect[width="150"]');
+    if (oversizedHitbox) {
+      oversizedHitbox.setAttribute('width', '35');
+    }
+    
+    // Ensure all canvas controls have pointer-events and pointer cursor
+    ['.prev-icon', '.next-icon', '.play-pause-btn', '.loop-icon', '.volume-icon', '.volume-slider-part', '.progress-group'].forEach((sel) => {
+      const el = selectedElement.querySelector(sel);
+      if (el) {
+        el.style.pointerEvents = 'all';
+        el.style.cursor = 'pointer';
       }
-      
-      const loopIcon = target.closest('.loop-icon');
-      if (loopIcon) {
-        e.stopPropagation();
-        if (handleLoopClickRef.current) handleLoopClickRef.current();
-        return;
-      }
+    });
 
-      const progressGroup = target.closest('.progress-group');
-      if (progressGroup) {
-        e.stopPropagation();
-        if (handleProgressClickRef.current) handleProgressClickRef.current(e, progressGroup);
-        return;
+    // File info
+    const nameAttr = selectedElement.getAttribute('data-filename');
+    if (nameAttr) {
+      setAudioName(nameAttr);
+      const titleEl = selectedElement.querySelector('.audio-title');
+      if (titleEl) {
+        titleEl.textContent = nameAttr.replace(/\.[^/.]+$/, '');
       }
+    }
 
-      const volumeGroup = target.closest('.volume-group');
-      if (volumeGroup) {
-        e.stopPropagation();
-        if (handleVolumeClickRef.current) handleVolumeClickRef.current(e, volumeGroup);
-        return;
+    const durText = selectedElement.getAttribute('data-audio-duration-text');
+    if (durText) {
+      setAudioDurationText(durText);
+      const parsedDisplay = parseDurationTextToDisplay(durText);
+      const totalTimeEl = selectedElement.querySelector('.audio-total-time');
+      if (totalTimeEl && parsedDisplay) {
+        totalTimeEl.textContent = parsedDisplay;
       }
+    }
 
-      if (togglePlayPauseRef.current) {
-        togglePlayPauseRef.current();
+    const sizeText = selectedElement.getAttribute('data-audio-size-text');
+    if (sizeText) setAudioSizeText(sizeText);
+
+    const formatText = selectedElement.getAttribute('data-audio-format-text');
+    if (formatText) setAudioFormatText(formatText);
+
+    const srcAttr = selectedElement.getAttribute('data-audio-src');
+    if (srcAttr) {
+      setAudioSrc(srcAttr);
+    } else {
+      setAudioSrc(sampleAudio);
+      selectedElement.setAttribute('data-audio-src', sampleAudio);
+      selectedElement.setAttribute('data-interaction', 'audio');
+      selectedElement.setAttribute('data-interaction-value', sampleAudio);
+    }
+
+    // Audio properties
+    const tplAttr = selectedElement.getAttribute('data-audio-template');
+    if (tplAttr) setPlayerStyle(tplAttr);
+
+    const speedAttr = selectedElement.getAttribute('data-audio-speed');
+    if (speedAttr) setPlaybackSpeed(speedAttr);
+
+    const behAttr = selectedElement.getAttribute('data-audio-behaviour');
+    if (behAttr) setBehaviour(behAttr);
+
+    const volAttr = selectedElement.getAttribute('data-audio-volume');
+    if (volAttr !== null) setDefaultVolume(Math.round(parseFloat(volAttr) * 100));
+
+    // Controls toggles (defaults to true if null or anything other than 'false')
+    const ppAttr = selectedElement.getAttribute('data-control-play-pause');
+    setControlPlayPause(ppAttr !== 'false');
+
+    const skipAttr = selectedElement.getAttribute('data-control-skip');
+    setControlSkip(skipAttr !== 'false');
+
+    const skipSecAttr = selectedElement.getAttribute('data-skip-seconds');
+    if (skipSecAttr) setSkipSeconds(parseInt(skipSecAttr, 10) || 5);
+
+    const durAttr = selectedElement.getAttribute('data-control-duration');
+    setControlDuration(durAttr !== 'false');
+
+    const volCtrlAttr = selectedElement.getAttribute('data-control-volume');
+    setControlVolume(volCtrlAttr !== 'false');
+
+    const loopAttr = selectedElement.getAttribute('data-control-loop') ?? selectedElement.getAttribute('data-audio-loop');
+    setControlLoop(loopAttr !== 'false');
+    setIsLooping(loopAttr === 'true');
+
+    const muteAttr = selectedElement.getAttribute('data-control-mute');
+    setControlMute(muteAttr !== 'false');
+
+    const audioMutedAttr = selectedElement.getAttribute('data-audio-muted');
+    if (audioMutedAttr !== null) setIsMuted(audioMutedAttr === 'true');
+
+    // Colors Extraction & Hydration from canvas element
+    const extracted = extractAudioColors(selectedElement);
+    setIconColor(extracted.iconColor);
+    setBgColor(extracted.bgColor);
+    setStrokeColor(extracted.strokeColor);
+
+    // If element was missing color attributes or had the old #900000 corruption, heal it on canvas
+    const rootEl = selectedElement.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || selectedElement;
+    const currentTpl = rootEl.getAttribute('data-audio-template') || 'glassmorphism';
+    const wasCorrupted = currentTpl !== 'audio-icon' && rootEl.getAttribute('data-stroke-color') === '#900000' && rootEl.getAttribute('data-icon-color') === '#000000';
+    if (!rootEl.getAttribute('data-icon-color') || !rootEl.getAttribute('data-fill-color') || !rootEl.getAttribute('data-stroke-color') || wasCorrupted) {
+      applyColorsToCanvas(rootEl, {
+        icon: extracted.iconColor,
+        bg: extracted.bgColor,
+        stroke: extracted.strokeColor
+      });
+      rootEl.setAttribute('data-icon-color', extracted.iconColor);
+      rootEl.setAttribute('data-fill-color', extracted.bgColor);
+      rootEl.setAttribute('data-stroke-color', extracted.strokeColor);
+    } else if (rootEl.getAttribute('data-fill-color') !== extracted.bgColor) {
+      rootEl.setAttribute('data-fill-color', extracted.bgColor);
+      if (typeof updateElementAttributeRef.current === 'function') {
+        if (activePageIndexRef.current !== undefined && selectedLayerIdRef.current) {
+          updateElementAttributeRef.current(activePageIndexRef.current, selectedLayerIdRef.current, 'data-fill-color', extracted.bgColor);
+        } else {
+          updateElementAttributeRef.current('data-fill-color', extracted.bgColor);
+        }
       }
-    };
+    }
 
-    selectedElement.addEventListener('click', handlePlayPauseClick);
-    return () => {
-      selectedElement.removeEventListener('click', handlePlayPauseClick);
-    };
+    // Drop Shadow
+    const hasDs = selectedElement.getAttribute('data-effect-drop-shadow') === 'true';
+    setActiveEffects(hasDs ? ['Drop Shadow'] : []);
+    if (hasDs) {
+      setEffectSettings({
+        'Drop Shadow': {
+          x: parseFloat(selectedElement.getAttribute('data-effect-drop-shadow-x') || '2'),
+          y: parseFloat(selectedElement.getAttribute('data-effect-drop-shadow-y') || '2'),
+          blur: parseFloat(selectedElement.getAttribute('data-effect-drop-shadow-blur') || '4'),
+          spread: parseFloat(selectedElement.getAttribute('data-effect-drop-shadow-spread') || '0'),
+          color: selectedElement.getAttribute('data-effect-drop-shadow-color') || '#000000',
+          opacity: parseFloat(selectedElement.getAttribute('data-effect-drop-shadow-opacity') || '35')
+        }
+      });
+    }
   }, [selectedElement]);
 
-  const updateAttribute = (attr, value) => {
-    if (selectedElement) {
-      selectedElement.setAttribute(attr, value);
-      if (updateElementAttribute) {
-        updateElementAttribute(attr, value);
-      }
-    }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length || !selectedElement) return;
-
-    setIsUploading(true);
-    let newFiles = [];
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser);
-            const formData = new FormData();
-            formData.append('emailId', user.emailId);
-            if (paramVId) formData.append('v_id', paramVId);
-            formData.append('type', 'audio');
-            formData.append('file', file);
-
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-            const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
-            
-            if (res.data.url) {
-              const serverUrl = resolveUploadsPath(res.data.url);
-              newFiles.push({ url: serverUrl, name: file.name });
-            }
-          } catch (uploadErr) {
-            console.error(`Upload error for ${file.name}, falling back to local URL:`, uploadErr);
-            const localUrl = URL.createObjectURL(file);
-            newFiles.push({ url: localUrl, name: file.name });
-          }
-        } else {
-            const localUrl = URL.createObjectURL(file);
-            newFiles.push({ url: localUrl, name: file.name });
-        }
-      }
-      
-      applyFilesToElement(newFiles, newFiles.length > files.length ? currentFileIndex : newFiles.length - files.length);
-
-    } catch (err) {
-      console.error("General error in file processing:", err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const applyFilesToElement = (files, index = 0) => {
-    setAudioFiles(files);
-    setCurrentFileIndex(index);
-    if (selectedElement) {
-      updateAttribute('data-audio-files', JSON.stringify(files));
-      updateAttribute('data-current-index', index.toString());
-      if (files.length > 0) {
-        updateAttribute('data-audio-src', files[index].url);
-        updateAttribute('data-filename', files[index].name);
-        updateAttribute('data-interaction', 'audio');
-        updateAttribute('data-interaction-value', files[index].url);
-      }
-      
-      const textEl = selectedElement.querySelector('.audio-time-text');
-      if (textEl && files.length > 0) {
-        textEl.textContent = files[index].name || 'Audio Player';
-      }
-
-      // Show or hide prev/next icons
-      const prevIcon = selectedElement.querySelector('.prev-icon');
-      const nextIcon = selectedElement.querySelector('.next-icon');
-      const playPauseIcon = selectedElement.querySelector('.play-pause-icon');
-      const audioFill = selectedElement.querySelector('.audio-fill-layer');
-      const strokeOverlay = selectedElement.querySelector('.svg-image-stroke-overlay');
-      const isIcon = audioFill && audioFill.getAttribute('height') === '48';
-
-      const hasAudio = files.length > 0;
-
-      if (prevIcon) {
-        prevIcon.setAttribute('display', 'block');
-        prevIcon.style.pointerEvents = hasAudio ? 'all' : 'none';
-        prevIcon.style.opacity = hasAudio ? '1' : '0.5';
-        prevIcon.style.cursor = hasAudio ? 'pointer' : 'default';
-      }
-      if (nextIcon) {
-        nextIcon.setAttribute('display', 'block');
-        nextIcon.style.pointerEvents = hasAudio ? 'all' : 'none';
-        nextIcon.style.opacity = hasAudio ? '1' : '0.5';
-        nextIcon.style.cursor = hasAudio ? 'pointer' : 'default';
-      }
-      
-      if (isIcon) {
-        audioFill.setAttribute('width', '96');
-        if (strokeOverlay) strokeOverlay.setAttribute('width', '96');
-        if (prevIcon) prevIcon.setAttribute('transform', 'translate(11, 0)');
-        if (playPauseIcon) playPauseIcon.setAttribute('transform', 'translate(24, 0)');
-        if (nextIcon) nextIcon.setAttribute('transform', 'translate(37, 0)');
-      }
-    }
-  };
-
-  const handleRemoveAudio = (indexToRemove) => {
-    const newFiles = audioFiles.filter((_, idx) => idx !== indexToRemove);
-    if (newFiles.length === 0) {
-      setAudioFiles([]);
-      setCurrentFileIndex(0);
-      if (isPlaying) {
-        audioRef.current?.pause();
-        setIsPlaying(false);
-      }
-      if (selectedElement) {
-        updateAttribute('data-audio-files', '');
-        updateAttribute('data-current-index', '0');
-        updateAttribute('data-audio-src', '');
-        updateAttribute('data-filename', '');
-        selectedElement.removeAttribute('data-interaction');
-        selectedElement.removeAttribute('data-interaction-value');
-        
-        const textEl = selectedElement.querySelector('.audio-time-text');
-        if (textEl) {
-          textEl.textContent = 'Audio Player';
-        }
-
-        const prevIcon = selectedElement.querySelector('.prev-icon');
-        const nextIcon = selectedElement.querySelector('.next-icon');
-        if (prevIcon) {
-          prevIcon.setAttribute('display', 'block');
-          prevIcon.style.pointerEvents = 'none';
-          prevIcon.style.opacity = '0.5';
-          prevIcon.style.cursor = 'default';
-        }
-        if (nextIcon) {
-          nextIcon.setAttribute('display', 'block');
-          nextIcon.style.pointerEvents = 'none';
-          nextIcon.style.opacity = '0.5';
-          nextIcon.style.cursor = 'default';
-        }
-      }
+  // Audio object initialization & live playback sync
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(effectiveSrc);
     } else {
-      let newIndex = currentFileIndex;
-      if (indexToRemove < currentFileIndex) {
-        newIndex--;
-      } else if (indexToRemove === currentFileIndex && newIndex >= newFiles.length) {
-        newIndex = newFiles.length - 1;
+      if (audioRef.current.src !== effectiveSrc) {
+        audioRef.current.src = effectiveSrc;
+        audioRef.current.load();
       }
-      applyFilesToElement(newFiles, newIndex);
     }
-  };
 
+    const audio = audioRef.current;
+    audio.loop = isLooping;
+    audio.volume = defaultVolume / 100;
+    audio.playbackRate = parseFloat(playbackSpeed) || 1;
+    audio.muted = isMuted;
+
+    const handleDuration = () => {
+      if (!audio) return;
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        syncDuration(audio.duration);
+      } else if (audio.duration === Infinity) {
+        // Chromium MP3 stream duration fix
+        audio.currentTime = 1e101;
+        const onTime = () => {
+          audio.removeEventListener('timeupdate', onTime);
+          audio.currentTime = 0;
+          if (isFinite(audio.duration) && audio.duration > 0) {
+            syncDuration(audio.duration);
+          }
+        };
+        audio.addEventListener('timeupdate', onTime);
+      }
+    };
+
+    // If metadata already loaded, sync immediately
+    if (audio.readyState >= 1) {
+      handleDuration();
+    }
+
+    audio.addEventListener('loadedmetadata', handleDuration);
+    audio.addEventListener('durationchange', handleDuration);
+    audio.addEventListener('canplay', handleDuration);
+    audio.addEventListener('loadeddata', handleDuration);
+
+    audio.onended = () => {
+      setIsPlaying(false);
+      updatePlayPauseIconOnCanvas(false);
+      if (!audio?.loop && selectedElement) {
+        const curEl = selectedElement.querySelector('.audio-current-time');
+        if (curEl) curEl.textContent = '0:00';
+        const progressFill = selectedElement.querySelector('.progress-fill');
+        const progressKnob = selectedElement.querySelector('.progress-knob');
+        if (progressFill && progressKnob) {
+          const progressBg = selectedElement.querySelector('.progress-bg');
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+          progressFill.setAttribute('width', '0');
+          progressKnob.setAttribute('cx', bgX.toString());
+        }
+      }
+    };
+
+    audio.ontimeupdate = () => {
+      if (!selectedElement || !audio) return;
+      const curTime = audio.currentTime;
+      const dur = audio.duration;
+      const currentTimeStr = formatTime(curTime);
+
+      const currentTimeEl = selectedElement.querySelector('.audio-current-time');
+      if (currentTimeEl) currentTimeEl.textContent = currentTimeStr;
+
+      const progressFill = selectedElement.querySelector('.progress-fill');
+      const progressKnob = selectedElement.querySelector('.progress-knob');
+      if (progressFill && progressKnob && dur && isFinite(dur) && dur > 0) {
+        const progressBg = selectedElement.querySelector('.progress-bg');
+        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+        const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+        const ratio = Math.min(1, Math.max(0, curTime / dur));
+        const fillWidth = ratio * maxWidth;
+        progressFill.setAttribute('width', fillWidth.toString());
+        progressKnob.setAttribute('cx', (bgX + fillWidth).toString());
+      }
+    };
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleDuration);
+      audio.removeEventListener('durationchange', handleDuration);
+      audio.removeEventListener('canplay', handleDuration);
+      audio.removeEventListener('loadeddata', handleDuration);
+      audio.pause();
+    };
+  }, [effectiveSrc, selectedElement, syncDuration]);
+
+  // Sync playback speed & volume to audioRef
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = parseFloat(playbackSpeed) || 1;
+      audioRef.current.volume = defaultVolume / 100;
+      audioRef.current.loop = isLooping;
+      audioRef.current.muted = isMuted;
+    }
+  }, [playbackSpeed, defaultVolume, isLooping, isMuted]);
+
+  // Sync control toggles visibility to SVG element on canvas (with strict equality guards)
+  useEffect(() => {
+    if (!selectedElement) return;
+
+    let hasDomChanges = false;
+
+    // Play/Pause button
+    const ppBtn = selectedElement.querySelector('.play-pause-btn') || selectedElement.querySelector('.play-pause-icon');
+    if (ppBtn) {
+      const nextDisplay = controlPlayPause ? '' : 'none';
+      if (ppBtn.style.display !== nextDisplay) {
+        ppBtn.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Skip prev/next
+    const prevIcon = selectedElement.querySelector('.prev-icon');
+    const nextIcon = selectedElement.querySelector('.next-icon');
+    if (prevIcon) {
+      const nextDisplay = controlSkip ? '' : 'none';
+      if (prevIcon.style.display !== nextDisplay) {
+        prevIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (nextIcon) {
+      const nextDisplay = controlSkip ? '' : 'none';
+      if (nextIcon.style.display !== nextDisplay) {
+        nextIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Duration (time texts, separator, and progress bar)
+    const curTime = selectedElement.querySelector('.audio-current-time');
+    const totTime = selectedElement.querySelector('.audio-total-time');
+    const sepTime = selectedElement.querySelector('.audio-duration-separator');
+    const progGroup = selectedElement.querySelector('.progress-group');
+    if (curTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (curTime.style.display !== nextDisplay) {
+        curTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (totTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (totTime.style.display !== nextDisplay) {
+        totTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (sepTime) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (sepTime.style.display !== nextDisplay) {
+        sepTime.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+    if (progGroup) {
+      const nextDisplay = controlDuration ? '' : 'none';
+      if (progGroup.style.display !== nextDisplay) {
+        progGroup.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Volume control slider
+    const volSlider = selectedElement.querySelector('.volume-slider-part');
+    if (volSlider) {
+      const nextDisplay = controlVolume ? '' : 'none';
+      if (volSlider.style.display !== nextDisplay) {
+        volSlider.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Loop button
+    const loopBtn = selectedElement.querySelector('.loop-icon');
+    if (loopBtn) {
+      const nextDisplay = controlLoop ? '' : 'none';
+      if (loopBtn.style.display !== nextDisplay) {
+        loopBtn.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Mute / volume icon
+    const volIcon = selectedElement.querySelector('.volume-icon');
+    if (volIcon) {
+      const nextDisplay = controlMute ? '' : 'none';
+      if (volIcon.style.display !== nextDisplay) {
+        volIcon.style.display = nextDisplay;
+        hasDomChanges = true;
+      }
+    }
+
+    // Persist attributes only if changed
+    const syncAttr = (attr, val) => {
+      if (selectedElement.getAttribute(attr) !== val) {
+        selectedElement.setAttribute(attr, val);
+        updateAttribute(attr, val);
+        hasDomChanges = true;
+      }
+    };
+
+    syncAttr('data-control-play-pause', controlPlayPause.toString());
+    syncAttr('data-control-skip', controlSkip.toString());
+    syncAttr('data-skip-seconds', skipSeconds.toString());
+    syncAttr('data-control-duration', controlDuration.toString());
+    syncAttr('data-control-volume', controlVolume.toString());
+    syncAttr('data-control-loop', controlLoop.toString());
+    syncAttr('data-control-mute', controlMute.toString());
+
+    if (hasDomChanges && onUpdate) onUpdate();
+  }, [
+    controlPlayPause,
+    controlSkip,
+    skipSeconds,
+    controlDuration,
+    controlVolume,
+    controlLoop,
+    controlMute,
+    selectedElement
+  ]); // eslint-disable-line
+
+  // Handle Play / Pause click
   const togglePlayPause = () => {
-    if (!audioRef.current || !currentFile.url || !selectedElement) return;
-    
-    const iconContainer = selectedElement.querySelector('.play-pause-icon');
-    if (!iconContainer) return;
-
+    if (!audioRef.current) {
+      audioRef.current = new Audio(effectiveSrc);
+    }
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
-      // Wait for re-render to update the icon (handled by useEffect)
+      updatePlayPauseIconOnCanvas(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+          updatePlayPauseIconOnCanvas(true);
+        })
+        .catch((e) => console.warn('Playback error:', e));
+    }
+  };
+
+  // Step selector for Skip Forward/Backward
+  const handlePrevStep = () => {
+    const currentIndex = SKIP_STEPS.indexOf(skipSeconds);
+    if (currentIndex > 0) {
+      const newSec = SKIP_STEPS[currentIndex - 1];
+      setSkipSeconds(newSec);
+      updateAttribute('data-skip-seconds', newSec.toString());
+    }
+  };
+
+  const handleNextStep = () => {
+    const currentIndex = SKIP_STEPS.indexOf(skipSeconds);
+    if (currentIndex < SKIP_STEPS.length - 1) {
+      const newSec = SKIP_STEPS[currentIndex + 1];
+      setSkipSeconds(newSec);
+      updateAttribute('data-skip-seconds', newSec.toString());
+    }
+  };
+
+  // Skip actions
+  const handlePrev = () => {
+    if (audioRef.current) {
+      const targetTime = Math.max(0, audioRef.current.currentTime - skipSeconds);
+      audioRef.current.currentTime = targetTime;
+      if (selectedElement) {
+        const curEl = selectedElement.querySelector('.audio-current-time');
+        if (curEl) curEl.textContent = formatTime(targetTime);
+        const dur = audioRef.current.duration;
+        if (dur && dur > 0) {
+          const progressBg = selectedElement.querySelector('.progress-bg');
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+          const ratio = Math.min(1, Math.max(0, targetTime / dur));
+          const progressFill = selectedElement.querySelector('.progress-fill');
+          const progressKnob = selectedElement.querySelector('.progress-knob');
+          if (progressFill && progressKnob) {
+            const fillWidth = ratio * maxWidth;
+            progressFill.setAttribute('width', fillWidth.toString());
+            progressKnob.setAttribute('cx', (bgX + fillWidth).toString());
+          }
+        }
+      }
     }
   };
 
   const handleNext = () => {
     if (audioRef.current && audioRef.current.duration) {
-      audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 3);
+      const targetTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + skipSeconds);
+      audioRef.current.currentTime = targetTime;
+      if (selectedElement) {
+        const curEl = selectedElement.querySelector('.audio-current-time');
+        if (curEl) curEl.textContent = formatTime(targetTime);
+        const dur = audioRef.current.duration;
+        if (dur && dur > 0) {
+          const progressBg = selectedElement.querySelector('.progress-bg');
+          const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+          const maxWidth = progressBg ? parseFloat(progressBg.getAttribute('width') || '100') : 100;
+          const ratio = Math.min(1, Math.max(0, targetTime / dur));
+          const progressFill = selectedElement.querySelector('.progress-fill');
+          const progressKnob = selectedElement.querySelector('.progress-knob');
+          if (progressFill && progressKnob) {
+            const fillWidth = ratio * maxWidth;
+            progressFill.setAttribute('width', fillWidth.toString());
+            progressKnob.setAttribute('cx', (bgX + fillWidth).toString());
+          }
+        }
+      }
     }
   };
 
-  const handlePrev = () => {
-    if (audioRef.current && audioRef.current.duration) {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 3);
+  // Seek on canvas progress bar
+  const handleProgressClick = (e, progressGroup) => {
+    if (!audioRef.current || !selectedElement) return;
+    const bg = progressGroup.querySelector('.progress-bg') || progressGroup.querySelector('rect:not([fill="transparent"])');
+    if (!bg) return;
+    const rect = bg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = e.clientX - rect.left;
+    const bgWidth = parseFloat(bg.getAttribute('width') || rect.width.toString()) || 100;
+    const bgX = parseFloat(bg.getAttribute('x') || '0') || 0;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const dur = audioRef.current.duration || 0;
+    if (dur > 0) {
+      const newTime = ratio * dur;
+      audioRef.current.currentTime = newTime;
+      const curEl = selectedElement.querySelector('.audio-current-time');
+      if (curEl) curEl.textContent = formatTime(newTime);
+    }
+    const progressFill = progressGroup.querySelector('.progress-fill');
+    const progressKnob = progressGroup.querySelector('.progress-knob');
+    if (progressFill && progressKnob) {
+      const fillW = ratio * bgWidth;
+      progressFill.setAttribute('width', fillW.toString());
+      progressKnob.setAttribute('cx', (bgX + fillW).toString());
+    }
+    if (onUpdate) onUpdate();
+  };
+
+  // Volume slider interaction on canvas
+  const handleVolumeClick = (e, volSliderPart) => {
+    if (!selectedElement) return;
+    const bg = volSliderPart.querySelector('.volume-bg') || volSliderPart.querySelector('rect:not([fill="transparent"])');
+    if (!bg) return;
+    const rect = bg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const newVolPct = Math.round(ratio * 100);
+    setDefaultVolume(newVolPct);
+    updateAttribute('data-audio-volume', ratio.toString());
+    if (audioRef.current) {
+      audioRef.current.volume = ratio;
+      if (ratio > 0 && isMuted) {
+        setIsMuted(false);
+        audioRef.current.muted = false;
+        updateAttribute('data-audio-muted', 'false');
+        updateMuteIconOnCanvas(false);
+      }
+    }
+    const volFill = volSliderPart.querySelector('.volume-fill');
+    const volKnob = volSliderPart.querySelector('.volume-knob');
+    if (volFill && volKnob) {
+      const bgX = parseFloat(bg.getAttribute('x') || '0') || 0;
+      const bgWidth = parseFloat(bg.getAttribute('width') || rect.width.toString()) || 50;
+      const fillW = ratio * bgWidth;
+      volFill.setAttribute('width', fillW.toString());
+      volKnob.setAttribute('cx', (bgX + fillW).toString());
+    }
+    if (onUpdate) onUpdate();
+  };
+
+  // Mute toggle on canvas
+  const handleVolumeIconClick = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+    }
+    updateAttribute('data-audio-muted', nextMuted.toString());
+    updateMuteIconOnCanvas(nextMuted);
+    if (onUpdate) onUpdate();
+  };
+
+  // Loop toggle on canvas
+  const handleLoopIconClick = () => {
+    const nextLoop = !isLooping;
+    setIsLooping(nextLoop);
+    if (audioRef.current) {
+      audioRef.current.loop = nextLoop;
+    }
+    updateAttribute('data-audio-loop', nextLoop.toString());
+    updateLoopIconOnCanvas(nextLoop);
+    if (onUpdate) onUpdate();
+  };
+
+  const actionsRef = useRef({
+    togglePlayPause,
+    handlePrev,
+    handleNext,
+    handleProgressClick,
+    handleVolumeClick,
+    handleVolumeIconClick,
+    handleLoopIconClick
+  });
+
+  useEffect(() => {
+    actionsRef.current = {
+      togglePlayPause,
+      handlePrev,
+      handleNext,
+      handleProgressClick,
+      handleVolumeClick,
+      handleVolumeIconClick,
+      handleLoopIconClick
+    };
+  });
+
+  // Attach canvas click and scrub delegation on selectedElement
+  useEffect(() => {
+    if (!selectedElement) return;
+
+    const handleCanvasClick = (e) => {
+      const target = e.target;
+
+      // Play/Pause button
+      if (target.closest('.play-pause-btn') || target.closest('.play-pause-icon')) {
+        e.stopPropagation();
+        actionsRef.current.togglePlayPause();
+        return;
+      }
+
+      // Prev icon (skip back)
+      if (target.closest('.prev-icon')) {
+        e.stopPropagation();
+        actionsRef.current.handlePrev();
+        return;
+      }
+
+      // Next icon (skip forward)
+      if (target.closest('.next-icon')) {
+        e.stopPropagation();
+        actionsRef.current.handleNext();
+        return;
+      }
+
+      // Progress bar (seek)
+      const progGroup = target.closest('.progress-group');
+      if (progGroup) {
+        e.stopPropagation();
+        actionsRef.current.handleProgressClick(e, progGroup);
+        return;
+      }
+
+      // Volume slider
+      const volSliderPart = target.closest('.volume-slider-part');
+      if (volSliderPart) {
+        e.stopPropagation();
+        actionsRef.current.handleVolumeClick(e, volSliderPart);
+        return;
+      }
+
+      // Volume / Mute icon
+      if (target.closest('.volume-icon')) {
+        e.stopPropagation();
+        actionsRef.current.handleVolumeIconClick();
+        return;
+      }
+
+      // Loop icon
+      if (target.closest('.loop-icon')) {
+        e.stopPropagation();
+        actionsRef.current.handleLoopIconClick();
+        return;
+      }
+    };
+
+    const handlePointerDown = (e) => {
+      const progGroup = e.target.closest('.progress-group');
+      if (progGroup) {
+        e.stopPropagation();
+        actionsRef.current.handleProgressClick(e, progGroup);
+
+        const onPointerMove = (moveEvent) => {
+          actionsRef.current.handleProgressClick(moveEvent, progGroup);
+        };
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        return;
+      }
+
+      const volSliderPart = e.target.closest('.volume-slider-part');
+      if (volSliderPart) {
+        e.stopPropagation();
+        actionsRef.current.handleVolumeClick(e, volSliderPart);
+
+        const onPointerMove = (moveEvent) => {
+          actionsRef.current.handleVolumeClick(moveEvent, volSliderPart);
+        };
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        return;
+      }
+    };
+
+    selectedElement.addEventListener('click', handleCanvasClick);
+    selectedElement.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      selectedElement.removeEventListener('click', handleCanvasClick);
+      selectedElement.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [selectedElement]);
+
+  // File Upload / Replacement Handler
+  const handleReplaceAudioClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedElement) return;
+
+    setIsUploading(true);
+    try {
+      const fileName = file.name;
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2) + ' mb';
+      const ext = fileName.split('.').pop()?.toUpperCase() || 'MP3';
+
+      setAudioName(fileName);
+      setAudioSizeText(sizeMb);
+      setAudioFormatText(ext);
+      updateAttribute('data-filename', fileName);
+      updateAttribute('data-audio-size-text', sizeMb);
+      updateAttribute('data-audio-format-text', ext);
+
+      // Update track title on canvas element if present
+      const titleEl = selectedElement.querySelector('.audio-title');
+      if (titleEl) {
+        titleEl.textContent = fileName.replace(/\.[^/.]+$/, '');
+      }
+
+      // Temporary local URL for immediate metadata loading & playback
+      const localUrl = URL.createObjectURL(file);
+
+      // Immediately probe duration directly from the file
+      const probeAudio = new Audio();
+      probeAudio.preload = 'metadata';
+      const handleProbe = () => {
+        if (isFinite(probeAudio.duration) && probeAudio.duration > 0) {
+          syncDuration(probeAudio.duration);
+        } else if (probeAudio.duration === Infinity) {
+          probeAudio.currentTime = 1e101;
+          const onProbeTime = () => {
+            probeAudio.removeEventListener('timeupdate', onProbeTime);
+            probeAudio.currentTime = 0;
+            if (isFinite(probeAudio.duration) && probeAudio.duration > 0) {
+              syncDuration(probeAudio.duration);
+            }
+          };
+          probeAudio.addEventListener('timeupdate', onProbeTime);
+        }
+      };
+      probeAudio.addEventListener('loadedmetadata', handleProbe);
+      probeAudio.addEventListener('durationchange', handleProbe);
+      probeAudio.addEventListener('canplay', handleProbe);
+      probeAudio.src = localUrl;
+
+      setAudioSrc(localUrl);
+      updateAttribute('data-audio-src', localUrl);
+      updateAttribute('data-interaction', 'audio');
+      updateAttribute('data-interaction-value', localUrl);
+
+      // Upload to backend if logged in
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          const formData = new FormData();
+          formData.append('emailId', user.emailId);
+          if (paramVId) formData.append('v_id', paramVId);
+          formData.append('type', 'audio');
+          formData.append('file', file);
+
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const res = await axios.post(`${backendUrl}/api/flipbook/upload-asset`, formData);
+          if (res.data?.url) {
+            const serverUrl = resolveUploadsPath(res.data.url);
+            setAudioSrc(serverUrl);
+            updateAttribute('data-audio-src', serverUrl);
+            updateAttribute('data-interaction-value', serverUrl);
+          }
+        } catch (uploadErr) {
+          console.warn('Backend upload failed, kept local URL:', uploadErr);
+        }
+      }
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      console.error('File selection error:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove audio track
+  const handleRemoveAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+    setAudioName('Audio Name.mp3');
+    setAudioDurationText('00:00 Mins');
+    setAudioSizeText('0.00 mb');
+    setAudioFormatText('MP3');
+    setAudioSrc('');
+    updateAttribute('data-filename', 'Audio Name.mp3');
+    updateAttribute('data-audio-duration-text', '00:00 Mins');
+    updateAttribute('data-audio-size-text', '0.00 mb');
+    updateAttribute('data-audio-format-text', 'MP3');
+    updateAttribute('data-audio-src', '');
+    updatePlayPauseIconOnCanvas(false);
+    if (selectedElement) {
+      const curEl = selectedElement.querySelector('.audio-current-time');
+      if (curEl) curEl.textContent = '0:00';
+      const totEl = selectedElement.querySelector('.audio-total-time');
+      if (totEl) totEl.textContent = '0:00';
+      const progressFill = selectedElement.querySelector('.progress-fill');
+      const progressKnob = selectedElement.querySelector('.progress-knob');
+      if (progressFill && progressKnob) {
+        const progressBg = selectedElement.querySelector('.progress-bg');
+        const bgX = progressBg ? parseFloat(progressBg.getAttribute('x') || '0') : 0;
+        progressFill.setAttribute('width', '0');
+        progressKnob.setAttribute('cx', bgX.toString());
+      }
+    }
+    if (onUpdate) onUpdate();
+  };
+
+  // Effect Handlers for Drop Shadow
+  const handleSetActiveEffects = (updater) => {
+    const next = typeof updater === 'function' ? updater(activeEffects) : updater;
+    setActiveEffects(next);
+    const hasDropShadow = next.includes('Drop Shadow');
+
+    if (selectedElement) {
+      selectedElement.setAttribute('data-effect-drop-shadow', hasDropShadow ? 'true' : 'false');
+      syncLiveFilters(selectedElement);
+    }
+    updateAttribute('data-effect-drop-shadow', hasDropShadow ? 'true' : 'false');
+    if (onUpdate) onUpdate();
+  };
+
+  const handleSetEffectSettings = (updater) => {
+    const next = typeof updater === 'function' ? updater(effectSettings) : updater;
+    setEffectSettings(next);
+    const ds = next['Drop Shadow'] || {};
+
+    if (selectedElement) {
+      selectedElement.setAttribute('data-effect-drop-shadow-x', (ds.x ?? 2).toString());
+      selectedElement.setAttribute('data-effect-drop-shadow-y', (ds.y ?? 2).toString());
+      selectedElement.setAttribute('data-effect-drop-shadow-blur', (ds.blur ?? 4).toString());
+      selectedElement.setAttribute('data-effect-drop-shadow-spread', (ds.spread ?? 0).toString());
+      selectedElement.setAttribute('data-effect-drop-shadow-color', ds.color || '#000000');
+      selectedElement.setAttribute('data-effect-drop-shadow-opacity', (ds.opacity ?? 35).toString());
+      syncLiveFilters(selectedElement);
+    }
+
+    updateAttribute('data-effect-drop-shadow-x', (ds.x ?? 2).toString());
+    updateAttribute('data-effect-drop-shadow-y', (ds.y ?? 2).toString());
+    updateAttribute('data-effect-drop-shadow-blur', (ds.blur ?? 4).toString());
+    updateAttribute('data-effect-drop-shadow-spread', (ds.spread ?? 0).toString());
+    updateAttribute('data-effect-drop-shadow-color', ds.color || '#000000');
+    updateAttribute('data-effect-drop-shadow-opacity', (ds.opacity ?? 35).toString());
+
+    if (onUpdate) onUpdate();
+  };
+
+  const handleIconColorChange = (val) => {
+    setIconColor(val);
+    updateAttribute('data-icon-color', val);
+    applyColorsToCanvas(selectedElement, { icon: val });
+    if (onUpdate) onUpdate();
+  };
+
+  const handleBgColorChange = (val) => {
+    setBgColor(val);
+    updateAttribute('data-fill-color', val);
+    applyColorsToCanvas(selectedElement, { bg: val });
+    if (onUpdate) onUpdate();
+  };
+
+  const handleStrokeColorChange = (val) => {
+    setStrokeColor(val);
+    updateAttribute('data-stroke-color', val);
+    applyColorsToCanvas(selectedElement, { stroke: val });
+    if (onUpdate) onUpdate();
+  };
+
+
+  const COLOR_MAP = {
+    iconColor: {
+      value: iconColor,
+      onChange: handleIconColorChange
+    },
+    bgColor: {
+      value: bgColor,
+      onChange: handleBgColorChange
+    },
+    strokeColor: {
+      value: strokeColor,
+      onChange: handleStrokeColorChange
     }
   };
 
   return (
-    <div className="flex flex-col text-gray-700 font-sans p-[0.5vw] text-[0.85vw]">
-      {/* Title Header */}
-      <div className="flex items-center gap-[0.75vw] mb-[0.5vw]">
-        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">
-          Audio Properties
-        </span>
-        <div className="h-[0.1vw] flex-1 bg-gray-200 mr-[-3vw]"></div>
-      </div>
+    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
+      {/* ── 1. Upload Audio Section ── */}
+      <SectionHeader title="Upload Audio" />
 
-      <div className="mb-[0.5vw] p-[1vw]">
-        <button 
-          onClick={handleUploadClick}
-          disabled={isUploading}
-          className="w-full py-[1.5vw] border border-gray-300 rounded-[0.4vw] text-[#34495e] font-medium hover:bg-gray-50 flex items-center justify-center mb-[0.8vw]"
+      <div className="flex items-center gap-[0.8vw] pl-[0.5vw] pr-[0.2vw] py-[0.2vw]">
+        {/* Blue Squircle Music App Icon with subtle 3D shadow */}
+        <div
+          className="w-[3.8vw] h-[3.8vw] rounded-[0.8vw] bg-gradient-to-br from-[#29b6f6] to-[#0288d1] flex items-center justify-center relative overflow-hidden shadow-[0_4px_12px_rgba(2,136,209,0.25)] flex-shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+          onClick={togglePlayPause}
+          title={isPlaying ? "Pause Audio" : "Play Audio"}
         >
-          {isUploading ? 'Uploading...' : 'Upload MP3/MP4'}
-        </button>
-
-        {audioFiles.length > 0 && (
-          <div className="flex flex-col gap-[0.5vw]">
-            {audioFiles.map((file, idx) => (
-              <div key={idx} className={`flex items-center justify-between border ${idx === currentFileIndex ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'} rounded-[0.4vw] p-[0.6vw]`}>
-                <div className="flex items-center gap-[0.6vw] flex-1 overflow-hidden">
-                  <button onClick={() => { if (idx !== currentFileIndex) applyFilesToElement(audioFiles, idx); else togglePlayPause(); }} className="text-gray-700 hover:text-gray-900 focus:outline-none flex items-center justify-center">
-                    {idx === currentFileIndex && isPlaying ? (
-                      <Pause size="1vw" className="fill-current" />
-                    ) : (
-                      <Play size="1vw" className="fill-current" />
-                    )}
-                  </button>
-                  <span className="text-gray-700 text-[0.85vw] truncate" title={file.name}>{file.name}</span>
-                </div>
-                <button onClick={() => handleRemoveAudio(idx)} className="text-gray-500 hover:text-gray-800 focus:outline-none flex items-center justify-center ml-[0.5vw]">
-                  <X size="1vw" />
-                </button>
-              </div>
-            ))}
-            
-
-          </div>
-        )}
-      </div>
-
-      <div className="px-[1vw] pb-[1vw] flex flex-col gap-[1vw]">
-        
-        <div className="flex items-center gap-[1vw]">
-          <label className="text-[0.85vw] text-gray-700 w-[3.5vw]">Loop</label>
-          <div className="flex-1 flex justify-end pr-[2vw]">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isLooping} 
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setIsLooping(checked);
-                  updateAttribute('data-audio-loop', checked.toString());
-                }}
-                className="sr-only peer"
+          {isPlaying ? (
+            <Pause className="w-[1.6vw] h-[1.6vw] text-white fill-white drop-shadow-md animate-pulse" />
+          ) : (
+            <svg viewBox="0 0 64 64" className="w-[2.3vw] h-[2.3vw]">
+              <defs>
+                <filter id="music-note-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="2" dy="2.5" stdDeviation="1.5" floodColor="#01579b" floodOpacity="0.45" />
+                </filter>
+              </defs>
+              <path
+                d="M26 18v22.5c-1.3-.9-3-.1.4-4.8 1.8-1.8 4.2-1.9 6.2-.8 2 1.2 2.6 3.6.8 5.4-1.8 1.8-4.2 1.9-6.2.8-.5-.3-1-.8-1.4-1.4V24.5l18-4.5v16c-1.3-.9-3-.1.4-4.8 1.8-1.8 4.2-1.9 6.2-.8 2 1.2 2.6 3.6.8 5.4-1.8 1.8-4.2 1.9-6.2.8-.5-.3-1-.8-1.4-1.4V14L26 18Z"
+                fill="white"
+                filter="url(#music-note-shadow)"
               />
-              <div className="w-[2.2vw] h-[1.2vw] bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[1vw] peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.1vw] after:left-[0.1vw] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[1vw] after:w-[1vw] after:transition-all peer-checked:bg-blue-500"></div>
-            </label>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-[1vw]">
-          <label className="text-[0.85vw] text-gray-700 w-[3.5vw]">Muted</label>
-          <div className="flex-1 flex justify-end pr-[2vw]">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isMuted} 
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setIsMuted(checked);
-                  updateAttribute('data-audio-muted', checked.toString());
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-[2.2vw] h-[1.2vw] bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[1vw] peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.1vw] after:left-[0.1vw] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[1vw] after:w-[1vw] after:transition-all peer-checked:bg-blue-500"></div>
-            </label>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-[1vw]">
-          <label className="text-[0.85vw] text-gray-700 w-[3.5vw]">Volume</label>
-          <input 
-            type="range" 
-            min="0" 
-            max="1" 
-            step="0.01" 
-            value={isMuted ? 0 : volume} 
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setVolume(val);
-              updateAttribute('data-audio-volume', val.toString());
-              if (val > 0 && isMuted) {
-                setIsMuted(false);
-                updateAttribute('data-audio-muted', 'false');
-              }
-            }}
-            className="flex-1 cursor-pointer"
-          />
-          <span className="text-[0.85vw] w-[2vw] text-right">{Math.round((isMuted ? 0 : volume) * 100)}%</span>
+            </svg>
+          )}
         </div>
 
-        <div className="flex items-center gap-[1vw]">
-          <label className="text-[0.85vw] text-gray-700 w-[3.5vw]">Speed</label>
-          <select 
-            value={speed} 
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setSpeed(val);
-              updateAttribute('data-audio-speed', val.toString());
-            }}
-            className="flex-1 text-[0.85vw] p-[0.2vw] border border-gray-300 rounded-[0.2vw] outline-none"
-          >
-            <option value={0.5}>0.5x</option>
-            <option value={0.75}>0.75x</option>
-            <option value={1}>1x</option>
-            <option value={1.25}>1.25x</option>
-            <option value={1.5}>1.5x</option>
-            <option value={2}>2x</option>
-          </select>
-          <div className="w-[2vw]"></div>
+        {/* Audio Information & Action Buttons */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="text-[0.85vw] font-medium text-gray-800 truncate" title={audioName}>
+            {audioName}
+          </div>
+
+          <div className="text-[0.7vw] text-gray-400 font-medium flex items-center gap-[0.35vw] mt-[0.1vw]">
+            <span>{audioDurationText}</span>
+            <span className="text-[0.6vw]">•</span>
+            <span>{audioSizeText}</span>
+            <span className="text-[0.6vw]">•</span>
+            <span>{audioFormatText}</span>
+          </div>
+
+          <div className="flex items-center gap-[0.4vw] mt-[0.4vw]">
+            <button
+              type="button"
+              onClick={handleReplaceAudioClick}
+              disabled={isUploading}
+              className="px-[0.75vw] py-[0.25vw] bg-white border border-gray-200 hover:border-gray-300 rounded-[0.4vw] text-[0.75vw] text-gray-700 font-medium shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              {isUploading ? 'Uploading...' : 'Replace Audio'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRemoveAudio}
+              className="w-[1.8vw] h-[1.8vw] bg-white border border-gray-200 hover:border-red-300 rounded-[0.4vw] flex items-center justify-center text-gray-400 hover:text-red-500 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer"
+              title="Delete Audio"
+            >
+              <Trash2 size="0.85vw" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        accept="audio/*,video/*" 
-        className="hidden" 
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="audio/*,video/*"
+        className="hidden"
       />
+
+      {/* ── 2. Audio Properties Section ── */}
+      <SectionHeader title="Audio Properties" />
+
+      {/* Playback Speed */}
+      <PropertyRow label="Playback Speed">
+        <CustomDropdown
+          value={playbackSpeed}
+          options={SPEED_OPTIONS}
+          onChange={(val) => {
+            setPlaybackSpeed(val);
+            updateAttribute('data-audio-speed', val);
+            if (audioRef.current) {
+              audioRef.current.playbackRate = parseFloat(val) || 1;
+            }
+            if (onUpdate) onUpdate();
+          }}
+        />
+      </PropertyRow>
+
+      {/* Behaviour */}
+      <PropertyRow label="Behaviour">
+        <CustomDropdown
+          value={behaviour}
+          options={BEHAVIOUR_OPTIONS}
+          onChange={(val) => {
+            setBehaviour(val);
+            updateAttribute('data-audio-behaviour', val);
+            if (val === 'Loop on Page') {
+              setIsLooping(true);
+              if (audioRef.current) audioRef.current.loop = true;
+              updateAttribute('data-audio-loop', 'true');
+              updateLoopIconOnCanvas(true);
+            }
+            if (onUpdate) onUpdate();
+          }}
+        />
+      </PropertyRow>
+
+      {/* Default Volume */}
+      <PropertyRow label="Default Volume">
+        <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]">
+          <Volume2 className="w-[1vw] h-[1vw] text-[#E05638] shrink-0" />
+          <div className="flex-1 flex items-center relative">
+            <ElementSlider
+              min={0}
+              max={100}
+              step={1}
+              value={defaultVolume}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setDefaultVolume(val);
+                updateAttribute('data-audio-volume', (val / 100).toString());
+                if (audioRef.current) {
+                  audioRef.current.volume = val / 100;
+                  if (val > 0 && isMuted) {
+                    setIsMuted(false);
+                    audioRef.current.muted = false;
+                    updateAttribute('data-audio-muted', 'false');
+                    updateMuteIconOnCanvas(false);
+                  }
+                }
+                if (selectedElement) {
+                  const volFill = selectedElement.querySelector('.volume-fill');
+                  const volKnob = selectedElement.querySelector('.volume-knob');
+                  const volBg = selectedElement.querySelector('.volume-bg');
+                  if (volFill && volKnob) {
+                    const bgX = volBg ? parseFloat(volBg.getAttribute('x') || '0') : 0;
+                    const bgWidth = volBg ? parseFloat(volBg.getAttribute('width') || '50') : 50;
+                    const fillW = (val / 100) * bgWidth;
+                    volFill.setAttribute('width', fillW.toString());
+                    volKnob.setAttribute('cx', (bgX + fillW).toString());
+                  }
+                }
+                if (onUpdate) onUpdate();
+              }}
+            />
+          </div>
+          <span className="text-[0.8vw] text-gray-800 font-medium w-[2.8vw] text-right shrink-0">
+            {defaultVolume} %
+          </span>
+        </div>
+      </PropertyRow>
+
+      {/* ── 3. Audio Player Controls Sub-section ── */}
+      <SectionHeader title="Audio Player Controls" />
+
+      {/* Play/Pause Button */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Play/Pause Button</span>
+        <Toggle checked={controlPlayPause} onChange={setControlPlayPause} />
+      </div>
+
+      {/* Skip Forward/Backward */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Skip Forward/Backward</span>
+        <div className="flex items-center gap-[0.5vw]">
+          {/* Stepper < 5 sec > */}
+          <div className="h-[2vw] flex items-center border border-gray-200 rounded-[0.4vw] bg-white px-[0.35vw] shadow-2xs">
+            <button
+              type="button"
+              onClick={handlePrevStep}
+              className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+              title="Decrease skip duration"
+            >
+              <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
+            </button>
+            <span className="text-[0.75vw] text-gray-800 font-medium px-[0.3vw] whitespace-nowrap">
+              {skipSeconds} sec
+            </span>
+            <button
+              type="button"
+              onClick={handleNextStep}
+              className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+              title="Increase skip duration"
+            >
+              <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
+            </button>
+          </div>
+          <Toggle checked={controlSkip} onChange={setControlSkip} />
+        </div>
+      </div>
+
+      {/* Duration */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Duration</span>
+        <Toggle checked={controlDuration} onChange={setControlDuration} />
+      </div>
+
+      {/* Volume Control */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Volume Control</span>
+        <Toggle checked={controlVolume} onChange={setControlVolume} />
+      </div>
+
+      {/* Loop Button */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Loop Button</span>
+        <Toggle checked={controlLoop} onChange={setControlLoop} />
+      </div>
+
+      {/* Mute */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-medium">Mute</span>
+        <Toggle checked={controlMute} onChange={setControlMute} />
+      </div>
+
+      {/* ── 4. Colors Section ── */}
+      <SectionHeader title="Colors" />
+
+      {/* Icon Color */}
+      <PropertyRow label="Icon Color">
+        <ColorInput
+          color={iconColor}
+          onChange={handleIconColorChange}
+          opacity={100}
+          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
+          isActive={activeColorPicker === 'iconColor'}
+        />
+      </PropertyRow>
+
+      {/* Bg Color */}
+      <PropertyRow label="Bg Color">
+        <ColorInput
+          color={bgColor}
+          onChange={handleBgColorChange}
+          opacity={100}
+          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'bgColor' ? null : 'bgColor'))}
+          isActive={activeColorPicker === 'bgColor'}
+        />
+      </PropertyRow>
+
+      {/* Stroke Color */}
+      <PropertyRow label="Stroke Color">
+        <ColorInput
+          color={strokeColor}
+          onChange={handleStrokeColorChange}
+          opacity={100}
+          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
+          isActive={activeColorPicker === 'strokeColor'}
+        />
+      </PropertyRow>
+
+      {/* ── 5. Effects Section ── */}
+      <SectionHeader title="Effects" />
+
+      <Effect
+        isShape={false}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+        hideBlur={true}
+        hideInnerShadow={true}
+        hideHeader={true}
+      />
+
+      {/* ── ColorPicker Portal Popup ── */}
+      {activeColorPicker && COLOR_MAP[activeColorPicker] && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{
+            top: '50%',
+            right: '19.5vw',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div
+            className="fixed inset-0 z-[-1]"
+            onClick={() => setActiveColorPicker(null)}
+          />
+          <div className="animate-in fade-in zoom-in-95 duration-200">
+            <ColorPicker
+              color={COLOR_MAP[activeColorPicker].value}
+              onChange={(newVal) => {
+                if (COLOR_MAP[activeColorPicker]) {
+                  COLOR_MAP[activeColorPicker].onChange(newVal);
+                }
+              }}
+              opacity={100}
+              onOpacityChange={() => {}}
+              onClose={() => setActiveColorPicker(null)}
+              disableGradient={activeColorPicker !== 'bgColor'}
+              colorsOnPage={[]}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

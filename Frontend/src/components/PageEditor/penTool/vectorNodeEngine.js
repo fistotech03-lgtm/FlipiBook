@@ -64,7 +64,7 @@ export const cleanPaperPathData = (paperPath) => {
   return cleanSubpathDs.join(' ');
 };
 
-const parseSingleMatrix = (el) => {
+export const parseSingleMatrix = (el) => {
   if (!el) return new DOMMatrix();
 
   try {
@@ -82,16 +82,25 @@ const parseSingleMatrix = (el) => {
 
   if (transformAttr) {
     try {
-      const match = transformAttr.match(/matrix\s*\(([^)]+)\)/i);
-      if (match) {
-        const parts = match[1].split(/[\s,]+/).map(Number);
-        if (parts.length === 6) matrix = new DOMMatrix(parts);
-      } else {
-        const tMatch = transformAttr.match(/translate\s*\(([^)]+)\)/i);
-        if (tMatch) {
-          const parts = tMatch[1].split(/[\s,]+/).map(Number);
+      const cmdRegex = /(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]+)\)/gi;
+      let match;
+      let matchedAny = false;
+      while ((match = cmdRegex.exec(transformAttr)) !== null) {
+        matchedAny = true;
+        const type = match[1].toLowerCase();
+        const parts = match[2].trim().split(/[\s,]+/).map(Number);
+        if (type === 'matrix' && parts.length === 6) {
+          matrix = matrix.multiply(new DOMMatrix(parts));
+        } else if (type === 'translate') {
           matrix = matrix.translate(parts[0] || 0, parts[1] || 0);
+        } else if (type === 'scale') {
+          matrix = matrix.scale(parts[0] !== undefined ? parts[0] : 1, parts.length > 1 ? parts[1] : (parts[0] !== undefined ? parts[0] : 1));
+        } else if (type === 'rotate') {
+          matrix = matrix.rotate(parts[0] || 0);
         }
+      }
+      if (!matchedAny) {
+        matrix = new DOMMatrix(transformAttr);
       }
     } catch (e) {}
   }

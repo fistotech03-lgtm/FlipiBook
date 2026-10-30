@@ -56,4 +56,20 @@ const userFolderSchema = new mongoose.Schema(
   }
 );
 
+userFolderSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncFolder(doc);
+  } catch (_) {}
+});
+
+userFolderSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncFolder(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.userFolder || mongoose.models.UserFolder) || mongoose.model('userFolder', userFolderSchema, 'UserFolders');

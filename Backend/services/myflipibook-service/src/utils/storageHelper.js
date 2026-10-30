@@ -100,94 +100,100 @@ const calculateUserStorage = (userId, emailId, userBooks = []) => {
  * Delete a user's book directory from disk
  */
 const deleteBookStorage = (userId, emailId, folderName, bookName, book = null) => {
-  try {
-    const storageRoot = getStorageRoot();
-    const userFolders = [
-      book?.userID,
-      book?.userId ? String(book.userId) : null,
-      userId ? String(userId) : null,
-      emailId ? emailId.replace(/[@.]/g, '_') : null,
-      book?.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
-    ].filter(Boolean);
+  // Execute non-blocking in background so API caller never waits on disk I/O
+  setImmediate(async () => {
+    try {
+      const storageRoot = getStorageRoot();
+      const userFolders = [
+        book?.userID,
+        book?.userId ? String(book.userId) : null,
+        userId ? String(userId) : null,
+        emailId ? emailId.replace(/[@.]/g, '_') : null,
+        book?.userEmail ? book.userEmail.replace(/[@.]/g, '_') : null
+      ].filter(Boolean);
 
-    const targetFolders = [
-      folderName,
-      'default',
-      ...(book && Array.isArray(book.folderName) ? book.folderName : (book?.folderName ? [book.folderName] : []))
-    ].filter(Boolean);
+      const targetFolders = [
+        folderName,
+        'default',
+        ...(book && Array.isArray(book.folderName) ? book.folderName : (book?.folderName ? [book.folderName] : []))
+      ].filter(Boolean);
 
-    const bookNames = [
-      bookName,
-      book?.flipbookName,
-      book ? `${book.flipbookName}_${book.v_id}` : null,
-      book?.v_id
-    ].filter(Boolean);
+      const bookNames = [
+        bookName,
+        book?.flipbookName,
+        book ? `${book.flipbookName}_${book.v_id}` : null,
+        book?.v_id
+      ].filter(Boolean);
 
-    const dirsToDelete = new Set();
+      const dirsToDelete = new Set();
 
-    userFolders.forEach(uf => {
-      targetFolders.forEach(tf => {
-        bookNames.forEach(bn => {
-          dirsToDelete.add(path.join(storageRoot, uf, 'books', tf, bn));
-          dirsToDelete.add(path.join(storageRoot, uf, tf, bn));
-          dirsToDelete.add(path.join(storageRoot, 'flipbooks', uf, tf, bn));
-        });
-      });
-      // Also inspect subdirectories in books directly
-      const userSubDir = path.join(storageRoot, uf, 'books');
-      if (fs.existsSync(userSubDir)) {
-        try {
-          const subdirs = fs.readdirSync(userSubDir);
-          subdirs.forEach(sd => {
-            bookNames.forEach(bn => {
-              dirsToDelete.add(path.join(userSubDir, sd, bn));
-            });
+      userFolders.forEach(uf => {
+        targetFolders.forEach(tf => {
+          bookNames.forEach(bn => {
+            dirsToDelete.add(path.join(storageRoot, uf, 'books', tf, bn));
+            dirsToDelete.add(path.join(storageRoot, uf, tf, bn));
+            dirsToDelete.add(path.join(storageRoot, 'flipbooks', uf, tf, bn));
           });
-        } catch (e) {}
-      }
-    });
+        });
+        // Also inspect subdirectories in books directly
+        const userSubDir = path.join(storageRoot, uf, 'books');
+        if (fs.existsSync(userSubDir)) {
+          try {
+            const subdirs = fs.readdirSync(userSubDir);
+            subdirs.forEach(sd => {
+              bookNames.forEach(bn => {
+                dirsToDelete.add(path.join(userSubDir, sd, bn));
+              });
+            });
+          } catch (e) {}
+        }
+      });
 
-    dirsToDelete.forEach(d => {
-      if (fs.existsSync(d)) {
-        console.log(`[Storage Helper] Deleting disk folder: ${d}`);
-        fs.rmSync(d, { recursive: true, force: true });
+      for (const d of dirsToDelete) {
+        if (fs.existsSync(d)) {
+          console.log(`[Storage Helper] Deleting disk folder: ${d}`);
+          await fs.promises.rm(d, { recursive: true, force: true }).catch(() => {});
+        }
       }
-    });
-  } catch (err) {
-    console.warn('[Storage Helper] Warning deleting book directory:', err.message);
-  }
+    } catch (err) {
+      console.warn('[Storage Helper] Warning deleting book directory:', err.message);
+    }
+  });
 };
 
 /**
  * Delete a user's folder directory from disk
  */
 const deleteFolderStorage = (userId, emailId, folderName) => {
-  try {
-    const storageRoot = getStorageRoot();
-    if (userId) {
-      const dirs = [
-        path.join(storageRoot, String(userId), 'books', folderName),
-        path.join(storageRoot, String(userId), folderName),
-        path.join(storageRoot, 'flipbooks', String(userId), folderName)
-      ];
-      dirs.forEach(d => {
-        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
-      });
+  // Execute non-blocking in background so API caller never waits on disk I/O
+  setImmediate(async () => {
+    try {
+      const storageRoot = getStorageRoot();
+      const dirs = [];
+      if (userId) {
+        dirs.push(
+          path.join(storageRoot, String(userId), 'books', folderName),
+          path.join(storageRoot, String(userId), folderName),
+          path.join(storageRoot, 'flipbooks', String(userId), folderName)
+        );
+      }
+      if (emailId) {
+        const sanitizedEmail = emailId.replace(/[@.]/g, '_');
+        dirs.push(
+          path.join(storageRoot, sanitizedEmail, 'books', folderName),
+          path.join(storageRoot, sanitizedEmail, folderName),
+          path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName)
+        );
+      }
+      for (const d of dirs) {
+        if (fs.existsSync(d)) {
+          await fs.promises.rm(d, { recursive: true, force: true }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('[Storage Helper] Warning deleting folder directory:', err.message);
     }
-    if (emailId) {
-      const sanitizedEmail = emailId.replace(/[@.]/g, '_');
-      const dirs = [
-        path.join(storageRoot, sanitizedEmail, 'books', folderName),
-        path.join(storageRoot, sanitizedEmail, folderName),
-        path.join(storageRoot, 'flipbooks', sanitizedEmail, folderName)
-      ];
-      dirs.forEach(d => {
-        if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true });
-      });
-    }
-  } catch (err) {
-    console.warn('[Storage Helper] Warning deleting folder directory:', err.message);
-  }
+  });
 };
 
 /**

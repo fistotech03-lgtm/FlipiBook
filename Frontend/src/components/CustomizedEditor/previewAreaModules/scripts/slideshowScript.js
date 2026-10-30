@@ -20,9 +20,9 @@ export const getSlideshowScript = () => `  <script>
             // --- Setup Container ---
             const container = el.parentElement || el;
             if (getComputedStyle(container).position === 'static') {
-              container.style.position = 'relative';
+              if (container && container.style) container.style.position = 'relative';
             }
-            container.style.overflow = 'hidden';
+            if (container && container.style) container.style.overflow = 'hidden';
 
             // --- Helper: set image src (handles SVG <image> and <img>) ---
             const setElSrc = (target, imgObj) => {
@@ -45,7 +45,7 @@ export const getSlideshowScript = () => `  <script>
                 } else {
                   const img = target.querySelector('img');
                   if (img) { imgEl = img; img.src = url; }
-                  else target.style.backgroundImage = 'url(' + url + ')';
+                  else if (target && target.style) target.style.backgroundImage = 'url(' + url + ')';
                 }
               }
 

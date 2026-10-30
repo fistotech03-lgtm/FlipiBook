@@ -20,16 +20,27 @@ export function ElementGridCard({ item, onInsert }) {
 
   return (
     <button
-      onClick={() => onInsert && onInsert(item)}
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onInsert) onInsert(item);
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       draggable={true}
       onDragStart={handleDragStart}
       title={`Click to add or drag to place ${item.name}`}
-      className="w-full aspect-square bg-white border border-gray-200 hover:border-[#ea543a] hover:shadow-md rounded-[0.55vw] p-[0.45vw] flex flex-col items-center justify-between cursor-grab active:cursor-grabbing transition-all duration-150 hover:-translate-y-0.5 active:scale-95 group overflow-hidden box-border"
+      className="w-full flex flex-col items-center group cursor-grab active:cursor-grabbing select-none focus:outline-none"
     >
-      <div className="w-full flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden pointer-events-none">
-        {item.renderPreview ? item.renderPreview() : null}
+      {/* Icon Card Box */}
+      <div className="w-full aspect-square bg-white border border-gray-200 group-hover:border-[#ea543a] group-hover:shadow-md rounded-2xl p-[0.1vw] flex items-center justify-center transition-all duration-150 group-hover:-translate-y-0.5 active:scale-95 box-border overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center pointer-events-none">
+          {item.renderPreview ? item.renderPreview() : null}
+        </div>
       </div>
-      <span className="text-[0.65vw] font-medium text-gray-600 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.2vh] flex-shrink-0 pointer-events-none">
+
+      {/* Label outside below card */}
+      <span className="text-[0.72vw] font-medium text-gray-700 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.5vh] px-[0.1vw] flex-shrink-0 pointer-events-none transition-colors">
         {item.name}
       </span>
     </button>

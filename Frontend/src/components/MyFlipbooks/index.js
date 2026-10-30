@@ -12,6 +12,7 @@ export { default as ThreeDBanner } from './ThreeDBanner';
 export { default as FavoritesScreen } from './FavoritesScreen';
 export { default as TrashScreen } from './TrashScreen';
 export { default as MyShelf } from './MyShelf';
+export { default as GalleryScreen } from './GalleryScreen';
 export { default as CustomScrollbar, getScrollbarStyle } from '../CustomScrollbar';
 export {
     default as FlipbookSkeletonList,

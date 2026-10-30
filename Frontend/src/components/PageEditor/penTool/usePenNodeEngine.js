@@ -223,6 +223,22 @@ export const usePenNodeEngine = ({
     if (!targetEl) return;
     if (activeTopTool === 'interaction' || activeTopTool === 'animation') return;
 
+    // Restrict element shapes (which use Element Shape Properties) from entering pen tool node edit mode
+    const isElShape = Boolean(
+      targetEl.getAttribute?.('data-is-element-shape') === 'true' ||
+      targetEl.getAttribute?.('data-shape-type') !== null ||
+      targetEl.getAttribute?.('data-type') === 'shape' ||
+      targetEl.closest?.('[data-is-element-shape="true"]') !== null ||
+      targetEl.closest?.('[data-shape-type]') !== null ||
+      targetEl.closest?.('[data-type="shape"]') !== null ||
+      (typeof targetEl.querySelector === 'function' && (
+        targetEl.querySelector('[data-is-element-shape="true"]') !== null ||
+        targetEl.querySelector('[data-shape-type]') !== null ||
+        targetEl.querySelector('[data-type="shape"]') !== null
+      ))
+    );
+    if (isElShape) return;
+
     const pathEl = targetEl.tagName?.toLowerCase() === 'path' ? targetEl : targetEl.querySelector('path');
     if (!pathEl || !pathEl.getAttribute('d')) return;
 

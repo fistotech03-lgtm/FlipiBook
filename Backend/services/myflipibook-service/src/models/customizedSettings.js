@@ -343,6 +343,23 @@ const customizedSettingsSchema = new mongoose.Schema(
 // Compound index to guarantee fast, unique lookup strictly by userID and flipbook v_id
 customizedSettingsSchema.index({ userID: 1, v_id: 1 }, { unique: true });
 
+// Asynchronous non-blocking backup mirror hook
+customizedSettingsSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncCustomizedSettings(doc);
+  } catch (_) {}
+});
+
+customizedSettingsSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncCustomizedSettings(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports =
   (mongoose.models.customizedSettings || mongoose.models.CustomizedSettings) ||
   mongoose.model('customizedSettings', customizedSettingsSchema);

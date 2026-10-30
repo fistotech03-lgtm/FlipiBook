@@ -90,19 +90,19 @@ const parseRgbaColor = (colorStr, defaultHex = '#ffffff') => {
 // Section Header matching standard styling
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
 
-// PropertyRow matching exact alignment (w-[5.6vw] pl-[0.5vw])
+// PropertyRow matching exact alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
         {label}
       </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -150,10 +150,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-semibold"
           maxLength={7}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -2061,7 +2061,7 @@ const ElementTableProperties = ({
         <div className="grid grid-cols-2 gap-[0.5vw] pl-[0.5vw] pr-[0.2vw]">
           <button
             onClick={handleCopyCells}
-            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-medium"
+            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-semibold"
             title="Copy selected cells or table to clipboard (TSV)"
           >
             <Copy size="0.85vw" />
@@ -2070,7 +2070,7 @@ const ElementTableProperties = ({
 
           <button
             onClick={() => handlePasteCells()}
-            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-medium"
+            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-semibold"
             title="Paste tabular text into table"
           >
             <ClipboardPaste size="0.85vw" />
@@ -2083,7 +2083,7 @@ const ElementTableProperties = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-[0.4vw]">
               <MousePointer size="0.85vw" className="text-[#E05638]" />
-              <span className="text-[0.75vw] font-bold text-gray-700">
+              <span className="text-[0.75vw] font-semibold text-gray-700">
                 {getSelectionCoordinateLabel()}
               </span>
             </div>
@@ -2105,7 +2105,7 @@ const ElementTableProperties = ({
                     }
                   }
                 }}
-                className="text-[0.7vw] text-gray-500 hover:text-gray-700 font-medium cursor-pointer"
+                className="text-[0.7vw] text-gray-500 hover:text-gray-700 font-semibold cursor-pointer"
               >
                 Select All
               </button>
@@ -2114,7 +2114,7 @@ const ElementTableProperties = ({
 
           {selectedCellKeys.size > 0 && (
             <div className="flex flex-col gap-[0.2vw] mt-[0.2vw]">
-              <span className="text-[0.7vw] text-gray-500 font-medium">Edit Selected Content:</span>
+              <span className="text-[0.7vw] text-gray-500 font-semibold">Edit Selected Content:</span>
               <textarea
                 value={selectedCellText}
                 onChange={(e) => {
@@ -2150,10 +2150,10 @@ const ElementTableProperties = ({
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
               <div className="flex items-center gap-[0.6vw]">
-                <span className="font-bold text-[0.85vw] text-gray-700">
+                <span className="font-semibold text-[0.85vw] text-gray-700">
                   {BORDER_STYLES.find(s => s.id === borderStyle)?.icon || '—'}
                 </span>
-                <span className="text-[0.78vw] font-medium text-gray-700 capitalize">
+                <span className="text-[0.78vw] font-semibold text-gray-700 capitalize">
                   {BORDER_STYLES.find(s => s.id === borderStyle)?.label || 'Solid'}
                 </span>
               </div>
@@ -2174,7 +2174,7 @@ const ElementTableProperties = ({
                       borderStyle === style.id ? 'bg-[#E05638]/10 font-semibold text-[#E05638]' : 'text-gray-700'
                     }`}
                   >
-                    <span className="w-[1.5vw] font-bold text-gray-600">{style.icon}</span>
+                    <span className="w-[1.5vw] font-semibold text-gray-600">{style.icon}</span>
                     <span>{style.label}</span>
                   </div>
                 ))}
@@ -2186,64 +2186,64 @@ const ElementTableProperties = ({
         {/* Border Presets Grid */}
         <div className="flex flex-col gap-[0.3vw] pl-[0.5vw] pr-[0.2vw]">
           <div className="flex items-center justify-between">
-            <span className="text-[0.74vw] text-gray-700 font-medium">Border Presets</span>
-            <span className="text-[0.68vw] text-gray-400 font-medium">
+            <span className="text-[0.74vw] text-gray-700 font-semibold">Border Presets</span>
+            <span className="text-[0.68vw] text-gray-400 font-semibold">
               {selectedCellKeys.size > 0 ? `${selectedCellKeys.size} cells` : 'Whole table'}
             </span>
           </div>
           <div className="grid grid-cols-4 gap-[0.35vw]">
             <button
               onClick={() => applyBorderPreset('all')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="All Borders"
             >
               All
             </button>
             <button
               onClick={() => applyBorderPreset('outer')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Outer Box Border"
             >
               Outer
             </button>
             <button
               onClick={() => applyBorderPreset('none')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="No Border"
             >
               None
             </button>
             <button
               onClick={() => applyBorderPreset('bottom')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Bottom Border"
             >
               Bottom
             </button>
             <button
               onClick={() => applyBorderPreset('top')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Top Border"
             >
               Top
             </button>
             <button
               onClick={() => applyBorderPreset('left')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Left Border"
             >
               Left
             </button>
             <button
               onClick={() => applyBorderPreset('right')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Right Border"
             >
               Right
             </button>
             <button
               onClick={() => applyBorderPreset('clear')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-red-50 hover:border-red-300 text-red-600 text-[0.72vw] font-medium active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-red-50 hover:border-red-300 text-red-600 text-[0.72vw] font-semibold active:scale-98 transition-all shadow-2xs"
               title="Clear All Borders"
             >
               Clear
@@ -2298,7 +2298,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{borderWidth}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{borderWidth}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2322,7 +2322,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{borderRadius}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{borderRadius}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2335,7 +2335,7 @@ const ElementTableProperties = ({
         {/* Scroll Option Toggle */}
         <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
           <div className="flex items-center gap-[0.4vw]">
-            <span className="text-[0.78vw] font-medium text-gray-700">Scroll Option</span>
+            <span className="text-[0.78vw] font-semibold text-gray-700">Scroll Option</span>
             <span className={`text-[0.6vw] px-[0.35vw] py-[0.08vw] rounded font-semibold ${
               isScrollable ? 'bg-[#E05638]/10 text-[#E05638]' : 'bg-gray-100 text-gray-500'
             }`}>
@@ -2381,7 +2381,7 @@ const ElementTableProperties = ({
                 <polyline points="12 19 5 12 12 5" />
                 <line x1="5" y1="5" x2="5" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Left</span>
+              <span className="text-[0.68vw] font-semibold">+ Left</span>
             </button>
             <button
               onClick={() => handleInsertColumn('right')}
@@ -2393,7 +2393,7 @@ const ElementTableProperties = ({
                 <polyline points="12 5 19 12 12 19" />
                 <line x1="19" y1="5" x2="19" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Right</span>
+              <span className="text-[0.68vw] font-semibold">+ Right</span>
             </button>
             <button
               onClick={handleSelectEntireCol}
@@ -2408,7 +2408,7 @@ const ElementTableProperties = ({
               title={selectedCellKeys.size > 0 ? "Delete selected column(s)" : "Delete last column"}
             >
               <Trash2 size="0.75vw" />
-              <span className="text-[0.68vw] font-medium">Delete</span>
+              <span className="text-[0.68vw] font-semibold">Delete</span>
             </button>
           </div>
         </PropertyRow>
@@ -2426,7 +2426,7 @@ const ElementTableProperties = ({
                 <polyline points="5 12 12 5 19 12" />
                 <line x1="5" y1="5" x2="19" y2="5" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Above</span>
+              <span className="text-[0.68vw] font-semibold">+ Above</span>
             </button>
             <button
               onClick={() => handleInsertRow('below')}
@@ -2438,7 +2438,7 @@ const ElementTableProperties = ({
                 <polyline points="19 12 12 19 5 12" />
                 <line x1="5" y1="19" x2="19" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Below</span>
+              <span className="text-[0.68vw] font-semibold">+ Below</span>
             </button>
             <button
               onClick={handleSelectEntireRow}
@@ -2453,14 +2453,14 @@ const ElementTableProperties = ({
               title={selectedCellKeys.size > 0 ? "Delete selected row(s)" : "Delete last row"}
             >
               <Trash2 size="0.75vw" />
-              <span className="text-[0.68vw] font-medium">Delete</span>
+              <span className="text-[0.68vw] font-semibold">Delete</span>
             </button>
           </div>
         </PropertyRow>
 
         {/* Cell Operation */}
         <div className="flex flex-col gap-[0.4vw] mt-[0.2vw] pl-[0.5vw] pr-[0.2vw]">
-          <span className="text-[0.78vw] text-gray-700 font-medium">Cell Operation</span>
+          <span className="text-[0.78vw] text-gray-700 font-semibold">Cell Operation</span>
           <div className="grid grid-cols-2 gap-[0.5vw]">
             <button
               onClick={handleMergeCells}
@@ -2471,7 +2471,7 @@ const ElementTableProperties = ({
                 <path d="M16 9l4 3-4 3" />
                 <line x1="12" y1="5" x2="12" y2="19" />
               </svg>
-              <span className="text-[0.72vw] font-medium">Merge Cells</span>
+              <span className="text-[0.72vw] font-semibold">Merge Cells</span>
             </button>
             <button
               onClick={handleUnmergeCells}
@@ -2483,7 +2483,7 @@ const ElementTableProperties = ({
                 <polyline points="7 9 4 12 7 15" />
                 <polyline points="17 9 20 12 17 15" />
               </svg>
-              <span className="text-[0.72vw] font-medium">Unmerge Cells</span>
+              <span className="text-[0.72vw] font-semibold">Unmerge Cells</span>
             </button>
           </div>
 
@@ -2546,7 +2546,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontFamilyOpen(!isFontFamilyOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700 truncate">{fontFamily}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700 truncate">{fontFamily}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
             </button>
             {isFontFamilyOpen && (
@@ -2577,7 +2577,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontSizeOpen(!isFontSizeOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700">{fontSize}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700">{fontSize}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0" />
             </button>
             {isFontSizeOpen && (
@@ -2610,7 +2610,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontWeightOpen(!isFontWeightOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700 truncate">{fontWeight}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700 truncate">{fontWeight}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0" />
             </button>
             {isFontWeightOpen && (
@@ -2647,7 +2647,7 @@ const ElementTableProperties = ({
             }`}
             title="Auto Table Width"
           >
-            <span className="text-[0.72vw] font-medium">Auto</span>
+            <span className="text-[0.72vw] font-semibold">Auto</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12h16" />
               <polyline points="7 9 4 12 7 15" />
@@ -2669,7 +2669,7 @@ const ElementTableProperties = ({
             }`}
             title="Auto Row Height"
           >
-            <span className="text-[0.72vw] font-medium">Auto</span>
+            <span className="text-[0.72vw] font-semibold">Auto</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 4v16" />
               <polyline points="9 7 12 4 15 7" />
@@ -2709,11 +2709,11 @@ const ElementTableProperties = ({
               applyTableStyles({ isBold: next });
             }}
             className={`flex items-center justify-center border rounded-[0.5vw] h-[2.5vw] shadow-2xs transition-colors ${
-              isBold ? 'border-[#E05638] bg-[#E05638]/5 text-[#E05638] font-bold' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700'
+              isBold ? 'border-[#E05638] bg-[#E05638]/5 text-[#E05638] font-semibold' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700'
             }`}
             title="Bold"
           >
-            <span className="font-extrabold text-[0.9vw]">B</span>
+            <span className="font-semibold text-[0.9vw]">B</span>
           </button>
 
           {/* Strikethrough / Dash */}
@@ -2728,7 +2728,7 @@ const ElementTableProperties = ({
             }`}
             title="Strikethrough"
           >
-            <span className="font-bold text-[1vw] leading-none">—</span>
+            <span className="font-semibold text-[1vw] leading-none">—</span>
           </button>
 
           {/* List */}
@@ -2762,7 +2762,7 @@ const ElementTableProperties = ({
               <polyline points="7 12 12 17 17 12" />
               <line x1="4" y1="21" x2="20" y2="21" />
             </svg>
-            <span className="text-[0.74vw] font-medium text-[#E05638] capitalize">
+            <span className="text-[0.74vw] font-semibold text-[#E05638] capitalize">
               {verticalAlign} Align
             </span>
           </button>
@@ -2778,7 +2778,7 @@ const ElementTableProperties = ({
             }`}
           >
             <WrapText size="1vw" strokeWidth={2.2} className="text-gray-600" />
-            <span className="text-[0.74vw] font-medium">Text Wrapping</span>
+            <span className="text-[0.74vw] font-semibold">Text Wrapping</span>
           </button>
         </div>
 
@@ -2801,7 +2801,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{paddingX}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{paddingX}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2825,7 +2825,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{paddingY}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{paddingY}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2837,7 +2837,7 @@ const ElementTableProperties = ({
 
         {/* Drop Shadow toggle */}
         <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-          <span className="text-[0.78vw] font-medium text-gray-700">Drop Shadow</span>
+          <span className="text-[0.78vw] font-semibold text-gray-700">Drop Shadow</span>
           <Toggle
             checked={hasDropShadow}
             onChange={(next) => {

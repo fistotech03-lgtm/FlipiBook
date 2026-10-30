@@ -27,19 +27,19 @@ import { ElementSlider, ElementDropdown } from './ElementUIControls';
 // Section Header matching audio/elements exact styling
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
 
-// PropertyRow matching exact alignment (w-[5.6vw] pl-[0.5vw])
+// PropertyRow matching exact alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
         {label}
       </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -77,7 +77,7 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, disabled =
             }}
           />
         </div>
-        <span className="text-[0.8vw] text-gray-800 font-medium w-[2.8vw] text-right shrink-0">
+        <span className="text-[0.8vw] text-gray-800 font-semibold w-[2.8vw] text-right shrink-0">
           {numVal}{unit}
         </span>
       </div>
@@ -300,7 +300,7 @@ const ShapeAppearanceControls = ({
                     ...prev,
                     strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   −
                 </button>
@@ -316,7 +316,7 @@ const ShapeAppearanceControls = ({
                         setBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
                       }
                     }}
-                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
                   />
                 </div>
                 <button
@@ -325,7 +325,7 @@ const ShapeAppearanceControls = ({
                     ...prev,
                     strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   +
                 </button>
@@ -2224,7 +2224,7 @@ const ElementShapesProperties = ({
             onClick={() => {
               window.dispatchEvent(new CustomEvent('trigger-mask'));
             }}
-            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw] ${isMaskEnabled
+            className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-semibold text-[0.75vw] ${isMaskEnabled
                 ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
                 : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
               }`}
@@ -2240,7 +2240,7 @@ const ElementShapesProperties = ({
             onClick={() => {
               window.dispatchEvent(new CustomEvent('trigger-flatten'));
             }}
-            className="flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer shadow-2xs font-medium text-[0.75vw]"
+            className="flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer shadow-2xs font-semibold text-[0.75vw]"
             title="Flatten shape to vector path and edit points"
           >
             <FlattenIcon size="1vw" className="text-gray-600" />
@@ -2268,7 +2268,7 @@ const ElementShapesProperties = ({
                   handleFileChange({ target: { files } });
                 }
               }}
-              className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-medium text-[0.85vw]"
+              className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-semibold text-[0.85vw]"
             >
               <Plus size="1vw" />
               <span>Add Images</span>
@@ -2317,7 +2317,7 @@ const ElementShapesProperties = ({
                     {/* Replace Overlay Button over the image */}
                     <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
                       <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                      <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                      <span className="text-[0.52vw] font-semibold text-white tracking-wide">Replace</span>
                     </div>
                   </div>
 
@@ -2326,7 +2326,7 @@ const ElementShapesProperties = ({
                     <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={slotImageName || 'Image Name .jpg'}>
                       {slotImageName || 'Image Name .jpg'}
                     </span>
-                    <span className="text-[0.68vw] text-gray-400 font-medium">
+                    <span className="text-[0.68vw] text-gray-400 font-semibold">
                       {slotImageMeta || '300 X 300 • 24MB'}
                     </span>
                   </div>

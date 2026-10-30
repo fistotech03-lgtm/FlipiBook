@@ -21,7 +21,7 @@ import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIContro
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
@@ -29,9 +29,11 @@ const SectionHeader = ({ title }) => (
 // Helper row with fixed-width label ensuring all colons align vertically
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-[0.8vw] text-gray-700 font-medium">
-      <span className="whitespace-nowrap">{label}</span>
-      <span className="text-gray-500 font-medium">:</span>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
+        {label}
+      </span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -69,7 +71,7 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
           className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
           maxLength={color && color.includes('gradient') ? 10 : 7}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -101,7 +103,7 @@ const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, is
         className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
         maxLength={color && color.includes('gradient') ? 10 : 7}
       />
-      <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+      <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
     </div>
   </div>
 );
@@ -1944,7 +1946,7 @@ export const ButtonEditor = ({
             value={buttonText}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Button"
-            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-normal"
+            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-semibold"
           />
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
             <Pencil className="w-[0.85vw] h-[0.85vw]" />
@@ -1998,7 +2000,7 @@ export const ButtonEditor = ({
 
       {/* Row 5: Add Icon Toggle */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
-        <span className="text-[0.8vw] font-medium text-gray-900">Add Icon to the button</span>
+        <span className="text-[0.8vw] font-semibold text-gray-900">Add Icon to the button</span>
         <ElementToggle
           checked={hasIcon}
           onChange={handleToggleIcon}
@@ -2076,12 +2078,12 @@ export const ButtonEditor = ({
         <div className="flex items-center gap-[0.4vw] w-full">
           {/* W input */}
           <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">W</span>
+            <span className="text-[0.75vw] text-gray-400 font-semibold">W</span>
             <input
               type="number"
               value={paddingW}
               onChange={(e) => handlePaddingChange('w', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
+              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-semibold no-spin"
             />
           </div>
 
@@ -2097,12 +2099,12 @@ export const ButtonEditor = ({
 
           {/* H input */}
           <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">H</span>
+            <span className="text-[0.75vw] text-gray-400 font-semibold">H</span>
             <input
               type="number"
               value={paddingH}
               onChange={(e) => handlePaddingChange('h', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
+              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-semibold no-spin"
             />
           </div>
         </div>
@@ -2119,7 +2121,7 @@ export const ButtonEditor = ({
               onChange={(val) => handleIconGapChange(parseInt(val) || 0)}
             />
           </div>
-          <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-medium shadow-2xs flex-shrink-0">
+          <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-semibold shadow-2xs flex-shrink-0">
             {iconGap}px
           </div>
         </div>
@@ -2163,7 +2165,7 @@ export const ButtonEditor = ({
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 −
               </button>
@@ -2172,13 +2174,13 @@ export const ButtonEditor = ({
                   type="number"
                   value={strokeWidth}
                   onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 +
               </button>

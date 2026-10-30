@@ -380,7 +380,7 @@ const ImageAdjustModal = ({
                         applyAspectRatio(item.ratio);
                       }
                     }}
-                    className={`px-[0.55vw] py-[0.25vw] rounded-[0.3vw] text-[0.78vw] font-medium transition-all cursor-pointer ${
+                    className={`px-[0.55vw] py-[0.25vw] rounded-[0.3vw] text-[0.78vw] font-semibold transition-all cursor-pointer ${
                       aspectRatioMode === item.id
                         ? 'bg-[#ec5137] text-white shadow-xs font-semibold'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/60'
@@ -493,7 +493,7 @@ const ImageAdjustModal = ({
             {/* Header with integrated Close Button */}
             <div className="flex items-start justify-between pb-[0.7vw] border-b border-gray-100">
               <div>
-                <h3 className="text-[1.05vw] font-bold text-gray-900 leading-tight">Image Adjustment</h3>
+                <h3 className="text-[1.05vw] font-semibold text-gray-900 leading-tight">Image Adjustment</h3>
                 <p className="text-[0.74vw] text-gray-400 mt-[0.1vw]">Fine-tune crop, opacity & filters</p>
               </div>
               <button
@@ -513,7 +513,7 @@ const ImageAdjustModal = ({
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full flex items-center justify-between gap-[0.4vw] px-[0.75vw] py-[0.45vw] bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs hover:border-gray-300 transition-colors text-[0.82vw] font-medium text-gray-800 cursor-pointer"
+                  className="w-full flex items-center justify-between gap-[0.4vw] px-[0.75vw] py-[0.45vw] bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs hover:border-gray-300 transition-colors text-[0.82vw] font-semibold text-gray-800 cursor-pointer"
                 >
                   <span>{fixType}</span>
                   <ChevronDown size="0.95vw" className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -540,7 +540,7 @@ const ImageAdjustModal = ({
                             fixType === opt.val ? 'bg-orange-50 text-[#ec5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
-                          <span className="font-medium">{opt.label}</span>
+                          <span className="font-semibold">{opt.label}</span>
                           <span className="text-[0.68vw] text-gray-400">{opt.desc}</span>
                         </button>
                       ))}
@@ -582,7 +582,7 @@ const ImageAdjustModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-[0.5vw] rounded-[0.45vw] border border-gray-300 text-[0.82vw] font-medium text-gray-700 bg-white hover:bg-gray-50 active:scale-95 transition-all flex items-center justify-center gap-[0.35vw] cursor-pointer shadow-2xs"
+              className="flex-1 py-[0.5vw] rounded-[0.45vw] border border-gray-300 text-[0.82vw] font-semibold text-gray-700 bg-white hover:bg-gray-50 active:scale-95 transition-all flex items-center justify-center gap-[0.35vw] cursor-pointer shadow-2xs"
             >
               <X size="0.95vw" />
               <span>Cancel</span>

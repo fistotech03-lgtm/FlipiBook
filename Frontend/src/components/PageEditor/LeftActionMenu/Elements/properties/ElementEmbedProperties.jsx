@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import {
   Copy,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import ColorPicker from '../../../properties/ColorPicker';
 import Effect from '../../../properties/Effect';
@@ -134,7 +135,7 @@ const syncLiveFilters = (el) => {
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.5vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
@@ -142,11 +143,11 @@ const SectionHeader = ({ title }) => (
 // PropertyRow matching editor alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
         {label}
       </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -165,9 +166,8 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
     <div className="flex items-center gap-[0.4vw] w-full">
       <div
         onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
+        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+          }`}
         style={{ backgroundColor: color === 'none' || color === 'transparent' ? '#ffffff' : color }}
         title="Click to open color palette"
       >
@@ -184,10 +184,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
-          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-semibold"
           maxLength={color && color.includes('gradient') ? 10 : 9}
         />
-        <span className="text-gray-500 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-500 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -197,13 +197,12 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
 const RadioButton = ({ label, checked, onChange }) => (
   <label onClick={onChange} className="flex items-center gap-[0.4vw] cursor-pointer select-none">
     <div
-      className={`w-[1.05vw] h-[1.05vw] rounded-full border-2 flex items-center justify-center transition-all ${
-        checked ? 'border-[#E05638]' : 'border-gray-400 hover:border-gray-600'
-      }`}
+      className={`w-[1.05vw] h-[1.05vw] rounded-full border-2 flex items-center justify-center transition-all ${checked ? 'border-[#E05638]' : 'border-gray-400 hover:border-gray-600'
+        }`}
     >
       {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
     </div>
-    <span className="text-[0.78vw] text-gray-700 font-medium">{label}</span>
+    <span className="text-[0.78vw] text-gray-700 font-semibold">{label}</span>
   </label>
 );
 
@@ -294,17 +293,22 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
       };
     }
 
+    // Only allow HTML embed code (tags like <iframe>, <div>, <script>, etc.) - do not parse plain URLs as embeds
+    if (!trimmedCode.startsWith('<')) {
+      const invalidEmbedDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body><div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#ef4444; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border:2px dashed #fca5a5;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><div style="font-size:16px; font-weight:600; color:#b91c1c; margin-bottom:4px;">Invalid Embed Code</div><div style="font-size:12px; color:#64748b;">Please enter valid HTML embed code (e.g. &lt;iframe...&gt;), or switch to URL mode.</div></div></body></html>`;
+      return {
+        type: 'placeholder',
+        src: '',
+        srcdoc: invalidEmbedDoc,
+        html: `<iframe srcdoc="${escapeHtml(invalidEmbedDoc)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto"></iframe>`
+      };
+    }
+
     let processedContent = trimmedCode;
-    if (trimmedCode.startsWith('<')) {
-      if (!allowFs) {
-        processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
-      } else if (!processedContent.includes('allowfullscreen')) {
-        processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen');
-      }
-    } else {
-      // If user pasted a URL in embed code mode
-      const formatted = formatEmbedUrl(trimmedCode, allowFs);
-      processedContent = `<iframe src="${escapeHtml(formatted)}" width="100%" height="100%" frameborder="0" allow="${allowPolicy}" ${fsAttrs} allowtransparency="true" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0;"></iframe>`;
+    if (!allowFs) {
+      processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
+    } else if (!processedContent.includes('allowfullscreen')) {
+      processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen');
     }
 
     const rawHtmlDocument = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${processedContent}</body></html>`;
@@ -343,6 +347,7 @@ const ElementEmbedProperties = ({
   const [url, setUrl] = useState('');
   const [customCode, setCustomCode] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // --- 2. Embed Controls ---
   const [openWebsiteBtn, setOpenWebsiteBtn] = useState(true);
@@ -603,7 +608,8 @@ const ElementEmbedProperties = ({
 
     const snap = lastAppliedSnapshotRef.current;
     const hasOverlayInDom = !!frameGroup.querySelector('.embed-overlay-wrapper');
-    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && !!(url || customCode);
+    const hasValidSource = embedVia === 'URL' ? !!url : !!(customCode?.trim().startsWith('<'));
+    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && hasValidSource;
     const hasCorrectOverlay = !!frameGroup.querySelector('.embed-overlay-wrapper .svg-icon-override');
     const overlayNeedsUpdate = hasOverlayInDom !== shouldHaveOverlay || (shouldHaveOverlay && !hasCorrectOverlay);
 
@@ -732,7 +738,7 @@ const ElementEmbedProperties = ({
         allowFs: allowFullscreen
       });
 
-      const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+      const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
       const overlayHtml = getEmbedOverlayHtml({
         targetUrl: effectiveUrl,
         openWebsiteBtn,
@@ -889,10 +895,26 @@ const ElementEmbedProperties = ({
 
   const handleUrlChange = (val) => {
     setUrl(val);
+    if (val.trim()) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 600);
+    } else {
+      setIsLoading(false);
+    }
   };
 
   const handleCustomCodeChange = (val) => {
     setCustomCode(val);
+    if (val.trim()) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 600);
+    } else {
+      setIsLoading(false);
+    }
   };
 
   // Handlers for Embed Controls
@@ -904,7 +926,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-open-website-btn', val ? 'true' : 'false');
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn: val,
@@ -938,7 +960,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-allow-fullscreen', val ? 'true' : 'false');
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn,
@@ -972,7 +994,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-behavior', val);
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn,
@@ -1126,7 +1148,7 @@ const ElementEmbedProperties = ({
       <PropertyRow label="Embed Via">
         <div className="flex items-center gap-[1.2vw]">
           <RadioButton
-            label="URL"
+            label="Embed Link"
             checked={embedVia === 'URL'}
             onChange={() => handleEmbedViaChange('URL')}
           />
@@ -1139,18 +1161,25 @@ const ElementEmbedProperties = ({
       </PropertyRow>
 
       <div className="flex flex-col gap-[0.25vw] pl-[0.5vw] pr-[0.2vw]">
-        <span className="text-[0.7vw] text-gray-500 font-medium">
+        <span className="text-[0.7vw] text-gray-500 font-semibold">
           {embedVia === 'Embed Code' ? 'Code' : 'Source URL'}
         </span>
 
         {embedVia === 'Embed Code' ? (
-          <textarea
-            placeholder="Paste HTML code here"
-            value={customCode}
-            onChange={(e) => handleCustomCodeChange(e.target.value)}
-            rows={3}
-            className="w-full border border-gray-200 rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-normal text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono"
-          />
+          <div className="relative w-full">
+            <textarea
+              placeholder="Paste HTML code here"
+              value={customCode}
+              onChange={(e) => handleCustomCodeChange(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-200 rounded-[0.5vw] p-[0.6vw] pr-[2.2vw] text-[0.78vw] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono"
+            />
+            {isLoading && (
+              <div className="absolute top-[0.6vw] right-[0.6vw] flex items-center justify-center pointer-events-none z-10">
+                <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin text-[#E05638]" />
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
             <input
@@ -1158,8 +1187,13 @@ const ElementEmbedProperties = ({
               placeholder="e.g. https://..."
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
-              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-semibold outline-none text-gray-800 placeholder-gray-400 bg-transparent"
             />
+            {isLoading && (
+              <div className="flex items-center px-[0.4vw]">
+                <Loader2 className="w-[0.85vw] h-[0.85vw] animate-spin text-[#E05638]" />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1187,7 +1221,7 @@ const ElementEmbedProperties = ({
 
       {/* Open website button */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium whitespace-nowrap">Open website button</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold whitespace-nowrap">Open website button</span>
         <ToggleSwitch
           checked={openWebsiteBtn}
           onChange={handleOpenWebsiteBtnChange}
@@ -1197,8 +1231,8 @@ const ElementEmbedProperties = ({
       {/* Allow Fullscreen */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
         <div className="flex items-center gap-[0.25vw]">
-          <span className="text-[0.78vw] text-gray-700 font-medium">Allow Fullscreen</span>
-         </div>
+          <span className="text-[0.78vw] text-gray-700 font-semibold">Allow Fullscreen</span>
+        </div>
         <ToggleSwitch
           checked={allowFullscreen}
           onChange={handleAllowFullscreenChange}
@@ -1239,7 +1273,7 @@ const ElementEmbedProperties = ({
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 −
               </button>
@@ -1248,13 +1282,13 @@ const ElementEmbedProperties = ({
                   type="number"
                   value={strokeWidth}
                   onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 +
               </button>

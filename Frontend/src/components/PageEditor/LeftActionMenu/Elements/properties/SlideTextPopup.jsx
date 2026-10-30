@@ -194,7 +194,7 @@ const SlideTextPopup = ({
           <div className="flex items-center justify-between gap-[0.5vw] mb-[0.8vw] pb-[0.4vw] border-b border-gray-100">
             <div className="flex items-center gap-[0.4vw]">
               <Type size="0.9vw" className="text-gray-700" />
-              <h3 className="text-[0.85vw] font-bold text-gray-800">Slide Typography</h3>
+              <h3 className="text-[0.85vw] font-semibold text-gray-800">Slide Typography</h3>
             </div>
             <button
               type="button"
@@ -245,7 +245,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={handleBoldToggle}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      isBold ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      isBold ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Bold"
                   >
@@ -255,7 +255,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={handleItalicToggle}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      isItalic ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      isItalic ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Italic"
                   >
@@ -265,7 +265,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={handleUnderlineToggle}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      isUnderline ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      isUnderline ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Underline"
                   >
@@ -282,7 +282,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={() => handleAlignSelect('left')}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      textAlign === 'left' ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      textAlign === 'left' ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Align Left"
                   >
@@ -292,7 +292,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={() => handleAlignSelect('center')}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      textAlign === 'center' ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      textAlign === 'center' ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Align Center"
                   >
@@ -302,7 +302,7 @@ const SlideTextPopup = ({
                     type="button"
                     onClick={() => handleAlignSelect('right')}
                     className={`flex-1 py-[0.3vw] flex items-center justify-center rounded-[0.25vw] transition-colors cursor-pointer ${
-                      textAlign === 'right' ? 'bg-white shadow-xs text-gray-950 font-bold' : 'text-gray-500 hover:text-gray-800'
+                      textAlign === 'right' ? 'bg-white shadow-xs text-gray-950 font-semibold' : 'text-gray-500 hover:text-gray-800'
                     }`}
                     title="Align Right"
                   >
@@ -316,7 +316,7 @@ const SlideTextPopup = ({
             <div className="space-y-[0.25vw]">
               <div className="flex items-center justify-between">
                 <span className="text-[0.72vw] font-semibold text-gray-700">Text Shadow</span>
-                <span className="text-[0.68vw] text-gray-500 font-medium capitalize">{textShadow}</span>
+                <span className="text-[0.68vw] text-gray-500 font-semibold capitalize">{textShadow}</span>
               </div>
               <div className="grid grid-cols-4 gap-[0.3vw] bg-gray-50 p-[0.2vw] rounded-[0.35vw] border border-gray-200">
                 {[
@@ -331,7 +331,7 @@ const SlideTextPopup = ({
                     onClick={() => handleShadowSelect(opt.id)}
                     className={`py-[0.3vw] text-[0.72vw] font-semibold rounded-[0.25vw] transition-all cursor-pointer text-center ${
                       textShadow === opt.id
-                        ? 'bg-white shadow-xs text-gray-950 border border-gray-200/80 font-bold'
+                        ? 'bg-white shadow-xs text-gray-950 border border-gray-200/80 font-semibold'
                         : 'text-gray-500 hover:text-gray-800'
                     }`}
                   >

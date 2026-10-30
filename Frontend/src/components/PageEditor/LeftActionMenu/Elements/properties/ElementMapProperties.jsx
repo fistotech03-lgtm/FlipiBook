@@ -9,7 +9,7 @@ import { ElementToggle, ElementDropdown } from './ElementUIControls';
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.2vw]">
-    <span className="text-[0.88vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.88vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
@@ -25,7 +25,7 @@ const RadioButton = ({ label, checked, onChange }) => (
     >
       {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
     </div>
-    <span className="text-[0.78vw] text-gray-600 font-medium">{label}</span>
+    <span className="text-[0.78vw] text-gray-600 font-semibold">{label}</span>
   </label>
 );
 
@@ -785,7 +785,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
               placeholder="Search Location..."
-              className="flex-1 h-full text-[0.78vw] font-normal text-gray-700 bg-transparent outline-none placeholder:text-gray-400"
+              className="flex-1 h-full text-[0.78vw] font-semibold text-gray-700 bg-transparent outline-none placeholder:text-gray-400"
             />
           </div>
 
@@ -819,7 +819,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* 1.2 URL Input */}
       {sourceType === 'URL' && (
         <div className="w-full flex flex-col gap-[0.25vw]">
-          <span className="text-[0.7vw] text-gray-500 font-medium">Source URL</span>
+          <span className="text-[0.7vw] text-gray-500 font-semibold">Source URL</span>
           <div className={`flex border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs`}>
             <input
               type="text"
@@ -833,7 +833,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               }}
               onBlur={handleApplyUrl}
               placeholder="e.g. https://maps.app.goo.gl/"
-              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-semibold outline-none text-gray-800 placeholder-gray-400 bg-transparent"
               disabled={isLoadingUrl}
             />
             {isLoadingUrl && (
@@ -872,7 +872,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* 1.3 Embed Code Textarea */}
       {sourceType === 'Embed Code' && (
         <div className="w-full flex flex-col gap-[0.25vw]">
-          <span className="text-[0.7vw] text-gray-500 font-medium">Code</span>
+          <span className="text-[0.7vw] text-gray-500 font-semibold">Code</span>
           <textarea
             value={embedCode}
             onChange={(e) => {
@@ -882,7 +882,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
             onBlur={handleApplyEmbedCode}
             placeholder="Paste HTML code here"
             rows={3}
-            className={`w-full border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-normal text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono`}
+            className={`w-full border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono`}
             disabled={isLoadingUrl}
           />
           {errorMessage && (
@@ -945,7 +945,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* "Open in Map" Redirect Button Toggle */}
       <div className="flex items-center justify-between py-[0.1vw] px-[0.1vw]">
         <div className="flex flex-col">
-          <span className="text-[0.78vw] font-medium text-gray-800">Open in Maps</span>
+          <span className="text-[0.78vw] font-semibold text-gray-800">Open in Maps</span>
           <span className="text-[0.65vw] text-gray-400">To add redirect button on map</span>
         </div>
         <Toggle
@@ -986,7 +986,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
             className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
             maxLength={7}
           />
-          <span className="text-gray-400 text-[0.75vw] font-medium">{buttonOpacity}%</span>
+          <span className="text-gray-400 text-[0.75vw] font-semibold">{buttonOpacity}%</span>
         </div>
       </div>
 

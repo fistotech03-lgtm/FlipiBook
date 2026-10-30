@@ -43,11 +43,10 @@ const cleanStaticHtml = (html) => {
             rootSvg.setAttribute('height', '100%');
         }
 
-        // Remove foreignObjects containing video/iframe from static background so they don't load twice or flash
-        doc.querySelectorAll('foreignObject[data-type="video"], foreignObject video, foreignObject iframe').forEach(el => {
-            const fo = el.tagName?.toLowerCase() === 'foreignobject' ? el : el.closest('foreignObject');
-            if (fo) fo.remove();
-            else el.remove();
+        // Remove foreignObjects containing video/iframe/map/embed from static background so they don't load twice or flash or leak during flips
+        doc.querySelectorAll('foreignObject[data-type="video"], foreignObject[data-type="map"], foreignObject[data-type="embed-frame"], foreignObject video, foreignObject iframe, g[data-type="map"], g[data-type="embed-frame"]').forEach(el => {
+            const target = el.closest('g[data-type="map"], g[data-type="embed-frame"]') || (el.tagName?.toLowerCase() === 'foreignobject' ? el : el.closest('foreignObject')) || el;
+            target.remove();
         });
         return doc.body.innerHTML || html;
     } catch (e) {
@@ -137,20 +136,33 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
   .text-edit-box,
   [contenteditable="true"],
   [data-scrollable="true"],
-  foreignObject div {
+  foreignObject:not([data-type="map"]) div:not(.map-root-container):not(.map-card-overlay):not(.map-card-overlay *) {
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
     word-break: normal !important;
     overflow-wrap: anywhere !important;
   }
 
-  foreignObject {
+  .map-nowrap,
+  [data-nowrap="true"],
+  .map-card-overlay .map-nowrap {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) {
     overflow: visible !important;
     clip-path: none !important;
   }
 
-  foreignObject * {
+  foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) * {
     clip-path: none !important;
+  }
+
+  foreignObject[data-type="map"],
+  g[data-type="map"] foreignObject {
+    overflow: hidden !important;
   }
 
   foreignObject video {

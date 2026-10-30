@@ -996,24 +996,39 @@ export async function renderQRWithFrame({
   if (logoSrc) {
     const logoImg = await loadImg(logoSrc);
     if (logoImg) {
-      const logoDim = Math.round((qrRenderSize * logoSize) / 100);
-      const logoX = qrX + (qrRenderSize - logoDim) / 2;
-      const logoY = qrY + (qrRenderSize - logoDim) / 2;
-      const radiusPx = Math.round((logoDim / 2) * ((logoRadius ?? 80) / 100));
+      const maxBoxDim = Math.round((qrRenderSize * logoSize) / 100);
+      const imgW = logoImg.naturalWidth || logoImg.width || 1;
+      const imgH = logoImg.naturalHeight || logoImg.height || 1;
+      const aspect = imgW / imgH;
+
+      let drawW, drawH;
+      if (aspect >= 1) {
+        drawW = maxBoxDim;
+        drawH = Math.max(4, Math.round(maxBoxDim / aspect));
+      } else {
+        drawH = maxBoxDim;
+        drawW = Math.max(4, Math.round(maxBoxDim * aspect));
+      }
+
+      const logoX = qrX + (qrRenderSize - drawW) / 2;
+      const logoY = qrY + (qrRenderSize - drawH) / 2;
+      // Fixed pixel radius: capped so it doesn't exceed half of the shortest edge
+      const maxAllowedR = Math.floor(Math.min(drawW, drawH) / 2);
+      const radiusPx = Math.max(0, Math.min(Number(logoRadius) || 0, maxAllowedR));
 
       if (logoBg) {
         const pad = 4;
         ctx.save();
-        drawRoundRect(ctx, logoX - pad, logoY - pad, logoDim + pad * 2, logoDim + pad * 2, radiusPx + pad);
+        drawRoundRect(ctx, logoX - pad, logoY - pad, drawW + pad * 2, drawH + pad * 2, radiusPx + pad);
         ctx.fillStyle = logoBgColor || '#ffffff';
         ctx.fill();
         ctx.restore();
       }
 
       ctx.save();
-      drawRoundRect(ctx, logoX, logoY, logoDim, logoDim, radiusPx);
+      drawRoundRect(ctx, logoX, logoY, drawW, drawH, radiusPx);
       ctx.clip();
-      ctx.drawImage(logoImg, logoX, logoY, logoDim, logoDim);
+      ctx.drawImage(logoImg, logoX, logoY, drawW, drawH);
       ctx.restore();
     }
   }

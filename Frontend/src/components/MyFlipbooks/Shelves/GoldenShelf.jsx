@@ -7,10 +7,13 @@ import goldenShelfPlank from '../../../assets/Bookshelf/golden_shelf/shelf.png';
 import goldenShelfLight from '../../../assets/Bookshelf/golden_shelf/light.png';
 import goldenShelfDecor from '../../../assets/Bookshelf/golden_shelf/decor.png';
 import goldenShelfPlant from '../../../assets/Bookshelf/golden_shelf/plant.png';
+import goldenShelfSwitch from '../../../assets/Bookshelf/golden_shelf/switch.png';
 
 const GoldenShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   selectedLightTheme,
   openMenuId,
   setOpenMenuId,
@@ -46,6 +49,30 @@ const GoldenShelf = ({
         />
       </div>
 
+      {/* 1b. Wall Light Switch in top-right - Clickable to toggle lights on/off; hidden/disabled when toggle is off */}
+      {showLightSwitch && (
+        <div
+          onClick={() => {
+            if (typeof setDecors === 'function') {
+              setDecors(prev => ({ ...prev, lights: !prev.lights }));
+            }
+          }}
+          className="absolute pointer-events-auto cursor-pointer z-15 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+          style={{
+            right: '5.2%',
+            top: '10.5%',
+            width: '3.2%'
+          }}
+          title={decors.lights ? "Turn Lights Off" : "Turn Lights On"}
+        >
+          <img
+            src={goldenShelfSwitch}
+            alt="Switch"
+            className="w-full h-auto block drop-shadow-sm transition-all duration-200 opacity-100"
+          />
+        </div>
+      )}
+
       {/* 2. Top Spotlight Beam / Fixture */}
       <div
         className="absolute pointer-events-none z-15"
@@ -55,24 +82,10 @@ const GoldenShelf = ({
           width: '61.6%'
         }}
       >
-        {decors.lights && (
-          <div
-            className="absolute inset-0 pointer-events-none -z-10"
-            style={{
-              background: selectedLightTheme === 'light1'
-                ? 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.20) 45%, transparent 75%)'
-                : selectedLightTheme === 'light2'
-                ? 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.22) 45%, transparent 75%)'
-                : 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 45%, transparent 75%)',
-              filter: 'blur(20px)',
-              mixBlendMode: 'screen'
-            }}
-          />
-        )}
         <img
           src={goldenShelfLight}
           alt="Lights"
-          className="w-full h-auto block drop-shadow-md"
+          className="w-full h-auto block drop-shadow-md relative z-20"
           style={{
             filter: decors.lights
               ? (selectedLightTheme === 'light1'
@@ -101,50 +114,52 @@ const GoldenShelf = ({
         />
       </div>
 
-      {/* 4. Plant sitting at the right edge of the shelf plank */}
-      <div
-        className="absolute pointer-events-none z-25"
-        style={{
-          left: '77.5%',
-          top: '39.8%',
-          width: '13.5%'
-        }}
-      >
-        <img
-          src={goldenShelfPlant}
-          alt="Hanging Plant"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {/* 4. Plant sitting on the shelf plank */}
+      {decors.plant !== false && (
+        <div
+          className="absolute pointer-events-none z-25"
+          style={{
+            left: '68.8%',
+            top: '41.2%',
+            width: '13.5%'
+          }}
+        >
+          <img
+            src={goldenShelfPlant}
+            alt="Hanging Plant"
+            className="w-full h-auto block drop-shadow-md"
+          />
+        </div>
+      )}
 
-      {/* 5. Decor (Ceramic vase & books) sitting on bottom-left just above base credenza */}
-      <div
-        className="absolute pointer-events-none z-20"
-        style={{
-          left: '1.2%',
-          bottom: '14.8%',
-          width: '12.0%'
-        }}
-      >
-        <img
-          src={goldenShelfDecor}
-          alt="Decor"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {/* 5. Decor (Ceramic vase & books) sitting firmly landed on bottom base credenza tabletop */}
+      {decors.decor !== false && (
+        <div
+          className="absolute pointer-events-none z-20"
+          style={{
+            left: '1.2%',
+            bottom: '12.2%',
+            width: '12.0%'
+          }}
+        >
+          <img
+            src={goldenShelfDecor}
+            alt="Decor"
+            className="w-full h-auto block drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      )}
 
-      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf */}
+      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf - Each directly centered under its spotlight bulb */}
       <div
-        className="absolute z-20 flex items-end pointer-events-auto"
-        style={{
-          left: '24.2%',
-          top: '37.3%',
-          width: '52.3%',
-          height: '22.8%',
-          gap: '4.5%'
-        }}
+        className="absolute inset-0 z-20 pointer-events-none"
       >
-        {[0, 1, 2, 3].map((slotIdx) => {
+        {[
+          { center: '27.13%' },
+          { center: '39.92%' },
+          { center: '52.66%' },
+          { center: '65.96%' }
+        ].map(({ center }, slotIdx) => {
           const book = filteredBooks && filteredBooks[slotIdx];
           if (!book) {
             return (
@@ -152,7 +167,13 @@ const GoldenShelf = ({
                 key={`golden-empty-${slotIdx}`}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, slotIdx)}
-                className="relative flex-1 h-full flex flex-col justify-end items-center"
+                className="absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center"
+                style={{
+                  left: center,
+                  top: '33.5%',
+                  width: '9.8%',
+                  height: '26.5%'
+                }}
               >
                 <div
                   onClick={() => {
@@ -160,7 +181,7 @@ const GoldenShelf = ({
                     setAddBookSearch('');
                     setShowAddBookModal(true);
                   }}
-                  className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                  className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px] shadow-sm"
                   title="Add Book"
                 >
                   <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
@@ -186,14 +207,20 @@ const GoldenShelf = ({
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, slotIdx)}
               onDragEnd={handleDragEnd}
-              className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `golden-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
+              className={`absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `golden-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
+              style={{
+                left: center,
+                top: '33.5%',
+                width: '9.8%',
+                height: '26.5%'
+              }}
               onClick={() => {
                 if (targetShareId) {
                   window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
                 }
               }}
             >
-              <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.22)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+              <div className="w-full aspect-[2.5/3.25] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.22)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
                 <LazyPreview
                   v_id={book.v_id}
                   emailId={book.rawBook?.userEmail || currentUserEmail}
@@ -224,6 +251,73 @@ const GoldenShelf = ({
                   onMouseLeave={() => setHoveredInfoId(null)}
                 >
                   <Icon icon="si:info-fill" className="w-4 h-4" />
+
+                  {/* Info Tooltip Bridge & Container */}
+                  <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `golden-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                    <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                      {/* Author Info */}
+                      <div className="flex items-center gap-2">
+                        {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                          <img
+                            src={book.authorPicture}
+                            alt={book.authorName}
+                            className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                            style={{ backgroundColor: book.authorBgColor || '#3B82F6' }}
+                          >
+                            {(book.authorName || 'U').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0 pr-1">
+                          <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName || 'Creator'}</span>
+                          <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                            <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                            <span className="truncate">{String(book.location || 'Coimbatore').replace(/📍/g, '').trim()}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-black font-semibold">{book.pages || 0}</span>
+                          <span className="font-normal text-gray-500">Pages</span>
+                        </div>
+                        <span className="text-gray-300">|</span>
+                        <span className="flex items-center gap-1">
+                          <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                          {book.views || '1.2k'}
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <span className="flex items-center gap-1">
+                          <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                          {book.rating || 4.5}
+                        </span>
+                      </div>
+
+                      {/* Title & Desc & Button */}
+                      <div className="relative">
+                        <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                        <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+
+                        {/* Action Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (targetShareId) {
+                              window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                            }
+                          }}
+                          className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
+                        >
+                          <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

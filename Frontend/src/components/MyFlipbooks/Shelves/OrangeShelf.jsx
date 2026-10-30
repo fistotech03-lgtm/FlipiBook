@@ -12,10 +12,13 @@ import orangeGlobe from '../../../assets/Bookshelf/orange_shelf/globedecor.png';
 import orangeShelfPlant from '../../../assets/Bookshelf/orange_shelf/shelfplant.png';
 import orangeBookDecor from '../../../assets/Bookshelf/orange_shelf/bookdecor.png';
 import orangePlant from '../../../assets/Bookshelf/orange_shelf/plant.png';
+import orangeSwitch from '../../../assets/Bookshelf/orange_shelf/switch.png';
 
 const OrangeShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   selectedLightTheme,
   openMenuId,
   setOpenMenuId,
@@ -51,6 +54,30 @@ const OrangeShelf = ({
         />
       </div>
 
+      {/* 1b. Wall Light Switch on right side wood top */}
+      {showLightSwitch && (
+        <div
+          onClick={() => {
+            if (typeof setDecors === 'function') {
+              setDecors(prev => ({ ...prev, lights: !prev.lights }));
+            }
+          }}
+          className="absolute pointer-events-auto cursor-pointer z-25 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+          style={{
+            right: '3.3%',
+            top: '7.5%',
+            width: '3.0%'
+          }}
+          title={decors.lights ? "Turn Lights Off" : "Turn Lights On"}
+        >
+          <img
+            src={orangeSwitch}
+            alt="Switch"
+            className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+          />
+        </div>
+      )}
+
       {/* 2. Base Credenza along the bottom */}
       <div
         className="absolute left-0 w-full pointer-events-none z-10"
@@ -82,122 +109,150 @@ const OrangeShelf = ({
         />
       </div>
 
-      {/* 4. Globe Decor on upper wave shelf tier */}
-      <div
-        className="absolute pointer-events-none z-20"
-        style={{
-          left: '21.4%',
-          top: '31.5%',
-          width: '5.2%'
-        }}
-      >
-        <img
-          src={orangeGlobe}
-          alt="Globe Decor"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {/* 4. Globe Decor on upper wave shelf tier - resting firmly on the shelf left edge */}
+      {decors.globeDecor !== false && (
+        <div
+          className="absolute pointer-events-none z-20"
+          style={{
+            left: '19.8%',
+            top: '35.8%',
+            width: '7.4%'
+          }}
+        >
+          <img
+            src={orangeGlobe}
+            alt="Globe Decor"
+            className="w-full h-auto block drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      )}
 
-      {/* 5. Shelf Plant on lower wave shelf tier */}
-      <div
-        className="absolute pointer-events-none z-20"
-        style={{
-          left: '64.2%',
-          top: '39.5%',
-          width: '6.4%'
-        }}
-      >
-        <img
-          src={orangeShelfPlant}
-          alt="Shelf Plant"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {/* 5. Shelf Plant on lower wave shelf tier - resting firmly on the shelf edge */}
+      {decors.shelfPlant !== false && (
+        <div
+          className="absolute pointer-events-none z-20"
+          style={{
+            left: '63.0%',
+            top: '45.2%',
+            width: '8.4%'
+          }}
+        >
+          <img
+            src={orangeShelfPlant}
+            alt="Shelf Plant"
+            className="w-full h-auto block drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      )}
 
       {/* 6. Wall Sconce Lamp with Light Glow on Right Slats */}
       <div
         className="absolute pointer-events-none z-20"
         style={{
-          right: '8.2%',
-          top: '8.0%',
-          width: '8.2%'
+          right: '11.2%',
+          top: '6.8%',
+          width: '11.0%'
         }}
       >
+        {/* Ambient Wall Wash radiating smoothly behind the entire lamp */}
         {decors.lights && (
-          <>
-            {/* Ambient Wall Wash behind Sconce */}
-            <div
-              className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
-              style={{
-                left: '50%',
-                top: '40%',
-                width: '320%',
-                height: '320%',
-                background: selectedLightTheme === 'light1'
-                  ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
-                  : selectedLightTheme === 'light2'
-                  ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
-                filter: 'blur(20px)',
-                mixBlendMode: 'screen'
-              }}
-            />
-          </>
+          <div
+            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-0"
+            style={{
+              left: '38%',
+              top: '22%',
+              width: '360%',
+              height: '360%',
+              background: selectedLightTheme === 'light1'
+                ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.18) 35%, rgba(217, 119, 6, 0.04) 65%, transparent 100%)'
+                : selectedLightTheme === 'light2'
+                  ? 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(248, 250, 252, 0.18) 35%, rgba(226, 232, 240, 0.04) 65%, transparent 100%)'
+                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.45) 0%, rgba(147, 197, 253, 0.20) 35%, rgba(96, 165, 250, 0.04) 65%, transparent 100%)',
+              filter: 'blur(30px)',
+              mixBlendMode: 'screen'
+            }}
+          />
         )}
 
+        {/* 1. Base Lamp Image: Always in its original golden metal tones (untouched holder/plate) */}
         <img
           src={orangeLamp}
           alt="Wall Sconce"
-          className="w-full h-auto block drop-shadow-md"
+          className="w-full h-auto block drop-shadow-md relative z-10 transition-all duration-300"
           style={{
             filter: decors.lights
               ? (selectedLightTheme === 'light1'
                   ? 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(251, 191, 36, 0.55))'
                   : selectedLightTheme === 'light2'
-                  ? 'brightness(1.20) contrast(1.02) drop-shadow(0 0 16px rgba(255, 255, 255, 0.60))'
-                  : 'brightness(1.12) contrast(1.02) drop-shadow(0 0 16px rgba(186, 230, 253, 0.55))')
+                    ? 'brightness(1.18) contrast(1.02) drop-shadow(0 0 16px rgba(255, 255, 255, 0.65))'
+                    : 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(96, 165, 250, 0.60))')
               : 'none'
           }}
         />
+
+        {/* 2. Top Shade Color Transformation: Strictly clipped to the upper lampshade (0% - 41.5% height), keeping the metallic holder & arm 100% golden */}
+        {decors.lights && selectedLightTheme !== 'light1' && (
+          <div
+            className="absolute inset-0 pointer-events-none z-20 overflow-hidden"
+            style={{
+              clipPath: 'polygon(0% 0%, 100% 0%, 100% 41.5%, 0% 41.5%)'
+            }}
+          >
+            <img
+              src={orangeLamp}
+              alt="Lamp Shade Glow"
+              className="w-full h-auto block transition-all duration-300"
+              style={{
+                filter: selectedLightTheme === 'light2'
+                  ? 'brightness(1.22) contrast(1.05) saturate(0.12)'
+                  : 'brightness(1.20) contrast(1.05) hue-rotate(185deg) saturate(1.4)'
+              }}
+            />
+          </div>
+        )}
       </div>
 
-      {/* 7. Decors on Credenza: Books Stack and Plant in Pot */}
-      <div
-        className="absolute pointer-events-none z-20"
-        style={{
-          right: '9.2%',
-          bottom: '10.6%',
-          width: '7.2%'
-        }}
-      >
-        <img
-          src={orangeBookDecor}
-          alt="Books Decor"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {/* 7. Decors on Credenza: Books Stack and Plant in Pot - firmly landed on bottom credenza tabletop */}
+      {decors.bookDecor !== false && (
+        <div
+          className="absolute pointer-events-none z-20"
+          style={{
+            right: '10.8%',
+            bottom: '7.0%',
+            width: '7.8%'
+          }}
+        >
+          <img
+            src={orangeBookDecor}
+            alt="Books Decor"
+            className="w-full h-auto block drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      )}
 
-      <div
-        className="absolute pointer-events-none z-20"
-        style={{
-          right: '5.0%',
-          bottom: '10.6%',
-          width: '9.2%'
-        }}
-      >
-        <img
-          src={orangePlant}
-          alt="Plant Decor"
-          className="w-full h-auto block drop-shadow-md"
-        />
-      </div>
+      {decors.basePlant !== false && (
+        <div
+          className="absolute pointer-events-none z-20"
+          style={{
+            right: '3.6%',
+            bottom: '7.0%',
+            width: '9.8%'
+          }}
+        >
+          <img
+            src={orangePlant}
+            alt="Plant Decor"
+            className="w-full h-auto block drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      )}
 
       {/* 8. Book 1 on Upper Shelf Tier */}
       <div
         className="absolute z-20 flex items-end justify-center pointer-events-auto"
         style={{
           left: '28.3%',
-          top: '18.5%',
+          top: '22.8%',
           width: '9.8%',
           height: '24.8%'
         }}

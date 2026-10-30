@@ -7,10 +7,14 @@ import blueFrameLeftShelf from '../../../assets/Bookshelf/blue_frame/leftshelf.p
 import blueFrameLight from '../../../assets/Bookshelf/blue_frame/light.png';
 import blueFrameDecor from '../../../assets/Bookshelf/blue_frame/decor.png';
 import blueFrameRopeShelf from '../../../assets/Bookshelf/blue_frame/rope_shelf.png';
+import blueFrameSwitch from '../../../assets/Bookshelf/blue_frame/switch.png';
 
 const BlueRopeShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
+  lightOpacity = 100,
   selectedLightTheme,
   openMenuId,
   setOpenMenuId,
@@ -46,10 +50,12 @@ const BlueRopeShelf = ({
                       />
                     </div>
 
-                    {/* 2. Base Credenza along bottom */}
+                    {/* 2. Base Credenza along bottom (expanded width to reach edges with zero gap) */}
                     <div
-                      className="absolute left-0 w-full pointer-events-none z-10"
+                      className="absolute pointer-events-none z-10"
                       style={{
+                        left: '-2%',
+                        width: '104%',
                         bottom: 0,
                         height: '9.4%'
                       }}
@@ -71,77 +77,44 @@ const BlueRopeShelf = ({
                     >
                       {/* Realistic Downward Spreading Light & Ambiance Effects */}
                       {decors.lights && (
-                        <>
-                          {/* 1. Large Ambient Wall Glow behind the lamp fixture */}
+                        <div
+                          className="pointer-events-none transition-opacity duration-150"
+                          style={{
+                            opacity: (Number(lightOpacity ?? 100) / 100)
+                          }}
+                        >
+                          {/* 1. Natural Ambient Radial Light Bloom: shifted downwards so light spreads down onto shelf */}
                           <div
                             className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
                             style={{
                               left: '50%',
-                              top: '93%',
+                              top: '165%',
                               width: '380%',
                               height: '380%',
                               background: selectedLightTheme === 'light1'
-                                ? 'radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.20) 28%, rgba(245, 158, 11, 0.04) 52%, transparent 70%)'
                                 : selectedLightTheme === 'light2'
-                                ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
-                              filter: 'blur(22px)',
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.52) 0%, rgba(248, 250, 252, 0.24) 28%, rgba(226, 232, 240, 0.04) 52%, transparent 70%)'
+                                : 'radial-gradient(circle at 50% 50%, rgba(186, 230, 253, 0.44) 0%, rgba(147, 197, 253, 0.18) 28%, rgba(191, 219, 254, 0.04) 52%, transparent 70%)',
+                              filter: 'blur(32px)',
                               mixBlendMode: 'screen'
                             }}
                           />
 
-                          {/* 2. Wide Downward Spreading Conical Beam (Spread Light Wall Wash) */}
+                          {/* 2. Soft Downward Core Pool directly beneath the lamp opening */}
                           <div
-                            className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 -z-10"
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
                             style={{
                               left: '50%',
-                              top: '93%',
-                              width: '420%',
-                              height: '460%',
-                              clipPath: 'polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%)',
-                              background: selectedLightTheme === 'light1'
-                                ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.88) 0%, rgba(254, 240, 138, 0.45) 25%, rgba(251, 191, 36, 0.18) 60%, rgba(245, 158, 11, 0.03) 85%, transparent 100%)'
-                                : selectedLightTheme === 'light2'
-                                ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.50) 25%, rgba(203, 213, 225, 0.18) 60%, rgba(203, 213, 225, 0.03) 85%, transparent 100%)'
-                                : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.92) 0%, rgba(186, 230, 253, 0.44) 25%, rgba(147, 197, 253, 0.15) 60%, rgba(147, 197, 253, 0.03) 85%, transparent 100%)',
-                              filter: 'blur(16px)',
-                              mixBlendMode: 'screen'
-                            }}
-                          />
-
-                          {/* 3. Inner Focused Light Core Shaft */}
-                          <div
-                            className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 -z-10"
-                            style={{
-                              left: '50%',
-                              top: '93%',
+                              top: '135%',
                               width: '240%',
-                              height: '320%',
-                              clipPath: 'polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%)',
+                              height: '240%',
                               background: selectedLightTheme === 'light1'
-                                ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.58) 25%, rgba(251, 191, 36, 0.18) 65%, transparent 100%)'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 250, 220, 0.70) 0%, rgba(254, 240, 138, 0.35) 30%, rgba(251, 191, 36, 0.06) 58%, transparent 75%)'
                                 : selectedLightTheme === 'light2'
-                                ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.62) 25%, rgba(203, 213, 225, 0.18) 65%, transparent 100%)'
-                                : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.58) 25%, rgba(186, 230, 253, 0.15) 65%, transparent 100%)',
-                              filter: 'blur(8px)',
-                              mixBlendMode: 'screen'
-                            }}
-                          />
-
-                          {/* 4. Downward Pool of Light on Lower Space / Credenza */}
-                          <div
-                            className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 -z-10"
-                            style={{
-                              left: '50%',
-                              top: '280%',
-                              width: '320%',
-                              height: '140%',
-                              background: selectedLightTheme === 'light1'
-                                ? 'radial-gradient(ellipse 65% 45% at 50% 50%, rgba(254, 240, 138, 0.35) 0%, rgba(251, 191, 36, 0.15) 45%, transparent 75%)'
-                                : selectedLightTheme === 'light2'
-                                ? 'radial-gradient(ellipse 65% 45% at 50% 50%, rgba(255, 255, 255, 0.40) 0%, rgba(241, 245, 249, 0.16) 45%, transparent 75%)'
-                                : 'radial-gradient(ellipse 65% 45% at 50% 50%, rgba(240, 249, 255, 0.38) 0%, rgba(186, 230, 253, 0.15) 45%, transparent 75%)',
-                              filter: 'blur(16px)',
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.76) 0%, rgba(248, 250, 252, 0.40) 30%, rgba(203, 213, 225, 0.06) 58%, transparent 75%)'
+                                : 'radial-gradient(circle at 50% 50%, rgba(240, 249, 255, 0.72) 0%, rgba(186, 230, 253, 0.36) 30%, rgba(147, 197, 253, 0.06) 58%, transparent 75%)',
+                              filter: 'blur(20px)',
                               mixBlendMode: 'screen'
                             }}
                           />
@@ -169,7 +142,7 @@ const BlueRopeShelf = ({
                               mixBlendMode: 'screen'
                             }}
                           />
-                        </>
+                        </div>
                       )}
 
                       <img
@@ -179,14 +152,38 @@ const BlueRopeShelf = ({
                         style={{
                           filter: decors.lights
                             ? (selectedLightTheme === 'light1'
-                                ? 'brightness(1.10) contrast(1.02) drop-shadow(0 0 16px rgba(251, 191, 36, 0.45))'
+                                ? `brightness(${1 + 0.10 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(251, 191, 36, ${0.45 * (Number(lightOpacity ?? 100) / 100)}))`
                                 : selectedLightTheme === 'light2'
-                                ? 'brightness(1.18) contrast(1.02) drop-shadow(0 0 16px rgba(255, 255, 255, 0.50))'
-                                : 'brightness(1.08) contrast(1.02) drop-shadow(0 0 16px rgba(186, 230, 253, 0.45))')
+                                ? `brightness(${1 + 0.18 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(255, 255, 255, ${0.50 * (Number(lightOpacity ?? 100) / 100)}))`
+                                : `brightness(${1 + 0.08 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(186, 230, 253, ${0.45 * (Number(lightOpacity ?? 100) / 100)}))`)
                             : 'none'
                         }}
                       />
                     </div>
+
+                    {/* 3b. Light Switch on Right Side of Lamp */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-30 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '2.4%',
+                          top: '12.0%',
+                          width: '2.8%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={blueFrameSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+                        />
+                      </div>
+                    )}
 
                     {/* 4. Bottom-Left Vase/Plant Decor placed on credenza */}
                     <div
@@ -350,7 +347,7 @@ const BlueRopeShelf = ({
                                         <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
                                         <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
                                           <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                          <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                          <span className="truncate">{String(book.location).replace(/≡ƒôì/g, '').trim()}</span>
                                         </span>
                                       </div>
                                     </div>
@@ -528,7 +525,7 @@ const BlueRopeShelf = ({
                                         <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
                                         <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
                                           <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                          <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                          <span className="truncate">{String(book.location).replace(/≡ƒôì/g, '').trim()}</span>
                                         </span>
                                       </div>
                                     </div>

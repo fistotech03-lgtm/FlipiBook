@@ -7,11 +7,15 @@ import windowShelfBase from '../../../assets/Bookshelf/window_shelf/base.png';
 import windowShelfPlank from '../../../assets/Bookshelf/window_shelf/shelf.png';
 import windowShelfPlant from '../../../assets/Bookshelf/window_shelf/plant.png';
 import windowShelfLight from '../../../assets/Bookshelf/window_shelf/light.png';
+import windowShelfSwitch from '../../../assets/Bookshelf/window_shelf/switch.png';
 
 const WindowShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   defaultLightType,
+  lightOpacity = 100,
   selectedLightTheme,
   openMenuId,
   setOpenMenuId,
@@ -64,6 +68,8 @@ const WindowShelf = ({
                     </div>
 
                     {/* 3. Triple Hanging Bulb Pendant Lights in Top-Right Corner */}
+                    {/* 3a. 3 Hanging Pendant Lights on Right */}
+                    {decors?.lightFixture !== false && (
                     <div
                       className="absolute pointer-events-none z-10"
                       style={{
@@ -72,21 +78,129 @@ const WindowShelf = ({
                         width: '8.6%'
                       }}
                     >
+                      {/* Ambient Wall Light Glow behind Pendant Bulbs */}
+                      {(decors?.lights && defaultLightType !== 'Turn off') && (
+                        <div className="contents" style={{ opacity: lightOpacity / 100 }}>
+                          {/* Soft Ambient Wall Spread from the 3 Bulbs */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-0"
+                            style={{
+                              left: '48%',
+                              top: '65%',
+                              width: '480%',
+                              height: '210%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(254, 240, 138, 0.48) 0%, rgba(251, 191, 36, 0.28) 35%, rgba(245, 158, 11, 0.12) 65%, transparent 100%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.25) 40%, rgba(203, 213, 225, 0.08) 70%, transparent 100%)'
+                                : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(186, 230, 253, 0.50) 0%, rgba(147, 197, 253, 0.25) 40%, rgba(96, 165, 250, 0.08) 70%, transparent 100%)',
+                              filter: 'blur(42px)',
+                              mixBlendMode: 'screen'
+                            }}
+                          />
+
+                          {/* Bulb 1 (Top-Left) Inner Glowing Filament Core */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-20"
+                            style={{
+                              left: '26.1%',
+                              top: '41.5%',
+                              width: '34%',
+                              height: '13.0%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(circle, #ffffff 15%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.60) 75%, transparent 100%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(circle, #ffffff 25%, rgba(255, 255, 255, 0.98) 55%, rgba(241, 245, 249, 0.80) 75%, transparent 100%)'
+                                : 'radial-gradient(circle, #ffffff 20%, rgba(224, 242, 254, 0.95) 50%, rgba(147, 197, 253, 0.85) 75%, transparent 100%)',
+                              filter: selectedLightTheme === 'light1' ? 'blur(3.2px)' : 'blur(3.5px)',
+                              boxShadow: selectedLightTheme === 'light1'
+                                ? '0 0 10px rgba(251, 191, 36, 0.65)'
+                                : 'none'
+                            }}
+                          />
+
+                          {/* Bulb 2 (Mid-Right) Inner Glowing Filament Core */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-20"
+                            style={{
+                              left: '78.2%',
+                              top: '67.6%',
+                              width: '34%',
+                              height: '13.0%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(circle, #ffffff 15%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.60) 75%, transparent 100%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(circle, #ffffff 25%, rgba(255, 255, 255, 0.98) 55%, rgba(241, 245, 249, 0.80) 75%, transparent 100%)'
+                                : 'radial-gradient(circle, #ffffff 20%, rgba(224, 242, 254, 0.95) 50%, rgba(147, 197, 253, 0.85) 75%, transparent 100%)',
+                              filter: selectedLightTheme === 'light1' ? 'blur(3.2px)' : 'blur(3.5px)',
+                              boxShadow: selectedLightTheme === 'light1'
+                                ? '0 0 10px rgba(251, 191, 36, 0.65)'
+                                : 'none'
+                            }}
+                          />
+
+                          {/* Bulb 3 (Bottom-Center) Inner Glowing Filament Core */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-20"
+                            style={{
+                              left: '49.7%',
+                              top: '83.1%',
+                              width: '35%',
+                              height: '13.5%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(circle, #ffffff 15%, rgba(254, 240, 138, 0.85) 45%, rgba(251, 191, 36, 0.60) 75%, transparent 100%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(circle, #ffffff 25%, rgba(255, 255, 255, 0.98) 55%, rgba(241, 245, 249, 0.80) 75%, transparent 100%)'
+                                : 'radial-gradient(circle, #ffffff 20%, rgba(224, 242, 254, 0.95) 50%, rgba(147, 197, 253, 0.85) 75%, transparent 100%)',
+                              filter: selectedLightTheme === 'light1' ? 'blur(3.2px)' : 'blur(3.5px)',
+                              boxShadow: selectedLightTheme === 'light1'
+                                ? '0 0 10px rgba(251, 191, 36, 0.65)'
+                                : 'none'
+                            }}
+                          />
+                        </div>
+                      )}
+
                       <img
                         src={windowShelfLight}
                         alt="Pendant Lights"
-                        className="w-full h-auto block drop-shadow-md"
+                        className="w-full h-auto block drop-shadow-md relative z-10 transition-all duration-300"
                         style={{
                           filter: (decors?.lights && defaultLightType !== 'Turn off')
                             ? selectedLightTheme === 'light1'
-                              ? 'brightness(1.22) drop-shadow(0 0 16px rgba(245, 158, 11, 0.55))'
+                              ? 'brightness(1.20) contrast(1.04) drop-shadow(0 0 16px rgba(254, 240, 138, 0.65)) drop-shadow(0 0 32px rgba(251, 191, 36, 0.40))'
                               : selectedLightTheme === 'light2'
-                              ? 'brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6))'
-                              : 'brightness(1.18) drop-shadow(0 0 16px rgba(186, 230, 253, 0.55))'
+                              ? 'brightness(1.28) contrast(1.05) saturate(0.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.85))'
+                              : 'brightness(1.22) contrast(1.05) hue-rotate(185deg) saturate(1.4) drop-shadow(0 0 16px rgba(96, 165, 250, 0.75))'
                             : 'none'
                         }}
                       />
                     </div>
+                    )}
+
+                    {/* 3b. Light Switch on Right Side of Pendant Lights */}
+                    {showLightSwitch && decors?.lightFixture !== false && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-30 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '2.5%',
+                          top: '12.0%',
+                          width: '3.2%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={windowShelfSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+                        />
+                      </div>
+                    )}
 
                     {/* 4. White Wall Floating Shelf */}
                     <div
@@ -105,6 +219,7 @@ const WindowShelf = ({
                     </div>
 
                     {/* 5. Hanging Vine Plant on the Left Edge of Shelf */}
+                    {decors?.plant !== false && (
                     <div
                       className="absolute pointer-events-none z-20"
                       style={{
@@ -119,16 +234,17 @@ const WindowShelf = ({
                         className="w-full h-auto block drop-shadow-md"
                       />
                     </div>
+                    )}
 
                     {/* 6. Interactive Books on the Floating Shelf */}
                     <div
                       className="absolute z-20 flex items-end justify-center pointer-events-auto"
                       style={{
-                        left: '44.5%',
-                        top: '35.5%',
-                        width: '24.0%',
-                        height: '24.5%',
-                        gap: '12.5%'
+                        left: '46.0%',
+                        top: '33.2%',
+                        width: '21.0%',
+                        height: '26.0%',
+                        gap: '12%'
                       }}
                     >
                       {[0, 1].map((slotIdx) => {
@@ -147,7 +263,7 @@ const WindowShelf = ({
                                   setAddBookSearch('');
                                   setShowAddBookModal(true);
                                 }}
-                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                                className="w-full h-full rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
                                 title="Add Book"
                               >
                                 <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
@@ -182,7 +298,7 @@ const WindowShelf = ({
                               }
                             }}
                           >
-                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                            <div className="w-full h-full relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
                               <LazyPreview
                                 v_id={book.v_id}
                                 emailId={book.rawBook?.userEmail || currentUserEmail}

@@ -157,6 +157,7 @@ const MyShelf = () => {
   const [logoFixType, setLogoFixType] = useState('Fit'); // 'Fit' | 'Fill'
   const [showLogoFixDropdown, setShowLogoFixDropdown] = useState(false);
   const [logoOpacity, setLogoOpacity] = useState(80);
+  const [lightOpacity, setLightOpacity] = useState(100);
   const [shelfLogo, setShelfLogo] = useState(null); // { url, name, size, dimensions }
   const [showLogoModal, setShowLogoModal] = useState(false);
   const logoInputRef = useRef(null);
@@ -197,10 +198,16 @@ const MyShelf = () => {
     }
   };
   const [defaultLightType, setDefaultLightType] = useState('Turn on');
+  const [showLightSwitch, setShowLightSwitch] = useState(true);
   const [decors, setDecors] = useState({
     plant: true,
+    decor: true,
     lamp: true,
     lights: true,
+    shelfPlant: true,
+    globeDecor: true,
+    basePlant: true,
+    bookDecor: true,
   });
   const [shelfStylesPage, setShelfStylesPage] = useState(1);
 
@@ -1818,6 +1825,9 @@ const MyShelf = () => {
                   <BlueRopeShelf
                     filteredBooks={filteredBooks}
                     decors={decors}
+                    setDecors={setDecors}
+                    showLightSwitch={showLightSwitch}
+                    lightOpacity={lightOpacity}
                     selectedLightTheme={selectedLightTheme}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}
@@ -1843,7 +1853,10 @@ const MyShelf = () => {
                   <WindowShelf
                     filteredBooks={filteredBooks}
                     decors={decors}
+                    setDecors={setDecors}
+                    showLightSwitch={showLightSwitch}
                     defaultLightType={defaultLightType}
+                    lightOpacity={lightOpacity}
                     selectedLightTheme={selectedLightTheme}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}
@@ -1869,6 +1882,8 @@ const MyShelf = () => {
                   <OrangeShelf
                     filteredBooks={filteredBooks}
                     decors={decors}
+                    setDecors={setDecors}
+                    showLightSwitch={showLightSwitch}
                     selectedLightTheme={selectedLightTheme}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}
@@ -1894,6 +1909,8 @@ const MyShelf = () => {
                   <GoldenShelf
                     filteredBooks={filteredBooks}
                     decors={decors}
+                    setDecors={setDecors}
+                    showLightSwitch={showLightSwitch}
                     selectedLightTheme={selectedLightTheme}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}
@@ -1927,7 +1944,11 @@ const MyShelf = () => {
                       : activeShelfStyle === 'customize_green'
                       ? '6.0%'
                       : '6.2%',
-                    left: activeShelfStyle === 'customize_greenlight'
+                    left: activeShelfStyle === 'customize_windowshelf'
+                      ? '16.5%'
+                      : activeShelfStyle === 'customize_golden'
+                      ? '5.8%'
+                      : activeShelfStyle === 'customize_greenlight'
                       ? '8.5%'
                       : activeShelfStyle === 'customize4'
                       ? '12.5%'
@@ -2553,18 +2574,14 @@ const MyShelf = () => {
                   <div className="flex-1 mx-2 border-b border-dotted border-gray-300"></div>
                   <button
                     type="button"
-                    onClick={() => {
-                      const nextLights = !decors.lights;
-                      setDecors(prev => ({ ...prev, lights: nextLights }));
-                      setDefaultLightType(nextLights ? 'Turn on' : 'Turn off');
-                    }}
+                    onClick={() => setShowLightSwitch(prev => !prev)}
                     className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                      decors.lights ? 'bg-[#FF5733]' : 'bg-gray-200'
+                      showLightSwitch ? 'bg-[#FF5733]' : 'bg-gray-200'
                     }`}
                   >
                     <div
                       className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                        decors.lights ? 'translate-x-4' : 'translate-x-0'
+                        showLightSwitch ? 'translate-x-4' : 'translate-x-0'
                       }`}
                     />
                   </button>
@@ -2594,6 +2611,27 @@ const MyShelf = () => {
                     );
                   })}
                 </div>
+
+                {/* Light Opacity Slider */}
+                <div className="flex items-center gap-3 mt-3">
+                  <span className="text-[12px] text-gray-700 font-medium">Light Opacity :</span>
+                  <div className="relative flex-1 flex items-center">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={lightOpacity}
+                      onChange={(e) => setLightOpacity(Number(e.target.value))}
+                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF5733]"
+                      style={{
+                        background: `linear-gradient(to right, #FF5733 0%, #FF5733 ${lightOpacity}%, #E5E7EB ${lightOpacity}%, #E5E7EB 100%)`
+                      }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-semibold text-gray-700 min-w-[32px] text-right">
+                    {lightOpacity} %
+                  </span>
+                </div>
               </div>
 
               {/* Decors (Optional) Section */}
@@ -2606,27 +2644,212 @@ const MyShelf = () => {
                 </div>
 
                 <div className="flex flex-col gap-3.5">
-                  {/* Lamp Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                      <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
-                      <span>Lamp</span>
-                    </div>
-                    <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                    <button
-                      type="button"
-                      onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
-                      className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                        decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
-                      }`}
-                    >
-                      <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                          decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                  {/* Shelf-specific Decors */}
+                  {activeShelfStyle === 'customize_windowshelf' ? (
+                    <>
+                      {/* Light (Pendant Lights) Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:lightbulb" className="w-4 h-4 text-amber-500 stroke-[1.75]" />
+                          <span>Light</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, lightFixture: prev.lightFixture === false ? true : false }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.lightFixture !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.lightFixture !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Plant (Shelf Hanging Vine Plant) Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                          <span>Plant</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </>
+                  ) : activeShelfStyle === 'customize_golden' ? (
+                    <>
+                      {/* Plant Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                          <span>Plant</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, plant: !prev.plant }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.plant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.plant ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Decor Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-600 stroke-[1.75]" />
+                          <span>Decor</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, decor: !prev.decor }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.decor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.decor ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </>
+                  ) : activeShelfStyle === 'customize_orange' ? (
+                    <>
+                      {/* Shelf Plant Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:flower-2" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                          <span>Shelf Plant</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, shelfPlant: !prev.shelfPlant }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.shelfPlant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.shelfPlant ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Globe Decor Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:globe" className="w-4 h-4 text-amber-700 stroke-[1.75]" />
+                          <span>Globe Decor</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, globeDecor: !prev.globeDecor }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.globeDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.globeDecor ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Base Plant Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-700 stroke-[1.75]" />
+                          <span>Base Plant</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, basePlant: !prev.basePlant }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.basePlant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.basePlant ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Book Decor Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                          <Icon icon="lucide:book-marked" className="w-4 h-4 text-stone-600 stroke-[1.75]" />
+                          <span>Book Decor</span>
+                        </div>
+                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                        <button
+                          type="button"
+                          onClick={() => setDecors(prev => ({ ...prev, bookDecor: !prev.bookDecor }))}
+                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                            decors.bookDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                              decors.bookDecor ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    /* Lamp Toggle for other shelves */
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                        <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                        <span>Lamp</span>
+                      </div>
+                      <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                      <button
+                        type="button"
+                        onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
+                        className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
+                          decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
                         }`}
-                      />
-                    </button>
-                  </div>
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                            decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -83,24 +83,24 @@ export const getMapDimensions = (pw, ph) => {
   let targetW, targetH;
   if (pw > ph) {
     // Landscape canvas (e.g. 297 x 210)
-    targetW = Math.round(pw * 0.55);
-    targetH = Math.round(targetW * (230 / 240));
-    if (targetH > ph * 0.82) {
-      targetH = Math.round(ph * 0.80);
-      targetW = Math.round(targetH * (240 / 230));
+    targetW = Math.round(pw * 0.60);
+    targetH = Math.round(targetW * (200 / 260));
+    if (targetH > ph * 0.72) {
+      targetH = Math.round(ph * 0.70);
+      targetW = Math.round(targetH * (260 / 200));
     }
   } else {
     // Portrait canvas (e.g. 210 x 297)
-    targetW = Math.round(pw * 0.78);
-    targetH = Math.round(targetW * (230 / 240));
-    if (targetH > ph * 0.58) {
-      targetH = Math.round(ph * 0.55);
-      targetW = Math.round(targetH * (240 / 230));
+    targetW = Math.round(pw * 0.82);
+    targetH = Math.round(targetW * (200 / 260));
+    if (targetH > ph * 0.55) {
+      targetH = Math.round(ph * 0.52);
+      targetW = Math.round(targetH * (260 / 200));
     }
   }
 
   targetW = Math.max(180, Math.min(targetW, pw - (pw > 400 ? 40 : 16)));
-  targetH = Math.max(180, Math.min(targetH, ph - (ph > 400 ? 40 : 16)));
+  targetH = Math.max(150, Math.min(targetH, ph - (ph > 400 ? 40 : 16)));
 
   const posX = Math.round((pw - targetW) / 2);
   const posY = Math.round((ph - targetH) / 2);
@@ -135,8 +135,8 @@ export const generateOverlayHtml = (style, data = {}) => {
   // Standard top-left Open in Maps overlay button connected to buttonColor
   const openMapsBtnHtml = showOpenMapBtn ? `
     <!-- Top-Left Open in Maps Button -->
-    <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="map-open-maps-btn" title="Open in Google Maps" style="position: absolute; top: 6px; left: 6px; background: ${openMapBg}; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 8.5px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; pointer-events: auto !important; z-index: 15; cursor: pointer !important; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.22); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <span style="color: #ffffff; font-size: 8.5px; font-weight: 600; line-height: 1;">Open in Maps</span>
+    <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="map-open-maps-btn" title="Open in Google Maps" style="position: absolute; top: 6px; left: 6px; background: ${openMapBg}; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 7px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; pointer-events: auto !important; z-index: 15; cursor: pointer !important; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.22); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <span style="color: #ffffff; font-size: 7px; font-weight: 600; line-height: 1;">Open in Maps</span>
       <svg class="svg-icon-override" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 9px !important; height: 9px !important; min-width: 9px !important; max-width: 9px !important; min-height: 9px !important; max-height: 9px !important; display: inline-block !important; flex-shrink: 0 !important; color: #ffffff;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
     </a>
   ` : '';
@@ -177,12 +177,12 @@ export const generateOverlayHtml = (style, data = {}) => {
       <div class="map-card-overlay map-card-actions" style="position: absolute; bottom: 0; left: 0; right: 0; background: ${cardBg}; ${cardBorder} border-radius: 14px 14px 0 0; padding: 5px 8px 6px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 52%; display: flex; flex-direction: column; justify-content: flex-end;">
         <div class="map-drag-pill" style="width: 24px; height: 2.5px; background: ${dragPill}; border-radius: 999px; margin: 0 auto 4px; flex-shrink: 0;"></div>
         <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; min-width: 0;">
-          <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 32px; height: 32px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);" />
+          <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 24px; height: 24px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);" />
           <div class="map-biz-info" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
             <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 10px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
             <div class="map-nowrap map-biz-addr" data-nowrap="true" style="font-size: 8px; color: ${textSubtitle}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.1;">${address}</div>
             <div class="map-biz-meta" style="display: flex; align-items: center; gap: 2px; margin-top: 1px; line-height: 1;">
-              <span class="map-biz-star" style="color: #f59e0b; font-size: 8.5px; line-height: 1;">★</span>
+              <span class="map-biz-star" style="color: #f59e0b; font-size: 6.5px; line-height: 1;">★</span>
               <span class="map-biz-rating" style="font-size: 8.5px; font-weight: 700; color: ${textTitle};">${rating}</span>
               <span class="map-biz-reviews" style="font-size: 7.5px; color: ${textReviews};">(${reviews})</span>
             </div>
@@ -213,18 +213,18 @@ export const generateOverlayHtml = (style, data = {}) => {
       <!-- Tooltip Speech Bubble -->
       <div class="map-card-overlay map-card-callout" style="position: absolute; top: 8%; left: 50%; transform: translateX(-50%); width: 85%; max-width: 220px; background: ${cardBg}; ${cardBorder} border-radius: 10px; padding: 5px 8px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box;">
         <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px;">
-          <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 32px; height: 32px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />
+          <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 24px; height: 24px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />
           <div class="map-biz-info" style="flex: 1; min-width: 0;">
             <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 10px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
             <div class="map-nowrap map-biz-addr" data-nowrap="true" style="font-size: 8px; color: ${textSubtitle}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${address}</div>
             <div class="map-biz-meta" style="display: flex; align-items: center; gap: 2px; margin-top: 1px;">
-              <span class="map-biz-star" style="color: #f59e0b; font-size: 8.5px; line-height: 1;">★</span>
+              <span class="map-biz-star" style="color: #f59e0b; font-size: 6.5px; line-height: 1;">★</span>
               <span class="map-biz-rating" style="font-size: 8.5px; font-weight: 700; color: ${textTitle};">${rating}</span>
               <span class="map-biz-reviews" style="font-size: 7.5px; color: ${textReviews};">(${reviews})</span>
             </div>
           </div>
-          <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="map-action-btn-circle" title="Open in Google Maps" style="width: 20px; height: 20px; border-radius: 999px; border: 1.2px solid ${buttonColor || '#00828a'}; display: flex; align-items: center; justify-content: center; color: ${buttonColor || '#00828a'}; text-decoration: none; flex-shrink: 0; cursor: pointer !important; pointer-events: auto !important;">
-            <svg class="svg-icon-override" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 10px !important; height: 10px !important; display: inline-block !important; flex-shrink: 0 !important;"><polyline points="9 18 15 12 9 6"/></svg>
+          <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="map-action-btn-circle" title="Open in Google Maps" style="width: 15px; height: 15px; border-radius: 999px; border: 1.2px solid ${buttonColor || '#00828a'}; display: flex; align-items: center; justify-content: center; color: ${buttonColor || '#00828a'}; text-decoration: none; flex-shrink: 0; cursor: pointer !important; pointer-events: auto !important;">
+            <svg class="svg-icon-override" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 7px !important; height: 7px !important; display: inline-block !important; flex-shrink: 0 !important;"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
         </div>
         <!-- Downward triangle arrow -->
@@ -265,7 +265,7 @@ export const generateOverlayHtml = (style, data = {}) => {
             <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 10px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
             <div class="map-nowrap map-biz-addr" data-nowrap="true" style="font-size: 8px; color: ${textSubtitle}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${address}</div>
             <div class="map-biz-meta" style="display: flex; align-items: center; gap: 2px; margin-top: 1px;">
-              <span class="map-biz-star" style="color: #f59e0b; font-size: 8.5px; line-height: 1;">★</span>
+              <span class="map-biz-star" style="color: #f59e0b; font-size: 6.5px; line-height: 1;">★</span>
               <span class="map-biz-rating" style="font-size: 8.5px; font-weight: 700; color: ${textTitle};">${rating}</span>
               <span class="map-biz-reviews" style="font-size: 7.5px; color: ${textReviews};">(${reviews})</span>
             </div>
@@ -308,41 +308,41 @@ export const generateOverlayHtml = (style, data = {}) => {
     </div>
 
     <!-- Floating Card -->
-    <div class="map-card-overlay map-card-carousel" style="position: absolute; bottom: 14px; left: 6px; right: 6px; background: ${cardBg}; ${cardBorder} border-radius: 8px; padding: 5px 7px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 50%;">
+    <div class="map-card-overlay map-card-carousel" style="position: absolute; bottom: 8px; left: 5px; right: 5px; background: ${cardBg}; ${cardBorder} border-radius: 8px; padding: 5px 7px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 50%;">
       <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px;">
-        <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 32px; height: 32px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);" />
+        <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 24px; height: 24px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);" />
         <div class="map-biz-info" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-          <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 9.5px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
+          <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 7.5px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
           <div class="map-nowrap map-biz-addr" data-nowrap="true" style="font-size: 7.5px; color: ${textSubtitle}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${address}</div>
           <div class="map-biz-meta" style="display: flex; align-items: center; gap: 2px; margin-top: 1px;">
-            <span class="map-biz-star" style="color: #f59e0b; font-size: 8.5px; line-height: 1;">★</span>
-            <span class="map-biz-rating" style="font-size: 8px; font-weight: 700; color: ${textTitle};">${rating}</span>
+            <span class="map-biz-star" style="color: #f59e0b; font-size: 6.5px; line-height: 1;">★</span>
+            <span class="map-biz-rating" style="font-size: 6.5px; font-weight: 700; color: ${textTitle};">${rating}</span>
             <span class="map-biz-reviews" style="font-size: 7px; color: ${textReviews};">(${reviews})</span>
           </div>
           <div class="map-nowrap map-biz-category" data-nowrap="true" style="font-size: 7px; color: ${textCategory}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${category}</div>
         </div>
-        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="map-action-btn-circle" title="Open in Google Maps" style="width: 20px; height: 20px; border-radius: 999px; border: 1.2px solid ${btnColor}; display: flex; align-items: center; justify-content: center; color: ${btnColor}; text-decoration: none; flex-shrink: 0; cursor: pointer !important; pointer-events: auto !important;">
-          <svg class="svg-icon-override" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 10px !important; height: 10px !important; min-width: 10px !important; max-width: 10px !important; min-height: 10px !important; max-height: 10px !important; display: inline-block !important; flex-shrink: 0 !important;"><polyline points="9 18 15 12 9 6"/></svg>
+        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="map-action-btn-circle" title="Open in Google Maps" style="width: 15px; height: 15px; border-radius: 999px; border: 1.2px solid ${btnColor}; display: flex; align-items: center; justify-content: center; color: ${btnColor}; text-decoration: none; flex-shrink: 0; cursor: pointer !important; pointer-events: auto !important;">
+          <svg class="svg-icon-override" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 7px !important; height: 7px !important; min-width: 10px !important; max-width: 10px !important; min-height: 10px !important; max-height: 10px !important; display: inline-block !important; flex-shrink: 0 !important;"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
       </div>
     </div>
 
     <!-- Carousel Pagination Dots -->
-    <div class="map-carousel-dots" style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; pointer-events: none; z-index: 10;">
-      <div style="width: 3.5px; height: 3.5px; border-radius: 999px; background: ${dotActive};"></div>
-      <div style="width: 3.5px; height: 3.5px; border-radius: 999px; background: ${dotInactive};"></div>
-      <div style="width: 3.5px; height: 3.5px; border-radius: 999px; background: ${dotInactive};"></div>
-      <div style="width: 3.5px; height: 3.5px; border-radius: 999px; background: ${dotInactive};"></div>
-      <div style="width: 3.5px; height: 3.5px; border-radius: 999px; background: ${dotInactive};"></div>
+    <div class="map-carousel-dots" style="position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; pointer-events: none; z-index: 10;">
+      <div style="width: 2.5px; height: 2.5px; border-radius: 999px; background: ${dotActive};"></div>
+      <div style="width: 2.5px; height: 2.5px; border-radius: 999px; background: ${dotInactive};"></div>
+      <div style="width: 2.5px; height: 2.5px; border-radius: 999px; background: ${dotInactive};"></div>
+      <div style="width: 2.5px; height: 2.5px; border-radius: 999px; background: ${dotInactive};"></div>
+      <div style="width: 2.5px; height: 2.5px; border-radius: 999px; background: ${dotInactive};"></div>
     </div>
   `;
 };
 
-export const getMapSvgCode = (templateId = 'carousel', isClick = false, customData = {}) => {
+export const getMapSvgCode = (templateId = 'none', isClick = false, customData = {}) => {
   const uniqueId = Date.now();
   const data = { ...DEFAULT_MAP_DATA, ...customData };
   const loc = data.location || 'Coimbatore, Tamil Nadu';
-  const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+  const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
   const theme = data.theme || 'Light Theme';
   const buttonColor = data.buttonColor || '#000000';
   const isDark = String(theme).toLowerCase().includes('dark');
@@ -380,7 +380,7 @@ export const getMapSvgCode = (templateId = 'carousel', isClick = false, customDa
        cursor="pointer"${transformAttr}>
       <foreignObject x="0" y="0" width="${targetW}" height="${targetH}" style="overflow: hidden; border-radius: 0px;">
         <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-          <iframe src="${defaultUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+          <iframe src="${defaultUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -45px; left: 0; width: 100%; height: calc(100% + 45px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
           <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
             ${overlayHtml}
           </div>
@@ -399,7 +399,7 @@ export const isElementMap = (el) => {
   );
 };
 
-export function createMapElementNode(templateId = 'carousel', customData = {}, cx = 200, cy = 150) {
+export function createMapElementNode(templateId = 'none', customData = {}, cx = 200, cy = 150) {
   let svgString = getMapSvgCode(templateId, true, customData);
   svgString = svgString.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/g, "&amp;");
   const parser = new DOMParser();
@@ -421,3 +421,5 @@ export function createMapElementNode(templateId = 'carousel', customData = {}, c
   }
   return null;
 }
+
+

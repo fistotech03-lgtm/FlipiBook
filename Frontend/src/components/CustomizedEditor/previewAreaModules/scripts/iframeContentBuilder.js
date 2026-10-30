@@ -228,6 +228,18 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         pointer-events: none !important;
                     }
 
+                    /* Map element strict isolation in preview */
+                    g[data-type="map"] foreignObject {
+                        overflow: hidden !important;
+                    }
+                    g[data-type="map"] foreignObject * {
+                        -webkit-user-select: auto !important;
+                        user-select: auto !important;
+                    }
+                    .map-root-container {
+                        overflow: hidden !important;
+                    }
+
                     /* Enable pointer events on map controls & embeds in preview */
                     .map-root-container,
                     .map-root-container iframe,

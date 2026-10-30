@@ -5,7 +5,7 @@
 
 export { default as TransformProperties, DimensionInput } from './TransformProperties';
 export { default as PageProperties, getDocumentInfo } from './PageProperties';
-export { default as TextEditor } from './TextEditor';
+export { default as TextProperties, default as TextEditor } from './TextProperties';
 export { default as VideoEditor } from './VideoEditor';
 export { default as ShapeProperties } from './ShapeProperties';
 export { default as ElementShapesProperties } from '../LeftActionMenu/Elements/properties/ElementShapesProperties';

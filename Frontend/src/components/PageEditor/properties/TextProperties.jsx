@@ -766,7 +766,7 @@ const syncTextEffect = (doc, element) => {
 
 };
 
-const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, selectedLayerId, updateElementAttributeLocal, sizingMode, isScrollable }) => {
+const TextPropertiesSubComponentAdapter = ({ selectedElementProps, activePageIndex, selectedLayerId, updateElementAttributeLocal, sizingMode, isScrollable }) => {
   const [openSubSection, setOpenSubSection] = useState(null);
 
   const [backgroundColor, setBackgroundColor] = useState({
@@ -997,8 +997,9 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
   }, [backgroundColor, radius, isRadiusLinked, activeEffects, effectSettings, activePageIndex, selectedLayerId]);
 
   return (
-    <div className="flex flex-col gap-[0.4vw]">
+    <div className="flex flex-col gap-[1.7vw]">
       <Color
+        noAccordion={true}
         openSubSection={openSubSection}
         setOpenSubSection={setOpenSubSection}
         backgroundColor={backgroundColor}
@@ -1025,6 +1026,7 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
         isScrollable={isScrollable}
       />
       <Effect
+        noAccordion={true}
         openSubSection={openSubSection}
         setOpenSubSection={setOpenSubSection}
         activeEffects={activeEffects}
@@ -1040,8 +1042,9 @@ const TextEditorSubComponentAdapter = ({ selectedElementProps, activePageIndex, 
   );
 };
 
+const TextEditorSubComponentAdapter = TextPropertiesSubComponentAdapter;
 
-const TextEditor = ({
+const TextProperties = ({
   selectedElement,
   onUpdate,
   closePanelsSignal,
@@ -3063,7 +3066,7 @@ const TextEditor = ({
 
   return (
     <div
-      className="w-full flex flex-col gap-[0.4vw] font-sans text-gray-800"
+      className="w-full flex flex-col gap-[1.7vw] pb-[2vw] font-sans text-gray-800"
       onMouseDown={(e) => {
         if (e.target.tagName !== 'INPUT') {
           e.preventDefault();
@@ -3071,55 +3074,60 @@ const TextEditor = ({
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-[0.75vw] mb-[0.5vw]">
-        <h2 className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Text Property</h2>
-        <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Text Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
-
-
-      {/* Font Selectors Row 1 */}
-      <div className="flex gap-[0.65vw] mb-[0.5vw]">
-        <div className="relative flex-[1.5]" ref={dropdownRef}>
+      {/* Font Selectors Row 1: Font Family & Font Size */}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Font Family */}
+        <div className="relative flex-[1.6]" ref={dropdownRef}>
           <button
+            type="button"
             onClick={() => setShowFontDropdown(!showFontDropdown)}
-            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white hover:border-indigo-500 transition-colors cursor-pointer"
+            className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
           >
-            <span className="text-[0.85vw] truncate" style={{ fontFamily: `'${fontFamily}', sans-serif` }}>
+            <span className="text-[0.8vw] font-medium text-gray-800 truncate" style={{ fontFamily: `'${fontFamily}', sans-serif` }}>
               {fontFamily === 'Designer_Signature' ? 'Designer Signature' : (fontFamily || 'Outfit')}
             </span>
-            <ChevronDown size="1vw" className="text-gray-500" />
+            <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showFontDropdown ? 'rotate-180' : ''}`} />
           </button>
           {showFontDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto [&::-webkit-scrollbar]:w-[0.3vw] [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-              {availableFontFamilies.map(font => {
-                const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
-                return (
-                  <div
-                    key={font}
-                    onClick={() => {
-                      loadGoogleFont(font);
-                      updateStyle('fontFamily', font);
-                      setShowFontDropdown(false);
-                    }}
-                    className={`px-[0.75vw] py-[0.45vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.85vw] flex items-center justify-between transition-colors ${
-                      isSelected ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'
-                    }`}
-                    style={{ fontFamily: `'${font}', sans-serif` }}
-                  >
-                    <span>{font === 'Designer_Signature' ? 'Designer Signature' : font}</span>
-                    {isSelected && (
-                      <span className="text-indigo-600 font-bold ml-1 text-[0.85vw]">✓</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => setShowFontDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {availableFontFamilies.map(font => {
+                  const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
+                  return (
+                    <div
+                      key={font}
+                      onClick={() => {
+                        loadGoogleFont(font);
+                        updateStyle('fontFamily', font);
+                        setShowFontDropdown(false);
+                      }}
+                      className={`px-[0.75vw] py-[0.38vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${
+                        isSelected ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                      style={{ fontFamily: `'${font}', sans-serif` }}
+                    >
+                      <span className="truncate">{font === 'Designer_Signature' ? 'Designer Signature' : font}</span>
+                      {isSelected && (
+                        <span className="text-[#4D47FF] font-bold ml-1 text-[0.8vw]">✓</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
+
+        {/* Font Size */}
         <div className="relative flex-1" ref={fontSizeRef}>
-          <div className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white focus-within:border-indigo-500 transition-colors">
-            <div className="flex items-center flex-1 min-w-0 mr-1">
+          <div className="w-full h-[2.1vw] px-[0.6vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 focus-within:border-gray-400 shadow-2xs transition-colors">
+            <div className="flex items-center flex-1 min-w-0 mr-[0.2vw]">
               <input
                 type="text"
                 value={fontSize}
@@ -3145,66 +3153,76 @@ const TextEditor = ({
                   }
                 }}
                 onFocus={() => setShowFontSizeDropdown(true)}
-                className="w-full bg-transparent outline-none text-[0.85vw] text-gray-700 font-semibold"
+                className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
                 placeholder="16"
               />
-              <span className="text-[0.7vw] font-medium text-gray-400 select-none uppercase tracking-wider">pt</span>
+              <span className="text-[0.7vw] font-medium text-gray-400 select-none uppercase tracking-wider mr-[0.1vw]">pt</span>
             </div>
             <ChevronDown
-              size="1vw"
-              className="text-gray-500 cursor-pointer flex-shrink-0"
+              size="0.8vw"
+              className={`text-gray-400 cursor-pointer flex-shrink-0 transition-transform ${showFontSizeDropdown ? 'rotate-180' : ''}`}
               onClick={() => setShowFontSizeDropdown(!showFontSizeDropdown)}
             />
           </div>
           {showFontSizeDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto">
-              {[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 21, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96, 120].map(size => (
-                <div
-                  key={size}
-                  onClick={() => {
-                    setFontSize(size);
-                    updateStyle('fontSize', `${size}pt`);
-                    setShowFontSizeDropdown(false);
-                  }}
-                  className={`px-[0.75vw] py-[0.35vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.8vw] flex items-center justify-between ${Number(fontSize) === size ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'}`}
-                >
-                  <span>{size}</span>
-                  <span className="text-[0.65vw] text-gray-400 font-normal">pt</span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => setShowFontSizeDropdown(false)} />
+              <div className="absolute right-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 21, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96, 120].map(size => (
+                  <div
+                    key={size}
+                    onClick={() => {
+                      setFontSize(size);
+                      updateStyle('fontSize', `${size}pt`);
+                      setShowFontSizeDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${Number(fontSize) === size ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    <span>{size}</span>
+                    <span className="text-[0.68vw] text-gray-400 font-normal">pt</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Font Selectors Row 2 */}
-      <div className="flex gap-[0.65vw] mb-[0.5vw]">
+      {/* Font Selectors Row 2: Weight, Letter Spacing, Line Height */}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Font Weight */}
         <div className="relative flex-1" ref={weightRef}>
           <button
+            type="button"
             onClick={() => setShowWeightDropdown(!showWeightDropdown)}
-            className="w-full h-[2.5vw] px-[0.75vw] flex items-center justify-between border border-gray-400 rounded-[0.75vw] bg-white hover:border-indigo-500 transition-colors"
+            className="w-full h-[2.1vw] px-[0.6vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
           >
-            <span className="text-[0.85vw] truncate text-gray-700 font-medium">{fontWeights.find(w => w.value === fontWeight)?.name || 'Regular'}</span>
-            <ChevronDown size="1vw" className="text-gray-500" />
+            <span className="text-[0.8vw] truncate text-gray-800 font-medium">{fontWeights.find(w => w.value === fontWeight)?.name || 'Regular'}</span>
+            <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showWeightDropdown ? 'rotate-180' : ''}`} />
           </button>
           {showWeightDropdown && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-[0.75vw] shadow-lg max-h-[14vw] overflow-y-auto py-1">
-              {fontWeights.map(w => (
-                <div
-                  key={w.value}
-                  onClick={() => {
-                    updateStyle('fontWeight', w.value);
-                    setShowWeightDropdown(false);
-                  }}
-                  className={`px-[0.75vw] py-[0.4vw] hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-[0.85vw] transition-colors ${fontWeight === w.value ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700'}`}
-                >
-                  {w.name}
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => setShowWeightDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {fontWeights.map(w => (
+                  <div
+                    key={w.value}
+                    onClick={() => {
+                      updateStyle('fontWeight', w.value);
+                      setShowWeightDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    {w.name}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
-        <div className="flex-1 flex items-center justify-between border border-gray-400 rounded-[0.75vw] px-[0.6vw] h-[2.5vw] bg-white focus-within:border-indigo-500 transition-colors">
+
+        {/* Letter Spacing */}
+        <div className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] px-[0.55vw] h-[2.1vw] bg-white hover:border-gray-400 focus-within:border-gray-400 shadow-2xs transition-colors">
           <input
             type="text"
             value={letterSpacing}
@@ -3213,16 +3231,19 @@ const TextEditor = ({
               const val = parseFloat(e.target.value);
               if (!isNaN(val)) updateStyle('letterSpacing', val);
             }}
-            className="w-full bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium"
+            className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
           />
           <div
-            className="flex items-center border-l border-gray-300 pl-[0.4vw] ml-[0.4vw] cursor-ew-resize active:text-indigo-600"
+            className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
             onMouseDown={handleScrub('letterSpacing', letterSpacing, 1)}
+            title="Drag horizontally to adjust letter spacing"
           >
-            <Icon icon="solar:paragraph-spacing-bold" className="w-[1.2vw] h-[1.2vw] text-gray-600 rotate-90 pointer-events-none" />
+            <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] rotate-90 pointer-events-none" />
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-between border border-gray-400 rounded-[0.75vw] px-[0.6vw] h-[2.5vw] bg-white focus-within:border-indigo-500 transition-colors">
+
+        {/* Line Height */}
+        <div className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] px-[0.55vw] h-[2.1vw] bg-white hover:border-gray-400 focus-within:border-gray-400 shadow-2xs transition-colors">
           <input
             type="text"
             value={lineHeight}
@@ -3231,269 +3252,223 @@ const TextEditor = ({
               const val = parseFloat(e.target.value);
               if (!isNaN(val)) updateStyle('lineHeight', val);
             }}
-            className="w-full bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium"
+            className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
           />
           <div
-            className="flex items-center border-l border-gray-300 pl-[0.4vw] ml-[0.4vw] cursor-ew-resize active:text-indigo-600"
+            className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
             onMouseDown={handleScrub('lineHeight', lineHeight, 0.1)}
+            title="Drag horizontally to adjust line height"
           >
-            <Icon icon="solar:paragraph-spacing-bold" className="w-[1.2vw] h-[1.2vw] text-gray-600 pointer-events-none" />
+            <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] pointer-events-none" />
           </div>
         </div>
       </div>
 
-      {/* Toolbar Buttons */}
-      <div className="flex gap-[0.8vw] relative">
+      {/* Toolbar Buttons: Alignment, Style, Case, List */}
+      <div className="flex items-center gap-[0.6vw] relative">
         {/* Alignment */}
-        <div className="relative" ref={alignmentRef}>
+        <div className="relative flex-1" ref={alignmentRef}>
           <button
+            type="button"
             onClick={() => togglePanel('alignment')}
-            className={`w-[3vw] h-[3vw] rounded-[0.8vw] flex items-center justify-center transition-all duration-200 ${activePanel === 'alignment'
-              ? 'bg-indigo-600 text-white shadow-lg scale-95'
-              : 'bg-[#F1F3F5] text-[#343A40] hover:bg-[#E9ECEF] hover:shadow-sm'
-              }`}
+            className={`w-full h-[2.1vw] rounded-[0.45vw] border border-gray-300 flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+              activePanel === 'alignment'
+                ? 'bg-gray-100 text-[#4D47FF] border-[#4D47FF]/50'
+                : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+            }`}
+            title="Text Alignment"
           >
-            {textAlign === 'center' ? <AlignCenter size="1.3vw" strokeWidth={2.5} /> :
-              textAlign === 'right' ? <AlignRight size="1.3vw" strokeWidth={2.5} /> :
-                textAlign === 'justify' ? <AlignJustify size="1.3vw" strokeWidth={2.5} /> :
-                  <AlignLeft size="1.3vw" strokeWidth={2.5} />}
+            {textAlign === 'center' ? <AlignCenter size="0.95vw" strokeWidth={2.2} /> :
+              textAlign === 'right' ? <AlignRight size="0.95vw" strokeWidth={2.2} /> :
+                textAlign === 'justify' ? <AlignJustify size="0.95vw" strokeWidth={2.2} /> :
+                  <AlignLeft size="0.95vw" strokeWidth={2.2} />}
           </button>
           {activePanel === 'alignment' && (
-            <div className="absolute top-[3.5vw] left-0 z-50 p-[0.5vw] bg-white border border-gray-100 rounded-[1vw] flex gap-[0.4vw] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in-95 duration-200">
-              <button onClick={() => { updateStyle('textAlign', 'left'); togglePanel(null); }} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textAlign === 'left' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><AlignLeft size="1.2vw" /></button>
-              <button onClick={() => { updateStyle('textAlign', 'center'); togglePanel(null); }} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textAlign === 'center' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><AlignCenter size="1.2vw" /></button>
-              <button onClick={() => { updateStyle('textAlign', 'right'); togglePanel(null); }} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textAlign === 'right' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><AlignRight size="1.2vw" /></button>
-              <button onClick={() => { updateStyle('textAlign', 'justify'); togglePanel(null); }} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textAlign === 'justify' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><AlignJustify size="1.2vw" /></button>
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => togglePanel(null)} />
+              <div className="absolute top-full left-0 mt-[0.35vw] z-[100] p-[0.35vw] bg-white border border-gray-200 rounded-[0.5vw] flex gap-[0.3vw] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                <button type="button" onClick={() => { updateStyle('textAlign', 'left'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${textAlign === 'left' ? 'bg-indigo-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Align Left"><AlignLeft size="0.9vw" /></button>
+                <button type="button" onClick={() => { updateStyle('textAlign', 'center'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${textAlign === 'center' ? 'bg-indigo-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Align Center"><AlignCenter size="0.9vw" /></button>
+                <button type="button" onClick={() => { updateStyle('textAlign', 'right'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${textAlign === 'right' ? 'bg-indigo-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Align Right"><AlignRight size="0.9vw" /></button>
+                <button type="button" onClick={() => { updateStyle('textAlign', 'justify'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${textAlign === 'justify' ? 'bg-indigo-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Justify"><AlignJustify size="0.9vw" /></button>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Style (Bold/Italic/etc) */}
-        <div className="relative" ref={styleRef}>
+        {/* Style (Bold/Italic/Underline/Strike) */}
+        <div className="relative flex-1" ref={styleRef}>
           <button
+            type="button"
             onClick={() => togglePanel('style')}
-            className={`w-[3vw] h-[3vw] rounded-[0.8vw] flex items-center justify-center transition-all duration-200 ${activePanel === 'style'
-              ? 'bg-indigo-600 text-white shadow-lg scale-95'
-              : 'bg-[#F1F3F5] text-[#343A40] hover:bg-[#E9ECEF] hover:shadow-sm'
-              }`}
+            className={`w-full h-[2.1vw] rounded-[0.45vw] border border-gray-300 flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+              activePanel === 'style'
+                ? 'bg-gray-100 text-[#4D47FF] border-[#4D47FF]/50'
+                : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+            }`}
+            title="Text Styling"
           >
-            <Bold size="1.3vw" strokeWidth={2.5} />
+            <Bold size="0.95vw" strokeWidth={2.2} />
           </button>
           {activePanel === 'style' && (
-            <div className="absolute top-[3.5vw] left-0 z-50 p-[0.5vw] bg-white border border-gray-100 rounded-[1vw] flex gap-[0.4vw] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in-95 duration-200">
-              <button onClick={() => updateStyle('fontWeight', ['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'normal' : 'bold')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold transition-all ${['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>B</button>
-              <button onClick={() => updateStyle('fontStyle', fontStyle === 'italic' ? 'normal' : 'italic')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center italic transition-all ${fontStyle === 'italic' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>I</button>
-              <button onClick={() => updateStyle('textDecoration', textDecoration === 'underline' ? 'none' : 'underline')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center underline transition-all ${textDecoration === 'underline' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>U</button>
-              <button onClick={() => updateStyle('textDecoration', textDecoration === 'line-through' ? 'none' : 'line-through')} className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${textDecoration === 'line-through' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}><span className="line-through">S</span></button>
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => togglePanel(null)} />
+              <div className="absolute top-full left-0 mt-[0.35vw] z-[100] p-[0.35vw] bg-white border border-gray-200 rounded-[0.5vw] flex gap-[0.3vw] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                <button type="button" onClick={() => updateStyle('fontWeight', ['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'normal' : 'bold')} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center font-bold text-[0.85vw] transition-colors ${['bold', 'extrabold', 'black', '700', '800', '900'].includes(fontWeight) ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Bold">B</button>
+                <button type="button" onClick={() => updateStyle('fontStyle', fontStyle === 'italic' ? 'normal' : 'italic')} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center italic font-semibold text-[0.85vw] transition-colors ${fontStyle === 'italic' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Italic">I</button>
+                <button type="button" onClick={() => updateStyle('textDecoration', textDecoration === 'underline' ? 'none' : 'underline')} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center underline font-semibold text-[0.85vw] transition-colors ${textDecoration === 'underline' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Underline">U</button>
+                <button type="button" onClick={() => updateStyle('textDecoration', textDecoration === 'line-through' ? 'none' : 'line-through')} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors font-semibold text-[0.85vw] ${textDecoration === 'line-through' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Strikethrough"><span className="line-through">S</span></button>
+              </div>
+            </>
           )}
         </div>
 
         {/* Case */}
-        <div className="relative" ref={caseRef}>
+        <div className="relative flex-1" ref={caseRef}>
           <button
+            type="button"
             onClick={() => togglePanel('case')}
-            className={`w-[3vw] h-[3vw] rounded-[0.8vw] flex items-center justify-center transition-all duration-200 ${activePanel === 'case'
-              ? 'bg-indigo-600 text-white shadow-lg scale-95'
-              : 'bg-[#F1F3F5] text-[#343A40] hover:bg-[#E9ECEF] hover:shadow-sm'
-              }`}
+            className={`w-full h-[2.1vw] rounded-[0.45vw] border border-gray-300 flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+              activePanel === 'case'
+                ? 'bg-gray-100 text-[#4D47FF] border-[#4D47FF]/50'
+                : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+            }`}
+            title="Letter Case"
           >
-            <span className="font-semibold text-[0.9vw] tracking-tight">
+            <span className="font-semibold text-[0.85vw] tracking-tight">
               {textTransform === 'capitalize' ? 'Aa' : textTransform === 'uppercase' ? 'AA' : textTransform === 'lowercase' ? 'aa' : 'aA'}
             </span>
           </button>
           {activePanel === 'case' && (
-            <div className="absolute top-[3.5vw] left-0 z-50 p-[0.5vw] bg-white border border-gray-100 rounded-[1vw] flex gap-[0.4vw] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in-95 duration-200">
-              {/* Default */}
-              <div className="relative group/btn flex items-center justify-center">
-                <button
-                  onClick={() => { updateStyle('textTransform', 'none'); togglePanel(null); }}
-                  className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold text-[0.85vw] tracking-tight transition-all ${textTransform === 'none' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-                >
-                  aA
-                </button>
-                <div className="absolute bottom-full mb-[0.4vw] hidden group-hover/btn:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-gray-900 text-white text-[0.65vw] px-[0.5vw] py-[0.25vw] rounded-[0.4vw] shadow-lg font-medium">
-                    Default
-                  </div>
-                  <div className="w-0 h-0 border-x-[0.25vw] border-x-transparent border-t-[0.3vw] border-t-gray-900"></div>
-                </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => togglePanel(null)} />
+              <div className="absolute top-full left-0 mt-[0.35vw] z-[100] p-[0.35vw] bg-white border border-gray-200 rounded-[0.5vw] flex gap-[0.3vw] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                <button type="button" onClick={() => { updateStyle('textTransform', 'none'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center font-semibold text-[0.8vw] transition-colors ${textTransform === 'none' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Default">aA</button>
+                <button type="button" onClick={() => { updateStyle('textTransform', 'capitalize'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center font-semibold text-[0.8vw] transition-colors ${textTransform === 'capitalize' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Capitalize">Aa</button>
+                <button type="button" onClick={() => { updateStyle('textTransform', 'uppercase'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center font-semibold text-[0.8vw] transition-colors ${textTransform === 'uppercase' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Uppercase">AA</button>
+                <button type="button" onClick={() => { updateStyle('textTransform', 'lowercase'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center font-semibold text-[0.8vw] transition-colors ${textTransform === 'lowercase' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Lowercase">aa</button>
               </div>
-
-              {/* Capitalize */}
-              <div className="relative group/btn flex items-center justify-center">
-                <button
-                  onClick={() => { updateStyle('textTransform', 'capitalize'); togglePanel(null); }}
-                  className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold text-[0.85vw] tracking-tight transition-all ${textTransform === 'capitalize' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-                >
-                  Aa
-                </button>
-                <div className="absolute bottom-full mb-[0.4vw] hidden group-hover/btn:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-gray-900 text-white text-[0.65vw] px-[0.5vw] py-[0.25vw] rounded-[0.4vw] shadow-lg font-medium">
-                    Capitalize
-                  </div>
-                  <div className="w-0 h-0 border-x-[0.25vw] border-x-transparent border-t-[0.3vw] border-t-gray-900"></div>
-                </div>
-              </div>
-
-              {/* Uppercase */}
-              <div className="relative group/btn flex items-center justify-center">
-                <button
-                  onClick={() => { updateStyle('textTransform', 'uppercase'); togglePanel(null); }}
-                  className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold text-[0.85vw] tracking-tight transition-all ${textTransform === 'uppercase' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-                >
-                  AA
-                </button>
-                <div className="absolute bottom-full mb-[0.4vw] hidden group-hover/btn:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-gray-900 text-white text-[0.65vw] px-[0.5vw] py-[0.25vw] rounded-[0.4vw] shadow-lg font-medium">
-                    Uppercase
-                  </div>
-                  <div className="w-0 h-0 border-x-[0.25vw] border-x-transparent border-t-[0.3vw] border-t-gray-900"></div>
-                </div>
-              </div>
-
-              {/* Lowercase */}
-              <div className="relative group/btn flex items-center justify-center">
-                <button
-                  onClick={() => { updateStyle('textTransform', 'lowercase'); togglePanel(null); }}
-                  className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center font-semibold text-[0.85vw] tracking-tight transition-all ${textTransform === 'lowercase' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-                >
-                  aa
-                </button>
-                <div className="absolute bottom-full mb-[0.4vw] hidden group-hover/btn:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-gray-900 text-white text-[0.65vw] px-[0.5vw] py-[0.25vw] rounded-[0.4vw] shadow-lg font-medium">
-                    Lowercase
-                  </div>
-                  <div className="w-0 h-0 border-x-[0.25vw] border-x-transparent border-t-[0.3vw] border-t-gray-900"></div>
-                </div>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
         {/* List */}
-        <div className="relative" ref={listRef}>
+        <div className="relative flex-1" ref={listRef}>
           <button
+            type="button"
             onClick={() => togglePanel('list')}
-            className={`w-[3vw] h-[3vw] rounded-[0.8vw] flex items-center justify-center transition-all duration-200 ${activePanel === 'list'
-              ? 'bg-indigo-600 text-white shadow-lg scale-95'
-              : 'bg-[#F1F3F5] text-[#343A40] hover:bg-[#E9ECEF] hover:shadow-sm'
-              }`}
+            className={`w-full h-[2.1vw] rounded-[0.45vw] border border-gray-300 flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+              activePanel === 'list'
+                ? 'bg-gray-100 text-[#4D47FF] border-[#4D47FF]/50'
+                : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+            }`}
+            title="Lists"
           >
-            {listStyleType === 'decimal' ? <ListOrdered size="1.3vw" strokeWidth={2.5} /> : <List size="1.3vw" strokeWidth={2.5} />}
+            {listStyleType === 'decimal' ? <ListOrdered size="0.95vw" strokeWidth={2.2} /> : <List size="0.95vw" strokeWidth={2.2} />}
           </button>
           {activePanel === 'list' && (
-            <div className="absolute top-[3.5vw] right-0 z-50 p-[0.5vw] bg-white border border-gray-100 rounded-[1vw] flex gap-[0.4vw] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in-95 duration-200">
-              <button
-                onClick={() => { updateStyle('listStyleType', listStyleType === 'disc' ? 'none' : 'disc'); togglePanel(null); }}
-                className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${listStyleType === 'disc' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-              >
-                <List size="1.2vw" />
-              </button>
-              <button
-                onClick={() => { updateStyle('listStyleType', listStyleType === 'decimal' ? 'none' : 'decimal'); togglePanel(null); }}
-                className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${listStyleType === 'decimal' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-              >
-                <ListOrdered size="1.2vw" />
-              </button>
-              <button
-                onClick={() => { updateStyle('listStyleType', 'none'); togglePanel(null); }}
-                className={`w-[2.6vw] h-[2.6vw] rounded-[0.7vw] flex items-center justify-center transition-all ${listStyleType === 'none' ? 'bg-indigo-50/80 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-              >
-                <Minus size="1.2vw" />
-              </button>
-            </div>
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => togglePanel(null)} />
+              <div className="absolute top-full right-0 mt-[0.35vw] z-[100] p-[0.35vw] bg-white border border-gray-200 rounded-[0.5vw] flex gap-[0.3vw] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                <button type="button" onClick={() => { updateStyle('listStyleType', listStyleType === 'disc' ? 'none' : 'disc'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${listStyleType === 'disc' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Bullet list"><List size="0.9vw" /></button>
+                <button type="button" onClick={() => { updateStyle('listStyleType', listStyleType === 'decimal' ? 'none' : 'decimal'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${listStyleType === 'decimal' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="Numbered list"><ListOrdered size="0.9vw" /></button>
+                <button type="button" onClick={() => { updateStyle('listStyleType', 'none'); togglePanel(null); }} className={`w-[2.1vw] h-[2.1vw] rounded-[0.38vw] flex items-center justify-center transition-colors ${listStyleType === 'none' ? 'bg-indigo-50 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`} title="None"><Minus size="0.9vw" /></button>
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Text Sizing Mode (Auto Width / Auto Height) */}
-      <div className="flex flex-col gap-[1vw] pt-[1vw] mb-[1vw] border-t border-gray-100">
-        <div className="flex items-center gap-[0.5vw] transition-opacity duration-200 opacity-100">
-          <span className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap">Resize</span>
-          <div className="flex gap-[0.35vw] p-[0.2vw] bg-gray-100 rounded-[0.6vw] flex-1">
-            {/* Auto Width */}
-            <button
-              title="Auto Width — text grows horizontally on one line"
-              onClick={() => applyTextSizingMode('auto-width')}
-              className={`flex-1 h-[2vw] rounded-[0.45vw] flex items-center justify-center gap-[0.25vw] text-[0.7vw] font-medium transition-all duration-150 ${isScrollable ? 'opacity-40 pointer-events-none' : ''
-                } ${sizingMode === 'auto-width'
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-              <ArrowLeftRight size="0.9vw" className="flex-shrink-0" strokeWidth={2.5} />
-              <span>Auto W</span>
-            </button>
-            {/* Auto Height */}
-            <button
-              title="Auto Height — width fixed, height grows with content"
-              onClick={() => applyTextSizingMode('auto-height')}
-              className={`flex-1 h-[2vw] rounded-[0.45vw] flex items-center justify-center gap-[0.25vw] text-[0.7vw] font-medium transition-all duration-150 ${isScrollable ? 'opacity-40 pointer-events-none' : ''
-                } ${sizingMode === 'auto-height'
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-              <ArrowUpDown size="0.9vw" className="flex-shrink-0" strokeWidth={2.5} />
-              <span>Auto H</span>
-            </button>
-            {/* Fixed Size */}
-            <button
-              title="Fixed Size — width and height are fixed, text wraps and overflows or scrolls"
-              onClick={() => applyTextSizingMode('fixed')}
-              className={`flex-1 h-[2vw] rounded-[0.45vw] flex items-center justify-center gap-[0.25vw] text-[0.7vw] font-medium transition-all duration-150 ${sizingMode === 'fixed'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-              <Maximize size="0.9vw" className="flex-shrink-0" strokeWidth={2.5} />
-              <span>Fixed</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Toggle */}
-        <div className={`flex items-center justify-between  ${sizingMode !== 'fixed' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-          <span className="text-[0.8vw] font-semibold text-gray-900">Scrollable Text Box Feature</span>
-          <div className="flex-1 mx-[1vw] border-b border-dashed border-gray-300"></div>
+      {/* Text Sizing Mode (Auto Width / Auto Height / Fixed) */}
+      <div className="flex items-center justify-between gap-[0.8vw] py-[0.1vw]">
+        <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Resize</span>
+        <div className="flex gap-[0.3vw] p-[0.2vw] bg-[#F1F3F5] rounded-[0.45vw] flex-1">
+          {/* Auto Width */}
           <button
-            onClick={() => {
-              const nextValue = !isScrollable;
-              setIsScrollable(nextValue);
-              if (selectedLayerId) {
-                updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-scrollable', nextValue.toString());
-              }
-            }}
-            className={`w-[2.3vw] h-[1.2vw] rounded-full p-[0.15vw] transition-colors duration-200 ${isScrollable ? 'bg-indigo-600' : 'bg-gray-300'}`}
+            type="button"
+            title="Auto Width — text grows horizontally on one line"
+            onClick={() => applyTextSizingMode('auto-width')}
+            className={`flex-1 h-[1.9vw] rounded-[0.35vw] flex items-center justify-center gap-[0.25vw] text-[0.75vw] font-medium transition-all ${
+              isScrollable ? 'opacity-40 pointer-events-none' : 'cursor-pointer'
+            } ${sizingMode === 'auto-width'
+              ? 'bg-white text-gray-900 font-semibold shadow-xs'
+              : 'text-gray-600 hover:text-gray-900'
+            }`}
           >
-            <div className={`w-[0.9vw] h-[0.9vw] bg-white rounded-full transition-transform duration-200 ${isScrollable ? 'translate-x-[1.1vw]' : 'translate-x-0'}`}></div>
+            <ArrowLeftRight size="0.85vw" strokeWidth={2.2} />
+            <span>Auto W</span>
+          </button>
+
+          {/* Auto Height */}
+          <button
+            type="button"
+            title="Auto Height — width fixed, height grows with content"
+            onClick={() => applyTextSizingMode('auto-height')}
+            className={`flex-1 h-[1.9vw] rounded-[0.35vw] flex items-center justify-center gap-[0.25vw] text-[0.75vw] font-medium transition-all ${
+              isScrollable ? 'opacity-40 pointer-events-none' : 'cursor-pointer'
+            } ${sizingMode === 'auto-height'
+              ? 'bg-white text-gray-900 font-semibold shadow-xs'
+              : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <ArrowUpDown size="0.85vw" strokeWidth={2.2} />
+            <span>Auto H</span>
+          </button>
+
+          {/* Fixed Size */}
+          <button
+            type="button"
+            title="Fixed Size — width and height are fixed, text wraps and overflows or scrolls"
+            onClick={() => applyTextSizingMode('fixed')}
+            className={`flex-1 h-[1.9vw] rounded-[0.35vw] flex items-center justify-center gap-[0.25vw] text-[0.75vw] font-medium transition-all cursor-pointer ${
+              sizingMode === 'fixed'
+                ? 'bg-white text-gray-900 font-semibold shadow-xs'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Maximize size="0.85vw" strokeWidth={2.2} />
+            <span>Fixed</span>
           </button>
         </div>
       </div>
 
-      {/* Accordions */}
-      <div className="flex flex-col gap-[0.4vw]">
-        {/* Accordions from ShapeProperties */}
-        <div className="shape-properties-container">
-          <TextEditorSubComponentAdapter
-            selectedElementProps={selectedElementProps || {
-              fill: '#000000',
-              opacity: '1',
-              stroke: 'none',
-              strokeWidth: '0',
-              tagName: 'text'
-            }}
-            activePageIndex={activePageIndex}
-            selectedLayerId={selectedLayerId}
-            updateElementAttributeLocal={updateElementAttributeLocal}
-            sizingMode={sizingMode}
-            isScrollable={isScrollable}
-          />
-        </div>
+      {/* Scrollable Toggle */}
+      <div className={`flex items-center justify-between py-[0.1vw] ${sizingMode !== 'fixed' ? 'opacity-50 pointer-events-none' : ''}`}>
+        <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Scrollable text</span>
+        <button
+          type="button"
+          onClick={() => {
+            const nextValue = !isScrollable;
+            setIsScrollable(nextValue);
+            if (selectedLayerId) {
+              updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-scrollable', nextValue.toString());
+            }
+          }}
+          className={`w-[2.3vw] h-[1.25vw] rounded-full p-[0.15vw] transition-colors duration-200 cursor-pointer ${isScrollable ? 'bg-[#4D47FF]' : 'bg-gray-300'}`}
+          title={isScrollable ? 'Disable scrollable text' : 'Enable scrollable text'}
+        >
+          <div className={`w-[0.95vw] h-[0.95vw] bg-white rounded-full shadow-xs transition-transform duration-200 ${isScrollable ? 'translate-x-[1.05vw]' : 'translate-x-0'}`} />
+        </button>
       </div>
+
+      {/* Color, Corner Radius & Effects */}
+      <TextPropertiesSubComponentAdapter
+        selectedElementProps={selectedElementProps || {
+          fill: '#000000',
+          opacity: '1',
+          stroke: 'none',
+          strokeWidth: '0',
+          tagName: 'text'
+        }}
+        activePageIndex={activePageIndex}
+        selectedLayerId={selectedLayerId}
+        updateElementAttributeLocal={updateElementAttributeLocal}
+        sizingMode={sizingMode}
+        isScrollable={isScrollable}
+      />
     </div>
   );
 };
 
-export default TextEditor;
+export default TextProperties;
+export { TextProperties as TextEditor };

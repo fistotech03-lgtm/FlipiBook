@@ -18,6 +18,7 @@ import {
   ElementAudioProperties,
   PenToolProperties,
   ImageEditor,
+  TextProperties,
   TextEditor,
   VideoEditor,
   GifEditor,
@@ -1018,7 +1019,7 @@ const RightSidebar = ({
                           activePageIndex={activePageIndex}
                         />
                       ) : selectedElementProps?.isText ? (
-                        <TextEditor
+                        <TextProperties
                           selectedElement={selectedTextElement}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;

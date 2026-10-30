@@ -1046,6 +1046,113 @@ const Color = ({
               <div className="flex-1" />
             </div>
           </div>
+
+          {/* ── Background & Scrollbar (Scrollable Text) ── */}
+          {isText && (isScrollable === true || selectedElementProps?.['data-scrollable'] === 'true') && (sizingMode === 'fixed' || selectedElementProps?.['data-sizing-mode'] === 'fixed') && (
+            <div className="flex flex-col gap-[1.1vw]">
+              <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
+                <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Background Fill</span>
+                <div className="flex-1 h-[1px] bg-gray-200" />
+              </div>
+              <div className="flex items-center gap-[0.6vw]">
+                {/* Swatch */}
+                <div
+                  className="w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+                  onClick={() => setActiveColorPicker(activeColorPicker === 'bg-fill' ? null : 'bg-fill')}
+                  title="Change background fill"
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: (backgroundColor?.bgFill === 'none' || backgroundColor?.bgFill === 'transparent' || backgroundColor?.bgFill === '#' || !backgroundColor?.bgFill)
+                        ? 'white'
+                        : backgroundColor?.bgFill
+                    }}
+                  />
+                  {(backgroundColor?.bgFill === 'none' || backgroundColor?.bgFill === 'transparent' || backgroundColor?.bgFill === '#' || !backgroundColor?.bgFill) && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+                  )}
+                </div>
+                {/* Input box */}
+                <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 transition-colors">
+                  <input
+                    type="text"
+                    value={(() => {
+                      const val = backgroundColor?.bgFill;
+                      if (!val || val === 'none' || val === 'transparent') return '#';
+                      return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
+                    })()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || val === '#') {
+                        updateAttr('data-bg-fill', 'none');
+                      } else {
+                        const finalVal = val.startsWith('#') ? val : '#' + val;
+                        updateAttr('data-bg-fill', finalVal);
+                      }
+                    }}
+                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    maxLength={8}
+                  />
+                  <div
+                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                    onPointerDown={(e) => {
+                      const currentPct = Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100);
+                      handleScrubHelper(e, currentPct, (val) => {
+                        const num = parseInt(val);
+                        const clamped = Math.min(Math.max(num, 0), 100);
+                        updateAttr('data-bg-fill-opacity', (clamped / 100).toString());
+                      });
+                    }}
+                    title="Drag horizontally to adjust background opacity"
+                  >
+                    <span className="text-[0.8vw] font-medium text-gray-700">
+                      {Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollbar Color */}
+              <div className="flex items-center gap-[0.8vw] mb-[0.25vw] mt-[0.5vw]">
+                <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Scrollbar Color</span>
+                <div className="flex-1 h-[1px] bg-gray-200" />
+              </div>
+              <div className="flex items-center gap-[0.6vw]">
+                {/* Swatch */}
+                <div
+                  className="w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+                  onClick={() => setActiveColorPicker(activeColorPicker === 'scrollbar' ? null : 'scrollbar')}
+                  title="Change scrollbar color"
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: backgroundColor?.scrollBarColor || '#4B5563'
+                    }}
+                  />
+                </div>
+                {/* Input box */}
+                <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 transition-colors">
+                  <input
+                    type="text"
+                    value={(() => {
+                      const val = backgroundColor?.scrollBarColor || '#4B5563';
+                      return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
+                    })()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const finalVal = val.startsWith('#') ? val : '#' + val;
+                      if (setBackgroundColor) setBackgroundColor(p => ({ ...p, scrollBarColor: finalVal }));
+                      if (onUpdate) onUpdate({ shouldRefresh: true });
+                    }}
+                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    maxLength={8}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>

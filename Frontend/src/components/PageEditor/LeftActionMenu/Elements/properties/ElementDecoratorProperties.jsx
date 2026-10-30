@@ -8,6 +8,7 @@ import {
   COLOR_COMBINATIONS,
   ANIMATED_SHAPES_PRESETS
 } from '../utils/decoratorElementUtils';
+import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
 
 const SectionHeader = ({ title, icon: IconComponent }) => (
   <div className="flex items-center gap-[0.4vw] my-[0.3vw]">
@@ -21,25 +22,18 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 360, step = 1, 
   <div className="flex items-center justify-between py-[0.1vw]">
     <span className="text-[0.7vw] font-medium text-gray-700 w-[5.5vw]">{label} :</span>
     <div className="flex-grow flex items-center gap-[0.5vw]">
-      <input
-        type="range"
+      <ElementSlider
         min={min}
         max={max}
         step={step}
         value={value !== undefined ? value : min}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="flex-grow h-[0.25vw] appearance-none cursor-pointer bg-gray-200 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-[0.8vw] [&::-webkit-slider-thumb]:h-[0.8vw] [&::-webkit-slider-thumb]:bg-[#544af4] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_5px_rgba(84,74,244,0.5)]"
-        style={{
-          background: `linear-gradient(to right, #544af4 0%, #544af4 ${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%, #e5e7eb ${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%, #e5e7eb 100%)`,
-        }}
+        onChange={(val) => onChange(val)}
+        className="flex-grow"
       />
-      <div className="w-[3.2vw] h-[1.4vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.3vw] shadow-sm">
-        <input
-          type="text"
-          value={`${value !== undefined ? value : min}${unit}`}
-          readOnly
-          className="w-full text-center text-[0.7vw] text-gray-700 font-medium outline-none bg-transparent cursor-default"
-        />
+      <div className="w-[3.2vw] h-[1.6vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
+        <span className="text-center text-[0.7vw] text-gray-700 font-medium select-none">
+          {value !== undefined ? value : min}{unit}
+        </span>
       </div>
     </div>
   </div>
@@ -553,21 +547,14 @@ const ElementDecoratorProperties = ({
               <label className="block text-[0.68vw] font-semibold text-gray-600 mb-[0.15vw]">
                 Motion Effect
               </label>
-              <select
+              <ElementDropdown
                 value={animPreset}
-                onChange={(e) => {
-                  const val = e.target.value;
+                onChange={(val) => {
                   setAnimPreset(val);
                   applyUpdates({ animPreset: val });
                 }}
-                className="w-full text-[0.75vw] p-[0.35vw] border border-gray-200 rounded-[0.35vw] bg-white outline-none cursor-pointer focus:border-indigo-500 font-medium"
-              >
-                {MOTION_EFFECTS.map((eff) => (
-                  <option key={eff.id} value={eff.id}>
-                    {eff.name}
-                  </option>
-                ))}
-              </select>
+                options={MOTION_EFFECTS.map((eff) => ({ label: eff.name, value: eff.id }))}
+              />
             </div>
 
             {/* Speed / Duration */}
@@ -710,41 +697,34 @@ const ElementDecoratorProperties = ({
 
               <div className="flex items-center justify-between py-[0.1vw]">
                 <span className="text-[0.7vw] font-medium text-gray-700 w-[5.5vw]">Dash Style :</span>
-                <select
-                  value={dashStyle}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setDashStyle(val);
-                    applyUpdates({ dashStyle: val });
-                  }}
-                  className="flex-grow text-[0.7vw] p-[0.25vw] border border-gray-200 rounded-[0.3vw] bg-white outline-none cursor-pointer"
-                >
-                  <option value="preserve">Keep Preset Flow</option>
-                  <option value="none">Solid Line</option>
-                  <option value="6,6">Dashed Flow</option>
-                  <option value="3,6">Dotted Flow</option>
-                </select>
+                <div className="flex-grow">
+                  <ElementDropdown
+                    value={dashStyle}
+                    onChange={(val) => {
+                      setDashStyle(val);
+                      applyUpdates({ dashStyle: val });
+                    }}
+                    options={[
+                      { label: 'Keep Preset Flow', value: 'preserve' },
+                      { label: 'Solid Line', value: 'none' },
+                      { label: 'Dashed Flow', value: '6,6' },
+                      { label: 'Dotted Flow', value: '3,6' }
+                    ]}
+                    buttonClassName="!h-[2vw]"
+                  />
+                </div>
               </div>
 
               {/* Glow Aura Toggle */}
               <div className="flex items-center justify-between py-[0.1vw]">
-                <div className="flex items-center gap-[0.3vw]">
-                  <button
-                    onClick={() => {
-                      const next = !glowEnabled;
+                <div className="flex items-center gap-[0.4vw]">
+                  <ElementToggle
+                    checked={glowEnabled}
+                    onChange={(next) => {
                       setGlowEnabled(next);
                       applyUpdates({ glowEnabled: next });
                     }}
-                    className={`w-[1.6vw] h-[0.9vw] rounded-full p-[0.1vw] transition-colors relative ${
-                      glowEnabled ? 'bg-indigo-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div
-                      className={`w-[0.7vw] h-[0.7vw] rounded-full bg-white transition-transform ${
-                        glowEnabled ? 'translate-x-[0.7vw]' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+                  />
                   <span className="text-[0.7vw] font-medium text-gray-700">Glow Aura</span>
                 </div>
               </div>
@@ -792,53 +772,43 @@ const ElementDecoratorProperties = ({
             <div className="grid grid-cols-3 gap-[0.4vw]">
               <div>
                 <span className="text-[0.68vw] font-semibold text-gray-600">Font</span>
-                <select
+                <ElementDropdown
                   value={fontFamily}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     setFontFamily(val);
                     applyUpdates({ fontFamily: val });
                   }}
-                  className="w-full text-[0.72vw] p-[0.35vw] border border-gray-200 rounded-[0.3vw] bg-white outline-none cursor-pointer"
-                >
-                  {fontFamilies.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
+                  options={fontFamilies}
+                  isFont={true}
+                  buttonClassName="!h-[2vw]"
+                />
               </div>
 
               <div>
                 <span className="text-[0.68vw] font-semibold text-gray-600">Weight</span>
-                <select
+                <ElementDropdown
                   value={fontWeight}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     setFontWeight(val);
                     applyUpdates({ fontWeight: val });
                   }}
-                  className="w-full text-[0.72vw] p-[0.35vw] border border-gray-200 rounded-[0.3vw] bg-white outline-none cursor-pointer"
-                >
-                  {fontWeights.map((w) => (
-                    <option key={w.value} value={w.value}>{w.name}</option>
-                  ))}
-                </select>
+                  options={fontWeights.map(w => ({ label: w.name, value: w.value }))}
+                  buttonClassName="!h-[2vw]"
+                />
               </div>
 
               <div>
                 <span className="text-[0.68vw] font-semibold text-gray-600">Size</span>
-                <select
+                <ElementDropdown
                   value={fontSize}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    setFontSize(val);
-                    applyUpdates({ fontSize: val });
+                  onChange={(val) => {
+                    const parsed = parseInt(val, 10);
+                    setFontSize(parsed);
+                    applyUpdates({ fontSize: parsed });
                   }}
-                  className="w-full text-[0.72vw] p-[0.35vw] border border-gray-200 rounded-[0.3vw] bg-white outline-none cursor-pointer"
-                >
-                  {fontSizes.map((s) => (
-                    <option key={s} value={s}>{s}px</option>
-                  ))}
-                </select>
+                  options={fontSizes.map((s) => ({ label: `${s}px`, value: s }))}
+                  buttonClassName="!h-[2vw]"
+                />
               </div>
             </div>
           </div>

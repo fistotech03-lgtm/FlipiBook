@@ -224,12 +224,6 @@ const userGallerySchema = new mongoose.Schema(
       trim: true,
       index: true
     },
-    emailId: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      index: true
-    },
 
     // 1. userdetails
     userdetails: {
@@ -265,6 +259,23 @@ const userGallerySchema = new mongoose.Schema(
     toObject: { virtuals: true }
   }
 );
+
+// Asynchronous non-blocking backup mirror hook
+userGallerySchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncUserGallery(doc);
+  } catch (_) {}
+});
+
+userGallerySchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncUserGallery(doc);
+    } catch (_) {}
+  }
+});
 
 module.exports =
   (mongoose.models.userGallery || mongoose.models.UserGallery) ||

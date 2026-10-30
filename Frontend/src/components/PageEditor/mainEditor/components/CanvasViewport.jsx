@@ -91,6 +91,15 @@ export const CanvasViewport = ({
       }
     }
 
+    // Auto-heal: ensure audio-fill-layer is always a <rect> and not a corrupted <path data-shape-type="rectangle">
+    if (clean.includes('audio-fill-layer')) {
+      clean = clean.replace(/<path\b([^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^]*?)(?:\/>|><\/path>)/gi, (match, attrs) => {
+        let cleanedAttrs = attrs.replace(/\s*d="[^"]*"/gi, '').replace(/\s*data-shape-type="[^"]*"/gi, '');
+        return `<rect${cleanedAttrs} />`;
+      });
+      clean = clean.replace(/(<rect\b[^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^>]*)data-shape-type="[^"]*"/gi, '$1');
+    }
+
     if (isEditingTextRef?.current && lastRenderedHtmlRef.current[index]) {
       return lastRenderedHtmlRef.current[index];
     }
@@ -167,6 +176,19 @@ export const CanvasViewport = ({
                                         el.innerHTML = newHtml;
                                         el.__lastPageIndex = displayIndex;
                                         el.__lastHtml = newHtml;
+                                        // Auto-heal any path.audio-fill-layer into rect.audio-fill-layer
+                                        el.querySelectorAll?.('path.audio-fill-layer').forEach(pathEl => {
+                                          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                                          Array.from(pathEl.attributes).forEach(attr => {
+                                            if (attr.name !== 'd' && attr.name !== 'data-shape-type') {
+                                              rect.setAttribute(attr.name, attr.value);
+                                            }
+                                          });
+                                          if (pathEl.parentNode) pathEl.parentNode.replaceChild(rect, pathEl);
+                                        });
+                                        el.querySelectorAll?.('rect.audio-fill-layer[data-shape-type]').forEach(rectEl => {
+                                          rectEl.removeAttribute('data-shape-type');
+                                        });
                                       } else {
                                         const parser = new DOMParser();
                                         const doc = parser.parseFromString(newHtml, 'text/html');
@@ -220,10 +242,28 @@ export const CanvasViewport = ({
                                     const dropPoint = { x: svgP.x, y: svgP.y };
 
                                     let targetShapeId = undefined;
-                                    if (e.target) {
-                                      const leaf = e.target.closest('[data-type="shape"], [data-type="vector-path"], [data-shape-type]');
-                                      if (leaf && leaf.id && !leaf.id.includes('mask') && !leaf.id.includes('clip')) {
-                                        targetShapeId = leaf.id;
+                                    // Use elementsFromPoint to penetrate highlight overlays, selection boxes, and handles
+                                    const elementsUnderCursor = typeof document.elementsFromPoint === 'function'
+                                      ? document.elementsFromPoint(e.clientX, e.clientY)
+                                      : [e.target];
+
+                                    for (const hitEl of elementsUnderCursor) {
+                                      if (!hitEl || typeof hitEl.closest !== 'function') continue;
+                                      if (hitEl.closest?.('#ghost-layer, [id^="highlight-overlay"], .selection-overlay-layer, [data-name="Overlay"], [data-name="Document Shield"]')) {
+                                        continue;
+                                      }
+                                      const sg = hitEl.closest('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]');
+                                      if (sg && sg.id && !sg.id.includes('mask') && !sg.id.includes('clip')) {
+                                        targetShapeId = sg.id;
+                                        break;
+                                      }
+                                    }
+
+                                    // Fallback: check e.target directly
+                                    if (!targetShapeId && e.target) {
+                                      const sg = e.target.closest('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]');
+                                      if (sg && sg.id && !sg.id.includes('mask') && !sg.id.includes('clip')) {
+                                        targetShapeId = sg.id;
                                       }
                                     }
 

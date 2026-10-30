@@ -91,4 +91,12 @@ const loginLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Asynchronous non-blocking backup mirror hook
+loginLogSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncLoginLog(doc);
+  } catch (_) {}
+});
+
 module.exports = mongoose.model('loginLog', loginLogSchema);

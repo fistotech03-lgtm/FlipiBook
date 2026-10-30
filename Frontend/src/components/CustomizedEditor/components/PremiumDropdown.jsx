@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Icon } from '@iconify/react';
+import { ChevronDown, Check } from 'lucide-react';
 
 const PremiumDropdown = ({ 
-  options, 
+  options = [], 
   value, 
   onChange, 
   width = '9vw', 
@@ -29,32 +29,36 @@ const PremiumDropdown = ({
   return (
     <div className={`relative dropdown-container ${className} ${isOpen ? 'z-[1001]' : ''}`} ref={dropdownRef} style={{ width }}>
       <button 
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-[1.9vw] bg-white rounded-[0.5vw] px-[0.5vw] py-[0.45vw] flex items-center justify-between shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 group ${buttonClassName}`}
+        className={`w-full h-[2.2vw] min-h-[32px] bg-white rounded-[0.45vw] px-[0.65vw] py-[0.45vw] flex items-center justify-between shadow-2xs transition-all cursor-pointer select-none ${
+          isOpen ? 'border-2 border-[#E05638] shadow-xs' : 'border border-gray-200 hover:border-gray-300'
+        } group ${buttonClassName}`}
       >
         <span 
-          className="text-[0.78vw] font-semibold text-gray-700 align-center text-left flex-1"
+          className="text-[0.78vw] font-medium text-gray-800 text-left flex-1 truncate"
           style={isFont ? { fontFamily: value } : {}}
         >
           {value || placeholder}
         </span>
-        <Icon icon="ph:caret-down-bold" className={`w-[0.9vw] h-[0.9vw] text-gray-700 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#5551FF]' : 'group-hover:text-gray-600'}`} />
+        <ChevronDown className={`w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 transition-transform duration-200 ml-[0.3vw] flex-shrink-0 ${isOpen ? 'rotate-180 text-[#E05638]' : 'group-hover:text-gray-700'}`} />
       </button>
       
       {isOpen && (
         <div 
-          className={`absolute top-full mt-[0.5vw] ${align === 'right' ? 'right-0' : 'left-0'} ${menuWidth === 'w-full' ? 'w-full' : ''} bg-white rounded-[0.6vw] shadow-[0_1.25vw_3.125vw_rgba(0,0,0,0.15)] border border-gray-50 z-[100] overflow-hidden py-[0.5vw] animate-in fade-in slide-in-from-top-2`}
+          className={`absolute top-full mt-[0.35vw] ${align === 'right' ? 'right-0' : 'left-0'} ${menuWidth === 'w-full' ? 'w-full' : ''} bg-white rounded-[0.55vw] shadow-xl border border-gray-100 z-[9999] overflow-hidden py-[0.3vw] animate-in fade-in zoom-in-95 duration-150`}
           style={menuWidth !== 'w-full' ? { width: menuWidth, zIndex: 9999 } : { zIndex: 9999 }}
         >
-          <div className="max-h-[12vw] overflow-y-auto custom-scrollbar">
+          <div className="max-h-[14vw] overflow-y-auto custom-scrollbar">
             {options.map((opt) => {
               const optionValue = typeof opt === 'string' ? opt : opt.value;
               const optionLabel = typeof opt === 'string' ? opt : opt.label;
-              const isSelected = value === optionValue;
+              const isSelected = String(value).toLowerCase() === String(optionValue).toLowerCase();
               
               return (
                 <button
                   key={optionValue}
+                  type="button"
                   disabled={opt.disabled}
                   onClick={() => {
                     if (!opt.disabled) {
@@ -62,16 +66,19 @@ const PremiumDropdown = ({
                       setIsOpen(false);
                     }
                   }}
-                  className={`w-full text-center px-[1.1vw] py-[0.5vw] text-[0.75vw] items-center font-semibold transition-colors ${
+                  className={`w-full text-left px-[0.85vw] py-[0.45vw] text-[0.78vw] flex items-center justify-between font-medium transition-colors cursor-pointer ${
                     opt.disabled 
                       ? 'opacity-40 cursor-not-allowed' 
                       : isSelected 
-                        ? 'text-[#3E4491] bg-gray-50' 
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-[#3E4491]'
+                        ? 'text-[#E05638] bg-[#FFF2EE] font-semibold' 
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                   style={isFont ? { fontFamily: optionValue } : {}}
                 >
-                  {optionLabel}
+                  <span className="truncate">{optionLabel}</span>
+                  {isSelected && (
+                    <Check className="w-[0.85vw] h-[0.85vw] min-w-[13px] min-h-[13px] text-[#E05638] shrink-0 ml-[0.4vw]" strokeWidth={2.5} />
+                  )}
                 </button>
               );
             })}

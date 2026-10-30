@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, ChevronDown } from 'lucide-react';
 import Adjustment from '../../../properties/Adjustment';
+import { ElementSlider } from './ElementUIControls';
 
 export const computeFilterString = (f) => {
   if (!f) return '';
@@ -557,16 +558,11 @@ const ImageAdjustModal = ({
                   {opacity}%
                 </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
+              <ElementSlider
+                min={0}
+                max={100}
                 value={opacity}
-                onChange={(e) => setOpacity(Number(e.target.value))}
-                className="w-full h-[0.32vw] rounded-full appearance-none cursor-pointer accent-[#ec5137]"
-                style={{
-                  background: `linear-gradient(to right, #ec5137 0%, #ec5137 ${opacity}%, #e5e7eb ${opacity}%, #e5e7eb 100%)`
-                }}
+                onChange={(val) => setOpacity(val)}
               />
             </div>
             

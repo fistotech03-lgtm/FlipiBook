@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const UserFolder = require('../models/userFolder');
 const Flipbook = require('../models/flipbook');
+const backupService = require('../../../../shared/backupService');
 const { deleteFolderStorage, getStorageRoot } = require('../utils/storageHelper');
 const { getAuthUser, resolveAuthUser, getUserQuery, getFlipbookUserQuery } = require('../utils/userHelper');
 
@@ -504,6 +505,20 @@ exports.deleteFolder = async (req, res) => {
       await userFolderDoc.save();
     }
 
+    // Record folder deletion in backup DB
+    backupService.recordFolderDeletion(
+      {
+        folderId: folderId || (targetFolder ? (targetFolder.fol_v_id || targetFolder._id) : null),
+        folderName: resolvedName,
+        targetFolder
+      },
+      {
+        req,
+        user: { customUserId, rawId, emailId },
+        reason: 'USER_DELETE'
+      }
+    );
+
     // 2. Cascade delete all books in this custom folder
     if ((resolvedName || folderId) && flipQuery) {
       const folderBooks = await Flipbook.find({
@@ -512,33 +527,46 @@ exports.deleteFolder = async (req, res) => {
           ...(folderId ? [{ folder_id: String(folderId) }] : []),
           ...(resolvedName ? [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }] : [])
         ]
-      }).select('v_id').lean();
+      }).lean();
       const folderVIds = folderBooks.map(b => b.v_id).filter(Boolean);
 
-      await Flipbook.deleteMany({
-        ...flipQuery,
-        $or: [
-          ...(folderId ? [{ folder_id: String(folderId) }] : []),
-          ...(resolvedName ? [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }] : [])
-        ]
+      // Record cascade deletion for each book in backup DB
+      folderBooks.forEach((book) => {
+        backupService.recordFlipbookDeletion(book, {
+          req,
+          user: { customUserId, rawId, emailId },
+          reason: 'FOLDER_CASCADE_DELETE'
+        });
       });
-      if (resolvedName) {
-        deleteFolderStorage(customUserId || rawId, emailId, resolvedName);
+
+      // Execute database deletions in parallel
+      const dbOps = [
+        Flipbook.deleteMany({
+          ...flipQuery,
+          $or: [
+            ...(folderId ? [{ folder_id: String(folderId) }] : []),
+            ...(resolvedName ? [{ folderName: resolvedName }, { folderName: { $in: [resolvedName] } }] : [])
+          ]
+        })
+      ];
+
+      if (folderVIds.length > 0 && mongoose.connection && mongoose.connection.db) {
+        dbOps.push(
+          mongoose.connection.db
+            .collection('customizedsettings')
+            .deleteMany({ v_id: { $in: folderVIds } })
+            .catch(() => {}),
+          mongoose.connection.db
+            .collection('leads')
+            .deleteMany({ v_id: { $in: folderVIds } })
+            .catch(() => {})
+        );
       }
 
-      if (folderVIds.length > 0) {
-        try {
-          if (mongoose.connection && mongoose.connection.db) {
-            await mongoose.connection.db
-              .collection('customizedsettings')
-              .deleteMany({ v_id: { $in: folderVIds } });
-            await mongoose.connection.db
-              .collection('leads')
-              .deleteMany({ v_id: { $in: folderVIds } });
-          }
-        } catch (e) {
-          console.warn('[Folder Controller] Failed to remove customizedsettings on folder delete:', e.message);
-        }
+      await Promise.allSettled(dbOps);
+
+      if (resolvedName) {
+        deleteFolderStorage(customUserId || rawId, emailId, resolvedName);
       }
     }
 

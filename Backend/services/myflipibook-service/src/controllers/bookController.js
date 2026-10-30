@@ -17,6 +17,7 @@ const {
   processAndSaveBase64Assets,
   normalizeToRelativeAssetPaths,
 } = require("../utils/base64Helper");
+const backupService = require("../../../../shared/backupService");
 
 // In-memory cache for chunked uploads with 30-minute TTL eviction to prevent memory leaks
 const CHUNK_TTL_MS = 30 * 60 * 1000;
@@ -442,6 +443,10 @@ exports.trashBook = async (req, res) => {
         .json({ success: false, message: "Flipbook not found" });
     }
 
+    try {
+      backupService.syncFlipbook(updated);
+    } catch (_) {}
+
     res.status(200).json({
       success: true,
       message: "Moved to trash successfully",
@@ -492,6 +497,10 @@ exports.restoreBook = async (req, res) => {
         .json({ success: false, message: "Flipbook not found" });
     }
 
+    try {
+      backupService.syncFlipbook(updated);
+    } catch (_) {}
+
     if (userQuery) enforceRecentLimit(userQuery).catch(() => {});
 
     res.status(200).json({
@@ -524,6 +533,17 @@ exports.emptyTrash = async (req, res) => {
 
     const trashedBooks = await Flipbook.find({ ...userQuery, trash: true });
 
+    // Preserve deletion audit in backup database before permanent removal
+    for (const b of trashedBooks) {
+      try {
+        backupService.recordFlipbookDeletion(b, {
+          req,
+          user: { rawId, customUserId, emailId },
+          reason: "EMPTY_TRASH"
+        });
+      } catch (_) {}
+    }
+
     // Clean up local disk files for trashed books
     for (const b of trashedBooks) {
       const folder = resolveFolder(b.folderName);
@@ -537,36 +557,40 @@ exports.emptyTrash = async (req, res) => {
     }
 
     const trashedVIds = trashedBooks.map((b) => b.v_id).filter(Boolean);
+    const dbOps = [
+      Flipbook.deleteMany({
+        ...userQuery,
+        trash: true,
+      })
+    ];
+
     if (trashedVIds.length > 0) {
-      try {
-        await FlipbookAsset.deleteMany({ flipbook_v_id: { $in: trashedVIds } });
-      } catch (e) {}
-      try {
-        if (mongoose.connection && mongoose.connection.db) {
-          await mongoose.connection.db
+      dbOps.push(
+        FlipbookAsset.deleteMany({ flipbook_v_id: { $in: trashedVIds } }).catch(() => {})
+      );
+      if (mongoose.connection && mongoose.connection.db) {
+        dbOps.push(
+          mongoose.connection.db
             .collection("customizedsettings")
-            .deleteMany({ v_id: { $in: trashedVIds } });
-          await mongoose.connection.db
+            .deleteMany({ v_id: { $in: trashedVIds } })
+            .catch(() => {}),
+          mongoose.connection.db
             .collection("leads")
-            .deleteMany({ v_id: { $in: trashedVIds } });
-        }
-      } catch (e) {
-        console.warn(
-          "[Book Controller] Failed to remove customizedsettings on empty trash:",
-          e.message
+            .deleteMany({ v_id: { $in: trashedVIds } })
+            .catch(() => {})
         );
       }
     }
 
-    const deleteResult = await Flipbook.deleteMany({
-      ...userQuery,
-      trash: true,
-    });
+    const [deleteResult] = await Promise.all([
+      dbOps[0],
+      Promise.allSettled(dbOps.slice(1))
+    ]);
 
     res.status(200).json({
       success: true,
       message: "Trash emptied successfully",
-      deletedCount: deleteResult.deletedCount,
+      deletedCount: deleteResult?.deletedCount || trashedBooks.length,
     });
   } catch (err) {
     console.error("[Book Controller] Error emptying trash:", err);
@@ -776,33 +800,41 @@ exports.deleteBookPermanently = async (req, res) => {
       book,
     );
 
-    await Flipbook.deleteOne({ _id: book._id });
+    // Preserve deletion audit in backup database before permanent removal
     try {
-      await FlipbookAsset.deleteMany({ flipbook_v_id: book.v_id });
-      await InteractionThreedModel.deleteMany({
+      backupService.recordFlipbookDeletion(book, {
+        req,
+        user: { rawId, customUserId, emailId },
+        reason: "PERMANENT_DELETE"
+      });
+    } catch (_) {}
+
+    // Execute database deletions concurrently in parallel
+    const dbOps = [
+      Flipbook.deleteOne({ _id: book._id }),
+      FlipbookAsset.deleteMany({ flipbook_v_id: book.v_id }).catch(() => {}),
+      InteractionThreedModel.deleteMany({
         $or: [
           { flipbook_v_id: book.v_id },
           { flipbookName: book.flipbookName, userEmail: book.userEmail }
         ]
-      }).catch(() => {});
-    } catch (e) {}
+      }).catch(() => {})
+    ];
 
-    // Check flipbook v_id in customizedsettings and remove that db data
-    try {
-      if (mongoose.connection && mongoose.connection.db) {
-        await mongoose.connection.db
+    if (mongoose.connection && mongoose.connection.db) {
+      dbOps.push(
+        mongoose.connection.db
           .collection("customizedsettings")
-          .deleteMany({ v_id: book.v_id });
-        await mongoose.connection.db
+          .deleteMany({ v_id: book.v_id })
+          .catch(() => {}),
+        mongoose.connection.db
           .collection("leads")
-          .deleteMany({ v_id: book.v_id });
-      }
-    } catch (e) {
-      console.warn(
-        `[Book Controller] Failed to remove customizedsettings for v_id ${book.v_id}:`,
-        e.message
+          .deleteMany({ v_id: book.v_id })
+          .catch(() => {})
       );
     }
+
+    await Promise.allSettled(dbOps);
 
     res.status(200).json({
       success: true,
@@ -2680,17 +2712,18 @@ exports.getGalleryAssets = async (req, res) => {
 
     // 1. Fetch from consolidated UserGallery model
     try {
-      const userGallery = await UserGallery.findOne({
-        $or: [
-          { emailId: new RegExp(`^${emailId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, 'i') },
-          { userID: userFolder }
-        ]
-      });
+      const ugConds = [];
+      if (resolvedUserId) ugConds.push({ userID: resolvedUserId });
+      if (userFolder) ugConds.push({ userID: userFolder });
+      if (/^[0-9a-fA-F]{24}$/.test(userFolder)) {
+        ugConds.push({ userObjectID: new mongoose.Types.ObjectId(userFolder) });
+      }
 
-      if (userGallery && userGallery.pageEditorgallery) {
-        const { images = [], video = [], gif = [] } = userGallery.pageEditorgallery;
+      const userGallery = await UserGallery.findOne(ugConds.length > 0 ? { $or: ugConds } : {});
 
-        const processList = (list, itemType) => {
+      if (userGallery) {
+        const processList = (list, itemType, categoryName) => {
+          if (!Array.isArray(list)) return;
           for (const item of list) {
             if (!item || !item.convertedName || !item.url) continue;
             if (currentFileName && (item.convertedName === currentFileName || item._id?.toString() === currentFileName)) continue;
@@ -2698,11 +2731,12 @@ exports.getGalleryAssets = async (req, res) => {
 
             if (!requestedType || itemType === requestedType) {
               assetsMap.set(item.convertedName, {
-                id: item.convertedName,
+                id: item._id?.toString() || item.convertedName,
                 file_v_id: item.convertedName,
                 name: item.originalName || item.convertedName,
                 url: item.url,
                 type: itemType,
+                category: categoryName || (itemType === 'video' ? 'Videos' : (itemType === 'gif' ? 'GIFs' : 'Images')),
                 size: item.size || 0,
                 uploadedAt: item.timestamp || new Date()
               });
@@ -2710,9 +2744,21 @@ exports.getGalleryAssets = async (req, res) => {
           }
         };
 
-        processList(images, 'image');
-        processList(video, 'video');
-        processList(gif, 'gif');
+        if (userGallery.pageEditorgallery) {
+          processList(userGallery.pageEditorgallery.images, 'image', 'Page Editor');
+          processList(userGallery.pageEditorgallery.video, 'video', 'Page Editor');
+          processList(userGallery.pageEditorgallery.gif, 'gif', 'Page Editor');
+        }
+        if (userGallery.CustomizationGallery) {
+          processList(userGallery.CustomizationGallery.images, 'image', 'Customization');
+          processList(userGallery.CustomizationGallery.videos, 'video', 'Customization');
+        }
+        if (userGallery.userdetails) {
+          processList(userGallery.userdetails.images, 'image', 'Branding');
+        }
+        if (userGallery.textures) {
+          processList(userGallery.textures, '3d', '3D Textures');
+        }
       }
     } catch (e) {}
 

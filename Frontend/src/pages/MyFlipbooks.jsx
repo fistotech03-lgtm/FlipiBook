@@ -29,6 +29,7 @@ import {
     FavoritesScreen,
     TrashScreen,
     MyShelf,
+    GalleryScreen,
     CustomScrollbar,
     FlipbookSkeletonList
 } from '../components/MyFlipbooks';
@@ -109,6 +110,7 @@ export default function MyFlipbooks() {
     const [dashboardMode, setDashboardMode] = useState(() => {
         const tab = searchParams.get('tab');
         if (tab === 'shelf') return 'shelf';
+        if (tab === 'gallery') return 'gallery';
         if (tab === '3d') return '3d';
         if (tab === 'favorites') return 'favorites';
         if (tab === 'trash') return 'trash';
@@ -116,12 +118,14 @@ export default function MyFlipbooks() {
         if (saved === 'Favorites') return 'favorites';
         if (saved === 'Trash') return 'trash';
         return 'books';
-    }); // 'books' | '3d' | 'shelf' | 'favorites' | 'trash'
+    }); // 'books' | '3d' | 'shelf' | 'gallery' | 'favorites' | 'trash'
 
     useEffect(() => {
         const tab = searchParams.get('tab');
         if (tab === 'shelf') {
             setDashboardMode('shelf');
+        } else if (tab === 'gallery') {
+            setDashboardMode('gallery');
         } else if (tab === '3d') {
             setDashboardMode('3d');
         } else if (tab === 'favorites') {
@@ -1810,6 +1814,15 @@ export default function MyFlipbooks() {
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
                         <MyShelf />
+                    </div>
+                ) : dashboardMode === 'gallery' ? (
+                    <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
+                        <GalleryScreen
+                            navigate={navigate}
+                            user={user}
+                            emailId={emailId}
+                            backendUrl={backendUrl}
+                        />
                     </div>
                 ) : (dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites')) ? (
                     <FavoritesScreen

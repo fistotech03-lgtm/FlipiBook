@@ -61,4 +61,21 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ userId: 1, createdAt: -1 });
 leadSchema.index({ v_id: 1, createdAt: -1 });
 
+// Asynchronous non-blocking backup mirror hook
+leadSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncLead(doc);
+  } catch (_) {}
+});
+
+leadSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncLead(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.lead || mongoose.models.Lead) || mongoose.model('lead', leadSchema);

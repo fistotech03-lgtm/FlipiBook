@@ -29,3 +29,53 @@ export const MenuOption = ({ icon, label, onClick, color = "text-gray-700", hove
     <span className="truncate">{label}</span>
   </button>
 );
+
+// Mask icon: circle with left half filled, right half outline (exact match to Figma / mockup)
+export const MaskIcon = ({ size = "1.1vw", className = "" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 20 20" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    style={{ minWidth: size, minHeight: size }}
+  >
+    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M10 2 A 8 8 0 0 0 10 18 Z" fill="currentColor" />
+  </svg>
+);
+
+// Flatten icon: arrow down into base lines (exact match to Figma / mockup)
+export const FlattenIcon = ({ size = "1.1vw", className = "" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 20 20" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    style={{ minWidth: size, minHeight: size }}
+  >
+    <path 
+      d="M10 2.5V10.5M10 10.5L6.5 7M10 10.5L13.5 7" 
+      stroke="currentColor" 
+      strokeWidth="1.8" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <path 
+      d="M3.5 13.5H16.5" 
+      stroke="currentColor" 
+      strokeWidth="1.8" 
+      strokeLinecap="round" 
+    />
+    <path 
+      d="M5 16.5H15" 
+      stroke="currentColor" 
+      strokeWidth="1.8" 
+      strokeLinecap="round" 
+    />
+  </svg>
+);
+

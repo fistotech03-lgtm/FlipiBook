@@ -112,6 +112,11 @@ export const useInteractEngine = ({
             if (!svgElement) return;
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
+            // If adjusting shape image mask/crop, stop interact.js drag so user can pan the inner image
+            if (window.__isAdjustingShapeImage || document.body.classList.contains("shape-adjust-active")) {
+              safeStopInteraction(event.interaction);
+              return;
+            }
             // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
             if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
@@ -271,7 +276,23 @@ export const useInteractEngine = ({
                       const isMainPageFrame = topFrames.length === 1 && selEl.id === topFrames[0].id;
 
                       if (!isMainPageFrame) {
-                        const isChildOfSelected = target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
+                        const isCompoundGroup = selEl.getAttribute('data-is-image-group') === 'true' ||
+                          selEl.getAttribute('data-is-video-group') === 'true' ||
+                          selEl.getAttribute('data-is-gif-group') === 'true' ||
+                          selEl.getAttribute('data-is-element-button') === 'true' ||
+                          selEl.getAttribute('data-type') === 'button' ||
+                          (selEl.id && selEl.id.startsWith('button-')) ||
+                          selEl.getAttribute('data-is-element-shape') === 'true' ||
+                          selEl.getAttribute('data-type') === 'shape' ||
+                          selEl.getAttribute('data-shape-type') !== null ||
+                          (selEl.id && selEl.id.startsWith('shape-')) ||
+                          selEl.getAttribute('data-type') === 'qrcode' ||
+                          selEl.getAttribute('data-type') === 'map' ||
+                          selEl.getAttribute('data-type') === 'embed-frame' ||
+                          selEl.getAttribute('data-type') === 'slideshow' ||
+                          selEl.getAttribute('data-type') === 'audio-frame';
+
+                        const isChildOfSelected = !isCompoundGroup && target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
                         elementToDrag = isChildOfSelected ? target : selEl;
                         break; // Found it!
                       }
@@ -328,6 +349,17 @@ export const useInteractEngine = ({
                   }
                 }
               }
+            }
+
+            // If dragging an element inside a button, shape, or compound element, always target the parent element!
+            const compoundParent = elementToDrag?.closest?.(
+              '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+              '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
+              '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
+              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+            );
+            if (compoundParent) {
+              elementToDrag = compoundParent;
             }
 
             // Safety check for metadata-based 'locked' or 'hidden'
@@ -650,6 +682,31 @@ export const useInteractEngine = ({
               const translation = new DOMMatrix().translate(localDeltaX, localDeltaY);
               const nextMatrix = translation.multiply(dragState.initialMatrix);
               target.setAttribute('transform', matrixToTransform(nextMatrix));
+
+              // Prevent Chromium foreignObject compositor ghosting trails by ensuring an active SVG shape
+              if (target.querySelector && (target.querySelector('foreignObject') || target.tagName?.toLowerCase() === 'foreignobject')) {
+                const foEl = target.tagName?.toLowerCase() === 'foreignobject' ? target : target.querySelector('foreignObject');
+                const foParent = foEl ? foEl.parentElement : null;
+                if (foParent && foEl) {
+                  let dmgRect = foParent.querySelector('.video-damage-rect');
+                  if (!dmgRect) {
+                    dmgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    dmgRect.setAttribute('class', 'video-damage-rect');
+                    dmgRect.setAttribute('fill', 'rgba(0,0,0,0.001)');
+                    dmgRect.setAttribute('stroke', 'none');
+                    dmgRect.setAttribute('pointer-events', 'none');
+                    try {
+                      foParent.insertBefore(dmgRect, foEl);
+                    } catch {
+                      foParent.appendChild(dmgRect);
+                    }
+                  }
+                  dmgRect.setAttribute('x', foEl.getAttribute('x') || '0');
+                  dmgRect.setAttribute('y', foEl.getAttribute('y') || '0');
+                  dmgRect.setAttribute('width', foEl.getAttribute('width') || '100%');
+                  dmgRect.setAttribute('height', foEl.getAttribute('height') || '100%');
+                }
+              }
 
               // Batch overlay highlight and smart guides rendering via RAF for 60fps smoothness
               const highlightType = currentFrameIdRef.current && target.id !== currentFrameIdRef.current ? 'child-selected' : 'selected';

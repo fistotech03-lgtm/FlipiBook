@@ -30,6 +30,7 @@
     "exceljs": "^4.4.0",
     "face-api.js": "^0.20.0",
     "file-saver": "^2.0.5",
+    "flipibook": "file:..",
     "framer-motion": "^12.31.0",
     "gifuct-js": "^2.1.2",
     "html2canvas": "^1.4.1",

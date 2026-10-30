@@ -601,6 +601,7 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
 
       // Sync video / iframe elements inside foreignObjects
       svg.querySelectorAll('foreignObject iframe').forEach(iframe => {
+        if (iframe.closest && iframe.closest('[data-type="map"], g[id^="map-"]')) return;
         const fo = iframe.closest('foreignObject');
         if (fo) {
           const foW = parseFloat(fo.getAttribute('width') || '0');

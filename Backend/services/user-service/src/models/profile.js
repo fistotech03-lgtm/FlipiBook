@@ -128,4 +128,21 @@ const profileSchema = new mongoose.Schema(
   }
 );
 
+// Asynchronous non-blocking backup mirror hook
+profileSchema.post('save', function (doc) {
+  try {
+    const backupService = require('../../../../shared/backupService');
+    backupService.syncProfile(doc);
+  } catch (_) {}
+});
+
+profileSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) {
+    try {
+      const backupService = require('../../../../shared/backupService');
+      backupService.syncProfile(doc);
+    } catch (_) {}
+  }
+});
+
 module.exports = (mongoose.models.profile || mongoose.models.Profile) || mongoose.model('profile', profileSchema, 'Profiles');

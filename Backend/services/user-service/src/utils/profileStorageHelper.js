@@ -48,10 +48,10 @@ const resolveUserFolder = async (emailId) => {
 
   const userFolder = resolvedId || sanitized;
 
-  // Ensure target Profile and Company_logo directories exist
+  // Ensure target userdetails/profile and userdetails/company_logo directories exist
   try {
-    const profileDir = path.join(storageRoot, userFolder, 'Profile');
-    const logoDir = path.join(storageRoot, userFolder, 'Company_logo');
+    const profileDir = path.join(storageRoot, userFolder, 'userdetails', 'profile');
+    const logoDir = path.join(storageRoot, userFolder, 'userdetails', 'company_logo');
     if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
     if (!fs.existsSync(logoDir)) fs.mkdirSync(logoDir, { recursive: true });
   } catch (e) {
@@ -86,11 +86,20 @@ const deleteOldAsset = async (assetUrlOrCss) => {
 /**
  * Save an uploaded Multer file or Base64 string into user's storage folder
  */
-const saveProfileAsset = async (userFolder, fileOrBase64, prefix = 'avatar', subfolder = 'Profile') => {
+const saveProfileAsset = async (userFolder, fileOrBase64, prefix = 'avatar', subfolder = 'userdetails/profile') => {
   try {
     if (!fileOrBase64 || !userFolder) return null;
     const storageRoot = getStorageRoot();
-    const targetDir = path.join(storageRoot, userFolder, subfolder);
+
+    // Normalize subfolder to aligned userdetails structure
+    let targetSub = subfolder;
+    if (subfolder === 'Company_logo' || subfolder === 'company_logo' || prefix === 'logo') {
+      targetSub = 'userdetails/company_logo';
+    } else if (subfolder === 'Profile' || subfolder === 'profile' || prefix === 'avatar' || prefix === 'banner') {
+      targetSub = 'userdetails/profile';
+    }
+
+    const targetDir = path.join(storageRoot, userFolder, targetSub);
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
@@ -101,7 +110,7 @@ const saveProfileAsset = async (userFolder, fileOrBase64, prefix = 'avatar', sub
       const fileName = `${prefix}_${Date.now()}.${ext}`;
       const fullPath = path.join(targetDir, fileName);
       fs.writeFileSync(fullPath, fileOrBase64.buffer);
-      return `/storage/${userFolder}/${subfolder}/${fileName}`;
+      return `/storage/${userFolder}/${targetSub}/${fileName}`;
     }
 
     // 2. Handle Base64 string
@@ -119,7 +128,7 @@ const saveProfileAsset = async (userFolder, fileOrBase64, prefix = 'avatar', sub
         const fileName = `${prefix}_${Date.now()}.${ext}`;
         const fullPath = path.join(targetDir, fileName);
         fs.writeFileSync(fullPath, buffer);
-        return `/storage/${userFolder}/${subfolder}/${fileName}`;
+        return `/storage/${userFolder}/${targetSub}/${fileName}`;
       }
     }
 

@@ -9,6 +9,7 @@ const Lead = require('../models/lead');
 const UserGallery = require('../models/userGallery');
 const EditorPreset = require('../models/editorPreset');
 const Flipbook = require('../models/flipbook');
+const backupService = require('../../../../shared/backupService');
 
 const { getAuthUser, getUserQuery, getUserStorageFolder } = require('../utils/userHelper');
 const {
@@ -566,20 +567,36 @@ const resetSettings = async (req, res) => {
 };
 
 /**
- * Helper to find or create UserGallery document for a user in Customized Editor
+ * Helper to find or create UserGallery document for a user in Customized Editor (strictly keyed by userObjectID and userID)
  */
 const findOrCreateUserGallery = async (authUser, req = null) => {
   let userGallery = null;
   const orConds = [];
   if (authUser.objectId) orConds.push({ userObjectID: authUser.objectId });
   if (authUser.customUserId) orConds.push({ userID: authUser.customUserId });
-  if (authUser.emailId) {
-    orConds.push({ emailId: new RegExp(`^${authUser.emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
-  }
 
-  const reqEmail = req?.body?.emailId || req?.query?.emailId;
-  if (reqEmail && (!authUser.emailId || reqEmail.toLowerCase() !== authUser.emailId.toLowerCase())) {
-    orConds.push({ emailId: new RegExp(`^${reqEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+  let resolvedUserId = authUser.customUserId;
+  let userObjectId = authUser.objectId;
+  const targetEmail = authUser.emailId || req?.body?.emailId || req?.query?.emailId;
+
+  if ((!resolvedUserId || !userObjectId) && targetEmail) {
+    try {
+      if (mongoose.connection && mongoose.connection.db) {
+        const u = await mongoose.connection.db.collection('users').findOne({
+          emailId: new RegExp(`^${targetEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+        });
+        if (u) {
+          resolvedUserId = resolvedUserId || u.userID;
+          userObjectId = userObjectId || u._id;
+          if (u._id && !orConds.some(c => c.userObjectID && String(c.userObjectID) === String(u._id))) {
+            orConds.push({ userObjectID: u._id });
+          }
+          if (u.userID && !orConds.some(c => c.userID === u.userID)) {
+            orConds.push({ userID: u.userID });
+          }
+        }
+      }
+    } catch (e) {}
   }
 
   if (orConds.length > 0) {
@@ -587,24 +604,6 @@ const findOrCreateUserGallery = async (authUser, req = null) => {
   }
 
   if (!userGallery) {
-    let resolvedUserId = authUser.customUserId;
-    let userObjectId = authUser.objectId;
-    const targetEmail = authUser.emailId || reqEmail;
-
-    if (!resolvedUserId && targetEmail) {
-      try {
-        if (mongoose.connection && mongoose.connection.db) {
-          const u = await mongoose.connection.db.collection('users').findOne({
-            emailId: new RegExp(`^${targetEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-          });
-          if (u) {
-            resolvedUserId = u.userID || resolvedUserId;
-            userObjectId = u._id || userObjectId;
-          }
-        }
-      } catch (e) {}
-    }
-
     if (!resolvedUserId) {
       resolvedUserId = getUserStorageFolder(req);
     }
@@ -612,7 +611,6 @@ const findOrCreateUserGallery = async (authUser, req = null) => {
     userGallery = new UserGallery({
       userObjectID: userObjectId || null,
       userID: resolvedUserId || null,
-      emailId: targetEmail ? targetEmail.toLowerCase() : undefined,
       userdetails: { images: [] },
       pageEditorgallery: { images: [], video: [], gif: [] },
       CustomizationGallery: { images: [], videos: [] },
@@ -837,15 +835,34 @@ const deleteCustomizedAsset = async (req, res) => {
       userGallery.markModified('CustomizationGallery');
       await userGallery.save();
 
-      // If file was not yet deleted from disk by URL, delete via item.filePath
-      if (!deletedFromDisk) {
-        const allRemoved = [...resUserImages.removed, ...resCustomImages.removed, ...resCustomVideos.removed];
-        for (const it of allRemoved) {
-          if (it.filePath && fs.existsSync(it.filePath)) {
-            try { fs.unlinkSync(it.filePath); } catch (e) {}
+      const allRemoved = [...resUserImages.removed, ...resCustomImages.removed, ...resCustomVideos.removed];
+
+      // If file was not yet deleted from disk by URL, delete via item.filePath in background
+      if (!deletedFromDisk && allRemoved.length > 0) {
+        setImmediate(async () => {
+          for (const it of allRemoved) {
+            if (it.filePath && fs.existsSync(it.filePath)) {
+              await fs.promises.unlink(it.filePath).catch(() => {});
+            }
           }
-        }
+        });
       }
+
+      // Record gallery asset deletion in backup DB
+      const userFolder = getUserStorageFolder(authUser);
+      backupService.recordGalleryAssetDeletion({
+        userFolder: userFolder || authUser?.customUserId || authUser?.userID,
+        userObjectID: authUser?.objectId || authUser?.rawId,
+        userID: authUser?.customUserId || authUser?.userID,
+        category: 'CustomizationGallery',
+        assets: allRemoved,
+        targetName: fileName || assetId,
+        url: url || ''
+      }, {
+        req,
+        user: authUser,
+        reason: 'USER_GALLERY_DELETE'
+      });
     }
 
     // 3. For backwards compatibility, clean legacy collection if any doc remains
@@ -1246,6 +1263,9 @@ const deleteLead = async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Lead not found or unauthorized' });
     }
+
+    // Record lead deletion in backup database
+    backupService.recordLeadDeletion(deleted, { req, reason: 'USER_DELETE' });
 
     return res.status(200).json({
       success: true,

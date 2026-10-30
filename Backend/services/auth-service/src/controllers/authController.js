@@ -853,6 +853,13 @@ const login = async (req, res) => {
 
     setAuthCookies(res, token, refreshToken, req, user);
 
+    // Ensure user storage workspace & subfolders exist
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Login]:", wsErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -1043,6 +1050,13 @@ const googleLogin = async (req, res) => {
     });
 
     setAuthCookies(res, token, refreshToken, req, user);
+
+    // Ensure user storage workspace & subfolders exist
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Login]:", wsErr.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -1633,6 +1647,13 @@ const verifySession = async (req, res) => {
 
     // Refresh cookies with user display info for instant client hydration
     setAuthCookies(res, activeToken, refreshToken, req, user);
+
+    // Ensure user storage workspace & subfolders exist on session verification
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Verify Session]:", wsErr.message);
+    }
 
     return res.status(200).json({
       success: true,

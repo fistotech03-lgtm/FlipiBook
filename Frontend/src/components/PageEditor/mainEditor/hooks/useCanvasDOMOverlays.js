@@ -481,6 +481,41 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
 
       const shapes = svg.querySelectorAll('[data-stroke-position="Outside"], [data-stroke-position="Inside"]');
       shapes.forEach(el => {
+        // Vector shapes (rect, circle, ellipse, path, polygon, etc.) keep stroke directly on the element using paint-order!
+        const isVectorShape = ['path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line'].includes(el.tagName.toLowerCase()) ||
+          el.getAttribute('data-type') === 'shape' ||
+          el.getAttribute('data-is-element-shape') === 'true';
+
+        if (isVectorShape) {
+          // Restore original stroke if previously hidden by overlay code
+          const origStroke = el.getAttribute('data-original-stroke');
+          if (origStroke && origStroke !== 'none') {
+            el.setAttribute('stroke', origStroke);
+            el.removeAttribute('data-original-stroke');
+          }
+          const origSw = parseFloat(el.getAttribute('data-stroke-width') || '0');
+          if (origSw > 0) {
+            const pos = el.getAttribute('data-stroke-position') || 'Outside';
+            if (pos === 'Outside') {
+              el.setAttribute('stroke-width', (origSw * 2).toString());
+              el.setAttribute('paint-order', 'stroke fill');
+              el.style.paintOrder = 'stroke fill';
+            } else if (pos === 'Inside') {
+              el.setAttribute('stroke-width', (origSw * 2).toString());
+              el.setAttribute('paint-order', 'fill stroke');
+              el.style.paintOrder = 'fill stroke';
+            } else {
+              el.setAttribute('stroke-width', origSw.toString());
+              el.setAttribute('paint-order', 'normal');
+              el.style.paintOrder = 'normal';
+            }
+          }
+          el.setAttribute('vector-effect', 'non-scaling-stroke');
+          const existingOverlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
+          if (existingOverlay) existingOverlay.remove();
+          return;
+        }
+
         // Skip elements that manage their own stroke offsets (Images, Videos, and their dedicated overlays)
         if (
           el.tagName.toLowerCase() === 'image' ||

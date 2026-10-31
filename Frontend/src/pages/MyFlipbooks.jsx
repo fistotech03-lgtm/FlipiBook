@@ -399,7 +399,7 @@ export default function MyFlipbooks() {
         // INSTANT LOADER APPEARANCE (0ms latency - immediately on button click!)
         setProcessingProgress({
             current: 1,
-            total: files.length,
+            total: initialPageCount,
             fileIndex: 0,
             totalFiles: files.length,
             pageCount: initialPageCount,
@@ -413,7 +413,7 @@ export default function MyFlipbooks() {
         try {
             let allImages = [];
 
-            // Step 1 â€” Extract all PDF pages into SVG blobs
+            // Step 1 — Extract all PDF pages into SVG blobs
             for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
                 if (isUploadCancelledRef.current) return;
                 const file = files[fileIndex];
@@ -423,8 +423,8 @@ export default function MyFlipbooks() {
                 const detectedCount = file._pageCount || 1;
 
                 setProcessingProgress({
-                    current: fileIndex + 1,
-                    total: files.length,
+                    current: 1,
+                    total: detectedCount,
                     fileIndex,
                     totalFiles: files.length,
                     pageCount: detectedCount,
@@ -439,26 +439,32 @@ export default function MyFlipbooks() {
                     if (typeof currOrObj === 'object' && currOrObj !== null) {
                         percent = currOrObj.percent ?? currOrObj.pct;
                         current = currOrObj.current ?? currOrObj.curr;
-                        pageCount = currOrObj.total ?? currOrObj.pageCount;
+                        pageCount = currOrObj.total ?? currOrObj.pageCount ?? file._pageCount;
                         currentStage = currOrObj.stage || 'converting';
                         message = currOrObj.message || (percent !== undefined ? `Converting ${docLabel} (${percent}%)...` : `Converting ${docLabel}...`);
                     } else {
                         current = currOrObj;
-                        pageCount = total;
+                        pageCount = (total !== undefined && total > 0) ? total : file._pageCount;
                         percent = pct;
                         currentStage = stage || 'converting';
-                        message = msg || (total ? `Extracting page ${currOrObj} of ${total} (${pct}%)...` : `Converting ${docLabel} (${pct}%)...`);
+                        message = msg || (pageCount ? `Extracting page ${currOrObj} of ${pageCount} (${pct}%)...` : `Converting ${docLabel} (${pct}%)...`);
                     }
-                    setProcessingProgress(prev => ({
-                        ...(prev || {}),
-                        current: current !== undefined ? current : prev?.current,
-                        total: pageCount !== undefined ? pageCount : prev?.total,
-                        pageCount: pageCount !== undefined ? pageCount : prev?.pageCount,
-                        percent: percent !== undefined ? percent : prev?.percent,
-                        message: message || prev?.message,
-                        fileName: file.name,
-                        stage: currentStage || prev?.stage || 'converting'
-                    }));
+                    setProcessingProgress(prev => {
+                        const resolvedPageCount = (pageCount && pageCount > 0)
+                            ? Math.max(pageCount, prev?.pageCount || 0, file._pageCount || 0)
+                            : (prev?.pageCount || file._pageCount || 1);
+                        const resolvedCurrent = (current && current > 0) ? current : (prev?.current || 1);
+                        return {
+                            ...(prev || {}),
+                            current: Math.min(resolvedPageCount, resolvedCurrent),
+                            total: resolvedPageCount,
+                            pageCount: resolvedPageCount,
+                            percent: percent !== undefined ? percent : prev?.percent,
+                            message: message || prev?.message,
+                            fileName: file.name,
+                            stage: currentStage || prev?.stage || 'converting'
+                        };
+                    });
                 });
                 if (isUploadCancelledRef.current) return;
                 allImages = [...allImages, ...images];
@@ -524,6 +530,9 @@ export default function MyFlipbooks() {
                 fileName: uniqueName,
                 stage: 'saving'
             });
+            // Yield to event loop so Step 3 spinner runs with 0 stutter
+            await new Promise(r => setTimeout(r, 0));
+
             const allPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
                 const base64Url = img.dataUrl || (img.content ? svgToDataUrl(img.content) : "") || (img.blob ? await blobToBase64(img.blob) : "");

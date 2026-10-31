@@ -25,10 +25,10 @@ const DEFAULT_NAV_LINKS = [
 ];
 
 const MY_FLIPBOOKS_NAV_LINKS = [
-  { name: 'Overview', path: '/overview' },
   { name: 'My Flipibooks', path: '/my-flipbooks' },
   { name: 'Templates', path: '/templates' },
   { name: 'Guide', path: '/guide' },
+  { name: 'Overview', path: '/overview' },
 ];
 
 const PROTECTED_NAV_ITEMS = new Set(['/my-flipbooks', '/overview']);
@@ -211,10 +211,10 @@ export default function HomeNav() {
           {!isMyFlipbooksPage && (
             <button
               type="button"
-              onClick={() => isLoggedIn ? navigate('/overview') : openAuthModal('signin', '/overview')}
+              onClick={() => isLoggedIn ? navigate('/my-flipbooks') : openAuthModal('signin', '/my-flipbooks')}
               className="flex items-center gap-[0.5vw] px-[1.3vw] py-[0.55vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d5452e] text-white text-[0.85vw] font-medium shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 cursor-pointer group whitespace-nowrap"
             >
-              <span>Go to Dashboard</span>
+              <span>Go to MyFlipibook</span>
               <ArrowRight className="w-[1vw] h-[1vw] transition-transform duration-200 group-hover:translate-x-0.5" />
             </button>
           )}

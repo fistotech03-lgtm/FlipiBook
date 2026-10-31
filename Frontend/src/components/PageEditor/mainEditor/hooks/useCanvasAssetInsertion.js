@@ -825,10 +825,13 @@ export const useCanvasAssetInsertion = ({
             fo.setAttribute('x', (cX - dynamicW / 2).toString());
             fo.setAttribute('y', (cY - dynamicH / 2).toString());
 
-            boundsRect.setAttribute('width', dynamicW.toString());
-            boundsRect.setAttribute('height', dynamicH.toString());
-            boundsRect.setAttribute('x', (cX - dynamicW / 2).toString());
-            boundsRect.setAttribute('y', (cY - dynamicH / 2).toString());
+            const boundsRect = videoGroup.querySelector?.('.video-damage-rect, rect');
+            if (boundsRect) {
+              boundsRect.setAttribute('width', dynamicW.toString());
+              boundsRect.setAttribute('height', dynamicH.toString());
+              boundsRect.setAttribute('x', (cX - dynamicW / 2).toString());
+              boundsRect.setAttribute('y', (cY - dynamicH / 2).toString());
+            }
 
             const tempBar = fo.querySelector('.custom-video-overlay');
             if (tempBar) tempBar.remove();

@@ -1,0 +1,595 @@
+import React from 'react';
+import { Icon } from '@iconify/react';
+
+// Blue Rope Shelf Assets
+import blueFrameBase from '../../../assets/Bookshelf/blue_frame/base.png';
+import blueFrameLeftShelf from '../../../assets/Bookshelf/blue_frame/leftshelf.png';
+import blueFrameLight from '../../../assets/Bookshelf/blue_frame/light.png';
+import blueFrameDecor from '../../../assets/Bookshelf/blue_frame/decor.png';
+import blueFrameRopeShelf from '../../../assets/Bookshelf/blue_frame/rope_shelf.png';
+import blueFrameSwitch from '../../../assets/Bookshelf/blue_frame/switch.png';
+
+const BlueRopeShelf = ({
+  filteredBooks,
+  decors,
+  setDecors,
+  showLightSwitch = true,
+  lightOpacity = 100,
+  selectedLightTheme,
+  openMenuId,
+  setOpenMenuId,
+  hoveredInfoId,
+  setHoveredInfoId,
+  draggedBookIndex,
+  handleDragStart,
+  handleDragOver,
+  handleDrop,
+  handleDragEnd,
+  handleRemoveBook,
+  setSelectedBookIdsToAdd,
+  setAddBookSearch,
+  setShowAddBookModal,
+  LazyPreview,
+  backendUrl,
+  currentUserEmail
+}) => {
+  return (
+                  <>
+                    {/* 1. Left Bookcase Shelf on left wall */}
+                    <div
+                      className="absolute left-0 top-0 pointer-events-none z-10"
+                      style={{
+                        bottom: '8.4%',
+                        width: '12.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameLeftShelf}
+                        alt="Left Shelf"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 2. Base Credenza along bottom (expanded width to reach edges with zero gap) */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '-2%',
+                        width: '104%',
+                        bottom: 0,
+                        height: '9.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameBase}
+                        alt="Base"
+                        className="w-full h-full block object-fill"
+                      />
+                    </div>
+
+                    {/* 3. Top-Right Ceiling Hanging Pendant Lamp with Realistic Downward Spread Light Effect */}
+                    <div
+                      className="absolute top-0 pointer-events-none z-20"
+                      style={{
+                        right: '4.8%',
+                        width: '11.9%'
+                      }}
+                    >
+                      {/* Realistic Downward Spreading Light & Ambiance Effects */}
+                      {decors.lights && (
+                        <div
+                          className="pointer-events-none transition-opacity duration-150"
+                          style={{
+                            opacity: (Number(lightOpacity ?? 100) / 100)
+                          }}
+                        >
+                          {/* 1. Natural Ambient Radial Light Bloom: shifted downwards so light spreads down onto shelf */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
+                            style={{
+                              left: '50%',
+                              top: '165%',
+                              width: '380%',
+                              height: '380%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(254, 240, 138, 0.45) 0%, rgba(251, 191, 36, 0.20) 28%, rgba(245, 158, 11, 0.04) 52%, transparent 70%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.52) 0%, rgba(248, 250, 252, 0.24) 28%, rgba(226, 232, 240, 0.04) 52%, transparent 70%)'
+                                : 'radial-gradient(circle at 50% 50%, rgba(186, 230, 253, 0.44) 0%, rgba(147, 197, 253, 0.18) 28%, rgba(191, 219, 254, 0.04) 52%, transparent 70%)',
+                              filter: 'blur(32px)',
+                              mixBlendMode: 'screen'
+                            }}
+                          />
+
+                          {/* 2. Soft Downward Core Pool directly beneath the lamp opening */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
+                            style={{
+                              left: '50%',
+                              top: '135%',
+                              width: '240%',
+                              height: '240%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 250, 220, 0.70) 0%, rgba(254, 240, 138, 0.35) 30%, rgba(251, 191, 36, 0.06) 58%, transparent 75%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.76) 0%, rgba(248, 250, 252, 0.40) 30%, rgba(203, 213, 225, 0.06) 58%, transparent 75%)'
+                                : 'radial-gradient(circle at 50% 50%, rgba(240, 249, 255, 0.72) 0%, rgba(186, 230, 253, 0.36) 30%, rgba(147, 197, 253, 0.06) 58%, transparent 75%)',
+                              filter: 'blur(20px)',
+                              mixBlendMode: 'screen'
+                            }}
+                          />
+
+                          {/* 5. Glowing Bulb Hotspot Opening at Dome Rim */}
+                          <div
+                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 transition-all duration-300 z-30"
+                            style={{
+                              left: '50%',
+                              top: '93%',
+                              width: '68%',
+                              height: '14%',
+                              borderRadius: '50%',
+                              background: selectedLightTheme === 'light1'
+                                ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 240, 1) 0%, rgba(254, 240, 138, 0.95) 45%, rgba(251, 191, 36, 0.60) 80%, transparent 100%)'
+                                : selectedLightTheme === 'light2'
+                                ? 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.95) 45%, rgba(203, 213, 225, 0.50) 80%, transparent 100%)'
+                                : 'radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(224, 242, 254, 0.95) 45%, rgba(147, 197, 253, 0.50) 80%, transparent 100%)',
+                              boxShadow: selectedLightTheme === 'light1'
+                                ? '0 0 16px 4px rgba(251, 191, 36, 0.85), 0 0 28px 8px rgba(245, 158, 11, 0.40)'
+                                : selectedLightTheme === 'light2'
+                                ? '0 0 16px 4px rgba(255, 255, 255, 0.90), 0 0 28px 8px rgba(203, 213, 225, 0.40)'
+                                : '0 0 16px 4px rgba(186, 230, 253, 0.85), 0 0 28px 8px rgba(147, 197, 253, 0.35)',
+                              filter: 'blur(1.5px)',
+                              mixBlendMode: 'screen'
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <img
+                        src={blueFrameLight}
+                        alt="Ceiling Light"
+                        className="w-full h-auto block drop-shadow-md relative z-20 transition-all duration-300"
+                        style={{
+                          filter: decors.lights
+                            ? (selectedLightTheme === 'light1'
+                                ? `brightness(${1 + 0.10 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(251, 191, 36, ${0.45 * (Number(lightOpacity ?? 100) / 100)}))`
+                                : selectedLightTheme === 'light2'
+                                ? `brightness(${1 + 0.18 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(255, 255, 255, ${0.50 * (Number(lightOpacity ?? 100) / 100)}))`
+                                : `brightness(${1 + 0.08 * (Number(lightOpacity ?? 100) / 100)}) contrast(1.02) drop-shadow(0 0 ${16 * (Number(lightOpacity ?? 100) / 100)}px rgba(186, 230, 253, ${0.45 * (Number(lightOpacity ?? 100) / 100)}))`)
+                            : 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* 3b. Light Switch on Right Side of Lamp */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-30 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '2.4%',
+                          top: '12.0%',
+                          width: '2.8%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={blueFrameSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+                        />
+                      </div>
+                    )}
+
+                    {/* 4. Bottom-Left Vase/Plant Decor placed on credenza */}
+                    <div
+                      className="absolute pointer-events-none z-20"
+                      style={{
+                        left: '13.6%',
+                        bottom: '8.5%',
+                        width: '12.6%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameDecor}
+                        alt="Decor"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 5. Upper-Left Rope Shelf Tier */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '16.8%',
+                        top: '21.5%',
+                        width: '36.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameRopeShelf}
+                        alt="Upper Rope Shelf"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 6. Lower-Right Rope Shelf Tier */}
+                    <div
+                      className="absolute pointer-events-none z-10"
+                      style={{
+                        left: '55.8%',
+                        top: '51.5%',
+                        width: '36.4%'
+                      }}
+                    >
+                      <img
+                        src={blueFrameRopeShelf}
+                        alt="Lower Rope Shelf"
+                        className="w-full h-auto block drop-shadow-md"
+                      />
+                    </div>
+
+                    {/* 7. Books on Upper-Left Rope Shelf (2 books matching screenshot) */}
+                    <div
+                      className="absolute z-20 flex items-end justify-center pointer-events-auto"
+                      style={{
+                        left: '23.8%',
+                        top: '19.8%',
+                        width: '22.5%',
+                        height: '24.8%',
+                        gap: '5.2%'
+                      }}
+                    >
+                      {[0, 1].map((slotIdx) => {
+                        const book = filteredBooks && filteredBooks[slotIdx];
+                        if (!book) {
+                          return (
+                            <div
+                              key={`upper-rope-empty-${slotIdx}`}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, slotIdx)}
+                              className="relative flex-1 h-full flex flex-col justify-end items-center"
+                            >
+                              <div
+                                onClick={() => {
+                                  setSelectedBookIdsToAdd([]);
+                                  setAddBookSearch('');
+                                  setShowAddBookModal(true);
+                                }}
+                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                                title="Add Book"
+                              >
+                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                    +
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                  Add Book
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const targetShareId = book.shareId || book.v_id;
+                        const rawAcc = String(book.access || 'public').toLowerCase();
+
+                        return (
+                          <div
+                            key={book.v_id || `upper-rope-${slotIdx}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, slotIdx)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, slotIdx)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `bluerope-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (targetShareId) {
+                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                              }
+                            }}
+                          >
+                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail || currentUserEmail}
+                                backendUrl={backendUrl}
+                                iframeBaseUrl=""
+                                title={book.title}
+                                imageUrl={null}
+                              />
+                            </div>
+
+                            {/* Hover Menu Pill */}
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === `bluerope-${slotIdx}` ? null : `bluerope-${slotIdx}`);
+                                }}
+                                className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
+                              >
+                                <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                              </button>
+                              <div
+                                className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                onMouseEnter={() => setHoveredInfoId(`bluerope-${slotIdx}`)}
+                                onMouseLeave={() => setHoveredInfoId(null)}
+                              >
+                                <Icon icon="si:info-fill" className="w-4 h-4" />
+                                <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `bluerope-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                  <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                    <div className="flex items-center gap-2">
+                                      {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                        <img
+                                          src={book.authorPicture}
+                                          alt={book.authorName}
+                                          className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                          style={{ backgroundColor: book.authorBgColor }}
+                                        >
+                                          {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col min-w-0 pr-1">
+                                        <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                          <span className="truncate">{String(book.location).replace(/≡ƒôì/g, '').trim()}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                                        <span className="font-normal text-gray-500">Pages</span>
+                                      </div>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                        {book.views || '1.2k'}
+                                      </span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                        {book.rating || 4.5}
+                                      </span>
+                                    </div>
+                                    <div className="relative">
+                                      <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                      <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {openMenuId === `bluerope-${slotIdx}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (targetShareId) {
+                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                    }
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                >
+                                  Open Book
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveBook(book.v_id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Remove Book
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 8. Books on Lower-Right Rope Shelf (2 books matching screenshot) */}
+                    <div
+                      className="absolute z-20 flex items-end justify-center pointer-events-auto"
+                      style={{
+                        left: '62.8%',
+                        top: '49.8%',
+                        width: '22.5%',
+                        height: '24.8%',
+                        gap: '5.2%'
+                      }}
+                    >
+                      {[2, 3].map((slotIdx) => {
+                        const book = filteredBooks && filteredBooks[slotIdx];
+                        if (!book) {
+                          return (
+                            <div
+                              key={`lower-rope-empty-${slotIdx}`}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, slotIdx)}
+                              className="relative flex-1 h-full flex flex-col justify-end items-center"
+                            >
+                              <div
+                                onClick={() => {
+                                  setSelectedBookIdsToAdd([]);
+                                  setAddBookSearch('');
+                                  setShowAddBookModal(true);
+                                }}
+                                className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                                title="Add Book"
+                              >
+                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                    +
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                  Add Book
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const targetShareId = book.shareId || book.v_id;
+                        const rawAcc = String(book.access || 'public').toLowerCase();
+
+                        return (
+                          <div
+                            key={book.v_id || `lower-rope-${slotIdx}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, slotIdx)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, slotIdx)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `bluerope-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (targetShareId) {
+                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                              }
+                            }}
+                          >
+                            <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail || currentUserEmail}
+                                backendUrl={backendUrl}
+                                iframeBaseUrl=""
+                                title={book.title}
+                                imageUrl={null}
+                              />
+                            </div>
+
+                            {/* Hover Menu Pill */}
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === `bluerope-${slotIdx}` ? null : `bluerope-${slotIdx}`);
+                                }}
+                                className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
+                              >
+                                <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                              </button>
+                              <div
+                                className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                onMouseEnter={() => setHoveredInfoId(`bluerope-${slotIdx}`)}
+                                onMouseLeave={() => setHoveredInfoId(null)}
+                              >
+                                <Icon icon="si:info-fill" className="w-4 h-4" />
+                                <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `bluerope-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                  <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                    <div className="flex items-center gap-2">
+                                      {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                        <img
+                                          src={book.authorPicture}
+                                          alt={book.authorName}
+                                          className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                          style={{ backgroundColor: book.authorBgColor }}
+                                        >
+                                          {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col min-w-0 pr-1">
+                                        <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                          <span className="truncate">{String(book.location).replace(/≡ƒôì/g, '').trim()}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-black font-semibold">{book.pages || 0}</span>
+                                        <span className="font-normal text-gray-500">Pages</span>
+                                      </div>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                        {book.views || '1.2k'}
+                                      </span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                        {book.rating || 4.5}
+                                      </span>
+                                    </div>
+                                    <div className="relative">
+                                      <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                      <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {openMenuId === `bluerope-${slotIdx}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (targetShareId) {
+                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                    }
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                >
+                                  Open Book
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveBook(book.v_id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Remove Book
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+  );
+};
+
+export default BlueRopeShelf;

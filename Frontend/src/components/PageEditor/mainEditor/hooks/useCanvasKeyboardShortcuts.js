@@ -587,13 +587,19 @@ export const useCanvasKeyboardShortcuts = ({
 
       // Expand compound groups if child was selected, or promote child to compound group
       elements = elements.map(el => {
-        const compoundGroup = el.closest(
-          '[data-is-element-shape="true"], [data-type="shape"], [data-is-image-frame="true"], [data-type="mask-group"]'
+        const compoundGroup = el.parentElement?.closest?.(
+          '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], [data-is-image-frame="true"], [data-type="mask-group"]'
+        ) || el.closest?.(
+          '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], [data-is-image-frame="true"], [data-type="mask-group"]'
         );
         return compoundGroup || el;
       });
       // Deduplicate elements
       elements = Array.from(new Set(elements));
+
+      const lastEl = elements[elements.length - 1];
+      const parent = lastEl?.parentNode;
+      if (!parent) return;
 
       if (paperScopeRef?.current) {
         paperScopeRef.current.activate();
@@ -601,57 +607,70 @@ export const useCanvasKeyboardShortcuts = ({
       const paperScope = paperScopeRef?.current;
       if (!paperScope) return;
 
-      const extractPathD = (el) => {
-        const tag = el.tagName?.toLowerCase();
-        if (tag === 'path') {
-          return el.getAttribute('d');
-        } else if (tag === 'rect') {
-          const x = parseFloat(el.getAttribute('x') || '0');
-          const y = parseFloat(el.getAttribute('y') || '0');
-          const w = parseFloat(el.getAttribute('width') || '0');
-          const h = parseFloat(el.getAttribute('height') || '0');
-          const rx = parseFloat(el.getAttribute('rx') || '0');
-          const ry = parseFloat(el.getAttribute('ry') || rx || '0');
+      const createPaperItemFromNode = (node) => {
+        const tag = node.tagName?.toLowerCase();
+        if (tag === 'circle') {
+          const cx = parseFloat(node.getAttribute('cx') || '0');
+          const cy = parseFloat(node.getAttribute('cy') || '0');
+          const r = parseFloat(node.getAttribute('r') || '0');
+          return new paperScope.Path.Circle(new paperScope.Point(cx, cy), r);
+        }
+        if (tag === 'ellipse') {
+          const cx = parseFloat(node.getAttribute('cx') || '0');
+          const cy = parseFloat(node.getAttribute('cy') || '0');
+          const rx = parseFloat(node.getAttribute('rx') || '0');
+          const ry = parseFloat(node.getAttribute('ry') || '0');
+          return new paperScope.Path.Ellipse(new paperScope.Rectangle(cx - rx, cy - ry, rx * 2, ry * 2));
+        }
+        if (tag === 'rect') {
+          const x = parseFloat(node.getAttribute('x') || '0');
+          const y = parseFloat(node.getAttribute('y') || '0');
+          const w = parseFloat(node.getAttribute('width') || '0');
+          const h = parseFloat(node.getAttribute('height') || '0');
+          const rx = parseFloat(node.getAttribute('rx') || '0');
+          const ry = parseFloat(node.getAttribute('ry') || rx || '0');
           if (rx > 0 || ry > 0) {
-            const effectiveRx = rx || ry;
-            const effectiveRy = ry || rx;
-            return `M${x + effectiveRx},${y} h${w - 2 * effectiveRx} a${effectiveRx},${effectiveRy} 0 0 1 ${effectiveRx},${effectiveRy} v${h - 2 * effectiveRy} a${effectiveRx},${effectiveRy} 0 0 1 -${effectiveRx},${effectiveRy} h-${w - 2 * effectiveRx} a${effectiveRx},${effectiveRy} 0 0 1 -${effectiveRx},-${effectiveRy} v-${h - 2 * effectiveRy} a${effectiveRx},${effectiveRy} 0 0 1 ${effectiveRx},-${effectiveRy} z`;
+            return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h), new paperScope.Size(rx, ry));
           }
-          return `M${x},${y} h${w} v${h} h-${w} z`;
-        } else if (tag === 'circle') {
-          const cx = parseFloat(el.getAttribute('cx') || '0');
-          const cy = parseFloat(el.getAttribute('cy') || '0');
-          const r = parseFloat(el.getAttribute('r') || '0');
-          return `M${cx - r},${cy} a${r},${r} 0 1,0 ${2 * r},0 a${r},${r} 0 1,0 -${2 * r},0 z`;
-        } else if (tag === 'ellipse') {
-          const cx = parseFloat(el.getAttribute('cx') || '0');
-          const cy = parseFloat(el.getAttribute('cy') || '0');
-          const rx = parseFloat(el.getAttribute('rx') || '0');
-          const ry = parseFloat(el.getAttribute('ry') || '0');
-          return `M${cx - rx},${cy} a${rx},${ry} 0 1,0 ${2 * rx},0 a${rx},${ry} 0 1,0 -${2 * rx},0 z`;
-        } else if (tag === 'polygon' || tag === 'polyline') {
-          const pointsAttr = el.getAttribute('points') || '';
+          return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h));
+        }
+        if (tag === 'polygon' || tag === 'polyline') {
+          const pointsAttr = node.getAttribute('points') || '';
           const pairs = pointsAttr.trim().split(/[\s,]+/).map(parseFloat).filter(n => !isNaN(n));
           if (pairs.length >= 4) {
-            let d = `M ${pairs[0]} ${pairs[1]}`;
-            for (let i = 2; i < pairs.length; i += 2) {
-              d += ` L ${pairs[i]} ${pairs[i + 1]}`;
+            const p = new paperScope.Path();
+            for (let i = 0; i < pairs.length; i += 2) {
+              p.add(new paperScope.Point(pairs[i], pairs[i + 1]));
             }
-            if (tag === 'polygon') d += ' Z';
-            return d;
+            if (tag === 'polygon') p.closed = true;
+            return p;
           }
-        } else if (tag === 'line') {
-          const x1 = el.getAttribute('x1') || '0';
-          const y1 = el.getAttribute('y1') || '0';
-          const x2 = el.getAttribute('x2') || '0';
-          const y2 = el.getAttribute('y2') || '0';
-          return `M${x1},${y1} L${x2},${y2}`;
-        } else if (tag === 'image') {
-          const x = parseFloat(el.getAttribute('x') || '0');
-          const y = parseFloat(el.getAttribute('y') || '0');
-          const w = parseFloat(el.getAttribute('width') || '0');
-          const h = parseFloat(el.getAttribute('height') || '0');
-          return `M${x},${y} h${w} v${h} h-${w} z`;
+        }
+        if (tag === 'line') {
+          const x1 = parseFloat(node.getAttribute('x1') || '0');
+          const y1 = parseFloat(node.getAttribute('y1') || '0');
+          const x2 = parseFloat(node.getAttribute('x2') || '0');
+          const y2 = parseFloat(node.getAttribute('y2') || '0');
+          return new paperScope.Path.Line(new paperScope.Point(x1, y1), new paperScope.Point(x2, y2));
+        }
+        if (tag === 'image') {
+          const x = parseFloat(node.getAttribute('x') || '0');
+          const y = parseFloat(node.getAttribute('y') || '0');
+          const w = parseFloat(node.getAttribute('width') || '0');
+          const h = parseFloat(node.getAttribute('height') || '0');
+          return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h));
+        }
+        if (tag === 'path') {
+          const d = node.getAttribute('d');
+          if (d) {
+            try {
+              const item = new paperScope.CompoundPath(d);
+              if (item.children && item.children.length === 1) return item.children[0];
+              return item;
+            } catch {
+              return new paperScope.Path(d);
+            }
+          }
         }
         return null;
       };
@@ -664,25 +683,65 @@ export const useCanvasKeyboardShortcuts = ({
           return list;
         }
 
-        const nodeFill = node.getAttribute?.('fill') || node.style?.fill;
-        const nodeStroke = node.getAttribute?.('stroke') || node.style?.stroke;
-        const nodeStrokeWidth = node.getAttribute?.('stroke-width') || node.style?.strokeWidth;
+        const rawFill = node.getAttribute?.('data-fill-color') || node.getAttribute?.('fill') || node.style?.fill;
+        const nodeFill = (rawFill && rawFill !== 'inherit') ? rawFill : inherited.fill;
+
+        // Check data-stroke-color first, then stroke attribute/style
+        const explicitStroke = node.getAttribute?.('data-stroke-color');
+        const standardStroke = node.getAttribute?.('stroke') || node.style?.stroke;
+        const rawStroke = (explicitStroke && explicitStroke !== 'none' && explicitStroke !== '#' && explicitStroke !== 'inherit')
+          ? explicitStroke
+          : ((standardStroke && standardStroke !== 'inherit' && standardStroke !== 'none' && standardStroke !== '#') ? standardStroke : null);
+
+        const nodeStroke = (rawStroke !== null && rawStroke !== undefined)
+          ? rawStroke
+          : (inherited.stroke && inherited.stroke !== 'none' && inherited.stroke !== 'inherit' && inherited.stroke !== '#' ? inherited.stroke : (rawStroke || standardStroke || inherited.stroke));
+
+        const rawStrokeWidth = node.getAttribute?.('data-stroke-width') || node.getAttribute?.('stroke-width') || node.style?.strokeWidth;
+        const nodeStrokeWidth = (rawStrokeWidth && rawStrokeWidth !== 'inherit' && rawStrokeWidth !== '0') ? rawStrokeWidth : (inherited.strokeWidth || rawStrokeWidth);
         const nodeOpacity = node.getAttribute?.('opacity') || node.style?.opacity;
         const nodeLinecap = node.getAttribute?.('stroke-linecap') || node.style?.strokeLinecap;
         const nodeLinejoin = node.getAttribute?.('stroke-linejoin') || node.style?.strokeLinejoin;
+        const nodePaintOrder = node.getAttribute?.('paint-order') || node.style?.paintOrder;
+        const nodeStrokeDash = node.getAttribute?.('stroke-dasharray') || node.getAttribute?.('data-stroke-dasharray');
+        const nodeDataStrokeWidth = node.getAttribute?.('data-stroke-width') || inherited.dataStrokeWidth;
+        const nodeDataStrokePos = node.getAttribute?.('data-stroke-position') || inherited.dataStrokePos;
 
         const effective = {
-          fill: (nodeFill && nodeFill !== 'inherit') ? nodeFill : inherited.fill,
-          stroke: (nodeStroke && nodeStroke !== 'inherit') ? nodeStroke : inherited.stroke,
-          strokeWidth: (nodeStrokeWidth && nodeStrokeWidth !== 'inherit') ? nodeStrokeWidth : inherited.strokeWidth,
+          fill: (nodeFill && nodeFill !== 'inherit') ? nodeFill : (inherited.fill || '#3194FC'),
+          stroke: (nodeStroke && nodeStroke !== 'inherit') ? nodeStroke : (inherited.stroke || 'none'),
+          strokeWidth: (nodeStrokeWidth && nodeStrokeWidth !== 'inherit') ? nodeStrokeWidth : (inherited.strokeWidth || '0'),
           opacity: (nodeOpacity && nodeOpacity !== 'inherit') ? nodeOpacity : inherited.opacity,
           linecap: (nodeLinecap && nodeLinecap !== 'inherit') ? nodeLinecap : inherited.linecap,
           linejoin: (nodeLinejoin && nodeLinejoin !== 'inherit') ? nodeLinejoin : inherited.linejoin,
+          paintOrder: nodePaintOrder || inherited.paintOrder,
+          strokeDash: nodeStrokeDash || inherited.strokeDash,
+          dataStrokeWidth: nodeDataStrokeWidth,
+          dataStrokePos: nodeDataStrokePos,
         };
 
         const imgUrl = node.getAttribute?.('data-masked-image-url') || node.getAttribute?.('data-slot-original-url') || node.getAttribute?.('href') || node.getAttribute?.('xlink:href');
         if (imgUrl) {
           effective.imageUrl = imgUrl;
+        }
+        const imgName = node.getAttribute?.('data-slot-image-name');
+        if (imgName) effective.imageName = imgName;
+        const imgMeta = node.getAttribute?.('data-slot-image-meta');
+        if (imgMeta) effective.imageMeta = imgMeta;
+        const origUrl = node.getAttribute?.('data-slot-original-url');
+        if (origUrl) effective.originalUrl = origUrl;
+
+        // If node has pattern fill, check image inside pattern
+        if (effective.fill && effective.fill.includes('url(#')) {
+          const patMatch = effective.fill.match(/#([^)'"]+)/);
+          if (patMatch) {
+            const patEl = svg.querySelector(`pattern[id="${patMatch[1]}"]`);
+            const pImg = patEl?.querySelector?.('image, img');
+            if (pImg) {
+              const pHref = pImg.getAttribute('href') || pImg.getAttribute('xlink:href') || pImg.src;
+              if (pHref) effective.imageUrl = pHref;
+            }
+          }
         }
 
         if (tag === 'g') {
@@ -728,21 +787,25 @@ export const useCanvasKeyboardShortcuts = ({
       let baseOpacity = null;
       let baseLinecap = null;
       let baseLinejoin = null;
+      let basePaintOrder = null;
+      let baseStrokeDash = null;
+      let baseDataStrokeWidth = null;
+      let baseDataStrokePos = null;
       let baseImageUrl = null;
+      let baseImageName = null;
+      let baseImageMeta = null;
+      let baseOriginalUrl = null;
 
       allShapes.forEach(({ node, styles }) => {
-        const d = extractPathD(node);
-        if (!d) return;
-
         try {
-          const paperPath = new paperScope.Path(d);
-          if (!paperPath) return;
+          const paperItem = createPaperItemFromNode(node);
+          if (!paperItem) return;
 
-          // Bake transforms: compute transform matrix from node up to svg root
+          // Bake transforms up to parent container where flatPath will be inserted!
+          // Stopping at parent prevents doubling the parent's transform!
           let curr = node;
-          let combinedMatrix = new DOMMatrix();
           const matrices = [];
-          while (curr && curr !== svg && curr.tagName && curr.tagName.toLowerCase() !== 'svg') {
+          while (curr && curr !== parent && curr.tagName && curr.tagName.toLowerCase() !== 'svg') {
             const transformAttr = curr.getAttribute?.('transform');
             const styleTransform = curr.style?.transform || curr.style?.translate;
             if (transformAttr || styleTransform) {
@@ -750,6 +813,7 @@ export const useCanvasKeyboardShortcuts = ({
             }
             curr = curr.parentElement;
           }
+          let combinedMatrix = new DOMMatrix();
           matrices.forEach(m => {
             combinedMatrix = combinedMatrix.multiply(m);
           });
@@ -760,18 +824,29 @@ export const useCanvasKeyboardShortcuts = ({
               combinedMatrix.c, combinedMatrix.d,
               combinedMatrix.e, combinedMatrix.f
             );
-            paperPath.transform(paperMatrix);
+            paperItem.transform(paperMatrix);
           }
 
-          const bakedD = cleanPaperPathData ? cleanPaperPathData(paperPath) : paperPath.pathData;
+          let bakedD = cleanPaperPathData ? cleanPaperPathData(paperItem) : null;
+          if (!bakedD || bakedD.trim() === '') {
+            bakedD = paperItem.pathData;
+          }
+
           if (bakedD) {
-            if (!baseFill && styles.fill && styles.fill !== 'none') baseFill = styles.fill;
-            if (!baseStroke && styles.stroke && styles.stroke !== 'none') baseStroke = styles.stroke;
-            if (!baseStrokeWidth && styles.strokeWidth) baseStrokeWidth = styles.strokeWidth;
+            if (!baseFill && styles.fill && styles.fill !== 'none' && styles.fill !== 'inherit') baseFill = styles.fill;
+            if (!baseStroke && styles.stroke && styles.stroke !== 'none' && styles.stroke !== 'inherit' && styles.stroke !== '#') baseStroke = styles.stroke;
+            if (!baseStrokeWidth && styles.strokeWidth && styles.strokeWidth !== '0') baseStrokeWidth = styles.strokeWidth;
             if (!baseOpacity && styles.opacity) baseOpacity = styles.opacity;
             if (!baseLinecap && styles.linecap) baseLinecap = styles.linecap;
             if (!baseLinejoin && styles.linejoin) baseLinejoin = styles.linejoin;
+            if (!basePaintOrder && styles.paintOrder) basePaintOrder = styles.paintOrder;
+            if (!baseStrokeDash && styles.strokeDash) baseStrokeDash = styles.strokeDash;
+            if (!baseDataStrokeWidth && styles.dataStrokeWidth) baseDataStrokeWidth = styles.dataStrokeWidth;
+            if (!baseDataStrokePos && styles.dataStrokePos) baseDataStrokePos = styles.dataStrokePos;
             if (!baseImageUrl && styles.imageUrl) baseImageUrl = styles.imageUrl;
+            if (!baseImageName && styles.imageName) baseImageName = styles.imageName;
+            if (!baseImageMeta && styles.imageMeta) baseImageMeta = styles.imageMeta;
+            if (!baseOriginalUrl && styles.originalUrl) baseOriginalUrl = styles.originalUrl;
             validPaths.push({ node, bakedD, styles });
           }
         } catch (err) {
@@ -782,7 +857,7 @@ export const useCanvasKeyboardShortcuts = ({
       if (validPaths.length === 0) return;
 
       // Preserve image as an SVG pattern fill if shape or selection had an image
-      if (baseImageUrl && (!baseFill || !baseFill.startsWith('url('))) {
+      if (baseImageUrl) {
         let defs = svg.querySelector('defs');
         if (!defs) {
           defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -839,24 +914,65 @@ export const useCanvasKeyboardShortcuts = ({
         }
       }
 
-      const lastEl = elements[elements.length - 1];
-      const parent = lastEl.parentNode;
-
       const flatPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      flatPath.id = 'flattened-' + Date.now();
-      flatPath.setAttribute('data-name', 'Flattened Vector');
-      flatPath.setAttribute('data-type', 'vector-path');
+      flatPath.id = `shape-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+      flatPath.setAttribute('data-name', 'Shape');
+      flatPath.setAttribute('data-type', 'shape');
+      flatPath.setAttribute('data-shape-type', 'shape');
+      flatPath.setAttribute('vector-effect', 'non-scaling-stroke');
       flatPath.setAttribute('d', combinedD);
 
-      flatPath.setAttribute('fill', baseFill || '#3194FC');
-      if (baseStroke && baseStroke !== 'none') {
+      if (baseFill && baseFill !== 'inherit' && baseFill !== 'none') {
+        flatPath.setAttribute('fill', baseFill);
+        flatPath.setAttribute('data-fill-color', baseFill);
+      } else if (baseFill === 'none') {
+        flatPath.setAttribute('fill', 'none');
+        flatPath.removeAttribute('data-fill-color');
+      } else {
+        flatPath.setAttribute('fill', '#3194FC');
+        flatPath.setAttribute('data-fill-color', '#3194FC');
+      }
+
+      if (baseImageUrl) {
+        flatPath.setAttribute('data-mask-enabled', 'true');
+        flatPath.setAttribute('data-masked-image-url', baseImageUrl);
+        if (baseOriginalUrl) flatPath.setAttribute('data-slot-original-url', baseOriginalUrl);
+        if (baseImageName) flatPath.setAttribute('data-slot-image-name', baseImageName);
+        if (baseImageMeta) flatPath.setAttribute('data-slot-image-meta', baseImageMeta);
+      }
+      if (baseStroke && baseStroke !== 'none' && baseStroke !== 'inherit' && baseStroke !== '#' && baseStroke !== 'transparent') {
         flatPath.setAttribute('stroke', baseStroke);
-        flatPath.setAttribute('stroke-width', baseStrokeWidth || '1');
+        flatPath.setAttribute('data-stroke-color', baseStroke);
+        const sw = (baseDataStrokeWidth && baseDataStrokeWidth !== '0') ? baseDataStrokeWidth : (baseStrokeWidth || '1');
+        const pos = baseDataStrokePos || 'Outside';
+        flatPath.setAttribute('data-stroke-position', pos);
+        flatPath.setAttribute('data-stroke-width', sw);
+
+        if (pos === 'Outside') {
+          flatPath.setAttribute('stroke-width', (parseFloat(sw) * 2).toString());
+          flatPath.setAttribute('paint-order', 'stroke fill');
+          flatPath.style.paintOrder = 'stroke fill';
+        } else if (pos === 'Inside') {
+          flatPath.setAttribute('stroke-width', (parseFloat(sw) * 2).toString());
+          flatPath.setAttribute('paint-order', 'fill stroke');
+          flatPath.style.paintOrder = 'fill stroke';
+        } else {
+          flatPath.setAttribute('stroke-width', sw);
+          flatPath.setAttribute('paint-order', 'normal');
+          flatPath.style.paintOrder = 'normal';
+        }
+
+        if (baseStrokeDash) {
+          flatPath.setAttribute('stroke-dasharray', baseStrokeDash);
+          flatPath.setAttribute('data-stroke-dasharray', baseStrokeDash);
+        }
         if (baseLinecap) flatPath.setAttribute('stroke-linecap', baseLinecap);
         if (baseLinejoin) flatPath.setAttribute('stroke-linejoin', baseLinejoin);
       } else {
         flatPath.setAttribute('stroke', 'none');
         flatPath.setAttribute('stroke-width', '0');
+        flatPath.removeAttribute('data-stroke-color');
+        flatPath.removeAttribute('data-stroke-width');
       }
       if (baseOpacity && baseOpacity !== '1') {
         flatPath.setAttribute('opacity', baseOpacity);
@@ -865,6 +981,8 @@ export const useCanvasKeyboardShortcuts = ({
       parent.insertBefore(flatPath, lastEl.nextSibling);
 
       elements.forEach(el => {
+        const overlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
+        if (overlay) overlay.remove();
         if (el.parentNode) el.parentNode.removeChild(el);
       });
 
@@ -877,14 +995,6 @@ export const useCanvasKeyboardShortcuts = ({
       if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([flatPath.id]);
 
       window.dispatchEvent(new CustomEvent('trigger-rebind-selection', { detail: { layerId: flatPath.id, pageIndex: activePageIndex } }));
-
-      // Immediately enter Pen Tool Node Edit mode on the newly flattened vector (like Figma's Flatten)
-      setTimeout(() => {
-        const freshEl = svg.querySelector(`[id="${flatPath.id}"]`) || document.getElementById(flatPath.id) || flatPath;
-        if (freshEl && typeof enterNodeEditMode === 'function') {
-          enterNodeEditMode(freshEl, activePageIndex);
-        }
-      }, 40);
     };
 
     window.addEventListener('keydown', handleKeyDown);

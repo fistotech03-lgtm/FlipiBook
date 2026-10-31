@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import {
   Upload,
   Plus,
-  GripVertical,
   Trash2,
   Edit2,
   ArrowRightLeft
@@ -1301,13 +1300,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     : 'border-gray-200/90 hover:border-gray-300'
                 }`}
               >
-                {/* Left Section: Drag handle + Thumbnail + Meta */}
+                {/* Left Section: Thumbnail + Meta (moveable grip removed) */}
                 <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
-                  {/* Drag Handle */}
-                  <div className="text-gray-300 hover:text-gray-500 cursor-grab shrink-0 px-[0.1vw]">
-                    <GripVertical size="0.95vw" />
-                  </div>
-
                   {/* Thumbnail with Replace button overlay */}
                   <div
                     className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] border border-gray-200 shrink-0 overflow-hidden group/thumb cursor-pointer shadow-2xs bg-gray-100 flex items-center justify-center"
@@ -1338,18 +1332,18 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                   </div>
 
                   {/* File Name & Dimensions block */}
-                  <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex flex-col min-w-0 flex-1 py-[0.1vw]">
                     <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={meta.name}>
                       {meta.name}
                     </span>
-                    <span className="text-[0.68vw] text-gray-400 font-medium">
+                    <span className="text-[0.68vw] text-gray-400 font-medium truncate" title={meta.meta}>
                       {meta.meta}
                     </span>
                   </div>
                 </div>
 
                 {/* Right Actions: Pencil / Edit & Delete Trash */}
-                <div className="flex items-center gap-[0.4vw] shrink-0 ml-[0.5vw]">
+                <div className="flex items-center gap-[0.3vw] shrink-0 ml-[0.4vw]">
                   <button
                     type="button"
                     onClick={(e) => {

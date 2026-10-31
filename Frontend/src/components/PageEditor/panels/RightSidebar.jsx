@@ -5,7 +5,6 @@ import {
   TransformProperties,
   PageProperties,
   ShapeProperties,
-  ElementShapesProperties,
   TextElementEditor,
   ElementButtonProperties,
   ImageFramingProperties,
@@ -17,11 +16,10 @@ import {
   ElementDecoratorProperties,
   ElementAudioProperties,
   PenToolProperties,
-  ImageEditor,
+  ImageProperties,
   TextProperties,
-  TextEditor,
-  VideoEditor,
-  GifEditor,
+  VideoProperties,
+  GifProperties,
   Model3DEditor,
   GroupProperties,
   UploadProperties
@@ -413,7 +411,19 @@ const RightSidebar = ({
     if (page && page.html) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(page.html, 'image/svg+xml');
-      const el = doc.getElementById(selectedLayerId);
+      let el = doc.getElementById(selectedLayerId);
+
+      // If the selected element is an internal child of a compound shape/button/audio/media group,
+      // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
+      const compoundGroup = el?.closest?.(
+        '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
+        '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+        '[data-type="audio-frame"], g[id^="audio-"], ' +
+        '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
+      );
+      if (compoundGroup && compoundGroup !== el) {
+        el = compoundGroup;
+      }
 
       const rootId = doc.querySelector('svg > g')?.id;
       const overlayId = doc.querySelector('[data-name="Overlay"]')?.id;
@@ -424,7 +434,16 @@ const RightSidebar = ({
 
         // --- IMPROVED DIMENSION LOGIC: Try actual DOM first for rendered accuracy ---
         const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-        const actualEl = editorDoc.getElementById(selectedLayerId);
+        let actualEl = editorDoc.getElementById(el.id || selectedLayerId);
+        const actualCompound = actualEl?.closest?.(
+          '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
+          '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+          '[data-type="audio-frame"], g[id^="audio-"], ' +
+          '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
+        );
+        if (actualCompound && actualCompound !== actualEl) {
+          actualEl = actualCompound;
+        }
         let measuredFromDom = false;
         if (actualEl && typeof actualEl.getBBox === 'function') {
           try {
@@ -495,6 +514,23 @@ const RightSidebar = ({
         let strokeStyle = el.getAttribute('stroke') || 'none';
         let strokeWidthStr = el.getAttribute('stroke-width') || el.getAttribute('strokeWidth') || '0';
 
+        if (fillStyle === 'inherit' || !fillStyle) {
+          const explicitFill = el.getAttribute('data-fill-color') || el.parentElement?.getAttribute('data-fill-color') || el.parentElement?.getAttribute('fill');
+          if (explicitFill && explicitFill !== 'inherit') fillStyle = explicitFill;
+        }
+        if (strokeStyle === 'none' || strokeStyle === 'inherit' || !el.hasAttribute('stroke')) {
+          const explicitStroke = el.getAttribute('data-stroke-color') || el.getAttribute('data-original-stroke') || el.parentElement?.getAttribute('data-stroke-color') || el.parentElement?.getAttribute('stroke');
+          if (explicitStroke && explicitStroke !== 'none' && explicitStroke !== 'inherit') {
+            strokeStyle = explicitStroke;
+          }
+        }
+        if (strokeWidthStr === '0' || strokeWidthStr === 'inherit' || !el.hasAttribute('stroke-width')) {
+          const explicitWidth = el.getAttribute('data-stroke-width') || el.parentElement?.getAttribute('data-stroke-width') || el.parentElement?.getAttribute('stroke-width') || el.parentElement?.getAttribute('strokeWidth');
+          if (explicitWidth && explicitWidth !== '0') {
+            strokeWidthStr = explicitWidth;
+          }
+        }
+
         if (el.tagName.toLowerCase() === 'foreignobject' && actualEl && actualEl.firstElementChild) {
           const comp = window.getComputedStyle(actualEl.firstElementChild);
           if (!el.hasAttribute('fill')) fillStyle = comp.color || fillStyle;
@@ -508,7 +544,7 @@ const RightSidebar = ({
         }
 
         const props = {
-          id: selectedLayerId,
+          id: el.id || selectedLayerId,
           tagName: el.tagName,
           fill: fillStyle,
           stroke: strokeStyle,
@@ -906,7 +942,7 @@ const RightSidebar = ({
                           setMultiSelectedIds={setMultiSelectedIds}
                         />
                       ) : selectedElementProps?.isImage ? (
-                        <ImageEditor
+                        <ImageProperties
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                             return editorDoc.getElementById(selectedLayerId);
@@ -1277,7 +1313,7 @@ const RightSidebar = ({
                           activePageIndex={activePageIndex}
                         />
                       ) : selectedElementProps?.isVideo ? (
-                        <VideoEditor
+                        <VideoProperties
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                             return editorDoc.getElementById(selectedLayerId);
@@ -1320,7 +1356,7 @@ const RightSidebar = ({
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
                       ) : selectedElementProps?.isGif ? (
-                        <GifEditor
+                        <GifProperties
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                             return editorDoc.getElementById(selectedLayerId);
@@ -1360,14 +1396,6 @@ const RightSidebar = ({
                           flipbookName={effectiveBook}
                           flipbookVId={effectiveVId}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
-                        />
-                      ) : selectedElementProps?.isElementShape ? (
-                        <ElementShapesProperties
-                          selectedElementProps={selectedElementProps}
-                          activePageIndex={activePageIndex}
-                          selectedLayerId={selectedLayerId}
-                          updateElementAttribute={updateElementAttribute}
-                          activeMainTool={activeMainTool}
                         />
                       ) : (
                         <>

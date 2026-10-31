@@ -6,9 +6,8 @@
 export { default as TransformProperties, DimensionInput } from './TransformProperties';
 export { default as PageProperties, getDocumentInfo } from './PageProperties';
 export { default as TextProperties, default as TextEditor } from './TextProperties';
-export { default as VideoEditor } from './VideoEditor';
-export { default as ShapeProperties } from './ShapeProperties';
-export { default as ElementShapesProperties, ShapeAppearanceControls } from '../LeftActionMenu/Elements/properties/ElementShapesProperties';
+export { default as VideoProperties, default as VideoEditor } from './VideoProperties';
+export { default as ShapeProperties, ElementShapesProperties, ShapeAppearanceControls } from './ShapeProperties';
 export { default as TextElementEditor } from '../LeftActionMenu/Elements/properties/TextElementproperties';
 export { default as TextElementproperties } from '../LeftActionMenu/Elements/properties/TextElementproperties';
 export { default as ElementButtonProperties } from '../LeftActionMenu/Elements/properties/ElementButtonProperties';
@@ -16,15 +15,22 @@ export { default as ButtonEditor } from '../LeftActionMenu/Elements/properties/E
 export { default as ImageFramingProperties } from '../LeftActionMenu/Elements/properties/ImageFramingProperties';
 export { default as ElementTableProperties } from '../LeftActionMenu/Elements/properties/ElementTableProperties';
 export { default as ElementQRCodeProperties } from '../LeftActionMenu/Elements/properties/ElementQRCodeProperties';
-export { default as ImageEditor } from './ImageEditor';
-export { default as GifEditor } from './Gif';
+export { default as ImageProperties, default as ImageEditor } from './ImageProperties';
+export { default as GifProperties, default as GifEditor } from './GifProperties';
 export { default as Model3DEditor, CustomQRCode } from './Model3DEditor';
 export { default as PenToolProperties } from './PenToolProperties';
 export { default as GroupProperties } from './GroupProperties';
+export {
+  handleScrubHelper,
+  formatBytes,
+  normalizeHex,
+  getIntAttr,
+  getFloatAttr,
+  PropertySlider
+} from './propertiesShared';
 
-export { default as Color, handleScrubHelper, ColorField } from './Color';
+export { default as Color, ColorField } from './Color';
 export { default as ColorPicker, parseGradient } from './ColorPicker';
-export { default as Adjustment } from './Adjustment';
 export { default as Crop, default as CropController, isElementCropped } from './Crop';
 export { default as CornerRadius } from './CornerRadius';
 export { default as Effect } from './Effect';

@@ -1029,7 +1029,12 @@ const getDraggableElement = (target, canvasRoot) => {
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group
     // Element shapes are single compound elements; always drag/select the whole shape group (ensure never inside audio frame)
-    const shapeGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]') : null;
+    const shapeGroup = current && typeof current.closest === 'function' ? (
+      current.parentElement?.closest('g[data-is-element-shape="true"], g[data-shape-type], g[data-type="shape"], g[id^="shape-"]') ||
+      (current.tagName?.toLowerCase() === 'g' && current.matches?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]') ? current : null) ||
+      current.closest('g[data-is-element-shape="true"], g[data-shape-type], g[data-type="shape"], g[id^="shape-"]') ||
+      current.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]')
+    ) : null;
     if (shapeGroup && !shapeGroup.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
       if (!shapeGroup.id) {
         shapeGroup.id = `shape-${Date.now()}`;

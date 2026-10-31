@@ -30,7 +30,7 @@ export const getDirectChildFrames = (el) => {
     return [];
   }
 
-  // If this element is an image/video/gif group or compound element (embed/map/audio/table/qr/slideshow/button), it acts as a single layer
+  // If this element is an image/video/gif group or compound element (embed/map/audio/table/qr/slideshow/button/shape), it acts as a single layer
   const dataType = el.getAttribute?.('data-type');
   if (
     el.getAttribute('data-is-image-group') ||
@@ -39,6 +39,11 @@ export const getDirectChildFrames = (el) => {
     el.getAttribute('data-is-element-button') === 'true' ||
     dataType === 'button' ||
     (el.id && el.id.startsWith('button-')) ||
+    el.getAttribute('data-is-element-shape') === 'true' ||
+    el.getAttribute('data-shape-type') ||
+    dataType === 'shape' ||
+    (el.id && el.id.startsWith('shape-')) ||
+    (typeof el.querySelector === 'function' && el.querySelector('[data-shape-type], [data-is-element-shape="true"]')) ||
     dataType === 'embed-frame' ||
     dataType === 'map' ||
     dataType === 'audio-frame' ||

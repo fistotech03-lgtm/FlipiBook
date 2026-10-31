@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronUp } from 'lucide-react';
-import { handleScrubHelper } from './Color';
 import Effect from './Effect';
 import ColorPicker from './ColorPicker';
-import { ElementSlider } from '../LeftActionMenu/Elements/properties/ElementUIControls';
+import { handleScrubHelper, normalizeHex, getIntAttr, getFloatAttr } from './propertiesShared';
 
 export default function GroupProperties({
   selectedElement,
@@ -41,27 +39,6 @@ export default function GroupProperties({
       if (el) return [el];
     }
     return [];
-  };
-
-  // Helper to normalize color strings to hex
-  const normalizeHex = (colorStr) => {
-    if (!colorStr || colorStr === 'none' || colorStr === 'transparent' || colorStr.startsWith('url(')) return null;
-    if (colorStr.startsWith('#')) {
-      if (colorStr.length === 4) {
-        return '#' + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3];
-      }
-      return colorStr.toLowerCase();
-    }
-    if (colorStr.startsWith('rgb')) {
-      const nums = colorStr.match(/\d+/g);
-      if (nums && nums.length >= 3) {
-        const r = parseInt(nums[0]).toString(16).padStart(2, '0');
-        const g = parseInt(nums[1]).toString(16).padStart(2, '0');
-        const b = parseInt(nums[2]).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}`.toLowerCase();
-      }
-    }
-    return colorStr.toLowerCase();
   };
 
   // Helper to extract unique fill, stroke, text & background colors from child elements
@@ -436,20 +413,6 @@ export default function GroupProperties({
   if (firstNode?.getAttribute('data-effect-inner-shadow') === 'true') activeEffects.push('Inner Shadow');
   if (firstNode?.getAttribute('data-effect-blur') === 'true') activeEffects.push('Blur');
 
-  const getIntAttr = (node, attr, defVal) => {
-    const val = node?.getAttribute(attr);
-    if (val === null || val === undefined || val === '') return defVal;
-    const parsed = parseInt(val, 10);
-    return isNaN(parsed) ? defVal : parsed;
-  };
-
-  const getFloatAttr = (node, attr, defVal) => {
-    const val = node?.getAttribute(attr);
-    if (val === null || val === undefined || val === '') return defVal;
-    const parsed = parseFloat(val);
-    return isNaN(parsed) ? defVal : parsed;
-  };
-
   const handleSetActiveEffects = (updater) => {
     const targetNodes = getSelectedNodes();
     if (targetNodes.length === 0) return;
@@ -757,7 +720,7 @@ export default function GroupProperties({
   };
 
   return (
-    <div className="flex flex-col font-sans gap-[0.4vw]">
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none text-gray-800">
       <style>{`
         .custom-range-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .custom-range-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
@@ -766,11 +729,11 @@ export default function GroupProperties({
         .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
       `}</style>
 
-      {/* ── Quick Action Section ── */}
-      <div className="space-y-[0.6vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Quick Action</span>
-          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+      {/* ── Quick Actions Section ── */}
+      <div className="flex flex-col gap-[0.8vw]">
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-tight">Quick Actions</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
         </div>
 
         <div className="grid grid-cols-2 gap-[0.6vw]">
@@ -778,13 +741,13 @@ export default function GroupProperties({
             <>
               <button
                 onClick={handleGroupSelected}
-                className="py-[0.55vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+                className="h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-700 text-[0.78vw] font-semibold hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
               >
                 Group
               </button>
               <button
                 onClick={handleDuplicateSelected}
-                className="py-[0.55vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+                className="h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-700 text-[0.78vw] font-semibold hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
               >
                 Duplicate Selected
               </button>
@@ -793,13 +756,13 @@ export default function GroupProperties({
             <>
               <button
                 onClick={handleUngroup}
-                className="py-[0.55vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+                className="h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-700 text-[0.78vw] font-semibold hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
               >
                 Ungroup
               </button>
               <button
                 onClick={handleDuplicate}
-                className="py-[0.55vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+                className="h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-700 text-[0.78vw] font-semibold hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
               >
                 Duplicate Group
               </button>
@@ -809,14 +772,14 @@ export default function GroupProperties({
         {isMultiSelect ? (
           <button
             onClick={handleDeleteSelected}
-            className="w-full py-[0.6vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-red-50 hover:border-red-300 hover:text-red-600 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+            className="w-full h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-600 text-[0.78vw] font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
           >
             Delete Selected
           </button>
         ) : (
           <button
             onClick={handleDelete}
-            className="w-full py-[0.6vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.5vw] text-gray-700 text-[0.75vw] font-semibold hover:bg-red-50 hover:border-red-300 hover:text-red-600 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+            className="w-full h-[2.2vw] px-[0.8vw] bg-white border border-gray-200 rounded-[0.45vw] text-gray-600 text-[0.78vw] font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:scale-[0.98] transition-all shadow-2xs cursor-pointer flex items-center justify-center"
           >
             Delete Group
           </button>
@@ -824,115 +787,119 @@ export default function GroupProperties({
       </div>
 
       {/* ── Opacity Section ── */}
-      <div className="flex items-center gap-[1vw] py-[0.5vw] mt-[0.5vw]">
-        <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Opacity :</span>
-        <div className="flex-1 flex items-center h-[1.5vw]">
-          <ElementSlider
-            min={0}
-            max={100}
+      <div className="flex items-center justify-between gap-[1vw] py-[0.1vw]">
+        <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Opacity</span>
+        <div className="flex-1 px-[0.2vw] flex items-center">
+          <input
+            type="range"
+            min="0"
+            max="100"
             value={opacity}
             onChange={(e) => handleOpacityChange(Number(e.target.value))}
+            className="custom-range-slider h-[0.2vw] w-full bg-gray-200 rounded-lg cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E5E7EB ${opacity}%, #E5E7EB 100%)`
+            }}
           />
         </div>
-        <div className="min-w-[3.5vw] h-[2vw] border-[0.1vw] border-gray-200 rounded-[0.3vw] flex items-center justify-center text-[0.8vw] font-medium text-black bg-white shadow-sm px-[0.5vw]">
-          {opacity} %
+        <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+          {opacity}%
         </div>
       </div>
 
-      {/* ── Colors in this Group Accordion Card ── */}
-      <div className="bg-white border border-gray-200 rounded-[0.75vw] shadow-sm overflow-hidden">
-        <div
-          onClick={() => setOpenSubSection(openSubSection === 'colors' ? null : 'colors')}
-          className={`flex items-center justify-between px-[1vw] py-[1vw] border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${openSubSection === 'colors' ? 'rounded-t-[0.75vw]' : 'rounded-[0.75vw]'}`}
-        >
-          <span className={`font-semibold text-[0.85vw] ${openSubSection === 'colors' ? 'text-gray-900' : 'text-gray-500'}`}>
-            {isMultiSelect ? 'Colors in Selected Elements' : 'Colors in this Group'}
+      {/* ── Colors in this Group Section ── */}
+      <div className="flex flex-col gap-[0.8vw]">
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">
+            {isMultiSelect ? 'Colors in Selection' : 'Colors in Group'}
           </span>
-          <ChevronUp size="1vw" className={`transition-transform duration-200 ${openSubSection === 'colors' ? 'text-gray-900' : 'rotate-180 text-gray-500'}`} />
+          <div className="flex-1 h-[1px] bg-gray-200" />
         </div>
 
-        <div className={`grid transition-all duration-150 ease-in-out ${openSubSection === 'colors' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-          <div className="overflow-hidden">
-            <div className="p-[1vw] space-y-[0.6vw]">
-              {colors.length === 0 ? (
-                <div className="text-[0.75vw] text-gray-400 py-[0.5vw] text-center italic">
-                  No distinct colors found
-                </div>
-              ) : (
-                <div className="max-h-[16vw] overflow-y-auto pr-[0.3vw] space-y-[0.4vw] custom-scrollbar">
-                  {colors.map((cItem, index) => (
-                    <div key={index} className="flex items-center gap-[0.4vw] py-[0.2vw]">
-                      <div className="w-[2vw] h-[2vw] rounded-[0.4vw] border border-gray-200 flex-shrink-0 relative overflow-hidden flex items-center justify-center">
-                        <div
-                          onClick={(e) => handleOpenColorPicker(e, index)}
-                          className="w-full h-full border border-gray-200 cursor-pointer color-field-trigger transition-transform flex-shrink-0"
-                          style={{
-                            background: (cItem.hex === 'none' || cItem.hex === 'transparent' || !cItem.hex)
-                              ? 'white'
-                              : cItem.hex
-                          }}
-                        />
-                        {(cItem.hex === 'none' || cItem.hex === 'transparent' || !cItem.hex) && (
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-                        )}
-                      </div>
-
-                      <div className="flex-grow flex items-center border border-gray-200 rounded-[0.5vw] overflow-hidden h-[2vw] bg-white hover:border-indigo-400 transition-colors px-[0.5vw]">
-                        <input
-                          type="text"
-                          value={(cItem.hex === 'none' || cItem.hex === 'transparent' || !cItem.hex) ? '#' : cItem.hex.toUpperCase()}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === '' || val === '#') {
-                              handleColorChange(cItem.hex, 'none');
-                            } else {
-                              const finalVal = val.startsWith('#') ? val : '#' + val;
-                              handleColorChange(cItem.hex, finalVal);
-                            }
-                          }}
-                          className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] font-mono tracking-tight"
-                          maxLength={7}
-                        />
-                        <div
-                          className="flex items-center gap-[0.1vw] ml-[0.5vw] cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                          onPointerDown={(e) => {
-                            handleScrubHelper(e, cItem.opacity, (val) => {
-                              const num = parseInt(val);
-                              const clamped = Math.min(Math.max(num, 0), 100);
-                              handleColorOpacityChange(cItem.hex, clamped);
-                            });
-                          }}
-                        >
-                          <span className="text-[0.75vw] font-semibold text-gray-700">
-                            {cItem.opacity}
-                          </span>
-                          <span className="text-[0.75vw] font-medium text-gray-500">%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {colors.length === 0 ? (
+          <div className="text-[0.78vw] text-gray-400 py-[0.8vw] text-center bg-gray-50/60 rounded-[0.45vw] border border-gray-100 italic">
+            No distinct colors found
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-[0.6vw] max-h-[16vw] overflow-y-auto pr-[0.3vw] custom-scrollbar">
+            {colors.map((cItem, index) => (
+              <div key={index} className="flex items-center gap-[0.6vw]">
+                {/* Swatch */}
+                <div
+                  className="w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105"
+                  onClick={(e) => handleOpenColorPicker(e, index)}
+                  title="Change color"
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: (cItem.hex === 'none' || cItem.hex === 'transparent' || !cItem.hex)
+                        ? 'white'
+                        : cItem.hex
+                    }}
+                  />
+                  {(cItem.hex === 'none' || cItem.hex === 'transparent' || !cItem.hex) && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+                  )}
+                </div>
+
+                {/* Input box */}
+                <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 transition-colors shadow-2xs">
+                  <input
+                    type="text"
+                    value={(() => {
+                      const val = cItem.hex;
+                      if (!val || val === 'none' || val === 'transparent') return '#';
+                      return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
+                    })()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || val === '#') {
+                        handleColorChange(cItem.hex, 'none');
+                      } else {
+                        const finalVal = val.startsWith('#') ? val : '#' + val;
+                        handleColorChange(cItem.hex, finalVal);
+                      }
+                    }}
+                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    maxLength={8}
+                  />
+                  <div
+                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+                    onPointerDown={(e) => {
+                      handleScrubHelper(e, cItem.opacity, (val) => {
+                        const num = parseInt(val);
+                        const clamped = Math.min(Math.max(num, 0), 100);
+                        handleColorOpacityChange(cItem.hex, clamped);
+                      });
+                    }}
+                    title="Drag horizontally to adjust opacity"
+                  >
+                    <span className="text-[0.8vw] font-medium text-gray-700">
+                      {cItem.opacity}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── Effect Accordion (Effect.jsx Component) ── */}
-      <div className="mt-0">
-        <Effect
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-        />
-      </div>
+      {/* ── Effects Section (Common Effect Component) ── */}
+      <Effect
+        noAccordion={true}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+      />
 
       {/* ── Official ColorPicker Portal Popup (Positioned alongside RightSidebar) ── */}
       {activeColorIndex !== null && colors[activeColorIndex] && createPortal(

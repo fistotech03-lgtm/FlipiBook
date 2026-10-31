@@ -4,61 +4,8 @@ import { createPortal } from 'react-dom';
 import ColorPicker, { parseGradient } from './ColorPicker';
 import { generateGradientString } from "../../CustomizedEditor/AppearanceShared";
 import { ChevronUp, ChevronDown } from 'lucide-react';
-
-export const handleScrubHelper = (e, initialVal, updateFn, sensitivity = 5) => {
-  const sValue = parseFloat(initialVal) || 0;
-  let accumulatedDelta = 0;
-  let virtualX = e.clientX;
-  let virtualY = e.clientY;
-
-  document.body.classList.add('is-scrubbing');
-
-  if (e.pointerId !== undefined) {
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch { }
-  }
-
-  const vCursor = document.createElement('div');
-  vCursor.className = 'virtual-scrub-cursor';
-  vCursor.style.left = `${virtualX}px`;
-  vCursor.style.top = `${virtualY}px`;
-  vCursor.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 15L21 12L18 9" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M18 15L21 12L18 9" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-  document.body.appendChild(vCursor);
-
-  const onMouseMove = (moveEvent) => {
-    const dx = moveEvent.movementX || 0;
-    accumulatedDelta += dx;
-
-    virtualX += dx;
-    if (virtualX < 0) virtualX = window.innerWidth;
-    if (virtualX > window.innerWidth) virtualX = 0;
-    vCursor.style.left = `${virtualX}px`;
-
-    const newVal = sValue + Math.round(accumulatedDelta / sensitivity);
-    updateFn(newVal.toString());
-  };
-
-  const onMouseUp = (moveEvent) => {
-    if (moveEvent.pointerId !== undefined) {
-      try { moveEvent.target.releasePointerCapture(moveEvent.pointerId); } catch { }
-    }
-    if (vCursor.parentNode) vCursor.parentNode.removeChild(vCursor);
-    document.body.classList.remove('is-scrubbing');
-    window.removeEventListener('pointermove', onMouseMove);
-    window.removeEventListener('pointerup', onMouseUp);
-  };
-
-  window.addEventListener('pointermove', onMouseMove);
-  window.addEventListener('pointerup', onMouseUp);
-};
+import { handleScrubHelper } from './propertiesShared';
+export { handleScrubHelper };
 
 export const ColorField = ({ label, color, opacity, onColorChange, onOpacityChange, onPickerToggle, baseAttr, selectedElementProps }) => (
   <div className="flex items-center gap-[0.4vw] py-[0.4vw]">
@@ -176,10 +123,17 @@ const Color = ({
 
     // Parse Fill
     let fill = el.getAttribute('data-fill-color') || el.getAttribute('fill') || 'transparent';
+    if (fill === 'inherit') {
+      fill = el.getAttribute('data-fill-color') || el.parentElement?.getAttribute('fill') || '#3194FC';
+    }
     const fillOpacity = parseFloat(el.getAttribute('data-fill-opacity') || el.getAttribute('fill-opacity') || '1') * 100;
 
     // Parse Stroke
-    const stroke = el.getAttribute('data-stroke-color') || el.getAttribute('stroke') || 'transparent';
+    let stroke = el.getAttribute('data-stroke-color') || el.getAttribute('data-original-stroke') || el.getAttribute('stroke') || 'transparent';
+    if (stroke === 'inherit' || stroke === 'none' || stroke === 'transparent' || !el.hasAttribute('stroke')) {
+      const explicit = el.getAttribute('data-stroke-color') || el.getAttribute('data-original-stroke') || el.parentElement?.getAttribute('stroke');
+      if (explicit && explicit !== 'none' && explicit !== 'inherit' && explicit !== 'transparent') stroke = explicit;
+    }
     const strokeOpacity = parseFloat(el.getAttribute('data-stroke-opacity') || el.getAttribute('stroke-opacity') || '1') * 100;
     const strokeWeight = parseFloat(el.getAttribute('data-stroke-width') || el.getAttribute('stroke-width') || '0');
 
@@ -218,8 +172,15 @@ const Color = ({
     const el = selectedElement;
 
     let fill = el.getAttribute('data-fill-color') || el.getAttribute('fill') || 'transparent';
+    if (fill === 'inherit') {
+      fill = el.getAttribute('data-fill-color') || el.parentElement?.getAttribute('fill') || '#3194FC';
+    }
     const fillOpacity = parseFloat(el.getAttribute('data-fill-opacity') || el.getAttribute('fill-opacity') || '1') * 100;
-    const stroke = el.getAttribute('data-stroke-color') || el.getAttribute('stroke') || 'transparent';
+    let stroke = el.getAttribute('data-stroke-color') || el.getAttribute('data-original-stroke') || el.getAttribute('stroke') || 'transparent';
+    if (stroke === 'inherit' || stroke === 'none' || stroke === 'transparent' || !el.hasAttribute('stroke')) {
+      const explicit = el.getAttribute('data-stroke-color') || el.getAttribute('data-original-stroke') || el.parentElement?.getAttribute('stroke');
+      if (explicit && explicit !== 'none' && explicit !== 'inherit' && explicit !== 'transparent') stroke = explicit;
+    }
     const strokeOpacity = parseFloat(el.getAttribute('data-stroke-opacity') || el.getAttribute('stroke-opacity') || '1') * 100;
     const strokeWeight = parseFloat(el.getAttribute('data-stroke-width') || el.getAttribute('stroke-width') || '0');
 
@@ -414,108 +375,53 @@ const Color = ({
           const sw = backgroundColor.strokeWeight || 0;
           const isEligibleShape = ['rect', 'ellipse', 'path', 'circle', 'polygon'].includes(el.tagName?.toLowerCase());
 
-          if (isEligibleShape && pos !== 'Center' && sw > 0) {
-            el.setAttribute('stroke', 'none');
-            el.removeAttribute('stroke-width');
-            el.removeAttribute('stroke-dasharray');
+          // Clean up any stale shape stroke overlay or mask/clip definitions
+          const staleOverlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
+          if (staleOverlay) staleOverlay.remove();
+          if (el._shapeStrokeObserver) {
+            el._shapeStrokeObserver.disconnect();
+            delete el._shapeStrokeObserver;
+          }
+          const svg = el.ownerSVGElement || el.parentNode;
+          const defs = svg?.querySelector('defs');
+          if (defs) {
+            defs.querySelector(`clipPath[id="clip-shape-${el.id}"]`)?.remove();
+            defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.remove();
+          }
 
-            let overlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
-            if (!overlay) {
-              overlay = document.createElementNS('http://www.w3.org/2000/svg', el.tagName);
-              overlay.classList.add('svg-shape-stroke-overlay');
-              overlay.setAttribute('data-target', el.id);
-              overlay.style.pointerEvents = 'none';
+          if (isEligibleShape) {
+            if (!isStrokeGradient) {
+              el.setAttribute('stroke', backgroundColor.stroke);
+            }
 
-              if (pos === 'Inside') {
-                el.parentNode.insertBefore(overlay, el.nextSibling);
-              } else {
-                el.parentNode.insertBefore(overlay, el);
-              }
+            // Outside stroke: stroke-width is sw * 2 with paint-order: stroke fill (inner half is covered by fill)
+            // Inside stroke: stroke-width is sw * 2 with paint-order: fill stroke (stroke is drawn over fill)
+            // Center stroke: stroke-width is sw with paint-order: normal
+            if (pos === 'Outside') {
+              el.setAttribute('stroke-width', (sw * 2).toString());
+              el.setAttribute('paint-order', 'stroke fill');
+              el.style.paintOrder = 'stroke fill';
+            } else if (pos === 'Inside') {
+              el.setAttribute('stroke-width', (sw * 2).toString());
+              el.setAttribute('paint-order', 'fill stroke');
+              el.style.paintOrder = 'fill stroke';
             } else {
-              if (pos === 'Inside' && overlay.previousSibling !== el) {
-                el.parentNode.insertBefore(overlay, el.nextSibling);
-              } else if (pos === 'Outside' && overlay.nextSibling !== el) {
-                el.parentNode.insertBefore(overlay, el);
-              }
+              el.setAttribute('stroke-width', sw.toString());
+              el.setAttribute('paint-order', 'normal');
+              el.style.paintOrder = 'normal';
             }
 
-            const svg = el.ownerSVGElement || el.parentNode;
-            let defs = svg.querySelector('defs');
-            if (!defs) {
-              defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-              svg.insertBefore(defs, svg.firstChild);
-            }
+            el.setAttribute('data-stroke-width', sw.toString());
+            el.setAttribute('data-stroke-position', pos);
+            el.setAttribute('vector-effect', 'non-scaling-stroke');
 
-            if (pos === 'Inside') {
-              let clip = defs.querySelector(`clipPath[id="clip-shape-${el.id}"]`);
-              if (!clip) {
-                clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-                clip.id = `clip-shape-${el.id}`;
-                const clipShape = document.createElementNS('http://www.w3.org/2000/svg', el.tagName);
-                clip.appendChild(clipShape);
-                defs.appendChild(clip);
-              }
-              overlay.setAttribute('clip-path', `url(#clip-shape-${el.id})`);
-              overlay.removeAttribute('mask');
+            if (dashArray !== 'none') {
+              el.setAttribute('stroke-dasharray', dashArray);
             } else {
-              let mask = defs.querySelector(`mask[id="mask-shape-${el.id}"]`);
-              if (!mask) {
-                mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
-                mask.id = `mask-shape-${el.id}`;
-                const maskBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                maskBg.setAttribute('x', '-500%');
-                maskBg.setAttribute('y', '-500%');
-                maskBg.setAttribute('width', '1000%');
-                maskBg.setAttribute('height', '1000%');
-                maskBg.setAttribute('fill', 'white');
-                const maskShape = document.createElementNS('http://www.w3.org/2000/svg', el.tagName);
-                maskShape.setAttribute('fill', 'black');
-                mask.appendChild(maskBg);
-                mask.appendChild(maskShape);
-                defs.appendChild(mask);
-              }
-              overlay.setAttribute('mask', `url(#mask-shape-${el.id})`);
-              overlay.removeAttribute('clip-path');
+              el.setAttribute('stroke-dasharray', 'none');
             }
-
-            overlay.setAttribute('stroke', backgroundColor.stroke);
-            overlay.setAttribute('stroke-width', (sw * 2).toString());
-            overlay.setAttribute('fill', 'none');
-            overlay.setAttribute('stroke-opacity', (backgroundColor.strokeOpacity / 100).toString());
-            if (dashArray !== 'none') overlay.setAttribute('stroke-dasharray', dashArray);
-            else overlay.removeAttribute('stroke-dasharray');
-            overlay.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
-            overlay.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
-            overlay.setAttribute('data-stroke-type', backgroundColor.strokeType || 'solid');
-
-            const syncGeometry = () => {
-              if (!overlay.isConnected) return;
-              const attrsToSync = ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'transform', 'points'];
-              const refShape = pos === 'Inside' ? defs.querySelector(`clipPath[id="clip-shape-${el.id}"]`)?.firstChild : defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.lastChild;
-
-              attrsToSync.forEach(attr => {
-                const val = el.getAttribute(attr);
-                if (val !== null) {
-                  overlay.setAttribute(attr, val);
-                  if (refShape && attr !== 'transform') refShape.setAttribute(attr, val);
-                } else {
-                  overlay.removeAttribute(attr);
-                  if (refShape) refShape.removeAttribute(attr);
-                }
-              });
-              overlay.style.transform = el.style.transform;
-              overlay.style.translate = el.style.translate;
-              overlay.style.scale = el.style.scale;
-              overlay.style.rotate = el.style.rotate;
-            };
-
-            syncGeometry();
-
-            if (!el._shapeStrokeObserver) {
-              el._shapeStrokeObserver = new MutationObserver(syncGeometry);
-              el._shapeStrokeObserver.observe(el, { attributes: true, attributeFilter: ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'transform', 'style'] });
-            }
-
+            el.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
+            el.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
           } else {
             if (!isStrokeGradient) {
               el.setAttribute('stroke', backgroundColor.stroke);
@@ -525,14 +431,6 @@ const Color = ({
               el.setAttribute('stroke-dasharray', dashArray);
             } else {
               el.setAttribute('stroke-dasharray', 'none');
-            }
-
-            const overlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
-            if (overlay) overlay.remove();
-            const defs = el.ownerSVGElement?.querySelector('defs');
-            if (defs) {
-              defs.querySelector(`clipPath[id="clip-shape-${el.id}"]`)?.remove();
-              defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.remove();
             }
           }
         } else {
@@ -724,9 +622,12 @@ const Color = ({
                   <input
                     type="text"
                     value={(() => {
-                      const val = pseudoProps.fill;
+                      let val = pseudoProps.fill;
                       if (!val || val === 'none' || val === 'transparent') return '#';
                       if (val.toString().toLowerCase().includes('gradient') || val.toString().toLowerCase().includes('url(#')) return 'Gradient';
+                      if (val === 'inherit') {
+                        val = selectedElement?.getAttribute('data-fill-color') || selectedElement?.parentElement?.getAttribute('fill') || '#3194FC';
+                      }
                       return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
                     })()}
                     onChange={(e) => {
@@ -799,9 +700,13 @@ const Color = ({
                 <input
                   type="text"
                   value={(() => {
-                    const val = pseudoProps.stroke;
+                    let val = pseudoProps.stroke;
                     if (!val || val === 'none' || val === 'transparent') return '#';
                     if (val.toString().toLowerCase().includes('gradient') || val.toString().toLowerCase().includes('url(#')) return 'Gradient';
+                    if (val === 'inherit') {
+                      val = selectedElement?.getAttribute('data-stroke-color') || selectedElement?.getAttribute('data-original-stroke') || selectedElement?.parentElement?.getAttribute('stroke') || 'none';
+                      if (val === 'none' || val === 'transparent') return '#';
+                    }
                     return val.startsWith('#') ? val.toUpperCase() : '#' + val.toUpperCase();
                   })()}
                   onChange={(e) => {

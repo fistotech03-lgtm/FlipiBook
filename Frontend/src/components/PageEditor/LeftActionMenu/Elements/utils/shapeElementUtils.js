@@ -612,7 +612,9 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   const posX = Math.round(cx - renderW / 2);
   const posY = Math.round(cy - renderH / 2);
 
+  const uniqueId = `shape-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', uniqueId);
   g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
   g.setAttribute('data-is-element-shape', 'true');
   g.setAttribute('data-type', 'shape');
@@ -638,14 +640,19 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   }
 
   // Default styling: Clean fill and stroke matching shape definition
-  g.setAttribute('fill', shapeData.fill || '#d8e9feff');
-  g.setAttribute('stroke', shapeData.stroke || 'none');
+  const initialFill = shapeData.fill || '#d8e9feff';
+  const initialStroke = shapeData.stroke || 'none';
+  g.setAttribute('fill', initialFill);
+  g.setAttribute('data-fill-color', initialFill);
+  g.setAttribute('stroke', initialStroke);
+  g.setAttribute('data-stroke-color', initialStroke);
   const initialSw = shapeData.strokeWidth !== undefined ? parseFloat(shapeData.strokeWidth) : 0;
   g.setAttribute('data-stroke-width', String(initialSw));
   g.setAttribute('stroke-width', String(initialSw * 2));
   g.setAttribute('data-stroke-position', 'Outside');
   g.setAttribute('paint-order', 'stroke fill');
   g.style.paintOrder = 'stroke fill';
+  g.setAttribute('vector-effect', 'non-scaling-stroke');
 
   const initialLinecap = shapeData.strokeLinecap || 'square';
   const initialLinejoin = shapeData.strokeLinejoin || (initialLinecap === 'round' ? 'round' : 'miter');
@@ -674,10 +681,15 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
     child.setAttribute('fill', 'inherit');
     child.setAttribute('paint-order', 'stroke fill');
     child.style.paintOrder = 'stroke fill';
+    child.setAttribute('vector-effect', 'non-scaling-stroke');
   });
 
   // Inject child SVG elements into the group
   g.innerHTML = svgRoot.innerHTML;
+  const primaryInner = g.querySelector('path, polygon, rect, circle, ellipse, line, polyline');
+  if (primaryInner && !primaryInner.getAttribute('id')) {
+    primaryInner.setAttribute('id', `${uniqueId}-child`);
+  }
 
   return g;
 };

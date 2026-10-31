@@ -453,10 +453,27 @@ export const useLayerOperations = ({
     if (!page.html) return;
     const doc = parser.parseFromString(page.html, 'image/svg+xml');
 
+    // If any id in idList belongs to a child inside a shape or compound group, promote it to the compound group's ID
+    const effectiveIds = new Set();
+    idList.forEach(id => {
+      const el = doc.querySelector(`[id="${id}"]`);
+      if (el) {
+        const comp = el.parentElement?.closest?.(
+          'g[data-is-element-shape="true"], g[data-type="shape"], g[id^="shape-"], ' +
+          'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+          'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"]'
+        );
+        effectiveIds.add(comp && comp.id ? comp.id : id);
+      } else {
+        effectiveIds.add(id);
+      }
+    });
+    const finalIdList = Array.from(effectiveIds);
+
     const clipboardItems = [];
     const findLayers = (layersList, parentId = null, alreadyCopyingAncestor = false) => {
       for (let layer of layersList) {
-        const isSelected = idList.includes(layer.id);
+        const isSelected = finalIdList.includes(layer.id);
 
         if (isSelected && !alreadyCopyingAncestor) {
           const element = doc.querySelector(`[id="${layer.id}"]`);
@@ -603,29 +620,56 @@ export const useLayerOperations = ({
           updateRecursiveIds(newElement, newLayer);
         }
 
+        // Ensure all child nodes inside newElement receive fresh unique IDs to avoid duplicate collisions
+        const childIdPrefix = `el-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
+        newElement.querySelectorAll('[id]').forEach((child, idx) => {
+          child.setAttribute('id', `${childIdPrefix}-${idx}`);
+        });
+
         let pasted = false;
         if (selectedLayerId) {
-          const insertNextTo = (list, isTopLevel = true) => {
+          // If selectedLayerId points to an element inside a shape/compound group, resolve to the shape/compound group
+          const selectedEl = doc.querySelector(`[id="${selectedLayerId}"]`);
+          const compParent = selectedEl?.parentElement?.closest?.(
+            'g[data-is-element-shape="true"], g[data-type="shape"], g[id^="shape-"], ' +
+            'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+            'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"]'
+          );
+          const targetEl = compParent || selectedEl;
+          const targetLayerId = targetEl ? targetEl.id : selectedLayerId;
+
+          const isTargetFrame = targetEl && targetEl.tagName?.toLowerCase() === 'g' &&
+            targetEl.getAttribute('data-type') === 'frame' &&
+            !targetEl.getAttribute('data-is-element-shape') &&
+            !targetEl.getAttribute('data-shape-type') &&
+            !targetEl.id?.startsWith('shape-') &&
+            !targetEl.getAttribute('data-is-image-group') &&
+            !targetEl.getAttribute('data-is-video-group') &&
+            !targetEl.getAttribute('data-is-gif-group') &&
+            !targetEl.getAttribute('data-is-element-button');
+
+          const insertNextTo = (list) => {
             for (let i = 0; i < list.length; i++) {
-              if (list[i].id === selectedLayerId) {
-                if (isTopLevel) {
-                  // Never paste alongside a top-level root folder, paste inside it
+              if (list[i].id === targetLayerId) {
+                if (isTargetFrame) {
+                  // Only paste inside structural root/folder frames
                   list[i].children = [...(list[i].children || []), newLayer];
                   return { method: 'inside', parentId: list[i].id };
                 } else {
+                  // Shapes, text, images, buttons must ALWAYS paste alongside as a sibling
                   list.splice(i + 1, 0, newLayer);
                   return { method: 'alongside' };
                 }
               }
               if (list[i].children) {
-                const res = insertNextTo(list[i].children, false);
+                const res = insertNextTo(list[i].children);
                 if (res) return res;
               }
             }
             return false;
           };
 
-          const result = insertNextTo(newLayers, true);
+          const result = insertNextTo(newLayers);
           if (result) {
             if (result.method === 'inside') {
               const parentEl = doc.querySelector(`[id="${result.parentId}"]`);
@@ -634,9 +678,8 @@ export const useLayerOperations = ({
                 pasted = true;
               }
             } else {
-              const selectedEl = doc.querySelector(`[id="${selectedLayerId}"]`);
-              if (selectedEl && selectedEl.parentNode) {
-                selectedEl.parentNode.insertBefore(newElement, selectedEl.nextSibling);
+              if (targetEl && targetEl.parentNode) {
+                targetEl.parentNode.insertBefore(newElement, targetEl.nextSibling);
                 pasted = true;
               }
             }
@@ -644,41 +687,55 @@ export const useLayerOperations = ({
         }
 
         if (!pasted && currentFrameId) {
-          const insertInside = (list) => {
-            for (let i = 0; i < list.length; i++) {
-              if (list[i].id === currentFrameId) {
-                list[i].children = [...(list[i].children || []), newLayer];
-                return true;
+          const frameNode = doc.querySelector(`[id="${currentFrameId}"]`);
+          const isCurrFrameFolder = frameNode && frameNode.tagName?.toLowerCase() === 'g' &&
+            frameNode.getAttribute('data-type') === 'frame' &&
+            !frameNode.getAttribute('data-is-element-shape') &&
+            !frameNode.id?.startsWith('shape-');
+
+          if (isCurrFrameFolder) {
+            const insertInside = (list) => {
+              for (let i = 0; i < list.length; i++) {
+                if (list[i].id === currentFrameId) {
+                  list[i].children = [...(list[i].children || []), newLayer];
+                  return true;
+                }
+                if (list[i].children && insertInside(list[i].children)) return true;
               }
-              if (list[i].children && insertInside(list[i].children)) return true;
-            }
-            return false;
-          };
-          if (insertInside(newLayers)) {
-            const parentEl = doc.querySelector(`[id="${currentFrameId}"]`);
-            if (parentEl) {
-              parentEl.appendChild(newElement);
-              pasted = true;
+              return false;
+            };
+            if (insertInside(newLayers)) {
+              if (frameNode) {
+                frameNode.appendChild(newElement);
+                pasted = true;
+              }
             }
           }
         }
 
         if (!pasted && originalParentId) {
-          const insertAtEnd = (list) => {
-            for (let i = 0; i < list.length; i++) {
-              if (list[i].id === originalParentId) {
-                list[i].children = [...(list[i].children || []), newLayer];
-                return true;
+          const origNode = doc.querySelector(`[id="${originalParentId}"]`);
+          const isOrigFolder = origNode && origNode.tagName?.toLowerCase() === 'g' &&
+            origNode.getAttribute('data-type') === 'frame' &&
+            !origNode.getAttribute('data-is-element-shape') &&
+            !origNode.id?.startsWith('shape-');
+
+          if (isOrigFolder) {
+            const insertAtEnd = (list) => {
+              for (let i = 0; i < list.length; i++) {
+                if (list[i].id === originalParentId) {
+                  list[i].children = [...(list[i].children || []), newLayer];
+                  return true;
+                }
+                if (list[i].children && insertAtEnd(list[i].children)) return true;
               }
-              if (list[i].children && insertAtEnd(list[i].children)) return true;
-            }
-            return false;
-          };
-          if (insertAtEnd(newLayers)) {
-            const parentEl = doc.querySelector(`[id="${originalParentId}"]`);
-            if (parentEl) {
-              parentEl.appendChild(newElement);
-              pasted = true;
+              return false;
+            };
+            if (insertAtEnd(newLayers)) {
+              if (origNode) {
+                origNode.appendChild(newElement);
+                pasted = true;
+              }
             }
           }
         }

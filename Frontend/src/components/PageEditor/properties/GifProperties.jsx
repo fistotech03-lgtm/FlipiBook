@@ -10,13 +10,14 @@ import {
 import { Icon } from '@iconify/react';
 
 import CornerRadius from './CornerRadius';
-import Adjustment from './Adjustment';
 import Effect from './Effect';
 import ReplaceMediaModal from '../modals/ReplaceMediaModal';
+import ImageAdjustmentModal, { AdjustmentIcon } from '../modals/ImageAdjustmentModal';
 import Color from './Color';
 import { parseGradient } from './ColorPicker';
+import { formatBytes } from './propertiesShared';
 
-const GifEditor = ({
+const GifProperties = ({
   selectedElement,
   selectedLayerId: propSelectedLayerId,
   onUpdate,
@@ -31,7 +32,6 @@ const GifEditor = ({
   const activeVId = flipbookVId || paramVId;
   const { user } = useAuth();
 
-  // Use prop if available, fallback to selectedElement.id
   const selectedLayerId = propSelectedLayerId || selectedElement?.id;
 
   const fileInputRef = useRef(null);
@@ -49,6 +49,7 @@ const GifEditor = ({
   const [openSubSection, setOpenSubSection] = useState(null);
 
   const [filters, setFilters] = useState({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [radius, setRadius] = useState({ tl: 0, tr: 0, br: 0, bl: 0 });
   const [isRadiusLinked, setIsRadiusLinked] = useState(true);
   const [activeEffects, setActiveEffects] = useState([]);
@@ -70,6 +71,11 @@ const GifEditor = ({
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [showStrokeSettings, setShowStrokeSettings] = useState(false);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
+  const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
+  const [isDashPosOpen, setIsDashPosOpen] = useState(false);
+  const [activePopup, setActivePopup] = useState(null);
 
   const isUpdatingDOM = useRef(false);
   const isUpdatingDOMTimeoutRef = useRef(null);
@@ -85,14 +91,11 @@ const GifEditor = ({
     if (!el) return null;
     const tag = el.tagName?.toLowerCase();
 
-    // 1. Direct hit
     if (tag === 'image' || tag === 'img') return el;
 
-    // 2. Child search
     const childImg = el.querySelector('image, img');
     if (childImg) return childImg;
 
-    // 3. Pattern search
     const findInPattern = (node) => {
       const fill = node.getAttribute?.('fill') || '';
       if (fill?.startsWith('url(#')) {
@@ -124,7 +127,6 @@ const GifEditor = ({
     if (!selectedElement) return;
     if (isUpdatingDOM.current && !force) return;
 
-    // isHydrating is only true briefly during selection change
     const tagLower = selectedElement.tagName?.toLowerCase();
     const svgImageEl = getSvgImageEl(selectedElement);
     const isSvgEl = !!svgImageEl || (selectedElement instanceof SVGElement && tagLower !== 'svg');
@@ -228,7 +230,6 @@ const GifEditor = ({
       setEffectSettings(prev => ({ ...prev, ...effectSettingsUpdates }));
     }
 
-
     // Background & Stroke
     let fill = selectedElement.getAttribute('data-fill-color');
     if (!fill) {
@@ -277,16 +278,13 @@ const GifEditor = ({
     });
   }, [selectedElement, getSvgImageEl]);
 
-  // Handle selection change
   useEffect(() => {
     if (!selectedElement) return;
     isHydrating.current = true;
     syncStateFromDOM(true);
-    // Use a small timeout to let the state settle before allowing applyVisuals to write back to DOM
     setTimeout(() => { isHydrating.current = false; }, 50);
   }, [selectedElement, syncStateFromDOM]);
 
-  // Handle external mutations
   useEffect(() => {
     if (!selectedElement) return;
     const observer = new MutationObserver((mutations) => {
@@ -305,7 +303,6 @@ const GifEditor = ({
   const applyVisuals = useCallback(() => {
     if (isHydrating.current) return;
 
-    // Use selectedLayerId if available to find the live element in the DOM
     const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
     let liveElement = (selectedLayerId && pageContainer)
       ? pageContainer.querySelector(`[id="${selectedLayerId}"]`)
@@ -316,16 +313,15 @@ const GifEditor = ({
     isUpdatingDOM.current = true;
     try {
       let svgImageEl = getSvgImageEl(liveElement);
-      // Correct SVG detection: only true if it's actually an SVG element
       let isSvgEl = liveElement.namespaceURI === "http://www.w3.org/2000/svg";
       let tagLower = liveElement.tagName.toLowerCase();
 
-      // --- FORCE GIF GROUP STRUCTURE FOR GIFS ---
+      // FORCE GIF GROUP STRUCTURE FOR GIFS
       if (isSvgEl && liveElement.getAttribute('data-is-gif-group') !== 'true') {
         if (tagLower === 'image' || tagLower === 'foreignobject' || tagLower === 'img') {
           const parent = liveElement.parentNode;
           const newGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          newGroup.id = liveElement.id; // Keep selection intact
+          newGroup.id = liveElement.id;
           newGroup.setAttribute('data-type', liveElement.getAttribute('data-type') || 'image');
           newGroup.setAttribute('data-name', 'GIF Group');
           newGroup.setAttribute('data-is-gif-group', 'true');
@@ -395,11 +391,10 @@ const GifEditor = ({
         const ds = effectSettings['Drop Shadow'];
         const alpha = Math.round((ds.opacity / 100) * 255).toString(16).padStart(2, '0');
         const colorWithAlpha = ds.color + (ds.color.length === 7 ? alpha : '');
-        // drop-shadow filter is more robust for images and follows transparency
         dsCssString = `drop-shadow(${ds.x}px ${ds.y}px ${ds.blur}px ${colorWithAlpha})`;
       }
 
-      // --- Loop Count ---
+      // Loop Count
       if (isSvgEl && svgImageEl) {
         svgImageEl.setAttribute('data-loop-count', loopCount);
         if (customLoopCount) svgImageEl.setAttribute('data-custom-loop-count', customLoopCount);
@@ -409,7 +404,7 @@ const GifEditor = ({
       if (customLoopCount) liveElement.setAttribute('data-custom-loop-count', customLoopCount);
       else liveElement.removeAttribute('data-custom-loop-count');
 
-      // --- Opacity ---
+      // Opacity
       const opacityVal = (opacity / 100).toString();
       if (isSvgEl && svgImageEl) {
         liveElement.style.removeProperty('opacity');
@@ -426,7 +421,7 @@ const GifEditor = ({
         }
       }
 
-      // --- SVG: Gif/Image fit via preserveAspectRatio ---
+      // SVG fit
       if (isSvgEl) {
         const parMap = { 'Fit': 'meet', 'Fill': 'slice', 'Crop': 'slice', 'Stretch': 'none' };
         const fitCssMap = { 'Fit': 'contain', 'Fill': 'cover', 'Crop': 'cover', 'Stretch': 'fill' };
@@ -446,7 +441,6 @@ const GifEditor = ({
           svgImageEl.style.setProperty('object-fit', fitCss, 'important');
           svgImageEl.setAttribute('data-object-fit', imageType);
 
-          // Fix for GIFs inside SVG Patterns (e.g., dropped on shapes)
           let patternEl = null;
           if (liveElement.hasAttribute('fill')) {
             const fillUrl = liveElement.getAttribute('fill');
@@ -480,7 +474,7 @@ const GifEditor = ({
         liveElement.setAttribute('data-object-fit', imageType);
       }
 
-      // --- Radius & Clip-path ---
+      // Radius & Clip-path
       const anyR = radius.tl || radius.tr || radius.br || radius.bl;
       const forceClip = activeEffects.includes('Blur') && effectSettings['Blur']?.clipContent;
 
@@ -624,7 +618,6 @@ const GifEditor = ({
               console.warn("Failed to parse crop data on gif element:", e);
             }
           } else {
-            // Restore default fitting if not crop but has forceClip or radius
             if (svgImageEl) {
               const origW = liveElement.getAttribute('data-crop-orig-w') || (svgImageEl ? svgImageEl.getAttribute('data-crop-orig-w') : null) || liveElement.getAttribute('width') || (svgImageEl ? svgImageEl.getAttribute('width') : null) || '100';
               const origH = liveElement.getAttribute('data-crop-orig-h') || (svgImageEl ? svgImageEl.getAttribute('data-crop-orig-h') : null) || liveElement.getAttribute('height') || (svgImageEl ? svgImageEl.getAttribute('height') : null) || '100';
@@ -790,14 +783,13 @@ const GifEditor = ({
         liveElement.style.removeProperty('-webkit-clip-path');
       }
 
-      // --- Filter Application ---
+      // Filter Application
       const adjustOnlyFilter = adjustOnlyStr.trim() || 'none';
       const shadowOnlyFilter = dsCssString.trim() || 'none';
       const blurOnlyFilter = blurStr.trim() || 'none';
       const totalHtmlFilter = `${adjustOnlyStr} ${blurStr} ${dsCssString}`.trim() || 'none';
 
       if (isSvgEl) {
-                // 1. Apply Adjustments to the actual image content (leaf)
         if (svgImageEl) {
           let leafFilter = adjustOnlyFilter;
           if (forceClip && blurOnlyFilter !== 'none') {
@@ -806,7 +798,6 @@ const GifEditor = ({
           svgImageEl.style.setProperty('filter', leafFilter, 'important');
         }
 
-        // 2. Apply Drop Shadow to a sibling caster (best for SVG to decouple from blur and clips)
         let shadowCaster = liveElement.querySelector('.svg-drop-shadow-caster');
         if (shadowOnlyFilter !== 'none') {
           if (!shadowCaster || shadowCaster.tagName.toLowerCase() !== 'path') {
@@ -896,7 +887,6 @@ const GifEditor = ({
                 svgFilt.setAttribute('height', '200%');
                 defs.appendChild(svgFilt);
               }
-              // Safely set innerHTML to generate only the shadow, hollowed out by SourceAlpha
               let blurStep = "";
               if (!forceClip && activeEffects.includes('Blur')) {
                 const extraBlur = effectSettings['Blur'].blur;
@@ -921,7 +911,6 @@ const GifEditor = ({
           shadowCaster.style.setProperty('display', 'none', 'important');
         }
 
-        // 3. Apply layer-level Blur to the selection element itself
         if (blurOnlyFilter !== 'none' && !forceClip) {
           liveElement.style.setProperty('filter', blurOnlyFilter, 'important');
         } else {
@@ -932,7 +921,6 @@ const GifEditor = ({
           liveElement.parentElement.style.setProperty('overflow', 'visible', 'important');
         }
       } else {
-        // FOR HTML
         liveElement.style.setProperty('filter', totalHtmlFilter, 'important');
         if (liveElement.parentElement) liveElement.parentElement.style.removeProperty('filter');
 
@@ -941,10 +929,9 @@ const GifEditor = ({
         }
       }
 
-      // Always clear box-shadow to ensure we only use the drop-shadow filter
       liveElement.style.boxShadow = 'none';
 
-      // --- Background & Stroke ---
+      // Background & Stroke
       if (isSvgEl) {
         let fillLayer = liveElement.querySelector('.gif-fill-layer') || liveElement.querySelector('.image-fill-layer');
         if (fillLayer && fillLayer.classList.contains('image-fill-layer')) {
@@ -958,7 +945,6 @@ const GifEditor = ({
             fillLayer.classList.add('gif-fill-layer');
             fillLayer.setAttribute('data-name', 'Fill Color');
             fillLayer.style.pointerEvents = 'none';
-            // Insert it as the first child so it acts as a background
             liveElement.insertBefore(fillLayer, liveElement.firstChild);
           }
 
@@ -978,8 +964,6 @@ const GifEditor = ({
               fillLayer.style.scale = visualTarget.style.scale;
               fillLayer.style.rotate = visualTarget.style.rotate;
               fillLayer.style.transformOrigin = visualTarget.style.transformOrigin;
-
-
             };
             const fObs = new MutationObserver(syncFillLayer);
             fObs.observe(liveElement, { attributes: true, attributeFilter: ['x', 'y', 'width', 'height', 'transform', 'style', 'data-radius'] });
@@ -998,8 +982,6 @@ const GifEditor = ({
           fillLayer.style.scale = visualTarget.style.scale;
           fillLayer.style.rotate = visualTarget.style.rotate;
           fillLayer.style.transformOrigin = visualTarget.style.transformOrigin;
-
-
 
           fillLayer.removeAttribute('d');
 
@@ -1051,8 +1033,7 @@ const GifEditor = ({
             liveElement.removeAttribute('data-fill-radius');
           }
           fillLayer.setAttribute('fill-opacity', (backgroundColor.fillOpacity / 100).toString());
-
-          fillLayer.removeAttribute('rx'); // We use 'd' instead of 'rx' now
+          fillLayer.removeAttribute('rx');
 
           liveElement.setAttribute('data-fill-color', backgroundColor.fill);
           if (liveElement.style) {
@@ -1066,7 +1047,6 @@ const GifEditor = ({
         }
         liveElement.setAttribute('data-fill-opacity', (backgroundColor.fillOpacity / 100).toString());
 
-        // To support stroke on <image> elements (which ignore stroke attributes natively), we create a <rect> overlay
         if (backgroundColor.stroke !== 'transparent' && backgroundColor.stroke !== 'none') {
           if (liveElement.getAttribute('data-is-gif-group') === 'true') {
             liveElement.removeAttribute('stroke');
@@ -1087,7 +1067,6 @@ const GifEditor = ({
           liveElement.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
           liveElement.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
 
-          // Dynamic Stroke Overlay for SVG images and GIFs
           const isTargetRenderable = svgImageEl && (svgImageEl.tagName?.toLowerCase() === 'image' || svgImageEl.tagName?.toLowerCase() === 'foreignobject' || svgImageEl.tagName?.toLowerCase() === 'g' || svgImageEl.tagName?.toLowerCase() === 'svg');
           if (isTargetRenderable) {
             let strokeOverlay = liveElement.querySelector('.svg-gif-stroke-overlay') || liveElement.querySelector('.svg-image-stroke-overlay');
@@ -1098,8 +1077,7 @@ const GifEditor = ({
               strokeOverlay.style.pointerEvents = 'none';
               liveElement.appendChild(strokeOverlay);
 
-              // Attach a mutation observer to keep the overlay perfectly synced with the image's layout
-                            const syncOverlay = () => {
+              const syncOverlay = () => {
                 if (!strokeOverlay.isConnected) return;
                 const weight = parseFloat(strokeOverlay.getAttribute('stroke-width')) || 0;
                 const pos = strokeOverlay.getAttribute('data-img-stroke-position') || 'Outside';
@@ -1200,7 +1178,6 @@ const GifEditor = ({
               }
             }
 
-            // Initial sync
             let targetEl = svgImageEl || liveElement;
             if (svgImageEl && svgImageEl.tagName?.toLowerCase() === 'img') {
               targetEl = svgImageEl.closest('foreignObject') || svgImageEl;
@@ -1332,13 +1309,11 @@ const GifEditor = ({
             strokeOverlay.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
             strokeOverlay.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
 
-            // Forcefully cleanup any orphaned MainEditor overlays that might have been applied previously
             if (liveElement.parentElement) {
               const orphans = liveElement.parentElement.querySelectorAll(`.svg-shape-stroke-overlay[data-target="${liveElement.id}"], .svg-shape-stroke-overlay[data-target=""]`);
               orphans.forEach(o => o.remove());
             }
 
-            // Add clipPath to clip the image to prevent sharp corners from bleeding
             const isImageElement = liveElement.tagName?.toLowerCase() === 'image';
             const defsOwner = isImageElement ? (liveElement.ownerSVGElement || liveElement.parentElement || liveElement) : liveElement;
 
@@ -1385,10 +1360,8 @@ const GifEditor = ({
           liveElement.querySelector('.svg-gif-stroke-overlay')?.remove();
         }
       } else {
-        // HTML Background & Border
         liveElement.style.backgroundColor = backgroundColor.fill;
 
-        // Helper to convert hex to rgba for CSS border
         const hexToRgba = (hex, alpha) => {
           if (!hex || hex === 'transparent' || hex === 'none') return 'transparent';
           if (hex.startsWith('rgba')) return hex;
@@ -1522,7 +1495,6 @@ const GifEditor = ({
             overlay.setAttribute('fill', 'white');
             liveElement.appendChild(overlay);
 
-            // MutationObserver to keep inner shadow perfectly synced when dragged or resized
             const syncInnerShadow = () => {
               if (!overlay.isConnected) return;
               let tEl = svgImageEl || liveElement;
@@ -1690,7 +1662,7 @@ const GifEditor = ({
         liveElement.setAttribute('data-effect-inner-shadow-blur', effectSettings['Inner Shadow'].blur.toString());
       }
 
-      // --- STRICT LAYER REORDERING FOR GIF GROUPS ---
+      // STRICT LAYER REORDERING FOR GIF GROUPS
       if (liveElement.getAttribute('data-is-gif-group') === 'true') {
         const dropShadow = liveElement.querySelector('.svg-drop-shadow-caster');
         const fillLayer = liveElement.querySelector('.gif-fill-layer') || liveElement.querySelector('.image-fill-layer');
@@ -1705,7 +1677,6 @@ const GifEditor = ({
           liveElement.appendChild(innerGroup);
         }
 
-        // Apply clip paths that might be stuck on liveElement to innerGroup
         const currentClip = liveElement.style.getPropertyValue('clip-path') || liveElement.getAttribute('clip-path');
         if (currentClip && currentClip !== 'none') {
           innerGroup.style.setProperty('clip-path', currentClip, 'important');
@@ -1755,7 +1726,6 @@ const GifEditor = ({
     }
   }, [selectedElement, selectedLayerId, activePageIndex, filters, activeEffects, effectSettings, opacity, imageType, radius, isRadiusLinked, backgroundColor, getSvgImageEl, loopCount, customLoopCount]);
 
-  // Trigger applyVisuals when state changes
   useEffect(() => {
     applyVisuals();
   }, [applyVisuals]);
@@ -1784,15 +1754,6 @@ const GifEditor = ({
       setGifFileSize('');
       return;
     }
-
-    const formatBytes = (bytes, decimals = 2) => {
-      if (!+bytes) return '0 Bytes';
-      const k = 1024;
-      const dm = decimals < 0 ? 0 : decimals;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-    };
 
     const img = new Image();
     img.src = currentSrc;
@@ -1899,44 +1860,41 @@ const GifEditor = ({
 
   if (!selectedElement) return null;
 
+  const gifDisplayName = selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'GIF';
+
   return (
-    <div className="relative flex flex-col gap-[0.4vw] w-full font-sans h-full overflow-y-auto no-scrollbar">
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none text-gray-800">
       <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .custom-range-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .custom-range-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
         .custom-range-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: inherit; }
         .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.55vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
         .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
         .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        body.is-scrubbing { overflow: hidden !important; }
       `}</style>
 
-      <div className="flex items-center gap-[0.5vw]">
-        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Gif Property</span>
-        <div className="h-[0.0925vw] bg-gray-200 flex-1" > </div>
+      {/* GIF Properties Header */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">GIF Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
-      {/* Image/Gif fix type */}
-      <div className="flex items-center justify-between relative z-20">
-        <div className="flex items-center gap-[0.5vw] flex-1">
-          <span className="text-[0.8vw] font-semibold text-gray-800 whitespace-nowrap">Image fix type</span>
-          <div className="h-[0px] flex-1 border-t border-dashed border-gray-300 mx-[0.25vw]" />
-        </div>
+      {/* GIF fix type */}
+      <div className="flex items-center justify-between relative z-20 py-[0.1vw]">
+        <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">GIF fix type</span>
         <div className="relative">
-          <div className="flex gap-[0.25vw] items-center">
-            <button
-              onClick={() => setShowImageTypeDropdown(!showImageTypeDropdown)}
-              className="flex items-center justify-between w-[6.5vw] py-[0.35vw] px-[0.75vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-xs hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-            >
-              <span className="text-[0.85vw] font-normal text-gray-700">{imageType}</span>
-              <ChevronDown size="0.9vw" className={`text-gray-400 transition-transform ${showImageTypeDropdown ? 'rotate-180' : ''}`} />
-            </button>
-          </div>
+          <button
+            onClick={() => setShowImageTypeDropdown(!showImageTypeDropdown)}
+            className="flex items-center justify-between w-[6.5vw] h-[2vw] px-[0.7vw] bg-white border border-gray-300 rounded-[0.4vw] shadow-2xs hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">{imageType}</span>
+            <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showImageTypeDropdown ? 'rotate-180' : ''}`} />
+          </button>
           {showImageTypeDropdown && (
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => setShowImageTypeDropdown(false)} />
-              <div className="absolute right-0 top-full mt-[0.5vw] w-[6.5vw] bg-white border border-gray-100 rounded-[0.5vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.25vw] animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full mt-[0.35vw] w-[6.5vw] bg-white border border-gray-200 rounded-[0.5vw] shadow-xl overflow-hidden z-[100] flex flex-col py-[0.25vw] animate-in fade-in zoom-in-95 duration-150">
                 {['Fit', 'Fill', 'Stretch'].map((type) => (
                   <button
                     key={type}
@@ -1947,9 +1905,6 @@ const GifEditor = ({
 
                       isHydrating.current = false;
 
-
-
-                      // If switching AWAY from Crop, keep current cropped bounding box size and clear crop attributes
                       if (imageType === 'Crop') {
                         const pageContainerTmp = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
                         const liveElTmp = (selectedLayerId && pageContainerTmp)
@@ -2070,7 +2025,7 @@ const GifEditor = ({
 
                       setImageType(type);
                     }}
-                    className="px-[1vw] py-[0.5vw] text-[0.8vw] font-medium text-gray-600 hover:bg-gray-50 hover:text-[#4D47FF] transition-colors text-left"
+                    className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left cursor-pointer ${imageType === type ? 'text-[#4D47FF] bg-gray-50 font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                   >
                     {type}
                   </button>
@@ -2081,169 +2036,202 @@ const GifEditor = ({
         </div>
       </div>
 
-      {/* Upload/Replace Row */}
-      <div className="flex items-center gap-[1vw] pt-[0.5vw]">
+      {/* GIF Info Row / Card */}
+      <div className="flex items-center gap-[0.9vw] p-[0.8vw] bg-white rounded-[0.55vw] border border-gray-200 shadow-2xs">
         {/* Current Preview */}
-        <div className="relative w-[8.5vw] h-[6vw] rounded-[0.4vw] overflow-hidden bg-gray-100 flex-shrink-0">
+        <div className="relative w-[7.6vw] h-[5.6vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group">
           {getSrc(getSvgImageEl(selectedElement) || selectedElement) ? (
-            <img src={getSrc(getSvgImageEl(selectedElement) || selectedElement)} className="w-full h-full object-fill" alt="Current GIF" />
+            <img src={getSrc(getSvgImageEl(selectedElement) || selectedElement)} className="w-full h-full object-cover" alt="Current GIF" />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center">
               <ImageIcon size="1.2vw" className="text-gray-300" />
             </div>
           )}
+
+          {/* Adjustment Icon Button (Top Right) */}
+          <button
+            type="button"
+            data-adjustment-trigger="true"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAdjustmentModal(prev => !prev);
+            }}
+            className={`absolute top-[0.35vw] right-[0.35vw] w-[1.7vw] h-[1.7vw] rounded-[0.35vw] shadow-md border flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer z-10 ${
+              showAdjustmentModal ? 'bg-gray-100 text-gray-900 border-gray-300' : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50'
+            }`}
+            title="GIF Adjustments"
+          >
+            <AdjustmentIcon className="w-[0.95vw] h-[0.95vw]" />
+          </button>
         </div>
 
         {/* Info & Actions */}
-        <div className="flex flex-col flex-1 gap-[0.4vw] py-[0.2vw] mb-[1.1vw]">
-          <div className="flex flex-col gap-[0.1vw] mt-[-0.5vw]">
-            <span className="text-[0.9vw] font-medium text-gray-700 truncate w-[10vw] mt-[0.8vw]" title={selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'Gif'}>
-              {selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'Gif'}
+        <div className="flex flex-col flex-1 min-w-0 justify-between py-[0.15vw]">
+          <div className="flex flex-col gap-[0.2vw]">
+            <span className="text-[0.82vw] font-semibold text-gray-900 truncate" title={gifDisplayName}>
+              {gifDisplayName}
             </span>
-            <div className="text-[0.75vw] text-gray-400 flex items-center gap-[0.3vw] flex-nowrap whitespace-nowrap mt-[0.3vw]">
+            <div className="text-[0.75vw] text-gray-500 font-medium flex items-center gap-[0.3vw] flex-nowrap whitespace-nowrap">
               <span>
                 {gifResolution ? `${gifResolution} • ` : ''}{gifFileSize || 'Unknown Size'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-[0.5vw] mt-[0.3vw]">
+          <div className="flex items-center gap-[0.5vw] mt-[0.7vw]">
             <button
               onClick={() => setShowReplaceModal(true)}
-              className="px-[0.65vw] py-[0.35vw] bg-gray-100 hover:bg-gray-200 text-gray-600 text-[0.75vw] font-medium rounded-[0.3vw] cursor-pointer transition-colors border border-gray-200"
+              className="px-[0.7vw] h-[1.9vw] bg-white hover:bg-gray-50 text-gray-700 text-[0.8vw] font-medium rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-gray-400 cursor-pointer transition-colors"
             >
               Replace gif
             </button>
-            <button
-              onClick={() => onDeleteLayer && onDeleteLayer()}
-              className="p-[0.4vw] bg-gray-100 text-gray-500 rounded-[0.3vw] border border-gray-200 cursor-pointer transition-none"
-              title="Delete"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.9vw] h-[0.9vw]">
-                <path d="M3 6h18"></path>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
-              </svg>
-            </button>
+            {onDeleteLayer && (
+              <button
+                onClick={() => onDeleteLayer()}
+                className="h-[1.9vw] px-[0.5vw] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-red-200 cursor-pointer transition-colors"
+                title="Delete layer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.85vw] h-[0.85vw]">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/gif, image/webp" onChange={handleGifUpload} className="hidden" />
 
-      <div className="flex flex-col gap-[0.4vw]">
-
-
-        <div className="flex items-center gap-[1vw] py-[0.5vw] mt-[-0.5vw]">
-          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Opacity :</span>
-          <div className="flex-1 flex items-center h-[1.5vw] rounded-full outline-none">
-            <input type="range" min="0" max="100" value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} className="w-full cursor-pointer custom-range-slider" style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }} />
-          </div>
-          <div className="min-w-[3.5vw] h-[2vw] border-[0.1vw] border-gray-200 rounded-[0.3vw] flex items-center justify-center text-[0.8vw] font-medium text-black bg-white shadow-sm px-[0.5vw]">
-            {opacity} %
-          </div>
+      {/* Opacity Section */}
+      <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+        <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Opacity</span>
+        <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={opacity}
+            onChange={(e) => setOpacity(Number(e.target.value))}
+            className="w-full cursor-pointer custom-range-slider"
+            style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
+          />
         </div>
-
-        <div className="space-y-[0.5vw]">
-          <div className="flex items-center gap-[0.5vw]">
-            <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Gif Playback Settings</span>
-            <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
-          </div>
-          <div className="flex flex-col gap-[0.5vw] pb-[0.5vw]">
-
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center justify-between w-[9.5vw]">
-                <span className="text-[0.8vw] font-medium text-gray-800 truncate" title="Repeat ( Loop Count )">Repeat ( Loop Count )</span>
-                <span className="text-[0.8vw] font-medium text-gray-800">:</span>
-              </div>
-              <div className="relative">
-                <div
-                  className="flex items-center justify-between w-[10.5vw] h-[2vw] px-[0.6vw] border border-gray-200 rounded-[0.4vw] cursor-pointer bg-white"
-                  onClick={() => { setShowLoopDropdown(!showLoopDropdown); }}
-                >
-                  <span className="text-[0.75vw] text-gray-600 truncate">{loopCount === "Custom" ? customLoopCount || "Custom" : loopCount}</span>
-                  <Icon icon="lucide:chevron-down" className="w-[0.9vw] h-[0.9vw] text-gray-500 flex-shrink-0" />
-                </div>
-                {showLoopDropdown && (
-                  <div className="absolute top-full left-0 mt-[0.2vw] w-full bg-white border border-gray-200 rounded-[0.4vw] shadow-lg z-50 py-[0.3vw] flex flex-col items-center">
-                    {["Once", "Twice", "Thrice", "Infinite"].map((opt) => (
-                      <div
-                        key={opt}
-                        className="px-[0.6vw] py-[0.4vw] text-[0.75vw] text-gray-700 hover:bg-gray-100 cursor-pointer w-full text-center"
-                        onClick={() => { setLoopCount(opt); setShowLoopDropdown(false); }}
-                      >
-                        {opt}
-                      </div>
-                    ))}
-                    <div className="w-[90%] h-[1px] bg-gray-100 my-[0.3vw]"></div>
-                    <div className="flex items-center gap-[0.3vw] px-[0.6vw] py-[0.2vw] w-full justify-center">
-                      <input
-                        type="number"
-                        placeholder="Custom"
-                        value={customLoopCount}
-                        onChange={(e) => {
-                          setCustomLoopCount(e.target.value);
-                          setLoopCount("Custom");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            setShowLoopDropdown(false);
-                          }
-                        }}
-                        className="w-[3.5vw] h-[1.6vw] text-[0.7vw] border border-gray-200 rounded-[0.2vw] px-[0.3vw] outline-none text-center"
-                      />
-                      <span className="text-[0.75vw] text-gray-600">times</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+          {opacity}%
         </div>
-
-
-        <Color
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          backgroundColor={backgroundColor}
-          setBackgroundColor={setBackgroundColor}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showStrokeSettings={showStrokeSettings}
-          setShowStrokeSettings={setShowStrokeSettings}
-        />
-        <CornerRadius
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          radius={radius}
-          setRadius={setRadius}
-          isRadiusLinked={isRadiusLinked}
-          setIsRadiusLinked={setIsRadiusLinked}
-          tagName={selectedElement?.tagName?.toLowerCase() || 'image'}
-        />
-        <Adjustment
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          filters={filters}
-          setFilters={setFilters}
-          tagName={selectedElement?.tagName?.toLowerCase() || 'image'}
-        />
-        <Effect
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          activeEffects={activeEffects}
-          setActiveEffects={setActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={setEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-        />
       </div>
+
+      {/* GIF Playback Settings */}
+      <div className="flex flex-col gap-[0.8vw]">
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">GIF Playback Settings</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+
+        <div className="flex items-center justify-between gap-[0.8vw] py-[0.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Repeat (Loop Count)</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowLoopDropdown(!showLoopDropdown)}
+              className="flex items-center justify-between w-[9.5vw] h-[2.1vw] px-[0.7vw] bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs hover:border-gray-400 transition-colors cursor-pointer"
+            >
+              <span className="text-[0.8vw] font-medium text-gray-700 truncate">{loopCount === "Custom" ? (customLoopCount ? `${customLoopCount} times` : "Custom") : loopCount}</span>
+              <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showLoopDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showLoopDropdown && (
+              <>
+                <div className="fixed inset-0 z-[90]" onClick={() => setShowLoopDropdown(false)} />
+                <div className="absolute right-0 top-full mt-[0.35vw] w-[9.5vw] bg-white border border-gray-200 rounded-[0.5vw] shadow-xl z-[100] py-[0.25vw] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                  {["Once", "Twice", "Thrice", "Infinite"].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={`px-[0.8vw] py-[0.35vw] text-[0.8vw] font-medium transition-colors text-left cursor-pointer ${
+                        loopCount === opt ? 'bg-gray-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                      onClick={() => { setLoopCount(opt); setShowLoopDropdown(false); }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                  <div className="w-[90%] h-[1px] bg-gray-100 my-[0.25vw] mx-auto"></div>
+                  <div className="flex items-center gap-[0.3vw] px-[0.6vw] py-[0.25vw] w-full justify-between">
+                    <input
+                      type="number"
+                      placeholder="Custom"
+                      value={customLoopCount}
+                      onChange={(e) => {
+                        setCustomLoopCount(e.target.value);
+                        setLoopCount("Custom");
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setShowLoopDropdown(false);
+                        }
+                      }}
+                      className="w-[4.2vw] h-[1.8vw] text-[0.75vw] border border-gray-300 rounded-[0.35vw] px-[0.3vw] outline-none text-center font-medium text-gray-700 focus:border-[#4D47FF]"
+                    />
+                    <span className="text-[0.75vw] text-gray-500 font-medium">times</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Subcomponents: Color, CornerRadius, Effect */}
+      <Color
+        standaloneMode={true}
+        noAccordion={true}
+        selectedElement={document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`)?.querySelector(`[id="${selectedLayerId}"]`) || selectedElement}
+        onUpdate={(info) => {
+          syncStateFromDOM();
+          if (onUpdateRef?.current) onUpdateRef.current(info);
+        }}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        showStrokeSettings={showStrokeSettings}
+        setShowStrokeSettings={setShowStrokeSettings}
+        isStrokeStyleOpen={isStrokeStyleOpen}
+        setIsStrokeStyleOpen={setIsStrokeStyleOpen}
+        dropdownPos={dropdownPos}
+        setDropdownPos={setDropdownPos}
+        strokeSettingsPos={strokeSettingsPos}
+        setStrokeSettingsPos={setStrokeSettingsPos}
+        isDashPosOpen={isDashPosOpen}
+        setIsDashPosOpen={setIsDashPosOpen}
+        activePopup={activePopup}
+        setActivePopup={setActivePopup}
+      />
+      <CornerRadius
+        noAccordion={true}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        radius={radius}
+        setRadius={setRadius}
+        isRadiusLinked={isRadiusLinked}
+        setIsRadiusLinked={setIsRadiusLinked}
+        tagName={selectedElement?.tagName?.toLowerCase() || 'image'}
+      />
+      <Effect
+        noAccordion={true}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        activeEffects={activeEffects}
+        setActiveEffects={setActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={setEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+      />
 
       {/* Replace Media Modal Popup */}
       <ReplaceMediaModal
@@ -2254,101 +2242,19 @@ const GifEditor = ({
           handleGifUpload({ target: { files: [file] } });
         }}
       />
+
+      {/* GIF Adjustment Modal Popup */}
+      <ImageAdjustmentModal
+        isOpen={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        filters={filters}
+        onChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
+        onResetAll={() => setFilters({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 })}
+      />
     </div>
   );
 };
 
-function syncGradient(doc, element, baseAttr) {
-  const type = element.getAttribute(`${baseAttr}-type`);
-  const currentValue = element.getAttribute(baseAttr);
-  const isUrl = currentValue && currentValue.toLowerCase().startsWith('url(#');
-  const gradType = element.getAttribute(`${baseAttr}-gradient-type`) || 'linear';
-  const stopsJson = element.getAttribute(`${baseAttr}-stops`);
+export default GifProperties;
+export { GifProperties as GifEditor };
 
-  if (type === 'solid' || type === 'none') return;
-
-  if (isUrl && !stopsJson) {
-    if (element.tagName.toLowerCase() === 'g' || element.tagName.toLowerCase() === 'text') {
-      Array.from(element.querySelectorAll('tspan, path, rect, circle, ellipse, polygon, polyline')).forEach(child => {
-        child.setAttribute(baseAttr, currentValue);
-        if (child.style) child.style.setProperty(baseAttr, currentValue, 'important');
-      });
-    }
-    return;
-  }
-
-  if (!type && !isUrl) return;
-  if (!stopsJson) return;
-
-  let stops = [];
-  try { stops = JSON.parse(stopsJson); } catch { return; }
-  if (!stops || !Array.isArray(stops)) return;
-
-  const svgRoot = element.closest('svg') || doc.querySelector('svg') || (doc.tagName?.toLowerCase() === 'svg' ? doc : null);
-  if (!svgRoot) return;
-
-  const ownerDoc = doc.ownerDocument || doc;
-
-  let defs = svgRoot.querySelector('defs');
-  if (!defs) {
-    defs = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
-    svgRoot.insertBefore(defs, svgRoot.firstChild);
-  }
-
-  if (!element.id) {
-    element.id = `${element.tagName}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  const gradIdPrefix = `grad-${element.id}-${baseAttr}`;
-  Array.from(defs.querySelectorAll(`[id^="${gradIdPrefix}"]`)).forEach(oldGrad => oldGrad.remove());
-
-  const gradId = `${gradIdPrefix}-${Math.random().toString(36).substr(2, 4)}`;
-  let gradEl = null;
-
-  const svgGradType = (gradType === 'angular' || gradType === 'diamond') ? (gradType === 'angular' ? 'linear' : 'radial') : gradType;
-
-  if (!gradEl) {
-    gradEl = ownerDoc.createElementNS("http://www.w3.org/2000/svg", `${svgGradType}Gradient`);
-    gradEl.id = gradId;
-    if (svgGradType === 'linear') {
-      const angle = parseFloat(element.getAttribute(`${baseAttr}-angle`) || '0');
-      const angleRad = (angle * Math.PI) / 180;
-      const dx = Math.sin(angleRad) * 50;
-      const dy = -Math.cos(angleRad) * 50;
-      gradEl.setAttribute('x1', Math.round(50 - dx) + '%');
-      gradEl.setAttribute('y1', Math.round(50 - dy) + '%');
-      gradEl.setAttribute('x2', Math.round(50 + dx) + '%');
-      gradEl.setAttribute('y2', Math.round(50 + dy) + '%');
-    } else {
-      const radius = parseFloat(element.getAttribute(`${baseAttr}-radius`) || '50');
-      gradEl.setAttribute('cx', '50%');
-      gradEl.setAttribute('cy', '50%');
-      gradEl.setAttribute('r', radius + '%');
-    }
-    defs.appendChild(gradEl);
-  }
-
-  while (gradEl.firstChild) gradEl.removeChild(gradEl.firstChild);
-  stops.forEach(s => {
-    const stop = ownerDoc.createElementNS("http://www.w3.org/2000/svg", "stop");
-    stop.setAttribute('offset', `${s.offset}%`);
-    stop.setAttribute('stop-color', s.color);
-    stop.setAttribute('stop-opacity', (s.opacity !== undefined && s.opacity !== null) ? s.opacity : 1);
-    gradEl.appendChild(stop);
-  });
-
-  const finalUrl = `url(#${gradId})`;
-  element.setAttribute(baseAttr, finalUrl);
-  if (element.style) {
-    element.style.setProperty(baseAttr, finalUrl, 'important');
-  }
-
-  if (element.tagName.toLowerCase() === 'g' || element.tagName.toLowerCase() === 'text') {
-    Array.from(element.querySelectorAll('tspan, path, rect, circle, ellipse, polygon, polyline')).forEach(child => {
-      child.setAttribute(baseAttr, finalUrl);
-      if (child.style) child.style.setProperty(baseAttr, finalUrl, 'important');
-    });
-  }
-};
-
-export default GifEditor;

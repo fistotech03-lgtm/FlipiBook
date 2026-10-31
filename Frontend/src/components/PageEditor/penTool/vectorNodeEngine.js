@@ -43,7 +43,7 @@ export const cleanPaperPathData = (paperPath) => {
 
       // Remove in-between line if two points meet at exact same position (0-length line)
       const pointDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      if (pointDist < 0.5) {
+      if (pointDist < 0.001) {
         continue;
       }
 

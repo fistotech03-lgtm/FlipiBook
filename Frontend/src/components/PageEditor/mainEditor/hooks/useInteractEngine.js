@@ -352,11 +352,21 @@ export const useInteractEngine = ({
             }
 
             // If dragging an element inside a button, shape, or compound element, always target the parent element!
-            const compoundParent = elementToDrag?.closest?.(
+            const compoundParent = elementToDrag?.parentElement?.closest?.(
+              'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
+              'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
+              'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+            ) || (elementToDrag?.tagName?.toLowerCase() === 'g' && elementToDrag?.matches?.(
               '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
               '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
               '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
               '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+            ) ? elementToDrag : null) || elementToDrag?.closest?.(
+              'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
+              'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
+              'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
             );
             if (compoundParent) {
               elementToDrag = compoundParent;
@@ -575,6 +585,13 @@ export const useInteractEngine = ({
 
               if (dragState.multiDragItems) {
                 for (const item of dragState.multiDragItems) {
+                  const comp = item.element.parentElement?.closest?.(
+                    'g[data-is-element-shape="true"], g[data-type="shape"], g[id^="shape-"], ' +
+                    'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+                    'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"]'
+                  );
+                  if (comp) item.element = comp;
+
                   item.originalElement = item.element;
                   // Reset original element to initial position
                   item.originalElement.setAttribute('transform', matrixToTransform(item.initialMatrix));
@@ -591,6 +608,13 @@ export const useInteractEngine = ({
                 multiSelectedIdsRef.current = newSelectedIds;
                 selectedLayerIdRef.current = Array.from(newSelectedIds)[0];
               } else {
+                const comp = dragState.element.parentElement?.closest?.(
+                  'g[data-is-element-shape="true"], g[data-type="shape"], g[id^="shape-"], ' +
+                  'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+                  'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"]'
+                );
+                if (comp) dragState.element = comp;
+
                 dragState.originalElement = dragState.element;
                 // Reset original element to initial position
                 dragState.originalElement.setAttribute('transform', matrixToTransform(dragState.initialMatrix));
@@ -1861,6 +1885,9 @@ export const useInteractEngine = ({
                     .translate(-worldAnchor.x, -worldAnchor.y);
                   const nextMatrix = scaleMatrix.multiply(matrix);
                   el.setAttribute('transform', matrixToTransform(nextMatrix));
+                  if (el.tagName?.toLowerCase() === 'path' || el.getAttribute?.('data-type') === 'shape') {
+                    el.setAttribute('vector-effect', 'non-scaling-stroke');
+                  }
                 }
               } else if ((isGroup || isHotspotIconGroup) && state.childrenData) {
                 const isMultiSel = el.tagName === 'multi';

@@ -620,14 +620,6 @@ export const buildPriorityCatalog = (icons) => {
  
 const priorityCatalogResult = buildPriorityCatalog(icons);
 
-if (priorityCatalogResult.unresolved?.length) {
-  console.warn('[IconsModal] Priority icons not found in this lucide-react version:', priorityCatalogResult.unresolved);
-}
-console.info(
-  `[IconsModal] Priority icons loaded: ${priorityCatalogResult.priorityCount}`,
-  priorityCatalogResult.catalog.slice(0, priorityCatalogResult.priorityCount).map((item) => item.key)
-);
-
 // Priority icons first, then every other Lucide icon
 export const ALL_LUCIDE_ICONS = priorityCatalogResult.catalog;
 

@@ -1,4 +1,4 @@
-// VideoEditor.jsx - Context-sensitive video editing panel
+// VideoProperties.jsx - Context-sensitive video editing panel
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
@@ -12,11 +12,13 @@ import {
   ChevronDown
 } from "lucide-react";
 import ReplaceMediaModal from "../modals/ReplaceMediaModal";
+import ImageAdjustmentModal, { AdjustmentIcon } from '../modals/ImageAdjustmentModal';
 import Color from './Color';
-import Adjustment from './Adjustment';
+import CornerRadius from './CornerRadius';
 import Effect from './Effect';
 import { parseGradient } from "./ColorPicker";
 import { syncGradient, getEmbedVideoUrl } from '../utils/editorUtils';
+import { formatBytes } from './propertiesShared';
 
 const resizeAndCenter = (el, targetW, targetH) => {
   const oldW = parseFloat(el.getAttribute("width") || "0");
@@ -31,9 +33,10 @@ const resizeAndCenter = (el, targetW, targetH) => {
   el.setAttribute("height", targetH);
 };
 
-// Switch toggle component (matches SlideshowProperties style)
+// Modern Switch toggle component
 const Switch = ({ enabled, onChange, disabled }) => (
   <button
+    type="button"
     disabled={disabled}
     onClick={(e) => {
       e.stopPropagation();
@@ -41,14 +44,17 @@ const Switch = ({ enabled, onChange, disabled }) => (
         onChange(!enabled);
       }
     }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
+    className={`w-[2.3vw] h-[1.25vw] rounded-full p-[0.15vw] transition-colors duration-200 cursor-pointer ${
+      disabled ? 'opacity-40 cursor-not-allowed' : ''
+    } ${enabled ? 'bg-[#4D47FF]' : 'bg-gray-300'}`}
   >
     <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
+      className={`w-[0.95vw] h-[0.95vw] bg-white rounded-full shadow-xs transition-transform duration-200 ${
+        enabled ? 'translate-x-[1.05vw]' : 'translate-x-0'
+      }`}
     />
   </button>
 );
-
 
 const debounce = (fn, delay = 150) => {
   let t;
@@ -73,35 +79,42 @@ const CustomSelect = ({ value, options, onChange }) => {
   }, []);
 
   return (
-    <div className="relative flex-1 custom-select-container" ref={dropdownRef}>
-      <div
-        className="flex items-center justify-between w-full h-[2vw] px-[0.6vw] border border-gray-200 rounded-[0.4vw] cursor-pointer bg-white"
+    <div className="relative flex-1" ref={dropdownRef}>
+      <button
+        type="button"
+        className="flex items-center justify-between w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] cursor-pointer bg-white shadow-2xs hover:border-gray-400 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="text-[0.75vw] text-gray-600">{value}</span>
-        <Icon icon={isOpen ? "lucide:chevron-up" : "lucide:chevron-down"} className="w-[0.9vw] h-[0.9vw] text-gray-500 pointer-events-none" />
-      </div>
+        <span className="text-[0.8vw] font-medium text-gray-700 truncate">{value}</span>
+        <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
       {isOpen && (
-        <div className="absolute top-[100%] left-0 mt-[0.2vw] w-full bg-white border border-gray-200 rounded-[0.4vw] shadow-lg z-50 py-[0.3vw]">
-          {options.map((opt) => (
-            <div
-              key={opt}
-              className="px-[0.6vw] py-[0.4vw] text-[0.75vw] text-gray-700 hover:bg-gray-100 cursor-pointer"
-              onClick={() => {
-                onChange(opt);
-                setIsOpen(false);
-              }}
-            >
-              {opt}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full left-0 mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl z-[100] py-[0.25vw] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                className={`px-[0.8vw] py-[0.35vw] text-[0.8vw] font-medium transition-colors text-left cursor-pointer ${
+                  value === opt ? 'bg-gray-50 text-[#4D47FF] font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+                onClick={() => {
+                  onChange(opt);
+                  setIsOpen(false);
+                }}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 };
 
-const VideoEditor = ({
+const VideoProperties = ({
   selectedElement,
   selectedLayerId,
   activePageIndex,
@@ -157,6 +170,36 @@ const VideoEditor = ({
   });
   const [filters, setFilters] = useState({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+  const [isRadiusLinked, setIsRadiusLinked] = useState(true);
+
+  const hasUserInteractedRef = useRef(false);
+  const lastSelectedLayerIdRef = useRef(selectedLayerId);
+  if (lastSelectedLayerIdRef.current !== selectedLayerId) {
+    lastSelectedLayerIdRef.current = selectedLayerId;
+    hasUserInteractedRef.current = false;
+  }
+
+  const handleAdjustmentChange = (key, val) => {
+    hasUserInteractedRef.current = true;
+    setFilters((prev) => ({
+      ...prev,
+      [key]: val
+    }));
+  };
+
+  const handleResetAllAdjustments = () => {
+    hasUserInteractedRef.current = true;
+    setFilters({
+      exposure: 0,
+      contrast: 0,
+      saturation: 0,
+      temperature: 0,
+      tint: 0,
+      highlights: 0,
+      shadows: 0
+    });
+  };
 
   const [radius, setRadius] = useState({ tl: 0, tr: 0, br: 0, bl: 0 });
   const [activeEffects, setActiveEffects] = useState([]);
@@ -191,14 +234,7 @@ const VideoEditor = ({
       return;
     }
 
-    const formatBytes = (bytes, decimals = 2) => {
-      if (!+bytes) return '0 Bytes';
-      const k = 1024;
-      const dm = decimals < 0 ? 0 : decimals;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-    };
+
 
     if (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be")) {
       setVideoResolution('');
@@ -296,13 +332,11 @@ const VideoEditor = ({
     if (!target) return;
     const visualTarget = container || target;
 
-    // Dimensions state removed to allow interact.js to manage it naturally without reversions
-
-    // 2. Opacity
+    // Opacity
     const op = parseFloat(target.getAttribute('data-opacity') || target.style.opacity || target.getAttribute('opacity') || visualTarget.getAttribute('data-opacity') || visualTarget.style.opacity || visualTarget.getAttribute('opacity') || "1");
     setOpacity(Math.round(op * 100));
 
-    // 3. Colors & Stroke
+    // Colors & Stroke
     let fill = liveElement.getAttribute('data-fill-color');
     if (!fill) {
       fill = visualTarget.getAttribute('data-bg-color') || visualTarget.style.backgroundColor || visualTarget.getAttribute('fill');
@@ -363,7 +397,7 @@ const VideoEditor = ({
       return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
     });
 
-    // 4. Radius
+    // Radius
     const brData = visualTarget.getAttribute('data-radius');
     if (brData) {
       try {
@@ -383,7 +417,7 @@ const VideoEditor = ({
       }
     }
 
-    // 5. Effects
+    // Effects
     const effectsData = visualTarget.getAttribute('data-effects');
     if (effectsData) {
       try {
@@ -400,7 +434,7 @@ const VideoEditor = ({
       } catch { }
     }
 
-    // 6. Media Specific
+    // Media Specific
     if (target.tagName === "VIDEO") {
       const src = target.currentSrc || target.src || target.querySelector("source")?.src || null;
       setPreviewSrc(src);
@@ -412,7 +446,6 @@ const VideoEditor = ({
       if (posterType === 'auto' || posterType === 'upload') {
         setCoverOption(posterType);
       } else {
-        // Fallback for older elements without the attribute
         setCoverOption(poster ? 'upload' : 'auto');
       }
       setAutoplay(target.autoplay || target.hasAttribute('autoplay'));
@@ -464,7 +497,7 @@ const VideoEditor = ({
           if (dataControls !== null && dataControls !== undefined) {
             setControls(dataControls !== "false");
           } else {
-            setControls(urlControls !== "0"); // Default is true unless explicitly 0
+            setControls(urlControls !== "0");
           }
           setLoop(urlObj.searchParams.get("loop") === "1");
           setMuted(urlObj.searchParams.get("mute") === "1");
@@ -502,7 +535,7 @@ const VideoEditor = ({
     };
   }, [selectedElement, selectedLayerId, activePageIndex, syncStateFromDOM]);
 
-  // Close pickers/popups on click-outside or Escape (matches ShapeProperties)
+  // Close pickers/popups on click-outside or Escape
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -568,8 +601,6 @@ const VideoEditor = ({
   const applyVisuals = useCallback(() => {
     if (isHydrating.current) return;
 
-    // Re-resolve the live element from the active page container to ensure we are 
-    // mutating the node that is actually visible in the DOM, skipping stale references.
     const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
     let liveElement = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || document.getElementById(selectedLayerId) || selectedElement;
 
@@ -579,18 +610,17 @@ const VideoEditor = ({
     const target = container ? container.querySelector("video, iframe") : (liveElement.tagName === "VIDEO" || liveElement.tagName === "IFRAME" ? liveElement : liveElement.querySelector("video, iframe"));
 
     if (!target) return;
-    if (!target) return;
     const visualTarget = container || target;
 
     let tagLower = liveElement.tagName?.toLowerCase();
     const isSvgEl = liveElement.namespaceURI === "http://www.w3.org/2000/svg";
 
-    // --- FORCE VIDEO GROUP STRUCTURE FOR VIDEOS ---
+    // FORCE VIDEO GROUP STRUCTURE FOR VIDEOS
     if (isSvgEl && liveElement.getAttribute('data-is-video-group') !== 'true') {
       if (tagLower === 'foreignobject' || tagLower === 'video' || tagLower === 'iframe') {
         const parent = liveElement.parentNode;
         const newGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        newGroup.id = liveElement.id; // Keep selection intact
+        newGroup.id = liveElement.id;
         newGroup.setAttribute('data-type', liveElement.getAttribute('data-type') || 'video');
         newGroup.setAttribute('data-name', 'Video Group');
         newGroup.setAttribute('data-is-video-group', 'true');
@@ -617,7 +647,6 @@ const VideoEditor = ({
 
     isUpdatingDOM.current = true;
     try {
-      // Dimensions are managed natively by the editor drag-resize logic
       if (container && target.tagName !== "IFRAME") {
         target.setAttribute('width', '100%');
         target.setAttribute('height', '100%');
@@ -739,7 +768,7 @@ const VideoEditor = ({
           fillLayer.removeAttribute('rx');
         }
 
-        visualTarget.style.backgroundColor = 'transparent'; // clear foreignObject background
+        visualTarget.style.backgroundColor = 'transparent';
         visualTarget.setAttribute('data-bg-color', backgroundColor.fill);
         liveElement.setAttribute('data-fill-color', backgroundColor.fill);
       } else {
@@ -750,7 +779,6 @@ const VideoEditor = ({
         liveElement.removeAttribute('data-fill-type');
       }
 
-      // Helper to convert hex to rgba for CSS border
       const hexToRgba = (hex, alpha) => {
         if (!hex || hex === 'transparent' || hex === 'none') return 'transparent';
         if (hex.startsWith('rgba')) return hex;
@@ -771,13 +799,12 @@ const VideoEditor = ({
       visualTarget.setAttribute('data-stroke-color', backgroundColor.stroke);
       liveElement.setAttribute('data-stroke-color', backgroundColor.stroke);
 
-      // Strip stroke from the <g> group so it doesn't cascade down to fillLayer and cause solid border leaks
       liveElement.removeAttribute('stroke');
       liveElement.removeAttribute('stroke-width');
       liveElement.removeAttribute('stroke-dasharray');
 
       visualTarget.setAttribute('stroke-width', weight);
-      visualTarget.setAttribute('data-stroke-width', weight); // Keep for legacy
+      visualTarget.setAttribute('data-stroke-width', weight);
 
       if (backgroundColor.strokeDashStyle === 'Dashed') {
         const dashArray = backgroundColor.strokeDasharrayValue || `${backgroundColor.strokeDashLength || 10},${backgroundColor.strokeDashGap || 10}`;
@@ -786,7 +813,6 @@ const VideoEditor = ({
         visualTarget.setAttribute('stroke-dasharray', 'none');
       }
 
-      // Dashed Stroke Attributes
       visualTarget.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
       visualTarget.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
       visualTarget.setAttribute('stroke-linejoin', (backgroundColor.strokeLinecap || 'butt') === 'round' ? 'round' : 'miter');
@@ -975,7 +1001,6 @@ const VideoEditor = ({
           visualTarget.style.outline = `${weight}px ${style} ${color}`;
           visualTarget.style.outlineOffset = `0px`;
         } else {
-          // Center
           visualTarget.style.borderWidth = `0px`;
           visualTarget.style.outline = `${weight}px ${style} ${color}`;
           visualTarget.style.outlineOffset = `-${weight / 2}px`;
@@ -1042,7 +1067,6 @@ const VideoEditor = ({
             clipPathEl.setAttribute('transform', targetElForShadow.getAttribute('transform') || '');
 
             if (container && container !== liveElement) {
-              // Apply directly to the video element to prevent breaking native controls in Chrome
               container.style.removeProperty('clip-path');
               container.style.removeProperty('-webkit-clip-path');
               liveElement.style.removeProperty('clip-path');
@@ -1099,7 +1123,6 @@ const VideoEditor = ({
         }
       }
 
-
       // Metadata & Effects
       const f = filters;
       const exposure = f.exposure || 0;
@@ -1126,7 +1149,7 @@ const VideoEditor = ({
         if (eff === 'Blur') blurStr = `blur(${effSet.blur}px) `;
       });
 
-      // 2. Drop Shadow Caster
+      // Drop Shadow Caster
       let shadowCaster = liveElement.querySelector('.svg-drop-shadow-caster');
       let hasDropShadow = activeEffects.includes('Drop Shadow');
 
@@ -1319,7 +1342,6 @@ const VideoEditor = ({
           }
         }
       } else {
-        // Fallback for non-SVG video targets
         activeEffects.forEach(eff => {
           const effSet = effectSettings[eff];
           if (!effSet) return;
@@ -1341,7 +1363,7 @@ const VideoEditor = ({
             overlay.style.width = '100%';
             overlay.style.height = '100%';
             overlay.style.pointerEvents = 'none';
-            overlay.style.zIndex = '99999'; // High z-index to stay above video
+            overlay.style.zIndex = '99999';
             overlay.style.boxSizing = 'border-box';
             if (window.getComputedStyle(targetParent).position === 'static') {
               targetParent.style.position = 'relative';
@@ -1358,17 +1380,12 @@ const VideoEditor = ({
         }
       }
 
-      // Always apply filters directly to the target (video element) instead of liveElement.
-      // Applying filter to liveElement (the SVG group) blurs the custom controls overlay
-      // which is dynamically injected as a sibling of the video.
       target.style.filter = (filterStr + " " + blurStr).trim() || 'none';
       if (visualTarget !== target) {
         visualTarget.style.filter = 'none';
       }
       liveElement.style.removeProperty('filter');
 
-      // Since we no longer blur the liveElement group, we must manually blur the stroke overlay
-      // if Clip Content is off, to maintain the original visual behavior for the stroke.
       const strokeOverlayEl = liveElement.querySelector('.svg-video-stroke-overlay');
       if (strokeOverlayEl) {
         if (activeEffects.includes('Blur') && !forceClip) {
@@ -1413,7 +1430,7 @@ const VideoEditor = ({
       visualTarget.setAttribute('data-effect-highlights', h.toString());
       visualTarget.setAttribute('data-effect-shadows', s.toString());
 
-      // Media State (preserving attributes)
+      // Media State
       if (target.tagName === "VIDEO") {
         if (autoplay) {
           target.setAttribute('autoplay', '');
@@ -1450,8 +1467,6 @@ const VideoEditor = ({
         target.volume = defaultVolume / 100;
         target.setAttribute('data-disable-fullscreen', disableFullScreen ? 'true' : 'false');
 
-        // Always keep native controls OFF — custom controls bar handles the UI.
-        // Use a data attribute so the custom controls useEffect knows the user preference.
         target.controls = false;
         target.removeAttribute('controls');
         target.setAttribute('data-show-controls', controls ? 'true' : 'false');
@@ -1469,7 +1484,6 @@ const VideoEditor = ({
         } else {
           target.classList.add('hide-controls');
         }
-        // Controls Size
         target.setAttribute('data-controls-size', controlsSize);
       } else if (target.tagName === "IFRAME") {
         target.setAttribute('data-show-controls', controls ? 'true' : 'false');
@@ -1484,7 +1498,7 @@ const VideoEditor = ({
 
           if (urlObj.hostname.includes("youtube.com") || urlObj.hostname.includes("youtu.be")) {
             const currentAutoplay = urlObj.searchParams.get("autoplay") === "1";
-            const currentControls = urlObj.searchParams.get("controls") !== "0"; // default is 1
+            const currentControls = urlObj.searchParams.get("controls") !== "0";
             const currentLoop = urlObj.searchParams.get("loop") === "1";
             const currentMute = urlObj.searchParams.get("mute") === "1";
 
@@ -1510,12 +1524,10 @@ const VideoEditor = ({
             target.src = urlObj.toString();
             target.setAttribute('src', urlObj.toString());
           }
-        } catch {
-          // Ignore invalid URLs
-        }
+        } catch { }
       }
 
-      // --- STRICT LAYER REORDERING FOR VIDEO GROUPS ---
+      // STRICT LAYER REORDERING FOR VIDEO GROUPS
       if (liveElement.getAttribute('data-is-video-group') === 'true') {
         const dropShadow = liveElement.querySelector('.svg-drop-shadow-caster');
         const fillLayer = liveElement.querySelector('.svg-fill-layer');
@@ -1523,7 +1535,6 @@ const VideoEditor = ({
         const strokeLayer = liveElement.querySelector('.svg-stroke-layer');
         const videoNode = liveElement.querySelector('foreignObject') || liveElement.querySelector('video') || liveElement.querySelector('iframe');
 
-        // We only move the specific layers to avoid detaching the videoNode itself
         if (dropShadow && videoNode) {
           dropShadow.setAttribute('data-name', 'Drop Shadow');
           if (dropShadow.nextElementSibling !== videoNode) {
@@ -1536,7 +1547,6 @@ const VideoEditor = ({
             liveElement.insertBefore(fillLayer, videoNode);
           }
         }
-        // Inner shadows and stroke layer must be placed AFTER videoNode.
         innerShadows.forEach(inner => {
           inner.setAttribute('data-name', 'Inner Shadow');
           if (liveElement.lastElementChild !== inner) {
@@ -1572,7 +1582,6 @@ const VideoEditor = ({
         target.style.removeProperty('transform-origin');
         target.removeAttribute('transform');
       } else {
-        // Ensure iframe stays scaled to match its foreignObject container dimensions
         const foW = parseFloat(container?.getAttribute('width') || liveElement.getAttribute('width') || 0);
         const foH = parseFloat(container?.getAttribute('height') || liveElement.getAttribute('height') || 0);
         const origW = parseFloat(target.getAttribute('data-original-width') || target.getAttribute('width') || 640);
@@ -1592,12 +1601,10 @@ const VideoEditor = ({
       liveElement.removeAttribute('data-crop-orig-x');
       liveElement.removeAttribute('data-crop-orig-y');
 
-      // Restore default fitting
       const fitCssMap = { 'Fit': 'contain', 'Fill': 'cover', 'Stretch': 'fill' };
       target.style.objectFit = fitCssMap[videoType] || 'contain';
       target.setAttribute('data-object-fit', videoType);
 
-      // Trigger parent update
       window.__skipCanvasUpdateForPage = activePageIndex;
       debouncedUpdate();
     } catch (e) {
@@ -1609,9 +1616,7 @@ const VideoEditor = ({
     applyVisuals();
   }, [applyVisuals]);
 
-  // Removed global disableNativeControls and custom-video-progress-style injection (moved to MainEditor.jsx)
-
-  // Inject scoped CSS to scale native video controls anchored at bottom
+  // Inject scoped CSS to hide native controls completely
   useEffect(() => {
     if (!selectedLayerId) return;
     const styleId = `vctrl-${selectedLayerId}`;
@@ -1621,7 +1626,6 @@ const VideoEditor = ({
       styleEl.id = styleId;
       document.head.appendChild(styleEl);
     }
-    // Only hide native controls completely, no custom styling
     styleEl.textContent = `
       [id="${selectedLayerId}"] video::-webkit-media-controls,
       video[id="${selectedLayerId}"]::-webkit-media-controls {
@@ -1638,10 +1642,7 @@ const VideoEditor = ({
     `;
   }, [selectedLayerId]);
 
-  // Removed custom inline controls bar injection (moved to MainEditor.jsx)
-
   const updateElementAttribute = (attr, value) => {
-    // These update the local state which then triggers applyVisuals
     if (attr === 'opacity') setOpacity(value);
     else if (attr === 'backgroundColor') setBackgroundColor(value);
     else if (attr === 'stroke') setBackgroundColor(prev => ({ ...prev, stroke: value }));
@@ -1668,19 +1669,14 @@ const VideoEditor = ({
     else if (attr === 'downloadButton') setDownloadButton(value);
   };
 
-
   const handleVideoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !selectedLayerId) return;
 
-    // Resolve the live element from the DOM to ensure we don't mutate a stale React reference
     const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const liveElement = editorDoc.getElementById(selectedLayerId) || selectedElement;
 
-    if (!liveElement) {
-      console.error("Could not resolve live element for upload");
-      return;
-    }
+    if (!liveElement) return;
 
     let target = null;
     if (liveElement.tagName === "VIDEO" || liveElement.tagName === "IFRAME") {
@@ -1689,20 +1685,15 @@ const VideoEditor = ({
       target = liveElement.querySelector("video, iframe");
     }
 
-    if (!target) {
-      console.error("No video/iframe target found for upload");
-      return;
-    }
+    if (!target) return;
 
     const wasIframe = target.tagName === "IFRAME";
 
     if (wasIframe) {
-      // Replace iframe with a video element
       const newVideo = document.createElement("video");
       newVideo.id = target.id || selectedLayerId;
       newVideo.style.cssText = target.style.cssText;
 
-      // Preserve existing structural attributes
       Array.from(target.attributes).forEach(attr => {
         if (!["src", "id", "style", "allow", "allowfullscreen"].includes(attr.name)) {
           newVideo.setAttribute(attr.name, attr.value);
@@ -1714,16 +1705,12 @@ const VideoEditor = ({
       target = newVideo;
     }
 
-    if (!target) {
-      console.error("No video target found for upload");
-      return;
-    }
+    if (!target) return;
 
     const videoURL = URL.createObjectURL(file);
 
     const tempVideo = document.createElement('video');
     tempVideo.onloadedmetadata = async () => {
-      // Dynamically calculate size based on the SVG canvas
       const svg = target.closest('svg');
       const svgW = svg ? ((svg.getAttribute('width') && !svg.getAttribute('width').includes('%') ? parseFloat(svg.getAttribute('width')) : 0) || (svg.viewBox?.baseVal?.width ? svg.viewBox.baseVal.width : 0) || 794) : 794;
 
@@ -1827,13 +1814,11 @@ const VideoEditor = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target.result;
-      // Resolve the live element from the DOM
       const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
       const liveElement = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || document.getElementById(selectedLayerId) || selectedElement;
 
       if (!liveElement) return;
 
-      // Find the video: check if it's a foreignObject containing a video, or the video itself
       let target = null;
       if (liveElement.tagName === "VIDEO") {
         target = liveElement;
@@ -1849,7 +1834,6 @@ const VideoEditor = ({
         target.setAttribute("poster", result);
         target.setAttribute("data-poster-type", "upload");
 
-        // Force the poster to show by replacing the video element with a clone
         const clone = target.cloneNode(true);
         clone.removeAttribute('data-custom-ctrl-active');
         target.parentNode.replaceChild(clone, target);
@@ -1876,13 +1860,11 @@ const VideoEditor = ({
     }
     if (!target) return;
 
-    // Clear any previously uploaded poster so the video natively shows its first frame
     target.poster = '';
     target.removeAttribute('poster');
     target.setAttribute('data-poster-type', 'auto');
     setPosterSrc(null);
 
-    // Force the video to reload without a poster
     const clone = target.cloneNode(true);
     clone.removeAttribute('data-custom-ctrl-active');
     target.parentNode.replaceChild(clone, target);
@@ -1898,7 +1880,6 @@ const VideoEditor = ({
 
     if (!liveElement) return;
 
-    // Find the actual target (video or iframe)
     let target = null;
     if (liveElement.tagName === "VIDEO" || liveElement.tagName === "IFRAME") {
       target = liveElement;
@@ -1911,21 +1892,18 @@ const VideoEditor = ({
     const finalUrl = getEmbedVideoUrl(url);
     const urlLower = url.toLowerCase();
 
-    // Check if it's an iframe-based embed
     const isIframeTarget = urlLower.includes('youtube') || urlLower.includes('youtu.be') ||
       urlLower.includes('vimeo') || urlLower.includes('dailymotion') ||
       urlLower.includes('dai.ly') || urlLower.includes('loom.com') ||
       urlLower.includes('wistia') || urlLower.includes('drive.google.com') ||
       urlLower.includes('embed') || urlLower.includes('player');
 
-    // Dynamically calculate size based on the SVG canvas
     const svg = target.closest('svg');
     const svgW = svg ? ((svg.getAttribute('width') && !svg.getAttribute('width').includes('%') ? parseFloat(svg.getAttribute('width')) : 0) || (svg.viewBox?.baseVal?.width ? svg.viewBox.baseVal.width : 0) || 794) : 794;
 
     const newW = Math.round(svgW * 0.5);
-    const newH = Math.round(newW * (9 / 16)); // Standard 16:9 for URLs
+    const newH = Math.round(newW * (9 / 16));
 
-    // If the target is already the correct type, just update its src
     if ((isIframeTarget && target.tagName === "IFRAME") || (!isIframeTarget && target.tagName === "VIDEO")) {
       target.src = finalUrl;
       target.setAttribute("src", finalUrl);
@@ -1971,9 +1949,7 @@ const VideoEditor = ({
         }
       }
 
-
       if (!isIframeTarget) {
-
         target.muted = true;
         target.setAttribute("muted", "");
       }
@@ -1991,7 +1967,6 @@ const VideoEditor = ({
       return;
     }
 
-    // Otherwise, create a new element of the correct type and swap it
     let newElement;
     if (isIframeTarget) {
       newElement = document.createElement("iframe");
@@ -1999,7 +1974,6 @@ const VideoEditor = ({
       newElement.src = finalUrl;
       newElement.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
       newElement.allowFullscreen = true;
-
     } else {
       newElement = document.createElement("video");
       newElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
@@ -2058,8 +2032,6 @@ const VideoEditor = ({
       }
     }
 
-
-    // Preserve layout and data attributes
     Array.from(target.attributes).forEach(attr => {
       if (!["src", "id", "style", "allow", "allowfullscreen", "controls"].includes(attr.name)) {
         newElement.setAttribute(attr.name, attr.value);
@@ -2082,45 +2054,54 @@ const VideoEditor = ({
 
   if (!selectedElement) {
     return (
-      <div className="border border-gray-200 rounded-[0.5vw] overflow-hidden bg-white shadow-sm p-[1vw] text-center text-gray-400 text-[0.75vw]">
-        <VideoIcon className="mx-auto mb-[0.5vw]" size="0.9vw" />
-        <p className="text-[0.75vw]">Click on a video to edit</p>
+      <div className="border border-gray-200 rounded-[0.5vw] overflow-hidden bg-white shadow-2xs p-[1vw] text-center text-gray-400 text-[0.8vw]">
+        <VideoIcon className="mx-auto mb-[0.5vw]" size="1vw" />
+        <p>Click on a video to edit</p>
       </div>
     );
   }
 
+  const videoDisplayName = selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'Video';
+
   return (
-    <div className="flex flex-col w-full font-sans text-gray-700 gap-[0.4vw]">
+    <div
+      className="relative flex flex-col gap-[1.2vw] w-full max-w-[25vw] font-sans select-none"
+      onPointerDownCapture={() => {
+        hasUserInteractedRef.current = true;
+      }}
+      onKeyDownCapture={() => {
+        hasUserInteractedRef.current = true;
+      }}
+    >
       <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 0.25vw; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 0.5vw; }
         .custom-range-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .custom-range-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
         .custom-range-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: inherit; }
-        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.4vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
+        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.55vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
         .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
         body.is-scrubbing { overflow: hidden !important; }
       `}</style>
 
-      {/* Video Property Section */}
-      <div className="space-y-[1.2vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Video Property</span>
-          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-        </div>        {/* Video fix type */}
-        <div className="flex items-center justify-between relative z-20">
-          <div className="flex items-center gap-[0.5vw] flex-1">
-            <span className="text-[0.8vw] font-semibold text-gray-800 whitespace-nowrap">Image fix type</span>
-            <div className="h-[0px] flex-1 border-t border-dashed border-gray-300 mx-[0.25vw]" />
-          </div>
+      <div className="flex flex-col gap-[1.7vw] pb-[2vw]">
+        {/* Video Properties Header */}
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Video Properties</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+
+        {/* Video fix type */}
+        <div className="flex items-center justify-between relative z-20 py-[0.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Video fix type</span>
           <div className="relative">
-            <div className="flex gap-[0.25vw] items-center">
-              <button
-                onClick={() => setShowVideoTypeDropdown(!showVideoTypeDropdown)}
-                className="flex items-center justify-between w-[6.5vw] py-[0.35vw] px-[0.75vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-xs hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-              >
-                <span className="text-[0.85vw] font-normal text-gray-700">{videoType}</span>
-                <ChevronDown size="0.9vw" className={`text-gray-400 transition-transform ${showVideoTypeDropdown ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
+            <button
+              onClick={() => setShowVideoTypeDropdown(!showVideoTypeDropdown)}
+              className="flex items-center justify-between w-[6.5vw] h-[2vw] px-[0.7vw] bg-white border border-gray-300 rounded-[0.4vw] shadow-2xs hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer"
+            >
+              <span className="text-[0.8vw] font-medium text-gray-700">{videoType}</span>
+              <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showVideoTypeDropdown ? 'rotate-180' : ''}`} />
+            </button>
             {showVideoTypeDropdown && (
               <>
                 <div className="fixed inset-0 z-[90]" onClick={() => setShowVideoTypeDropdown(false)} />
@@ -2154,7 +2135,7 @@ const VideoEditor = ({
                         setVideoType(type);
                         applyVisuals();
                       }}
-                      className="px-[1vw] py-[0.5vw] text-[0.8vw] font-medium text-gray-600 hover:bg-gray-50 hover:text-[#4D47FF] transition-colors text-left"
+                      className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left ${videoType === type ? 'text-[#4D47FF] bg-gray-50 font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                     >
                       {type}
                     </button>
@@ -2165,17 +2146,18 @@ const VideoEditor = ({
           </div>
         </div>
 
-        {/* Video Info Row */}
-        <div className="flex items-center gap-[1vw] mt-[-1vw]">
-          <div className="relative w-[8.5vw] h-[6vw] rounded-[0.4vw] overflow-hidden bg-gray-100 flex-shrink-0">
+        {/* Video Info Row / Card */}
+        <div className="flex items-center gap-[0.9vw] p-[0.8vw] bg-white rounded-[0.55vw] border border-gray-200 shadow-2xs">
+          {/* Thumbnail */}
+          <div className="relative w-[7.6vw] h-[5.6vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group">
             {previewSrc ? (
               previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be") ? (
                 (() => {
                   const match = previewSrc.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
                   const vidId = match ? match[1] : null;
                   return vidId ? (
-                    <div className="relative w-full h-full rounded-[0.4vw] overflow-hidden group">
-                      <img src={`https://img.youtube.com/vi/${vidId}/hqdefault.jpg`} className="w-full h-full object-cover" />
+                    <div className="relative w-full h-full rounded-[0.45vw] overflow-hidden group">
+                      <img src={`https://img.youtube.com/vi/${vidId}/hqdefault.jpg`} className="w-full h-full object-cover" alt="Video thumbnail" />
                       <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
                     </div>
                   ) : (
@@ -2190,292 +2172,313 @@ const VideoEditor = ({
                 <VideoIcon size="1.2vw" className="text-gray-300" />
               </div>
             )}
+
+            {/* Adjustment Icon Button (Top Right) */}
+            <button
+              type="button"
+              data-adjustment-trigger="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAdjustmentModal(prev => !prev);
+              }}
+              className={`absolute top-[0.35vw] right-[0.35vw] w-[1.7vw] h-[1.7vw] rounded-[0.35vw] shadow-md border flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer z-10 ${
+                showAdjustmentModal ? 'bg-gray-100 text-gray-900 border-gray-300' : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50'
+              }`}
+              title="Video Adjustments"
+            >
+              <AdjustmentIcon className="w-[0.95vw] h-[0.95vw]" />
+            </button>
           </div>
 
-          <div className="flex flex-col flex-1 gap-[0.4vw] py-[0.2vw] mb-[1.1vw]">
-            <div className="flex flex-col gap-[0.1vw] mt-[0.6vw]">
-              <span className="text-[0.9vw] font-medium text-gray-700 truncate w-[10vw] mt-[0.8vw]" title={selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'Video'}>
-                {selectedElement?.getAttribute('data-filename') || selectedElement?.getAttribute('data-name') || 'Video'}
+          {/* Info & Actions */}
+          <div className="flex flex-col flex-1 min-w-0 justify-between py-[0.15vw]">
+            <div className="flex flex-col gap-[0.2vw]">
+              <span className="text-[0.82vw] font-semibold text-gray-900 truncate" title={videoDisplayName}>
+                {videoDisplayName}
               </span>
-              <div className="text-[0.75vw] text-gray-400 flex items-center gap-[0.3vw] flex-nowrap whitespace-nowrap mt-[0.3vw]">
-                {(videoDurationState || selectedElement?.getAttribute('data-video-duration')) && (
-                  <>
-                    <span>
-                      {(() => {
-                        const d = parseFloat(videoDurationState || selectedElement.getAttribute('data-video-duration'));
-                        const m = Math.floor(d / 60).toString().padStart(2, '0');
-                        const s = Math.floor(d % 60).toString().padStart(2, '0');
-                        return (
-                          <>
-                            {m}:{s} <span className="text-[0.75vw] opacity-80">Mins</span>
-                          </>
-                        );
-                      })()}
-                    </span>
-                    <span>•</span>
-                  </>
-                )}
-                <span>
-                  {videoResolution ? `${videoResolution} • ` : ''}{videoFileSize || 'Unknown Size'}
-                </span>
-              </div>
+              <span className="text-[0.75vw] text-gray-500 font-medium">
+                {(() => {
+                  const parts = [];
+                  if (videoDurationState || selectedElement?.getAttribute('data-video-duration')) {
+                    const d = parseFloat(videoDurationState || selectedElement.getAttribute('data-video-duration'));
+                    if (!isNaN(d) && d > 0) {
+                      const m = Math.floor(d / 60).toString().padStart(2, '0');
+                      const s = Math.floor(d % 60).toString().padStart(2, '0');
+                      parts.push(`${m}:${s} Mins`);
+                    }
+                  }
+                  if (videoResolution) parts.push(videoResolution);
+                  parts.push(videoFileSize || 'Unknown Size');
+                  return parts.join(' • ');
+                })()}
+              </span>
             </div>
 
-            <div className="flex items-center gap-[0.5vw] mt-[0.3vw]">
+            <div className="flex items-center gap-[0.5vw] mt-[0.7vw]">
               <button
                 onClick={() => setShowReplaceModal(true)}
-                className="px-[0.65vw] py-[0.35vw] bg-gray-100 hover:bg-gray-200 text-gray-600 text-[0.75vw] font-medium rounded-[0.3vw] cursor-pointer transition-colors border border-gray-200"
+                className="px-[0.7vw] h-[1.9vw] bg-white hover:bg-gray-50 text-gray-700 text-[0.8vw] font-medium rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-gray-400 cursor-pointer transition-colors"
               >
                 Replace video
               </button>
-              <button
-                onClick={() => onDeleteLayer && onDeleteLayer()}
-                className="p-[0.4vw] bg-gray-100 text-gray-500 rounded-[0.3vw] border border-gray-200 cursor-pointer transition-none"
-                title="Delete"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.9vw] h-[0.9vw]">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  <line x1="10" y1="11" x2="10" y2="17"></line>
-                  <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
-              </button>
+              {onDeleteLayer && (
+                <button
+                  onClick={() => onDeleteLayer()}
+                  className="h-[1.9vw] px-[0.5vw] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-red-200 cursor-pointer transition-colors"
+                  title="Delete layer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.85vw] h-[0.85vw]">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
-
-
         </div>
 
-
-      </div>
-
-      {/* Opacity Section */}
-      <div className="flex items-center gap-[1vw] py-[0.5vw] mt-[-1vw]">
-        <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Opacity :</span>
-        <div className="flex-1 flex items-center h-[1.5vw] rounded-full outline-none">
-          <input
-            type="range"
-            min="0" max="100"
-            value={opacity}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              setOpacity(val);
-              // Directly manipulate DOM for zero-flicker feedback
-              const container = selectedElement.tagName === "FOREIGNOBJECT" ? selectedElement : (selectedElement.querySelector("foreignObject") || selectedElement.closest("foreignObject"));
-              const target = container ? container.querySelector("video, iframe") : (selectedElement.tagName === "VIDEO" || selectedElement.tagName === "IFRAME" ? selectedElement : selectedElement.querySelector("video, iframe"));
-              const visualTarget = container || target;
-              if (visualTarget) {
-                visualTarget.style.opacity = val / 100;
-                visualTarget.setAttribute('opacity', val / 100);
-              }
-            }}
-            onMouseUp={() => debouncedUpdate()}
-            className="w-full cursor-pointer custom-range-slider"
-            style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
-          />
-        </div>
-        <div className="min-w-[3.5vw] h-[2vw] border-[0.1vw] border-gray-200 rounded-[0.3vw] flex items-center justify-center text-[0.8vw] font-medium text-black bg-white shadow-sm px-[0.5vw]">
-          {opacity} %
-        </div>
-      </div>
-
-      {/* Cover Image Upload Options */}
-      <div className="space-y-[1.2vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Cover Image Upload Options</span>
-          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+        {/* Opacity */}
+        <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Opacity</span>
+          <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={opacity}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setOpacity(val);
+                const container = selectedElement.tagName === "FOREIGNOBJECT" ? selectedElement : (selectedElement.querySelector("foreignObject") || selectedElement.closest("foreignObject"));
+                const target = container ? container.querySelector("video, iframe") : (selectedElement.tagName === "VIDEO" || selectedElement.tagName === "IFRAME" ? selectedElement : selectedElement.querySelector("video, iframe"));
+                const visualTarget = container || target;
+                if (visualTarget) {
+                  visualTarget.style.opacity = val / 100;
+                  visualTarget.setAttribute('opacity', val / 100);
+                }
+              }}
+              onMouseUp={() => debouncedUpdate()}
+              className="w-full cursor-pointer custom-range-slider"
+              style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
+            />
+          </div>
+          <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+            {opacity}%
+          </div>
         </div>
 
-        <div className="flex items-center justify-between px-[0.5vw]">
-          <div className="flex flex-col gap-[1.2vw]">
-            <label className="flex items-center gap-[0.8vw] cursor-pointer group">
-              <div
-                className={`w-[1.2vw] h-[1.2vw] rounded-full border-[0.1vw] flex items-center justify-center transition-all ${coverOption === 'upload' ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-gray-300'}`}
+        {/* Cover Image Upload Options */}
+        <div className="flex flex-col gap-[0.8vw]">
+          <div className="flex items-center gap-[0.8vw]">
+            <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Cover Image</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
+
+          <div className="flex items-center justify-between p-[0.8vw] bg-white rounded-[0.55vw] border border-gray-200 shadow-2xs">
+            <div className="flex flex-col gap-[0.8vw]">
+              <label
                 onClick={() => { setCoverOption('upload'); coverInputRef.current?.click(); }}
+                className="flex items-center gap-[0.6vw] cursor-pointer group select-none"
               >
-                {coverOption === 'upload' && <div className="w-[0.6vw] h-[0.6vw] rounded-full bg-indigo-600" />}
-              </div>
-              <span className={`text-[0.75vw] font-medium transition-colors ${coverOption === 'upload' ? 'text-gray-900' : 'text-gray-800'}`}>Upload from your File</span>
-            </label>
-            <label className="flex items-center gap-[0.8vw] cursor-pointer group">
-              <div
-                className={`w-[1.2vw] h-[1.2vw] rounded-full border-[0.1vw] flex items-center justify-center transition-all ${coverOption === 'auto' ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-gray-300'}`}
-                onClick={() => { setCoverOption('auto'); handleAutoPickThumbnail(); }}
-              >
-                {coverOption === 'auto' && <div className="w-[0.6vw] h-[0.6vw] rounded-full bg-indigo-600" />}
-              </div>
-              <span className={`text-[0.75vw] font-medium transition-colors ${coverOption === 'auto' ? 'text-gray-900' : 'text-gray-800'}`}>Auto Pick from video</span>
-            </label>
-          </div>
-
-          <div
-            onClick={() => {
-              if (coverOption === 'upload') coverInputRef.current?.click();
-            }}
-            className={`w-[8vw] h-[5vw] rounded-[0.8vw] flex flex-col items-center justify-center overflow-hidden transition-all ${coverOption === 'upload'
-              ? 'border-2 border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-400 hover:bg-white cursor-pointer'
-              : 'border border-gray-200 bg-gray-50'
-              }`}
-          >
-            {posterSrc && coverOption === 'upload' ? (
-              <img src={posterSrc} className="w-full h-full object-cover" />
-            ) : coverOption === 'upload' ? (
-              <>
-                <Upload size="1vw" className="text-gray-300 mb-[0.2vw]" />
-                <div className="text-[0.6vw] text-gray-400 text-center px-[0.5vw]">File Format : JPG, PNG</div>
-              </>
-            ) : (
-              previewSrc ? (
-                previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be") ? (
-                  (() => {
-                    const match = previewSrc.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
-                    const vidId = match ? match[1] : null;
-                    return vidId ? (
-                      <div className="relative w-full h-full rounded-[0.8vw] overflow-hidden group">
-                        <img src={`https://img.youtube.com/vi/${vidId}/hqdefault.jpg`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
-                      </div>
-                    ) : (
-                      <iframe src={previewSrc} className="w-full h-full object-cover pointer-events-none" frameBorder="0" />
-                    );
-                  })()
-                ) : (
-                  <video src={previewSrc} className="w-full h-full object-cover pointer-events-none" muted />
-                )
-              ) : (
-                <div className="flex flex-col items-center justify-center opacity-50">
-                  <Icon icon="material-symbols:smart-display-outline" className="w-[1.2vw] h-[1.2vw] text-gray-400 mb-[0.2vw]" />
+                <div
+                  className={`w-[1.1vw] h-[1.1vw] rounded-full border flex items-center justify-center transition-all ${
+                    coverOption === 'upload' ? 'border-[#4D47FF] bg-indigo-50 shadow-2xs' : 'border-gray-300 bg-white group-hover:border-gray-400'
+                  }`}
+                >
+                  {coverOption === 'upload' && <div className="w-[0.55vw] h-[0.55vw] rounded-full bg-[#4D47FF]" />}
                 </div>
-              )
-            )}
+                <span className={`text-[0.8vw] font-medium transition-colors ${coverOption === 'upload' ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>Upload from your File</span>
+              </label>
+              <label
+                onClick={() => { setCoverOption('auto'); handleAutoPickThumbnail(); }}
+                className="flex items-center gap-[0.6vw] cursor-pointer group select-none"
+              >
+                <div
+                  className={`w-[1.1vw] h-[1.1vw] rounded-full border flex items-center justify-center transition-all ${
+                    coverOption === 'auto' ? 'border-[#4D47FF] bg-indigo-50 shadow-2xs' : 'border-gray-300 bg-white group-hover:border-gray-400'
+                  }`}
+                >
+                  {coverOption === 'auto' && <div className="w-[0.55vw] h-[0.55vw] rounded-full bg-[#4D47FF]" />}
+                </div>
+                <span className={`text-[0.8vw] font-medium transition-colors ${coverOption === 'auto' ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>Auto Pick from video</span>
+              </label>
+            </div>
+
+            <div
+              onClick={() => {
+                if (coverOption === 'upload') coverInputRef.current?.click();
+              }}
+              className={`w-[7.6vw] h-[5vw] rounded-[0.45vw] flex flex-col items-center justify-center overflow-hidden transition-all shadow-2xs ${
+                coverOption === 'upload'
+                  ? 'border-2 border-dashed border-gray-300 bg-gray-50/50 hover:border-[#4D47FF] hover:bg-white cursor-pointer'
+                  : 'border border-gray-200 bg-gray-50'
+              }`}
+            >
+              {posterSrc && coverOption === 'upload' ? (
+                <img src={posterSrc} className="w-full h-full object-cover" alt="Video cover" />
+              ) : coverOption === 'upload' ? (
+                <>
+                  <Upload size="1vw" className="text-gray-400 mb-[0.2vw]" />
+                  <div className="text-[0.65vw] text-gray-500 font-medium text-center px-[0.5vw]">JPG, PNG</div>
+                </>
+              ) : (
+                previewSrc ? (
+                  previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be") ? (
+                    (() => {
+                      const match = previewSrc.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+                      const vidId = match ? match[1] : null;
+                      return vidId ? (
+                        <div className="relative w-full h-full rounded-[0.45vw] overflow-hidden group">
+                          <img src={`https://img.youtube.com/vi/${vidId}/hqdefault.jpg`} className="w-full h-full object-cover" alt="YouTube cover" />
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+                        </div>
+                      ) : (
+                        <iframe src={previewSrc} className="w-full h-full object-cover pointer-events-none" frameBorder="0" />
+                      );
+                    })()
+                  ) : (
+                    <video src={previewSrc} className="w-full h-full object-cover pointer-events-none" muted />
+                  )
+                ) : (
+                  <div className="flex flex-col items-center justify-center opacity-50">
+                    <Icon icon="material-symbols:smart-display-outline" className="w-[1.2vw] h-[1.2vw] text-gray-400 mb-[0.2vw]" />
+                  </div>
+                )
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Default Playback Settings / Settings */}
-      <div className="space-y-[1.2vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap mt-[0.5vw]">
-            {previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be")) ? "Settings" : "Default Playback Settings"}
-          </span>
-          <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-        </div>
+        {/* Default Playback Settings */}
+        <div className="flex flex-col gap-[0.8vw]">
+          <div className="flex items-center gap-[0.8vw]">
+            <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">
+              {previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be")) ? "Settings" : "Default Playback Settings"}
+            </span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
 
-        <div className="space-y-[0.8vw] px-[0.5vw]">
-          {!(previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be"))) && (
-            <>
-              {/* Play Video While */}
-              <div className="flex items-center justify-between">
-                <span className="text-[0.75vw] font-medium text-gray-800 w-[6.5vw] ">Play Video While</span>
-                <span className="text-[0.75vw] font-medium text-gray-800 mr-[0.5vw]">:</span>
-                <CustomSelect
-                  value={playVideoWhile}
-                  options={["Auto Play on Page Open", "Manual (Click to Play)"]}
-                  onChange={(v) => {
-                    setPlayVideoWhile(v);
-                    if (v === "Manual (Click to Play)") {
-                      updateElementAttribute('playPauseButton', true);
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Playback Speed */}
-              <div className="flex items-center justify-between">
-                <span className="text-[0.75vw] font-medium text-gray-800 w-[6.5vw]">Playback Speed</span>
-                <span className="text-[0.75vw] font-medium text-gray-800 mr-[0.5vw]">:</span>
-                <CustomSelect
-                  value={playbackSpeed}
-                  options={["0.5x", "1.0x", "1.5x", "2.0x"]}
-                  onChange={setPlaybackSpeed}
-                />
-              </div>
-
-              {/* Default Volume */}
-              <div className="flex items-center justify-between mt-[1vw] mb-[0.5vw]">
-                <span className="text-[0.75vw] font-medium text-gray-800 w-[6.5vw]">Default Volume</span>
-                <span className="text-[0.75vw] font-medium text-gray-800 mr-[0.5vw]">:</span>
-                <div className="flex items-center gap-[0.5vw] flex-1 w-full justify-between">
-                  <button onClick={() => setMuted(!muted)}>
-                    <Icon icon={muted || defaultVolume === 0 ? "lucide:volume-x" : "lucide:volume-2"} className="w-[1vw] h-[1vw] text-indigo-600" />
-                  </button>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={muted ? 0 : defaultVolume}
-                    onChange={(e) => {
-                      if (muted) setMuted(false);
-                      setDefaultVolume(parseInt(e.target.value));
-                    }}
-                    className="flex-1 w-[8.2vw] h-[0.3vw] bg-gray-200 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-[0.8vw] [&::-webkit-slider-thumb]:h-[0.8vw] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, #4f46e5 ${muted ? 0 : defaultVolume}%, #e5e7eb ${muted ? 0 : defaultVolume}%)`
+          <div className="flex flex-col gap-[0.6vw]">
+            {!(previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be"))) && (
+              <>
+                {/* Play Video While */}
+                <div className="flex items-center justify-between gap-[0.8vw] py-[0.1vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Play Video While</span>
+                  <CustomSelect
+                    value={playVideoWhile}
+                    options={["Auto Play on Page Open", "Manual (Click to Play)"]}
+                    onChange={(v) => {
+                      setPlayVideoWhile(v);
+                      if (v === "Manual (Click to Play)") {
+                        updateElementAttribute('playPauseButton', true);
+                      }
                     }}
                   />
-                  <span className="text-[0.65vw] font-medium text-gray-600 min-w-[1.5vw]">{muted ? 0 : defaultVolume} %</span>
                 </div>
-              </div>
 
-              {/* Loop Video */}
-              <div className="flex items-center justify-between pt-[0.4vw]">
-                <span className="text-[0.75vw] font-medium text-gray-800">Loop Video</span>
-                <Switch enabled={loop} onChange={setLoop} />
-              </div>
-            </>
-          )}
+                {/* Playback Speed */}
+                <div className="flex items-center justify-between gap-[0.8vw] py-[0.1vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Playback Speed</span>
+                  <CustomSelect
+                    value={playbackSpeed}
+                    options={["0.5x", "1.0x", "1.5x", "2.0x"]}
+                    onChange={setPlaybackSpeed}
+                  />
+                </div>
 
-          {previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be")) && (
-            <div className="flex items-center justify-between pt-[0.4vw]">
-              <span className="text-[0.75vw] font-medium text-gray-800">Autoplay</span>
-              <Switch enabled={autoplay} onChange={setAutoplay} />
+                {/* Default Volume */}
+                <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Default Volume</span>
+                  <div className="flex items-center gap-[0.5vw] flex-1">
+                    <button type="button" onClick={() => setMuted(!muted)} className="cursor-pointer text-gray-600 hover:text-[#4D47FF] transition-colors p-[0.2vw]">
+                      <Icon icon={muted || defaultVolume === 0 ? "lucide:volume-x" : "lucide:volume-2"} className="w-[1.05vw] h-[1.05vw]" />
+                    </button>
+                    <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={muted ? 0 : defaultVolume}
+                        onChange={(e) => {
+                          if (muted) setMuted(false);
+                          setDefaultVolume(parseInt(e.target.value));
+                        }}
+                        className="w-full cursor-pointer custom-range-slider"
+                        style={{
+                          backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${muted ? 0 : defaultVolume}%, #E2E8F0 ${muted ? 0 : defaultVolume}%, #E2E8F0 100%)`
+                        }}
+                      />
+                    </div>
+                    <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+                      {muted ? 0 : defaultVolume}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loop Video */}
+                <div className="flex items-center justify-between py-[0.1vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Loop Video</span>
+                  <Switch enabled={loop} onChange={setLoop} />
+                </div>
+              </>
+            )}
+
+            {previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be")) && (
+              <div className="flex items-center justify-between py-[0.1vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Autoplay</span>
+                <Switch enabled={autoplay} onChange={setAutoplay} />
+              </div>
+            )}
+
+            {/* Video Player Controls (Main Toggle) */}
+            <div className="flex items-center justify-between py-[0.1vw]">
+              <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Video Player Controls</span>
+              <Switch enabled={controls} onChange={setControls} />
             </div>
-          )}
-
-          {/* Video Player Controls (Main Toggle) */}
-          <div className="flex items-center justify-between pt-[0.4vw]">
-            <span className="text-[0.75vw] font-medium text-gray-800">Video Player Controls</span>
-            <Switch enabled={controls} onChange={setControls} />
           </div>
         </div>
-      </div>
 
-      {!(previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be"))) && (
-        <div className="space-y-[1.2vw]">
-          <div className="flex items-center gap-[0.5vw]">
-            <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap mt-[1vw]">Video Player Controls</span>
-            <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
+        {!(previewSrc && (previewSrc.includes("youtube.com") || previewSrc.includes("youtu.be"))) && (
+          <div className="flex flex-col gap-[0.8vw]">
+            <div className="flex items-center gap-[0.8vw]">
+              <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Player Controls</span>
+              <div className="flex-1 h-[1px] bg-gray-200" />
+            </div>
+
+            <div className="flex flex-col gap-[0.4vw] bg-white p-[0.7vw] rounded-[0.55vw] border border-gray-200 shadow-2xs">
+              {[
+                { label: "Play/Pause Button", value: playPauseButton, onChange: (v) => updateElementAttribute('playPauseButton', v), disabled: playVideoWhile === "Manual (Click to Play)" },
+                { label: "Skip Forward/Backward (3 sec)", value: controls && skipButton, onChange: (v) => updateElementAttribute('skipButton', v), disabled: !controls },
+                { label: "Progress Bar", value: controls && progressBar, onChange: (v) => updateElementAttribute('progressBar', v), disabled: !controls },
+                { label: "Loop Button", value: controls && loopButtonControl, onChange: (v) => updateElementAttribute('loopButtonControl', v), disabled: !controls },
+                { label: "Fullscreen Button", value: fullscreenButtonControl, onChange: (v) => updateElementAttribute('fullscreenButtonControl', v), disabled: false },
+                { label: "Playback Speed Menu", value: controls && playbackSpeedMenu, onChange: (v) => updateElementAttribute('playbackSpeedMenu', v), disabled: !controls },
+                { label: "Volume Control", value: controls && volumeControl, onChange: (v) => updateElementAttribute('volumeControl', v), disabled: !controls },
+                { label: "Download Button", value: downloadButton, onChange: (v) => updateElementAttribute('downloadButton', v), disabled: false },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between py-[0.25vw] px-[0.2vw]">
+                  <span className="text-[0.8vw] font-medium text-gray-800">{item.label}</span>
+                  <Switch enabled={item.value} onChange={item.onChange} disabled={item.disabled} />
+                </div>
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="space-y-[0.8vw] px-[0.5vw]">
-            {[
-              { label: "Play/Pause Button", value: playPauseButton, onChange: (v) => updateElementAttribute('playPauseButton', v), disabled: playVideoWhile === "Manual (Click to Play)" },
-              { label: "Skip Forward/Backward (3 sec)", value: controls && skipButton, onChange: (v) => updateElementAttribute('skipButton', v), disabled: !controls },
-              { label: "Progress Bar", value: controls && progressBar, onChange: (v) => updateElementAttribute('progressBar', v), disabled: !controls },
-              { label: "Loop Button", value: controls && loopButtonControl, onChange: (v) => updateElementAttribute('loopButtonControl', v), disabled: !controls },
-              { label: "Fullscreen Button", value: fullscreenButtonControl, onChange: (v) => updateElementAttribute('fullscreenButtonControl', v), disabled: false },
-              { label: "Playback Speed Menu", value: controls && playbackSpeedMenu, onChange: (v) => updateElementAttribute('playbackSpeedMenu', v), disabled: !controls },
-              { label: "Volume Control", value: controls && volumeControl, onChange: (v) => updateElementAttribute('volumeControl', v), disabled: !controls },
-              { label: "Download Button", value: downloadButton, onChange: (v) => updateElementAttribute('downloadButton', v), disabled: false },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between py-[0.3vw]">
-                <span className="text-[0.75vw] font-medium text-gray-800">{item.label}</span>
-                <Switch enabled={item.value} onChange={item.onChange} disabled={item.disabled} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-[0.60vw] px-[0.3vw]">
+        {/* ── Color / Corner Radius / Effect ── */}
         <Color
+          standaloneMode={true}
+          noAccordion={true}
+          selectedElement={document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`)?.querySelector(`[id="${selectedLayerId}"]`) || selectedElement}
+          onUpdate={(info) => {
+            syncStateFromDOM();
+            if (onUpdateRef.current) onUpdateRef.current(info);
+          }}
           openSubSection={openSubSection}
           setOpenSubSection={setOpenSubSection}
-          backgroundColor={backgroundColor}
-          setBackgroundColor={setBackgroundColor}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
           showStrokeSettings={showStrokeSettings}
           setShowStrokeSettings={setShowStrokeSettings}
           isStrokeStyleOpen={isStrokeStyleOpen}
@@ -2489,18 +2492,21 @@ const VideoEditor = ({
           activePopup={activePopup}
           setActivePopup={setActivePopup}
           colorsOnPage={colorsOnPage}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
         />
 
-        <Adjustment
+        <CornerRadius
+          noAccordion={true}
           openSubSection={openSubSection}
           setOpenSubSection={setOpenSubSection}
-          filters={filters}
-          setFilters={setFilters}
+          radius={radius}
+          setRadius={setRadius}
+          isRadiusLinked={isRadiusLinked}
+          setIsRadiusLinked={setIsRadiusLinked}
           tagName={selectedElement?.tagName?.toLowerCase() || 'video'}
         />
+
         <Effect
+          noAccordion={true}
           openSubSection={openSubSection}
           setOpenSubSection={setOpenSubSection}
           activeEffects={activeEffects}
@@ -2518,8 +2524,6 @@ const VideoEditor = ({
       <input ref={fileInputRef} type="file" accept="video/mp4" className="hidden" onChange={handleVideoUpload} />
       <input ref={coverInputRef} type="file" accept="image/jpeg, image/png" className="hidden" onChange={handleCoverUpload} />
 
-
-
       {/* Replace Media Modal Popup */}
       <ReplaceMediaModal
         show={showReplaceModal}
@@ -2533,8 +2537,19 @@ const VideoEditor = ({
           }
         }}
       />
+
+      {/* Video Adjustment Modal Popup */}
+      <ImageAdjustmentModal
+        isOpen={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        filters={filters}
+        onChange={handleAdjustmentChange}
+        onResetAll={handleResetAllAdjustments}
+      />
     </div>
   );
 };
 
-export default VideoEditor;
+export default VideoProperties;
+export { VideoProperties as VideoEditor };
+

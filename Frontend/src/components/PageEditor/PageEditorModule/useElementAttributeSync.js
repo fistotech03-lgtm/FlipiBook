@@ -9,8 +9,10 @@ import { parseLayersFromSVG, syncGradient, syncFilters } from './svgFilterUtils'
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     const updateElementAttribute = (pageIndex, elementId, attribute, value) => {
     saveToHistory();
-    // Special case: ImageEditor serializes the whole SVG and passes it directly
-    if (attribute === '__dom_sync__') {
+    // Special case: ImageProperties or ShapeProperties serializes the whole SVG and passes it directly
+    const isDomSync = attribute === '__dom_sync__' || (typeof attribute === 'object' && attribute !== null && Boolean(attribute.__dom_sync__));
+    if (isDomSync) {
+      const syncValue = attribute === '__dom_sync__' ? value : attribute.__dom_sync__;
       const safeParseSVG = (htmlStr) => {
         let safeStr = htmlStr;
         if (!safeStr.includes('xmlns:xlink=')) {
@@ -30,15 +32,15 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
         if (!page) return updated;
 
         let newLayers = page.layers;
-        if (value) {
-          const doc = safeParseSVG(value);
+        if (syncValue) {
+          const doc = safeParseSVG(syncValue);
           const svgEl = doc.querySelector('svg');
           if (svgEl) {
             newLayers = parseLayersFromSVG(svgEl);
           }
         }
 
-        updated[pageIndex] = { ...page, html: value, layers: newLayers };
+        updated[pageIndex] = { ...page, html: syncValue, layers: newLayers };
         return updated;
       });
       return;
@@ -123,7 +125,8 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
               }
             }
             if (attr === 'stroke-width' && val !== '0' && (element.getAttribute('stroke') === 'none' || !element.getAttribute('stroke'))) {
-              element.setAttribute('stroke', '#000000');
+              const existingStroke = element.getAttribute('data-stroke-color');
+              element.setAttribute('stroke', (existingStroke && existingStroke !== 'none' && existingStroke !== '#') ? existingStroke : '#000000');
             }
           }
         });

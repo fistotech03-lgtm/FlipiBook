@@ -1,4 +1,4 @@
-export { default as ElementShapesProperties, ShapeAppearanceControls } from './ElementShapesProperties';
+export { default as ElementShapesProperties, ShapeAppearanceControls } from '../../../properties/ShapeProperties';
 export { default as TextElementEditor } from './TextElementproperties';
 export { default as TextElementproperties } from './TextElementproperties';
 export { default as ElementButtonProperties } from './ElementButtonProperties';

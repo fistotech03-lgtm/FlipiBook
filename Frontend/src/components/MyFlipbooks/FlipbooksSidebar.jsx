@@ -570,24 +570,6 @@ export default function FlipbooksSidebar({
                     {dashboardMode === '3d' ? (
                         /* 3D Folders List - Only Default Folder (All Models) & Recent */
                         <div className="space-y-[0.25vw]">
-                            {/* All Models */}
-                            <div
-                                onClick={() => setActive3dFolder?.('All Models')}
-                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                    (!active3dFolder || active3dFolder === 'All Models')
-                                        ? 'bg-[#2c3749] text-white font-medium'
-                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
-                                }`}
-                            >
-                                <div className="flex items-center gap-[0.75vw]">
-                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white' : 'text-gray-300'}`} />
-                                    <span>All Models</span>
-                                </div>
-                                <span className={`text-[0.8vw] ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                    {threeDCounts?.allCount ?? 0}
-                                </span>
-                            </div>
-
                             {/* Recent */}
                             <div
                                 onClick={() => setActive3dFolder?.('Recent')}
@@ -605,32 +587,28 @@ export default function FlipbooksSidebar({
                                     {threeDCounts?.recentCount ?? 0}
                                 </span>
                             </div>
-                        </div>
-                    ) : (
-                        /* Flipbook Folders List */
-                        <div className="space-y-[0.25vw]">
-                            {/* All Flipbooks */}
+
+                            {/* All Models */}
                             <div
-                                onClick={() => {
-                                    if (setDashboardMode) setDashboardMode('books');
-                                    setActiveFolder('All Flipbook');
-                                    setSelectedBooks([]);
-                                }}
+                                onClick={() => setActive3dFolder?.('All Models')}
                                 className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                    (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                    (!active3dFolder || active3dFolder === 'All Models')
                                         ? 'bg-[#2c3749] text-white font-medium'
                                         : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                                 }`}
                             >
                                 <div className="flex items-center gap-[0.75vw]">
-                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
-                                    <span>All Flipbooks</span>
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Models</span>
                                 </div>
-                                <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                    {allCount}
+                                <span className={`text-[0.8vw] ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {threeDCounts?.allCount ?? 0}
                                 </span>
                             </div>
-
+                        </div>
+                    ) : (
+                        /* Flipbook Folders List */
+                        <div className="space-y-[0.25vw]">
                             {/* Recent */}
                             <div
                                 onClick={() => {
@@ -650,6 +628,28 @@ export default function FlipbooksSidebar({
                                 </div>
                                 <span className={`text-[0.8vw] ${(activeFolder === 'Recent' || activeFolder === 'Recent Book') ? 'text-white font-medium' : 'text-gray-400'}`}>
                                     {recentCount}
+                                </span>
+                            </div>
+
+                            {/* All Flipbooks */}
+                            <div
+                                onClick={() => {
+                                    if (setDashboardMode) setDashboardMode('books');
+                                    setActiveFolder('All Flipbook');
+                                    setSelectedBooks([]);
+                                }}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Flipbooks</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {allCount}
                                 </span>
                             </div>
 

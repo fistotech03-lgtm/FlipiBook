@@ -1799,9 +1799,21 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
+      const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
+      if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
+        resolvedId = shapeParent.id;
+      }
       const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
       if (buttonParent && buttonParent.id) {
         resolvedId = buttonParent.id;
+      }
+      const audioParent = el?.closest?.('[data-type="audio-frame"], g[id^="audio-"]');
+      if (audioParent && audioParent.id) {
+        resolvedId = audioParent.id;
+      }
+      const mediaParent = el?.closest?.('[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+      if (mediaParent && mediaParent.id) {
+        resolvedId = mediaParent.id;
       }
       const finalEl = document.getElementById(resolvedId) || el;
       const isFreeFrame = finalEl ? (
@@ -2540,9 +2552,9 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // Check if double click targets a compound element (button, audio, qr, map, embed, etc.)
+    // Check if double click targets a compound element (button, audio, shape, qr, map, embed, etc.)
     const compoundParent = (directTextEl || e.target)?.closest?.(
-      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (compoundParent) {
       if (compoundParent.id) {
@@ -2579,7 +2591,7 @@ export const useCanvasPointerEvents = ({
     }
     let target = getDraggableElement(clickedEl, e.currentTarget) || (selectedLayerIdRef.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null);
     const targetCompound = target?.closest?.(
-      '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (targetCompound) {
       if (targetCompound.id) {
@@ -2731,10 +2743,18 @@ export const useCanvasPointerEvents = ({
     if (target.id && target.tagName.toLowerCase() !== 'svg') {
       const isMediaGroupChild = target.closest('[data-is-image-group="true"]') ||
         target.closest('[data-is-video-group="true"]') ||
-        target.closest('[data-is-gif-group="true"]');
+        target.closest('[data-is-gif-group="true"]') ||
+        target.closest('[data-is-element-shape="true"]') ||
+        target.closest('[data-shape-type]') ||
+        target.closest('[data-type="shape"]') ||
+        target.closest('g[id^="shape-"]');
 
-      // If the target is a child of a media group, do not drill down on double click
+      // If the target is a child of a compound group, do not drill down on double click
       if (isMediaGroupChild && isMediaGroupChild !== target) {
+        if (setSelectedLayerId) {
+          setSelectedLayerId(isMediaGroupChild.id);
+          selectedLayerIdRef.current = isMediaGroupChild.id;
+        }
         return;
       }
 

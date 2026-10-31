@@ -85,12 +85,17 @@ export async function extractDocToPdf(fileInput, fileName = 'document.docx', onP
     const previewPages = [];
 
     const total = sheets.length;
+    onProgress({ percent: 45, stage: `Found ${total} pages. Processing...`, current: 1, total });
+
     for (let i = 0; i < total; i++) {
       const canvas = sheets[i];
       const geometry = (layout?.pages && layout.pages[i]) || layout?.page || { width: 816, height: 1056 };
 
-      const percent = Math.round(50 + (i / total) * 35);
-      onProgress({ percent, stage: `Processing page ${i + 1} of ${total}...` });
+      const percent = Math.round(45 + ((i + 1) / total) * 40);
+      onProgress({ percent, stage: `Processing page ${i + 1} of ${total}...`, current: i + 1, total });
+
+      // Yield to event loop so spinner runs smoothly
+      await new Promise(r => setTimeout(r, 0));
 
       const jpegBytes = await canvasToJpegBytes(canvas, 0.92);
       const fragments = extractPageFragments(lines, i);

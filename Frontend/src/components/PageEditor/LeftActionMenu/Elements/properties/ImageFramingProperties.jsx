@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import {
   Upload,
   Plus,
-  GripVertical,
   Trash2,
   Edit2,
   ArrowRightLeft
@@ -116,8 +115,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     if (backgroundColor.strokeOpacity !== next.strokeOpacity) updates['data-frame-stroke-opacity'] = (next.strokeOpacity / 100).toString();
     if (backgroundColor.strokeWeight !== next.strokeWeight) updates['data-frame-stroke-width'] = next.strokeWeight.toString();
     if (backgroundColor.strokeDashStyle !== next.strokeDashStyle || backgroundColor.strokeDashLength !== next.strokeDashLength || backgroundColor.strokeDashGap !== next.strokeDashGap || backgroundColor.strokeDasharrayValue !== next.strokeDasharrayValue) {
-      const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') 
-        ? 'none' 
+      const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
+        ? 'none'
         : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
       updates['data-frame-stroke-dasharray'] = dashValue;
     }
@@ -132,13 +131,13 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
     if (Object.keys(updates).length > 0) {
       Object.entries(updates).forEach(([k, v]) => selectedElement.setAttribute(k, v));
-      
+
       let bgRect = selectedElement.querySelector('.frame-bg-rect');
       if (!bgRect) {
         updateFramePadding(framePadding, true);
         bgRect = selectedElement.querySelector('.frame-bg-rect');
       }
-      
+
       if (bgRect) {
         bgRect.setAttribute('fill', next.fill !== 'none' && next.fill !== '#' ? next.fill : 'none');
         if (next.fillOpacity !== undefined) bgRect.setAttribute('fill-opacity', next.fillOpacity / 100);
@@ -151,8 +150,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
           bgRect.setAttribute('stroke-width', (sw * 2).toString());
           bgRect.setAttribute('data-frame-stroke-width', sw.toString());
         }
-        const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid') 
-          ? 'none' 
+        const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
+          ? 'none'
           : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
         bgRect.setAttribute('stroke-dasharray', dashValue);
         if (next.strokeLinecap !== undefined) {
@@ -230,210 +229,210 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     const listeners = [];
 
     const updateAdjustTransform = () => {
-        if (!adjustStateRef.current.matrix) return;
-        const m = adjustStateRef.current.matrix;
-        const transformStr = `${adjustStateRef.current.rotateStr || ''}matrix(${m[0]} ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]})`;
-        if (adjustStateRef.current.imgNode) {
-            adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
-        }
-        const ghost = selectedElement.querySelector('#ghost-layer');
-        if (ghost) {
-            const ghostImg = ghost.querySelector('image, img');
-            const outline = ghost.querySelector('rect');
-            if (ghostImg) ghostImg.setAttribute('transform', transformStr);
-            if (outline) outline.setAttribute('transform', transformStr);
-        }
+      if (!adjustStateRef.current.matrix) return;
+      const m = adjustStateRef.current.matrix;
+      const transformStr = `${adjustStateRef.current.rotateStr || ''}matrix(${m[0]} ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]})`;
+      if (adjustStateRef.current.imgNode) {
+        adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
+      }
+      const ghost = selectedElement.querySelector('#ghost-layer');
+      if (ghost) {
+        const ghostImg = ghost.querySelector('image, img');
+        const outline = ghost.querySelector('rect');
+        if (ghostImg) ghostImg.setAttribute('transform', transformStr);
+        if (outline) outline.setAttribute('transform', transformStr);
+      }
     };
 
     const enterAdjustMode = (patternId, path) => {
-        const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
-        if (!pattern) return;
-        let imgNode = pattern.querySelector('image, img');
-        if (!imgNode) {
-          const useNode = pattern.querySelector('use');
-          if (useNode) {
-            const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
-            const targetId = href.replace('#', '');
-            imgNode = selectedElement.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
-          }
+      const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
+      if (!pattern) return;
+      let imgNode = pattern.querySelector('image, img');
+      if (!imgNode) {
+        const useNode = pattern.querySelector('use');
+        if (useNode) {
+          const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+          const targetId = href.replace('#', '');
+          imgNode = selectedElement.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
         }
-        if (!imgNode) return; // Cannot adjust empty slot
+      }
+      if (!imgNode) return; // Cannot adjust empty slot
 
-        adjustStateRef.current.isAdjusting = true;
-        adjustStateRef.current.slotId = patternId;
-        adjustStateRef.current.imgNode = imgNode;
-        adjustStateRef.current.path = path;
-        adjustStateRef.current.bbox = path.getBBox();
-        
-        const transformStr = imgNode.getAttribute('transform');
-        let matrix = [1, 0, 0, 1, 0, 0];
-        let rotateStr = '';
-        if (transformStr) {
-            const rMatch = transformStr.match(/rotate\([^)]+\)/);
-            if (rMatch) rotateStr = rMatch[0] + ' ';
-            
-            const match = transformStr.match(/matrix\(([^)]+)\)/);
-            if (match) {
-                matrix = match[1].split(/[ ,]+/).map(parseFloat);
-            }
-        }
-        adjustStateRef.current.matrix = matrix;
-        adjustStateRef.current.rotateStr = rotateStr;
+      adjustStateRef.current.isAdjusting = true;
+      adjustStateRef.current.slotId = patternId;
+      adjustStateRef.current.imgNode = imgNode;
+      adjustStateRef.current.path = path;
+      adjustStateRef.current.bbox = path.getBBox();
 
-        let ghost = selectedElement.querySelector('#ghost-layer');
-        if (ghost) ghost.remove();
-        
-        ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        ghost.id = 'ghost-layer';
-        ghost.style.pointerEvents = 'none';
-        
-        // Inherit path's transform to match local coordinate space
-        let combinedTransform = path.getAttribute('transform') || '';
-        const pt = pattern.getAttribute('patternTransform');
-        if (pt) {
-            combinedTransform = `${combinedTransform} ${pt}`.trim();
-        }
-        if (combinedTransform) {
-            ghost.setAttribute('transform', combinedTransform);
-        }
-        
-        const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const bbox = adjustStateRef.current.bbox;
-        
-        const pcu = pattern.getAttribute('patternContentUnits');
-        if (!pcu || pcu === 'objectBoundingBox') {
-            wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
-        } else {
-            wrapper.setAttribute('transform', `translate(0, 0)`);
-        }
-        
-        const ghostImg = imgNode.cloneNode(true);
-        ghostImg.setAttribute('opacity', '0.4');
-        
-        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        outline.setAttribute('fill', 'none');
-        outline.setAttribute('stroke', '#f59e0b');
-        outline.setAttribute('vector-effect', 'non-scaling-stroke');
-        outline.setAttribute('stroke-dasharray', '5,5');
-        
-        let iw = imgNode.getAttribute('width');
-        let ih = imgNode.getAttribute('height');
-        if (!iw || iw.includes('%')) iw = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.width.toString();
-        if (!ih || ih.includes('%')) ih = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.height.toString();
-        
-        outline.setAttribute('width', iw);
-        outline.setAttribute('height', ih);
-        
-        const imgTransform = ghostImg.getAttribute('transform');
-        if (imgTransform) outline.setAttribute('transform', imgTransform);
-        
-        wrapper.appendChild(ghostImg);
-        wrapper.appendChild(outline);
-        ghost.appendChild(wrapper);
+      const transformStr = imgNode.getAttribute('transform');
+      let matrix = [1, 0, 0, 1, 0, 0];
+      let rotateStr = '';
+      if (transformStr) {
+        const rMatch = transformStr.match(/rotate\([^)]+\)/);
+        if (rMatch) rotateStr = rMatch[0] + ' ';
 
-        // Insert sibling to inherit group transforms
-        if (path.parentNode) {
-            path.parentNode.insertBefore(ghost, path.nextSibling);
-        } else {
-            selectedElement.appendChild(ghost);
+        const match = transformStr.match(/matrix\(([^)]+)\)/);
+        if (match) {
+          matrix = match[1].split(/[ ,]+/).map(parseFloat);
         }
+      }
+      adjustStateRef.current.matrix = matrix;
+      adjustStateRef.current.rotateStr = rotateStr;
 
-        const highlightId = `highlight-${patternId}`;
-        let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) {
-            highlight.setAttribute('stroke', '#f59e0b');
-            highlight.setAttribute('stroke-dasharray', '8,4');
-        }
+      let ghost = selectedElement.querySelector('#ghost-layer');
+      if (ghost) ghost.remove();
+
+      ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      ghost.id = 'ghost-layer';
+      ghost.style.pointerEvents = 'none';
+
+      // Inherit path's transform to match local coordinate space
+      let combinedTransform = path.getAttribute('transform') || '';
+      const pt = pattern.getAttribute('patternTransform');
+      if (pt) {
+        combinedTransform = `${combinedTransform} ${pt}`.trim();
+      }
+      if (combinedTransform) {
+        ghost.setAttribute('transform', combinedTransform);
+      }
+
+      const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const bbox = adjustStateRef.current.bbox;
+
+      const pcu = pattern.getAttribute('patternContentUnits');
+      if (!pcu || pcu === 'objectBoundingBox') {
+        wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
+      } else {
+        wrapper.setAttribute('transform', `translate(0, 0)`);
+      }
+
+      const ghostImg = imgNode.cloneNode(true);
+      ghostImg.setAttribute('opacity', '0.4');
+
+      const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      outline.setAttribute('fill', 'none');
+      outline.setAttribute('stroke', '#f59e0b');
+      outline.setAttribute('vector-effect', 'non-scaling-stroke');
+      outline.setAttribute('stroke-dasharray', '5,5');
+
+      let iw = imgNode.getAttribute('width');
+      let ih = imgNode.getAttribute('height');
+      if (!iw || iw.includes('%')) iw = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.width.toString();
+      if (!ih || ih.includes('%')) ih = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.height.toString();
+
+      outline.setAttribute('width', iw);
+      outline.setAttribute('height', ih);
+
+      const imgTransform = ghostImg.getAttribute('transform');
+      if (imgTransform) outline.setAttribute('transform', imgTransform);
+
+      wrapper.appendChild(ghostImg);
+      wrapper.appendChild(outline);
+      ghost.appendChild(wrapper);
+
+      // Insert sibling to inherit group transforms
+      if (path.parentNode) {
+        path.parentNode.insertBefore(ghost, path.nextSibling);
+      } else {
+        selectedElement.appendChild(ghost);
+      }
+
+      const highlightId = `highlight-${patternId}`;
+      let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
+      if (highlight) {
+        highlight.setAttribute('stroke', '#f59e0b');
+        highlight.setAttribute('stroke-dasharray', '8,4');
+      }
     };
 
     const exitAdjustMode = () => {
-        adjustStateRef.current.isAdjusting = false;
-        const ghost = selectedElement.querySelector('#ghost-layer');
-        if (ghost) ghost.remove();
-        
-        if (adjustStateRef.current.slotId) {
-            const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-            const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-            if (highlight) {
-                highlight.setAttribute('stroke', '#2563eb');
-                highlight.setAttribute('stroke-dasharray', '4,5');
-            }
+      adjustStateRef.current.isAdjusting = false;
+      const ghost = selectedElement.querySelector('#ghost-layer');
+      if (ghost) ghost.remove();
+
+      if (adjustStateRef.current.slotId) {
+        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
+        const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
+        if (highlight) {
+          highlight.setAttribute('stroke', '#2563eb');
+          highlight.setAttribute('stroke-dasharray', '4,5');
         }
-        adjustStateRef.current.slotId = null;
-        syncDomChanges();
+      }
+      adjustStateRef.current.slotId = null;
+      syncDomChanges();
     };
 
     const handlePointerMove = (e) => {
-        if (!adjustStateRef.current.isPanning) return;
-        e.preventDefault();
-        e.stopPropagation();
-        
-        let dx = e.clientX - adjustStateRef.current.startX;
-        let dy = e.clientY - adjustStateRef.current.startY;
-        
-        let pcu = 'objectBoundingBox';
-        if (adjustStateRef.current.slotId && adjustStateRef.current.path) {
-            const pattern = adjustStateRef.current.path.ownerSVGElement?.querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`);
-            if (pattern) {
-                pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
-                
-                // Read rotation from patternTransform (old) OR from image transform (new)
-                let rot = 0;
-                const pt = pattern.getAttribute('patternTransform');
-                if (pt) {
-                    const match = pt.match(/rotate\(([-0-9.]+)/);
-                    if (match) rot = parseFloat(match[1]);
-                } else if (adjustStateRef.current.rotateStr) {
-                    const match = adjustStateRef.current.rotateStr.match(/rotate\(([-0-9.]+)/);
-                    if (match) rot = parseFloat(match[1]);
-                }
-                
-                if (rot !== 0) {
-                    const rad = -rot * Math.PI / 180;
-                    const dxRot = dx * Math.cos(rad) - dy * Math.sin(rad);
-                    const dyRot = dx * Math.sin(rad) + dy * Math.cos(rad);
-                    dx = dxRot;
-                    dy = dyRot;
-                }
-            }
-        }
+      if (!adjustStateRef.current.isPanning) return;
+      e.preventDefault();
+      e.stopPropagation();
 
-        let scaleX = 1;
-        let scaleY = 1;
-        if (adjustStateRef.current.path) {
-            const ctm = adjustStateRef.current.path.getScreenCTM();
-            if (ctm) {
-                scaleX = ctm.a || 1;
-                scaleY = ctm.d || 1;
-            }
+      let dx = e.clientX - adjustStateRef.current.startX;
+      let dy = e.clientY - adjustStateRef.current.startY;
+
+      let pcu = 'objectBoundingBox';
+      if (adjustStateRef.current.slotId && adjustStateRef.current.path) {
+        const pattern = adjustStateRef.current.path.ownerSVGElement?.querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`);
+        if (pattern) {
+          pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
+
+          // Read rotation from patternTransform (old) OR from image transform (new)
+          let rot = 0;
+          const pt = pattern.getAttribute('patternTransform');
+          if (pt) {
+            const match = pt.match(/rotate\(([-0-9.]+)/);
+            if (match) rot = parseFloat(match[1]);
+          } else if (adjustStateRef.current.rotateStr) {
+            const match = adjustStateRef.current.rotateStr.match(/rotate\(([-0-9.]+)/);
+            if (match) rot = parseFloat(match[1]);
+          }
+
+          if (rot !== 0) {
+            const rad = -rot * Math.PI / 180;
+            const dxRot = dx * Math.cos(rad) - dy * Math.sin(rad);
+            const dyRot = dx * Math.sin(rad) + dy * Math.cos(rad);
+            dx = dxRot;
+            dy = dyRot;
+          }
         }
-        
-        const bbox = adjustStateRef.current.bbox;
-        let tx_delta, ty_delta;
-        
-        if (pcu === 'userSpaceOnUse') {
-            tx_delta = dx / scaleX;
-            ty_delta = dy / scaleY;
-        } else {
-            tx_delta = (dx / scaleX) / bbox.width;
-            ty_delta = (dy / scaleY) / bbox.height;
+      }
+
+      let scaleX = 1;
+      let scaleY = 1;
+      if (adjustStateRef.current.path) {
+        const ctm = adjustStateRef.current.path.getScreenCTM();
+        if (ctm) {
+          scaleX = ctm.a || 1;
+          scaleY = ctm.d || 1;
         }
-        
-        const m = adjustStateRef.current.startMatrix;
-        if (!m || !adjustStateRef.current.matrix) return;
-        const newTx = m[4] + tx_delta;
-        const newTy = m[5] + ty_delta;
-        
-        adjustStateRef.current.matrix[4] = newTx;
-        adjustStateRef.current.matrix[5] = newTy;
-        
-        updateAdjustTransform();
+      }
+
+      const bbox = adjustStateRef.current.bbox;
+      let tx_delta, ty_delta;
+
+      if (pcu === 'userSpaceOnUse') {
+        tx_delta = dx / scaleX;
+        ty_delta = dy / scaleY;
+      } else {
+        tx_delta = (dx / scaleX) / bbox.width;
+        ty_delta = (dy / scaleY) / bbox.height;
+      }
+
+      const m = adjustStateRef.current.startMatrix;
+      if (!m || !adjustStateRef.current.matrix) return;
+      const newTx = m[4] + tx_delta;
+      const newTy = m[5] + ty_delta;
+
+      adjustStateRef.current.matrix[4] = newTx;
+      adjustStateRef.current.matrix[5] = newTy;
+
+      updateAdjustTransform();
     };
 
     const handlePointerUp = (e) => {
-        if (adjustStateRef.current.isPanning) {
-            adjustStateRef.current.isPanning = false;
-        }
+      if (adjustStateRef.current.isPanning) {
+        adjustStateRef.current.isPanning = false;
+      }
     };
 
     window.addEventListener('pointermove', handlePointerMove);
@@ -498,7 +497,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             if (paths.length === 1) return;
             e.stopPropagation();
             e.preventDefault();
-            
+
             if (activeSlotRef.current === patternId) {
               // Deselect
               activeSlotRef.current = null;
@@ -524,7 +523,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               exitAdjustMode();
             } else {
               if (adjustStateRef.current.isAdjusting) {
-                  exitAdjustMode();
+                exitAdjustMode();
               }
               enterAdjustMode(patternId, path);
             }
@@ -532,40 +531,40 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
           const handlePointerDown = (e) => {
             if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                e.preventDefault();
-                e.stopPropagation();
-                adjustStateRef.current.isPanning = true;
-                adjustStateRef.current.startX = e.clientX;
-                adjustStateRef.current.startY = e.clientY;
-                adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
+              e.preventDefault();
+              e.stopPropagation();
+              adjustStateRef.current.isPanning = true;
+              adjustStateRef.current.startX = e.clientX;
+              adjustStateRef.current.startY = e.clientY;
+              adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
             }
           };
 
           const handleWheel = (e) => {
             if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
-                const m = adjustStateRef.current.matrix;
-                
-                let pcu = 'objectBoundingBox';
-                const pattern = selectedElement?.querySelector(`pattern[id="${patternId}"]`);
-                if (pattern) pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
-                
-                let cx = 0.5;
-                let cy = 0.5;
-                if (pcu === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                    cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
-                    cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
-                }
+              e.preventDefault();
+              e.stopPropagation();
 
-                m[0] *= zoomDelta;
-                m[3] *= zoomDelta;
-                m[4] = cx + (m[4] - cx) * zoomDelta;
-                m[5] = cy + (m[5] - cy) * zoomDelta;
-                
-                updateAdjustTransform();
+              const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
+              const m = adjustStateRef.current.matrix;
+
+              let pcu = 'objectBoundingBox';
+              const pattern = selectedElement?.querySelector(`pattern[id="${patternId}"]`);
+              if (pattern) pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
+
+              let cx = 0.5;
+              let cy = 0.5;
+              if (pcu === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
+                cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
+                cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
+              }
+
+              m[0] *= zoomDelta;
+              m[3] *= zoomDelta;
+              m[4] = cx + (m[4] - cx) * zoomDelta;
+              m[5] = cy + (m[5] - cy) * zoomDelta;
+
+              updateAdjustTransform();
             }
           };
 
@@ -637,42 +636,42 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       setGap(parseFloat(firstPath.getAttribute('stroke-width')) || 0);
       setRadius(parseFloat(firstPath.getAttribute('rx')) || parseFloat(firstPath.getAttribute('data-rx')) || 0);
     }
-    
+
     // Load per-slot radii
     const initialRadii = {};
     const initialRotations = {};
     paths.forEach(p => {
-       const pId = p.dataset.patternId;
-       if (pId) {
-           initialRadii[pId] = parseFloat(p.getAttribute('rx')) || parseFloat(p.getAttribute('data-rx')) || 0;
-           const pattern = selectedElement.querySelector(`pattern[id="${pId}"]`);
-           if (pattern) {
-               // Check patternTransform (old method) or image rotate (new method)
-               const pt = pattern.getAttribute('patternTransform');
-               let foundRot = false;
-               if (pt) {
-                   const match = pt.match(/rotate\(([-0-9.]+)/);
-                   if (match) {
-                       initialRotations[pId] = parseFloat(match[1]);
-                       foundRot = true;
-                   }
-               }
-               if (!foundRot) {
-                   const imgNode = pattern.querySelector('image, img');
-                   if (imgNode) {
-                       const tf = imgNode.getAttribute('transform');
-                       if (tf) {
-                           const match = tf.match(/rotate\(([-0-9.]+)/);
-                           if (match) initialRotations[pId] = parseFloat(match[1]);
-                       }
-                   }
-               }
-           }
-       }
+      const pId = p.dataset.patternId;
+      if (pId) {
+        initialRadii[pId] = parseFloat(p.getAttribute('rx')) || parseFloat(p.getAttribute('data-rx')) || 0;
+        const pattern = selectedElement.querySelector(`pattern[id="${pId}"]`);
+        if (pattern) {
+          // Check patternTransform (old method) or image rotate (new method)
+          const pt = pattern.getAttribute('patternTransform');
+          let foundRot = false;
+          if (pt) {
+            const match = pt.match(/rotate\(([-0-9.]+)/);
+            if (match) {
+              initialRotations[pId] = parseFloat(match[1]);
+              foundRot = true;
+            }
+          }
+          if (!foundRot) {
+            const imgNode = pattern.querySelector('image, img');
+            if (imgNode) {
+              const tf = imgNode.getAttribute('transform');
+              if (tf) {
+                const match = tf.match(/rotate\(([-0-9.]+)/);
+                if (match) initialRotations[pId] = parseFloat(match[1]);
+              }
+            }
+          }
+        }
+      }
     });
     setSlotRadii(initialRadii);
     setSlotRotations(initialRotations);
-    
+
     setFramePadding(parseFloat(selectedElement.getAttribute('data-frame-padding')) || 0);
 
     return () => {
@@ -690,7 +689,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       if (observer) observer.disconnect();
       activeSlotRef.current = null;
       setActiveSlotId(null);
-      
+
       const ghost = selectedElement?.querySelector('#ghost-layer');
       if (ghost) ghost.remove();
     };
@@ -726,8 +725,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     const fileName = customName || file.name || 'Image Name .jpg';
     const fileSizeFormatted = file.size
       ? (file.size >= 1024 * 1024
-          ? `${(file.size / (1024 * 1024)).toFixed(0)}MB`
-          : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+        ? `${(file.size / (1024 * 1024)).toFixed(0)}MB`
+        : `${Math.max(1, Math.round(file.size / 1024))}KB`)
       : '24MB';
 
     const reader = new FileReader();
@@ -856,11 +855,11 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         mask.id = maskId;
         defs.appendChild(mask);
       }
-      
+
       if (newGap > 0) {
         mask.innerHTML = ''; // clear old mask shapes
         mask.setAttribute('maskUnits', 'userSpaceOnUse');
-        
+
         const whiteRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         // Cover everything so the image is visible
         whiteRect.setAttribute('x', '-5000');
@@ -872,7 +871,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
         const clone = path.cloneNode(true);
         clone.setAttribute('fill', 'none'); // MUST be none, otherwise it defaults to black and hides the whole shape!
-        clone.removeAttribute('mask'); 
+        clone.removeAttribute('mask');
         clone.removeAttribute('id');
         clone.removeAttribute('data-pattern-id');
         clone.removeAttribute('transform'); // Remove transform so it evaluates in path's local coordinate system
@@ -880,7 +879,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         clone.setAttribute('stroke-width', newGap);
         clone.setAttribute('stroke-linejoin', 'round');
         mask.appendChild(clone);
-        
+
         path.removeAttribute('stroke');
         path.removeAttribute('stroke-opacity');
         path.removeAttribute('stroke-width');
@@ -917,15 +916,15 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
     setGap(newGap);
     setRadius(newRadius);
-    
+
     // Also update all slot radii state to match the global one
     const newSlotRadii = {};
     paths.forEach(p => {
-       const pId = p.dataset.patternId;
-       if (pId) newSlotRadii[pId] = newRadius;
+      const pId = p.dataset.patternId;
+      if (pId) newSlotRadii[pId] = newRadius;
     });
     setSlotRadii(newSlotRadii);
-    
+
     const bgRect = selectedElement.querySelector('.frame-bg-rect');
     if (bgRect) {
       if (newRadius > 0) {
@@ -936,7 +935,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         bgRect.removeAttribute('ry');
       }
     }
-    
+
     if (!skipSync) {
       syncDomChanges();
     }
@@ -944,58 +943,58 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
   const updateSlotRadius = (patternId, newRadius, skipSync = false) => {
     if (!selectedElement) return;
-    
-    setSlotRadii(prev => ({...prev, [patternId]: newRadius}));
-    
+
+    setSlotRadii(prev => ({ ...prev, [patternId]: newRadius }));
+
     const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
     const path = paths.find(p => p.dataset.patternId === patternId);
     if (path) {
-        if (newRadius > 0) {
-          if (path.tagName.toLowerCase() === 'rect') {
-            path.setAttribute('rx', newRadius);
-            path.setAttribute('ry', newRadius);
-          } else {
-            path.setAttribute('stroke-linejoin', 'round');
-            path.setAttribute('data-rx', newRadius);
-          }
+      if (newRadius > 0) {
+        if (path.tagName.toLowerCase() === 'rect') {
+          path.setAttribute('rx', newRadius);
+          path.setAttribute('ry', newRadius);
         } else {
-          if (path.tagName.toLowerCase() === 'rect') {
-            path.removeAttribute('rx');
-            path.removeAttribute('ry');
-          } else {
-            path.removeAttribute('stroke-linejoin');
-            path.removeAttribute('data-rx');
-          }
+          path.setAttribute('stroke-linejoin', 'round');
+          path.setAttribute('data-rx', newRadius);
         }
-        
-        // Also update highlight clone if it exists
-        const highlightId = `highlight-${patternId}`;
-        const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) {
-            if (newRadius > 0 && highlight.tagName.toLowerCase() === 'rect') {
-                highlight.setAttribute('rx', newRadius);
-                highlight.setAttribute('ry', newRadius);
-            } else if (highlight.tagName.toLowerCase() === 'rect') {
-                highlight.removeAttribute('rx');
-                highlight.removeAttribute('ry');
-            }
+      } else {
+        if (path.tagName.toLowerCase() === 'rect') {
+          path.removeAttribute('rx');
+          path.removeAttribute('ry');
+        } else {
+          path.removeAttribute('stroke-linejoin');
+          path.removeAttribute('data-rx');
         }
+      }
+
+      // Also update highlight clone if it exists
+      const highlightId = `highlight-${patternId}`;
+      const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
+      if (highlight) {
+        if (newRadius > 0 && highlight.tagName.toLowerCase() === 'rect') {
+          highlight.setAttribute('rx', newRadius);
+          highlight.setAttribute('ry', newRadius);
+        } else if (highlight.tagName.toLowerCase() === 'rect') {
+          highlight.removeAttribute('rx');
+          highlight.removeAttribute('ry');
+        }
+      }
     }
-    
+
     if (!skipSync) syncDomChanges();
   };
 
   const updateFramePadding = (newPadding, skipSync = false) => {
     if (!selectedElement) return;
-    
+
     setFramePadding(newPadding);
     selectedElement.setAttribute('data-frame-padding', newPadding);
-    
+
     const scaleVal = (100 - newPadding) / 100;
-    
+
     const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'))
       .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
-      
+
     paths.forEach(p => {
       if (!p.hasAttribute('data-orig-tf')) {
         p.setAttribute('data-orig-tf', p.getAttribute('transform') || '');
@@ -1011,16 +1010,16 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         if (origTf) p.setAttribute('transform', origTf);
         else p.removeAttribute('transform');
       });
-      
+
       const bbox = selectedElement.getBBox();
       boundary = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       boundary.setAttribute('class', 'frame-bg-rect');
-      
+
       const fillVal = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
       boundary.setAttribute('fill', fillVal !== '#' ? fillVal : 'none');
       const bgOp = selectedElement.getAttribute('data-frame-bg-opacity');
       if (bgOp) boundary.setAttribute('fill-opacity', bgOp);
-      
+
       const strokeVal = selectedElement.getAttribute('data-frame-stroke') || 'none';
       boundary.setAttribute('stroke', strokeVal !== '#' ? strokeVal : 'none');
       const strOp = selectedElement.getAttribute('data-frame-stroke-opacity');
@@ -1033,7 +1032,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         boundary.setAttribute('rx', radius);
         boundary.setAttribute('ry', radius);
       }
-      
+
       boundary.setAttribute('pointer-events', 'none');
       boundary.setAttribute('x', bbox.x);
       boundary.setAttribute('y', bbox.y);
@@ -1044,14 +1043,14 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
     const frameCx = parseFloat(boundary.getAttribute('x')) + parseFloat(boundary.getAttribute('width')) / 2;
     const frameCy = parseFloat(boundary.getAttribute('y')) + parseFloat(boundary.getAttribute('height')) / 2;
-    
+
     const paddingTransform = `translate(${frameCx}, ${frameCy}) scale(${scaleVal}) translate(${-frameCx}, ${-frameCy})`;
-    
+
     paths.forEach(path => {
       const origTf = path.getAttribute('data-orig-tf');
       const finalTransform = origTf ? `${paddingTransform} ${origTf}` : paddingTransform;
       path.setAttribute('transform', finalTransform);
-      
+
       const patternId = path.dataset.patternId;
       if (patternId) {
         const highlightId = `highlight-${patternId}`;
@@ -1074,7 +1073,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
 
     const slotsToUpdate = activeSlotId ? [activeSlotId] : paths.map(p => p.dataset.patternId).filter(Boolean);
-    
+
     setSlotRotations(prev => {
       const next = { ...prev };
       slotsToUpdate.forEach(id => { next[id] = angle; });
@@ -1086,41 +1085,41 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       const path = paths.find(p => p.getAttribute('data-pattern-id') === patternId || p.dataset?.patternId === patternId);
       if (pattern && path) {
         let bbox = { x: 0, y: 0, width: 100, height: 100 };
-        try { bbox = path.getBBox(); } catch(e) {}
+        try { bbox = path.getBBox(); } catch (e) { }
         const cx = bbox.x + bbox.width / 2;
         const cy = bbox.y + bbox.height / 2;
-        
+
         const pcu = pattern.getAttribute('patternContentUnits');
         let matrixStr = '';
         const imgNode = pattern.querySelector('image, img');
-        
+
         if (imgNode) {
-            let tf = imgNode.getAttribute('transform') || '';
-            let m = [1, 0, 0, 1, 0, 0];
-            const mMatch = tf.match(/matrix\(([^)]+)\)/);
-            if (mMatch) {
-                m = mMatch[1].split(/[ ,]+/).map(parseFloat);
-            }
-            
-            if (pcu !== 'userSpaceOnUse') {
-                // Upgrade from objectBoundingBox to userSpaceOnUse on the fly!
-                m[0] = m[0] * bbox.width;
-                m[2] = m[2] * bbox.width;
-                m[1] = m[1] * bbox.height;
-                m[3] = m[3] * bbox.height;
-                m[4] = bbox.x + m[4] * bbox.width;
-                m[5] = bbox.y + m[5] * bbox.height;
-                pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-                pattern.removeAttribute('patternTransform');
-            }
-            
-            matrixStr = `matrix(${m.join(' ')})`;
-            
-            if (angle !== 0) {
-                imgNode.setAttribute('transform', `rotate(${angle}, ${cx}, ${cy}) ${matrixStr}`.trim());
-            } else {
-                imgNode.setAttribute('transform', matrixStr);
-            }
+          let tf = imgNode.getAttribute('transform') || '';
+          let m = [1, 0, 0, 1, 0, 0];
+          const mMatch = tf.match(/matrix\(([^)]+)\)/);
+          if (mMatch) {
+            m = mMatch[1].split(/[ ,]+/).map(parseFloat);
+          }
+
+          if (pcu !== 'userSpaceOnUse') {
+            // Upgrade from objectBoundingBox to userSpaceOnUse on the fly!
+            m[0] = m[0] * bbox.width;
+            m[2] = m[2] * bbox.width;
+            m[1] = m[1] * bbox.height;
+            m[3] = m[3] * bbox.height;
+            m[4] = bbox.x + m[4] * bbox.width;
+            m[5] = bbox.y + m[5] * bbox.height;
+            pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+            pattern.removeAttribute('patternTransform');
+          }
+
+          matrixStr = `matrix(${m.join(' ')})`;
+
+          if (angle !== 0) {
+            imgNode.setAttribute('transform', `rotate(${angle}, ${cx}, ${cy}) ${matrixStr}`.trim());
+          } else {
+            imgNode.setAttribute('transform', matrixStr);
+          }
         }
       }
     });
@@ -1148,7 +1147,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       let bbox = { width: 100, height: 100 };
       try {
         bbox = shapeEl.getBBox();
-      } catch(e) {}
+      } catch (e) { }
       if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100 };
 
       const slotW = bbox.width;
@@ -1163,7 +1162,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
       let imageNode = pattern.querySelector('image, img');
       const useNode = pattern.querySelector('use');
-      
+
       if (!imageNode && useNode) {
         imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         pattern.removeChild(useNode);
@@ -1176,15 +1175,15 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       imageNode.setAttribute('width', imgW);
       imageNode.setAttribute('height', imgH);
       imageNode.removeAttribute('preserveAspectRatio');
-      
+
       pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
       pattern.removeAttribute('patternTransform'); // Clear old pt when upgrading
-      
+
       const existingTf = imageNode.getAttribute('transform') || '';
       let rotateStr = '';
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
-      
+
       imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${bbox.x + tx_user} ${bbox.y + ty_user})`);
 
       imageNode.setAttribute('href', dataUrl);
@@ -1201,12 +1200,12 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
   const isFillNone = !backgroundColor?.fill || backgroundColor.fill === 'none' || backgroundColor.fill === 'transparent' || backgroundColor.fill === '#';
   const isStrokeNone = !backgroundColor?.stroke || backgroundColor.stroke === 'none' || backgroundColor.stroke === 'transparent' || backgroundColor.stroke === '#';
 
-  const currentFillHex = localFillHex !== null 
-    ? localFillHex 
+  const currentFillHex = localFillHex !== null
+    ? localFillHex
     : (isFillNone ? 'NONE' : backgroundColor.fill);
 
-  const currentStrokeHex = localStrokeHex !== null 
-    ? localStrokeHex 
+  const currentStrokeHex = localStrokeHex !== null
+    ? localStrokeHex
     : (isStrokeNone ? 'NONE' : backgroundColor.stroke);
 
   const handleHexSubmit = (type, val) => {
@@ -1295,19 +1294,13 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                   e.stopPropagation();
                 }}
                 onDrop={(e) => handleImageDrop(e, slot.id)}
-                className={`flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border rounded-[0.75vw] shadow-2xs transition-all cursor-pointer ${
-                  isSelected || (!slot.currentImage || slot.currentImage === DEFAULT_FRAME_IMAGE)
+                className={`flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border rounded-[0.75vw] shadow-2xs transition-all cursor-pointer ${isSelected || (!slot.currentImage || slot.currentImage === DEFAULT_FRAME_IMAGE)
                     ? 'border-blue-500 ring-1 ring-blue-500/30'
                     : 'border-gray-200/90 hover:border-gray-300'
-                }`}
+                  }`}
               >
-                {/* Left Section: Drag handle + Thumbnail + Meta */}
+                {/* Left Section: Thumbnail + Meta (moveable grip removed) */}
                 <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
-                  {/* Drag Handle */}
-                  <div className="text-gray-300 hover:text-gray-500 cursor-grab shrink-0 px-[0.1vw]">
-                    <GripVertical size="0.95vw" />
-                  </div>
-
                   {/* Thumbnail with Replace button overlay */}
                   <div
                     className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] border border-gray-200 shrink-0 overflow-hidden group/thumb cursor-pointer shadow-2xs bg-gray-100 flex items-center justify-center"
@@ -1338,18 +1331,18 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                   </div>
 
                   {/* File Name & Dimensions block */}
-                  <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex flex-col min-w-0 flex-1 py-[0.1vw]">
                     <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={meta.name}>
                       {meta.name}
                     </span>
-                    <span className="text-[0.68vw] text-gray-400 font-semibold">
+                    <span className="text-[0.68vw] text-gray-400 font-medium truncate" title={meta.meta}>
                       {meta.meta}
                     </span>
                   </div>
                 </div>
 
                 {/* Right Actions: Pencil / Edit & Delete Trash */}
-                <div className="flex items-center gap-[0.4vw] shrink-0 ml-[0.5vw]">
+                <div className="flex items-center gap-[0.3vw] shrink-0 ml-[0.4vw]">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1398,40 +1391,40 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       {/* ── 3. Properties Sliders ── */}
       <div className="flex flex-col gap-[0.5vw] mt-[0.5vw]">
         {slots.length > 1 && (
-          <PropertySlider 
-            label="Partition Gap" 
-            value={gap} 
-            onChange={(val) => updateGapAndRadius(val, radius, true)} 
+          <PropertySlider
+            label="Partition Gap"
+            value={gap}
+            onChange={(val) => updateGapAndRadius(val, radius, true)}
             onPointerUp={syncDomChanges}
-            min={0} 
-            max={50} 
+            min={0}
+            max={50}
           />
         )}
 
         {slots.some(s => s.path.tagName.toLowerCase() === 'rect') && (
-          <PropertySlider 
-            label="Corner Radius" 
-            value={activeSlotId ? (slotRadii[activeSlotId] || 0) : radius} 
+          <PropertySlider
+            label="Corner Radius"
+            value={activeSlotId ? (slotRadii[activeSlotId] || 0) : radius}
             onChange={(val) => {
               if (activeSlotId) {
                 updateSlotRadius(activeSlotId, val, true);
               } else {
                 updateGapAndRadius(gap, val, true);
               }
-            }} 
+            }}
             onPointerUp={syncDomChanges}
-            min={0} 
-            max={100} 
+            min={0}
+            max={100}
           />
         )}
 
-        <PropertySlider 
-          label="Rotation" 
-          value={activeSlotId ? (slotRotations[activeSlotId] || 0) : (Object.values(slotRotations)[0] || 0)} 
-          onChange={(val) => updateRotation(val, true)} 
+        <PropertySlider
+          label="Rotation"
+          value={activeSlotId ? (slotRotations[activeSlotId] || 0) : (Object.values(slotRotations)[0] || 0)}
+          onChange={(val) => updateRotation(val, true)}
           onPointerUp={syncDomChanges}
-          min={-180} 
-          max={180} 
+          min={-180}
+          max={180}
         />
       </div>
 
@@ -1659,7 +1652,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                 if (bbox.width && bbox.height) {
                   return bbox.width / bbox.height;
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
             return 130 / 140;
           })()}

@@ -1108,133 +1108,133 @@ const ElementShapesProperties = ({
                   } catch (e) { }
                 }
 
-                  foundImage = true;
+                foundImage = true;
 
-                  const handleDoubleClick = (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                      exitAdjustMode();
-                    } else {
-                      if (adjustStateRef.current.isAdjusting) exitAdjustMode();
-                      enterAdjustMode(patternId, shapeEl);
-                    }
-                  };
-
-                  const handlePointerDown = (e) => {
-                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      adjustStateRef.current.isPanning = true;
-                      adjustStateRef.current.startX = e.clientX;
-                      adjustStateRef.current.startY = e.clientY;
-                      adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
-                      if (shapeEl) shapeEl.style.cursor = 'grabbing';
-                      if (selectedElement) selectedElement.style.cursor = 'grabbing';
-                    }
-                  };
-
-                  const handleWheel = (e) => {
-                    if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
-                      const m = adjustStateRef.current.matrix;
-
-                      let pcuVal = 'objectBoundingBox';
-                      const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
-                      if (pat) pcuVal = pat.getAttribute('patternContentUnits') || 'objectBoundingBox';
-
-                      let cx = 0.5;
-                      let cy = 0.5;
-                      if (pcuVal === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                        cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
-                        cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
-                      }
-
-                      m[0] *= zoomDelta;
-                      m[3] *= zoomDelta;
-                      m[4] = cx + (m[4] - cx) * zoomDelta;
-                      m[5] = cy + (m[5] - cy) * zoomDelta;
-
-                      updateAdjustTransform();
-                    }
-                  };
-
-                  shapeEl.addEventListener('dblclick', handleDoubleClick);
-                  shapeEl.addEventListener('pointerdown', handlePointerDown);
-                  shapeEl.addEventListener('wheel', handleWheel, { passive: false });
-                  listeners.push({ targetEl: shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
-
-                  if (selectedElement && selectedElement !== shapeEl) {
-                    selectedElement.addEventListener('dblclick', handleDoubleClick);
-                    selectedElement.addEventListener('pointerdown', handlePointerDown);
-                    selectedElement.addEventListener('wheel', handleWheel, { passive: false });
-                    listeners.push({ targetEl: selectedElement, handleDoubleClick, handlePointerDown, handleWheel });
+                const handleDoubleClick = (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                    exitAdjustMode();
+                  } else {
+                    if (adjustStateRef.current.isAdjusting) exitAdjustMode();
+                    enterAdjustMode(patternId, shapeEl);
                   }
+                };
 
-                  break;
+                const handlePointerDown = (e) => {
+                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    adjustStateRef.current.isPanning = true;
+                    adjustStateRef.current.startX = e.clientX;
+                    adjustStateRef.current.startY = e.clientY;
+                    adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
+                    if (shapeEl) shapeEl.style.cursor = 'grabbing';
+                    if (selectedElement) selectedElement.style.cursor = 'grabbing';
+                  }
+                };
+
+                const handleWheel = (e) => {
+                  if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
+                    const m = adjustStateRef.current.matrix;
+
+                    let pcuVal = 'objectBoundingBox';
+                    const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
+                    if (pat) pcuVal = pat.getAttribute('patternContentUnits') || 'objectBoundingBox';
+
+                    let cx = 0.5;
+                    let cy = 0.5;
+                    if (pcuVal === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
+                      cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
+                      cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
+                    }
+
+                    m[0] *= zoomDelta;
+                    m[3] *= zoomDelta;
+                    m[4] = cx + (m[4] - cx) * zoomDelta;
+                    m[5] = cy + (m[5] - cy) * zoomDelta;
+
+                    updateAdjustTransform();
+                  }
+                };
+
+                shapeEl.addEventListener('dblclick', handleDoubleClick);
+                shapeEl.addEventListener('pointerdown', handlePointerDown);
+                shapeEl.addEventListener('wheel', handleWheel, { passive: false });
+                listeners.push({ targetEl: shapeEl, handleDoubleClick, handlePointerDown, handleWheel });
+
+                if (selectedElement && selectedElement !== shapeEl) {
+                  selectedElement.addEventListener('dblclick', handleDoubleClick);
+                  selectedElement.addEventListener('pointerdown', handlePointerDown);
+                  selectedElement.addEventListener('wheel', handleWheel, { passive: false });
+                  listeners.push({ targetEl: selectedElement, handleDoubleClick, handlePointerDown, handleWheel });
                 }
+
+                break;
               }
             }
           }
         }
-
-        if (!foundImage) {
-          setSlotImage(null);
-          const hasMaskAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
-            selectedElement.querySelector('[data-mask-enabled="true"]') !== null;
-          setIsMaskEnabled(hasMaskAttr);
-        }
-      };
-
-      updateImageFromDOM();
-
-      let observer = null;
-      if (svgRoot) {
-        observer = new MutationObserver(() => {
-          updateImageFromDOM();
-        });
-        observer.observe(svgRoot, {
-          childList: true,
-          subtree: true,
-          attributes: true,
-          attributeFilter: ['fill', 'href', 'xlink:href', 'data-mask-enabled']
-        });
       }
 
-      return () => {
-        if (observer) observer.disconnect();
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('pointerdown', handleOutsideClick, true);
-        window.removeEventListener('trigger-shape-adjust', handleTriggerAdjust);
-        window.__isAdjustingShapeImage = false;
-        if (typeof document !== 'undefined' && document.body) {
-          document.body.classList.remove('shape-adjust-active');
-        }
-        listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
-          targetEl.removeEventListener('dblclick', handleDoubleClick);
-          if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
-          if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
-        });
-        const ghost = selectedElement?.querySelector('#ghost-layer');
-        if (ghost) ghost.remove();
-        if (adjustStateRef.current.slotId) {
-          const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-          const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
-          if (highlight) highlight.remove();
+      if (!foundImage) {
+        setSlotImage(null);
+        const hasMaskAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
+          selectedElement.querySelector('[data-mask-enabled="true"]') !== null;
+        setIsMaskEnabled(hasMaskAttr);
+      }
+    };
 
-          const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
-          const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
-          const invertMask = defs?.querySelector(`#${invertMaskId}`);
-          if (invertMask) invertMask.remove();
-        }
-        adjustStateRef.current.isAdjusting = false;
-        adjustStateRef.current.isPanning = false;
-      };
-    }, [selectedLayerId, activePageIndex, selectedElementProps?.fill]);
+    updateImageFromDOM();
+
+    let observer = null;
+    if (svgRoot) {
+      observer = new MutationObserver(() => {
+        updateImageFromDOM();
+      });
+      observer.observe(svgRoot, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['fill', 'href', 'xlink:href', 'data-mask-enabled']
+      });
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointerdown', handleOutsideClick, true);
+      window.removeEventListener('trigger-shape-adjust', handleTriggerAdjust);
+      window.__isAdjustingShapeImage = false;
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.remove('shape-adjust-active');
+      }
+      listeners.forEach(({ targetEl, handleDoubleClick, handlePointerDown, handleWheel }) => {
+        targetEl.removeEventListener('dblclick', handleDoubleClick);
+        if (handlePointerDown) targetEl.removeEventListener('pointerdown', handlePointerDown);
+        if (handleWheel) targetEl.removeEventListener('wheel', handleWheel);
+      });
+      const ghost = selectedElement?.querySelector('#ghost-layer');
+      if (ghost) ghost.remove();
+      if (adjustStateRef.current.slotId) {
+        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
+        const highlight = selectedElement?.querySelector(`[data-highlight-id="${highlightId}"]`);
+        if (highlight) highlight.remove();
+
+        const invertMaskId = `ghost-extent-mask-${adjustStateRef.current.slotId}`;
+        const defs = selectedElement?.querySelector('defs') || (svgRoot && svgRoot.querySelector('defs'));
+        const invertMask = defs?.querySelector(`#${invertMaskId}`);
+        if (invertMask) invertMask.remove();
+      }
+      adjustStateRef.current.isAdjusting = false;
+      adjustStateRef.current.isPanning = false;
+    };
+  }, [selectedLayerId, activePageIndex, selectedElementProps?.fill]);
 
   const handleRemoveMask = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -2225,8 +2225,8 @@ const ElementShapesProperties = ({
               window.dispatchEvent(new CustomEvent('trigger-mask'));
             }}
             className={`flex items-center justify-center gap-[0.45vw] py-[0.55vw] px-[0.7vw] rounded-[0.5vw] border transition-all cursor-pointer shadow-2xs font-semibold text-[0.75vw] ${isMaskEnabled
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
               }`}
             title={isMaskEnabled ? 'Click to Unmask' : 'Use as Mask (or add image)'}
           >

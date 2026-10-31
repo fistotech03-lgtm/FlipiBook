@@ -932,38 +932,82 @@ export const getOfficeDocDetails = async (file, backendUrl = null) => {
       const arrayBuffer = await file.arrayBuffer();
       const zip = await JSZip.loadAsync(arrayBuffer);
 
-      // Count actual slide files: ppt/slides/slide1.xml, etc.
-      const slideFiles = Object.keys(zip.files).filter(name => /^ppt\/slides\/slide\d+\.xml$/i.test(name));
+      // Check docProps/app.xml for exact <Slides> count
+      const findZipFile = (pattern) => {
+        const foundKey = Object.keys(zip.files).find(k => pattern.test(k.replace(/\\/g, '/')));
+        return foundKey ? zip.file(foundKey) : null;
+      };
+
+      const appXmlFile = findZipFile(/(^|\/)docProps\/app\.xml$/i);
+      if (appXmlFile) {
+        try {
+          const appText = await appXmlFile.async('text');
+          const slidesMatch = appText.match(/<[a-z0-9:]*Slides[^>]*>(\d+)<\/[a-z0-9:]*Slides>/i) ||
+                             appText.match(/<Slides>(\d+)<\/Slides>/i);
+          if (slidesMatch) {
+            const parsed = parseInt(slidesMatch[1], 10);
+            if (!isNaN(parsed) && parsed > 0) {
+              count = Math.max(count, parsed);
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Check [Content_Types].xml for slide overrides
+      const ctFile = findZipFile(/(^|\/)\[Content_Types\]\.xml$/i);
+      if (ctFile) {
+        try {
+          const ctText = await ctFile.async('text');
+          const slideMatches = ctText.match(/ContentType=["'][^"']*presentationml\.slide\+xml["']/gi);
+          if (slideMatches && slideMatches.length > 0) {
+            count = Math.max(count, slideMatches.length);
+          }
+        } catch (_) {}
+      }
+
+      // Count actual slide files: ppt/slides/slide*.xml
+      const slideFiles = Object.keys(zip.files).filter(name => {
+        const norm = name.replace(/\\/g, '/').replace(/^\.?\//, '');
+        return /^ppt\/slides\/slide[a-z0-9_-]*\.xml$/i.test(norm);
+      });
       if (slideFiles.length > 0) {
-        count = slideFiles.length;
+        count = Math.max(count, slideFiles.length);
       }
 
       // Also check presentation.xml for <p:sldId>
-      if (count === 0) {
-        const presXmlFile = zip.file('ppt/presentation.xml');
-        if (presXmlFile) {
+      const presXmlFile = findZipFile(/(^|\/)ppt\/presentation\.xml$/i);
+      if (presXmlFile) {
+        try {
           const presText = await presXmlFile.async('text');
           const sldMatches = presText.match(/<[a-z0-9:]*sldId\b/gi);
           if (sldMatches && sldMatches.length > 0) {
-            count = sldMatches.length;
+            count = Math.max(count, sldMatches.length);
           }
-        }
+
+          // Read exact slide dimensions from presentation.xml
+          const cxMatch = presText.match(/<[a-z0-9:]*sldSz[^>]*cx=["'](\d+)["']/i);
+          const cyMatch = presText.match(/<[a-z0-9:]*sldSz[^>]*cy=["'](\d+)["']/i);
+          if (cxMatch && cyMatch) {
+            const cx = parseInt(cxMatch[1], 10);
+            const cy = parseInt(cyMatch[1], 10);
+            if (!isNaN(cx) && !isNaN(cy) && cx > 0 && cy > 0) {
+              defaultWidth = Math.round((cx / 36000) * 10) / 10;
+              defaultHeight = Math.round((cy / 36000) * 10) / 10;
+            }
+          }
+        } catch (_) {}
       }
 
-      // Read exact slide dimensions from presentation.xml
-      const presXmlFile = zip.file('ppt/presentation.xml');
-      if (presXmlFile) {
-        const presText = await presXmlFile.async('text');
-        const cxMatch = presText.match(/<[a-z0-9:]*sldSz[^>]*cx=["'](\d+)["']/i);
-        const cyMatch = presText.match(/<[a-z0-9:]*sldSz[^>]*cy=["'](\d+)["']/i);
-        if (cxMatch && cyMatch) {
-          const cx = parseInt(cxMatch[1], 10);
-          const cy = parseInt(cyMatch[1], 10);
-          if (!isNaN(cx) && !isNaN(cy) && cx > 0 && cy > 0) {
-            defaultWidth = Math.round((cx / 36000) * 10) / 10;
-            defaultHeight = Math.round((cy / 36000) * 10) / 10;
+      // Also check ppt/_rels/presentation.xml.rels
+      const relsFile = findZipFile(/(^|\/)ppt\/_rels\/presentation\.xml\.rels$/i);
+      if (relsFile) {
+        try {
+          const relsText = await relsFile.async('text');
+          const relMatches = relsText.match(/relationships\/slide["']/gi);
+          if (relMatches && relMatches.length > 0) {
+            count = Math.max(count, relMatches.length);
           }
-        }
+        } catch (_) {}
       }
 
       if (count > 0) {
@@ -990,23 +1034,27 @@ export const getOfficeDocDetails = async (file, backendUrl = null) => {
       const arrayBuffer = await file.arrayBuffer();
       const zip = await JSZip.loadAsync(arrayBuffer);
 
+      const findZipFile = (pattern) => {
+        const foundKey = Object.keys(zip.files).find(k => pattern.test(k.replace(/\\/g, '/')));
+        return foundKey ? zip.file(foundKey) : null;
+      };
+
       // Check app.xml for <Pages>
-      const appXmlFile = zip.file('docProps/app.xml');
+      const appXmlFile = findZipFile(/(^|\/)docProps\/app\.xml$/i);
       if (appXmlFile) {
         const appXmlText = await appXmlFile.async('text');
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(appXmlText, 'application/xml');
-        const pagesNode = xmlDoc.getElementsByTagName('Pages')[0];
-        if (pagesNode && pagesNode.textContent) {
-          const parsed = parseInt(pagesNode.textContent.trim(), 10);
-          if (!isNaN(parsed) && parsed > 1) {
-            count = parsed;
+        const pagesMatch = appXmlText.match(/<[a-z0-9:]*Pages[^>]*>(\d+)<\/[a-z0-9:]*Pages>/i) ||
+                           appXmlText.match(/<Pages>(\d+)<\/Pages>/i);
+        if (pagesMatch) {
+          const parsed = parseInt(pagesMatch[1], 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            count = Math.max(count, parsed);
           }
         }
       }
 
       // Check document.xml for page breaks and page dimensions
-      const docXmlFile = zip.file('word/document.xml');
+      const docXmlFile = findZipFile(/(^|\/)word\/document\.xml$/i);
       if (docXmlFile) {
         const docText = await docXmlFile.async('text');
         const breaks = docText.match(/<w:lastRenderedPageBreak\b|<w:br[^>]*w:type=["']page["']/gi);
@@ -1034,18 +1082,19 @@ export const getOfficeDocDetails = async (file, backendUrl = null) => {
         }
       }
 
-      const docxCount = count > 0 ? count : 1;
-      return {
-        count: docxCount,
-        width: defaultWidth,
-        height: defaultHeight,
-        isUniform: true,
-        pages: Array.from({ length: docxCount }, (_, i) => ({
-          pageNumber: i + 1,
+      if (count > 0) {
+        return {
+          count,
           width: defaultWidth,
-          height: defaultHeight
-        }))
-      };
+          height: defaultHeight,
+          isUniform: true,
+          pages: Array.from({ length: count }, (_, i) => ({
+            pageNumber: i + 1,
+            width: defaultWidth,
+            height: defaultHeight
+          }))
+        };
+      }
     } catch (e) {
       console.warn(`[Office Inspector] Client DOCX zip parsing failed for ${file.name}:`, e);
     }
@@ -1129,7 +1178,9 @@ export const convertOfficeDocumentToPdf = async (file, backendUrl = null, onProg
     if (onProgress && typeof onProgress === 'function') {
       try {
         if (typeof p === 'object' && p !== null) {
-          onProgress(p.current || 1, p.total || 1, p.percent, 'converting', p.stage || p.message);
+          const curr = p.current ?? p.curr;
+          const tot = p.total ?? p.pageCount ?? file._pageCount;
+          onProgress(curr, tot, p.percent, 'converting', p.stage || p.message);
         } else {
           onProgress(p);
         }

@@ -55,13 +55,14 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
     // Total pages count from progress or file
     const totalPagesCount = useMemo(() => {
-        if (pageCount && Number(pageCount) > 0) return Number(pageCount);
-        if (total && Number(total) > 0 && (stage === 'converting' || stage === 'saving' || stage === 'done' || totalFiles === 1)) {
-            return Number(total);
+        const directPageCount = Number(pageCount || progress?.pageCount || 0);
+        if (directPageCount > 0) return directPageCount;
+        const directTotal = Number(total || 0);
+        if (directTotal > 0 && (stage === 'converting' || stage === 'saving' || stage === 'done')) {
+            return directTotal;
         }
-        if (progress?.pageCount && Number(progress.pageCount) > 0) return Number(progress.pageCount);
         return 0;
-    }, [pageCount, total, stage, totalFiles, progress?.pageCount]);
+    }, [pageCount, total, stage, progress?.pageCount]);
 
     // Extracted pages count (e.g. 8 of 12)
     const extractedPagesCount = useMemo(() => {
@@ -209,11 +210,11 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
     // Derive active step (1: Uploading, 2: Extracting, 3: Processing, 4: Complete, 5: All Finished)
     const activeStep = useMemo(() => {
-        if (isDone) return 5; // All 4 steps completed with checkmarks!
-        if (stage === 'saving' || displayPercent >= 80) return 3;
-        if (stage === 'converting' || displayPercent >= 20) return 2;
+        if (isDone || stage === 'done') return 5; // All 4 steps completed with checkmarks!
+        if (stage === 'saving') return 3; // Processing & saving
+        if (stage === 'converting') return 2; // Extracting pages/slides
         return 1; // Uploading
-    }, [stage, displayPercent, isDone]);
+    }, [stage, isDone]);
 
     const displaySubtitle = "We're analysing your document and extracting the pages, text and images.";
     const displayTip = "Large files may take a little longer. Feel free to stay on this page.";
@@ -249,6 +250,18 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             >
                 {/* Ambient Decorative Background Glows with breathing animation */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    <style>{`
+                        @keyframes infiniteStepSpin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        .infinite-step-spinner {
+                            animation: infiniteStepSpin 0.75s linear infinite !important;
+                            will-change: transform;
+                            transform: translateZ(0);
+                            transform-origin: center center;
+                        }
+                    `}</style>
                     {/* Top-Right Soft Lavender Glow */}
                     <motion.div 
                         className="absolute -top-[10vw] -right-[10vw] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-indigo-100/60 to-purple-100/40 blur-[7vw]"
@@ -302,28 +315,21 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                 <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-[1.5vw] py-[2vh] max-w-[55vw] mx-auto w-full text-center">
                     
                     {/* Halo with Shining Silver Fade from Left to Right */}
-                    <div className="relative w-[13vw] h-[13vw] flex items-center justify-center mb-[1.5vw]">
+                    <div className="relative w-[13.5vw] h-[13.5vw] flex items-center justify-center mb-[1.5vw]">
                         
-                        {/* Shining Silver Circular Disc */}
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white via-[#F8FAFC] to-[#E2E8F0] shadow-[0_0.7vw_1.8vw_rgba(148,163,184,0.18),inset_0_0.08vw_0.2vw_rgba(255,255,255,0.95)] overflow-hidden pointer-events-none">
-                            {/* Radiant Pure Silver Specular Beam */}
+                        {/* Soft Ambient Diffused Outer Shade / Halo Glow like before */}
+                        <div className="absolute -inset-[0.8vw] rounded-full bg-gradient-to-b from-indigo-200/50 via-purple-100/30 to-blue-200/40 blur-[1.6vw] pointer-events-none" />
+
+                        {/* Dimensional Circular Disc with Rich Outer Drop Shadow and Inset Luster */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white via-[#F8FAFC] to-[#EDF2F7] shadow-[0_1.2vw_3.5vw_rgba(99,102,241,0.18),0_0.4vw_1.5vw_rgba(15,23,42,0.08),inset_0_0.1vw_0.25vw_rgba(255,255,255,1),inset_0_-0.1vw_0.3vw_rgba(148,163,184,0.18)] pointer-events-none overflow-hidden">
+                            {/* Subtle Silky Silver Ambient Sheen */}
                             <motion.div
                                 className="absolute -inset-y-[1.5vw] -left-1/2 w-[200%] h-[150%] pointer-events-none"
                                 style={{
-                                    background: 'linear-gradient(110deg, transparent 20%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.35) 44%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.35) 56%, rgba(255,255,255,0) 65%, transparent 80%)'
+                                    background: 'linear-gradient(110deg, transparent 20%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.3) 44%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.3) 56%, rgba(255,255,255,0) 65%, transparent 80%)'
                                 }}
                                 animate={{ x: ['-60%', '60%'] }}
-                                transition={{ repeat: Infinity, duration: 2.2, ease: [0.4, 0, 0.2, 1] }}
-                            />
-
-                            {/* Secondary Ambient Silver Sheen for Silky Luster */}
-                            <motion.div
-                                className="absolute inset-0 w-full h-full pointer-events-none"
-                                style={{
-                                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0.1) 75%, transparent 100%)'
-                                }}
-                                animate={{ x: ['-100%', '100%'] }}
-                                transition={{ repeat: Infinity, duration: 2.2, ease: [0.4, 0, 0.2, 1], delay: 0.12 }}
+                                transition={{ repeat: Infinity, duration: 2.5, ease: [0.4, 0, 0.2, 1] }}
                             />
                         </div>
 
@@ -335,8 +341,8 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                     <stop offset="50%" stopColor="#6366F1" />
                                     <stop offset="100%" stopColor="#8B5CF6" />
                                 </linearGradient>
-                                <filter id="circleGlow" x="-20%" y="-20%" width="140%" height="140%">
-                                    <feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#6366F1" floodOpacity="0.4" />
+                                <filter id="circleGlow" x="-30%" y="-30%" width="160%" height="160%">
+                                    <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#6366F1" floodOpacity="0.45" />
                                 </filter>
                             </defs>
 
@@ -459,18 +465,16 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                     )}
 
                                     {/* Step Circle Badge */}
-                                    <motion.div
-                                        animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-                                        transition={isActive ? { repeat: Infinity, duration: 2.2, ease: 'easeInOut' } : { duration: 0.35 }}
-                                        className={`w-[2.3vw] h-[2.3vw] rounded-full flex items-center justify-center transition-colors duration-400 shadow-[0_0.2vw_0.6vw_rgba(0,0,0,0.04)] relative z-10 ${
+                                    <div
+                                        className={`w-[2.3vw] h-[2.3vw] rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0.2vw_0.6vw_rgba(0,0,0,0.04)] relative z-10 ${
                                             isCompleted
                                                 ? 'bg-[#3B82F6] text-white shadow-blue-200'
                                                 : isActive
-                                                ? 'bg-white border-[0.15vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50'
+                                                ? 'bg-white border-[0.15vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50 shadow-indigo-100'
                                                 : 'bg-[#F1F5F9] border border-[#E2E8F0] text-[#94A3B8]'
                                         }`}
                                     >
-                                        <AnimatePresence mode="wait">
+                                        <AnimatePresence>
                                             {isCompleted ? (
                                                 <motion.div
                                                     key="completed"
@@ -482,28 +486,33 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                                     <Check className="w-[1vw] h-[1vw] stroke-[3]" />
                                                 </motion.div>
                                             ) : isActive ? (
-                                                <motion.div
+                                                <svg
                                                     key="active"
-                                                    initial={{ scale: 0.6, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    exit={{ scale: 0.6, opacity: 0 }}
-                                                    transition={{ duration: 0.2 }}
+                                                    className="w-[1.15vw] h-[1.15vw] text-[#4F46E5] infinite-step-spinner"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
                                                 >
-                                                    <Loader2 className="w-[1vw] h-[1vw] text-[#4F46E5] animate-spin" />
-                                                </motion.div>
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="8.5"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2.8"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray="53.4"
+                                                        strokeDashoffset="34"
+                                                    />
+                                                </svg>
                                             ) : (
-                                                <motion.span
+                                                <span
                                                     key="pending"
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
                                                     className="text-[0.78vw] font-semibold"
                                                 >
                                                     {step.id}
-                                                </motion.span>
+                                                </span>
                                             )}
                                         </AnimatePresence>
-                                    </motion.div>
+                                    </div>
 
                                     {/* Step Title with Extract Count beside Point 2 */}
                                     <div className="mt-[0.5vw] flex items-center justify-center gap-[0.35vw] flex-wrap">

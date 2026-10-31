@@ -1,5 +1,13 @@
 const dns = require('dns');
-const mongoose = require('mongoose');
+const path = require('path');
+
+let mongoose;
+try {
+  // Ensure connection binds to the shared root Mongoose instance used by shared/models/User
+  mongoose = require(path.resolve(__dirname, '../../../../node_modules/mongoose'));
+} catch (_) {
+  mongoose = require('mongoose');
+}
 
 // Configure reliable DNS servers for Atlas SRV resolution
 try {

@@ -26,7 +26,7 @@ const flipbookSchema = new mongoose.Schema(
     userObjectID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
-      required: false,
+      required: true,
       index: true
     },
     userID: {
@@ -35,22 +35,12 @@ const flipbookSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
-    userEmail: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      index: true
-    },
     folder_id: {
       type: String, // fol_v_id of single folder
       required: true,
       default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
       trim: true,
       index: true
-    },
-    folderName: {
-      type: [String],
-      default: ['default']
     },
     flipbookName: {
       type: String,
@@ -111,27 +101,6 @@ const flipbookSchema = new mongoose.Schema(
     viewsCount: {
       type: Number,
       default: 0
-    },
-    views: {
-      type: Number,
-      default: 0
-    },
-    likes: {
-      type: Number,
-      default: 0
-    },
-    isFeatured: {
-      type: Boolean,
-      default: false
-    },
-    isFlagged: {
-      type: Boolean,
-      default: false
-    },
-    status: {
-      type: String,
-      enum: ['active', 'hidden', 'flagged', 'archived'],
-      default: 'active'
     },
     bookRating: {
       type: [mongoose.Schema.Types.Mixed],
@@ -200,7 +169,6 @@ flipbookSchema.pre('validate', async function () {
 flipbookSchema.index({ userObjectID: 1, trash: 1, updatedAt: -1 });
 flipbookSchema.index({ userObjectID: 1, folder_id: 1, trash: 1 });
 flipbookSchema.index({ isFavorite: 1, trash: 1 });
-flipbookSchema.index({ userEmail: 1, createdAt: -1 });
 flipbookSchema.index({ flipbookName: 'text' });
 flipbookSchema.index({ createdAt: -1 });
 
@@ -222,4 +190,3 @@ flipbookSchema.post('findOneAndUpdate', function (doc) {
 });
 
 module.exports = (mongoose.models.flipbook || mongoose.models.Flipbook) || mongoose.model('flipbook', flipbookSchema, 'flipbooks');
-

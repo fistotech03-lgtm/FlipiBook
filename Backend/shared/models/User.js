@@ -3,11 +3,6 @@ const Counter = require('./Counter');
 
 const userSchema = new mongoose.Schema(
   {
-    userID: {
-      type: String,
-      default: '',
-      index: true
-    },
     emailId: {
       type: String,
       required: true,
@@ -16,16 +11,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       index: true
     },
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true
-    },
     password: {
       type: String,
       default: '',
-      required: false,
-      select: false // Exclude from normal queries for security
+      required: false
     },
     name: {
       type: String,
@@ -33,73 +22,16 @@ const userSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      default: null
+      default: ''
     },
-    role: {
+    userID: {
       type: String,
-      enum: ['user', 'admin', 'moderator', 'staff'],
-      default: 'user',
+      default: '',
       index: true
     },
-    status: {
-      type: String,
-      enum: ['active', 'suspended', 'banned'],
-      default: 'active',
-      index: true
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-    isVerified: {
+    isDeleted: {
       type: Boolean,
       default: false
-    },
-    provider: {
-      type: String,
-      default: 'local'
-    },
-    phone: {
-      type: String,
-      default: ''
-    },
-    bio: {
-      type: String,
-      default: ''
-    },
-    company: {
-      type: String,
-      default: ''
-    },
-    designation: {
-      type: String,
-      default: ''
-    },
-    city: {
-      type: String,
-      default: ''
-    },
-    state: {
-      type: String,
-      default: ''
-    },
-    country: {
-      type: String,
-      default: ''
-    },
-    pincode: {
-      type: String,
-      default: ''
-    },
-    website: {
-      type: String,
-      default: ''
-    },
-    socials: {
-      linkedin: { type: String, default: '' },
-      twitter: { type: String, default: '' },
-      github: { type: String, default: '' },
-      instagram: { type: String, default: '' }
     },
     otp: {
       code: {
@@ -112,11 +44,7 @@ const userSchema = new mongoose.Schema(
       }
     }
   },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
-  }
+  { timestamps: true }
 );
 
 // Auto-generate userID (e.g. FLIPI0001) if not set
@@ -154,4 +82,3 @@ userSchema.post('findOneAndUpdate', function (doc) {
 });
 
 module.exports = (mongoose.models.user || mongoose.models.User) || mongoose.model('user', userSchema, 'users');
-

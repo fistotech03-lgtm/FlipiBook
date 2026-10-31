@@ -210,6 +210,22 @@ const MyShelf = () => {
     bookDecor: true,
   });
   const [shelfStylesPage, setShelfStylesPage] = useState(1);
+  const [selectedBookCountFilter, setSelectedBookCountFilter] = useState('All'); // 'All' | '8' | '4' | '2'
+  const [isShelfFullscreen, setIsShelfFullscreen] = useState(false);
+
+  const toggleShelfFullscreen = () => {
+    setIsShelfFullscreen(prev => !prev);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isShelfFullscreen) {
+        setIsShelfFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isShelfFullscreen]);
 
   const [booksData, setBooksData] = useState([]);
   const [allCreatedBooks, setAllCreatedBooks] = useState([]);
@@ -1279,6 +1295,14 @@ const MyShelf = () => {
 
                   <div className="flex items-center gap-2.5">
                     <button
+                      onClick={toggleShelfFullscreen}
+                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+                      title={isShelfFullscreen ? "Exit Fullscreen" : "Fullscreen Shelf"}
+                    >
+                      <Icon icon={isShelfFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-3.5 h-3.5 text-gray-600" />
+                    </button>
+
+                    <button
                       onClick={() => setShowShareShelfModal(true)}
                       className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
                     >
@@ -1296,13 +1320,470 @@ const MyShelf = () => {
                   </div>
                 </div>
 
-                <p className="text-[11px] text-gray-500 mt-1">
-                  {filteredBooks.length} Books &nbsp;•&nbsp; Last updated 14 Oct 2026
-                </p>
+
               </div>
             </div>
 
             {/* The Shelf Stage (w-full fills wrapper completely, aspect-[16/8.4] mild height increase) */}
+            {isShelfFullscreen ? (
+              <div className="fixed inset-0 z-[99999] bg-[#0f172a]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200">
+                <div
+                  className="w-full max-w-[96vw] max-h-[94vh] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-2xl border border-white/10"
+                  style={{
+                    backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
+                    backgroundSize: '100% 100%',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                  }}
+                >
+                  {/* Exit Fullscreen Button */}
+                  <button
+                    type="button"
+                    onClick={toggleShelfFullscreen}
+                    className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/85 text-white px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-lg flex items-center gap-2 group cursor-pointer border border-white/15"
+                    title="Exit Full Screen (Esc)"
+                  >
+                    <Icon
+                      icon="lucide:minimize-2"
+                      className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
+                    />
+                    <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
+                  </button>
+
+                  {isLoading && (
+                    <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
+                      <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
+                      <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
+                    </div>
+                  )}
+
+                  {/* If bg is an array, map over it to render wall blocks */}
+                  {Array.isArray(activeAssets.bg) && (
+                    <div className="absolute inset-0 flex flex-col rounded-xl overflow-hidden pointer-events-none">
+                      {Array.from({ length: activeAssets.rowCount }, (_, i) => (
+                        <div
+                          key={i}
+                          className="w-full flex-1 bg-center"
+                          style={{
+                            backgroundImage: `url('${activeAssets.bg[i % activeAssets.bg.length]}')`,
+                            backgroundSize: activeAssets.bgStretch ? '100% 100%' : '100% auto',
+                            backgroundRepeat: activeAssets.bgStretch ? 'no-repeat' : 'repeat',
+                            backgroundPosition: 'center',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {openMenuId && (
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setOpenMenuId(null)}
+                    />
+                  )}
+
+                  {activeAssets.type === 'rows' && activeAssets.rowAsset && (
+                    <div className="absolute inset-0 w-full h-full">
+                      {Array.from({ length: activeAssets.rowCount }, (_, i) => (
+                        <div
+                          key={i}
+                          className={`absolute left-0 w-full ${activeAssets.rowPadding ? '' : (activeAssets.padding || 'px-12')}`}
+                          style={{
+                            top: `${newTopOffset + (i * newSpacing) - (activeShelfStyle === 'customize2' && i !== activeAssets.rowCount - 1 ? 3.5 : 0)}%`,
+                            padding: activeAssets.rowPadding || undefined
+                          }}
+                        >
+                          <div className="relative w-full">
+                            {!(activeShelfStyle === 'customize2' && i === activeAssets.rowCount - 1) && (
+                              <img src={activeAssets.rowAsset} alt="Shelf" className="w-full h-auto drop-shadow-lg" />
+                            )}
+                            {activeAssets.rowShadow && (
+                              <img src={activeAssets.rowShadow} alt="Shelf Shadow" className="w-full h-auto -mt-[1%] opacity-90 drop-shadow-md" />
+                            )}
+                            {/* Books Container */}
+                            {!activeAssets.hideBooks && (
+                              <div
+                                className={`absolute inset-x-0 flex items-end ${activeAssets.justify || 'justify-between'}`}
+                                style={activeAssets.bookStyle || { bottom: '15%', padding: '0 5%' }}
+                              >
+                              {(() => {
+                                const booksPerRow = activeShelfStyle === 'customize4' ? 4 : 6;
+                                const rowBooks = filteredBooks.slice(i * booksPerRow, (i + 1) * booksPerRow) || [];
+                                const paddedBooks = [...rowBooks, ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)];
+                                
+                                return paddedBooks.map((book, bIdx) => {
+                                  const bookIndex = i * booksPerRow + bIdx;
+                                  if (!book) {
+                                    return (
+                                      <div
+                                        key={`fs-empty-${i}-${bIdx}`}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, bookIndex)}
+                                        className={`relative flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'}`}
+                                        style={{ width: activeAssets.bookWidth || '12%' }}
+                                      >
+                                        {activeShelfStyle === 'customize4' ? (
+                                          <div
+                                            onClick={() => {
+                                              setSelectedBookIdsToAdd([]);
+                                              setAddBookSearch('');
+                                              setShowAddBookModal(true);
+                                            }}
+                                            className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px]"
+                                            title="Add Book"
+                                          >
+                                            <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                              <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                              <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">+</span>
+                                            </div>
+                                            <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                              Add Book
+                                            </span>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  }
+
+                                  const targetShareId = book.shareId || book.v_id;
+                                  const rawAcc = String(book.access || 'public').toLowerCase();
+
+                                  return (
+                                    <div
+                                      key={book.v_id || `fs-book-${bIdx}`}
+                                      draggable
+                                      onDragStart={(e) => handleDragStart(e, bookIndex)}
+                                      onDragOver={handleDragOver}
+                                      onDrop={(e) => handleDrop(e, bookIndex)}
+                                      onDragEnd={handleDragEnd}
+                                      className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `fs-${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
+                                      style={{ width: activeAssets.bookWidth || '12%' }}
+                                    >
+                                      <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
+                                        <LazyPreview
+                                          v_id={book.v_id}
+                                          emailId={book.rawBook?.userEmail || currentUserEmail}
+                                          backendUrl={backendUrl}
+                                          iframeBaseUrl=""
+                                          title={book.title}
+                                          imageUrl={null}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeAssets.type === 'green_shelf' && (
+                    <GreenShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      selectedLightTheme={selectedLightTheme}
+                      selectedWallTheme={selectedWallTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeAssets.type === 'green_light_shelf' && (
+                    <GreenLightShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      selectedLightTheme={selectedLightTheme}
+                      selectedWallTheme={selectedWallTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeAssets.type === 'light_shelf' && (
+                    <LightShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      selectedLightTheme={selectedLightTheme}
+                      selectedWallTheme={selectedWallTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeAssets.type === 'plant_light_shelf' && (
+                    <PlantLightShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      selectedLightTheme={selectedLightTheme}
+                      selectedWallTheme={selectedWallTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeShelfStyle === 'customize4' && (
+                    <div
+                      className="absolute left-0 w-full pointer-events-none z-10"
+                      style={{ bottom: '-22%' }}
+                    >
+                      <div className="relative w-full">
+                        <img
+                          src={bluedecor}
+                          alt="Shelf Credenza"
+                          className="w-full h-auto block object-cover drop-shadow-md"
+                        />
+                        {decors.lamp && (
+                          <div
+                            className="absolute pointer-events-none z-20 transition-all duration-300"
+                            style={{
+                              left: '5.2%',
+                              bottom: '50%',
+                              width: '9.2%'
+                            }}
+                          >
+                            <img
+                              src={blueLamp}
+                              alt="Desk Lamp"
+                              className="w-full h-auto block drop-shadow-md relative z-20"
+                            />
+                          </div>
+                        )}
+                        <div
+                          className="absolute pointer-events-none z-15 transition-all duration-300"
+                          style={{
+                            left: '14.8%',
+                            bottom: '50%',
+                            width: '84%',
+                          }}
+                        >
+                          <img
+                            src={blueBookWithPot}
+                            alt="Shelf Decor"
+                            className="w-full h-auto block object-contain drop-shadow-md"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeShelfStyle === 'customize_bluerope' && (
+                    <BlueRopeShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      lightOpacity={lightOpacity}
+                      selectedLightTheme={selectedLightTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeShelfStyle === 'customize_windowshelf' && (
+                    <WindowShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      defaultLightType={defaultLightType}
+                      lightOpacity={lightOpacity}
+                      selectedLightTheme={selectedLightTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeShelfStyle === 'customize_orange' && (
+                    <OrangeShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      selectedLightTheme={selectedLightTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {activeShelfStyle === 'customize_golden' && (
+                    <GoldenShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      selectedLightTheme={selectedLightTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {shelfLogo && (
+                    <div
+                      className="absolute z-30 pointer-events-none"
+                      style={{
+                        top: activeShelfStyle === 'customize_windowshelf'
+                          ? '6.2%'
+                          : activeShelfStyle === 'customize_golden'
+                          ? '6.2%'
+                          : activeShelfStyle === 'customize_greenlight'
+                          ? '6.2%'
+                          : activeShelfStyle === 'customize_plantlight'
+                          ? '6.2%'
+                          : activeShelfStyle === 'customize_light'
+                          ? '6.2%'
+                          : activeShelfStyle === 'customize_green'
+                          ? '6.0%'
+                          : '6.2%',
+                        left: activeShelfStyle === 'customize_windowshelf'
+                          ? '16.5%'
+                          : activeShelfStyle === 'customize_golden'
+                          ? '5.8%'
+                          : activeShelfStyle === 'customize_greenlight'
+                          ? '8.5%'
+                          : activeShelfStyle === 'customize4'
+                          ? '12.5%'
+                          : activeShelfStyle === 'customize_plantlight'
+                          ? '5.0%'
+                          : activeShelfStyle === 'customize_light'
+                          ? '1.8%'
+                          : activeShelfStyle === 'customize_green'
+                          ? '1.8%'
+                          : '6.2%',
+                        width: '8%',
+                        aspectRatio: '1.8/1',
+                        opacity: (logoOpacity ?? 80) / 100
+                      }}
+                    >
+                      <img
+                        src={shelfLogo.url}
+                        alt="Shelf Logo"
+                        className="w-full h-full block rounded-md"
+                        style={{
+                          objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             <div
               className="w-full aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
               style={{
@@ -1312,6 +1793,18 @@ const MyShelf = () => {
                 backgroundPosition: 'center',
               }}
             >
+              {/* In-shelf Fullscreen Toggle Button (Always visible on shelf top-right) */}
+              <button
+                type="button"
+                onClick={toggleShelfFullscreen}
+                className="absolute top-3.5 right-3.5 z-40 bg-black/50 hover:bg-black/75 text-white p-2 rounded-lg backdrop-blur-md transition-all shadow-md group cursor-pointer"
+                title="Fullscreen Shelf"
+              >
+                <Icon
+                  icon="lucide:maximize-2"
+                  className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
+                />
+              </button>
               {isLoading && (
                 <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
                   <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
@@ -1995,31 +2488,65 @@ const MyShelf = () => {
             <div className="mt-2.5 mb-1 flex flex-col gap-1.5">
               {(() => {
                 const allStyles = [
-                  { id: 'customize4', img: blueshade, title: 'Pumps Shelf' },
-                  { id: 'customize_green', img: greenshade, title: 'Green Shelf' },
-                  { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf' },
-                  { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf' },
-                  { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf' },
-                  { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf' },
-                  { id: 'customize_windowshelf', img: windowShelfImg, title: 'Window Shelf' },
-                  { id: 'customize_orange', img: orangeShelfImg, title: 'Orange Shelf' },
-                  { id: 'customize_golden', img: goldenShelfImg, title: 'Golden Shelf' },
+                  { id: 'customize4', img: blueshade, title: 'Pumps Shelf', bookCount: 8 },
+                  { id: 'customize_green', img: greenshade, title: 'Green Shelf', bookCount: 8 },
+                  { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf', bookCount: 8 },
+                  { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf', bookCount: 8 },
+                  { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf', bookCount: 8 },
+                  { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf', bookCount: 4 },
+                  { id: 'customize_windowshelf', img: windowShelfImg, title: 'Window Shelf', bookCount: 2 },
+                  { id: 'customize_orange', img: orangeShelfImg, title: 'Orange Shelf', bookCount: 2 },
+                  { id: 'customize_golden', img: goldenShelfImg, title: 'Golden Shelf', bookCount: 4 },
                 ];
+
+                const filteredStyles = selectedBookCountFilter === 'All'
+                  ? allStyles
+                  : allStyles.filter(s => String(s.bookCount) === selectedBookCountFilter);
+
                 const itemsPerPage = 5;
-                const totalPages = Math.ceil(allStyles.length / itemsPerPage);
-                const startIndex = (shelfStylesPage - 1) * itemsPerPage;
-                const visibleStyles = allStyles.slice(startIndex, startIndex + itemsPerPage);
+                const totalPages = Math.max(1, Math.ceil(filteredStyles.length / itemsPerPage));
+                const currentPage = Math.min(shelfStylesPage, totalPages);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const visibleStyles = filteredStyles.slice(startIndex, startIndex + itemsPerPage);
 
                 return (
                   <>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
+                        {/* Pill Tabs: All, 8 Books, 4 Books, 2 Books */}
+                        <div className="inline-flex items-center bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
+                          {[
+                            { id: 'All', label: 'All' },
+                            { id: '8', label: '8 Books' },
+                            { id: '4', label: '4 Books' },
+                            { id: '2', label: '2 Books' }
+                          ].map(tab => (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookCountFilter(tab.id);
+                                setShelfStylesPage(1);
+                              }}
+                              className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full transition-all duration-150 cursor-pointer ${
+                                selectedBookCountFilter === tab.id
+                                  ? 'bg-[#FF5733] text-white shadow-xs'
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-1 text-[11px] font-semibold">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                           <button
                             key={page}
                             onClick={() => setShelfStylesPage(page)}
-                            className={`w-4 h-4 rounded flex items-center justify-center transition-all ${shelfStylesPage === page
+                            className={`w-4 h-4 rounded flex items-center justify-center transition-all ${currentPage === page
                               ? 'bg-[#FF5733] text-white shadow-sm'
                               : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                               }`}

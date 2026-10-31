@@ -291,7 +291,7 @@ const pdfConversionProxy = createProxyMiddleware({
 
 // Proxy Page Editor routes to Page Editor Service (port 5003)
 const isPageEditorRoute = (pathname) => {
-  return /^\/api\/flipbook\/(save-page|save-pages-batch|get-page|rename-page|delete-page|upload-asset|upload-3d-model|delete-asset|get-gallery-assets|rename-gallery-asset|delete-gallery-asset|use-gallery-asset|inline-svgs)(\/|$|\?)/i.test(pathname);
+  return /^\/api\/flipbook\/(save-page|save-pages-batch|get-page|rename-page|delete-page|upload-asset|upload-3d-model|delete-asset|get-gallery-assets|rename-gallery-asset|delete-gallery-asset|use-gallery-asset|inline-svgs|resolve-map-url)(\/|$|\?)/i.test(pathname);
 };
 
 const pageEditorProxy = createProxyMiddleware({

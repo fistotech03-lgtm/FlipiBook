@@ -1261,7 +1261,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               slotReplaceRefs.current[targetSlot.id]?.click();
             }
           }}
-          className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-medium text-[0.85vw]"
+          className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-semibold text-[0.85vw]"
         >
           <Plus size="1vw" />
           <span>Add Images</span>
@@ -1327,7 +1327,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                         {/* Replace Overlay Button over the image */}
                         <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
                           <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                          <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                          <span className="text-[0.52vw] font-semibold text-white tracking-wide">Replace</span>
                         </div>
                       </>
                     ) : (
@@ -1342,7 +1342,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={meta.name}>
                       {meta.name}
                     </span>
-                    <span className="text-[0.68vw] text-gray-400 font-medium">
+                    <span className="text-[0.68vw] text-gray-400 font-semibold">
                       {meta.meta}
                     </span>
                   </div>
@@ -1563,7 +1563,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     ...prev,
                     strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   −
                 </button>
@@ -1579,7 +1579,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                         handleSetBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
                       }
                     }}
-                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
                   />
                 </div>
                 <button
@@ -1588,7 +1588,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     ...prev,
                     strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
                 >
                   +
                 </button>

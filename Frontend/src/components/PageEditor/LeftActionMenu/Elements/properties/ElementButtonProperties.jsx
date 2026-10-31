@@ -1,27 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  Link2,
-  Link2Off,
   Pencil,
-  ArrowLeftRight,
-  Check,
-  Trash2,
-  Plus
+  ArrowLeftRight
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
-import CornerRadius from '../../../properties/CornerRadius';
-import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
+import { ElementToggle, ElementDropdown } from './ElementUIControls';
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
@@ -29,9 +20,11 @@ const SectionHeader = ({ title }) => (
 // Helper row with fixed-width label ensuring all colons align vertically
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-[0.8vw] text-gray-700 font-medium">
-      <span className="whitespace-nowrap">{label}</span>
-      <span className="text-gray-500 font-medium">:</span>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
+        {label}
+      </span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -66,10 +59,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
           maxLength={color && color.includes('gradient') ? 10 : 7}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -98,10 +91,10 @@ const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, is
           if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
           onChange(val);
         }}
-        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
         maxLength={color && color.includes('gradient') ? 10 : 7}
       />
-      <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+      <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
     </div>
   </div>
 );
@@ -130,10 +123,27 @@ const fontSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 50,
 const extractColorOrGradient = (element, attrName, defaultColor) => {
   if (!element) return defaultColor;
   const buttonG = element.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
-  const dataColor = element.getAttribute(`data-${attrName}-color`) || buttonG?.getAttribute(`data-${attrName}-color`);
-  if (dataColor) return dataColor;
+  // First check data attribute on the element itself (e.g. data-fill-color on <text>)
+  const ownDataColor = element.getAttribute(`data-${attrName}-color`);
+  if (ownDataColor) return ownDataColor;
 
-  const rawVal = element.getAttribute(attrName) || element.style?.[attrName] || defaultColor;
+  // Next, if element is text, check for standard data-text-color
+  if (element.tagName?.toLowerCase() === 'text') {
+    const textDataColor = element.getAttribute('data-text-color') || buttonG?.getAttribute('data-text-color');
+    if (textDataColor) return textDataColor;
+  }
+
+  // Next, check the raw style or attribute on the element directly
+  const directVal = element.style?.[attrName] || element.getAttribute(attrName);
+  if (directVal && directVal !== 'none' && !directVal.startsWith('url(#')) {
+    return directVal;
+  }
+
+  // Next check container buttonG attribute if not shape fill
+  const parentDataColor = buttonG?.getAttribute(`data-${attrName}-color`);
+  if (parentDataColor && element.tagName?.toLowerCase() !== 'text') return parentDataColor;
+
+  const rawVal = directVal || defaultColor;
   if (rawVal && rawVal.startsWith('url(#')) {
     const gradId = rawVal.match(/url\(#([^)]+)\)/)?.[1];
     const svgRoot = element.closest('svg');
@@ -271,7 +281,7 @@ export const ButtonEditor = ({
   // ─── 1. Button Content States ───────────────────────────────────
   const [buttonText, setButtonText] = useState('Button');
   const [fontFamily, setFontFamily] = useState('Poppins');
-  const [fontSize, setFontSize] = useState(14);
+  const [fontSize, setFontSize] = useState(12);
   const [fontWeight, setFontWeight] = useState('600'); // Semi Bold
   const [textFillColor, setTextFillColor] = useState('#000000');
   const [textOpacity, setTextOpacity] = useState(100);
@@ -405,12 +415,12 @@ export const ButtonEditor = ({
       setFontWeight(fw);
 
       const fs = textEl.getAttribute('font-size') || textEl.style.fontSize;
-      parsedFs = fs ? parseInt(fs) : 14;
-      if (!parsedFs || parsedFs <= 0 || parsedFs === 12 || parsedFs === 13) {
-        parsedFs = 14;
+      parsedFs = fs ? parseInt(fs) : 12;
+      if (!parsedFs || parsedFs <= 0) {
+        parsedFs = 12;
         textWasHidden = true;
-        textEl.setAttribute('font-size', '14');
-        if (textEl.style) textEl.style.fontSize = '14px';
+        textEl.setAttribute('font-size', '12');
+        if (textEl.style) textEl.style.fontSize = '12px';
       }
       setFontSize(parsedFs);
 
@@ -882,7 +892,7 @@ export const ButtonEditor = ({
       measuredWidth = (textVal.length || 1) * (currentFontSize * charRatio);
     }
 
-    const iconSize = Math.max(16, Math.round(currentFontSize * 0.9));
+    const iconSize = Math.max(10, Math.round(currentFontSize));
 
     // Check if icon has a badge circle or background
     let badgeEl = el.querySelector('.btn-badge-circle, .btn-badge-block, .btn-icon-bg') ||
@@ -904,13 +914,15 @@ export const ButtonEditor = ({
       ? measuredWidth + currentIconGap + effectiveIconWidth
       : measuredWidth;
 
-    // Padding scaling
-    const horizPad = Math.max(currentPaddingW * 4, 16);
-    const vertPad = Math.max(currentPaddingH * 3, 10);
-    const curW = parseFloat(rectEl.getAttribute('width') || 0);
-    const curH = parseFloat(rectEl.getAttribute('height') || 0);
-    const minW = curW > 0 ? Math.max(140, curW) : 140;
-    const minH = curH > 0 ? Math.max(42, curH) : 42;
+    const btnTemplate = el.getAttribute('data-button-template');
+    const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
+
+    // Padding scaling: paddingW and paddingH act as visual padding
+    // Base padding for button: horizPad = 16 + paddingW, vertPad = 10 + paddingH
+    const horizPad = 16 + currentPaddingW * 2;
+    const vertPad = 10 + currentPaddingH * 2;
+    const minW = isBadgeTemplate ? 110 : 80;
+    const minH = 32;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
 
@@ -922,15 +934,15 @@ export const ButtonEditor = ({
     rectEl.setAttribute('height', newButtonHeight.toString());
 
     // Apply corner radius & shape geometry
-    const isPill = el.getAttribute('data-button-template') === 'solid-pill' ||
-      el.getAttribute('data-button-template') === 'white-pill-badge' ||
-      el.getAttribute('data-button-template') === 'gradient-pill' ||
-      el.getAttribute('data-button-template') === 'lavender-badge' ||
-      el.getAttribute('data-button-template') === 'mint-frost' ||
-      el.getAttribute('data-button-template') === 'pearl-pill' ||
-      el.getAttribute('data-button-template') === 'diagonal-pastel';
-    const isSlanted = el.getAttribute('data-button-template') === 'slanted-border' ||
-      el.getAttribute('data-button-template') === 'slanted-pastel' ||
+    const isPill = btnTemplate === 'solid-pill' ||
+      btnTemplate === 'white-pill-badge' ||
+      btnTemplate === 'gradient-pill' ||
+      btnTemplate === 'lavender-badge' ||
+      btnTemplate === 'mint-frost' ||
+      btnTemplate === 'pearl-pill' ||
+      btnTemplate === 'diagonal-pastel';
+    const isSlanted = btnTemplate === 'slanted-border' ||
+      btnTemplate === 'slanted-pastel' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
     const savedTl = el.getAttribute('data-tl');
@@ -961,7 +973,6 @@ export const ButtonEditor = ({
     rectEl.setAttribute('ry', maxR.toString());
 
     let mainPoly = el.querySelector('.btn-main-poly');
-    const btnTemplate = el.getAttribute('data-button-template');
 
     if (mainPoly) {
       if (mainPoly.tagName?.toLowerCase() === 'path') {
@@ -1184,18 +1195,22 @@ export const ButtonEditor = ({
       } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
         const circleEl = badgeCircle || badgeEl;
         const bRadius = Math.max(14, Math.round(newButtonHeight / 2 - 4));
+        const badgeDiameter = bRadius * 2;
+        const totalBadgeContentWidth = badgeDiameter + currentIconGap + measuredWidth;
+        const startX = rectX + (newButtonWidth - totalBadgeContentWidth) / 2;
+
         if (placement === 'Left') {
-          badgeCenterX = rectX + newButtonHeight / 2;
+          badgeCenterX = startX + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + newButtonHeight) + (newButtonWidth - newButtonHeight - 16) / 2;
+          textX = startX + badgeDiameter + currentIconGap + measuredWidth / 2;
           textY = centerY;
         } else {
-          badgeCenterX = rectX + newButtonWidth - newButtonHeight / 2;
+          textX = startX + measuredWidth / 2;
+          textY = centerY;
+          badgeCenterX = startX + measuredWidth + currentIconGap + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + 16) + (newButtonWidth - newButtonHeight - 16) / 2;
-          textY = centerY;
         }
         circleEl.setAttribute('cx', badgeCenterX.toString());
         circleEl.setAttribute('cy', centerY.toString());
@@ -1318,7 +1333,7 @@ export const ButtonEditor = ({
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
       textEl.textContent = newVal;
-      updateButtonDimensions(newVal, fontSize, fontFamily);
+      updateButtonDimensions(newVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1332,7 +1347,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-family', val);
       textEl.style.fontFamily = val;
-      updateButtonDimensions(buttonText, fontSize, val);
+      updateButtonDimensions(buttonText, fontSize, val, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1346,7 +1361,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-size', val.toString());
       textEl.style.fontSize = `${val}px`;
-      updateButtonDimensions(buttonText, val, fontFamily);
+      updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1386,7 +1401,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-has-icon', val ? 'true' : 'false');
-    updateButtonDimensions(buttonText, fontSize, fontFamily, val);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, val, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1944,7 +1959,7 @@ export const ButtonEditor = ({
             value={buttonText}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Button"
-            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-normal"
+            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-semibold"
           />
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
             <Pencil className="w-[0.85vw] h-[0.85vw]" />
@@ -1998,7 +2013,7 @@ export const ButtonEditor = ({
 
       {/* Row 5: Add Icon Toggle */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
-        <span className="text-[0.8vw] font-medium text-gray-900">Add Icon to the button</span>
+        <span className="text-[0.8vw] font-semibold text-gray-900">Add Icon to the button</span>
         <ElementToggle
           checked={hasIcon}
           onChange={handleToggleIcon}
@@ -2068,63 +2083,6 @@ export const ButtonEditor = ({
         </>
       )}
 
-      {/* ─── 2. SIZE & SPACING SECTION ──────────────────────────── */}
-      <SectionHeader title="Size & Spacing" />
-
-      {/* Padding */}
-      <PropertyRow label="Padding">
-        <div className="flex items-center gap-[0.4vw] w-full">
-          {/* W input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">W</span>
-            <input
-              type="number"
-              value={paddingW}
-              onChange={(e) => handlePaddingChange('w', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
-            />
-          </div>
-
-          {/* Link button */}
-          <button
-            type="button"
-            onClick={() => handleTogglePaddingLink(!isPaddingLinked)}
-            className="text-gray-400 hover:text-gray-600 p-[0.2vw] transition-colors cursor-pointer flex-shrink-0"
-            title={isPaddingLinked ? "Unlink padding" : "Link padding"}
-          >
-            {isPaddingLinked ? <Link2 size="0.95vw" className="text-gray-700" /> : <Link2Off size="0.95vw" className="text-gray-400" />}
-          </button>
-
-          {/* H input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">H</span>
-            <input
-              type="number"
-              value={paddingH}
-              onChange={(e) => handlePaddingChange('h', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
-            />
-          </div>
-        </div>
-      </PropertyRow>
-
-      {/* Icon Gap */}
-      <PropertyRow label="Icon Gap">
-        <div className="flex items-center gap-[0.6vw] w-full">
-          <div className="flex-1 relative flex items-center">
-            <ElementSlider
-              min={0}
-              max={40}
-              value={iconGap}
-              onChange={(val) => handleIconGapChange(parseInt(val) || 0)}
-            />
-          </div>
-          <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-medium shadow-2xs flex-shrink-0">
-            {iconGap}px
-          </div>
-        </div>
-      </PropertyRow>
-
       {/* ─── 3. BUTTON COLOR SECTION ────────────────────────────── */}
       <SectionHeader title="Button Color" />
 
@@ -2163,7 +2121,7 @@ export const ButtonEditor = ({
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 −
               </button>
@@ -2172,13 +2130,13 @@ export const ButtonEditor = ({
                   type="number"
                   value={strokeWidth}
                   onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+                  className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
               >
                 +
               </button>
@@ -2197,15 +2155,6 @@ export const ButtonEditor = ({
           </div>
         </div>
       </div>
-
-      {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
-      <CornerRadius
-        radius={radius}
-        onCornerChange={handleCornerChange}
-        isRadiusLinked={isRadiusLinked}
-        onToggleLinked={handleToggleRadiusLink}
-        className="pl-[0.5vw]"
-      />
 
       {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
       <SectionHeader title="Effects" />

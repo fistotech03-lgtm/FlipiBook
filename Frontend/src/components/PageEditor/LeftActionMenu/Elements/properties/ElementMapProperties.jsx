@@ -4,13 +4,12 @@ import { Search, AlertCircle, Loader2, X, Copy, Check } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import ColorPicker from '../../../properties/ColorPicker';
 import { DEFAULT_MAP_DATA, MAP_TEMPLATES, generateOverlayHtml, escapeXml } from '../utils/mapElementUtils';
-import { MapTemplateThumbnail } from '../categories/mapCatalog';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
 
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.2vw]">
-    <span className="text-[0.88vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.88vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
@@ -26,7 +25,7 @@ const RadioButton = ({ label, checked, onChange }) => (
     >
       {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
     </div>
-    <span className="text-[0.78vw] text-gray-600 font-medium">{label}</span>
+    <span className="text-[0.78vw] text-gray-600 font-semibold">{label}</span>
   </label>
 );
 
@@ -53,10 +52,8 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   const [errorMessage, setErrorMessage] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // --- 2. Map Layout Template & Style Picker Modal ---
-  const [layoutStyle, setLayoutStyle] = useState('carousel'); // default to 'carousel' matching mockup
-  const [showStylePicker, setShowStylePicker] = useState(false);
-  const [tempStyle, setTempStyle] = useState('carousel');
+  // --- 2. Map Layout Template ---
+  const [layoutStyle, setLayoutStyle] = useState('none'); // default to 'carousel' matching mockup
 
   // --- 3. Button Color State & Open in Map Toggle ---
   const [buttonColor, setButtonColor] = useState('#000000');
@@ -120,14 +117,14 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const placeMatch = trimmed.match(/\/maps\/place\/([^/@?]+)/i);
     if (placeMatch && placeMatch[1]) {
       const place = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
     }
 
     // Google Maps search URL: /maps/search/Query/...
     const searchMatch = trimmed.match(/\/maps\/search\/([^/@?]+)/i);
     if (searchMatch && searchMatch[1]) {
       const query = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
     }
 
     // Google Maps query param: ?q=...
@@ -135,7 +132,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       const urlObj = new URL(trimmed);
       const q = urlObj.searchParams.get('q');
       if (q) {
-        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
       }
     } catch (e) {}
 
@@ -149,7 +146,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     }
 
     // Fallback: search query
-    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
   };
 
   // Helper: extract iframe src from embed code
@@ -225,7 +222,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-            <iframe src="${nextUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+            <iframe src="${nextUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -45px; left: 0; width: 100%; height: calc(100% + 45px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
             <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
               ${overlayHtml}
             </div>
@@ -299,7 +296,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     } else if (data.embedUrl && !data.embedUrl.includes('q=https') && !data.embedUrl.includes('q=http')) {
       finalEmbedUrl = data.embedUrl;
     } else if (type === 'Location' && newName) {
-      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=14&ie=UTF8&iwloc=near&output=embed`;
+      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
     }
 
     setIframeUrl(finalEmbedUrl);
@@ -348,7 +345,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
   // Sync state with selected element on canvas
   useEffect(() => {
-    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=13&ie=UTF8&iwloc=near&output=embed`;
+    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
 
     if (selectedElement) {
       const url = selectedElement.getAttribute('data-url') || defaultUrl;
@@ -373,7 +370,6 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
       if (savedStyle) {
         setLayoutStyle(savedStyle);
-        setTempStyle(savedStyle);
       }
       if (savedName && !savedName.toLowerCase().includes('fisto')) {
         setBusinessName(savedName);
@@ -458,7 +454,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
         // Ensure overlay is present and in sync with current map properties
         const overlayWrapper = fo.querySelector('.map-overlay-wrapper');
-        const effectiveStyle = savedStyle || layoutStyle || 'carousel';
+        const effectiveStyle = savedStyle || layoutStyle || 'none';
         const freshOverlayHtml = generateOverlayHtml(effectiveStyle, {
           name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
           address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
@@ -480,10 +476,10 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         if (iframe) {
           iframe.style.removeProperty('transform');
           iframe.style.setProperty('position', 'absolute', 'important');
-          iframe.style.setProperty('top', '-56px', 'important');
+          iframe.style.setProperty('top', '-45px', 'important');
           iframe.style.setProperty('left', '0', 'important');
           iframe.style.setProperty('width', '100%', 'important');
-          iframe.style.setProperty('height', 'calc(100% + 56px)', 'important');
+          iframe.style.setProperty('height', 'calc(100% + 45px)', 'important');
           iframe.removeAttribute('width');
           iframe.removeAttribute('height');
           iframe.style.setProperty('border', 'none', 'important');
@@ -509,7 +505,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           }
         } else {
           // Re-render map root container with theme & overlay
-          const effectiveStyle = savedStyle || layoutStyle || 'carousel';
+          const effectiveStyle = savedStyle || layoutStyle || 'none';
           const overlayHtml = generateOverlayHtml(effectiveStyle, {
             name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
             address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
@@ -528,7 +524,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           const cleanUrl = (url || defaultUrl).replace(/&amp;/g, '&').replace(/&/g, '&amp;');
           fo.innerHTML = `
             <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-              <iframe src="${cleanUrl}" style="position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+              <iframe src="${cleanUrl}" style="position: absolute; top: -45px; left: 0; width: 100%; height: calc(100% + 45px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
               <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
                 ${overlayHtml}
               </div>
@@ -609,7 +605,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     setShowSuggestions(false);
     setErrorMessage('');
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=14&ie=UTF8&iwloc=near&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
     setIframeUrl(newUrl);
     updateMapData({
       url: newUrl,
@@ -629,7 +625,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const query = locationInput.trim();
     if (!query) return;
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=near&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
     setBusinessName(query);
     setLocation(query);
     setBusinessAddress(query);
@@ -789,7 +785,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
               placeholder="Search Location..."
-              className="flex-1 h-full text-[0.78vw] font-normal text-gray-700 bg-transparent outline-none placeholder:text-gray-400"
+              className="flex-1 h-full text-[0.78vw] font-semibold text-gray-700 bg-transparent outline-none placeholder:text-gray-400"
             />
           </div>
 
@@ -823,7 +819,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* 1.2 URL Input */}
       {sourceType === 'URL' && (
         <div className="w-full flex flex-col gap-[0.25vw]">
-          <span className="text-[0.7vw] text-gray-500 font-medium">Source URL</span>
+          <span className="text-[0.7vw] text-gray-500 font-semibold">Source URL</span>
           <div className={`flex border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs`}>
             <input
               type="text"
@@ -837,7 +833,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               }}
               onBlur={handleApplyUrl}
               placeholder="e.g. https://maps.app.goo.gl/"
-              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-semibold outline-none text-gray-800 placeholder-gray-400 bg-transparent"
               disabled={isLoadingUrl}
             />
             {isLoadingUrl && (
@@ -876,17 +872,23 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* 1.3 Embed Code Textarea */}
       {sourceType === 'Embed Code' && (
         <div className="w-full flex flex-col gap-[0.25vw]">
-          <span className="text-[0.7vw] text-gray-500 font-medium">Code</span>
+          <span className="text-[0.7vw] text-gray-500 font-semibold">Code</span>
           <textarea
             value={embedCode}
             onChange={(e) => {
               setEmbedCode(e.target.value);
               setErrorMessage('');
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleApplyEmbedCode();
+              }
+            }}
             onBlur={handleApplyEmbedCode}
             placeholder="Paste HTML code here"
             rows={3}
-            className={`w-full border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-normal text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono`}
+            className={`w-full border ${errorMessage ? 'border-red-500' : 'border-gray-200'} rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono`}
             disabled={isLoadingUrl}
           />
           {errorMessage && (
@@ -900,20 +902,6 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
       {/* ─── 2. LIVE MAP & OVERLAY PREVIEW CARD ─── */}
       <div className="relative w-full aspect-[4/3.5] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
-        {/* Top-Right Replace / Swap Style Button (Opens Style Gallery Popup) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setTempStyle(layoutStyle);
-            setShowStylePicker(true);
-          }}
-          className="absolute top-[0.4vw] right-[0.4vw] z-30 p-[0.3vw] bg-white/95 hover:bg-white backdrop-blur-sm rounded-[0.35vw] shadow-xs border border-gray-200 text-gray-500 hover:text-black hover:border-gray-400 transition-all cursor-pointer flex items-center justify-center"
-          title="Click to replace map style"
-        >
-          <Icon icon="lucide:arrow-right-left" className="w-[0.9vw] h-[0.9vw] group-hover:scale-105 transition-transform" />
-        </button>
-
         {iframeUrl ? (
           <div className="relative w-full h-full overflow-hidden">
             <iframe
@@ -921,10 +909,10 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               src={iframeUrl}
               style={{
                 position: 'absolute',
-                top: '-56px',
+                top: '-45px',
                 left: 0,
                 width: '100%',
-                height: 'calc(100% + 56px)',
+                height: 'calc(100% + 45px)',
                 border: 0,
                 filter: isDarkTheme ? 'invert(90%) hue-rotate(180deg) contrast(95%)' : 'none'
               }}
@@ -963,7 +951,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* "Open in Map" Redirect Button Toggle */}
       <div className="flex items-center justify-between py-[0.1vw] px-[0.1vw]">
         <div className="flex flex-col">
-          <span className="text-[0.78vw] font-medium text-gray-800">Open in Maps</span>
+          <span className="text-[0.78vw] font-semibold text-gray-800">Open in Maps</span>
           <span className="text-[0.65vw] text-gray-400">To add redirect button on map</span>
         </div>
         <Toggle
@@ -1001,10 +989,10 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
               handleButtonColorChange(val);
             }}
-            className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
+            className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
             maxLength={7}
           />
-          <span className="text-gray-400 text-[0.75vw] font-medium">{buttonOpacity}%</span>
+          <span className="text-gray-400 text-[0.75vw] font-semibold">{buttonOpacity}%</span>
         </div>
       </div>
 
@@ -1018,97 +1006,6 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       />
 
       {/* ─── PORTALS ─── */}
-      {/* ── Map Style Gallery Popup ── */}
-      {showStylePicker && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[4999]"
-            onClick={() => setShowStylePicker(false)}
-          />
-          <div
-            className="fixed z-[5000] bg-white border border-gray-100 rounded-[0.5vw] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 px-[1vw] pt-[1vw] pb-[0.6vw] shadow-2xl select-none"
-            style={{
-              width: '21vw',
-              minWidth: '320px',
-              top: '60%',
-              right: '19.5vw',
-              transform: 'translateY(-50%)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-full flex flex-col">
-              {/* Header */}
-              <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-                <h3 className="text-[0.9vw] font-medium text-gray-800 whitespace-nowrap">Map Style Gallery</h3>
-                <div className="flex-grow h-[0.1px] bg-[#E2E8F0]" />
-              </div>
-
-              {/* Grid */}
-              <div className="grid grid-cols-2 gap-[0.6vw] mb-[0.6vw] max-h-[55vh] overflow-y-auto custom-scrollbar pr-[0.3vw]">
-                {MAP_TEMPLATES.map((tmpl) => {
-                  const isSelected = tempStyle === tmpl.id;
-                  return (
-                    <div
-                      key={tmpl.id}
-                      onClick={() => setTempStyle(tmpl.id)}
-                      onDoubleClick={() => {
-                        setLayoutStyle(tmpl.id);
-                        updateMapData({ style: tmpl.id });
-                        setShowStylePicker(false);
-                      }}
-                      className={`cursor-pointer transition-all duration-300 p-[0.45vw] rounded-[0.5vw] flex flex-col border-[1px] ${
-                        isSelected
-                          ? 'shadow-[0_8px_20px_rgba(0,0,0,0.12)] border-[2px] border-gray-300 scale-[1.03] bg-slate-50/40'
-                          : 'hover:bg-gray-50 border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                      title={tmpl.name}
-                    >
-                      <div className="w-full aspect-[4/3] rounded-[0.3vw] overflow-hidden pointer-events-none relative shadow-2xs border border-gray-100">
-                        <MapTemplateThumbnail templateId={tmpl.id} theme={theme} buttonColor={buttonColor} />
-                      </div>
-                      <div className="flex items-center justify-between mt-[0.35vw] px-[0.1vw]">
-                        <span className="text-[0.65vw] font-semibold text-gray-800 truncate">
-                          {tmpl.name}
-                        </span>
-                        {tmpl.badge && (
-                          <span className="text-[0.5vw] font-semibold px-[0.25vw] py-[0.05vw] rounded bg-teal-50 text-[#00828a] border border-teal-100 flex-shrink-0 ml-[0.2vw]">
-                            {tmpl.badge}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-end justify-end gap-[0.8vw] pt-[0.5vw] border-t border-[#F1F5F9]">
-                <button
-                  type="button"
-                  onClick={() => setShowStylePicker(false)}
-                  className="flex items-end gap-[0.4vw] px-[1vw] py-[0.4vw] rounded-[0.4vw] border-[1px] border-gray-300 bg-white text-gray-700 font-semibold text-[0.8vw] hover:bg-gray-50 transition-all active:scale-95 shadow-sm cursor-pointer"
-                >
-                  <X size="1vw" className="mb-[0.1vw]" /> Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLayoutStyle(tempStyle);
-                    updateMapData({ style: tempStyle });
-                    setShowStylePicker(false);
-                  }}
-                  className="flex items-end gap-[0.4vw] px-[1.2vw] py-[0.4vw] bg-black text-white rounded-[0.4vw] text-[0.8vw] font-semibold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg cursor-pointer"
-                >
-                  <Icon icon="qlementine-icons:replace-16" className="w-[1vw] h-[1vw] mb-[0.1vw]" />
-                  Replace
-                </button>
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
-
       {/* Official ColorPicker Portal Popup */}
       {activeColorPicker === 'buttonColor' && createPortal(
         <div
@@ -1139,3 +1036,5 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 };
 
 export default ElementMapProperties;
+
+

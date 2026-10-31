@@ -17,11 +17,12 @@ export const ButtonPreview = ({ template }) => {
         {btn.id === 'solid-pill' && (
           <>
             <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} fill={btn.fill} />
-            <g transform="translate(18, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            <g transform="translate(18, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+                <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+                <circle cx="18" cy="20" r="2" />
+                <circle cx="8" cy="20" r="2" />
               </svg>
             </g>
             <text
@@ -43,11 +44,12 @@ export const ButtonPreview = ({ template }) => {
           <>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill={btn.fill} stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
             <circle cx="21" cy={btn.height / 2} r="14" fill={btn.badgeColor} />
-            <g transform="translate(13, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            <g transform="translate(13, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+                <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+                <circle cx="18" cy="20" r="2" />
+                <circle cx="8" cy="20" r="2" />
               </svg>
             </g>
             <text
@@ -69,11 +71,12 @@ export const ButtonPreview = ({ template }) => {
           <>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill={btn.fill} stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
             <path d={`M 0,${btn.rx} A ${btn.rx},${btn.rx} 0 0 1 ${btn.rx},0 L 38,0 L 38,${btn.height} L ${btn.rx},${btn.height} A ${btn.rx},${btn.rx} 0 0 1 0,${btn.height - btn.rx} Z`} fill={btn.badgeColor} />
-            <g transform="translate(11, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            <g transform="translate(11, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+                <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+                <circle cx="18" cy="20" r="2" />
+                <circle cx="8" cy="20" r="2" />
               </svg>
             </g>
             <text
@@ -94,11 +97,11 @@ export const ButtonPreview = ({ template }) => {
         {btn.id === 'app-icon' && (
           <>
             <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} fill={btn.fill} />
-            <g transform="translate(18, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <g transform="translate(18, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                <path d="M2 12h20" />
               </svg>
             </g>
             <text
@@ -140,8 +143,8 @@ export const ButtonPreview = ({ template }) => {
           <>
             <rect x="0" y="0" width={btn.width} height={btn.height} rx={btn.rx} fill={btn.fill} />
             <circle cx="21" cy={btn.height / 2} r="14" fill={btn.badgeColor} />
-            <g transform="translate(13, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#22c55e">
+            <g transform="translate(13, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#22c55e">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.052 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
               </svg>
             </g>
@@ -171,9 +174,9 @@ export const ButtonPreview = ({ template }) => {
             <g clipPath="url(#preview-clip-angled-slice)">
               <polygon points={`-5,-5 42,-5 26,${btn.height + 5} -5,${btn.height + 5}`} fill={btn.sliceColor} />
             </g>
-            <g transform="translate(10, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            <g transform="translate(10, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" />
               </svg>
             </g>
             <text
@@ -225,9 +228,9 @@ export const ButtonPreview = ({ template }) => {
               strokeWidth={btn.strokeWidth}
             />
             <polygon points={`0,0 36,0 36,${btn.height} 0,${btn.height}`} fill={btn.blockColor} stroke="none" />
-            <g transform="translate(10, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            <g transform="translate(10, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
               </svg>
             </g>
             <text
@@ -258,11 +261,11 @@ export const ButtonPreview = ({ template }) => {
             <g clipPath="url(#preview-clip-upload-ribbon)">
               <polygon points={`0,0 34,0 42,${btn.height / 2} 34,${btn.height} 0,${btn.height}`} fill={btn.ribbonColor} />
             </g>
-            <g transform="translate(10, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <g transform="translate(10, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12" />
+                <path d="m17 8-5-5-5 5" />
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
             </g>
             <text
@@ -291,9 +294,12 @@ export const ButtonPreview = ({ template }) => {
               </linearGradient>
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-sunrise)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                <path d="M20 2v4" />
+                <path d="M22 4h-4" />
+                <circle cx="4" cy="20" r="2" />
               </svg>
             </g>
             <text
@@ -320,10 +326,10 @@ export const ButtonPreview = ({ template }) => {
               </linearGradient>
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-ocean)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={btn.iconColor} stroke="none" />
+                <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
               </svg>
             </g>
             <text
@@ -355,10 +361,10 @@ export const ButtonPreview = ({ template }) => {
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-lav-bg)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
             <circle cx="21" cy={btn.height / 2} r="14" fill="url(#preview-grad-lav-badge)" />
-            <g transform="translate(13, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            <g transform="translate(13, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+                <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
               </svg>
             </g>
             <text
@@ -385,9 +391,9 @@ export const ButtonPreview = ({ template }) => {
               </linearGradient>
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-mint)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
                 <path d="m9 12 2 2 4-4" />
               </svg>
             </g>
@@ -415,9 +421,9 @@ export const ButtonPreview = ({ template }) => {
               </linearGradient>
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-sunset)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill={btn.iconColor} stroke="none">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" />
               </svg>
             </g>
             <text
@@ -456,10 +462,10 @@ export const ButtonPreview = ({ template }) => {
             >
               {btn.text}
             </text>
-            <g transform="translate(116, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
+            <g transform="translate(116, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
               </svg>
             </g>
           </>
@@ -484,10 +490,10 @@ export const ButtonPreview = ({ template }) => {
             <g clipPath="url(#preview-clip-lemon-ribbon)">
               <polygon points={`0,0 34,0 42,${btn.height / 2} 34,${btn.height} 0,${btn.height}`} fill="url(#preview-grad-lemon-ribbon)" />
             </g>
-            <g transform="translate(10, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-                <circle cx="7" cy="7" r="1.5" fill={btn.iconColor} stroke="none" />
+            <g transform="translate(10, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+                <circle cx="7.5" cy="7.5" r=".5" fill={btn.iconColor} stroke="none" />
               </svg>
             </g>
             <text
@@ -517,11 +523,9 @@ export const ButtonPreview = ({ template }) => {
               </linearGradient>
             </defs>
             <rect x="1" y="1" width={btn.width - 2} height={btn.height - 2} rx={btn.rx} fill="url(#preview-grad-pearl)" stroke={btn.stroke} strokeWidth={btn.strokeWidth} />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 3h12l4 6-10 13L2 9Z" />
-                <path d="M11 3 8 9l4 13 4-13-3-6" />
-                <path d="M2 9h20" />
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z" />
               </svg>
             </g>
             <text
@@ -556,11 +560,11 @@ export const ButtonPreview = ({ template }) => {
             <g clipPath="url(#preview-clip-diagonal-pastel)">
               <polygon points={`-5,-5 42,-5 26,${btn.height + 5} -5,${btn.height + 5}`} fill="url(#preview-grad-diag-slice)" />
             </g>
-            <g transform="translate(10, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <g transform="translate(10, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 15V3" />
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
+                <path d="m7 10 5 5 5-5" />
               </svg>
             </g>
             <text
@@ -592,9 +596,9 @@ export const ButtonPreview = ({ template }) => {
               stroke={btn.stroke}
               strokeWidth={btn.strokeWidth}
             />
-            <g transform="translate(16, 13)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill={btn.iconColor} stroke="none">
-                <polygon points="5 3 19 12 5 21 5 3" />
+            <g transform="translate(16, 15)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={btn.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
               </svg>
             </g>
             <text

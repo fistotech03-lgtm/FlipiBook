@@ -23,7 +23,7 @@ export const BUTTON_TEMPLATES = [
     fill: '#1e1b4b',
     text: 'Shop Now',
     textColor: '#ffffff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     fontFamily: "'Inter', sans-serif",
     iconName: 'ShoppingCart',
@@ -42,7 +42,7 @@ export const BUTTON_TEMPLATES = [
     badgeColor: '#1e1b4b',
     text: 'Shop Now',
     textColor: '#1e1b4b',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     fontFamily: "'Inter', sans-serif",
     iconName: 'ShoppingCart',
@@ -61,7 +61,7 @@ export const BUTTON_TEMPLATES = [
     badgeColor: '#1e1b4b',
     text: 'Shop Now',
     textColor: '#1e1b4b',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     fontFamily: "'Inter', sans-serif",
     iconName: 'ShoppingCart',
@@ -77,7 +77,7 @@ export const BUTTON_TEMPLATES = [
     fill: '#60a5fa',
     text: 'Globe',
     textColor: '#ffffff',
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: "'Inter', sans-serif",
     fontWeight: '500',
     iconName: 'Globe',
@@ -93,7 +93,7 @@ export const BUTTON_TEMPLATES = [
     fill: '#3b82f6',
     text: 'BUTTON',
     textColor: '#ffffff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Inter', sans-serif",
     letterSpacing: '0.8px',
@@ -109,7 +109,7 @@ export const BUTTON_TEMPLATES = [
     badgeColor: '#ffffff',
     text: '@Yourusername',
     textColor: '#ffffff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'WhatsApp',
@@ -128,7 +128,7 @@ export const BUTTON_TEMPLATES = [
     sliceColor: '#f472b6',
     text: 'Contact us',
     textColor: '#000000',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Poppins', sans-serif",
     iconName: 'Phone',
@@ -151,7 +151,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 2,
     text: 'SETTINGS',
     textColor: '#1e293b',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Poppins', sans-serif",
     letterSpacing: '2px',
@@ -169,7 +169,7 @@ export const BUTTON_TEMPLATES = [
     blockColor: '#ec4899',
     text: 'LIKE',
     textColor: '#1e293b',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Poppins', sans-serif",
     letterSpacing: '0.5px',
@@ -187,7 +187,7 @@ export const BUTTON_TEMPLATES = [
     ribbonColor: '#93c5fd',
     text: 'UPLOAD',
     textColor: '#ffffff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Poppins', sans-serif",
     letterSpacing: '0.8px',
@@ -207,7 +207,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'Get Started',
     textColor: '#831843',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'Sparkles',
@@ -226,7 +226,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'Explore',
     textColor: '#0369a1',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'Compass',
@@ -246,7 +246,7 @@ export const BUTTON_TEMPLATES = [
     badgeColor: '#a855f7',
     text: 'Subscribe',
     textColor: '#581c87',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'Bell',
@@ -265,7 +265,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'Verified',
     textColor: '#065f46',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'ShieldCheck',
@@ -284,7 +284,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'Hot Deals',
     textColor: '#9f1239',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Inter', sans-serif",
     iconName: 'Zap',
@@ -303,7 +303,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'Learn More',
     textColor: '#3730a3',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Inter', sans-serif",
     iconName: 'ArrowRight',
@@ -342,7 +342,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 1.5,
     text: 'PREMIUM',
     textColor: '#312e81',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Poppins', sans-serif",
     letterSpacing: '1px',
@@ -362,7 +362,7 @@ export const BUTTON_TEMPLATES = [
     sliceColor: '#a78bfa',
     text: 'Download',
     textColor: '#0f172a',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: "'Poppins', sans-serif",
     iconName: 'Download',
@@ -386,7 +386,7 @@ export const BUTTON_TEMPLATES = [
     strokeWidth: 2,
     text: 'WATCH LIVE',
     textColor: '#5b21b6',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: "'Poppins', sans-serif",
     letterSpacing: '1px',
@@ -405,11 +405,12 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
     return `
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-button-template="solid-pill" data-has-icon="true" data-icon-name="ShoppingCart" data-icon-color="#ffffff" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(18, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(18, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+            <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+            <circle cx="18" cy="20" r="2" />
+            <circle cx="8" cy="20" r="2" />
           </svg>
         </g>
         <text x="82" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -422,11 +423,12 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.badgeColor}" data-button-template="white-pill-badge" data-has-icon="true" data-icon-name="ShoppingCart" data-icon-color="#ffffff" data-icon-bg-color="${template.badgeColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
         <circle class="btn-badge-circle" cx="21" cy="${h / 2}" r="14" fill="${template.badgeColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(13, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(13, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+            <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+            <circle cx="18" cy="20" r="2" />
+            <circle cx="8" cy="20" r="2" />
           </svg>
         </g>
         <text x="86" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -447,11 +449,12 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
           <path class="btn-badge-block" d="M 0,${template.rx} A ${template.rx},${template.rx} 0 0 1 ${template.rx},0 L 38,0 L 38,${h} L ${template.rx},${h} A ${template.rx},${template.rx} 0 0 1 0,${h - template.rx} Z" fill="${template.badgeColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
         </g>
-        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(11, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <circle cx="9" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <circle cx="20" cy="21" r="1" fill="#ffffff" stroke="none" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        <g class="btn-icon" data-icon-name="ShoppingCart" transform="translate(11, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" />
+            <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" />
+            <circle cx="18" cy="20" r="2" />
+            <circle cx="8" cy="20" r="2" />
           </svg>
         </g>
         <text x="92" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -463,11 +466,11 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
     return `
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-button-template="app-icon" data-has-icon="true" data-icon-name="Globe" data-icon-color="#ffffff" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="14" data-tr="14" data-bl="14" data-br="14" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Globe" transform="translate(18, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+        <g class="btn-icon" data-icon-name="Globe" transform="translate(18, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
             <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+            <path d="M2 12h20" />
           </svg>
         </g>
         <text x="76" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -489,8 +492,8 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
       <g id="button-${uniqueId}" data-type="button" data-is-element-button="true" data-name="${template.name}" data-text="${template.text}" data-fill-color="${template.fill}" data-accent-color="${template.badgeColor}" data-button-template="social-badge" data-has-icon="true" data-icon-name="WhatsApp" data-icon-color="#22c55e" data-icon-bg-color="${template.badgeColor}" data-icon-placement="Left" data-padding-w="0" data-padding-h="0" data-tl="21" data-tr="21" data-bl="21" data-br="21" cursor="pointer" pointer-events="all" style="cursor: pointer; pointer-events: all;"${transformAttr}>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="${template.fill}" stroke="none" pointer-events="none" style="pointer-events: none;" />
         <circle class="btn-badge-circle" cx="21" cy="${h / 2}" r="14" fill="${template.badgeColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="WhatsApp" transform="translate(13, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#22c55e" pointer-events="none" style="pointer-events: none;">
+        <g class="btn-icon" data-icon-name="WhatsApp" transform="translate(13, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#22c55e" pointer-events="none" style="pointer-events: none;">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.052 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
           </svg>
         </g>
@@ -512,9 +515,9 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
           <polygon points="-5,-5 42,-5 26,${h + 5} -5,${h + 5}" fill="${template.sliceColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
         </g>
-        <g class="btn-icon" data-icon-name="Phone" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff" pointer-events="none" style="pointer-events: none;">
-            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+        <g class="btn-icon" data-icon-name="Phone" transform="translate(10, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" />
           </svg>
         </g>
         <text x="94" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -540,9 +543,9 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="0" fill="none" stroke="none" opacity="0" pointer-events="none" style="pointer-events: none;" />
         <polygon class="btn-main-poly" points="${points}" fill="${template.fill}" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
         <polygon points="0,0 36,0 36,${h} 0,${h}" fill="${template.blockColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Heart" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff" pointer-events="none" style="pointer-events: none;">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        <g class="btn-icon" data-icon-name="Heart" transform="translate(10, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
           </svg>
         </g>
         <text x="86" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="0.5px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 0.5px; pointer-events: none;">${template.text}</text>
@@ -563,11 +566,11 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
           <polygon points="0,0 34,0 42,${h / 2} 34,${h} 0,${h}" fill="${template.ribbonColor}" stroke="none" pointer-events="none" style="pointer-events: none;" />
         </g>
-        <g class="btn-icon" data-icon-name="Upload" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+        <g class="btn-icon" data-icon-name="Upload" transform="translate(10, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M12 3v12" />
+            <path d="m17 8-5-5-5 5" />
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </g>
         <text x="92" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="0.8px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 0.8px; pointer-events: none;">${template.text}</text>
@@ -586,9 +589,12 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </linearGradient>
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Sparkles" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+        <g class="btn-icon" data-icon-name="Sparkles" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+            <path d="M20 2v4" />
+            <path d="M22 4h-4" />
+            <circle cx="4" cy="20" r="2" />
           </svg>
         </g>
         <text x="84" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -607,10 +613,10 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </linearGradient>
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Compass" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <circle cx="12" cy="12" r="10"/>
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="${template.iconColor}" stroke="none"/>
+        <g class="btn-icon" data-icon-name="Compass" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
           </svg>
         </g>
         <text x="82" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -635,10 +641,10 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
         <circle class="btn-badge-circle" cx="21" cy="${h / 2}" r="14" fill="url(#${badgeGradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Bell" transform="translate(13, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        <g class="btn-icon" data-icon-name="Bell" transform="translate(13, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+            <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
           </svg>
         </g>
         <text x="92" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -657,10 +663,10 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </linearGradient>
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="ShieldCheck" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="m9 12 2 2 4-4"/>
+        <g class="btn-icon" data-icon-name="ShieldCheck" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="m9 12 2 2 4-4" />
           </svg>
         </g>
         <text x="84" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -679,9 +685,9 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </linearGradient>
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Zap" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="${template.iconColor}" stroke="none" pointer-events="none" style="pointer-events: none;">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        <g class="btn-icon" data-icon-name="Zap" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" />
           </svg>
         </g>
         <text x="82" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -701,10 +707,10 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
         <text x="64" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
-        <g class="btn-icon" data-icon-name="ArrowRight" transform="translate(116, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
+        <g class="btn-icon" data-icon-name="ArrowRight" transform="translate(116, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
           </svg>
         </g>
       </g>
@@ -734,10 +740,10 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
           <polygon points="0,0 34,0 42,${h / 2} 34,${h} 0,${h}" fill="url(#${ribbonGradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
         </g>
-        <g class="btn-icon" data-icon-name="Tag" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
-            <circle cx="7" cy="7" r="1.5" fill="${template.iconColor}" stroke="none"/>
+        <g class="btn-icon" data-icon-name="Tag" transform="translate(10, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+            <circle cx="7.5" cy="7.5" r=".5" fill="${template.iconColor}" stroke="none" />
           </svg>
         </g>
         <text x="94" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="0.8px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 0.8px; pointer-events: none;">${template.text}</text>
@@ -757,11 +763,9 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
           </linearGradient>
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="${template.rx}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Diamond" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="M6 3h12l4 6-10 13L2 9Z"/>
-            <path d="M11 3 8 9l4 13 4-13-3-6"/>
-            <path d="M2 9h20"/>
+        <g class="btn-icon" data-icon-name="Diamond" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z" />
           </svg>
         </g>
         <text x="86" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="1px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 1px; pointer-events: none;">${template.text}</text>
@@ -787,11 +791,11 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         <g clip-path="url(#${clipId})" pointer-events="none" style="pointer-events: none;">
           <polygon points="-5,-5 42,-5 26,${h + 5} -5,${h + 5}" fill="url(#${gradId})" stroke="none" pointer-events="none" style="pointer-events: none;" />
         </g>
-        <g class="btn-icon" data-icon-name="Download" transform="translate(10, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
+        <g class="btn-icon" data-icon-name="Download" transform="translate(10, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M12 15V3" />
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="m7 10 5 5 5-5" />
           </svg>
         </g>
         <text x="94" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; pointer-events: none;">${template.text}</text>
@@ -812,9 +816,9 @@ export const getButtonSvgCode = (template, uniqueId, withTransform = false) => {
         </defs>
         <rect class="btn-bg" x="0" y="0" width="${w}" height="${h}" rx="20" fill="none" stroke="none" opacity="0" pointer-events="none" style="pointer-events: none;" />
         <path class="btn-main-poly" d="${d}" fill="url(#${gradId})" stroke="${template.stroke}" stroke-width="${template.strokeWidth}" pointer-events="none" style="pointer-events: none;" />
-        <g class="btn-icon" data-icon-name="Play" transform="translate(16, 13)" pointer-events="none" style="pointer-events: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="${template.iconColor}" stroke="none" pointer-events="none" style="pointer-events: none;">
-            <polygon points="5 3 19 12 5 21 5 3"/>
+        <g class="btn-icon" data-icon-name="Play" transform="translate(16, 15)" pointer-events="none" style="pointer-events: none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${template.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" style="pointer-events: none;">
+            <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
           </svg>
         </g>
         <text x="88" y="${h / 2 + 1}" fill="${template.textColor}" font-size="${template.fontSize}" font-family="${template.fontFamily}" font-weight="${template.fontWeight}" letter-spacing="1px" text-anchor="middle" dominant-baseline="middle" pointer-events="none" style="text-anchor: middle; dominant-baseline: middle; font-family: ${template.fontFamily}; letter-spacing: 1px; pointer-events: none;">${template.text}</text>

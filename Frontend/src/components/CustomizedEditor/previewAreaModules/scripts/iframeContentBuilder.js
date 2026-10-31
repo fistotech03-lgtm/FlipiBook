@@ -117,20 +117,33 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                     .text-edit-box,
                     [contenteditable="true"],
                     [data-scrollable="true"],
-                    foreignObject div {
+                    foreignObject:not([data-type="map"]) div:not(.map-root-container):not(.map-card-overlay):not(.map-card-overlay *) {
                         white-space: pre-wrap !important;
                         word-wrap: break-word !important;
                         word-break: normal !important;
                         overflow-wrap: anywhere !important;
                     }
 
-                    foreignObject {
+                    .map-nowrap,
+                    [data-nowrap="true"],
+                    .map-card-overlay .map-nowrap {
+                        white-space: nowrap !important;
+                        word-break: normal !important;
+                        overflow-wrap: normal !important;
+                    }
+
+                    foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) {
                         overflow: visible !important;
                         clip-path: none !important;
                     }
 
-                    foreignObject * {
+                    foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) * {
                         clip-path: none !important;
+                    }
+
+                    foreignObject[data-type="map"],
+                    g[data-type="map"] foreignObject {
+                        overflow: hidden !important;
                     }
 
                     foreignObject video {
@@ -226,6 +239,18 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                     g[data-type="embed-frame"] > rect.svg-image-stroke-overlay,
                     g[data-type="qrcode"] > rect:last-child {
                         pointer-events: none !important;
+                    }
+
+                    /* Map element strict isolation in preview */
+                    g[data-type="map"] foreignObject {
+                        overflow: hidden !important;
+                    }
+                    g[data-type="map"] foreignObject * {
+                        -webkit-user-select: auto !important;
+                        user-select: auto !important;
+                    }
+                    .map-root-container {
+                        overflow: hidden !important;
                     }
 
                     /* Enable pointer events on map controls & embeds in preview */

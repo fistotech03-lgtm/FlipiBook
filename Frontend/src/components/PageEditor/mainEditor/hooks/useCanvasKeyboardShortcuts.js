@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import paper from 'paper';
 import {
   pathToD,
   deleteSelectedNodeOrHandle,
@@ -397,18 +398,21 @@ export const useCanvasKeyboardShortcuts = ({
       handleKeyDown({ key: 'G', ctrlKey: true, shiftKey: true, preventDefault: () => { } });
     };
 
-    const handleTriggerMask = () => {
+    const handleTriggerMask = (e) => {
       const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
       const activeContainer = doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`) || document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
       const svg = activeContainer?.querySelector('svg') || doc.querySelector('svg');
       if (!svg) return;
 
-      const ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
+      let ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
         ? Array.from(multiSelectedIdsRef.current)
         : (selectedLayerIdRef?.current ? [selectedLayerIdRef.current] : []);
+      if (e?.detail?.layerId && !ids.includes(e.detail.layerId)) {
+        ids.push(e.detail.layerId);
+      }
       if (ids.length === 0) return;
 
-      const elements = ids.map(id => svg.querySelector(`[id="${id}"]`)).filter(Boolean);
+      const elements = ids.map(id => svg.querySelector(`[id="${CSS.escape(id)}"]`) || doc.getElementById(id) || document.getElementById(id)).filter(Boolean);
       if (elements.length === 0) return;
 
       // Check if selected element is already part of a mask group to toggle/unmask
@@ -460,6 +464,8 @@ export const useCanvasKeyboardShortcuts = ({
         const el = elements[0];
         const isShape = el.getAttribute('data-is-element-shape') === 'true' ||
                         el.getAttribute('data-shape-type') ||
+                        el.getAttribute('data-type') === 'vector-path' ||
+                        el.id?.startsWith('vpath-') ||
                         el.querySelector('[data-is-element-shape="true"]') !== null ||
                         ['path', 'rect', 'circle', 'ellipse', 'polygon', 'g'].includes(el.tagName.toLowerCase());
 
@@ -511,6 +517,10 @@ export const useCanvasKeyboardShortcuts = ({
             el.setAttribute('data-mask-enabled', 'true');
             if (!shapeTarget.hasAttribute('data-original-fill')) {
               shapeTarget.setAttribute('data-original-fill', shapeTarget.getAttribute('fill') || '#3194FC');
+            }
+
+            if (nodeEditModeRef?.current && typeof exitNodeEditMode === 'function') {
+              exitNodeEditMode();
             }
 
             if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
@@ -572,17 +582,25 @@ export const useCanvasKeyboardShortcuts = ({
       if (setMultiSelectedIds) setMultiSelectedIds(new Set([maskGroup.id]));
     };
 
-    const handleTriggerFlatten = () => {
+    const handleTriggerFlatten = (e) => {
       const activeContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
       const svg = activeContainer?.querySelector('svg');
       if (!svg) return;
 
-      const ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
+      let ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
         ? Array.from(multiSelectedIdsRef.current)
         : (selectedLayerIdRef?.current ? [selectedLayerIdRef.current] : []);
+      if (e?.detail?.layerId && !ids.includes(e.detail.layerId)) {
+        ids.push(e.detail.layerId);
+      }
       if (ids.length === 0) return;
 
-      let elements = ids.map(id => svg.querySelector(`[id="${id}"]`)).filter(Boolean);
+      let elements = ids.map(id => svg.querySelector(`[id="${CSS.escape(id)}"]`) || document.getElementById(id)).filter(Boolean);
+      elements = elements.filter(el => {
+        const dType = el.getAttribute?.('data-type');
+        const dName = el.getAttribute?.('data-name');
+        return dType !== 'frame' && dType !== 'background' && dType !== 'shield' && dName !== 'Overlay' && el.tagName?.toLowerCase() !== 'svg';
+      });
       if (elements.length === 0) return;
 
       // Expand compound groups if child was selected, or promote child to compound group
@@ -604,7 +622,16 @@ export const useCanvasKeyboardShortcuts = ({
       if (paperScopeRef?.current) {
         paperScopeRef.current.activate();
       }
-      const paperScope = paperScopeRef?.current;
+      let paperScope = paperScopeRef?.current;
+      if (!paperScope && typeof paper !== 'undefined') {
+        try {
+          paperScope = new paper.PaperScope();
+          paperScope.setup(document.createElement('canvas'));
+          if (paperScopeRef) paperScopeRef.current = paperScope;
+        } catch (err) {
+          console.warn('PaperScope fallback init error:', err);
+        }
+      }
       if (!paperScope) return;
 
       const createPaperItemFromNode = (node) => {
@@ -668,7 +695,11 @@ export const useCanvasKeyboardShortcuts = ({
               if (item.children && item.children.length === 1) return item.children[0];
               return item;
             } catch {
-              return new paperScope.Path(d);
+              try {
+                return new paperScope.Path(d);
+              } catch (e) {
+                return null;
+              }
             }
           }
         }
@@ -799,7 +830,16 @@ export const useCanvasKeyboardShortcuts = ({
       allShapes.forEach(({ node, styles }) => {
         try {
           const paperItem = createPaperItemFromNode(node);
-          if (!paperItem) return;
+          if (!paperItem) {
+            // Direct path data fallback if paperItem couldn't be parsed
+            const rawD = node.getAttribute?.('d');
+            if (rawD) {
+              if (baseFill === null && styles.fill) baseFill = styles.fill;
+              if (baseStroke === null && styles.stroke) baseStroke = styles.stroke;
+              validPaths.push({ node, bakedD: rawD, styles });
+            }
+            return;
+          }
 
           // Bake transforms up to parent container where flatPath will be inserted!
           // Stopping at parent prevents doubling the parent's transform!
@@ -833,8 +873,8 @@ export const useCanvasKeyboardShortcuts = ({
           }
 
           if (bakedD) {
-            if (!baseFill && styles.fill && styles.fill !== 'none' && styles.fill !== 'inherit') baseFill = styles.fill;
-            if (!baseStroke && styles.stroke && styles.stroke !== 'none' && styles.stroke !== 'inherit' && styles.stroke !== '#') baseStroke = styles.stroke;
+            if (baseFill === null && styles.fill && styles.fill !== 'inherit') baseFill = styles.fill;
+            if (baseStroke === null && styles.stroke && styles.stroke !== 'inherit' && styles.stroke !== '#') baseStroke = styles.stroke;
             if (!baseStrokeWidth && styles.strokeWidth && styles.strokeWidth !== '0') baseStrokeWidth = styles.strokeWidth;
             if (!baseOpacity && styles.opacity) baseOpacity = styles.opacity;
             if (!baseLinecap && styles.linecap) baseLinecap = styles.linecap;
@@ -887,7 +927,13 @@ export const useCanvasKeyboardShortcuts = ({
         try {
           let united = null;
           for (const item of validPaths) {
-            const p = new paperScope.Path(item.bakedD);
+            let p;
+            try {
+              p = new paperScope.CompoundPath(item.bakedD);
+              if (p.children && p.children.length === 1) p = p.children[0];
+            } catch {
+              p = new paperScope.Path(item.bakedD);
+            }
             if (!united) {
               united = p;
             } else {
@@ -915,10 +961,10 @@ export const useCanvasKeyboardShortcuts = ({
       }
 
       const flatPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      flatPath.id = `shape-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
-      flatPath.setAttribute('data-name', 'Shape');
-      flatPath.setAttribute('data-type', 'shape');
-      flatPath.setAttribute('data-shape-type', 'shape');
+      const flatPathId = `vpath-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+      flatPath.id = flatPathId;
+      flatPath.setAttribute('data-name', 'Vector Path');
+      flatPath.setAttribute('data-type', 'vector-path');
       flatPath.setAttribute('vector-effect', 'non-scaling-stroke');
       flatPath.setAttribute('d', combinedD);
 
@@ -944,23 +990,12 @@ export const useCanvasKeyboardShortcuts = ({
         flatPath.setAttribute('stroke', baseStroke);
         flatPath.setAttribute('data-stroke-color', baseStroke);
         const sw = (baseDataStrokeWidth && baseDataStrokeWidth !== '0') ? baseDataStrokeWidth : (baseStrokeWidth || '1');
-        const pos = baseDataStrokePos || 'Outside';
+        const pos = baseDataStrokePos || 'Center';
         flatPath.setAttribute('data-stroke-position', pos);
         flatPath.setAttribute('data-stroke-width', sw);
-
-        if (pos === 'Outside') {
-          flatPath.setAttribute('stroke-width', (parseFloat(sw) * 2).toString());
-          flatPath.setAttribute('paint-order', 'stroke fill');
-          flatPath.style.paintOrder = 'stroke fill';
-        } else if (pos === 'Inside') {
-          flatPath.setAttribute('stroke-width', (parseFloat(sw) * 2).toString());
-          flatPath.setAttribute('paint-order', 'fill stroke');
-          flatPath.style.paintOrder = 'fill stroke';
-        } else {
-          flatPath.setAttribute('stroke-width', sw);
-          flatPath.setAttribute('paint-order', 'normal');
-          flatPath.style.paintOrder = 'normal';
-        }
+        flatPath.setAttribute('stroke-width', sw);
+        flatPath.setAttribute('paint-order', 'stroke fill');
+        flatPath.style.paintOrder = 'stroke fill';
 
         if (baseStrokeDash) {
           flatPath.setAttribute('stroke-dasharray', baseStrokeDash);
@@ -995,6 +1030,14 @@ export const useCanvasKeyboardShortcuts = ({
       if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([flatPath.id]);
 
       window.dispatchEvent(new CustomEvent('trigger-rebind-selection', { detail: { layerId: flatPath.id, pageIndex: activePageIndex } }));
+
+      // Immediately enter vector node edit mode so anchor points and curve handles are editable
+      setTimeout(() => {
+        const livePath = svg.querySelector(`[id="${CSS.escape(flatPath.id)}"]`) || document.getElementById(flatPath.id) || flatPath;
+        if (livePath && typeof enterNodeEditMode === 'function') {
+          enterNodeEditMode(livePath, activePageIndex);
+        }
+      }, 50);
     };
 
     window.addEventListener('keydown', handleKeyDown);

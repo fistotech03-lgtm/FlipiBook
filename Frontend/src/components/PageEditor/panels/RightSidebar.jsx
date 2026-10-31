@@ -638,7 +638,27 @@ const RightSidebar = ({
           (!el.getAttribute('data-is-image-group') && !el.getAttribute('data-is-video-group') && !el.getAttribute('data-is-gif-group') && dataType !== 'icon' && lowerDataName !== 'icon' && !lowerId.includes('icon'))
         ) && el.getAttribute('data-is-image-group') !== 'true' && el.getAttribute('data-is-video-group') !== 'true' && el.getAttribute('data-is-gif-group') !== 'true' && dataType !== 'icon' && lowerDataName !== 'icon' && !lowerId.includes('icon');
 
-        const isImage = !isUserGroup && (lowerTagName.includes('image') ||
+        const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
+          el.getAttribute('data-shape-type') !== null ||
+          el.getAttribute('data-type') === 'shape' ||
+          el.getAttribute('data-type') === 'vector-path' ||
+          el.getAttribute('data-mask-enabled') === 'true' ||
+          lowerId.startsWith('vpath-') ||
+          (el.closest && (
+            el.closest('[data-is-element-shape="true"]') !== null ||
+            el.closest('[data-shape-type]') !== null ||
+            el.closest('[data-type="shape"]') !== null ||
+            el.closest('[data-type="vector-path"]') !== null ||
+            el.closest('[data-mask-enabled="true"]') !== null
+          )) ||
+          (el.querySelector && (
+            el.querySelector('[data-is-element-shape="true"]') !== null ||
+            el.querySelector('[data-shape-type]') !== null ||
+            el.querySelector('[data-type="shape"]') !== null ||
+            el.querySelector('[data-type="vector-path"]') !== null
+          ));
+
+        const isImage = !isUserGroup && !isElementShape && el.getAttribute('data-type') !== 'vector-path' && (lowerTagName.includes('image') ||
           lowerTagName === 'img' ||
           dataType === 'image' ||
           lowerDataName.includes('image') ||
@@ -650,20 +670,6 @@ const RightSidebar = ({
         const isVideo = lowerTagName === 'video' || lowerTagName === 'iframe' || dataType === 'video' || lowerDataName.includes('video') || lowerId.includes('video') || (lowerTagName === 'foreignobject' && el.querySelector('video, iframe'));
         const isText = (lowerTagName === 'text' || lowerTagName === 'tspan' || (lowerTagName === 'foreignobject' && !isVideo)) || dataType === 'text' || lowerDataName.includes('text') || lowerId.includes('text');
         const isIcon = dataType === 'icon' || dataType === 'hotspot' || lowerDataName.includes('icon') || lowerDataName.includes('hotspot') || lowerId.includes('icon') || lowerId.includes('hotspot') || lowerTagName.includes('lucide') || el.classList.contains('lucide') || el.classList.contains('iconify');
-
-                const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
-          el.getAttribute('data-shape-type') !== null ||
-          el.getAttribute('data-type') === 'shape' ||
-          (el.closest && (
-            el.closest('[data-is-element-shape="true"]') !== null ||
-            el.closest('[data-shape-type]') !== null ||
-            el.closest('[data-type="shape"]') !== null
-          )) ||
-          (el.querySelector && (
-            el.querySelector('[data-is-element-shape="true"]') !== null ||
-            el.querySelector('[data-shape-type]') !== null ||
-            el.querySelector('[data-type="shape"]') !== null
-          ));
 
         const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
           el.getAttribute('data-typography-type') === 'kinetic' ||

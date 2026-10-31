@@ -119,6 +119,7 @@ const LayerItem = ({
   setMultiSelectedIds,
   renameLayer,
   pageIndex,
+  activePageIndex,
   setActivePageIndex,
   onLayerContextMenu,
   onReorderLayer,
@@ -149,28 +150,36 @@ const LayerItem = ({
   // Handles primary selection, multi-selection, and compound element / child matching
   const isSelected = (() => {
     if (selectedLayerId === layer.id) return true;
-    if (multiSelectedIds.size > 1 && multiSelectedIds.has(layer.id) && depth === 0) return true;
-    if (multiSelectedIds.has(layer.id)) return true;
-    if (!selectedLayerId) return false;
-    // If selectedLayerId is related to layer.id (e.g. prefix or compound match)
-    if (selectedLayerId.startsWith(`${layer.id}-`) || layer.id.startsWith(`${selectedLayerId}-`)) return true;
-    // Check if selectedLayerId is inside this layer's children
-    if (isGroup && layer.children) {
-      const hasDescendant = (node, id) => {
-        if (!node.children) return false;
-        return node.children.some(c => c.id === id || hasDescendant(c, id));
-      };
-      if (hasDescendant(layer, selectedLayerId)) return true;
+    if (multiSelectedIds && multiSelectedIds.has(layer.id)) return true;
+    if (layer.isVirtualImageChild && (selectedLayerId === layer.parentId || (multiSelectedIds && multiSelectedIds.has(layer.parentId)))) return true;
+
+    // Fallback: If no item is selected, keep root folder of the active page selected
+    if (!selectedLayerId || selectedLayerId === '') {
+      if (isBaseLayer && (activePageIndex === undefined || pageIndex === activePageIndex)) return true;
+      return false;
     }
-    // Check compound parent in live DOM
+
+    // Check compound parent in live DOM (e.g. clicking internal child of a compound shape/button)
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selEl = doc.getElementById(selectedLayerId);
-    if (selEl) {
-      const compound = selEl.closest('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
-      if (compound && compound.id === layer.id) return true;
-      const layerEl = doc.getElementById(layer.id);
-      if (layerEl && (layerEl.contains(selEl) || selEl.contains(layerEl))) return true;
+    if (selectedLayerId) {
+      const selEl = doc.getElementById(selectedLayerId);
+      if (selEl) {
+        const compound = selEl.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+        if (compound && compound.id === layer.id) return true;
+      }
     }
+
+    // Check if any multi-selected ID is an internal child of this compound layer
+    if (multiSelectedIds && multiSelectedIds.size > 0) {
+      for (const id of multiSelectedIds) {
+        const el = doc.getElementById(id);
+        if (el) {
+          const comp = el.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+          if (comp && comp.id === layer.id) return true;
+        }
+      }
+    }
+
     return false;
   })();
 
@@ -546,6 +555,7 @@ const LayerItem = ({
                 setMultiSelectedIds={setMultiSelectedIds}
                 renameLayer={renameLayer}
                 pageIndex={pageIndex}
+                activePageIndex={activePageIndex}
                 setActivePageIndex={setActivePageIndex}
                 onLayerContextMenu={onLayerContextMenu}
                 onReorderLayer={onReorderLayer}
@@ -1131,7 +1141,7 @@ const Layer = ({
                     return (
                       <button
                         onClick={() => {
-                          window.dispatchEvent(new CustomEvent('trigger-mask'));
+                          window.dispatchEvent(new CustomEvent('trigger-mask', { detail: { layerId: activeLayerMenu?.layerId || selectedLayerId } }));
                           setActiveLayerMenu(null);
                         }}
                         className="flex items-center gap-[0.6vw] px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer"
@@ -1145,7 +1155,7 @@ const Layer = ({
                   {/* Flatten Option */}
                   <button
                     onClick={() => {
-                      window.dispatchEvent(new CustomEvent('trigger-flatten'));
+                      window.dispatchEvent(new CustomEvent('trigger-flatten', { detail: { layerId: activeLayerMenu?.layerId || selectedLayerId } }));
                       setActiveLayerMenu(null);
                     }}
                     className="flex items-center gap-[0.6vw] px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer"
@@ -1528,6 +1538,7 @@ const Layer = ({
                                         setMultiSelectedIds={setMultiSelectedIds}
                                         renameLayer={renameLayer}
                                         pageIndex={index}
+                                        activePageIndex={activePageIndex}
                                         setActivePageIndex={setActivePageIndex}
                                         onLayerContextMenu={handleLayerContextMenu}
                                         onReorderLayer={reorderLayer}

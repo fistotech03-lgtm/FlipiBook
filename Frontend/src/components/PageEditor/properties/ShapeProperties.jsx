@@ -236,7 +236,7 @@ const ShapeProperties = ({
 
   useEffect(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
     const hasMaskEnabledAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
@@ -269,7 +269,7 @@ const ShapeProperties = ({
         const match = fill.match(/url\(['"]?#([^)'"]+)['"]?\)/);
         if (match && match[1]) {
           const patternId = match[1];
-          const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
+          const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId) || document.getElementById(patternId);
           if (pattern) {
             const imgNode = pattern.querySelector('image, img');
             if (imgNode) {
@@ -301,7 +301,7 @@ const ShapeProperties = ({
   // Image Mask Handlers
   const handleRemoveMask = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
     let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
@@ -318,10 +318,10 @@ const ShapeProperties = ({
       shapeEl.removeAttribute('data-mask-enabled');
       const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
       if (patternMatch && patternMatch[1]) {
-        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
+        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`) || doc.getElementById(patternMatch[1]) || document.getElementById(patternMatch[1]);
         if (pat) pat.remove();
       }
-      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
+      const origFill = shapeEl.getAttribute('data-original-fill') || selectedElementProps?.['data-original-fill'] || '#3194FC';
       shapeEl.setAttribute('fill', origFill);
       shapeEl.removeAttribute('data-pattern-id');
       shapeEl.removeAttribute('data-masked-image-url');
@@ -347,11 +347,12 @@ const ShapeProperties = ({
       cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
       const serializer = new XMLSerializer();
       const html = serializer.serializeToString(cloneSvg);
+      const origFill = shapeEl?.getAttribute('data-original-fill') || selectedElementProps?.['data-original-fill'] || '#3194FC';
       updateElementAttribute(activePageIndex, selectedLayerId, {
         '__dom_sync__': html,
         'data-mask-enabled': 'false',
         'data-masked-image-url': null,
-        'fill': selectedElementProps?.['data-original-fill'] || '#3194FC'
+        'fill': origFill
       });
     }
     window.dispatchEvent(new CustomEvent('shape-mask-toggled', { detail: { layerId: selectedLayerId, enabled: false } }));
@@ -359,7 +360,7 @@ const ShapeProperties = ({
 
   const handleDeleteImage = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
     let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
@@ -375,10 +376,10 @@ const ShapeProperties = ({
     if (shapeEl) {
       const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
       if (patternMatch && patternMatch[1]) {
-        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
+        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`) || doc.getElementById(patternMatch[1]) || document.getElementById(patternMatch[1]);
         if (pat) pat.remove();
       }
-      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
+      const origFill = shapeEl.getAttribute('data-original-fill') || selectedElementProps?.['data-original-fill'] || '#3194FC';
       shapeEl.setAttribute('fill', origFill);
       shapeEl.removeAttribute('data-pattern-id');
       shapeEl.removeAttribute('data-masked-image-url');
@@ -414,10 +415,11 @@ const ShapeProperties = ({
       cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
       const serializer = new XMLSerializer();
       const html = serializer.serializeToString(cloneSvg);
+      const origFill = shapeEl?.getAttribute('data-original-fill') || selectedElementProps?.['data-original-fill'] || '#3194FC';
       updateElementAttribute(activePageIndex, selectedLayerId, {
         '__dom_sync__': html,
         'data-masked-image-url': null,
-        'fill': selectedElementProps?.['data-original-fill'] || '#3194FC'
+        'fill': origFill
       });
     }
   };
@@ -429,7 +431,7 @@ const ShapeProperties = ({
     originalDataUrl = null
   ) => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
     let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
@@ -445,7 +447,7 @@ const ShapeProperties = ({
     }
     setIsMaskEnabled(true);
 
-    const svgRoot = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
+    const svgRoot = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
     let defs = svgRoot ? svgRoot.querySelector('defs') : selectedElement.querySelector('defs');
     if (!defs && svgRoot) {
       defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -533,14 +535,16 @@ const ShapeProperties = ({
       const rMatch = existingTf.match(/rotate\([^)]+\)/);
       if (rMatch) rotateStr = rMatch[0] + ' ';
 
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${tx_user} ${ty_user})`);
+      const posX = (bbox.x || 0) + tx_user;
+      const posY = (bbox.y || 0) + ty_user;
+      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${posX} ${posY})`);
       imageNode.setAttribute('href', dataUrl);
       imageNode.setAttribute('xlink:href', dataUrl);
 
       setSlotImage(dataUrl);
 
       window.__skipCanvasUpdateForPage = activePageIndex;
-      let rootSvg = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
+      let rootSvg = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
       if (rootSvg) {
         const cloneSvg = rootSvg.cloneNode(true);
         cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer, .selection-overlay-layer').forEach(el => el.remove());
@@ -606,7 +610,7 @@ const ShapeProperties = ({
   const updateRotation = (angle, skipSync = false) => {
     setSlotRotation(angle);
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
     let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
@@ -623,13 +627,13 @@ const ShapeProperties = ({
     while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
       svgRoot = svgRoot.parentElement;
     }
-    const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
+    const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId) || document.getElementById(patternId);
     if (!pattern) return;
 
     let bbox = { x: 0, y: 0, width: 100, height: 100 };
     try { bbox = shapeEl.getBBox(); } catch (e) { }
-    const cx = bbox.width / 2;
-    const cy = bbox.height / 2;
+    const cx = (bbox.x || 0) + bbox.width / 2;
+    const cy = (bbox.y || 0) + bbox.height / 2;
 
     const pcu = pattern.getAttribute('patternContentUnits');
     const imgNode = pattern.querySelector('image, img');
@@ -647,8 +651,8 @@ const ShapeProperties = ({
       m[2] = m[2] * bbox.width;
       m[1] = m[1] * bbox.height;
       m[3] = m[3] * bbox.height;
-      m[4] = m[4] * bbox.width;
-      m[5] = m[5] * bbox.height;
+      m[4] = (bbox.x || 0) + m[4] * bbox.width;
+      m[5] = (bbox.y || 0) + m[5] * bbox.height;
       pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
       pattern.removeAttribute('patternTransform');
     }
@@ -1177,7 +1181,7 @@ const ShapeProperties = ({
               if (isMaskEnabled || hasUploadedImage) {
                 handleRemoveMask();
               } else {
-                window.dispatchEvent(new CustomEvent('trigger-mask'));
+                window.dispatchEvent(new CustomEvent('trigger-mask', { detail: { layerId: selectedLayerId } }));
               }
             }}
             className={`flex items-center justify-center gap-[0.45vw] h-[2.2vw] px-[0.7vw] rounded-[0.45vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.8vw] ${
@@ -1195,7 +1199,7 @@ const ShapeProperties = ({
           <button
             type="button"
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('trigger-flatten'));
+              window.dispatchEvent(new CustomEvent('trigger-flatten', { detail: { layerId: selectedLayerId } }));
             }}
             className="flex items-center justify-center gap-[0.45vw] h-[2.2vw] px-[0.7vw] rounded-[0.45vw] border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-2xs font-medium text-[0.8vw]"
             title="Flatten shape to vector path and edit points"

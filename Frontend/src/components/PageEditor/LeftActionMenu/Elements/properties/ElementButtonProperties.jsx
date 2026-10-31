@@ -914,10 +914,14 @@ export const ButtonEditor = ({
       ? measuredWidth + currentIconGap + effectiveIconWidth
       : measuredWidth;
 
-    // Padding scaling
-    const horizPad = Math.max(currentPaddingW * 4, 16);
-    const vertPad = Math.max(currentPaddingH * 3, 10);
-    const minW = 100;
+    const btnTemplate = el.getAttribute('data-button-template');
+    const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
+
+    // Padding scaling: paddingW and paddingH act as visual padding
+    // Base padding for button: horizPad = 16 + paddingW, vertPad = 10 + paddingH
+    const horizPad = 16 + currentPaddingW * 2;
+    const vertPad = 10 + currentPaddingH * 2;
+    const minW = isBadgeTemplate ? 110 : 80;
     const minH = 32;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
@@ -930,15 +934,15 @@ export const ButtonEditor = ({
     rectEl.setAttribute('height', newButtonHeight.toString());
 
     // Apply corner radius & shape geometry
-    const isPill = el.getAttribute('data-button-template') === 'solid-pill' ||
-      el.getAttribute('data-button-template') === 'white-pill-badge' ||
-      el.getAttribute('data-button-template') === 'gradient-pill' ||
-      el.getAttribute('data-button-template') === 'lavender-badge' ||
-      el.getAttribute('data-button-template') === 'mint-frost' ||
-      el.getAttribute('data-button-template') === 'pearl-pill' ||
-      el.getAttribute('data-button-template') === 'diagonal-pastel';
-    const isSlanted = el.getAttribute('data-button-template') === 'slanted-border' ||
-      el.getAttribute('data-button-template') === 'slanted-pastel' ||
+    const isPill = btnTemplate === 'solid-pill' ||
+      btnTemplate === 'white-pill-badge' ||
+      btnTemplate === 'gradient-pill' ||
+      btnTemplate === 'lavender-badge' ||
+      btnTemplate === 'mint-frost' ||
+      btnTemplate === 'pearl-pill' ||
+      btnTemplate === 'diagonal-pastel';
+    const isSlanted = btnTemplate === 'slanted-border' ||
+      btnTemplate === 'slanted-pastel' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
     const savedTl = el.getAttribute('data-tl');
@@ -969,7 +973,6 @@ export const ButtonEditor = ({
     rectEl.setAttribute('ry', maxR.toString());
 
     let mainPoly = el.querySelector('.btn-main-poly');
-    const btnTemplate = el.getAttribute('data-button-template');
 
     if (mainPoly) {
       if (mainPoly.tagName?.toLowerCase() === 'path') {
@@ -1192,18 +1195,22 @@ export const ButtonEditor = ({
       } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
         const circleEl = badgeCircle || badgeEl;
         const bRadius = Math.max(14, Math.round(newButtonHeight / 2 - 4));
+        const badgeDiameter = bRadius * 2;
+        const totalBadgeContentWidth = badgeDiameter + currentIconGap + measuredWidth;
+        const startX = rectX + (newButtonWidth - totalBadgeContentWidth) / 2;
+
         if (placement === 'Left') {
-          badgeCenterX = rectX + newButtonHeight / 2;
+          badgeCenterX = startX + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + newButtonHeight) + (newButtonWidth - newButtonHeight - 16) / 2;
+          textX = startX + badgeDiameter + currentIconGap + measuredWidth / 2;
           textY = centerY;
         } else {
-          badgeCenterX = rectX + newButtonWidth - newButtonHeight / 2;
+          textX = startX + measuredWidth / 2;
+          textY = centerY;
+          badgeCenterX = startX + measuredWidth + currentIconGap + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + 16) + (newButtonWidth - newButtonHeight - 16) / 2;
-          textY = centerY;
         }
         circleEl.setAttribute('cx', badgeCenterX.toString());
         circleEl.setAttribute('cy', centerY.toString());
@@ -1326,7 +1333,7 @@ export const ButtonEditor = ({
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
       textEl.textContent = newVal;
-      updateButtonDimensions(newVal, fontSize, fontFamily);
+      updateButtonDimensions(newVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1340,7 +1347,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-family', val);
       textEl.style.fontFamily = val;
-      updateButtonDimensions(buttonText, fontSize, val);
+      updateButtonDimensions(buttonText, fontSize, val, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1354,7 +1361,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-size', val.toString());
       textEl.style.fontSize = `${val}px`;
-      updateButtonDimensions(buttonText, val, fontFamily);
+      updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1394,7 +1401,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-has-icon', val ? 'true' : 'false');
-    updateButtonDimensions(buttonText, fontSize, fontFamily, val);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, val, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 

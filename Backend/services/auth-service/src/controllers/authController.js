@@ -13,6 +13,63 @@ const {
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 const { createUserWorkspace } = require("../utils/workspaceHelper");
 const { parseUserAgent, resolveLocation } = require("../utils/deviceParser");
+const { getRedis, isAvailable } = require("../../../../shared/redisClient");
+
+/**
+ * Fast Redis session blacklisting & profile caching helpers
+ */
+const isSessionRevokedInRedis = async (sessionId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return false;
+  try {
+    const val = await redis.get(`revoked:session:${sessionId}`);
+    return val === "1";
+  } catch (_) {
+    return false;
+  }
+};
+
+const markSessionRevokedInRedis = async (sessionId, ttlSeconds = 7 * 24 * 60 * 60) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return;
+  try {
+    await redis.set(`revoked:session:${sessionId}`, "1", "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const getCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return null;
+  try {
+    const raw = await redis.get(`user:profile:${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const setCachedUserProfile = async (userId, userDoc, ttlSeconds = 300) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId || !userDoc) return;
+  try {
+    const payload = {
+      _id: userDoc._id ? String(userDoc._id) : undefined,
+      name: userDoc.name || "",
+      picture: userDoc.picture || "",
+      emailId: userDoc.emailId || "",
+      userID: userDoc.userID || ""
+    };
+    await redis.set(`user:profile:${userId}`, JSON.stringify(payload), "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const purgeCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return;
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch (_) {}
+};
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -295,125 +352,10 @@ const clearAuthCookies = (res, req = null) => {
 };
 
 /**
- * 1. User Signup
+ * 1. User Signup - Strictly requires email OTP verification
  */
 const signup = async (req, res) => {
-  try {
-    const { name, emailId, password } = req.body;
-
-    if (!emailId || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password are required" });
-    }
-
-    const cleanEmail = emailId.trim().toLowerCase();
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ emailId: cleanEmail });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user (pre-save hook generates FLIPI0001 userID)
-    const user = new User({
-      name: name ? name.trim() : "",
-      emailId: cleanEmail,
-      password: hashedPassword,
-    });
-
-    await user.save();
-
-    // Create user storage workspace
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
-    }
-
-    // Capture Device, IP & Create Login Log
-    const ipAddress = getClientIp(req);
-    const userAgent = req.headers["user-agent"] || "";
-    const parsed = parseUserAgent(userAgent);
-    const browser = req.body?.browser || parsed.browser;
-    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
-    const deviceType = req.body?.deviceType || parsed.deviceType;
-    const location = resolveLocation(req, ipAddress);
-    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
-    const sessionObjectId = new mongoose.Types.ObjectId();
-    const sessionId = sessionObjectId.toString();
-
-    let loginLog = null;
-    try {
-      loginLog = await LoginLog.create({
-        _id: sessionObjectId,
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
-        userObjectId: user._id,
-        emailId: user.emailId,
-        sessionId,
-        deviceId: clientDeviceId,
-        ipAddress,
-        userAgent,
-        browser,
-        operatingSystem,
-        deviceType,
-        location,
-        loginTime: new Date(),
-        lastActiveAt: new Date(),
-        status: "ACTIVE",
-        isRevoked: false,
-        eventType: "NEW_DEVICE_LOGIN",
-        loginMethod: "EMAIL_PASSWORD",
-      });
-    } catch (logErr) {
-      console.error("[Signup LoginLog Error]:", logErr.message);
-    }
-
-    const token = generateToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: sessionId,
-      deviceId: clientDeviceId,
-    });
-
-    const refreshToken = generateRefreshToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: sessionId,
-      deviceId: clientDeviceId,
-    });
-
-    setAuthCookies(res, token, refreshToken, req, user);
-
-    return res.status(201).json({
-      success: true,
-      message: "Account created successfully",
-      token,
-      user: {
-        name: user.name,
-        picture: user.picture,
-      },
-    });
-  } catch (error) {
-    console.error("[Signup Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during signup",
-      });
-  }
+  return sendSignupOtp(req, res);
 };
 
 /**
@@ -717,7 +659,8 @@ const login = async (req, res) => {
     if (!user.password) {
       return res.status(400).json({
         success: false,
-        message: "Password not yet added. Please sign in with Google or use 'Forgot Password' to set one.",
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not have a password. Please sign in with Google.",
       });
     }
 
@@ -1102,6 +1045,15 @@ const forgotPassword = async (req, res) => {
         .json({ success: false, message: "No account found with this email" });
     }
 
+    // Google-only / passwordless accounts cannot use Forgot Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -1276,6 +1228,15 @@ const resetPassword = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
+    // Google-only / passwordless accounts cannot use Reset Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
+    }
+
     if (!user.otp || !user.otp.code) {
       return res
         .status(400)
@@ -1314,7 +1275,15 @@ const resetPassword = async (req, res) => {
 
     await user.save();
 
-    // Revoke any existing active sessions upon password reset (OWASP standard)
+    // Revoke any existing active sessions in Redis & DB upon password reset (OWASP standard)
+    try {
+      const activeSessions = await LoginLog.find({ userId: user.userID, status: "ACTIVE" }).select("sessionId");
+      for (const s of activeSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+      purgeCachedUserProfile(user._id);
+    } catch (_) {}
+
     await LoginLog.updateMany(
       { userId: user.userID, status: "ACTIVE" },
       { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
@@ -1357,9 +1326,16 @@ const logout = async (req, res) => {
 
     let updatedCount = 0;
 
+    const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
+    if (targetSessionId) {
+      markSessionRevokedInRedis(targetSessionId);
+    }
+    if (decoded?.id) {
+      purgeCachedUserProfile(decoded.id);
+    }
+
     try {
       const dbUpdatePromise = (async () => {
-        const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
         const targetDeviceId = decoded?.deviceId || req.headers["x-device-id"] || req.cookies?.flipibook_device_id || null;
 
         const sessionMatches = [
@@ -1497,6 +1473,17 @@ const verifySession = async (req, res) => {
       if (decodedAccess && decodedAccess.id) {
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedAccess.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedAccess.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1540,6 +1527,17 @@ const verifySession = async (req, res) => {
         tokenEmail = decodedRefresh.emailId || null;
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedRefresh.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedRefresh.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1602,13 +1600,20 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 5. Retrieve user details by ID
+    // 5. Retrieve user details by ID (Check fast Redis cache first)
     let user = null;
-    if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
+    if (targetUserId) {
+      user = await getCachedUserProfile(targetUserId);
+    }
+
+    if (!user && targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
       try {
         user = await User.findById(targetUserId).select(
           "name picture emailId userID",
         );
+        if (user) {
+          setCachedUserProfile(targetUserId, user);
+        }
       } catch (userErr) {
         console.warn("[Verify Session] User lookup by ID warning:", userErr.message);
       }
@@ -1899,6 +1904,11 @@ const revokeSession = async (req, res) => {
     targetSession.logoutTime = new Date();
     await targetSession.save();
 
+    // Instantly blacklist revoked session in Redis (< 0.5ms)
+    if (targetSession.sessionId) {
+      await markSessionRevokedInRedis(targetSession.sessionId);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Session successfully logged out and revoked",
@@ -1945,6 +1955,14 @@ const revokeOtherSessions = async (req, res) => {
     if (excludeQueries.length > 0) {
       filter.$nor = excludeQueries;
     }
+
+    // Instantly blacklist other sessions in Redis (< 0.5ms)
+    try {
+      const revokedSessions = await LoginLog.find(filter).select("sessionId");
+      for (const s of revokedSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+    } catch (_) {}
 
     const result = await LoginLog.updateMany(filter, {
       $set: {

@@ -23,8 +23,8 @@ const {
 const { authLimiter, otpLimiter, otpVerifyLimiter } = require('../middlewares/rateLimiter');
 const { authenticateUser } = require('../middlewares/authMiddleware');
 
-// Public Auth Endpoints
-router.post('/signup', authLimiter, signup);
+// Public Auth Endpoints (Registration strictly requires email OTP verification)
+router.post('/signup', otpLimiter, sendSignupOtp);
 router.post('/signup-otp', otpLimiter, sendSignupOtp);
 router.post('/verify-signup-otp', otpVerifyLimiter, verifySignupOtp);
 router.post('/resend-signup-otp', otpLimiter, resendSignupOtp);

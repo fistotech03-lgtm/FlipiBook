@@ -53,6 +53,7 @@ services:
       - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
+      - REDIS_URL=${REDIS_URL:-redis://default:Flipibook123@flipibook-redis-vatxsj:6379}
     env_file:
       - path: ./Backend/.env
         required: false

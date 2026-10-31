@@ -8,6 +8,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     template: 'cyber-frame',
     name: 'Cyber Frame',
     category: 'text',
+    subtopic: 'Titles',
     tag: 'Motion AE',
     bg: '#05070e',
     text: 'ANIMATION',
@@ -24,6 +25,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     template: 'flipi-split',
     name: 'Flipi Slash',
     category: 'text',
+    subtopic: 'Titles',
     tag: 'Motion AE',
     bg: '#0a0c14',
     text: 'FLIPIBOOK',
@@ -40,6 +42,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     template: 'box-reveal',
     name: 'Dual Box',
     category: 'text',
+    subtopic: 'Titles',
     tag: 'Motion AE',
     bg: '#08080c',
     text: 'FLIPIBOOK',
@@ -56,6 +59,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     template: 'youtube-channel',
     name: 'YouTube Intro',
     category: 'text',
+    subtopic: 'Titles',
     tag: 'Motion AE',
     bg: '#0b0c10',
     text: 'FLIPIBOOK',
@@ -74,6 +78,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-slide-up',
     name: 'Kinetic Slide',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#0F172A',
     textColor: '#FFFFFF',
@@ -88,6 +93,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-neon-pulse',
     name: 'Neon Pulse',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#090D16',
     textColor: '#00F0FF',
@@ -102,6 +108,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-pop-bounce',
     name: 'Pop Bounce',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#18181B',
     textColor: '#FBBF24',
@@ -116,6 +123,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-wave-flow',
     name: 'Harmonic Wave',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#064E3B',
     textColor: '#34D399',
@@ -130,6 +138,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-flip-3d',
     name: '3D Flip',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#31104B',
     textColor: '#E879F9',
@@ -144,6 +153,7 @@ export const KINETIC_PRESETS = [
     id: 'kinetic-slide-down',
     name: 'Top Drop',
     category: 'text',
+    subtopic: 'Typography',
     tag: 'Kinetic',
     bg: '#1E1B4B',
     textColor: '#818CF8',
@@ -422,6 +432,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: 'text-heading',
     name: 'Add Heading',
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => (
       <svg viewBox="0 0 100 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -447,6 +458,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: 'text-subheading',
     name: 'Add Subheading',
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => (
       <svg viewBox="0 0 110 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -472,6 +484,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: 'text-paragraph',
     name: 'Paragraph Text',
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => (
       <svg viewBox="0 0 110 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -497,6 +510,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: 'text-bullet-list',
     name: 'Bullet List',
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => (
       <svg viewBox="0 0 100 42" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -548,6 +562,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: 'text-numbered-list',
     name: 'Numbered List',
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => (
       <svg viewBox="0 0 100 42" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -601,6 +616,7 @@ export const TYPOGRAPHY_ITEMS = [
     id: preset.id,
     name: preset.name,
     category: 'text',
+    subtopic: 'Titles',
     type: 'text',
     renderPreview: () => renderMotionGraphicPreview(preset),
     insert: (cx, cy) => createMotionGraphicElementNode(preset, cx, cy)
@@ -611,11 +627,15 @@ export const TYPOGRAPHY_ITEMS = [
     id: preset.id,
     name: preset.name,
     category: 'text',
+    subtopic: 'Typography',
     type: 'text',
     renderPreview: () => renderKineticPreview(preset),
     insert: (cx, cy) => createKineticElementNode(preset, cx, cy)
   })),
 
   // --- Styled Poster Presets ---
-  ...POSTER_PRESETS
+  ...POSTER_PRESETS.map((preset) => ({
+    ...preset,
+    subtopic: 'Typography'
+  }))
 ];

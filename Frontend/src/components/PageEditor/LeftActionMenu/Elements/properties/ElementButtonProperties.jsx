@@ -9,9 +9,10 @@ import ColorPicker, { parseGradient, generateGradientString } from '../../../../
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
+import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
 
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
+  <div className="flex items-center gap-[0.4vw] mb-[0.1vw]">
     <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
@@ -40,9 +41,8 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
     <div className="flex items-center gap-[0.4vw] w-full">
       <div
         onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
+        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+          }`}
         style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
         title="Click to open color palette"
       >
@@ -72,9 +72,8 @@ const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, is
   <div className="flex items-center gap-[0.4vw] w-full">
     <div
       onClick={onOpenPicker}
-      className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-        isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-      }`}
+      className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+        }`}
       style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
       title="Click to open color palette"
     >
@@ -189,7 +188,7 @@ const lightenColor = (col, amount = 0.3) => {
       if (parsed && parsed.stops && parsed.stops.length > 0) {
         baseCol = parsed.stops[0].color;
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   if (typeof baseCol !== 'string') return col;
   let r = 0, g = 0, b = 0;
@@ -885,7 +884,7 @@ export const ButtonEditor = ({
       if (typeof textEl.getComputedTextLength === 'function' && textEl.getComputedTextLength() > 0) {
         measuredWidth = textEl.getComputedTextLength();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     if (!measuredWidth || measuredWidth < 10) {
       const charRatio = currentFontFamily.toLowerCase().includes('banger') ? 0.6 : 0.58;
@@ -917,12 +916,17 @@ export const ButtonEditor = ({
     const btnTemplate = el.getAttribute('data-button-template');
     const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
 
+    // Retrieve original template defaults if available (standard templates are 140+ px wide, 42px high)
+    const matchedTemplate = BUTTON_TEMPLATES.find((t) => t.id === btnTemplate);
+    const templateMinW = matchedTemplate?.width || (isBadgeTemplate ? 110 : 130);
+    const templateMinH = matchedTemplate?.height || 42;
+
     // Padding scaling: paddingW and paddingH act as visual padding
     // Base padding for button: horizPad = 16 + paddingW, vertPad = 10 + paddingH
     const horizPad = 16 + currentPaddingW * 2;
     const vertPad = 10 + currentPaddingH * 2;
-    const minW = isBadgeTemplate ? 110 : 80;
-    const minH = 32;
+    const minW = isBadgeTemplate ? Math.max(110, templateMinW) : templateMinW;
+    const minH = templateMinH;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
 
@@ -2174,7 +2178,7 @@ export const ButtonEditor = ({
           activeColorPicker={activeColorPicker}
           setActiveColorPicker={setActiveColorPicker}
           showDetailedPicker={false}
-          setShowDetailedPicker={() => {}}
+          setShowDetailedPicker={() => { }}
         />
       </div>
 
@@ -2189,17 +2193,17 @@ export const ButtonEditor = ({
           <ColorPicker
             color={
               activeColorPicker === 'textColor' ? textFillColor :
-              activeColorPicker === 'iconColor' ? iconColor :
-              activeColorPicker === 'iconBgColor' ? iconBgColor :
-              activeColorPicker === 'buttonColor' ? shapeFillColor :
-              activeColorPicker === 'strokeColor' ? strokeColor : '#000000'
+                activeColorPicker === 'iconColor' ? iconColor :
+                  activeColorPicker === 'iconBgColor' ? iconBgColor :
+                    activeColorPicker === 'buttonColor' ? shapeFillColor :
+                      activeColorPicker === 'strokeColor' ? strokeColor : '#000000'
             }
             opacity={
               activeColorPicker === 'textColor' ? textOpacity :
-              activeColorPicker === 'iconColor' ? iconOpacity :
-              activeColorPicker === 'iconBgColor' ? iconBgOpacity :
-              activeColorPicker === 'buttonColor' ? shapeOpacity :
-              activeColorPicker === 'strokeColor' ? strokeOpacity : 100
+                activeColorPicker === 'iconColor' ? iconOpacity :
+                  activeColorPicker === 'iconBgColor' ? iconBgOpacity :
+                    activeColorPicker === 'buttonColor' ? shapeOpacity :
+                      activeColorPicker === 'strokeColor' ? strokeOpacity : 100
             }
             onOpacityChange={(op) => {
               if (activeColorPicker === 'textColor') handleTextOpacityChange(op);

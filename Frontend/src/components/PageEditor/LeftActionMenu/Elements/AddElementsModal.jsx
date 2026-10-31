@@ -270,17 +270,62 @@ export const AddElementsModal = ({
                 {activeCategoryObj.name}
               </span>
 
-              <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[1vw] gap-x-[0.8vw] gap-y-[1.5vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]'}`}>
-                {filteredElements.map((item) => (
-                  <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                ))}
+              {selectedCategory === 'text' && !searchQuery.trim() ? (
+                (() => {
+                  const titleItems = filteredElements.filter((item) => item.subtopic === 'Titles');
+                  const typographyItems = filteredElements.filter((item) => item.subtopic === 'Typography' || !item.subtopic);
 
-                {filteredElements.length === 0 && (
-                  <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
-                    No elements found in {activeCategoryObj.name}
-                  </div>
-                )}
-              </div>
+                  return (
+                    <div className="flex flex-col gap-[2vh]">
+                      {/* Titles Section (JSON animations only) */}
+                      {titleItems.length > 0 && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[0.4vw] pt-[0.8vh] pb-[1.2vh]">
+                            <span className="text-[0.8vw] font-semibold text-gray-800">
+                              Titles
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-200" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+                            {titleItems.map((item) => (
+                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Typography Section */}
+                      {typographyItems.length > 0 && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
+                            <span className="text-[0.8vw] font-semibold text-gray-800 ">
+                              Typography
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-200" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+                            {typographyItems.map((item) => (
+                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[1vw] gap-x-[0.8vw] gap-y-[1.5vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]'}`}>
+                  {filteredElements.map((item) => (
+                    <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                  ))}
+
+                  {filteredElements.length === 0 && (
+                    <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
+                      No elements found in {activeCategoryObj.name}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

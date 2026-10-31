@@ -139,6 +139,479 @@ export const loadImg = (src) => new Promise((resolve) => {
 // Cache to store pre-rendered data URLs
 const qrImageCache = new Map();
 
+export const svgToDataUrl = (svgString) => {
+  try {
+    if (typeof btoa !== 'undefined') {
+      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+    }
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+  } catch (e) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+  }
+};
+
+export function getSvgPathRoundRect(x, y, w, h, radius) {
+  let r = typeof radius === 'number'
+    ? { tl: radius, tr: radius, br: radius, bl: radius }
+    : { tl: 0, tr: 0, br: 0, bl: 0, ...radius };
+
+  const maxR = Math.min(w / 2, h / 2);
+  r.tl = Math.max(0, Math.min(r.tl, maxR));
+  r.tr = Math.max(0, Math.min(r.tr, maxR));
+  r.br = Math.max(0, Math.min(r.br, maxR));
+  r.bl = Math.max(0, Math.min(r.bl, maxR));
+
+  return `M ${x + r.tl} ${y} ` +
+    `L ${x + w - r.tr} ${y} ` +
+    `Q ${x + w} ${y} ${x + w} ${y + r.tr} ` +
+    `L ${x + w} ${y + h - r.br} ` +
+    `Q ${x + w} ${y + h} ${x + w - r.br} ${y + h} ` +
+    `L ${x + r.bl} ${y + h} ` +
+    `Q ${x} ${y + h} ${x} ${y + h - r.bl} ` +
+    `L ${x} ${y + r.tl} ` +
+    `Q ${x} ${y} ${x + r.tl} ${y} Z`;
+}
+
+export function escapeXml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+export function renderModuleSvg(x, y, size, style, color) {
+  const S = size;
+  const cx = x + S / 2;
+  const cy = y + S / 2;
+
+  switch (style) {
+    case 'rounded-square':
+      return `<path d="${getSvgPathRoundRect(x + 0.3, y + 0.3, S - 0.6, S - 0.6, S * 0.26)}" fill="${color}" />`;
+    case 'circular-dots':
+      return `<circle cx="${cx}" cy="${cy}" r="${S * 0.44}" fill="${color}" />`;
+    case 'extra-rounded':
+      return `<path d="${getSvgPathRoundRect(x + 0.2, y + 0.2, S - 0.4, S - 0.4, S * 0.46)}" fill="${color}" />`;
+    case 'diamond':
+      return `<polygon points="${cx},${y + 0.3} ${x + S - 0.3},${cy} ${cx},${y + S - 0.3} ${x + 0.3},${cy}" fill="${color}" />`;
+    case 'horizontal-bars':
+      return `<path d="${getSvgPathRoundRect(x, y + S * 0.16, S, S * 0.68, S * 0.22)}" fill="${color}" />`;
+    case 'vertical-bars':
+      return `<path d="${getSvgPathRoundRect(x + S * 0.16, y, S * 0.68, S, S * 0.22)}" fill="${color}" />`;
+    case 'tiny-pixel':
+      return `<rect x="${x + S * 0.22}" y="${y + S * 0.22}" width="${S * 0.56}" height="${S * 0.56}" fill="${color}" />`;
+    case 'classic-square':
+    default:
+      return `<rect x="${x}" y="${y}" width="${S + 0.05}" height="${S + 0.05}" fill="${color}" />`;
+  }
+}
+
+export function renderEyeFrameSvg(x, y, size, thickness, style, color, backdrop) {
+  const S = size;
+  const T = thickness;
+
+  switch (style) {
+    case 'circular-frame': {
+      const cx = x + S / 2;
+      const cy = y + S / 2;
+      return `<circle cx="${cx}" cy="${cy}" r="${S / 2}" fill="${color}" />` +
+             `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T}" fill="${backdrop}" />`;
+    }
+    case 'rounded-square': {
+      const R = S * 0.24;
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+    }
+    case 'octagon': {
+      const C = T * 1.8;
+      const outerPts = `${x + C},${y} ${x + S - C},${y} ${x + S},${y + C} ${x + S},${y + S - C} ${x + S - C},${y + S} ${x + C},${y + S} ${x},${y + S - C} ${x},${y + C}`;
+      const c = Math.max(2, C - T * 0.7);
+      const innerPts = `${x + T + c},${y + T} ${x + S - T - c},${y + T} ${x + S - T},${y + T + c} ${x + S - T},${y + S - T - c} ${x + S - T - c},${y + S - T} ${x + T + c},${y + S - T} ${x + T},${y + S - T - c} ${x + T},${y + T + c}`;
+      return `<polygon points="${outerPts}" fill="${color}" />` +
+             `<polygon points="${innerPts}" fill="${backdrop}" />`;
+    }
+    case 'squircle': {
+      const R = S * 0.38;
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+    }
+    case 'cut-corners': {
+      const R = S * 0.44;
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, { tl: R, tr: 0, br: R, bl: 0 })}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 })}" fill="${backdrop}" />`;
+    }
+    case 'double-border': {
+      const b1 = T * 0.42;
+      const gap = T * 0.35;
+      const b2 = T * 0.42;
+      const x2 = x + b1 + gap;
+      const y2 = y + b1 + gap;
+      const S2 = S - 2 * (b1 + gap);
+      return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
+             `<rect x="${x + b1}" y="${y + b1}" width="${S - 2 * b1}" height="${S - 2 * b1}" fill="${backdrop}" />` +
+             `<rect x="${x2}" y="${y2}" width="${S2}" height="${S2}" fill="${color}" />` +
+             `<rect x="${x2 + b2}" y="${y2 + b2}" width="${S2 - 2 * b2}" height="${S2 - 2 * b2}" fill="${backdrop}" />`;
+    }
+    case 'soft-corners': {
+      const R = S * 0.32;
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+    }
+    case 'classic-square':
+    default: {
+      return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
+             `<rect x="${x + T}" y="${y + T}" width="${S - 2 * T}" height="${S - 2 * T}" fill="${backdrop}" />`;
+    }
+  }
+}
+
+export function renderEyeBallSvg(cx, cy, size, style, color, backdrop) {
+  const B = size;
+  const bx = cx - B / 2;
+  const by = cy - B / 2;
+
+  switch (style) {
+    case 'circle':
+      return `<circle cx="${cx}" cy="${cy}" r="${B / 2}" fill="${color}" />`;
+    case 'rounded-square':
+      return `<path d="${getSvgPathRoundRect(bx, by, B, B, B * 0.28)}" fill="${color}" />`;
+    case 'diamond':
+      return `<polygon points="${cx},${by} ${bx + B},${cy} ${cx},${by + B} ${bx},${cy}" fill="${color}" />`;
+    case 'small-dot':
+      return `<circle cx="${cx}" cy="${cy}" r="${B * 0.32}" fill="${color}" />`;
+    case 'cross': {
+      const barW = B * 0.38;
+      return `<rect x="${bx}" y="${cy - barW / 2}" width="${B}" height="${barW}" fill="${color}" />` +
+             `<rect x="${cx - barW / 2}" y="${by}" width="${barW}" height="${B}" fill="${color}" />`;
+    }
+    case 'star': {
+      const rOuter = B / 2;
+      const rInner = B * 0.24;
+      let pts = [];
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        const r = i % 2 === 0 ? rOuter : rInner;
+        pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+      }
+      return `<polygon points="${pts.join(' ')}" fill="${color}" />`;
+    }
+    case 'ring':
+      return `<circle cx="${cx}" cy="${cy}" r="${B / 2}" fill="${color}" />` +
+             `<circle cx="${cx}" cy="${cy}" r="${B * 0.28}" fill="${backdrop}" />`;
+    case 'square':
+    default:
+      return `<rect x="${bx}" y="${by}" width="${B}" height="${B}" fill="${color}" />`;
+  }
+}
+
+/**
+ * Generates pure vector SVG XML string representing the framed QR Code.
+ */
+export function generatePureVectorQRSvg({
+  url = 'https://example.com',
+  frame = 'frame-none',
+  text = 'SCAN ME',
+  logoSrc = null,
+  logoSize = 22,
+  logoRadius = 80,
+  logoBg = true,
+  logoBgColor = '#FFFFFF',
+  qrColor = '#000000',
+  backdrop = '#FFFFFF',
+  patternStyle = 'classic-square',
+  eyeFrame = 'classic-square',
+  eyeBall = 'classic-square',
+  fontFamily = 'Poppins',
+  fontSize = 24,
+  fontWeight = '600',
+  textColor = '#FFFFFF',
+  frameBgColor = '#FFFFFF',
+  arrowColor = '#000000'
+}) {
+  let effectiveFrame = frame;
+  if (frame === 'frame-badge') effectiveFrame = 'frame-bottom-bar';
+  else if (frame === 'frame-bubble') effectiveFrame = 'frame-top-bubble';
+  else if (frame === 'frame-polaroid') effectiveFrame = 'frame-simple-text';
+  else if (frame === 'frame-elegant') effectiveFrame = 'frame-top-header';
+
+  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text');
+  let effectiveTextColor = textColor;
+  if (!effectiveTextColor) {
+    effectiveTextColor = isLightBgFrame ? (arrowColor || '#000000') : '#FFFFFF';
+  } else if (isLightBgFrame && (effectiveTextColor.toUpperCase() === '#FFFFFF' || effectiveTextColor.toUpperCase() === '#FFF')) {
+    effectiveTextColor = arrowColor || '#000000';
+  }
+
+  let totalW = 278;
+  let totalH = 334;
+  let qrX = 0;
+  let qrY = 0;
+  let qrRenderSize = 220;
+
+  const labelText = (text !== undefined && text !== null)
+    ? text
+    : (effectiveFrame === 'frame-curved-arrow' ? 'Scan me' : 'SCAN ME');
+
+  if (effectiveFrame === 'frame-none') {
+    totalW = 240;
+    totalH = 240;
+    qrRenderSize = 240;
+    qrX = 0;
+    qrY = 0;
+  } else if (effectiveFrame === 'frame-bottom-bar') {
+    const bw = 7;
+    const padX = 22;
+    const padTop = 22;
+    const bannerH = 46;
+    const gap = 12;
+    qrRenderSize = 220;
+    const innerW = qrRenderSize + padX * 2;
+    totalW = innerW + bw * 2;
+    totalH = bw * 2 + padTop + qrRenderSize + gap + bannerH;
+    qrX = bw + padX;
+    qrY = bw + padTop;
+  } else if (effectiveFrame === 'frame-top-bubble') {
+    const bw = 7;
+    const pad = 18;
+    const bubbleH = 34;
+    const pointerH = 8;
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    const boxY = bubbleH + pointerH + 2;
+    totalH = boxY + boxH + bw * 2;
+    qrX = bw + pad;
+    qrY = boxY + bw + pad;
+  } else if (effectiveFrame === 'frame-curved-arrow') {
+    totalW = 280;
+    totalH = 320;
+    qrRenderSize = 195;
+    qrX = 70;
+    qrY = 20;
+  } else if (effectiveFrame === 'frame-phone') {
+    totalW = 260;
+    totalH = 360;
+    qrRenderSize = 205;
+    const screenX = 14;
+    const screenY = 28;
+    const screenW = totalW - 28;
+    const screenH = 270;
+    qrX = screenX + (screenW - qrRenderSize) / 2;
+    qrY = screenY + (screenH - qrRenderSize) / 2;
+  } else if (effectiveFrame === 'frame-bottom-pointer') {
+    const bw = 7;
+    const pad = 18;
+    const bannerH = 34;
+    const pointerH = 8;
+    const gap = 5;
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = bw * 2 + boxH + gap + pointerH + bannerH;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-simple-text') {
+    const bw = 7;
+    const pad = 18;
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = bw * 2 + boxH + 42;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-top-header') {
+    const bw = 7;
+    const padX = 22;
+    const headerH = 46;
+    const gap = 12;
+    const padBottom = 22;
+    qrRenderSize = 220;
+    const innerW = qrRenderSize + padX * 2;
+    totalW = innerW + bw * 2;
+    totalH = bw * 2 + headerH + gap + qrRenderSize + padBottom;
+    qrX = bw + padX;
+    qrY = bw + headerH + gap;
+  }
+
+  // QR matrix generation
+  let qr;
+  for (const ecc of ['H', 'Q', 'M', 'L']) {
+    try {
+      qr = qrcode(0, ecc);
+      qr.addData(url || 'https://example.com');
+      qr.make();
+      break;
+    } catch (_) {}
+  }
+  if (!qr) {
+    qr = qrcode(4, 'L');
+    qr.addData('https://example.com');
+    qr.make();
+  }
+
+  const count = qr.getModuleCount();
+  const margin = 2;
+  const totalModules = count + margin * 2;
+  const modSize = qrRenderSize / totalModules;
+
+  let normPattern = patternStyle || 'classic-square';
+  if (normPattern === 'square') normPattern = 'classic-square';
+  if (normPattern === 'dots') normPattern = 'circular-dots';
+  if (normPattern === 'rounded') normPattern = 'rounded-square';
+
+  let normEyeFrame = eyeFrame || 'classic-square';
+  if (normEyeFrame === 'square') normEyeFrame = 'classic-square';
+  if (normEyeFrame === 'rounded') normEyeFrame = 'rounded-square';
+  if (normEyeFrame === 'circle') normEyeFrame = 'circular-frame';
+
+  let normEyeBall = eyeBall || 'square';
+  if (normEyeBall === 'rounded') normEyeBall = 'rounded-square';
+
+  const isEyeModule = (r, c) => {
+    if (r <= 7 && c <= 7) return true;
+    if (r <= 7 && c >= count - 8) return true;
+    if (r >= count - 8 && c <= 7) return true;
+    return false;
+  };
+
+  const qrElements = [];
+  // QR Backdrop
+  qrElements.push(`<rect x="${qrX}" y="${qrY}" width="${qrRenderSize}" height="${qrRenderSize}" fill="${backdrop || '#FFFFFF'}" />`);
+
+  // QR Modules
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (isEyeModule(r, c)) continue;
+      if (qr.isDark(r, c)) {
+        const mx = qrX + (c + margin) * modSize;
+        const my = qrY + (r + margin) * modSize;
+        qrElements.push(renderModuleSvg(mx, my, modSize, normPattern, qrColor || '#000000'));
+      }
+    }
+  }
+
+  // 3 Eyes
+  const eyeSize = 7 * modSize;
+  const eyeThickness = modSize;
+  const eyeBallSize = 3 * modSize;
+
+  const eyePositions = [
+    { x: qrX + margin * modSize, y: qrY + margin * modSize },
+    { x: qrX + (count - 7 + margin) * modSize, y: qrY + margin * modSize },
+    { x: qrX + margin * modSize, y: qrY + (count - 7 + margin) * modSize }
+  ];
+
+  eyePositions.forEach((pos) => {
+    qrElements.push(`<rect x="${pos.x}" y="${pos.y}" width="${eyeSize}" height="${eyeSize}" fill="${backdrop || '#FFFFFF'}" />`);
+    qrElements.push(renderEyeFrameSvg(pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor || '#000000', backdrop || '#FFFFFF'));
+    const cx = pos.x + eyeSize / 2;
+    const cy = pos.y + eyeSize / 2;
+    qrElements.push(renderEyeBallSvg(cx, cy, eyeBallSize, normEyeBall, qrColor || '#000000', backdrop || '#FFFFFF'));
+  });
+
+  // Center logo
+  if (logoSrc) {
+    const maxBoxDim = Math.round((qrRenderSize * (logoSize || 22)) / 100);
+    const drawW = maxBoxDim;
+    const drawH = maxBoxDim;
+    const lx = qrX + (qrRenderSize - drawW) / 2;
+    const ly = qrY + (qrRenderSize - drawH) / 2;
+    const maxAllowedR = Math.floor(Math.min(drawW, drawH) / 2);
+    const radiusPx = Math.max(0, Math.min(Number(logoRadius) || 0, maxAllowedR));
+
+    if (logoBg) {
+      const pad = 4;
+      qrElements.push(`<path d="${getSvgPathRoundRect(lx - pad, ly - pad, drawW + pad * 2, drawH + pad * 2, radiusPx + pad)}" fill="${logoBgColor || '#FFFFFF'}" />`);
+    }
+
+    const clipId = `qr-logo-clip-${Math.random().toString(36).substr(2, 6)}`;
+    qrElements.push(`<defs><clipPath id="${clipId}"><path d="${getSvgPathRoundRect(lx, ly, drawW, drawH, radiusPx)}" /></clipPath></defs>`);
+    qrElements.push(`<image x="${lx}" y="${ly}" width="${drawW}" height="${drawH}" href="${escapeXml(logoSrc)}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid meet" />`);
+  }
+
+  // Frame Elements
+  const frameElements = [];
+  const safeFontFamily = fontFamily || 'Poppins';
+  const safeFontWeight = FONT_WEIGHT_MAP[fontWeight] || (typeof fontWeight === 'number' ? fontWeight : '600');
+  const safeFontSize = parseInt(fontSize) || 24;
+
+  if (effectiveFrame === 'frame-none') {
+    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || backdrop || '#FFFFFF'}" />`);
+  } else if (effectiveFrame === 'frame-bottom-bar') {
+    const bw = 7;
+    const radius = 14;
+    const bannerH = 46;
+
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw, totalH - bw - bannerH, totalW - bw * 2, bannerH, { tl: 0, tr: 0, br: radius - bw / 2, bl: radius - bw / 2 })}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<text x="${totalW / 2}" y="${totalH - bw - bannerH / 2}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${Math.round(safeFontSize * 0.75)}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  } else if (effectiveFrame === 'frame-top-bubble') {
+    const bw = 7;
+    const radius = 14;
+    const bubbleH = 34;
+    const pointerH = 8;
+    const bubbleW = 145;
+    const boxY = bubbleH + pointerH + 2;
+    const boxH = qrRenderSize + 18 * 2;
+    const bubbleX = totalW / 2 - bubbleW / 2;
+    const bubbleY = 2;
+
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, boxY + bw / 2, totalW - bw, boxH + bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bubbleX, bubbleY, bubbleW, bubbleH, 7)}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<polygon points="${totalW / 2 - 8},${bubbleY + bubbleH} ${totalW / 2},${bubbleY + bubbleH + pointerH} ${totalW / 2 + 8},${bubbleY + bubbleH}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<text x="${totalW / 2}" y="${bubbleY + bubbleH / 2}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${Math.round(safeFontSize * 0.65)}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  } else if (effectiveFrame === 'frame-curved-arrow') {
+    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || '#FFFFFF'}" />`);
+    frameElements.push(`<path d="M 52 250 C 20 215, 18 140, 56 92" fill="none" stroke="${arrowColor || '#000000'}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />`);
+    const tipX = 66, tipY = 88;
+    const angle = Math.atan2(88 - 98, 66 - 54);
+    const headLen = 14;
+    const p1x = tipX - headLen * Math.cos(angle - Math.PI / 7);
+    const p1y = tipY - headLen * Math.sin(angle - Math.PI / 7);
+    const pMidX = tipX - (headLen * 0.6) * Math.cos(angle);
+    const pMidY = tipY - (headLen * 0.6) * Math.sin(angle);
+    const p2x = tipX - headLen * Math.cos(angle + Math.PI / 7);
+    const p2y = tipY - headLen * Math.sin(angle + Math.PI / 7);
+    frameElements.push(`<polygon points="${tipX},${tipY} ${p1x},${p1y} ${pMidX},${pMidY} ${p2x},${p2y}" fill="${arrowColor || '#000000'}" />`);
+    const textX = labelText.length > 12 ? (totalW / 2) : 88;
+    frameElements.push(`<text x="${textX}" y="280" fill="${effectiveTextColor || arrowColor || '#000000'}" font-family="${safeFontFamily}, Caveat, cursive" font-size="${safeFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  } else if (effectiveFrame === 'frame-phone') {
+    frameElements.push(`<path d="${getSvgPathRoundRect(4, 4, totalW - 8, totalH - 8, 24)}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(totalW / 2 - 16, 14, 32, 4, 2)}" fill="#e2e8f0" />`);
+    frameElements.push(`<circle cx="${totalW / 2 - 28}" cy="16" r="2.5" fill="#475569" />`);
+    const screenX = 14, screenY = 28, screenW = totalW - 28, screenH = 270;
+    frameElements.push(`<path d="${getSvgPathRoundRect(screenX, screenY, screenW, screenH, 10)}" fill="${frameBgColor || '#FFFFFF'}" />`);
+    frameElements.push(`<text x="${totalW / 2}" y="328" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${Math.round(safeFontSize * 0.68)}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  } else if (effectiveFrame === 'frame-simple-text') {
+    const bw = 7;
+    const radius = 14;
+    const boxH = qrRenderSize + 18 * 2;
+    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || '#FFFFFF'}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, boxH + bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<text x="${totalW / 2}" y="${boxH + bw * 2 + 20}" fill="${effectiveTextColor || '#000000'}" font-family="${safeFontFamily}, sans-serif" font-size="${Math.round(safeFontSize * 0.75)}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  } else if (effectiveFrame === 'frame-top-header') {
+    const bw = 7;
+    const radius = 16;
+    const headerH = 46;
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw, bw, totalW - bw * 2, headerH, { tl: radius - bw / 2, tr: radius - bw / 2, br: 0, bl: 0 })}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<text x="${totalW / 2}" y="${bw + headerH / 2}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${Math.round(safeFontSize * 0.75)}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(labelText)}</text>`);
+  }
+
+  const svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}">\n  ${frameElements.join('\n  ')}\n  ${qrElements.join('\n  ')}\n</svg>`;
+
+  return {
+    svgXml,
+    dataUrl: svgToDataUrl(svgXml),
+    totalWidth: totalW,
+    totalHeight: totalH
+  };
+}
+
 /**
  * Pre-generate default frames for instant drag-and-drop
  */
@@ -175,6 +648,14 @@ export function getCachedFrame(frameId, url = 'https://example.com') {
         return v;
       }
     } catch (_) {}
+  }
+  const cachedPure = generatePureVectorQRSvg({
+    url,
+    frame: frameId,
+    text: frameObj.defaultText
+  });
+  if (cachedPure?.dataUrl) {
+    return cachedPure;
   }
   // Return dimensions based on ratio
   const width = 50;
@@ -598,6 +1079,38 @@ export async function renderQRWithFrame({
   });
   if (qrImageCache.has(cacheKey)) {
     return qrImageCache.get(cacheKey);
+  }
+
+  // Generate pure vector SVG representation
+  try {
+    const vectorResult = generatePureVectorQRSvg({
+      url,
+      frame: effectiveFrame,
+      text,
+      logoSrc,
+      logoSize,
+      logoRadius,
+      logoBg,
+      logoBgColor,
+      qrColor,
+      backdrop,
+      patternStyle,
+      eyeFrame,
+      eyeBall,
+      fontFamily,
+      fontSize,
+      fontWeight,
+      textColor: effectiveTextColor,
+      frameBgColor,
+      arrowColor
+    });
+
+    if (vectorResult?.dataUrl) {
+      qrImageCache.set(cacheKey, vectorResult);
+      return vectorResult;
+    }
+  } catch (vectorErr) {
+    console.warn('[QR] Vector SVG generation error, falling back to canvas:', vectorErr);
   }
 
   const baseQRSize = 240;

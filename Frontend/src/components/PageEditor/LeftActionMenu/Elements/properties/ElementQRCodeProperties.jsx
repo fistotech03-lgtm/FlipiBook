@@ -623,8 +623,12 @@ const ElementQRCodeProperties = ({
         // High quality vector SVG download
         let svgContent = '';
         if (previewDataUrl && previewDataUrl.startsWith('data:image/svg+xml')) {
-          const base64Part = previewDataUrl.split(',')[1];
-          svgContent = decodeURIComponent(base64Part ? atob(base64Part) : '');
+          if (previewDataUrl.includes(';base64,')) {
+            const base64Part = previewDataUrl.split(';base64,')[1];
+            svgContent = decodeURIComponent(escape(atob(base64Part)));
+          } else {
+            svgContent = decodeURIComponent(previewDataUrl.split(',')[1]);
+          }
         } else {
           // Render SVG wrapper
           const currentDataUrl = previewDataUrl;

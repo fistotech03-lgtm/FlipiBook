@@ -182,10 +182,10 @@ const OrangeShelf = ({
           style={{
             filter: decors.lights
               ? (selectedLightTheme === 'light1'
-                  ? 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(251, 191, 36, 0.55))'
-                  : selectedLightTheme === 'light2'
-                    ? 'brightness(1.18) contrast(1.02) drop-shadow(0 0 16px rgba(255, 255, 255, 0.65))'
-                    : 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(96, 165, 250, 0.60))')
+                ? 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(251, 191, 36, 0.55))'
+                : selectedLightTheme === 'light2'
+                  ? 'brightness(1.18) contrast(1.02) drop-shadow(0 0 16px rgba(255, 255, 255, 0.65))'
+                  : 'brightness(1.15) contrast(1.02) drop-shadow(0 0 16px rgba(96, 165, 250, 0.60))')
               : 'none'
           }}
         />

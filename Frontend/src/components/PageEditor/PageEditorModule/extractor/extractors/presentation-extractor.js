@@ -87,16 +87,19 @@ export async function extractPresentationToPdf(fileInput, fileName = 'presentati
   const widthPx = emuToPx(rawSize.width);
   const heightPx = emuToPx(rawSize.height);
 
-  onProgress({ percent: 30, stage: `Found ${slides.length} slides. Rendering high-DPI canvases...` });
-
   const pdfPages = [];
   const previewPages = [];
   const total = slides.length;
 
+  onProgress({ percent: 20, stage: `Found ${total} slides. Reading slides...`, current: 1, total });
+
   for (let i = 0; i < total; i++) {
     const slide = slides[i];
-    const percent = Math.round(30 + (i / total) * 55);
-    onProgress({ percent, stage: `Rendering slide ${i + 1} of ${total}...` });
+    const percent = Math.round(20 + ((i + 1) / total) * 60);
+    onProgress({ percent, stage: `Reading slide ${i + 1} of ${total}...`, current: i + 1, total });
+
+    // Yield to event loop every slide so the UI and GPU spinner stay completely smooth without stutter
+    await new Promise(r => setTimeout(r, 0));
 
     // Render slide to pure vector SVG
     const svgString = renderSlideToSvg(pres, slide, { textLayout: 'svg' });

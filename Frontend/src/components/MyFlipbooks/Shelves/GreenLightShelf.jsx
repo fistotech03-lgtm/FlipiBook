@@ -13,6 +13,7 @@ import greenLightFixture from '../../../assets/Bookshelf/greenlight/light.png';
 const GreenLightShelf = ({
   filteredBooks,
   decors,
+  lightOpacity = 100,
   selectedLightTheme,
   selectedWallTheme,
   openMenuId,
@@ -102,14 +103,15 @@ const GreenLightShelf = ({
                         </div>
 
                         {/* Realistic Studio Spotlight Wall-Wash Beams: vertical downward spread from fixture down onto book */}
-                        {decors.lights && (
+                        {decors.lights !== false && (
                           <div
-                            className="absolute pointer-events-none z-15"
+                            className="absolute pointer-events-none z-15 transition-opacity duration-150"
                             style={{
                               top: lightTop,
                               left: '24.0%',
                               width: '68.0%',
-                              height: '100%'
+                              height: '100%',
+                              opacity: (Number(lightOpacity ?? 100) / 100)
                             }}
                           >
                             {[
@@ -409,8 +411,13 @@ const GreenLightShelf = ({
                         }}
                       >
                         {/* Light inside the lamp dome (lamp kulla light) & surrounding ambiance */}
-                        {decors.lights && (
-                          <>
+                        {decors.lights !== false && (
+                          <div
+                            className="pointer-events-none transition-opacity duration-150"
+                            style={{
+                              opacity: (Number(lightOpacity ?? 100) / 100)
+                            }}
+                          >
                             {/* 1. Large ambient wall glow behind the lamp */}
                             <div
                               className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 -z-10"
@@ -484,7 +491,7 @@ const GreenLightShelf = ({
                                 filter: 'blur(7px)'
                               }}
                             />
-                          </>
+                          </div>
                         )}
 
                         <img

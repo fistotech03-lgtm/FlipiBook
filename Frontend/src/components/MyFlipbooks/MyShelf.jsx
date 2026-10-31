@@ -1326,36 +1326,35 @@ const MyShelf = () => {
 
             {/* The Shelf Stage (w-full fills wrapper completely, aspect-[16/8.4] mild height increase) */}
             {isShelfFullscreen ? (
-              <div className="fixed inset-0 z-[99999] bg-[#0f172a]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200">
-                <div
-                  className="w-full max-w-[96vw] max-h-[94vh] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-2xl border border-white/10"
-                  style={{
-                    backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
-                    backgroundSize: '100% 100%',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                  }}
+              <div
+                className="fixed inset-0 z-[99999] w-screen h-screen overflow-hidden"
+                style={{
+                  backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
+                  backgroundSize: '100% 100%',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
+              >
+                {/* Exit Fullscreen Button */}
+                <button
+                  type="button"
+                  onClick={toggleShelfFullscreen}
+                  className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/85 text-white px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-lg flex items-center gap-2 group cursor-pointer border border-white/15"
+                  title="Exit Full Screen (Esc)"
                 >
-                  {/* Exit Fullscreen Button */}
-                  <button
-                    type="button"
-                    onClick={toggleShelfFullscreen}
-                    className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/85 text-white px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-lg flex items-center gap-2 group cursor-pointer border border-white/15"
-                    title="Exit Full Screen (Esc)"
-                  >
-                    <Icon
-                      icon="lucide:minimize-2"
-                      className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
-                    />
-                    <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
-                  </button>
+                  <Icon
+                    icon="lucide:minimize-2"
+                    className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
+                  />
+                  <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
+                </button>
 
-                  {isLoading && (
-                    <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
-                      <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-                      <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
-                    </div>
-                  )}
+                {isLoading && (
+                  <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
+                    <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
+                    <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
+                  </div>
+                )}
 
                   {/* If bg is an array, map over it to render wall blocks */}
                   {Array.isArray(activeAssets.bg) && (
@@ -1510,6 +1509,7 @@ const MyShelf = () => {
                     <GreenLightShelf
                       filteredBooks={filteredBooks}
                       decors={decors}
+                      lightOpacity={lightOpacity}
                       selectedLightTheme={selectedLightTheme}
                       selectedWallTheme={selectedWallTheme}
                       openMenuId={openMenuId}
@@ -1713,6 +1713,7 @@ const MyShelf = () => {
                       decors={decors}
                       setDecors={setDecors}
                       showLightSwitch={showLightSwitch}
+                      lightOpacity={lightOpacity}
                       selectedLightTheme={selectedLightTheme}
                       openMenuId={openMenuId}
                       setOpenMenuId={setOpenMenuId}
@@ -1780,7 +1781,6 @@ const MyShelf = () => {
                       />
                     </div>
                   )}
-                </div>
               </div>
             ) : null}
 
@@ -2086,6 +2086,7 @@ const MyShelf = () => {
                   <GreenLightShelf
                     filteredBooks={filteredBooks}
                     decors={decors}
+                    lightOpacity={lightOpacity}
                     selectedLightTheme={selectedLightTheme}
                     selectedWallTheme={selectedWallTheme}
                     openMenuId={openMenuId}
@@ -2404,6 +2405,7 @@ const MyShelf = () => {
                     decors={decors}
                     setDecors={setDecors}
                     showLightSwitch={showLightSwitch}
+                    lightOpacity={lightOpacity}
                     selectedLightTheme={selectedLightTheme}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}

@@ -13,6 +13,63 @@ const {
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 const { createUserWorkspace } = require("../utils/workspaceHelper");
 const { parseUserAgent, resolveLocation } = require("../utils/deviceParser");
+const { getRedis, isAvailable } = require("../../../../shared/redisClient");
+
+/**
+ * Fast Redis session blacklisting & profile caching helpers
+ */
+const isSessionRevokedInRedis = async (sessionId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return false;
+  try {
+    const val = await redis.get(`revoked:session:${sessionId}`);
+    return val === "1";
+  } catch (_) {
+    return false;
+  }
+};
+
+const markSessionRevokedInRedis = async (sessionId, ttlSeconds = 7 * 24 * 60 * 60) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return;
+  try {
+    await redis.set(`revoked:session:${sessionId}`, "1", "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const getCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return null;
+  try {
+    const raw = await redis.get(`user:profile:${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const setCachedUserProfile = async (userId, userDoc, ttlSeconds = 300) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId || !userDoc) return;
+  try {
+    const payload = {
+      _id: userDoc._id ? String(userDoc._id) : undefined,
+      name: userDoc.name || "",
+      picture: userDoc.picture || "",
+      emailId: userDoc.emailId || "",
+      userID: userDoc.userID || ""
+    };
+    await redis.set(`user:profile:${userId}`, JSON.stringify(payload), "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const purgeCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return;
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch (_) {}
+};
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -1218,7 +1275,15 @@ const resetPassword = async (req, res) => {
 
     await user.save();
 
-    // Revoke any existing active sessions upon password reset (OWASP standard)
+    // Revoke any existing active sessions in Redis & DB upon password reset (OWASP standard)
+    try {
+      const activeSessions = await LoginLog.find({ userId: user.userID, status: "ACTIVE" }).select("sessionId");
+      for (const s of activeSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+      purgeCachedUserProfile(user._id);
+    } catch (_) {}
+
     await LoginLog.updateMany(
       { userId: user.userID, status: "ACTIVE" },
       { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
@@ -1261,9 +1326,16 @@ const logout = async (req, res) => {
 
     let updatedCount = 0;
 
+    const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
+    if (targetSessionId) {
+      markSessionRevokedInRedis(targetSessionId);
+    }
+    if (decoded?.id) {
+      purgeCachedUserProfile(decoded.id);
+    }
+
     try {
       const dbUpdatePromise = (async () => {
-        const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
         const targetDeviceId = decoded?.deviceId || req.headers["x-device-id"] || req.cookies?.flipibook_device_id || null;
 
         const sessionMatches = [
@@ -1401,6 +1473,17 @@ const verifySession = async (req, res) => {
       if (decodedAccess && decodedAccess.id) {
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedAccess.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedAccess.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1444,6 +1527,17 @@ const verifySession = async (req, res) => {
         tokenEmail = decodedRefresh.emailId || null;
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedRefresh.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedRefresh.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1506,13 +1600,20 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 5. Retrieve user details by ID
+    // 5. Retrieve user details by ID (Check fast Redis cache first)
     let user = null;
-    if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
+    if (targetUserId) {
+      user = await getCachedUserProfile(targetUserId);
+    }
+
+    if (!user && targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
       try {
         user = await User.findById(targetUserId).select(
           "name picture emailId userID",
         );
+        if (user) {
+          setCachedUserProfile(targetUserId, user);
+        }
       } catch (userErr) {
         console.warn("[Verify Session] User lookup by ID warning:", userErr.message);
       }
@@ -1803,6 +1904,11 @@ const revokeSession = async (req, res) => {
     targetSession.logoutTime = new Date();
     await targetSession.save();
 
+    // Instantly blacklist revoked session in Redis (< 0.5ms)
+    if (targetSession.sessionId) {
+      await markSessionRevokedInRedis(targetSession.sessionId);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Session successfully logged out and revoked",
@@ -1849,6 +1955,14 @@ const revokeOtherSessions = async (req, res) => {
     if (excludeQueries.length > 0) {
       filter.$nor = excludeQueries;
     }
+
+    // Instantly blacklist other sessions in Redis (< 0.5ms)
+    try {
+      const revokedSessions = await LoginLog.find(filter).select("sessionId");
+      for (const s of revokedSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+    } catch (_) {}
 
     const result = await LoginLog.updateMany(filter, {
       $set: {

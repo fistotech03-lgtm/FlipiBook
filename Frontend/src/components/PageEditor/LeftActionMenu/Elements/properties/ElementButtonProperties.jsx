@@ -2,13 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Pencil,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Link2,
+  Link2Off
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
-import { ElementToggle, ElementDropdown } from './ElementUIControls';
+import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
+import { handleScrubHelper } from '../../../properties/propertiesShared';
 import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
 
 const SectionHeader = ({ title }) => (
@@ -302,6 +305,7 @@ export const ButtonEditor = ({
   const [paddingH, setPaddingH] = useState(0);
   const [isPaddingLinked, setIsPaddingLinked] = useState(true);
   const [iconGap, setIconGap] = useState(4);
+  const [iconPadding, setIconPadding] = useState(0);
 
   // ─── 3. Button Color States ─────────────────────────────────────
   const [shapeFillColor, setShapeFillColor] = useState('#000000');
@@ -502,6 +506,9 @@ export const ButtonEditor = ({
 
     const savedIconGap = el.getAttribute('data-icon-gap') || '4';
     setIconGap(parseInt(savedIconGap) || 4);
+
+    const savedIconPadding = el.getAttribute('data-icon-padding') || '0';
+    setIconPadding(parseInt(savedIconPadding, 10) || 0);
 
     // 3. Padding Properties
     const savedPaddingW = el.getAttribute('data-padding-w');
@@ -869,7 +876,8 @@ export const ButtonEditor = ({
     currentPlacement = iconPlacement,
     currentRadius = radius,
     currentIconColor = iconColor,
-    currentIconBgColor = iconBgColor
+    currentIconBgColor = iconBgColor,
+    currentIconPadding = iconPadding
   ) => {
     const el = resolveTargetElement();
     if (!el) return;
@@ -904,10 +912,10 @@ export const ButtonEditor = ({
       currentIconBgColor !== 'transparent'
     );
 
-    const badgeRadius = Math.max(14, Math.round(iconSize * 0.85));
+    const badgeRadius = Math.max(14, Math.round(iconSize * 0.85)) + (parseInt(currentIconPadding, 10) || 0);
     const effectiveIconWidth = (hasIconBg || (badgeEl && badgeEl.getAttribute('display') !== 'none' && badgeEl.getAttribute('fill') !== 'none'))
-      ? Math.max(iconSize, badgeRadius * 2)
-      : iconSize;
+      ? Math.max(iconSize + (parseInt(currentIconPadding, 10) || 0) * 2, badgeRadius * 2)
+      : iconSize + (parseInt(currentIconPadding, 10) || 0) * 2;
 
     const totalContentWidth = hasIconVal
       ? measuredWidth + currentIconGap + effectiveIconWidth
@@ -916,17 +924,15 @@ export const ButtonEditor = ({
     const btnTemplate = el.getAttribute('data-button-template');
     const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
 
-    // Retrieve original template defaults if available (standard templates are 140+ px wide, 42px high)
-    const matchedTemplate = BUTTON_TEMPLATES.find((t) => t.id === btnTemplate);
-    const templateMinW = matchedTemplate?.width || (isBadgeTemplate ? 110 : 130);
-    const templateMinH = matchedTemplate?.height || 42;
-
     // Padding scaling: paddingW and paddingH act as visual padding
     // Base padding for button: horizPad = 16 + paddingW, vertPad = 10 + paddingH
     const horizPad = 16 + currentPaddingW * 2;
     const vertPad = 10 + currentPaddingH * 2;
-    const minW = isBadgeTemplate ? Math.max(110, templateMinW) : templateMinW;
-    const minH = templateMinH;
+
+    // Allow the button to naturally scale down when font size is decreased
+    // while keeping a minimum touch target
+    const minW = isBadgeTemplate ? 48 : 36;
+    const minH = 20;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
 
@@ -1557,7 +1563,18 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-gap', gap.toString());
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, gap);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, gap, iconPlacement, radius, iconColor, iconBgColor, iconPadding);
+    syncButtonToCanvas();
+  };
+
+  const handleIconPaddingChange = (pad) => {
+    const num = Math.max(0, pad);
+    setIconPadding(num);
+    const el = resolveTargetElement();
+    if (!el) return;
+
+    el.setAttribute('data-icon-padding', num.toString());
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor, num);
     syncButtonToCanvas();
   };
 
@@ -1950,6 +1967,17 @@ export const ButtonEditor = ({
           cursor: pointer;
           box-shadow: 0 1px 2px rgba(0,0,0,0.15);
         }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 999999;
+          transform: translate(-50%, -50%);
+          filter: drop-shadow(0 0.2vw 0.4vw rgba(0,0,0,0.4));
+        }
+        body.is-scrubbing * {
+          cursor: ew-resize !important;
+          user-select: none !important;
+        }
       `}</style>
 
       {/* ─── 1. BUTTON CONTENT SECTION ──────────────────────────── */}
@@ -2015,6 +2043,99 @@ export const ButtonEditor = ({
         />
       </PropertyRow>
 
+      {/* Row 4.1: Padding (Horizontal & Vertical with Link toggle & Mouse Drag Scrubbing) */}
+      <PropertyRow label="Padding">
+        <div className="flex items-center gap-[0.4vw] w-full">
+          {/* Horizontal Padding (Width adjustment) with mouse dragger */}
+          <div
+            onPointerDown={(e) => {
+              if (e.target.tagName === 'INPUT') return;
+              handleScrubHelper(e, paddingW, (newVal) => {
+                handlePaddingChange('w', Math.max(0, parseInt(newVal, 10) || 0));
+              }, 4);
+            }}
+            title={isPaddingLinked ? "Drag horizontally to adjust Width & Height padding, or type value" : "Drag horizontally to adjust Width padding, or type value"}
+            className="flex-1 flex items-center h-[2.2vw] min-h-[30px] border border-gray-200 rounded-[0.5vw] bg-white px-[0.4vw] shadow-2xs focus-within:border-[#E05638] cursor-ew-resize select-none hover:border-gray-300 transition-colors"
+          >
+            <span className="text-[0.72vw] font-bold text-gray-500 cursor-ew-resize select-none mr-[0.2vw]">W</span>
+            <input
+              type="number"
+              min={0}
+              value={paddingW}
+              onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) => handlePaddingChange('w', parseFloat(e.target.value) || 0)}
+              className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent no-spin cursor-text"
+            />
+          </div>
+
+          {/* Link / Unlink toggle button */}
+          <button
+            type="button"
+            onClick={() => handleTogglePaddingLink(!isPaddingLinked)}
+            className={`w-[1.9vw] h-[2.2vw] min-h-[30px] rounded-[0.5vw] border flex items-center justify-center cursor-pointer transition-all ${
+              isPaddingLinked
+                ? 'border-[#E05638] bg-[#E05638]/10 text-[#E05638]'
+                : 'border-gray-200 hover:border-gray-300 bg-gray-50 text-gray-400'
+            }`}
+            title={isPaddingLinked ? 'Linked (Click to unlink)' : 'Unlinked (Click to link)'}
+          >
+            {isPaddingLinked ? (
+              <Link2 className="w-[0.9vw] h-[0.9vw]" />
+            ) : (
+              <Link2Off className="w-[0.9vw] h-[0.9vw]" />
+            )}
+          </button>
+
+          {/* Vertical Padding (Height adjustment) with mouse dragger */}
+          <div
+            onPointerDown={(e) => {
+              if (e.target.tagName === 'INPUT') return;
+              handleScrubHelper(e, paddingH, (newVal) => {
+                handlePaddingChange('h', Math.max(0, parseInt(newVal, 10) || 0));
+              }, 4);
+            }}
+            title={isPaddingLinked ? "Drag horizontally to adjust Width & Height padding, or type value" : "Drag horizontally to adjust Height padding, or type value"}
+            className="flex-1 flex items-center h-[2.2vw] min-h-[30px] border border-gray-200 rounded-[0.5vw] bg-white px-[0.4vw] shadow-2xs focus-within:border-[#E05638] cursor-ew-resize select-none hover:border-gray-300 transition-colors"
+          >
+            <span className="text-[0.72vw] font-bold text-gray-500 cursor-ew-resize select-none mr-[0.2vw]">H</span>
+            <input
+              type="number"
+              min={0}
+              value={paddingH}
+              onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) => handlePaddingChange('h', parseFloat(e.target.value) || 0)}
+              className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent no-spin cursor-text"
+            />
+          </div>
+        </div>
+      </PropertyRow>
+
+      {/* Row 4.2: Gap (Slider with Value Badge matching Coral Theme) */}
+      <PropertyRow label="Gap">
+        <div className="flex items-center gap-[0.6vw] w-full">
+          <div className="flex-1 flex items-center">
+            <ElementSlider
+              min={0}
+              max={40}
+              step={1}
+              value={iconGap}
+              onChange={(val) => handleIconGapChange(Math.max(0, parseInt(val, 10) || 0))}
+            />
+          </div>
+          <div className="w-[3.2vw] h-[1.8vw] min-h-[26px] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs px-[0.2vw]">
+            <input
+              type="number"
+              min={0}
+              max={40}
+              value={iconGap}
+              onChange={(e) => handleIconGapChange(Math.max(0, parseFloat(e.target.value) || 0))}
+              className="w-full text-center text-[0.78vw] text-gray-700 font-semibold outline-none bg-transparent no-spin"
+            />
+            <span className="text-[0.68vw] text-gray-400 font-semibold pr-[0.1vw]">px</span>
+          </div>
+        </div>
+      </PropertyRow>
+
       {/* Row 5: Add Icon Toggle */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
         <span className="text-[0.8vw] font-semibold text-gray-900">Add Icon to the button</span>
@@ -2061,6 +2182,32 @@ export const ButtonEditor = ({
               onChange={handleIconPlacementChange}
               options={['Left', 'Right']}
             />
+          </PropertyRow>
+
+          {/* Icon Padding (Slider with Value Badge) */}
+          <PropertyRow label="Icon Padding">
+            <div className="flex items-center gap-[0.6vw] w-full">
+              <div className="flex-1 flex items-center">
+                <ElementSlider
+                  min={0}
+                  max={30}
+                  step={1}
+                  value={iconPadding}
+                  onChange={(val) => handleIconPaddingChange(Math.max(0, parseInt(val, 10) || 0))}
+                />
+              </div>
+              <div className="w-[3.2vw] h-[1.8vw] min-h-[26px] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs px-[0.2vw]">
+                <input
+                  type="number"
+                  min={0}
+                  max={30}
+                  value={iconPadding}
+                  onChange={(e) => handleIconPaddingChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full text-center text-[0.78vw] text-gray-700 font-semibold outline-none bg-transparent no-spin"
+                />
+                <span className="text-[0.68vw] text-gray-400 font-semibold pr-[0.1vw]">px</span>
+              </div>
+            </div>
           </PropertyRow>
 
           {/* Icon Color */}

@@ -851,10 +851,20 @@ export const createButtonElementNode = (template, cx, cy) => {
   const g = doc.querySelector(`g#button-${uniqueId}`);
   if (!g) return null;
 
-  const posX = Math.round(cx - template.width / 2);
-  const posY = Math.round(cy - template.height / 2);
+  // Scale down button so it inserts cleanly and compact onto the page canvas
+  let scale = 1;
+  const maxInitialWidth = 55;
+  if (template.width > maxInitialWidth) {
+    scale = maxInitialWidth / template.width;
+  }
 
-  g.setAttribute('transform', `translate(${posX}, ${posY})`);
+  const renderW = template.width * scale;
+  const renderH = template.height * scale;
+
+  const posX = Math.round(cx - renderW / 2);
+  const posY = Math.round(cy - renderH / 2);
+
+  g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
   g.setAttribute('data-name', 'Button');
   g.setAttribute('data-button-title', template.name || 'Button');
   g.setAttribute('data-type', 'button');

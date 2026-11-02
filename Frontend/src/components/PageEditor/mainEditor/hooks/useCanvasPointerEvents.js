@@ -1799,6 +1799,10 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
+      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
+      if (typographyParent && typographyParent.id) {
+        resolvedId = typographyParent.id;
+      }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
         resolvedId = shapeParent.id;
@@ -2554,7 +2558,7 @@ export const useCanvasPointerEvents = ({
 
     // Check if double click targets a compound element (button, audio, shape, qr, map, embed, etc.)
     const compoundParent = (directTextEl || e.target)?.closest?.(
-      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (compoundParent) {
       if (compoundParent.id) {
@@ -2591,7 +2595,7 @@ export const useCanvasPointerEvents = ({
     }
     let target = getDraggableElement(clickedEl, e.currentTarget) || (selectedLayerIdRef.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null);
     const targetCompound = target?.closest?.(
-      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (targetCompound) {
       if (targetCompound.id) {

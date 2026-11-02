@@ -23,8 +23,8 @@ export const TABLE_TEMPLATES = [
     name: 'Standard Grid',
     rows: 3,
     cols: 3,
-    width: 260,
-    height: 120,
+    width: 300,
+    height: 150,
     themeColor: '#ffffff',
     themeOpacity: 100,
     borderColor: '#cbd5e1',
@@ -38,20 +38,15 @@ export const TABLE_TEMPLATES = [
     textAlign: 'left',
     verticalAlign: 'middle',
     paddingX: 10,
-    paddingY: 8,
-    sampleHeaders: ['Item', 'Category', 'Price'],
-    sampleData: [
-      ['Design System', 'UI/UX', '$450'],
-      ['Motion Library', 'Graphics', '$320']
-    ]
+    paddingY: 8
   },
   {
     id: 'table-accent-header',
     name: 'Accent Header',
     rows: 3,
     cols: 3,
-    width: 260,
-    height: 120,
+    width: 300,
+    height: 150,
     themeColor: '#ffffff',
     themeOpacity: 100,
     borderColor: '#e2e8f0',
@@ -67,20 +62,15 @@ export const TABLE_TEMPLATES = [
     textAlign: 'left',
     verticalAlign: 'middle',
     paddingX: 10,
-    paddingY: 8,
-    sampleHeaders: ['Phase', 'Deliverable', 'Status'],
-    sampleData: [
-      ['Phase 1', 'Brand Audit', 'Done'],
-      ['Phase 2', 'Prototypes', 'In Review']
-    ]
+    paddingY: 8
   },
   {
     id: 'table-dark-slate',
     name: 'Executive Dark',
     rows: 3,
     cols: 3,
-    width: 260,
-    height: 120,
+    width: 300,
+    height: 150,
     themeColor: '#0f172a',
     themeOpacity: 100,
     borderColor: '#334155',
@@ -96,20 +86,15 @@ export const TABLE_TEMPLATES = [
     textAlign: 'left',
     verticalAlign: 'middle',
     paddingX: 10,
-    paddingY: 8,
-    sampleHeaders: ['Metric', 'Q3 Target', 'Actual'],
-    sampleData: [
-      ['Revenue', '$1.2M', '$1.45M'],
-      ['NPS Score', '85%', '92%']
-    ]
+    paddingY: 8
   },
   {
     id: 'table-minimal-clean',
     name: 'Clean Borderless',
     rows: 3,
     cols: 3,
-    width: 260,
-    height: 120,
+    width: 300,
+    height: 150,
     themeColor: '#ffffff',
     themeOpacity: 100,
     borderColor: '#e2e8f0',
@@ -123,20 +108,15 @@ export const TABLE_TEMPLATES = [
     textAlign: 'left',
     verticalAlign: 'middle',
     paddingX: 10,
-    paddingY: 8,
-    sampleHeaders: ['Feature', 'Starter', 'Enterprise'],
-    sampleData: [
-      ['Users', '5', 'Unlimited'],
-      ['Support', 'Email', '24/7 Dedicated']
-    ]
+    paddingY: 8
   },
   {
     id: 'table-emerald-sheet',
     name: 'Emerald Sheet',
     rows: 4,
     cols: 3,
-    width: 280,
-    height: 140,
+    width: 300,
+    height: 150,
     themeColor: '#ffffff',
     themeOpacity: 100,
     borderColor: '#a7f3d0',
@@ -152,13 +132,7 @@ export const TABLE_TEMPLATES = [
     textAlign: 'left',
     verticalAlign: 'middle',
     paddingX: 8,
-    paddingY: 6,
-    sampleHeaders: ['Account', 'Budget', 'Balance'],
-    sampleData: [
-      ['Marketing', '$25,000', '$14,200'],
-      ['R&D Dev', '$80,000', '$62,500'],
-      ['Operations', '$15,000', '$8,900']
-    ]
+    paddingY: 6
   },
   {
     id: 'table-compact-data',
@@ -182,13 +156,7 @@ export const TABLE_TEMPLATES = [
     textAlign: 'center',
     verticalAlign: 'middle',
     paddingX: 6,
-    paddingY: 5,
-    sampleHeaders: ['ID', 'Region', 'Units', 'Growth'],
-    sampleData: [
-      ['01', 'North', '1,420', '+18%'],
-      ['02', 'South', '980', '+12%'],
-      ['03', 'East', '2,150', '+24%']
-    ]
+    paddingY: 5
   }
 ];
 

@@ -1,12 +1,84 @@
 import React from 'react';
-import { createKineticElementNode } from '../utils/kineticTypographyUtils';
-import { createMotionGraphicElementNode } from '../utils/motionGraphicUtils';
+import {
+  createMotionGraphicElementNode
+} from '../utils/motionGraphicUtils';
 
+import typographySvg1 from '../../../../../assets/Elements/Typography/Typography text 1.svg';
+import typographySvg2 from '../../../../../assets/Elements/Typography/Tpography text 2.svg';
+import typographySvg3 from '../../../../../assets/Elements/Typography/Tpography text 3.svg';
+import typographySvg4 from '../../../../../assets/Elements/Typography/Tpography text 4.svg';
+import typographySvg5 from '../../../../../assets/Elements/Typography/Tpography text 5.svg';
+
+// --- 9 Motion Graphic Titles (subtopic: 'Titles') ---
 export const MOTION_GRAPHIC_PRESETS = [
   {
-    id: 'lottie-neon-cyber-frame',
+    id: 'lottie-title-1',
+    template: 'slide-split',
+    name: 'Slide Split (Title 1)',
+    category: 'text',
+    subtopic: 'Titles',
+    tag: 'Motion AE',
+    bg: '#08080c',
+    text: 'FLIPIBOOK',
+    subText: 'ANIMATION',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#FF0040',
+    fontSize: 24,
+    fontFamily: '"Arial Black", Impact, sans-serif',
+    duration: 5300
+  },
+  {
+    id: 'lottie-title-2',
+    template: 'swap-bar',
+    name: 'Swap Bar (Title 2)',
+    category: 'text',
+    subtopic: 'Titles',
+    tag: 'Motion AE',
+    bg: '#0a0a10',
+    text: 'FLIPIBOOK',
+    subText: 'ANIMATION',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#00E5FF',
+    fontSize: 22,
+    fontFamily: '"Arial Black", Impact, sans-serif',
+    duration: 7000
+  },
+  {
+    id: 'lottie-title-3',
+    template: 'bar-sweep',
+    name: 'Bar Sweep (Title 3)',
+    category: 'text',
+    subtopic: 'Titles',
+    tag: 'Motion AE',
+    bg: '#05070e',
+    text: 'FLIPIBOOK',
+    subText: 'ANIMATION',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#FFC600',
+    fontSize: 24,
+    fontFamily: '"Arial Black", Impact, sans-serif',
+    duration: 8000
+  },
+  {
+    id: 'lottie-title-4',
+    template: 'square-open',
+    name: 'Square Open (Title 4)',
+    category: 'text',
+    subtopic: 'Titles',
+    tag: 'Motion AE',
+    bg: '#0d0d14',
+    text: 'FLIPIBOOK',
+    subText: 'ANIMATION',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#3BF4FF',
+    fontSize: 20,
+    fontFamily: '"Arial Black", Impact, sans-serif',
+    duration: 6500
+  },
+  {
+    id: 'lottie-title-5',
     template: 'cyber-frame',
-    name: 'Cyber Frame',
+    name: 'Cyber Frame (Title 5)',
     category: 'text',
     subtopic: 'Titles',
     tag: 'Motion AE',
@@ -21,9 +93,9 @@ export const MOTION_GRAPHIC_PRESETS = [
     duration: 4700
   },
   {
-    id: 'lottie-flipi-slash-title',
+    id: 'lottie-title-6',
     template: 'flipi-split',
-    name: 'Flipi Slash',
+    name: 'Flipi Slash (Title 6)',
     category: 'text',
     subtopic: 'Titles',
     tag: 'Motion AE',
@@ -38,9 +110,9 @@ export const MOTION_GRAPHIC_PRESETS = [
     duration: 4500
   },
   {
-    id: 'lottie-box-counter-slide',
+    id: 'lottie-title-7',
     template: 'box-reveal',
-    name: 'Dual Box',
+    name: 'Dual Box (Title 7)',
     category: 'text',
     subtopic: 'Titles',
     tag: 'Motion AE',
@@ -55,9 +127,9 @@ export const MOTION_GRAPHIC_PRESETS = [
     duration: 4000
   },
   {
-    id: 'lottie-youtube-channel-intro',
+    id: 'lottie-title-8',
     template: 'youtube-channel',
-    name: 'YouTube Intro',
+    name: 'YouTube Intro (Title 8)',
     category: 'text',
     subtopic: 'Titles',
     tag: 'Motion AE',
@@ -70,301 +142,23 @@ export const MOTION_GRAPHIC_PRESETS = [
     fontSize: 21,
     fontFamily: '"Arial Black", Impact, sans-serif',
     duration: 3600
-  }
-];
-
-export const KINETIC_PRESETS = [
-  {
-    id: 'kinetic-slide-up',
-    name: 'Kinetic Slide',
-    category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#0F172A',
-    textColor: '#FFFFFF',
-    fontFamily: 'Inter',
-    words: ['CODING', 'KINETIC', 'TYPE'],
-    animType: 'slide-up',
-    duration: 3800,
-    stagger: 50,
-    fontSize: 34
   },
   {
-    id: 'kinetic-neon-pulse',
-    name: 'Neon Pulse',
+    id: 'lottie-title-9',
+    template: 'social-badge',
+    name: 'Social Badge (Title 9)',
     category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#090D16',
-    textColor: '#00F0FF',
-    fontFamily: 'Inter',
-    words: ['CYBER', 'NEON', 'PULSE'],
-    animType: 'pulse-glow',
-    duration: 2600,
-    stagger: 60,
-    fontSize: 34
-  },
-  {
-    id: 'kinetic-pop-bounce',
-    name: 'Pop Bounce',
-    category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#18181B',
-    textColor: '#FBBF24',
-    fontFamily: 'Poppins',
-    words: ['MOTION', 'BOUNCE', 'POP'],
-    animType: 'pop-bounce',
-    duration: 3200,
-    stagger: 45,
-    fontSize: 34
-  },
-  {
-    id: 'kinetic-wave-flow',
-    name: 'Harmonic Wave',
-    category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#064E3B',
-    textColor: '#34D399',
-    fontFamily: 'Inter',
-    words: ['SMOOTH', 'RHYTHMIC', 'FLOW'],
-    animType: 'wave-float',
-    duration: 2400,
-    stagger: 70,
-    fontSize: 34
-  },
-  {
-    id: 'kinetic-flip-3d',
-    name: '3D Flip',
-    category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#31104B',
-    textColor: '#E879F9',
-    fontFamily: 'Inter',
-    words: ['FUTURE', 'DIMENSION', '3D'],
-    animType: 'flip-3d',
-    duration: 3600,
-    stagger: 55,
-    fontSize: 34
-  },
-  {
-    id: 'kinetic-slide-down',
-    name: 'Top Drop',
-    category: 'text',
-    subtopic: 'Typography',
-    tag: 'Kinetic',
-    bg: '#1E1B4B',
-    textColor: '#818CF8',
-    fontFamily: 'Inter',
-    words: ['CREATIVE', 'DESIGN', 'STUDIO'],
-    animType: 'slide-down',
-    duration: 3600,
-    stagger: 50,
-    fontSize: 34
-  }
-];
-
-export const POSTER_PRESETS = [
-  {
-    id: 'poster-comic',
-    name: 'Comic Poster',
-    category: 'text',
-    tag: 'Poster',
-    renderPreview: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center p-[0.2vw] bg-[#FDF6E2] rounded-[0.35vw]">
-        <svg viewBox="0 0 160 80" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-          <text x="80" y="34" textAnchor="middle" fontFamily="'Bangers', Impact, sans-serif" fontSize="24" fill="#D32F2F" stroke="#000" strokeWidth="1.2">GOOD THINGS</text>
-          <text x="80" y="68" textAnchor="middle" fontFamily="'Bangers', Impact, sans-serif" fontSize="34" fill="#FBC02D" stroke="#000" strokeWidth="1.5">FEARLESS</text>
-        </svg>
-      </div>
-    ),
-    insert: (cx, cy) => {
-      const uniqueId = Date.now();
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('id', `typography-${uniqueId}`);
-      g.setAttribute('data-type', 'text');
-      g.setAttribute('data-is-element-typography', 'true');
-      g.setAttribute('data-name', 'Comic Poster');
-      g.setAttribute('transform', `translate(${cx - 100}, ${cy - 50})`);
-      g.setAttribute('cursor', 'pointer');
-      g.setAttribute('style', '--stroke-width: 2px; --shadow-x: 3px; --shadow-y: 3px; --skew-angle: 0deg;');
-      g.innerHTML = `
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Bangers&amp;display=swap');
-          #typography-${uniqueId} text {
-            font-family: 'Bangers', cursive;
-            letter-spacing: 0.05em;
-            stroke-width: var(--stroke-width, 2px);
-            -webkit-text-stroke-width: var(--stroke-width, 2px);
-            filter: drop-shadow(var(--shadow-x, 3px) var(--shadow-y, 3px) 0px #000000);
-            transform: skewX(var(--skew-angle, 0deg));
-          }
-        </style>
-        <text x="100" y="40" font-size="34" font-family="Bangers" fill="#D32F2F" stroke="#000000" text-anchor="middle">GOOD THINGS</text>
-        <text x="100" y="80" font-size="46" font-family="Bangers" fill="#FBC02D" stroke="#000000" text-anchor="middle">FEARLESS</text>
-      `;
-      return g;
-    }
-  },
-  {
-    id: 'poster-hiring',
-    name: "We're Hiring",
-    category: 'text',
-    tag: 'Script',
-    renderPreview: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center p-[0.2vw] bg-[#F0F7FF] rounded-[0.35vw]">
-        <svg viewBox="0 0 160 80" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-          <text x="80" y="35" textAnchor="middle" fontFamily="'Satisfy', cursive" fontSize="30" fill="#025EE8">We're</text>
-          <text x="80" y="68" textAnchor="middle" fontFamily="'Satisfy', cursive" fontSize="36" fill="#025EE8">Hiring!</text>
-        </svg>
-      </div>
-    ),
-    insert: (cx, cy) => {
-      const uniqueId = Date.now();
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('id', `typography-${uniqueId}`);
-      g.setAttribute('data-type', 'text');
-      g.setAttribute('data-is-element-typography', 'true');
-      g.setAttribute('data-name', "We're Hiring");
-      g.setAttribute('transform', `translate(${cx - 75}, ${cy - 45})`);
-      g.setAttribute('cursor', 'pointer');
-      g.setAttribute('style', '--stroke-width: 0px; --shadow-x: 2px; --shadow-y: 2px; --skew-angle: 0deg;');
-      g.innerHTML = `
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Satisfy&amp;display=swap');
-          #typography-${uniqueId} text {
-            font-family: 'Satisfy', cursive;
-            stroke-width: var(--stroke-width, 0px);
-            filter: drop-shadow(var(--shadow-x, 2px) var(--shadow-y, 2px) 0px rgba(0,0,0,0.15));
-            transform: skewX(var(--skew-angle, 0deg));
-          }
-        </style>
-        <text x="75" y="35" font-size="34" font-family="Satisfy" fill="#025EE8" text-anchor="middle">We're</text>
-        <text x="75" y="72" font-size="38" font-family="Satisfy" fill="#025EE8" text-anchor="middle">Hiring!</text>
-      `;
-      return g;
-    }
-  },
-  {
-    id: 'poster-free-shipping',
-    name: 'Free Shipping',
-    category: 'text',
-    tag: 'Badge',
-    renderPreview: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center p-[0.2vw] bg-[#FFF8F0] rounded-[0.35vw]">
-        <svg viewBox="0 0 160 80" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-          <text x="80" y="34" textAnchor="middle" fontFamily="'Oswald', Impact, sans-serif" fontWeight="700" fontSize="28" fill="#E60012" stroke="#FFD700" strokeWidth="2">FREE</text>
-          <text x="80" y="68" textAnchor="middle" fontFamily="'Oswald', Impact, sans-serif" fontWeight="700" fontSize="28" fill="#FFD700" stroke="#FFD700" strokeWidth="1">SHIPPING</text>
-        </svg>
-      </div>
-    ),
-    insert: (cx, cy) => {
-      const uniqueId = Date.now();
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('id', `typography-${uniqueId}`);
-      g.setAttribute('data-type', 'text');
-      g.setAttribute('data-is-element-typography', 'true');
-      g.setAttribute('data-name', 'Free Shipping');
-      g.setAttribute('transform', `translate(${cx - 80}, ${cy - 45})`);
-      g.setAttribute('cursor', 'pointer');
-      g.setAttribute('style', '--stroke-width: 3px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;');
-      g.innerHTML = `
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&amp;display=swap');
-          #typography-${uniqueId} text {
-            font-family: 'Oswald', sans-serif;
-            font-weight: 700;
-            stroke-width: var(--stroke-width, 3px);
-            -webkit-text-stroke-width: var(--stroke-width, 3px);
-            paint-order: stroke fill;
-          }
-        </style>
-        <text x="80" y="38" font-size="34" font-family="Oswald" font-weight="700" fill="#E60012" stroke="#FFD700" text-anchor="middle">FREE</text>
-        <text x="80" y="78" font-size="34" font-family="Oswald" font-weight="700" fill="#FFD700" stroke="#FFD700" text-anchor="middle">SHIPPING</text>
-      `;
-      return g;
-    }
-  },
-  {
-    id: 'poster-golden-hour',
-    name: 'Golden Hour',
-    category: 'text',
-    tag: 'Serif',
-    renderPreview: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center p-[0.2vw] bg-[#FAF5EB] rounded-[0.35vw]">
-        <svg viewBox="0 0 160 80" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-          <text x="80" y="35" textAnchor="middle" fontFamily="'Courier New', Courier, monospace" fontWeight="700" fontSize="24" fill="#DAA520">GOLDEN</text>
-          <text x="80" y="68" textAnchor="middle" fontFamily="'Courier New', Courier, monospace" fontWeight="700" fontSize="24" fill="#DAA520">HOUR</text>
-        </svg>
-      </div>
-    ),
-    insert: (cx, cy) => {
-      const uniqueId = Date.now();
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('id', `typography-${uniqueId}`);
-      g.setAttribute('data-type', 'text');
-      g.setAttribute('data-is-element-typography', 'true');
-      g.setAttribute('data-name', 'Golden Hour');
-      g.setAttribute('transform', `translate(${cx - 75}, ${cy - 45})`);
-      g.setAttribute('cursor', 'pointer');
-      g.setAttribute('style', '--stroke-width: 0px; --shadow-x: 2px; --shadow-y: 2px; --skew-angle: 0deg;');
-      g.innerHTML = `
-        <style>
-          #typography-${uniqueId} text {
-            font-family: 'Courier New', Courier, monospace;
-            stroke-width: var(--stroke-width, 0px);
-            filter: drop-shadow(var(--shadow-x, 2px) var(--shadow-y, 2px) 0px rgba(0,0,0,0.25));
-            transform: skewX(var(--skew-angle, 0deg));
-          }
-        </style>
-        <text x="75" y="35" font-size="34" font-family="Courier New" fill="#DAA520" stroke="#000000" text-anchor="middle">GOLDEN</text>
-        <text x="75" y="75" font-size="34" font-family="Courier New" fill="#DAA520" stroke="#000000" text-anchor="middle">HOUR</text>
-      `;
-      return g;
-    }
-  },
-  {
-    id: 'poster-holiday',
-    name: 'Holiday',
-    category: 'text',
-    tag: 'Luxury',
-    renderPreview: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center p-[0.2vw] bg-[#0F172A] rounded-[0.35vw]">
-        <svg viewBox="0 0 160 80" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-          <text x="80" y="50" textAnchor="middle" fontFamily="'Playfair Display', serif" fontWeight="700" fontSize="32" fill="#FFFFFF" stroke="#38BDF8" strokeWidth="2">Holiday</text>
-        </svg>
-      </div>
-    ),
-    insert: (cx, cy) => {
-      const uniqueId = Date.now();
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('id', `typography-${uniqueId}`);
-      g.setAttribute('data-type', 'text');
-      g.setAttribute('data-is-element-typography', 'true');
-      g.setAttribute('data-name', 'Holiday');
-      g.setAttribute('transform', `translate(${cx - 70}, ${cy - 35})`);
-      g.setAttribute('cursor', 'pointer');
-      g.setAttribute('style', '--stroke-width: 3px; --shadow-x: 2px; --shadow-y: 2px; --skew-angle: 0deg;');
-      g.innerHTML = `
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;display=swap');
-          #typography-${uniqueId} text {
-            font-family: 'Playfair Display', serif;
-            font-weight: 700;
-            stroke-width: var(--stroke-width, 3px);
-            -webkit-text-stroke-width: var(--stroke-width, 3px);
-            stroke-linejoin: round;
-            paint-order: stroke fill;
-            filter: drop-shadow(var(--shadow-x, 2px) var(--shadow-y, 2px) 0px rgba(0,0,0,0.25));
-            transform: skewX(var(--skew-angle, 0deg));
-          }
-        </style>
-        <text x="70" y="45" font-size="34" font-family="Playfair Display" font-weight="700" fill="#FFFFFF" stroke="#38BDF8" text-anchor="middle">Holiday</text>
-      `;
-      return g;
-    }
+    subtopic: 'Titles',
+    tag: 'Motion AE',
+    bg: '#08122c',
+    text: 'FLIPIBOOK',
+    subText: '',
+    primaryColor: '#0E34A8',
+    secondaryColor: '#FFFFFF',
+    glowIntensity: 0,
+    fontSize: 18,
+    fontFamily: '"Expletus Sans", Arial, sans-serif',
+    duration: 4200
   }
 ];
 
@@ -395,6 +189,33 @@ const renderMotionGraphicPreview = (preset) => {
           <polygon points="22,19 31,25 22,31" fill="#FFFFFF" />
           <text x="50" y="30" fill={preset.secondaryColor} fontSize="13" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
         </svg>
+      ) : preset.template === 'slide-split' ? (
+        <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
+          <rect x="6" y="10" width="148" height="30" rx="3" fill="#14141d" stroke={preset.secondaryColor} strokeWidth="1.5" />
+          <text x="80" y="24" textAnchor="middle" fill={preset.primaryColor} fontSize="12" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
+          <text x="80" y="35" textAnchor="middle" fill={preset.secondaryColor} fontSize="8" fontFamily="Arial, sans-serif">{preset.subText}</text>
+        </svg>
+      ) : preset.template === 'swap-bar' ? (
+        <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
+          <rect x="14" y="12" width="6" height="26" fill={preset.secondaryColor} />
+          <text x="26" y="24" fill={preset.primaryColor} fontSize="12" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
+          <text x="26" y="35" fill={preset.secondaryColor} fontSize="8" fontFamily="Arial, sans-serif">{preset.subText}</text>
+        </svg>
+      ) : preset.template === 'bar-sweep' ? (
+        <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
+          <line x1="10" y1="36" x2="150" y2="36" stroke={preset.secondaryColor} strokeWidth="2" />
+          <text x="80" y="27" textAnchor="middle" fill={preset.primaryColor} fontSize="13" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
+        </svg>
+      ) : preset.template === 'square-open' ? (
+        <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
+          <rect x="25" y="8" width="110" height="34" rx="2" fill="none" stroke={preset.secondaryColor} strokeWidth="1.5" strokeDasharray="6 4" />
+          <text x="80" y="29" textAnchor="middle" fill={preset.primaryColor} fontSize="11" fontWeight="700" fontFamily="sans-serif">{preset.text}</text>
+        </svg>
+      ) : preset.template === 'social-badge' ? (
+        <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
+          <rect x="12" y="10" width="136" height="30" rx="15" fill={preset.primaryColor} />
+          <text x="80" y="29" textAnchor="middle" fill={preset.secondaryColor} fontSize="11" fontWeight="800" fontFamily="sans-serif">{preset.text}</text>
+        </svg>
       ) : (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
           <rect x="6" y="6" width="148" height="38" rx="8" fill="none" stroke={preset.primaryColor} strokeWidth="2.5" />
@@ -405,213 +226,219 @@ const renderMotionGraphicPreview = (preset) => {
   );
 };
 
-// Helper to format kinetic typography preview
-const renderKineticPreview = (preset) => {
-  return (
-    <div
-      className="w-full h-full rounded-[0.35vw] flex flex-col items-center justify-center gap-[0.1vw] overflow-hidden p-[0.2vw]"
-      style={{ backgroundColor: preset.bg }}
-    >
-      {preset.words.map((w, idx) => (
-        <span
-          key={idx}
-          className="text-[0.62vw] font-black uppercase tracking-wider leading-none truncate"
-          style={{ color: preset.textColor }}
-        >
-          {w}
-        </span>
-      ))}
-    </div>
-  );
+// --- SVG Typography Text Presets (subtopic: 'Typography') ---
+const parseSvgToGroupNode = (rawSvg, name, targetWidth, targetHeight, cx, cy) => {
+  const uniqueId = `group-typography-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawSvg, 'image/svg+xml');
+  const svgEl = doc.querySelector('svg');
+  if (!svgEl) return null;
+
+  let origW = parseFloat(svgEl.getAttribute('width'));
+  let origH = parseFloat(svgEl.getAttribute('height'));
+  const viewBox = svgEl.getAttribute('viewBox');
+  if (viewBox) {
+    const parts = viewBox.trim().split(/[\s,]+/).map(parseFloat);
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      origW = parts[2];
+      origH = parts[3];
+    }
+  }
+  if (!origW || isNaN(origW)) origW = targetWidth;
+  if (!origH || isNaN(origH)) origH = targetHeight;
+
+  const scale = targetWidth / origW;
+  const renderW = targetWidth;
+  const renderH = origH * scale;
+
+  const posX = Math.round(cx - renderW / 2);
+  const posY = Math.round(cy - renderH / 2);
+
+  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  group.setAttribute('id', uniqueId);
+  group.setAttribute('data-type', 'group');
+  group.setAttribute('data-name', name || 'Typography Group');
+  group.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
+
+  // Move inner contents into group
+  const innerGroup = svgEl.querySelector('g');
+  if (innerGroup) {
+    Array.from(innerGroup.childNodes).forEach((child) => {
+      group.appendChild(document.importNode(child, true));
+    });
+  } else {
+    Array.from(svgEl.childNodes).forEach((child) => {
+      group.appendChild(document.importNode(child, true));
+    });
+  }
+
+  return group;
 };
+
+// Raw SVG strings for clean vector group creation
+const RAW_SVG_1 = `<svg width="1272" height="733" viewBox="0 0 1272 733" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Typography text 1">
+<text id="TYPEFACE" fill="#FF5468" style="white-space: pre" xml:space="preserve" font-family="Bebas Neue" font-size="333" letter-spacing="0em"><tspan x="130.788" y="342.9">TYPEFACE</tspan></text>
+<text id="Bortons" transform="translate(0 177.666) rotate(-7)" fill="#F2F2F2" style="white-space: pre" xml:space="preserve" font-family="Mr Dafoe" font-size="400" letter-spacing="0em"><tspan x="0.03125" y="392.5">Bortons</tspan></text>
+<path id="Vector" d="M427 583.691C537 551.691 697 536.691 837 543.691C697 553.691 557 576.691 429 597.691C407 601.691 409 589.691 427 583.691Z" fill="#F2F2F2"/>
+<text id="INTRODUCING" fill="#FF5468" style="white-space: pre" xml:space="preserve" font-family="Oswald" font-size="32" font-weight="bold" letter-spacing="0em"><tspan x="534.359" y="37.964">INTRODUCING</tspan></text>
+<g id="Group 10440">
+<text id="FONT DUO SCRIPT &#38; SANS SERIF + SWASH" fill="#FF5468" style="white-space: pre" xml:space="preserve" font-family="Oswald" font-size="25" font-weight="bold" letter-spacing="0em"><tspan x="399.087" y="675.8">FONT DUO SCRIPT &#38; SANS SERIF + SWASH</tspan></text>
+<text id="YOUR STUDIO NAME" fill="#FF5468" style="white-space: pre" xml:space="preserve" font-family="Oswald" font-size="25" font-weight="bold" letter-spacing="0em"><tspan x="509.451" y="716.8">YOUR STUDIO NAME</tspan></text>
+</g>
+</g>
+</svg>`;
+
+const RAW_SVG_2 = `<svg width="1391" height="741" viewBox="0 0 1391 741" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Tpography text 2">
+<text id="MASTERPIECE" fill="#D14B45" style="white-space: pre" xml:space="preserve" font-family="Bebas Neue" font-size="337" letter-spacing="0em"><tspan x="0.108398" y="524.101">MASTERPIECE</tspan></text>
+<text id="Mind" transform="translate(459 423.124) rotate(-8)" fill="#2B2B2B" style="white-space: pre" xml:space="preserve" font-family="Mr Dafoe" font-size="230" letter-spacing="0em"><tspan x="0.487305" y="225.475">Mind</tspan></text>
+<text id="Master" transform="translate(364 65.6445) rotate(-6)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Mr Dafoe" font-size="250" letter-spacing="0em"><tspan x="0.157227" y="245.125">Master</tspan></text>
+</g>
+</svg>`;
+
+const RAW_SVG_3 = `<svg width="1234" height="515" viewBox="0 0 1234 515" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Tpography text 3">
+<text id="2015 TOM HARDY AS MAX" fill="#D14B45" style="white-space: pre" xml:space="preserve" font-family="Oswald" font-size="32" font-weight="bold" letter-spacing="0em"><tspan x="430.281" y="505.964">2015 TOM HARDY AS MAX</tspan></text>
+<text id="MADMAX" fill="#F65761" style="white-space: pre" xml:space="preserve" font-family="Bebas Neue" font-size="300" letter-spacing="0em"><tspan x="192.496" y="270">MADMAX</tspan></text>
+<text id="FURY ROAD!" transform="translate(0 179.704) rotate(-3)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Kaushan Script" font-size="201" letter-spacing="0em"><tspan x="0.14209" y="218.059">FURY ROAD!</tspan></text>
+</g>
+</svg>`;
+
+const RAW_SVG_5 = `<svg width="1123" height="2197" viewBox="0 0 1123 2197" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Tpography text 5">
+<text id="FOR DESIGNERS" fill="#232323" style="white-space: pre" xml:space="preserve" font-family="Playfair Display" font-size="120" font-weight="bold" letter-spacing="0em"><tspan x="81.1484" y="2166.86">FOR DESIGNERS</tspan></text>
+<text id="FONTS" fill="#232323" style="white-space: pre" xml:space="preserve" font-family="Playfair Display" font-size="300" font-weight="bold" letter-spacing="0em"><tspan x="59.4375" y="2036.65">FONTS</tspan></text>
+<text id="FREE" fill="#FF7A00" style="white-space: pre" xml:space="preserve" font-family="Playfair Display" font-size="386" font-weight="bold" letter-spacing="0em"><tspan x="69.0107" y="1800.88">FREE</tspan></text>
+<text id="25" fill="#FF7A00" style="white-space: pre" xml:space="preserve" font-family="Playfair Display" font-size="1230" font-weight="bold" letter-spacing="-0.07em"><tspan x="0.360535" y="1331.06">25</tspan></text>
+<text id="fresh" transform="translate(217 1178.32) rotate(-6)" fill="#232323" stroke="#232323" style="white-space: pre" stroke-width="10" stroke-linejoin="round" xml:space="preserve" font-family="Kaushan Script" font-size="320" letter-spacing="0em"><tspan x="0.125" y="346.72">fresh</tspan></text>
+</g>
+</svg>`;
+
+export const TYPOGRAPHY_SVG_PRESETS = [
+  {
+    id: 'typography-svg-1',
+    name: 'Typeface Bortons',
+    category: 'text',
+    subtopic: 'Typography',
+    type: 'group',
+    tag: 'Typography',
+    src: typographySvg1,
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] bg-[#1a1a24] rounded-[0.35vw]">
+        <img
+          src={typographySvg1}
+          alt="Typeface Bortons"
+          className="w-full h-full object-contain pointer-events-none select-none"
+        />
+      </div>
+    ),
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_1, 'Typeface Bortons', 260, 150, cx, cy)
+  },
+  {
+    id: 'typography-svg-2',
+    name: 'Masterpiece Mind',
+    category: 'text',
+    subtopic: 'Typography',
+    type: 'group',
+    tag: 'Typography',
+    src: typographySvg2,
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] bg-[#1a1a24] rounded-[0.35vw]">
+        <img
+          src={typographySvg2}
+          alt="Masterpiece Mind"
+          className="w-full h-full object-contain pointer-events-none select-none"
+        />
+      </div>
+    ),
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_2, 'Masterpiece Mind', 260, 138, cx, cy)
+  },
+  {
+    id: 'typography-svg-3',
+    name: 'MadMax Fury Road',
+    category: 'text',
+    subtopic: 'Typography',
+    type: 'group',
+    tag: 'Typography',
+    src: typographySvg3,
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] bg-[#1a1a24] rounded-[0.35vw]">
+        <img
+          src={typographySvg3}
+          alt="MadMax Fury Road"
+          className="w-full h-full object-contain pointer-events-none select-none"
+        />
+      </div>
+    ),
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_3, 'MadMax Fury Road', 260, 108, cx, cy)
+  },
+  {
+    id: 'typography-svg-4',
+    name: 'Typography Poster',
+    category: 'text',
+    subtopic: 'Typography',
+    type: 'group',
+    tag: 'Typography',
+    src: typographySvg4,
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] bg-[#FAF8F5] rounded-[0.35vw]">
+        <img
+          src={typographySvg4}
+          alt="Typography Poster"
+          className="w-full h-full object-contain pointer-events-none select-none"
+        />
+      </div>
+    ),
+    insert: (cx, cy) => {
+      // SVG 4 is composed of paths - fetch/parse and insert as a group
+      const uniqueId = `group-typography-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('id', uniqueId);
+      group.setAttribute('data-type', 'group');
+      group.setAttribute('data-name', 'Typography Poster');
+      const scale = 180 / 672;
+      const posX = Math.round(cx - 180 / 2);
+      const posY = Math.round(cy - (661 * scale) / 2);
+      group.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
+      
+      // Load svg paths dynamically or from DOM
+      fetch(typographySvg4)
+        .then(res => res.text())
+        .then(svgText => {
+          const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+          const paths = doc.querySelectorAll('path');
+          paths.forEach(p => group.appendChild(document.importNode(p, true)));
+        })
+        .catch(() => {});
+
+      return group;
+    }
+  },
+  {
+    id: 'typography-svg-5',
+    name: 'Fresh Fonts 25',
+    category: 'text',
+    subtopic: 'Typography',
+    type: 'group',
+    tag: 'Typography',
+    src: typographySvg5,
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.3vw] bg-[#F7F7F8] rounded-[0.35vw]">
+        <img
+          src={typographySvg5}
+          alt="Fresh Fonts 25"
+          className="w-full h-full object-contain pointer-events-none select-none"
+        />
+      </div>
+    ),
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_5, 'Fresh Fonts 25', 130, 254, cx, cy)
+  }
+];
 
 // Unified Typography Items Export
 export const TYPOGRAPHY_ITEMS = [
-  // --- Standard Heading, Subheading, Body, Bullet & Numbered Lists ---
-  {
-    id: 'text-heading',
-    name: 'Add Heading',
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => (
-      <svg viewBox="0 0 100 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <text x="50" y="24" textAnchor="middle" fontSize="16" fontWeight="800" fill="#111827" fontFamily="Inter, sans-serif">Heading</text>
-      </svg>
-    ),
-    insert: (cx, cy) => {
-      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('x', String(cx));
-      t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '28pt');
-      t.setAttribute('font-weight', 'bold');
-      t.setAttribute('data-font-weight', 'bold');
-      t.setAttribute('fill', '#111827');
-      t.setAttribute('text-anchor', 'middle');
-      t.textContent = 'Add a Heading';
-      t.setAttribute('data-name', 'Heading');
-      t.setAttribute('data-type', 'text');
-      return t;
-    }
-  },
-  {
-    id: 'text-subheading',
-    name: 'Add Subheading',
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => (
-      <svg viewBox="0 0 110 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <text x="55" y="23" textAnchor="middle" fontSize="13" fontWeight="600" fill="#4B5563" fontFamily="Inter, sans-serif">Subheading</text>
-      </svg>
-    ),
-    insert: (cx, cy) => {
-      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('x', String(cx));
-      t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '18pt');
-      t.setAttribute('font-weight', 'semibold');
-      t.setAttribute('data-font-weight', 'semibold');
-      t.setAttribute('fill', '#4b5563');
-      t.setAttribute('text-anchor', 'middle');
-      t.textContent = 'Add a subheading';
-      t.setAttribute('data-name', 'Subheading');
-      t.setAttribute('data-type', 'text');
-      return t;
-    }
-  },
-  {
-    id: 'text-paragraph',
-    name: 'Paragraph Text',
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => (
-      <svg viewBox="0 0 110 36" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <text x="55" y="22" textAnchor="middle" fontSize="11" fill="#6B7280" fontFamily="Inter, sans-serif">Paragraph text</text>
-      </svg>
-    ),
-    insert: (cx, cy) => {
-      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('x', String(cx));
-      t.setAttribute('y', String(cy));
-      t.setAttribute('font-size', '14pt');
-      t.setAttribute('font-weight', 'normal');
-      t.setAttribute('data-font-weight', 'normal');
-      t.setAttribute('fill', '#6b7280');
-      t.setAttribute('text-anchor', 'middle');
-      t.textContent = 'Add a little bit of body text';
-      t.setAttribute('data-name', 'Paragraph Text');
-      t.setAttribute('data-type', 'text');
-      return t;
-    }
-  },
-  {
-    id: 'text-bullet-list',
-    name: 'Bullet List',
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => (
-      <svg viewBox="0 0 100 42" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <circle cx="18" cy="11" r="2.5" fill="#4B5563" />
-        <rect x="26" y="9" width="56" height="4" rx="2" fill="#9CA3AF" />
-        <circle cx="18" cy="21" r="2.5" fill="#4B5563" />
-        <rect x="26" y="19" width="46" height="4" rx="2" fill="#9CA3AF" />
-        <circle cx="18" cy="31" r="2.5" fill="#4B5563" />
-        <rect x="26" y="29" width="50" height="4" rx="2" fill="#9CA3AF" />
-      </svg>
-    ),
-    insert: (cx, cy) => {
-      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-      const uniqueId = Date.now();
-      fo.setAttribute('id', `text-list-${uniqueId}`);
-      fo.setAttribute('data-type', 'text');
-      fo.setAttribute('data-name', 'Bullet List');
-      fo.setAttribute('data-sizing-mode', 'auto-height');
-      fo.setAttribute('data-text-align', 'left');
-      fo.setAttribute('data-list-type', 'disc');
-      fo.setAttribute('font-size', '14pt');
-      fo.setAttribute('font-weight', 'normal');
-      fo.setAttribute('data-font-weight', 'normal');
-      fo.setAttribute('x', String(cx - 90));
-      fo.setAttribute('y', String(cy - 40));
-      fo.setAttribute('width', '200');
-      fo.setAttribute('height', '84');
-      fo.setAttribute('overflow', 'visible');
-      const div = document.createElement('div');
-      div.className = 'flipbook-text-inner';
-      div.style.width = '100%';
-      div.style.minHeight = '100%';
-      div.style.color = '#1f2937';
-      div.style.fontFamily = "'Inter', sans-serif";
-      div.style.fontSize = '14pt';
-      div.style.fontWeight = 'normal';
-      div.setAttribute('data-font-weight', 'normal');
-      div.style.lineHeight = '1.6';
-      div.style.textAlign = 'left';
-      div.style.padding = '0px';
-      div.style.margin = '0';
-      div.style.boxSizing = 'border-box';
-      div.innerHTML = '• First bullet item<br/>• Second bullet item<br/>• Third bullet item';
-      fo.appendChild(div);
-      return fo;
-    }
-  },
-  {
-    id: 'text-numbered-list',
-    name: 'Numbered List',
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => (
-      <svg viewBox="0 0 100 42" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <text x="16" y="14" fontSize="9" fontWeight="700" fill="#4B5563" textAnchor="middle" fontFamily="sans-serif">1.</text>
-        <rect x="26" y="9" width="56" height="4" rx="2" fill="#9CA3AF" />
-        <text x="16" y="24" fontSize="9" fontWeight="700" fill="#4B5563" textAnchor="middle" fontFamily="sans-serif">2.</text>
-        <rect x="26" y="19" width="46" height="4" rx="2" fill="#9CA3AF" />
-        <text x="16" y="34" fontSize="9" fontWeight="700" fill="#4B5563" textAnchor="middle" fontFamily="sans-serif">3.</text>
-        <rect x="26" y="29" width="50" height="4" rx="2" fill="#9CA3AF" />
-      </svg>
-    ),
-    insert: (cx, cy) => {
-      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-      const uniqueId = Date.now();
-      fo.setAttribute('id', `text-list-${uniqueId}`);
-      fo.setAttribute('data-type', 'text');
-      fo.setAttribute('data-name', 'Numbered List');
-      fo.setAttribute('data-sizing-mode', 'auto-height');
-      fo.setAttribute('data-text-align', 'left');
-      fo.setAttribute('data-list-type', 'decimal');
-      fo.setAttribute('font-size', '14pt');
-      fo.setAttribute('font-weight', 'normal');
-      fo.setAttribute('data-font-weight', 'normal');
-      fo.setAttribute('x', String(cx - 90));
-      fo.setAttribute('y', String(cy - 40));
-      fo.setAttribute('width', '200');
-      fo.setAttribute('height', '84');
-      fo.setAttribute('overflow', 'visible');
-      const div = document.createElement('div');
-      div.className = 'flipbook-text-inner';
-      div.style.width = '100%';
-      div.style.minHeight = '100%';
-      div.style.color = '#1f2937';
-      div.style.fontFamily = "'Inter', sans-serif";
-      div.style.fontSize = '14pt';
-      div.style.fontWeight = 'normal';
-      div.setAttribute('data-font-weight', 'normal');
-      div.style.lineHeight = '1.6';
-      div.style.textAlign = 'left';
-      div.style.padding = '0px';
-      div.style.margin = '0';
-      div.style.boxSizing = 'border-box';
-      div.innerHTML = '1. First list item<br/>2. Second list item<br/>3. Third list item';
-      fo.appendChild(div);
-      return fo;
-    }
-  },
-
-  // --- Motion Graphic Titles (After Effects) ---
+  // --- Motion Graphic Titles (subtopic: 'Titles') ---
   ...MOTION_GRAPHIC_PRESETS.map((preset) => ({
     id: preset.id,
     name: preset.name,
@@ -622,19 +449,8 @@ export const TYPOGRAPHY_ITEMS = [
     insert: (cx, cy) => createMotionGraphicElementNode(preset, cx, cy)
   })),
 
-  // --- Kinetic Animated Typography ---
-  ...KINETIC_PRESETS.map((preset) => ({
-    id: preset.id,
-    name: preset.name,
-    category: 'text',
-    subtopic: 'Typography',
-    type: 'text',
-    renderPreview: () => renderKineticPreview(preset),
-    insert: (cx, cy) => createKineticElementNode(preset, cx, cy)
-  })),
-
-  // --- Styled Poster Presets ---
-  ...POSTER_PRESETS.map((preset) => ({
+  // --- SVG Typography Text Presets (subtopic: 'Typography') ---
+  ...TYPOGRAPHY_SVG_PRESETS.map((preset) => ({
     ...preset,
     subtopic: 'Typography'
   }))

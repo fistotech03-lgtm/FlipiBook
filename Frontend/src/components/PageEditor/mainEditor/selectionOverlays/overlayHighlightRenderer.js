@@ -1,4 +1,4 @@
-﻿import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
+import { getVisualBBox, getElementMatrix, getVisualCornersAndRotation } from '../utils/geometryUtils';
 import {
   getOverlayForElement,
   getHtmlOverlayForElement,
@@ -364,7 +364,8 @@ export const createOverlayHighlightRenderer = ({
             }
             const isFreeFrameEl = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame';
             const isHotspotEl = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
-            const isBlackSelection = isFreeFrameEl || isHotspotEl || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected);
+            const isTableEl = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
+            const isBlackSelection = !isTableEl && (isFreeFrameEl || isHotspotEl || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
 
             if (isBlackSelection) {
               polygon.setAttribute('stroke', (isHover && !isSelected) ? 'transparent' : '#000000');
@@ -397,7 +398,8 @@ export const createOverlayHighlightRenderer = ({
             const htmlOverlay = getHtmlOverlayForElement(el);
             const isFreeFrameEl2 = el.getAttribute('data-name')?.toLowerCase() === 'free frame' || el.getAttribute('data-type') === 'free-frame' || el.id?.startsWith('free-frame');
             const isHotspotEl2 = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
-            const isBlackSelection2 = isFreeFrameEl2 || isHotspotEl2 || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected);
+            const isTableEl2 = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
+            const isBlackSelection2 = !isTableEl2 && (isFreeFrameEl2 || isHotspotEl2 || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
             const isInteractiveResizable = isFreeFrameEl2 || isHotspotEl2;
             const isLCorner = (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation' || isFreeFrameEl2 || isHotspotEl2);
             const showSideHandles = activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation' || isInteractiveResizable;
@@ -673,7 +675,8 @@ export const createOverlayHighlightRenderer = ({
         }
         const isFreeFrameFB = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame';
         const isHotspotFB = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
-        const isBlackSelectionFB = isFreeFrameFB || isHotspotFB || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected);
+        const isTableFB = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
+        const isBlackSelectionFB = !isTableFB && (isFreeFrameFB || isHotspotFB || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
 
         if (isLine) {
           polygon.setAttribute('stroke', 'transparent');
@@ -717,7 +720,8 @@ export const createOverlayHighlightRenderer = ({
         const htmlOverlay = getHtmlOverlayForElement(el);
         const isFreeFrameFB2 = el.getAttribute('data-name')?.toLowerCase() === 'free frame' || el.getAttribute('data-type') === 'free-frame' || el.id?.startsWith('free-frame');
         const isHotspotFB2 = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
-        const isBlackSelectionFB2 = isFreeFrameFB2 || isHotspotFB2 || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected);
+        const isTableFB2 = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
+        const isBlackSelectionFB2 = !isTableFB2 && (isFreeFrameFB2 || isHotspotFB2 || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
         const isInteractiveResizableFB = isFreeFrameFB2 || isHotspotFB2;
         const isLCornerFB = (activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation' || isFreeFrameFB2 || isHotspotFB2);
         const showSideHandlesFB = activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation' || isInteractiveResizableFB;

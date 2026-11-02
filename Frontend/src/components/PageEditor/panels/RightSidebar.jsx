@@ -5,6 +5,7 @@ import {
   TransformProperties,
   PageProperties,
   ShapeProperties,
+  ElementTitlesProperties,
   TextElementEditor,
   ElementButtonProperties,
   ImageFramingProperties,
@@ -416,6 +417,7 @@ const RightSidebar = ({
       // If the selected element is an internal child of a compound shape/button/audio/media group,
       // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
       const compoundGroup = el?.closest?.(
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
         '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
         '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
         '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -427,7 +429,8 @@ const RightSidebar = ({
 
       const rootId = doc.querySelector('svg > g')?.id;
       const overlayId = doc.querySelector('[data-name="Overlay"]')?.id;
-      const isPageSelected = !selectedLayerId || selectedLayerId === rootId || selectedLayerId === overlayId;
+      const isRootPageElement = el && (el.getAttribute('data-type') === 'frame' || el.getAttribute('data-name')?.startsWith('Page ') || el.getAttribute('data-name')?.startsWith('Slide '));
+      const isPageSelected = !selectedLayerId || (selectedLayerId === rootId && isRootPageElement) || selectedLayerId === overlayId;
 
       if (el && !isPageSelected) {
         let w = '0', h = '0', x = '0', y = '0', r = '0';
@@ -436,6 +439,7 @@ const RightSidebar = ({
         const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
         let actualEl = editorDoc.getElementById(el.id || selectedLayerId);
         const actualCompound = actualEl?.closest?.(
+          '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
           '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
           '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
           '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -665,11 +669,12 @@ const RightSidebar = ({
             el.querySelector('[data-type="shape"]') !== null
           ));
 
-        const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
-          el.getAttribute('data-typography-type') === 'kinetic' ||
+        const isElementTitle = el.getAttribute('data-subtopic') === 'Titles' ||
           el.getAttribute('data-typography-type') === 'motion-graphic' ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('typography-')) ||
-          (el.querySelector && el.querySelector('[data-is-element-typography="true"], [data-typography-type]'));
+          el.getAttribute('data-motion-template') !== null ||
+          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"]') !== null;
+
+        const isElementTypography = false;
 
         const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
         const isElementButton = el.getAttribute('data-is-element-button') === 'true' ||
@@ -733,11 +738,13 @@ const RightSidebar = ({
         props.isQRCode = isQRCode;
 
         props.isElementShape = isElementShape;
+        props.isElementTitle = isElementTitle;
         props.isElementTypography = isElementTypography;
         props.isElementButton = isElementButton;
         props.isImageFrame = isImageFrame;
         props.isUserGroup = isUserGroup &&
           !isElementShape &&
+          !isElementTitle &&
           !isElementTypography &&
           !isElementButton &&
           !isImageFrame &&
@@ -756,12 +763,12 @@ const RightSidebar = ({
           props.isElementShape = false;
         }
 
-        props.isImage = (isElementButton || isElementShape) ? false : isImage;
-        props.isText = (isElementButton || isElementShape) ? false : isText;
-        props.isVideo = (isElementButton || isElementShape) ? false : isVideo;
-        props.isGif = (isElementButton || isElementShape) ? false : isGif;
-        props.isIcon = (isElementButton || isElementShape) ? false : isIcon;
-        props.isPdfBackground = (isElementButton || isElementShape) ? false : isPdfBackground;
+        props.isImage = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isImage;
+        props.isText = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isText;
+        props.isVideo = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isVideo;
+        props.isGif = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isGif;
+        props.isIcon = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isIcon;
+        props.isPdfBackground = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isPdfBackground;
 
         return props;
       }
@@ -1278,15 +1285,15 @@ const RightSidebar = ({
                           updateElementAttribute={updateElementAttribute}
                           selectedElementProps={selectedElementProps}
                         />
-                      ) : selectedElementProps?.isElementTypography ? (
-                        <TextElementEditor
+                      ) : selectedElementProps?.isElementTitle ? (
+                        <ElementTitlesProperties
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                             return editorDoc.getElementById(selectedLayerId);
                           })()}
-                          updateElementAttribute={updateElementAttribute}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
                         />
                       ) : selectedElementProps?.isText ? (
                         <TextProperties

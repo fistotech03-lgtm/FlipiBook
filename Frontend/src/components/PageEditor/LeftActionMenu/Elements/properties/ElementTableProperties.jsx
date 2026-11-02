@@ -175,7 +175,7 @@ const ElementTableProperties = ({
   const [borderColor, setBorderColor] = useState('#d1d5db');
   const [borderOpacity, setBorderOpacity] = useState(100);
   const [borderWidth, setBorderWidth] = useState(2);
-  const [borderRadius, setBorderRadius] = useState(4);
+  const [borderRadius, setBorderRadius] = useState(0);
 
   // Structure states
   const [rowsCount, setRowsCount] = useState(3);
@@ -302,9 +302,12 @@ const ElementTableProperties = ({
       td.style.setProperty('box-shadow', 'inset 0 0 0 1000px rgba(37, 99, 235, 0.12)', 'important');
     } else {
       td.removeAttribute('data-cell-selected');
+      td.removeAttribute('contenteditable');
       td.style.removeProperty('outline');
       td.style.removeProperty('outline-offset');
       td.style.removeProperty('box-shadow');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
     }
   };
 
@@ -432,6 +435,11 @@ const ElementTableProperties = ({
     setIsList(list);
     setAutoWidth(aWidth);
     setAutoHeight(aHeight);
+
+    // Initial check on element selection to auto-expand if content overflows
+    setTimeout(() => {
+      fitTableHeightToContent(el);
+    }, 60);
     setSelectedCellText('');
   };
 
@@ -467,7 +475,7 @@ const ElementTableProperties = ({
   const clearCellSelection = (targetEl) => {
     const el = targetEl || getTargetElement();
     if (el) {
-      el.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+      el.querySelectorAll('td[data-cell-selected], th[data-cell-selected], td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
         markCellSelected(td, 0, 0, false);
       });
       syncInspectorWithTable(el);
@@ -619,6 +627,9 @@ const ElementTableProperties = ({
         const nextTd = table.querySelector(`td[data-row="${nextR}"][data-col="${nextC}"]`);
         if (nextTd) {
           selectCellRange(el, nextR, nextC, nextR, nextC, false);
+          nextTd.setAttribute('contenteditable', 'true');
+          nextTd.style.cursor = 'text';
+          nextTd.style.userSelect = 'text';
           nextTd.focus();
         }
       }
@@ -629,6 +640,9 @@ const ElementTableProperties = ({
         const nextTd = table.querySelector(`td[data-row="${nextR}"][data-col="${c}"]`);
         if (nextTd) {
           selectCellRange(el, nextR, c, nextR, c, false);
+          nextTd.setAttribute('contenteditable', 'true');
+          nextTd.style.cursor = 'text';
+          nextTd.style.userSelect = 'text';
           nextTd.focus();
         }
       }
@@ -659,6 +673,18 @@ const ElementTableProperties = ({
           const curR = parseInt(td.getAttribute('data-row') || '0', 10);
           const curC = parseInt(td.getAttribute('data-col') || '0', 10);
           handleCellMouseEnter(curR, curC);
+        });
+        td.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          td.setAttribute('contenteditable', 'true');
+          td.style.cursor = 'text';
+          td.style.userSelect = 'text';
+          td.focus();
+        });
+        td.addEventListener('blur', () => {
+          td.removeAttribute('contenteditable');
+          td.style.cursor = 'default';
+          td.style.userSelect = 'none';
         });
         td.addEventListener('keydown', (e) => handleCellKeyDown(e, td));
       });
@@ -733,11 +759,34 @@ const ElementTableProperties = ({
       });
     }
 
+    fitTableHeightToContent(el);
     syncChanges(el);
     if (typeof window.drawOverlayHighlight === 'function') {
       window.drawOverlayHighlight(el, 'selected');
     }
   };
+
+  // Automatically fit bounding box height to table contents to avoid cutoff
+  const fitTableHeightToContent = (el) => {
+    if (!el) return;
+    const isAutoH = el.getAttribute('data-auto-height') !== 'false';
+    if (!isAutoH) return;
+    const fo = el.querySelector('foreignObject');
+    const table = el.querySelector('table');
+    const overlay = el.querySelector('.svg-table-overlay, .svg-image-stroke-overlay');
+    if (!fo || !table) return;
+
+    const scrollH = table.scrollHeight || table.offsetHeight;
+    if (scrollH && scrollH > 20) {
+      const curH = parseFloat(fo.getAttribute('height') || '0');
+      if (Math.abs(scrollH - curH) > 2) {
+        const newH = Math.max(scrollH, 40);
+        fo.setAttribute('height', String(newH));
+        if (overlay) overlay.setAttribute('height', String(newH));
+      }
+    }
+  };
+
 
   // Automatically check if table overflows the page bounds and fit it
   // If table was stretched by an outer scale matrix, bake the scale into foreignObject width & height and reset scale to 1
@@ -858,7 +907,13 @@ const ElementTableProperties = ({
     if (!el) return;
     const existingTable = el.querySelector('table');
     if (existingTable) {
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       return;
     }
 
@@ -888,7 +943,7 @@ const ElementTableProperties = ({
     for (let r = 0; r < rows; r++) {
       rowsHtml += `<tr style="height: ${rowHeightPct}%; box-sizing: border-box;">`;
       for (let c = 0; c < cols; c++) {
-        rowsHtml += `<td contenteditable="true" data-row="${r}" data-col="${c}" style="width: ${colWidthPct}%; height: 100%; border: ${Math.max(1, Math.round(bWidth / 2))}px solid ${bColor}; padding: 6px 8px; color: #000000; text-align: left; vertical-align: middle; box-sizing: border-box; word-break: break-word; outline: none; background-color: #ffffff;"></td>`;
+        rowsHtml += `<td data-row="${r}" data-col="${c}" style="width: ${colWidthPct}%; height: 100%; border: ${Math.max(1, Math.round(bWidth / 2))}px solid ${bColor}; padding: 6px 8px; color: #000000; text-align: left; vertical-align: middle; box-sizing: border-box; word-break: break-word; outline: none; background-color: #ffffff; cursor: default; user-select: none;"></td>`;
       }
       rowsHtml += '</tr>';
     }
@@ -896,14 +951,6 @@ const ElementTableProperties = ({
     fo.innerHTML = `<div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${bRadius}px;overflow:hidden;display:block;margin:0;padding:0;white-space:normal;line-height:normal;pointer-events:auto;"><table style="width:100%;height:100%;border-collapse:collapse;border:${bWidth}px solid ${bColor};background-color:${tColor};font-family:'Poppins',sans-serif;font-size:13px;table-layout:fixed;margin:0;padding:0;white-space:normal;box-sizing:border-box;"><tbody>${rowsHtml}</tbody></table></div>`;
 
     el.appendChild(fo);
-
-    const overlayRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    overlayRect.setAttribute('class', 'svg-table-overlay svg-image-stroke-overlay');
-    overlayRect.setAttribute('width', w.toString());
-    overlayRect.setAttribute('height', h.toString());
-    overlayRect.setAttribute('fill', 'transparent');
-    overlayRect.setAttribute('pointer-events', 'none');
-    el.appendChild(overlayRect);
 
     el.setAttribute('data-type', 'table-frame');
     el.setAttribute('data-rows', rows.toString());
@@ -913,6 +960,12 @@ const ElementTableProperties = ({
     el.setAttribute('data-border-width', bWidth.toString());
     el.setAttribute('data-border-radius', bRadius.toString());
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     syncChanges(el);
   };
@@ -929,6 +982,14 @@ const ElementTableProperties = ({
     ensureTableStructure(el);
     // Ensure table fits inside the page
     checkAndFitTable(el);
+    // Remove any ghost overlay rects that were saved on the table
+    el.querySelectorAll('rect.svg-table-overlay, rect.svg-image-stroke-overlay, rect.table-fill-layer').forEach(r => r.remove());
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
 
     const bStyle = el.getAttribute('data-border-style') || 'solid';
@@ -937,7 +998,7 @@ const ElementTableProperties = ({
     const bColor = el.getAttribute('data-border-color') || '#d1d5db';
     const bOpacity = parseInt(el.getAttribute('data-border-opacity') || '100', 10);
     const bWidth = parseInt(el.getAttribute('data-border-width') || '2', 10);
-    const bRadius = parseInt(el.getAttribute('data-border-radius') || '4', 10);
+    const bRadius = parseInt(el.getAttribute('data-border-radius') || '0', 10);
 
     setBorderStyle(bStyle);
     setThemeColor(tColor);
@@ -997,6 +1058,7 @@ const ElementTableProperties = ({
         if (selectedCellKeys.has(`${r}_${c}`)) {
           setSelectedCellText(e.target.textContent || '');
         }
+        fitTableHeightToContent(el);
         syncChanges(el);
       }
     };
@@ -1224,6 +1286,7 @@ const ElementTableProperties = ({
       }
     }
 
+    fitTableHeightToContent(el);
     syncChanges(el);
     if (typeof window.drawOverlayHighlight === 'function') {
       window.drawOverlayHighlight(el, 'selected');
@@ -1374,7 +1437,8 @@ const ElementTableProperties = ({
         for (let c = minC; c <= maxC; c++) {
           const cell = row.getCell(c);
           const td = document.createElement('td');
-          td.setAttribute('contenteditable', 'true');
+          td.style.cursor = 'default';
+          td.style.userSelect = 'none';
           td.setAttribute('data-row', (r - minR).toString());
           td.setAttribute('data-col', (c - minC).toString());
           td.style.border = borderCss;
@@ -1434,7 +1498,13 @@ const ElementTableProperties = ({
       setIsScrollable(true);
       applyTableStyles({ isScrollable: true });
       fitTableToPage(el);
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     } catch (err) {
       console.error('Failed to import Excel:', err);
@@ -1603,6 +1673,12 @@ const ElementTableProperties = ({
       });
     });
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     checkAndFitTable(el);
     syncChanges(el);
@@ -1638,7 +1714,8 @@ const ElementTableProperties = ({
 
     trs.forEach((tr) => {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.border = `${bW}px ${borderStyle} ${bColorRgba}`;
       newTd.style.padding = `${paddingY}px ${paddingX}px`;
       newTd.style.color = cColorRgba;
@@ -1702,6 +1779,12 @@ const ElementTableProperties = ({
       }
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     const activeR = selectedCellKeys.size > 0 ? parseInt(Array.from(selectedCellKeys)[0].split('_')[0], 10) : 0;
     selectCellRange(el, activeR, insertColIdx, activeR, insertColIdx, false);
@@ -1750,6 +1833,12 @@ const ElementTableProperties = ({
       });
     });
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     clearCellSelection(el);
     applyTableStyles();
@@ -1792,7 +1881,8 @@ const ElementTableProperties = ({
     const colWidthPct = (100 / Math.max(1, currentCols)).toFixed(3);
     for (let c = 0; c < currentCols; c++) {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.width = `${colWidthPct}%`;
       newTd.style.height = '100%';
       newTd.style.border = `${bW}px ${borderStyle} ${bColorRgba}`;
@@ -1846,6 +1936,12 @@ const ElementTableProperties = ({
       if (overlay) overlay.setAttribute('height', newH.toString());
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     const activeC = selectedCellKeys.size > 0 ? parseInt(Array.from(selectedCellKeys)[0].split('_')[1], 10) : 0;
     selectCellRange(el, insertRowIdx, activeC, insertRowIdx, activeC, false);
@@ -1902,6 +1998,12 @@ const ElementTableProperties = ({
       if (overlay) overlay.setAttribute('height', newH.toString());
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     clearCellSelection(el);
     applyTableStyles();
@@ -1972,7 +2074,8 @@ const ElementTableProperties = ({
       if (parentRow && span > 1) {
         for (let i = 1; i < span; i++) {
           const newTd = document.createElement('td');
-          newTd.setAttribute('contenteditable', 'true');
+          newTd.style.cursor = 'default';
+          newTd.style.userSelect = 'none';
           newTd.style.border = `${Math.max(1, Math.round(borderWidth / 2))}px ${borderStyle} ${hexToRgba(borderColor, borderOpacity)}`;
           newTd.style.padding = `${paddingY}px ${paddingX}px`;
           newTd.style.color = hexToRgba(cellColor, cellOpacity);
@@ -1986,6 +2089,12 @@ const ElementTableProperties = ({
         }
       }
     });
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     syncChanges(el);
   };
@@ -1996,7 +2105,8 @@ const ElementTableProperties = ({
     const lastRow = el.querySelector('tr:last-child');
     if (lastRow) {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.border = `${Math.max(1, Math.round(borderWidth / 2))}px ${borderStyle} ${hexToRgba(borderColor, borderOpacity)}`;
       newTd.style.padding = `${paddingY}px ${paddingX}px`;
       newTd.style.color = hexToRgba(cellColor, cellOpacity);
@@ -2007,7 +2117,13 @@ const ElementTableProperties = ({
       newTd.style.outline = 'none';
       newTd.style.backgroundColor = 'transparent';
       lastRow.appendChild(newTd);
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     }
   };
@@ -2024,7 +2140,13 @@ const ElementTableProperties = ({
         lastRow.remove();
         setRowsCount(Math.max(1, rowsCount - 1));
       }
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     }
   };

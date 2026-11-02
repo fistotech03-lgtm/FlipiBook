@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+global.mongoose = mongoose;
 
 const connectDB = async () => {
   try {

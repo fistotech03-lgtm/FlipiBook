@@ -613,85 +613,59 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
   const posY = Math.round(cy - renderH / 2);
 
   const uniqueId = `shape-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('id', uniqueId);
-  g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
-  g.setAttribute('data-is-element-shape', 'true');
-  g.setAttribute('data-type', 'shape');
-  g.setAttribute('data-name', 'Shape');
-  g.setAttribute('data-shape-title', shapeData.name || 'Shape');
+  const primaryChild = svgRoot.querySelector('path, polygon, rect, circle, ellipse, line, polyline') || svgRoot.firstElementChild;
+  const shapeEl = primaryChild ? primaryChild.cloneNode(true) : document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+  shapeEl.setAttribute('id', uniqueId);
+  shapeEl.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
+  shapeEl.setAttribute('data-is-element-shape', 'true');
+  shapeEl.setAttribute('data-type', 'shape');
+  const formattedName = shapeData.name || 'Shape';
+  shapeEl.setAttribute('data-name', `${formattedName} ${uniqueId.substr(uniqueId.length - 4)}`);
+  shapeEl.setAttribute('data-shape-title', formattedName);
   if (shapeData.id) {
-    g.setAttribute('data-shape-id', shapeData.id);
+    shapeEl.setAttribute('data-shape-id', shapeData.id);
   }
   if (shapeData.shapeType) {
-    g.setAttribute('data-shape-type', shapeData.shapeType);
+    shapeEl.setAttribute('data-shape-type', shapeData.shapeType);
   }
   if (shapeData.tl !== undefined) {
-    g.setAttribute('data-tl', String(shapeData.tl));
-    g.setAttribute('data-tr', String(shapeData.tr || 0));
-    g.setAttribute('data-bl', String(shapeData.bl || 0));
-    g.setAttribute('data-br', String(shapeData.br || 0));
-    g.setAttribute('data-corner-linked', shapeData.cornerLinked !== undefined ? String(shapeData.cornerLinked) : 'false');
-    g.setAttribute('x', String(shapeData.x !== undefined ? shapeData.x : 10));
-    g.setAttribute('y', String(shapeData.y !== undefined ? shapeData.y : 10));
-    g.setAttribute('width', String(shapeData.rectWidth !== undefined ? shapeData.rectWidth : 80));
-    g.setAttribute('height', String(shapeData.rectHeight !== undefined ? shapeData.rectHeight : 80));
-    g.setAttribute('rx', String(Math.max(shapeData.tl, shapeData.tr || 0, shapeData.bl || 0, shapeData.br || 0)));
+    shapeEl.setAttribute('data-tl', String(shapeData.tl));
+    shapeEl.setAttribute('data-tr', String(shapeData.tr || 0));
+    shapeEl.setAttribute('data-bl', String(shapeData.bl || 0));
+    shapeEl.setAttribute('data-br', String(shapeData.br || 0));
+    shapeEl.setAttribute('data-corner-linked', shapeData.cornerLinked !== undefined ? String(shapeData.cornerLinked) : 'false');
+    shapeEl.setAttribute('x', String(shapeData.x !== undefined ? shapeData.x : 10));
+    shapeEl.setAttribute('y', String(shapeData.y !== undefined ? shapeData.y : 10));
+    shapeEl.setAttribute('width', String(shapeData.rectWidth !== undefined ? shapeData.rectWidth : 80));
+    shapeEl.setAttribute('height', String(shapeData.rectHeight !== undefined ? shapeData.rectHeight : 80));
+    shapeEl.setAttribute('rx', String(Math.max(shapeData.tl, shapeData.tr || 0, shapeData.bl || 0, shapeData.br || 0)));
   }
 
   // Default styling: Clean fill and stroke matching shape definition
   const initialFill = shapeData.fill || '#d8e9feff';
   const initialStroke = shapeData.stroke || 'none';
-  g.setAttribute('fill', initialFill);
-  g.setAttribute('data-fill-color', initialFill);
-  g.setAttribute('stroke', initialStroke);
-  g.setAttribute('data-stroke-color', initialStroke);
+  shapeEl.setAttribute('fill', initialFill);
+  shapeEl.setAttribute('data-fill-color', initialFill);
+  shapeEl.setAttribute('stroke', initialStroke);
+  shapeEl.setAttribute('data-stroke-color', initialStroke);
   const initialSw = shapeData.strokeWidth !== undefined ? parseFloat(shapeData.strokeWidth) : 0;
-  g.setAttribute('data-stroke-width', String(initialSw));
-  g.setAttribute('stroke-width', String(initialSw * 2));
-  g.setAttribute('data-stroke-position', 'Outside');
-  g.setAttribute('paint-order', 'stroke fill');
-  g.style.paintOrder = 'stroke fill';
-  g.setAttribute('vector-effect', 'non-scaling-stroke');
+  shapeEl.setAttribute('data-stroke-width', String(initialSw));
+  shapeEl.setAttribute('stroke-width', String(initialSw * 2));
+  shapeEl.setAttribute('data-stroke-position', 'Outside');
+  shapeEl.setAttribute('paint-order', 'stroke fill');
+  shapeEl.style.paintOrder = 'stroke fill';
+  shapeEl.setAttribute('vector-effect', 'non-scaling-stroke');
 
   const initialLinecap = shapeData.strokeLinecap || 'square';
   const initialLinejoin = shapeData.strokeLinejoin || (initialLinecap === 'round' ? 'round' : 'miter');
-  g.setAttribute('stroke-linecap', initialLinecap);
-  g.setAttribute('stroke-linejoin', initialLinejoin);
+  shapeEl.setAttribute('stroke-linecap', initialLinecap);
+  shapeEl.setAttribute('stroke-linejoin', initialLinejoin);
   if (shapeData.strokeMiterlimit) {
-    g.setAttribute('stroke-miterlimit', String(shapeData.strokeMiterlimit));
+    shapeEl.setAttribute('stroke-miterlimit', String(shapeData.strokeMiterlimit));
   }
 
-  // Copy child shape attributes (like data-shape-type, data-count, etc.) up to g for RightSidebar inspection
-  const primaryChild = svgRoot.querySelector('path, polygon, rect, circle, ellipse, line, g');
-  if (primaryChild) {
-    Array.from(primaryChild.attributes).forEach((attr) => {
-      if (attr.name.startsWith('data-') || ['x', 'y', 'width', 'height', 'rx', 'ry'].includes(attr.name)) {
-        g.setAttribute(attr.name, attr.value);
-      }
-    });
-  }
-
-  // Ensure child elements inside do not have hardcoded stroke overriding g and preserve outside stroke paint-order
-  Array.from(svgRoot.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline')).forEach((child) => {
-    child.removeAttribute('stroke');
-    child.removeAttribute('stroke-width');
-    child.removeAttribute('stroke-linecap');
-    child.removeAttribute('stroke-linejoin');
-    child.setAttribute('fill', 'inherit');
-    child.setAttribute('paint-order', 'stroke fill');
-    child.style.paintOrder = 'stroke fill';
-    child.setAttribute('vector-effect', 'non-scaling-stroke');
-  });
-
-  // Inject child SVG elements into the group
-  g.innerHTML = svgRoot.innerHTML;
-  const primaryInner = g.querySelector('path, polygon, rect, circle, ellipse, line, polyline');
-  if (primaryInner && !primaryInner.getAttribute('id')) {
-    primaryInner.setAttribute('id', `${uniqueId}-child`);
-  }
-
-  return g;
+  return shapeEl;
 };
 
 /**

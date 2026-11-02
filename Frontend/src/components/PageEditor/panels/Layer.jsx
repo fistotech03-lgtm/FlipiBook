@@ -351,16 +351,39 @@ const LayerItem = ({
 
     const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
 
-    if (e.shiftKey) {
-      // ── Shift+Click: Multi-select block ───────────────────────────────────
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      if (isBaseLayer) {
+        // Base layer / Page root can NEVER be part of multi-selection!
+        return;
+      }
+      // ── Shift / Cmd / Ctrl + Click: Multi-select block ─────────────────────────────
       const newSet = new Set(multiSelectedIds);
+
+      // Clean out any base layer or page root that might have been in multiSelectedIds
+      for (const id of Array.from(newSet)) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement?.tagName?.toLowerCase() === 'svg' && el.getAttribute('data-type') === 'frame') {
+          newSet.delete(id);
+        }
+      }
+
+      const selEl = selectedLayerId ? document.getElementById(selectedLayerId) : null;
+      const isSelRoot = selEl && selEl.parentElement?.tagName?.toLowerCase() === 'svg' && selEl.getAttribute('data-type') === 'frame';
+      if (selectedLayerId && !isSelRoot && !newSet.has(selectedLayerId)) {
+        newSet.add(selectedLayerId);
+      }
       if (newSet.has(targetId)) newSet.delete(targetId);
       else newSet.add(targetId);
+
       if (setMultiSelectedIds) setMultiSelectedIds(newSet);
+      if (setSelectedLayerId) {
+        const remaining = Array.from(newSet);
+        setSelectedLayerId(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      }
     } else {
       // ── Plain click: single select, clear multi-selection ─────────────
       if (setSelectedLayerId) setSelectedLayerId(targetId);
-      if (setMultiSelectedIds) setMultiSelectedIds(new Set([targetId]));
+      if (setMultiSelectedIds) setMultiSelectedIds(isBaseLayer ? new Set() : new Set([targetId]));
       if (isGroup && layer.children && layer.children.length > 0) setIsOpen(!isOpen);
     }
 

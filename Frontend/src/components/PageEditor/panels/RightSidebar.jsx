@@ -580,10 +580,20 @@ const RightSidebar = ({
               props['stroke-linejoin'] = innerShape.getAttribute('stroke-linejoin');
             }
             Array.from(innerShape.attributes).forEach(attr => {
-              if (['data-shape-type', 'data-shape-id', 'data-shape-title', 'data-name', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked', 'x', 'y', 'width', 'height'].includes(attr.name)) {
+              if ([
+                'data-shape-type', 'data-shape-id', 'data-shape-title', 'data-name', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked', 'x', 'y', 'width', 'height',
+                'data-masked-image-url', 'data-mask-enabled', 'data-original-fill', 'data-original-stroke',
+                'data-slot-image-name', 'data-slot-image-meta', 'data-slot-original-url',
+                'data-slot-pan-x', 'data-slot-pan-y', 'data-slot-zoom',
+                'data-slot-base-x', 'data-slot-base-y', 'data-slot-base-w', 'data-slot-base-h'
+              ].includes(attr.name)) {
                 props[attr.name] = attr.value;
               }
             });
+            const innerFill = innerShape.getAttribute('fill');
+            if (innerFill && innerFill.includes('url(#pattern-')) {
+              props.fill = innerFill;
+            }
             const innerD = innerShape.getAttribute('d') || '';
             const isInnerDiamond = props['data-shape-type'] === 'diamond' ||
               props['data-shape-id'] === 'rounded-diamond' ||

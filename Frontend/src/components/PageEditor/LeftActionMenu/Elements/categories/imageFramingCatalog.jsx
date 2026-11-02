@@ -12,6 +12,7 @@ export const FRAMING_ITEMS = IMAGE_FRAMING_PRESETS.map((preset) => {
     id: preset.id,
     name: preset.name,
     category: 'masking',
+    subtopic: preset.subtopic,
     type: 'frame',
     renderPreview: () => (
       <div className="w-full h-full flex items-center justify-center p-[0.35vw] pointer-events-none select-none">

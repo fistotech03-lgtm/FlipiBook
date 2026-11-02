@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 const crypto = require('crypto');
 
 const pageSchema = new mongoose.Schema(

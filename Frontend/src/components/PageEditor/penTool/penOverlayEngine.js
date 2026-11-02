@@ -7,6 +7,255 @@
 
 import { getPaperSegments, getPaperCurves } from './vectorNodeEngine';
 
+/**
+ * Renders the masked image crop preview:
+ * - Unclipped outer image at 50% opacity (with mask cutting out shape interior so shape remains 100% opaque)
+ * - 3x3 rule-of-thirds grid lines inside the shape
+ * - Subtle dashed boundary of the full image
+ */
+export const renderMaskCropPreview = (pathEl, nodeGroup, svgMatrix, invScale, pageIndex, refs = {}) => {
+  if (!pathEl || !nodeGroup || !svgMatrix) return;
+
+  const targetNode = pathEl.tagName?.toLowerCase() === 'g'
+    ? (pathEl.querySelector('path, rect, circle, ellipse, polygon') || pathEl)
+    : pathEl;
+
+  const isImageAdjustActive = Boolean(
+    pathEl.getAttribute('data-image-adjust-active') === 'true' ||
+    targetNode.getAttribute('data-image-adjust-active') === 'true' ||
+    refs?.nodeEditImageAdjustRef?.current === true ||
+    window.__isAdjustingShapeImage === true
+  );
+  if (!isImageAdjustActive) return;
+
+  const hasImageMask = Boolean(
+    pathEl.getAttribute('data-mask-enabled') === 'true' ||
+    targetNode.getAttribute('data-mask-enabled') === 'true' ||
+    pathEl.getAttribute('data-masked-image-url') ||
+    targetNode.getAttribute('data-masked-image-url') ||
+    pathEl.closest?.('[data-mask-enabled="true"]') !== null ||
+    (pathEl.getAttribute('fill') && pathEl.getAttribute('fill').includes('url(#pattern-')) ||
+    (targetNode.getAttribute('fill') && targetNode.getAttribute('fill').includes('url(#pattern-')) ||
+    pathEl.closest?.('[fill*="url(#pattern-"]') !== null
+  );
+  if (!hasImageMask) return;
+
+  const fillAttr = targetNode.getAttribute('fill') || targetNode.style?.fill || pathEl.getAttribute('fill') || pathEl.style?.fill || '';
+  const patternMatch = fillAttr.match(/url\(['"]?#([^)'"]+)['"]?\)/);
+  const patternId = patternMatch ? patternMatch[1] : `pattern-${targetNode.id || pathEl.id}`;
+  const rootSvg = targetNode.ownerSVGElement || pathEl.ownerSVGElement || targetNode.closest?.('svg') || document;
+  const pattern = rootSvg?.querySelector?.(`pattern[id="${CSS.escape(patternId)}"]`) ||
+    document.getElementById(patternId) ||
+    rootSvg?.querySelector?.('pattern');
+  const imgNode = pattern?.querySelector?.('image, img');
+  const imgUrl = targetNode.getAttribute('data-masked-image-url') ||
+    pathEl.getAttribute('data-masked-image-url') ||
+    targetNode.getAttribute('data-slot-original-url') ||
+    pathEl.getAttribute('data-slot-original-url') ||
+    imgNode?.getAttribute('href') ||
+    imgNode?.getAttribute('xlink:href');
+  if (!imgUrl) return;
+
+  let bbox;
+  try {
+    bbox = targetNode.getBBox();
+  } catch {
+    try {
+      bbox = pathEl.getBBox();
+    } catch {
+      bbox = { x: 0, y: 0, width: 100, height: 100 };
+    }
+  }
+  if (!bbox || bbox.width <= 0 || bbox.height <= 0) return;
+
+  let baseX = bbox.x;
+  let baseY = bbox.y;
+  let baseW = bbox.width;
+  let baseH = bbox.height;
+
+  const panX = parseFloat(targetNode.getAttribute('data-slot-pan-x') || pathEl.getAttribute('data-slot-pan-x') || '0');
+  const panY = parseFloat(targetNode.getAttribute('data-slot-pan-y') || pathEl.getAttribute('data-slot-pan-y') || '0');
+  const zoomVal = parseFloat(targetNode.getAttribute('data-slot-zoom') || pathEl.getAttribute('data-slot-zoom') || '1');
+
+  let angle = 0;
+  const tf = imgNode?.getAttribute('transform') || '';
+  const rMatch = tf.match(/rotate\(([-0-9.]+)/);
+  if (rMatch) {
+    angle = parseFloat(rMatch[1]) || 0;
+  } else {
+    const rotAttr = targetNode.getAttribute('data-slot-rotation') || pathEl.getAttribute('data-slot-rotation');
+    if (rotAttr) {
+      angle = parseFloat(rotAttr) || 0;
+    }
+  }
+
+  const meta = targetNode.getAttribute('data-slot-image-meta') || pathEl.getAttribute('data-slot-image-meta') || '';
+  const m = meta.match(/(\d+)\s*[xX]\s*(\d+)/);
+  let naturalW = m ? parseFloat(m[1]) : (imgNode?.naturalWidth || (imgNode?.width?.baseVal?.value > 1 ? imgNode.width.baseVal.value : 1254));
+  let naturalH = m ? parseFloat(m[2]) : (imgNode?.naturalHeight || (imgNode?.height?.baseVal?.value > 1 ? imgNode.height.baseVal.value : 1254));
+  if (!naturalW || naturalW <= 1) naturalW = 1254;
+  if (!naturalH || naturalH <= 1) naturalH = 1254;
+
+  const scale = Math.max(baseW / naturalW, baseH / naturalH) * zoomVal;
+  const scaledW = naturalW * scale;
+  const scaledH = naturalH * scale;
+
+  const dx = panX * baseW;
+  const dy = panY * baseH;
+
+  const finalX = baseX + baseW / 2 + dx - scaledW / 2;
+  const finalY = baseY + baseH / 2 + dy - scaledH / 2;
+
+  const centerX = baseX + baseW / 2 + dx;
+  const centerY = baseY + baseH / 2 + dy;
+  const rotateTransform = angle !== 0 ? `rotate(${angle} ${centerX} ${centerY})` : '';
+
+  // Store calculated screen bounds for ghost area hit testing & wheel zoom
+  try {
+    const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
+    if (overlay) {
+      const ctm = targetNode.getScreenCTM();
+      if (ctm) {
+        const pt1 = overlay.createSVGPoint(); pt1.x = finalX; pt1.y = finalY;
+        const pt2 = overlay.createSVGPoint(); pt2.x = finalX + scaledW; pt2.y = finalY + scaledH;
+        const s1 = pt1.matrixTransform(ctm);
+        const s2 = pt2.matrixTransform(ctm);
+        window.__shapeImageAdjustGhostRect = {
+          left: Math.min(s1.x, s2.x),
+          right: Math.max(s1.x, s2.x),
+          top: Math.min(s1.y, s2.y),
+          bottom: Math.max(s1.y, s2.y)
+        };
+      }
+    }
+  } catch (e) { }
+
+  const ghostGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  ghostGroup.setAttribute('id', 'node-edit-mask-crop-preview');
+  ghostGroup.setAttribute('pointer-events', 'none');
+  ghostGroup.setAttribute('transform', `matrix(${svgMatrix.a} ${svgMatrix.b} ${svgMatrix.c} ${svgMatrix.d} ${svgMatrix.e} ${svgMatrix.f})`);
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const uid = Math.random().toString(36).substr(2, 6);
+  const maskId = `ghost-crop-mask-${pageIndex}-${uid}`;
+  const clipId = `ghost-crop-clip-${pageIndex}-${uid}`;
+
+  const maskEl = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+  maskEl.setAttribute('id', maskId);
+  maskEl.setAttribute('maskUnits', 'userSpaceOnUse');
+  maskEl.setAttribute('maskContentUnits', 'userSpaceOnUse');
+
+  const maskBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  maskBg.setAttribute('x', '-100000');
+  maskBg.setAttribute('y', '-100000');
+  maskBg.setAttribute('width', '200000');
+  maskBg.setAttribute('height', '200000');
+  maskBg.setAttribute('fill', 'white');
+  maskEl.appendChild(maskBg);
+
+  const cutoutClone = targetNode.cloneNode(false);
+  cutoutClone.setAttribute('fill', 'black');
+  cutoutClone.removeAttribute('stroke');
+  cutoutClone.removeAttribute('stroke-width');
+  cutoutClone.removeAttribute('filter');
+  cutoutClone.removeAttribute('id');
+  cutoutClone.removeAttribute('style');
+  cutoutClone.removeAttribute('transform');
+  maskEl.appendChild(cutoutClone);
+
+  const clipPathEl = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPathEl.setAttribute('id', clipId);
+  clipPathEl.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const clipClone = targetNode.cloneNode(false);
+  clipClone.removeAttribute('stroke');
+  clipClone.removeAttribute('stroke-width');
+  clipClone.removeAttribute('filter');
+  clipClone.removeAttribute('id');
+  clipClone.removeAttribute('style');
+  clipClone.removeAttribute('transform');
+  clipPathEl.appendChild(clipClone);
+
+  defs.appendChild(maskEl);
+  defs.appendChild(clipPathEl);
+  ghostGroup.appendChild(defs);
+
+  // 1. Ghost Image: 50% opacity outside, masked out inside shape so shape remains 100% opaque
+  const maskedImgContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  maskedImgContainer.setAttribute('mask', `url(#${maskId})`);
+  const ghostImg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  ghostImg.setAttribute('href', imgUrl);
+  ghostImg.setAttribute('x', String(finalX));
+  ghostImg.setAttribute('y', String(finalY));
+  ghostImg.setAttribute('width', String(scaledW));
+  ghostImg.setAttribute('height', String(scaledH));
+  ghostImg.setAttribute('preserveAspectRatio', 'none');
+  ghostImg.setAttribute('opacity', '0.5');
+  if (rotateTransform) {
+    ghostImg.setAttribute('transform', rotateTransform);
+  }
+  maskedImgContainer.appendChild(ghostImg);
+  ghostGroup.appendChild(maskedImgContainer);
+
+  // 2. 3x3 Rule-of-Thirds Grid Lines (thin solid white lines clipped inside shape)
+  const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  gridGroup.setAttribute('shape-rendering', 'crispEdges');
+  gridGroup.setAttribute('clip-path', `url(#${clipId})`);
+
+  const lines = [
+    { x1: baseX, y1: baseY + baseH / 3, x2: baseX + baseW, y2: baseY + baseH / 3 },
+    { x1: baseX, y1: baseY + 2 * baseH / 3, x2: baseX + baseW, y2: baseY + 2 * baseH / 3 },
+    { x1: baseX + baseW / 3, y1: baseY, x2: baseX + baseW / 3, y2: baseY + baseH },
+    { x1: baseX + 2 * baseW / 3, y1: baseY, x2: baseX + 2 * baseW / 3, y2: baseY + baseH }
+  ];
+
+  lines.forEach(({ x1, y1, x2, y2 }) => {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', String(x1));
+    line.setAttribute('y1', String(y1));
+    line.setAttribute('x2', String(x2));
+    line.setAttribute('y2', String(y2));
+    line.setAttribute('stroke', '#ffffff');
+    line.setAttribute('stroke-width', '0.75');
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    line.setAttribute('stroke-opacity', '0.8');
+    gridGroup.appendChild(line);
+  });
+
+  ghostGroup.appendChild(gridGroup);
+  nodeGroup.appendChild(ghostGroup);
+};
+
+/**
+ * Renders Image Adjust Mode overlay (50% ghost image + 3x3 grid lines) for unflattened shapes
+ * WITHOUT rendering any path anchor points, curve handles, or pen edit controls.
+ */
+export const drawShapeImageAdjustOverlay = (shapeEl, pageIndex, zoom = 100) => {
+  if (!shapeEl) return;
+  const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
+  if (!overlay) return;
+
+  let nodeGroup = overlay.querySelector('#node-edit-overlay-group');
+  if (!nodeGroup) {
+    nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    nodeGroup.setAttribute('id', 'node-edit-overlay-group');
+    overlay.appendChild(nodeGroup);
+  } else {
+    nodeGroup.innerHTML = '';
+  }
+
+  const ctm = shapeEl.getScreenCTM();
+  const overlayCtm = overlay.getScreenCTM();
+  if (!ctm || !overlayCtm) return;
+  const svgMatrix = overlayCtm.inverse().multiply(ctm);
+
+  const overlayScale = Math.hypot(overlayCtm.a, overlayCtm.b) || (zoom / 100) || 1;
+  const invScale = 1 / overlayScale;
+
+  renderMaskCropPreview(shapeEl, nodeGroup, svgMatrix, invScale, pageIndex, {
+    nodeEditImageAdjustRef: { current: true }
+  });
+};
+
 export const drawNodeEditOverlay = (
   pathEl,
   paperPath,
@@ -26,7 +275,8 @@ export const drawNodeEditOverlay = (
     nodeEditDragRef,
     nodeEditScreenNodesRef,
     nodeEditScreenSegmentsRef,
-    nodeEditRetractHandleRef
+    nodeEditRetractHandleRef,
+    nodeEditImageAdjustRef
   } = refs;
 
   const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
@@ -51,6 +301,9 @@ export const drawNodeEditOverlay = (
 
     const overlayScale = Math.hypot(overlayCtm.a, overlayCtm.b) || (zoom / 100) || 1;
     const invScale = 1 / overlayScale;
+
+    // Render 50% ghost crop preview + 3x3 grid lines for masked shapes
+    renderMaskCropPreview(pathEl, nodeGroup, svgMatrix, invScale, pageIndex, refs);
 
     const mapPt = (x, y) => new DOMPoint(x, y).matrixTransform(svgMatrix);
     const screenPt = (x, y) => {

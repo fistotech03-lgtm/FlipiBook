@@ -888,15 +888,9 @@ const Profile = () => {
                         <span>{user.businessEmail || user.companyEmail}</span>
                       </div>
                     )}
-                    {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') && Array.isArray(user.specialization) && user.specialization.length > 0 && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">Specialization : </span>
-                        <span>{user.specialization.join(', ')}</span>
-                      </div>
-                    )}
                     {((Array.isArray(user.services) && user.services.length > 0) || (Array.isArray(user.skills) && user.skills.length > 0)) && (
                       <div>
-                        <span className="font-medium text-[#22262e]">Service/Expertise : </span>
+                        <span className="font-medium text-[#22262e]">Skills / Services / Expertise : </span>
                         <span>
                           {((Array.isArray(user.services) && user.services.length > 0)
                             ? user.services
@@ -946,12 +940,14 @@ const Profile = () => {
                       {(user.address1 || user.address2) ? (
                         <div>{[user.address1, user.address2].filter(Boolean).join(', ')}</div>
                       ) : null}
-                      {(user.city || user.state) ? (
-                        <div>{[user.city, user.state].filter(Boolean).join(', ')}</div>
+                      {(user.city || (user.state && user.state !== 'None')) ? (
+                        <div>{[user.city, user.state === 'None' ? null : user.state].filter(Boolean).join(', ')}</div>
                       ) : null}
-                      <div>
-                        {[user.country || 'India', user.pincode ? `${user.pincode}` : ''].filter(Boolean).join(' - ')}
-                      </div>
+                      {Boolean((user.country && user.country !== 'None') || user.pincode) && (
+                        <div>
+                          {[user.country && user.country !== 'None' ? user.country : '', user.pincode ? `${user.pincode}` : ''].filter(Boolean).join(' - ')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -270,7 +270,8 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
 
   // Resolve country isoCode from editedUser.country (which could be country name e.g. "India" or isoCode "IN")
   const currentCountryObj = useMemo(() => {
-    const raw = (editedUser?.country || 'India').trim().toLowerCase();
+    if (!editedUser?.country || editedUser?.country === 'None') return null;
+    const raw = (editedUser?.country || '').trim().toLowerCase();
     return allCountries.find(c => c.name.toLowerCase() === raw || c.isoCode.toLowerCase() === raw) || null;
   }, [editedUser?.country, allCountries]);
 
@@ -593,8 +594,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
   const [isExperienceOpen, setIsExperienceOpen] = useState(false);
   const [isTeamSizeOpen, setIsTeamSizeOpen] = useState(false);
   const [isCompanySizeOpen, setIsCompanySizeOpen] = useState(false);
-  const [isAddingSpecialization, setIsAddingSpecialization] = useState(false);
-  const [newSpecializationInput, setNewSpecializationInput] = useState('');
   const [editingContactKey, setEditingContactKey] = useState(null); // 'contact1' | 'contact2' | 'contact3'
 
   const teamSizeOptions = [
@@ -627,26 +626,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
     '8+ Years',
     '10+ Years'
   ];
-
-  const specializationList = Array.isArray(editedUser?.specialization)
-    ? editedUser.specialization
-    : [];
-
-  const handleAddSpecialization = () => {
-    if (!newSpecializationInput.trim()) return;
-    const val = newSpecializationInput.trim();
-    if (!specializationList.includes(val)) {
-      const updated = [...specializationList, val];
-      updateEditedUser({ specialization: updated });
-    }
-    setNewSpecializationInput('');
-    setIsAddingSpecialization(false);
-  };
-
-  const handleRemoveSpecialization = (itemToRemove) => {
-    const nextList = specializationList.filter(s => s !== itemToRemove);
-    updateEditedUser({ specialization: nextList });
-  };
 
   const servicesList = Array.isArray(editedUser?.services)
     ? editedUser.services
@@ -1178,81 +1157,10 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                   </div>
                 )}
 
-                {/* Specialization */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Specialization <span className="text-red-500">*</span>
-                  </label>
-                  <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
-                    {isAddingSpecialization ? (
-                      <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.4vw] px-[0.6vw] py-[0.3vw] bg-[#EC5137]/5">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Specialization..."
-                          value={newSpecializationInput}
-                          onChange={(e) => setNewSpecializationInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddSpecialization();
-                            } else if (e.key === 'Escape') {
-                              setIsAddingSpecialization(false);
-                              setNewSpecializationInput('');
-                            }
-                          }}
-                          className="text-[0.78vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddSpecialization}
-                          className="text-[#EC5137] hover:opacity-80 font-bold text-[0.78vw]"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingSpecialization(false);
-                            setNewSpecializationInput('');
-                          }}
-                          className="text-gray-400 hover:text-gray-600 text-[0.78vw]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingSpecialization(true)}
-                        className="flex items-center gap-[0.3vw] px-[0.75vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.4vw] text-[0.74vw] font-semibold hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
-                      >
-                        <span>+</span> Add Service
-                      </button>
-                    )}
-
-                    {specializationList.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.4vw] text-[0.74vw] font-medium"
-                      >
-                        {item}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSpecialization(item)}
-                          className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                        >
-                          <X className="w-[0.75vw] h-[0.75vw]" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Services / Expertise */}
                 <div>
                   <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Services / Expertise <span className="text-red-500">*</span>
+                    Skills / Services / Expertise <span className="text-red-500">*</span>
                   </label>
                   <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
                     {isAddingService ? (
@@ -1320,31 +1228,33 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                   </div>
                 </div>
 
-                {/* Portfolio / Website (Freelancer) OR Agency Website (Agency) OR Company Website (Company) */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    {editedUser?.profileType === 'Company'
-                      ? 'Company Website'
-                      : (editedUser?.profileType === 'Agency' ? 'Agency Website' : 'Portfolio / Website')}
-                  </label>
-                  <div className="relative flex items-center">
-                    <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none text-gray-500">
-                      <Icon icon="lucide:globe" className="w-[0.9vw] h-[0.9vw]" />
+                {/* Portfolio / Website (Freelancer) OR Company Website (Company) */}
+                {editedUser?.profileType !== 'Agency' && (
+                  <div>
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                      {editedUser?.profileType === 'Company'
+                        ? 'Company Website'
+                        : 'Portfolio / Website'}
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none text-gray-500">
+                        <Icon icon="lucide:globe" className="w-[0.9vw] h-[0.9vw]" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="https://fisto.com"
+                        value={editedUser?.website || ''}
+                        onChange={(e) => {
+                          updateEditedUser({ website: e.target.value });
+                          setErrors(prev => ({ ...prev, website: null }));
+                        }}
+                        onBlur={(e) => validateField('website', e.target.value)}
+                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.4vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="https://fisto.com"
-                      value={editedUser?.website || ''}
-                      onChange={(e) => {
-                        updateEditedUser({ website: e.target.value });
-                        setErrors(prev => ({ ...prev, website: null }));
-                      }}
-                      onBlur={(e) => validateField('website', e.target.value)}
-                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.4vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
-                    />
+                    {errors.website && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.website}</p>}
                   </div>
-                  {errors.website && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.website}</p>}
-                </div>
+                )}
 
                 {/* Contact Number / Business Contact Number */}
                 <div className="flex flex-col gap-[0.6vw]">
@@ -1612,77 +1522,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                   </div>
                 </div>
 
-                {/* Specialization */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Specialization
-                  </label>
-                  <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
-                    {isAddingSpecialization ? (
-                      <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.4vw] px-[0.6vw] py-[0.3vw] bg-[#EC5137]/5">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Specialization..."
-                          value={newSpecializationInput}
-                          onChange={(e) => setNewSpecializationInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddSpecialization();
-                            } else if (e.key === 'Escape') {
-                              setIsAddingSpecialization(false);
-                              setNewSpecializationInput('');
-                            }
-                          }}
-                          className="text-[0.78vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddSpecialization}
-                          className="text-[#EC5137] hover:opacity-80 font-bold text-[0.78vw]"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingSpecialization(false);
-                            setNewSpecializationInput('');
-                          }}
-                          className="text-gray-400 hover:text-gray-600 text-[0.78vw]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingSpecialization(true)}
-                        className="flex items-center gap-[0.3vw] px-[0.75vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.4vw] text-[0.74vw] font-semibold hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
-                      >
-                        <span>+</span> Add Service
-                      </button>
-                    )}
-
-                    {specializationList.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.4vw] text-[0.74vw] font-medium"
-                      >
-                        {item}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSpecialization(item)}
-                          className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                        >
-                          <X className="w-[0.75vw] h-[0.75vw]" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Skills / Expertise */}
                 <div>
                   <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
@@ -1890,18 +1729,23 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
 
                       {/* State list */}
                       <div className="max-h-[14vw] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updateEditedUser({ state: '' });
-                            setIsStateOpen(false);
-                          }}
-                          className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
-                            !editedUser?.state ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="truncate text-gray-400">None / Clear</span>
-                        </button>
+                        {(!stateSearch.trim() || 'none'.includes(stateSearch.toLowerCase().trim())) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateEditedUser({ state: 'None' });
+                              setIsStateOpen(false);
+                            }}
+                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                              (editedUser?.state === 'None' || !editedUser?.state) ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="truncate">None</span>
+                            {(editedUser?.state === 'None' || !editedUser?.state) && (
+                              <Icon icon="lucide:check" className="w-[0.9vw] h-[0.9vw] text-[#EC5137] shrink-0" strokeWidth="2.5" />
+                            )}
+                          </button>
+                        )}
                         {filteredStates.length > 0 ? (
                           filteredStates.map((st) => {
                             const isSelected = editedUser?.state === st.name;
@@ -1953,7 +1797,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                     }`}
                   >
                     <span className="truncate text-gray-700 font-normal">
-                      {currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'India')}
+                      {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'Select Country'))}
                     </span>
                     <Icon
                       icon="lucide:chevron-down"
@@ -1991,6 +1835,26 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
 
                       {/* Country List */}
                       <div className="max-h-[14vw] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
+                        {(!countrySearch.trim() || 'none'.includes(countrySearch.toLowerCase().trim())) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateEditedUser({
+                                country: 'None',
+                                state: 'None'
+                              });
+                              setIsCountryOpen(false);
+                            }}
+                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                              editedUser?.country === 'None' ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="truncate">None</span>
+                            {editedUser?.country === 'None' && (
+                              <Icon icon="lucide:check" className="w-[0.9vw] h-[0.9vw] text-[#EC5137] shrink-0" strokeWidth="2.5" />
+                            )}
+                          </button>
+                        )}
                         {filteredCountries.length > 0 ? (
                           filteredCountries.map((c) => {
                             const isSelected = (currentCountryObj?.isoCode === c.isoCode) || (editedUser?.country === c.name);
@@ -2002,7 +1866,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                                   const newStates = State.getStatesOfCountry(c.isoCode);
                                   updateEditedUser({
                                     country: c.name,
-                                    state: newStates.some(s => s.name === editedUser?.state) ? editedUser.state : (newStates[0]?.name || '')
+                                    state: newStates.some(s => s.name === editedUser?.state) ? editedUser.state : (editedUser?.state === 'None' ? 'None' : '')
                                   });
                                   setIsCountryOpen(false);
                                 }}

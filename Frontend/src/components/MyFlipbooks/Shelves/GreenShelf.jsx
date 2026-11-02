@@ -6,10 +6,14 @@ import greenLeftWood from '../../../assets/Bookshelf/greenshelf/Leftwood.png';
 import greenBase from '../../../assets/Bookshelf/greenshelf/base.png';
 import greenLamp from '../../../assets/Bookshelf/greenshelf/lamp.png';
 import greenDecor from '../../../assets/Bookshelf/greenshelf/decor.png';
+import greenSwitch from '../../../assets/Bookshelf/greenshelf/switch.png';
 
 const GreenShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
+  lightOpacity = 100,
   selectedLightTheme,
   selectedWallTheme,
   openMenuId,
@@ -63,42 +67,74 @@ const GreenShelf = ({
                                 }}
                               />
 
-                              {/* 2. Delicate warm LED strip glow directly underneath the shelf matching Screenshot 3 */}
+                              {/* 2. Beautiful luminous LED under-shelf glow spreading downwards */}
                               {decors.lights && (
                                 <>
-                                  {/* Crisp thin warm LED light line under plank */}
+                                  {/* Golden LED light source along the bottom edge */}
                                   <div
-                                    className="absolute left-[0.5%] right-[0.5%] pointer-events-none z-0"
+                                    className="absolute left-[2%] right-[2%] pointer-events-none z-0 transition-opacity duration-300"
                                     style={{
-                                      top: '98%',
-                                      height: '0.22vw',
-                                      background: '#FFDE82',
-                                      borderRadius: '0 0 1px 1px',
-                                      boxShadow: '0 0 6px 1px #FBBF24, 0 0 12px 2px rgba(245, 158, 11, 0.5)'
+                                      top: '97%',
+                                      height: '0.18vw',
+                                      opacity: ((lightOpacity ?? 100) / 100) * 0.75,
+                                      background: selectedLightTheme === 'light1'
+                                        ? 'linear-gradient(90deg, transparent 0%, #FFF3B0 20%, #FFDF6D 50%, #FFF3B0 80%, transparent 100%)'
+                                        : selectedLightTheme === 'light2'
+                                        ? 'linear-gradient(90deg, transparent 0%, #FFFFFF 20%, #F1F5F9 50%, #FFFFFF 80%, transparent 100%)'
+                                        : 'linear-gradient(90deg, transparent 0%, #E0F2FE 20%, #BAE6FD 50%, #E0F2FE 80%, transparent 100%)',
+                                      boxShadow: selectedLightTheme === 'light1'
+                                        ? '0 0 6px 1px #FBBF24, 0 0 12px 2px rgba(245, 158, 11, 0.35)'
+                                        : selectedLightTheme === 'light2'
+                                        ? '0 0 6px 1px #FFFFFF, 0 0 12px 2px rgba(226, 232, 240, 0.45)'
+                                        : '0 0 6px 1px #38BDF8, 0 0 12px 2px rgba(56, 189, 248, 0.35)',
+                                      filter: 'blur(1px)'
                                     }}
                                   />
-                                  {/* Soft luminous warm glow spreading downwards onto the green wall */}
+
+                                  {/* Primary bright downward light beam spreading onto the green wall */}
                                   <div
-                                    className="absolute left-[2%] right-[2%] pointer-events-none z-0"
+                                    className="absolute left-[0%] right-[0%] pointer-events-none z-0 transition-opacity duration-300"
                                     style={{
                                       top: '100%',
-                                      height: '1.4vw',
-                                      background: 'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(254, 240, 138, 0.5) 0%, rgba(251, 191, 36, 0.2) 40%, rgba(245, 158, 11, 0.04) 70%, transparent 100%)',
+                                      height: '1.6vw',
+                                      opacity: ((lightOpacity ?? 100) / 100) * 0.65,
+                                      background: selectedLightTheme === 'light1'
+                                        ? 'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.30) 40%, rgba(245, 158, 11, 0.06) 70%, transparent 100%)'
+                                        : selectedLightTheme === 'light2'
+                                        ? 'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(255, 255, 255, 0.70) 0%, rgba(241, 245, 249, 0.35) 40%, rgba(203, 213, 225, 0.08) 70%, transparent 100%)'
+                                        : 'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(224, 242, 254, 0.65) 0%, rgba(186, 230, 253, 0.30) 40%, rgba(147, 197, 253, 0.06) 70%, transparent 100%)',
                                       mixBlendMode: 'screen',
-                                      filter: 'blur(1px)'
+                                      filter: 'blur(2.5px)'
+                                    }}
+                                  />
+
+                                  {/* Wider soft ambient diffusion spreading out */}
+                                  <div
+                                    className="absolute left-[-4%] right-[-4%] pointer-events-none z-0 transition-opacity duration-300"
+                                    style={{
+                                      top: '100%',
+                                      height: '2.8vw',
+                                      opacity: ((lightOpacity ?? 100) / 100) * 0.55,
+                                      background: selectedLightTheme === 'light1'
+                                        ? 'radial-gradient(ellipse 75% 100% at 50% 0%, rgba(253, 224, 71, 0.32) 0%, rgba(245, 158, 11, 0.10) 45%, transparent 80%)'
+                                        : selectedLightTheme === 'light2'
+                                        ? 'radial-gradient(ellipse 75% 100% at 50% 0%, rgba(255, 255, 255, 0.35) 0%, rgba(226, 232, 240, 0.12) 45%, transparent 80%)'
+                                        : 'radial-gradient(ellipse 75% 100% at 50% 0%, rgba(186, 230, 253, 0.32) 0%, rgba(125, 211, 252, 0.10) 45%, transparent 80%)',
+                                      mixBlendMode: 'screen',
+                                      filter: 'blur(6px)'
                                     }}
                                   />
                                 </>
                               )}
 
-                              {/* Soft ambient drop shadow underneath */}
+                              {/* Subtle natural contact shadow directly under plank */}
                               <div
                                 className="absolute left-[0.5%] right-[0.5%] pointer-events-none -z-10"
                                 style={{
                                   top: '100%',
-                                  height: '0.8vw',
-                                  background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.03) 60%, transparent 100%)',
-                                  filter: 'blur(2px)'
+                                  height: '0.6vw',
+                                  background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, transparent 100%)',
+                                  filter: 'blur(1px)'
                                 }}
                               />
 
@@ -296,7 +332,7 @@ const GreenShelf = ({
                     ))}
                   </div>
                   <>
-                    {/* Left Wood Panel on left wall with natural tight light & shadow on right side */}
+                    {/* Left Wood Panel on left wall */}
                     <div
                       className="absolute left-0 top-0 pointer-events-none z-10"
                       style={{
@@ -304,42 +340,6 @@ const GreenShelf = ({
                         aspectRatio: '140 / 950'
                       }}
                     >
-                      {/* 1. Bright intense vertical LED strip directly behind the panel edge */}
-                      <div
-                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
-                        style={{
-                          width: '16px',
-                          transform: 'translateX(30%)',
-                          background: 'linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 245, 205, 0.98) 40%, rgba(253, 224, 71, 0.85) 75%, transparent 100%)',
-                          filter: 'blur(3px)',
-                          mixBlendMode: 'screen'
-                        }}
-                      />
-
-                      {/* 2. Primary bright warm core glow */}
-                      <div
-                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
-                        style={{
-                          width: '65px',
-                          transform: 'translateX(60%)',
-                          background: 'linear-gradient(90deg, rgba(255, 241, 168, 0.95) 0%, rgba(252, 211, 77, 0.75) 35%, rgba(245, 158, 11, 0.40) 65%, transparent 100%)',
-                          filter: 'blur(10px)',
-                          mixBlendMode: 'screen'
-                        }}
-                      />
-
-                      {/* 3. Wide soft ambient light diffusion spreading onto the green wall */}
-                      <div
-                        className="absolute top-0 right-0 h-full pointer-events-none z-0"
-                        style={{
-                          width: '130px',
-                          transform: 'translateX(55%)',
-                          background: 'linear-gradient(90deg, rgba(254, 240, 138, 0.60) 0%, rgba(251, 191, 36, 0.35) 40%, rgba(217, 119, 6, 0.12) 75%, transparent 100%)',
-                          filter: 'blur(20px)',
-                          mixBlendMode: 'screen'
-                        }}
-                      />
-
                       <img
                         src={greenLeftWood}
                         alt="Left Wood Panel"
@@ -360,123 +360,149 @@ const GreenShelf = ({
                     </div>
 
                     {/* Bottom Left: lamp.png placed on credenza with internal lamp light effects */}
-                    <div
-                      className="absolute pointer-events-none z-20 transition-all duration-300"
-                      style={{
-                        left: '3.8%',
-                        bottom: '10.0%',
-                        width: '18.5%'
-                      }}
-                    >
-                      {/* Natural Vivid Lamp Light Effects (placed relative to the lamp so light is inside the shade) */}
-                      {decors.lamp && decors.lights && (
-                        <>
-                          {/* 1. Ambient wall wash behind the lamp */}
-                          <div
-                            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-0"
-                            style={{
-                              left: '26%',
-                              top: '42%',
-                              width: '170%',
-                              height: '170%',
-                              background: selectedLightTheme === 'light1'
-                                ? 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
-                                : selectedLightTheme === 'light2'
-                                ? 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(248, 250, 252, 0.26) 35%, rgba(226, 232, 240, 0.06) 60%, transparent 80%)'
-                                : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
-                              filter: 'blur(16px)',
-                              mixBlendMode: 'screen'
-                            }}
-                          />
-
-                          {/* 2. Downward pool of light on the credenza surface */}
-                          <div
-                            className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 z-0"
-                            style={{
-                              left: '26%',
-                              top: '46%',
-                              width: '160%',
-                              height: '90%',
-                              background: selectedLightTheme === 'light1'
-                                ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.70) 0%, rgba(251, 191, 36, 0.35) 40%, transparent 75%)'
-                                : selectedLightTheme === 'light2'
-                                ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.80) 0%, rgba(241, 245, 249, 0.38) 40%, transparent 75%)'
-                                : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
-                              filter: 'blur(10px)',
-                              mixBlendMode: 'screen'
-                            }}
-                          />
-
-                          {/* 3. Lampshade inner glow layer (light directly inside the dome) */}
-                          <div
-                            className="absolute pointer-events-none transition-all duration-300 z-25"
-                            style={{
-                              left: '4%',
-                              top: '12%',
-                              width: '44%',
-                              height: '42%',
-                              borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
-                              background: selectedLightTheme === 'light1'
-                                ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.98) 0%, rgba(251, 191, 36, 0.80) 50%, rgba(217, 119, 6, 0.35) 85%, transparent 100%)'
-                                : selectedLightTheme === 'light2'
-                                ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.85) 50%, rgba(203, 213, 225, 0.35) 85%, transparent 100%)'
-                                : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
-                              mixBlendMode: 'screen',
-                              filter: 'blur(2px)'
-                            }}
-                          />
-
-                          {/* 4. Color tint on the shade surface for unmistakable theme differentiation */}
-                          {selectedLightTheme === 'light3' && (
+                    {decors?.lamp !== false && (
+                      <div
+                        className="absolute pointer-events-none z-20 transition-all duration-300"
+                        style={{
+                          left: '3.8%',
+                          bottom: '10.0%',
+                          width: '18.5%'
+                        }}
+                      >
+                        {/* Natural Vivid Lamp Light Effects (placed relative to the lamp so light is inside the shade) */}
+                        {decors?.lights && (
+                          <>
+                            {/* 1. Ambient wall wash behind the lamp */}
                             <div
-                              className="absolute pointer-events-none transition-all duration-300 z-26"
+                              className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-0"
                               style={{
-                                left: '5%',
-                                top: '13%',
-                                width: '42%',
-                                height: '40%',
-                                borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
-                                background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
-                                mixBlendMode: 'color'
+                                left: '26%',
+                                top: '42%',
+                                width: '170%',
+                                height: '170%',
+                                background: selectedLightTheme === 'light1'
+                                  ? 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.22) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
+                                  : selectedLightTheme === 'light2'
+                                  ? 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(248, 250, 252, 0.26) 35%, rgba(226, 232, 240, 0.06) 60%, transparent 80%)'
+                                  : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
+                                filter: 'blur(16px)',
+                                mixBlendMode: 'screen'
                               }}
                             />
-                          )}
-                        </>
-                      )}
 
-                      <img
-                        src={greenLamp}
-                        alt="Lamp"
-                        className="w-full h-auto block drop-shadow-md relative z-20 transition-all duration-300"
-                        style={{
-                          filter: !decors.lamp
-                            ? 'none'
-                            : decors.lights
-                            ? (selectedLightTheme === 'light1'
-                                ? 'brightness(1.06) contrast(1.02)'
-                                : selectedLightTheme === 'light2'
-                                ? 'brightness(1.15) contrast(1.02)'
-                                : 'brightness(1.04) contrast(1.02)')
-                            : 'none'
+                            {/* 2. Downward pool of light on the credenza surface */}
+                            <div
+                              className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 z-0"
+                              style={{
+                                left: '26%',
+                                top: '46%',
+                                width: '160%',
+                                height: '90%',
+                                background: selectedLightTheme === 'light1'
+                                  ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.70) 0%, rgba(251, 191, 36, 0.35) 40%, transparent 75%)'
+                                  : selectedLightTheme === 'light2'
+                                  ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.80) 0%, rgba(241, 245, 249, 0.38) 40%, transparent 75%)'
+                                  : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
+                                filter: 'blur(10px)',
+                                mixBlendMode: 'screen'
+                              }}
+                            />
+
+                            {/* 3. Lampshade inner glow layer (light directly inside the dome) */}
+                            <div
+                              className="absolute pointer-events-none transition-all duration-300 z-25"
+                              style={{
+                                left: '4%',
+                                top: '12%',
+                                width: '44%',
+                                height: '42%',
+                                borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
+                                background: selectedLightTheme === 'light1'
+                                  ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.98) 0%, rgba(251, 191, 36, 0.80) 50%, rgba(217, 119, 6, 0.35) 85%, transparent 100%)'
+                                  : selectedLightTheme === 'light2'
+                                  ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.85) 50%, rgba(203, 213, 225, 0.35) 85%, transparent 100%)'
+                                  : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
+                                mixBlendMode: 'screen',
+                                filter: 'blur(2px)'
+                              }}
+                            />
+
+                            {/* 4. Color tint on the shade surface for unmistakable theme differentiation */}
+                            {selectedLightTheme === 'light3' && (
+                              <div
+                                className="absolute pointer-events-none transition-all duration-300 z-26"
+                                style={{
+                                  left: '5%',
+                                  top: '13%',
+                                  width: '42%',
+                                  height: '40%',
+                                  borderRadius: '50% 50% 18% 18% / 78% 78% 22% 22%',
+                                  background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
+                                  mixBlendMode: 'color'
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
+
+                        <img
+                          src={greenLamp}
+                          alt="Lamp"
+                          className="w-full h-auto block drop-shadow-md relative z-20 transition-all duration-300"
+                          style={{
+                            filter: decors?.lights
+                              ? (selectedLightTheme === 'light1'
+                                  ? 'brightness(1.06) contrast(1.02)'
+                                  : selectedLightTheme === 'light2'
+                                  ? 'brightness(1.15) contrast(1.02)'
+                                  : 'brightness(1.04) contrast(1.02)')
+                              : 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Wall Light Switch on right side */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
                         }}
-                      />
-                    </div>
+                        className="absolute pointer-events-auto cursor-pointer z-30 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '4.2%',
+                          top: '12.0%',
+                          width: '2.8%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={greenSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+                        />
+                      </div>
+                    )}
 
                     {/* Bottom Right: decor.png placed on credenza (moved to right edge) */}
-                    <div
-                      className="absolute pointer-events-none z-20"
-                      style={{
-                        right: '2.5%',
-                        bottom: '10.0%',
-                        width: '13.5%'
-                      }}
-                    >
-                      <img
-                        src={greenDecor}
-                        alt="Decor"
-                        className="w-full h-auto block drop-shadow-md"
-                      />
-                    </div>
+                    {decors?.decor !== false && (
+                      <div
+                        className="absolute pointer-events-none z-20 transition-all duration-300"
+                        style={{
+                          right: '2.5%',
+                          bottom: '10.0%',
+                          width: '13.5%'
+                        }}
+                      >
+                        <img
+                          src={greenDecor}
+                          alt="Decor"
+                          className="w-full h-auto block drop-shadow-md"
+                        />
+                      </div>
+                    )}
                   </>
     </>
   );

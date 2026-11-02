@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import ReplaceMediaModal from '../PageEditor/modals/ReplaceMediaModal';
 import { useAuth } from '../../context/AuthContext';
 import { getInitialUser } from '../../utils/authUtils';
+import { useToast } from '../CustomToast';
 const resolveUploadsPath = (path) => path || '';
 
 import bookShelf1 from '../../assets/Bookshelf/Book_shelf1.webp';
@@ -19,13 +20,9 @@ import blueshade from '../../assets/Bookshelf/blueshelf/blueshade.svg';
 import bluesheet from '../../assets/Bookshelf/blueshelf/bluesheet.webp';
 import blueshelfwood from '../../assets/Bookshelf/blueshelf/blueshelfwood.webp';
 import bluedecor from '../../assets/Bookshelf/blueshelf/bluedecor.webp';
-import blueLamp from '../../assets/Bookshelf/blueshelf/Lamp.png';
-import blueBookWithPot from '../../assets/Bookshelf/blueshelf/bookwithpot.png';
 import blueRopeShelfImg from '../../assets/Bookshelf/blue_frame/blue-ropeshelf.png';
 import blueFrameSheet from '../../assets/Bookshelf/blue_frame/bluesheet.png';
-import blueFrameLeftShelf from '../../assets/Bookshelf/blue_frame/leftshelf.png';
-import blueFrameBase from '../../assets/Bookshelf/blue_frame/base.png';
-import blueFrameRopeShelf from '../../assets/Bookshelf/blue_frame/rope_shelf.png';
+import BlueShelf from './Shelves/BlueShelf';
 import BlueRopeShelf from './Shelves/BlueRopeShelf';
 import WindowShelf from './Shelves/WindowShelf';
 import PlantLightShelf from './Shelves/PlantLightShelf';
@@ -34,54 +31,20 @@ import GreenLightShelf from './Shelves/GreenLightShelf';
 import GreenShelf from './Shelves/GreenShelf';
 import OrangeShelf from './Shelves/OrangeShelf';
 import GoldenShelf from './Shelves/GoldenShelf';
-import blueFrameLight from '../../assets/Bookshelf/blue_frame/light.png';
-import blueFrameDecor from '../../assets/Bookshelf/blue_frame/decor.png';
 import windowShelfImg from '../../assets/Bookshelf/window_shelf/windowshelf.png';
 import windowShelfSheet from '../../assets/Bookshelf/window_shelf/bluesheet.png';
-import windowShelfWindow from '../../assets/Bookshelf/window_shelf/window.png';
-import windowShelfBase from '../../assets/Bookshelf/window_shelf/base.png';
-import windowShelfPlank from '../../assets/Bookshelf/window_shelf/shelf.png';
-import windowShelfPlant from '../../assets/Bookshelf/window_shelf/plant.png';
-import windowShelfLight from '../../assets/Bookshelf/window_shelf/light.png';
 import orangeShelfImg from '../../assets/Bookshelf/orange_shelf/orange_shelf.png';
 import orangeSheet from '../../assets/Bookshelf/orange_shelf/orangesheet.png';
 import goldenShelfImg from '../../assets/Bookshelf/golden_shelf/goldenshelf.png';
 import goldenShelfSheet from '../../assets/Bookshelf/golden_shelf/sheet.png';
 import greenshade from '../../assets/Bookshelf/greenshelf/greenshade.svg';
 import greensheet from '../../assets/Bookshelf/greenshelf/Green_sheet.png';
-import greenLeftWood from '../../assets/Bookshelf/greenshelf/Leftwood.png';
-import greenWoodshelf from '../../assets/Bookshelf/greenshelf/woodshelf.svg';
-import greenShelfShadow from '../../assets/Bookshelf/greenshelf/shelfshadow.svg';
-import greenLamp from '../../assets/Bookshelf/greenshelf/lamp.png';
-import greenDecor from '../../assets/Bookshelf/greenshelf/decor.png';
-import greenBase from '../../assets/Bookshelf/greenshelf/base.png';
 import lightShelfImg from '../../assets/Bookshelf/light_shelf/light-sheld.svg';
 import lightShelfSheet from '../../assets/Bookshelf/light_shelf/lightsheet.png';
-import lightShelfLeftWood from '../../assets/Bookshelf/light_shelf/leftwood.png';
-import lightShelfSpotlights from '../../assets/Bookshelf/light_shelf/light.png';
-import lightShelfTopTier from '../../assets/Bookshelf/light_shelf/lightwithshelf.png';
-import lightShelfBottomTier from '../../assets/Bookshelf/light_shelf/shelf.png';
-import lightShelfLamp from '../../assets/Bookshelf/light_shelf/lamp.png';
-import lightShelfPlant from '../../assets/Bookshelf/light_shelf/plantpot.png';
-import lightShelfBase from '../../assets/Bookshelf/light_shelf/base.png';
 import plantLightShelfImg from '../../assets/Bookshelf/plant-light/plantlight-shelf.svg';
 import plantLightShadowSheet from '../../assets/Bookshelf/plant-light/shadowsheet.png';
-import plantLightLeftDecor from '../../assets/Bookshelf/plant-light/leftdecor.png';
-import plantLightBase from '../../assets/Bookshelf/plant-light/base.png';
-import plantLightShelf1 from '../../assets/Bookshelf/plant-light/shelf1.png';
-import plantLightShelf2 from '../../assets/Bookshelf/plant-light/shelf2.png';
-import plantLightPlant from '../../assets/Bookshelf/plant-light/plant.png';
-import plantLightDecor from '../../assets/Bookshelf/plant-light/decor.png';
-import plantLightLeaf from '../../assets/Bookshelf/plant-light/leaf.png';
-import plantLightLamp from '../../assets/Bookshelf/plant-light/lamp.png';
 import greenLightShelfImg from '../../assets/Bookshelf/greenlight/greenlight.svg';
 import greenLightSheet from '../../assets/Bookshelf/greenlight/sheet.png';
-import greenLightLeftWood from '../../assets/Bookshelf/greenlight/Leftwood.png';
-import greenLightShelfPlank from '../../assets/Bookshelf/greenlight/greenshelf.png';
-import greenLightLamp from '../../assets/Bookshelf/greenlight/lamp.png';
-import greenLightPlant from '../../assets/Bookshelf/greenlight/plant.png';
-import greenLightFixture from '../../assets/Bookshelf/greenlight/light.png';
-import greenLightBase from '../../assets/Bookshelf/greenlight/base.png';
 
 // Wall Theme Assets
 import walltheme1 from '../../assets/Bookshelf/Wall_themes/walltheme_1.webp';
@@ -126,6 +89,7 @@ const shelfOptions = [
 ];
 
 const MyShelf = () => {
+  const toast = useToast();
   const [currentView, setCurrentView] = useState('overview'); // 'overview' | 'shelf_detail'
   const [view, setView] = useState('shelf');
   const [showShelfModal, setShowShelfModal] = useState(false);
@@ -133,10 +97,10 @@ const MyShelf = () => {
   const [shelfLinkCopied, setShelfLinkCopied] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [hoveredInfoId, setHoveredInfoId] = useState(null);
-  const [folders, setFolders] = useState([
-    { name: 'My Flipbooks', books: [] }
-  ]);
-  const [selectedFolder, setSelectedFolder] = useState('My Flipbooks');
+  const [folders, setFolders] = useState([]);
+  const [selectedFolder, setSelectedFolder] = useState('');
+  const [isEditingShelfName, setIsEditingShelfName] = useState(false);
+  const [editingShelfNameValue, setEditingShelfNameValue] = useState('');
   const [showAddShelfModal, setShowAddShelfModal] = useState(false);
   const [newShelfName, setNewShelfName] = useState('');
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -208,6 +172,7 @@ const MyShelf = () => {
     globeDecor: true,
     basePlant: true,
     bookDecor: true,
+    bookWithPot: true,
   });
   const [shelfStylesPage, setShelfStylesPage] = useState(1);
   const [selectedBookCountFilter, setSelectedBookCountFilter] = useState('All'); // 'All' | '8' | '4' | '2'
@@ -359,13 +324,13 @@ const MyShelf = () => {
         // First, initialize folderMap with any existing folders from the profile
         const folderDesignMap = {};
         const bookToFolderMap = new Map();
-        
-        if (actualMyShelf && actualMyShelf.folders) {
+
+        if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
           actualMyShelf.folders.forEach(f => {
             const fName = f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks');
             if (!folderMap[fName]) folderMap[fName] = [];
             folderDesignMap[fName] = f.shelf_design || 4;
-            
+
             if (f.books && Array.isArray(f.books)) {
               f.books.forEach(b => {
                 const v_id = typeof b === 'string' ? b : b.v_id;
@@ -375,17 +340,16 @@ const MyShelf = () => {
           });
         }
 
+        // Only assign books to folder if that folder was explicitly created in folderMap
         formatted.forEach(b => {
-          let folderName = bookToFolderMap.get(b.v_id) || b.rawBook.folder || 'My Flipbooks';
-          if (folderName === 'My_Flipbooks') {
-            folderName = 'My Flipbooks';
+          const folderName = bookToFolderMap.get(b.v_id);
+          if (folderName && folderMap[folderName]) {
+            folderMap[folderName].push(b);
           }
-          if (!folderMap[folderName]) folderMap[folderName] = [];
-          folderMap[folderName].push(b);
         });
 
         // Sort books based on their row and order from DB
-        if (actualMyShelf && actualMyShelf.folders) {
+        if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
           const globalDbOrder = new Map();
           actualMyShelf.folders.forEach(f => {
             const fName = f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks');
@@ -421,12 +385,10 @@ const MyShelf = () => {
           shelf_design: (folderDesignMap[folderName] === 1 || !folderDesignMap[folderName]) ? 4 : folderDesignMap[folderName]
         }));
 
-        // Ensure 'My Flipbooks' always exists
-        if (!newFolders.some(f => f.name === 'My Flipbooks')) {
-          newFolders.unshift({ name: 'My Flipbooks', books: [], shelf_design: folderDesignMap['My Flipbooks'] || 4 });
-        }
-
         setFolders(newFolders);
+        if (newFolders.length > 0 && !selectedFolder) {
+          setSelectedFolder(newFolders[0].name);
+        }
 
         // The active shelf style will be synced by the useEffect depending on selectedFolder
 
@@ -435,7 +397,7 @@ const MyShelf = () => {
           newFolders.forEach(folder => {
             const dbFolder = actualMyShelf.folders.find(f => f.folderName === folder.name || (folder.name === 'My Flipbooks' && f.folderName === 'My_Flipbooks'));
             const dbBookCount = dbFolder && dbFolder.books ? dbFolder.books.length : 0;
-            
+
             if (folder.books.length !== dbBookCount) {
               try {
                 const bookIds = folder.books.map(b => b.v_id);
@@ -510,7 +472,7 @@ const MyShelf = () => {
     try {
       // Find full book objects from allCreatedBooks
       const booksToAppend = allCreatedBooks.filter(b => selectedBookIdsToAdd.includes(b.v_id));
-      
+
       const formattedToAppend = booksToAppend.map((b, idx) => {
         let aName = b.authorName || profileData?.name || (b.userEmail ? b.userEmail.split('@')[0] : 'Creator');
         let aPic = b.authorPicture || (profileData?.picture !== 'color_only' ? profileData?.picture : null);
@@ -574,10 +536,40 @@ const MyShelf = () => {
   useEffect(() => {
     const currentFolder = folders.find(f => f.name === selectedFolder);
     if (currentFolder && currentFolder.shelf_design) {
-      const designId = currentFolder.shelf_design === 1 ? 'customize4' : `customize${currentFolder.shelf_design}`;
+      const designId = String(currentFolder.shelf_design).startsWith('customize')
+        ? currentFolder.shelf_design
+        : (currentFolder.shelf_design === 1 ? 'customize4' : `customize${currentFolder.shelf_design}`);
       setActiveShelfStyle(designId);
     }
   }, [folders, selectedFolder]);
+
+  const handleSaveShelfName = async () => {
+    const trimmed = editingShelfNameValue.trim();
+    if (!trimmed || trimmed === selectedFolder) {
+      setIsEditingShelfName(false);
+      return;
+    }
+
+    const oldName = selectedFolder;
+    setSelectedFolder(trimmed);
+    setIsEditingShelfName(false);
+
+    setFolders(prev => prev.map(f => f.name === oldName ? { ...f, name: trimmed } : f));
+
+    if (currentUserEmail) {
+      try {
+        await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
+          emailId: currentUserEmail,
+          folderName: trimmed,
+          oldFolderName: oldName
+        }).catch(() => {});
+      } catch (err) {
+        console.error("Failed to rename shelf:", err);
+      }
+    }
+
+    toast?.success?.("Shelf renamed successfully!");
+  };
 
   const handleFlipbookSelect = (e) => {
     if (e.target.value === 'add_shelf') {
@@ -586,7 +578,9 @@ const MyShelf = () => {
       setSelectedFolder(e.target.value);
       const targetFolder = folders.find(f => f.name === e.target.value);
       if (targetFolder) {
-        const designId = (!targetFolder.shelf_design || targetFolder.shelf_design === 1) ? 'customize4' : `customize${targetFolder.shelf_design}`;
+        const designId = String(targetFolder.shelf_design).startsWith('customize')
+          ? targetFolder.shelf_design
+          : ((!targetFolder.shelf_design || targetFolder.shelf_design === 1) ? 'customize4' : `customize${targetFolder.shelf_design}`);
         setActiveShelfStyle(designId);
       }
     }
@@ -598,22 +592,34 @@ const MyShelf = () => {
   };
 
   const applyShelfStyle = async () => {
-    setActiveShelfStyle(draftShelfStyle);
+    const targetStyle = activeShelfStyle;
     setShowShelfModal(false);
 
-    if (!currentUserEmail || !selectedFolder) return;
-    try {
-      const shelfDesignNum = parseInt(draftShelfStyle.replace('customize', '')) || 1;
-      await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
-        emailId: currentUserEmail,
-        folderName: selectedFolder,
-        shelf_design: shelfDesignNum
-      });
-
-      setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelf_design: shelfDesignNum } : f));
-    } catch (err) {
-      console.error("Failed to update shelf design:", err);
+    if (!selectedFolder) {
+      toast?.error?.("No shelf selected.");
+      return;
     }
+
+    // Update local state for the folder immediately
+    setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelf_design: targetStyle } : f));
+
+    if (currentUserEmail) {
+      try {
+        const shelfDesignValue = targetStyle.startsWith('customize')
+          ? (parseInt(targetStyle.replace('customize', '')) || targetStyle)
+          : targetStyle;
+
+        await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
+          emailId: currentUserEmail,
+          folderName: selectedFolder,
+          shelf_design: shelfDesignValue
+        }).catch(err => console.warn("Backend update-shelf-design notice:", err));
+      } catch (err) {
+        console.error("Failed to update shelf design:", err);
+      }
+    }
+
+    toast?.success?.("Shelf changes saved successfully!");
   };
 
   const handleMoveSubmit = async () => {
@@ -769,7 +775,7 @@ const MyShelf = () => {
       }
       return folder;
     }));
-    
+
     setDraggedBookIndex(null);
 
     try {
@@ -789,25 +795,25 @@ const MyShelf = () => {
   };
 
   const activeFolderGlobal = folders.find(f => f.name === selectedFolder);
-  
-  const filteredBooks = activeFolderGlobal 
+
+  const filteredBooks = activeFolderGlobal
     ? activeFolderGlobal.books.filter(b => {
-        if (selectedStatus === 'All Status') return true;
-        
-        const isPublic = String(b.access).toLowerCase() === 'public';
-        const isPrivate = String(b.access).toLowerCase() === 'private';
-        const isPublished = b.rawBook?.isPublished === true || b.rawBook?.isPublished === 'true';
+      if (selectedStatus === 'All Status') return true;
 
-        if (selectedStatus === 'Published - Public' && isPublished && isPublic) return true;
-        if (selectedStatus === 'Published - Private' && isPublished && isPrivate) return true;
-        if (selectedStatus === 'Unpublished - Public' && !isPublished && isPublic) return true;
-        if (selectedStatus === 'Unpublished - Private' && !isPublished && isPrivate) return true;
+      const isPublic = String(b.access).toLowerCase() === 'public';
+      const isPrivate = String(b.access).toLowerCase() === 'private';
+      const isPublished = b.rawBook?.isPublished === true || b.rawBook?.isPublished === 'true';
 
-        if (selectedStatus === 'Private' && isPrivate) return true;
-        if (selectedStatus === 'Public' && isPublic) return true;
+      if (selectedStatus === 'Published - Public' && isPublished && isPublic) return true;
+      if (selectedStatus === 'Published - Private' && isPublished && isPrivate) return true;
+      if (selectedStatus === 'Unpublished - Public' && !isPublished && isPublic) return true;
+      if (selectedStatus === 'Unpublished - Private' && !isPublished && isPrivate) return true;
 
-        return false;
-      })
+      if (selectedStatus === 'Private' && isPrivate) return true;
+      if (selectedStatus === 'Public' && isPublic) return true;
+
+      return false;
+    })
     : [];
 
   const getShelfAssets = (style) => {
@@ -904,20 +910,10 @@ const MyShelf = () => {
         };
       case 'customize4':
         return {
-          type: 'rows',
+          type: 'blue_shelf',
           bg: selectedWallTheme || bluesheet,
-          rowAsset: blueshelfwood,
-          rowCount: 2,
           bgStretch: true,
           noZone: true,
-          decorBottom: bluedecor,
-          padding: 'px-0',
-          rowPadding: '0 4% 0 26%',
-          topOffset: 16.5,
-          spacing: 27.5,
-          justify: 'justify-center gap-[2vw]',
-          bookWidth: '15%',
-          bookStyle: { bottom: '51%', padding: '0 6% 0 0' }
         };
       case 'customize3':
         return {
@@ -1014,214 +1010,48 @@ const MyShelf = () => {
       )}
 
       {currentView === 'overview' ? (
-        /* Shelves Overview Grid matching screenshot */
+        /* Shelves Overview Grid: Only shows actual user-created shelves + Create New Shelf card */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start max-w-5xl">
-          {/* Shelf Cards (First shelf uses blueshade.svg as requested) */}
+          {/* Real User Shelves */}
           {folders.map((folder, idx) => {
-            const shelfTitle = idx === 0 && folder.name === 'My Flipbooks' ? 'Pumps based shelfs' : folder.name;
+            const shelfTitle = folder.name;
+            const styleId = String(folder.shelf_design).startsWith('customize')
+              ? folder.shelf_design
+              : ((folder.shelf_design === 1 || !folder.shelf_design) ? 'customize4' : `customize${folder.shelf_design}`);
+
+            const shelfCardImg =
+              styleId === 'customize_green' ? greenshade :
+              styleId === 'customize_light' ? lightShelfImg :
+              styleId === 'customize_plantlight' ? plantLightShelfImg :
+              styleId === 'customize_greenlight' ? greenLightShelfImg :
+              styleId === 'customize_bluerope' ? blueRopeShelfImg :
+              styleId === 'customize_windowshelf' ? windowShelfImg :
+              styleId === 'customize_orange' ? orangeShelfImg :
+              styleId === 'customize_golden' ? goldenShelfImg :
+              blueshade;
+
             return (
-              <React.Fragment key={folder.name || idx}>
-                <div
-                  onClick={() => {
-                    setSelectedFolder(folder.name);
-                    setActiveShelfStyle('customize4');
-                    setSelectedWallTheme(null);
-                    setCurrentView('shelf_detail');
-                  }}
-                  className="group cursor-pointer flex flex-col items-center"
-                >
-                  <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-blue-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                    <img
-                      src={blueshade}
-                      alt={shelfTitle}
-                      className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                    />
-                  </div>
-                  <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
-                    {shelfTitle}
-                  </span>
+              <div
+                key={folder.name || idx}
+                onClick={() => {
+                  setSelectedFolder(folder.name);
+                  setActiveShelfStyle(styleId);
+                  setSelectedWallTheme(null);
+                  setCurrentView('shelf_detail');
+                }}
+                className="group cursor-pointer flex flex-col items-center"
+              >
+                <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-blue-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
+                  <img
+                    src={shelfCardImg}
+                    alt={shelfTitle}
+                    className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
+                  />
                 </div>
-
-                {/* Green Shelf card added right next to Blue Shelf */}
-                {idx === 0 && (
-                  <>
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_green');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-green-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={greenshade}
-                          alt="Green Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-green-600 transition-colors">
-                        Green Shelf
-                      </span>
-                    </div>
-
-                    {/* Light Shelf card right beside Green Shelf */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_light');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-amber-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={lightShelfImg}
-                          alt="Light Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-amber-600 transition-colors">
-                        Light Shelf
-                      </span>
-                    </div>
-
-                    {/* Plant-Light Shelf card right beside Light Shelf */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_plantlight');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-emerald-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={plantLightShelfImg}
-                          alt="Plant-Light Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-emerald-600 transition-colors">
-                        Plant-Light Shelf
-                      </span>
-                    </div>
-
-                    {/* Green-Light Shelf card right beside Plant-Light Shelf */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_greenlight');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-teal-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={greenLightShelfImg}
-                          alt="Green-Light Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-teal-600 transition-colors">
-                        Green-Light Shelf
-                      </span>
-                    </div>
-
-                    {/* Blue Rope Shelf card */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_bluerope');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-sky-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={blueRopeShelfImg}
-                          alt="Blue Rope Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-sky-600 transition-colors">
-                        Blue Rope Shelf
-                      </span>
-                    </div>
-
-                    {/* Window Shelf card */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_windowshelf');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-indigo-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={windowShelfImg}
-                          alt="Window Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-indigo-600 transition-colors">
-                        Window Shelf
-                      </span>
-                    </div>
-
-                    {/* Orange Shelf card */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_orange');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-orange-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={orangeShelfImg}
-                          alt="Orange Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-orange-600 transition-colors">
-                        Orange Shelf
-                      </span>
-                    </div>
-
-                    {/* Golden Shelf card */}
-                    <div
-                      onClick={() => {
-                        setSelectedFolder(folder.name);
-                        setActiveShelfStyle('customize_golden');
-                        setSelectedWallTheme(null);
-                        setCurrentView('shelf_detail');
-                      }}
-                      className="group cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-amber-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
-                        <img
-                          src={goldenShelfImg}
-                          alt="Golden Shelf"
-                          className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
-                        />
-                      </div>
-                      <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-amber-600 transition-colors">
-                        Golden Shelf
-                      </span>
-                    </div>
-                  </>
-                )}
-              </React.Fragment>
+                <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                  {shelfTitle}
+                </span>
+              </div>
             );
           })}
 
@@ -1263,99 +1093,586 @@ const MyShelf = () => {
         /* Detailed Bookshelf / List View */
         <>
 
-      {/* Main Content */}
-      <div className="flex items-start gap-6 relative">
-        {view === 'shelf' ? (
-          /* Left Shelf Column (Header + Shelf + Styles) */
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Shelf View Header scoped to Shelf width (ends at shelf right edge) */}
-            <div className="flex flex-col mb-3 w-full -mt-1">
-              {/* Back to My Shelf Link */}
-              <div className="flex items-center gap-2 mb-1">
-                <button
-                  onClick={() => setCurrentView('overview')}
-                  className="flex items-center gap-1 text-[#FF5733] hover:text-[#E04D2D] text-xs font-semibold transition-colors"
-                >
-                  <Icon icon="lucide:chevron-left" className="w-4 h-4" />
-                  <span>My Shelf</span>
-                </button>
-              </div>
-
-              {/* Title Row aligned straight with Action Buttons at the shelf right edge */}
-              <div className="w-full">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
-                      {activeShelfStyle === 'customize_golden' ? 'Golden Shelf' : activeShelfStyle === 'customize_orange' ? 'Orange Shelf' : activeShelfStyle === 'customize_windowshelf' ? 'Window Shelf' : activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : (selectedFolder === 'My Flipbooks' ? 'Pumps based shelf' : selectedFolder)}
-                    </h2>
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors p-0.5" title="Rename shelf">
-                      <Icon icon="lucide:edit-3" className="w-3.5 h-3.5" />
+          {/* Main Content */}
+          <div className="flex items-start gap-6 relative">
+            {view === 'shelf' ? (
+              /* Left Shelf Column (Header + Shelf + Styles) */
+              <div className="flex-1 flex flex-col min-w-0">
+                {/* Shelf View Header scoped to Shelf width (ends at shelf right edge) */}
+                <div className="flex flex-col mb-3 w-full -mt-1">
+                  {/* Back to My Shelf Link */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <button
+                      onClick={() => setCurrentView('overview')}
+                      className="flex items-center gap-1 text-[#FF5733] hover:text-[#E04D2D] text-xs font-semibold transition-colors"
+                    >
+                      <Icon icon="lucide:chevron-left" className="w-4 h-4" />
+                      <span>My Shelf</span>
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={toggleShelfFullscreen}
-                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
-                      title={isShelfFullscreen ? "Exit Fullscreen" : "Fullscreen Shelf"}
-                    >
-                      <Icon icon={isShelfFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-3.5 h-3.5 text-gray-600" />
-                    </button>
+                  {/* Title Row aligned straight with Action Buttons at the shelf right edge */}
+                  <div className="w-full">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        {isEditingShelfName ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={editingShelfNameValue}
+                              onChange={(e) => setEditingShelfNameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveShelfName();
+                                if (e.key === 'Escape') setIsEditingShelfName(false);
+                              }}
+                              autoFocus
+                              className="text-xl font-bold text-gray-900 border-b-2 border-[#FF5733] bg-transparent outline-none px-1 py-0.5"
+                            />
+                            <button
+                              onClick={handleSaveShelfName}
+                              className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded"
+                              title="Save name"
+                            >
+                              <Icon icon="lucide:check" className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setIsEditingShelfName(false)}
+                              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                              title="Cancel"
+                            >
+                              <Icon icon="lucide:x" className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
+                              {selectedFolder || (activeShelfStyle === 'customize_golden' ? 'Golden Shelf' : activeShelfStyle === 'customize_orange' ? 'Orange Shelf' : activeShelfStyle === 'customize_windowshelf' ? 'Window Shelf' : activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : 'My Shelf')}
+                            </h2>
+                            <button
+                              onClick={() => {
+                                setEditingShelfNameValue(selectedFolder || '');
+                                setIsEditingShelfName(true);
+                              }}
+                              className="text-gray-400 hover:text-[#FF5733] transition-colors p-0.5 cursor-pointer"
+                              title="Rename shelf"
+                            >
+                              <Icon icon="lucide:edit-3" className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
 
-                    <button
-                      onClick={() => setShowShareShelfModal(true)}
-                      className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
-                    >
-                      <Icon icon="lucide:share-2" className="w-3.5 h-3.5 text-gray-600" />
-                      <span>Share Shelf</span>
-                    </button>
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          onClick={toggleShelfFullscreen}
+                          className="flex items-center justify-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+                          title={isShelfFullscreen ? "Exit Fullscreen" : "Fullscreen Shelf"}
+                        >
+                          <Icon icon={isShelfFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
 
-                    <button
-                      onClick={applyShelfStyle}
-                      className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
-                    >
-                      <Icon icon="lucide:check" className="w-3.5 h-3.5" />
-                      <span>Save Changes</span>
-                    </button>
+                        <button
+                          onClick={() => setShowShareShelfModal(true)}
+                          className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+                        >
+                          <Icon icon="lucide:share-2" className="w-3.5 h-3.5 text-gray-600" />
+                          <span>Share Shelf</span>
+                        </button>
+
+                        <button
+                          onClick={applyShelfStyle}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                        >
+                          <Icon icon="lucide:check" className="w-3.5 h-3.5" />
+                          <span>Save Changes</span>
+                        </button>
+                      </div>
+                    </div>
+
+
                   </div>
                 </div>
 
+                {/* The Shelf Stage (w-full fills wrapper completely, aspect-[16/8.4] mild height increase) */}
+                {isShelfFullscreen ? (
+                  <div
+                    className="fixed inset-0 z-[99999] w-screen h-screen overflow-hidden"
+                    style={{
+                      backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
+                      backgroundSize: '100% 100%',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                    }}
+                  >
+                    {/* Exit Fullscreen Button */}
+                    <button
+                      type="button"
+                      onClick={toggleShelfFullscreen}
+                      className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/85 text-white px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-lg flex items-center gap-2 group cursor-pointer border border-white/15"
+                      title="Exit Full Screen (Esc)"
+                    >
+                      <Icon
+                        icon="lucide:minimize-2"
+                        className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
+                      />
+                      <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
+                    </button>
 
-              </div>
-            </div>
+                    {isLoading && (
+                      <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
+                        <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
+                        <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
+                      </div>
+                    )}
 
-            {/* The Shelf Stage (w-full fills wrapper completely, aspect-[16/8.4] mild height increase) */}
-            {isShelfFullscreen ? (
-              <div
-                className="fixed inset-0 z-[99999] w-screen h-screen overflow-hidden"
-                style={{
-                  backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
-                  backgroundSize: '100% 100%',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                }}
-              >
-                {/* Exit Fullscreen Button */}
-                <button
-                  type="button"
-                  onClick={toggleShelfFullscreen}
-                  className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/85 text-white px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-lg flex items-center gap-2 group cursor-pointer border border-white/15"
-                  title="Exit Full Screen (Esc)"
-                >
-                  <Icon
-                    icon="lucide:minimize-2"
-                    className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
-                  />
-                  <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
-                </button>
+                    {/* If bg is an array, map over it to render wall blocks */}
+                    {Array.isArray(activeAssets.bg) && (
+                      <div className="absolute inset-0 flex flex-col rounded-xl overflow-hidden pointer-events-none">
+                        {Array.from({ length: activeAssets.rowCount }, (_, i) => (
+                          <div
+                            key={i}
+                            className="w-full flex-1 bg-center"
+                            style={{
+                              backgroundImage: `url('${activeAssets.bg[i % activeAssets.bg.length]}')`,
+                              backgroundSize: activeAssets.bgStretch ? '100% 100%' : '100% auto',
+                              backgroundRepeat: activeAssets.bgStretch ? 'no-repeat' : 'repeat',
+                              backgroundPosition: 'center',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
 
-                {isLoading && (
-                  <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
-                    <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-                    <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
+                    {openMenuId && (
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setOpenMenuId(null)}
+                      />
+                    )}
+
+                    {activeAssets.type === 'rows' && activeAssets.rowAsset && (
+                      <div className="absolute inset-0 w-full h-full">
+                        {Array.from({ length: activeAssets.rowCount }, (_, i) => (
+                          <div
+                            key={i}
+                            className={`absolute left-0 w-full ${activeAssets.rowPadding ? '' : (activeAssets.padding || 'px-12')}`}
+                            style={{
+                              top: `${newTopOffset + (i * newSpacing) - (activeShelfStyle === 'customize2' && i !== activeAssets.rowCount - 1 ? 3.5 : 0)}%`,
+                              padding: activeAssets.rowPadding || undefined
+                            }}
+                          >
+                            <div className="relative w-full">
+                              {!(activeShelfStyle === 'customize2' && i === activeAssets.rowCount - 1) && (
+                                <img src={activeAssets.rowAsset} alt="Shelf" className="w-full h-auto drop-shadow-lg" />
+                              )}
+                              {activeAssets.rowShadow && (
+                                <img src={activeAssets.rowShadow} alt="Shelf Shadow" className="w-full h-auto -mt-[1%] opacity-90 drop-shadow-md" />
+                              )}
+                              {/* Books Container */}
+                              {!activeAssets.hideBooks && (
+                                <div
+                                  className={`absolute inset-x-0 flex items-end ${activeAssets.justify || 'justify-between'}`}
+                                  style={activeAssets.bookStyle || { bottom: '15%', padding: '0 5%' }}
+                                >
+                                  {(() => {
+                                    const booksPerRow = activeShelfStyle === 'customize4' ? 4 : 6;
+                                    const rowBooks = filteredBooks.slice(i * booksPerRow, (i + 1) * booksPerRow) || [];
+                                    const paddedBooks = [...rowBooks, ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)];
+
+                                    return paddedBooks.map((book, bIdx) => {
+                                      const bookIndex = i * booksPerRow + bIdx;
+                                      if (!book) {
+                                        return (
+                                          <div
+                                            key={`fs-empty-${i}-${bIdx}`}
+                                            onDragOver={handleDragOver}
+                                            onDrop={(e) => handleDrop(e, bookIndex)}
+                                            className={`relative flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'}`}
+                                            style={{ width: activeAssets.bookWidth || '12%' }}
+                                          >
+                                            {activeShelfStyle === 'customize4' ? (
+                                              <div
+                                                onClick={() => {
+                                                  setSelectedBookIdsToAdd([]);
+                                                  setAddBookSearch('');
+                                                  setShowAddBookModal(true);
+                                                }}
+                                                className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px]"
+                                                title="Add Book"
+                                              >
+                                                <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                  <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                                  <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">+</span>
+                                                </div>
+                                                <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                                  Add Book
+                                                </span>
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      }
+
+                                      const targetShareId = book.shareId || book.v_id;
+                                      const rawAcc = String(book.access || 'public').toLowerCase();
+
+                                      return (
+                                        <div
+                                          key={book.v_id || `fs-book-${bIdx}`}
+                                          draggable
+                                          onDragStart={(e) => handleDragStart(e, bookIndex)}
+                                          onDragOver={handleDragOver}
+                                          onDrop={(e) => handleDrop(e, bookIndex)}
+                                          onDragEnd={handleDragEnd}
+                                          className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `fs-${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
+                                          style={{ width: activeAssets.bookWidth || '12%' }}
+                                        >
+                                          <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
+                                            <LazyPreview
+                                              v_id={book.v_id}
+                                              emailId={book.rawBook?.userEmail || currentUserEmail}
+                                              backendUrl={backendUrl}
+                                              iframeBaseUrl=""
+                                              title={book.title}
+                                              imageUrl={null}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeAssets.type === 'green_shelf' && (
+                      <GreenShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        selectedWallTheme={selectedWallTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeAssets.type === 'green_light_shelf' && (
+                      <GreenLightShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        selectedWallTheme={selectedWallTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeAssets.type === 'light_shelf' && (
+                      <LightShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        selectedLightTheme={selectedLightTheme}
+                        selectedWallTheme={selectedWallTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeAssets.type === 'plant_light_shelf' && (
+                      <PlantLightShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        selectedLightTheme={selectedLightTheme}
+                        selectedWallTheme={selectedWallTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeShelfStyle === 'customize_bluerope' && (
+                      <BlueRopeShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeShelfStyle === 'customize_windowshelf' && (
+                      <WindowShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        defaultLightType={defaultLightType}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeShelfStyle === 'customize_orange' && (
+                      <OrangeShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        selectedLightTheme={selectedLightTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {activeShelfStyle === 'customize_golden' && (
+                      <GoldenShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+
+                    {activeShelfStyle === 'customize4' && (
+                      <BlueShelf
+                        filteredBooks={filteredBooks}
+                        decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
+                        lightOpacity={lightOpacity}
+                        selectedLightTheme={selectedLightTheme}
+                        selectedWallTheme={selectedWallTheme}
+                        openMenuId={openMenuId}
+                        setOpenMenuId={setOpenMenuId}
+                        hoveredInfoId={hoveredInfoId}
+                        setHoveredInfoId={setHoveredInfoId}
+                        draggedBookIndex={draggedBookIndex}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDrop={handleDrop}
+                        handleDragEnd={handleDragEnd}
+                        handleRemoveBook={handleRemoveBook}
+                        setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                        setAddBookSearch={setAddBookSearch}
+                        setShowAddBookModal={setShowAddBookModal}
+                        LazyPreview={LazyPreview}
+                        backendUrl={backendUrl}
+                        currentUserEmail={currentUserEmail}
+                      />
+                    )}
+
+                    {shelfLogo && (
+                      <div
+                        className="absolute z-30 pointer-events-none"
+                        style={{
+                          top: activeShelfStyle === 'customize_bluerope'
+                            ? '3.5%'
+                            : activeShelfStyle === 'customize_windowshelf'
+                              ? '6.2%'
+                              : activeShelfStyle === 'customize_golden'
+                              ? '6.2%'
+                              : activeShelfStyle === 'customize_greenlight'
+                                ? '6.2%'
+                                : activeShelfStyle === 'customize_plantlight'
+                                  ? '6.2%'
+                                  : activeShelfStyle === 'customize_light'
+                                    ? '6.2%'
+                                    : activeShelfStyle === 'customize_green'
+                                      ? '6.0%'
+                                      : '6.2%',
+                          left: activeShelfStyle === 'customize_windowshelf'
+                            ? '16.5%'
+                            : activeShelfStyle === 'customize_bluerope'
+                              ? '13.8%'
+                              : activeShelfStyle === 'customize_golden'
+                                ? '5.8%'
+                                : activeShelfStyle === 'customize_greenlight'
+                                  ? '8.5%'
+                                  : activeShelfStyle === 'customize4'
+                                    ? '12.5%'
+                                    : activeShelfStyle === 'customize_plantlight'
+                                      ? '5.0%'
+                                      : activeShelfStyle === 'customize_light'
+                                        ? '1.8%'
+                                        : activeShelfStyle === 'customize_green'
+                                          ? '1.8%'
+                                          : '6.2%',
+                          width: '8%',
+                          aspectRatio: '1.8/1',
+                          opacity: (logoOpacity ?? 80) / 100
+                        }}
+                      >
+                        <img
+                          src={shelfLogo.url}
+                          alt="Shelf Logo"
+                          className="w-full h-full block rounded-md"
+                          style={{
+                            objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                ) : null}
 
+                <div
+                  className="w-full aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
+                  style={{
+                    backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
+                    backgroundSize: '100% 100%',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                  }}
+                >
+                  {/* In-shelf Fullscreen Toggle Button (Always visible on shelf top-right) */}
+                  <button
+                    type="button"
+                    onClick={toggleShelfFullscreen}
+                    className="absolute top-3.5 right-3.5 z-40 bg-black/50 hover:bg-black/75 text-white p-2 rounded-lg backdrop-blur-md transition-all shadow-md group cursor-pointer"
+                    title="Fullscreen Shelf"
+                  >
+                    <Icon
+                      icon="lucide:maximize-2"
+                      className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                  {isLoading && (
+                    <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
+                      <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
+                      <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
+                    </div>
+                  )}
                   {/* If bg is an array, map over it to render wall blocks */}
                   {Array.isArray(activeAssets.bg) && (
                     <div className="absolute inset-0 flex flex-col rounded-xl overflow-hidden pointer-events-none">
@@ -1373,13 +1690,13 @@ const MyShelf = () => {
                       ))}
                     </div>
                   )}
-
                   {openMenuId && (
                     <div
                       className="fixed inset-0 z-20"
                       onClick={() => setOpenMenuId(null)}
                     />
                   )}
+
 
                   {activeAssets.type === 'rows' && activeAssets.rowAsset && (
                     <div className="absolute inset-0 w-full h-full">
@@ -1405,73 +1722,194 @@ const MyShelf = () => {
                                 className={`absolute inset-x-0 flex items-end ${activeAssets.justify || 'justify-between'}`}
                                 style={activeAssets.bookStyle || { bottom: '15%', padding: '0 5%' }}
                               >
-                              {(() => {
-                                const booksPerRow = activeShelfStyle === 'customize4' ? 4 : 6;
-                                const rowBooks = filteredBooks.slice(i * booksPerRow, (i + 1) * booksPerRow) || [];
-                                const paddedBooks = [...rowBooks, ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)];
-                                
-                                return paddedBooks.map((book, bIdx) => {
-                                  const bookIndex = i * booksPerRow + bIdx;
-                                  if (!book) {
+                                {(() => {
+                                  const booksPerRow = activeShelfStyle === 'customize4' ? 4 : 6;
+                                  const rowBooks = filteredBooks.slice(i * booksPerRow, (i + 1) * booksPerRow) || [];
+                                  const paddedBooks = [...rowBooks, ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)];
+
+                                  return paddedBooks.map((book, bIdx) => {
+                                    const bookIndex = i * booksPerRow + bIdx;
+                                    if (!book) {
+                                      return (
+                                        <div
+                                          key={`empty-${i}-${bIdx}`}
+                                          onDragOver={handleDragOver}
+                                          onDrop={(e) => handleDrop(e, bookIndex)}
+                                          className={`relative flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'}`}
+                                          style={{ width: activeAssets.bookWidth || '12%' }}
+                                        >
+                                          {activeShelfStyle === 'customize4' ? (
+                                            <div
+                                              onClick={() => {
+                                                setSelectedBookIdsToAdd([]);
+                                                setAddBookSearch('');
+                                                setShowAddBookModal(true);
+                                              }}
+                                              className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px]"
+                                              title="Add Book"
+                                            >
+                                              <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                                                <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                                                  +
+                                                </span>
+                                              </div>
+                                              <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                                                Add Book
+                                              </span>
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    }
+
+                                    const emailFolder = book.rawBook?.userEmail ? book.rawBook.userEmail.replace(/[@.]/g, "_") : '';
+                                    const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
+                                    const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
+                                    const basePath = '';
+
                                     return (
                                       <div
-                                        key={`fs-empty-${i}-${bIdx}`}
+                                        key={book.v_id || bIdx}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, bookIndex)}
                                         onDragOver={handleDragOver}
                                         onDrop={(e) => handleDrop(e, bookIndex)}
-                                        className={`relative flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'}`}
+                                        onDragEnd={handleDragEnd}
+                                        className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
                                         style={{ width: activeAssets.bookWidth || '12%' }}
                                       >
-                                        {activeShelfStyle === 'customize4' ? (
-                                          <div
-                                            onClick={() => {
-                                              setSelectedBookIdsToAdd([]);
-                                              setAddBookSearch('');
-                                              setShowAddBookModal(true);
-                                            }}
-                                            className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px]"
-                                            title="Add Book"
+                                        <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
+                                          <LazyPreview
+                                            v_id={book.v_id}
+                                            emailId={book.rawBook?.userEmail || currentUserEmail}
+                                            backendUrl={backendUrl}
+                                            iframeBaseUrl={basePath}
+                                            title={book.title}
+                                            imageUrl={null}
+                                          />
+                                        </div>
+
+                                        {/* Hover Menu Pill */}
+                                        <div className="absolute top-[2%] right-[0vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto">
+                                          <button
+                                            onClick={() => setOpenMenuId(openMenuId === `${i}-${bIdx}` ? null : `${i}-${bIdx}`)}
+                                            className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
                                           >
-                                            <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                              <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
-                                              <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">+</span>
+                                            <Icon icon="mdi:dots-vertical" className="text-[14px]" />
+                                          </button>
+                                          <div
+                                            className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
+                                            onMouseEnter={() => setHoveredInfoId(`${i}-${bIdx}`)}
+                                            onMouseLeave={() => setHoveredInfoId(null)}
+                                          >
+                                            <Icon icon="si:info-fill" className="w-4 h-4" />
+
+                                            {/* Info Tooltip Bridge & Container */}
+                                            <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `${i}-${bIdx}` ? 'block' : 'hidden'} z-[60]`}>
+                                              <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
+                                                {/* Author Info */}
+                                                <div className="flex items-center gap-2">
+                                                  {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                                                    <img
+                                                      src={book.authorPicture}
+                                                      alt={book.authorName}
+                                                      className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
+                                                    />
+                                                  ) : (
+                                                    <div
+                                                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
+                                                      style={{ backgroundColor: book.authorBgColor }}
+                                                    >
+                                                      {(book.authorName || 'U').charAt(0).toUpperCase()}
+                                                    </div>
+                                                  )}
+                                                  <div className="flex flex-col min-w-0 pr-1">
+                                                    <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                                                    <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
+                                                      <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                                      <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                                                    </span>
+                                                  </div>
+                                                </div>
+
+                                                {/* Stats */}
+                                                <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-black font-semibold">{book.pages || 0}</span>
+                                                    <span className="font-normal text-gray-500">Pages</span>
+                                                  </div>
+                                                  <span className="text-gray-300">|</span>
+                                                  <span className="flex items-center gap-1">
+                                                    <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                                                    {book.views || '1.2k'}
+                                                  </span>
+                                                  <span className="text-gray-300">|</span>
+                                                  <span className="flex items-center gap-1">
+                                                    <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
+                                                    {book.rating || 4.5}
+                                                  </span>
+                                                </div>
+
+                                                {/* Title & Desc & Button */}
+                                                <div className="relative">
+                                                  <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                                                  <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+
+                                                  {/* Action Button */}
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const targetShareId = book.shareId || book.v_id;
+                                                      const rawAcc = String(book.access || 'public').toLowerCase();
+                                                      if (targetShareId) {
+                                                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                                      }
+                                                    }}
+                                                    className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
+                                                  >
+                                                    <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
+                                                  </button>
+                                                </div>
+                                              </div>
                                             </div>
-                                            <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
-                                              Add Book
-                                            </span>
                                           </div>
-                                        ) : null}
+                                        </div>
+
+
+                                        {openMenuId === `${i}-${bIdx}` && (
+                                          <div className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const targetShareId = book.shareId || book.v_id;
+                                                const rawAcc = String(book.access || 'public').toLowerCase();
+                                                if (targetShareId) {
+                                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                                }
+                                                setOpenMenuId(null);
+                                              }}
+                                              className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
+                                            >
+                                              Open Book
+                                            </button>
+
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveBook(book.v_id);
+                                                setOpenMenuId(null);
+                                              }}
+                                              className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                              Remove Book
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     );
-                                  }
-
-                                  const targetShareId = book.shareId || book.v_id;
-                                  const rawAcc = String(book.access || 'public').toLowerCase();
-
-                                  return (
-                                    <div
-                                      key={book.v_id || `fs-book-${bIdx}`}
-                                      draggable
-                                      onDragStart={(e) => handleDragStart(e, bookIndex)}
-                                      onDragOver={handleDragOver}
-                                      onDrop={(e) => handleDrop(e, bookIndex)}
-                                      onDragEnd={handleDragEnd}
-                                      className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `fs-${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                                      style={{ width: activeAssets.bookWidth || '12%' }}
-                                    >
-                                      <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                        <LazyPreview
-                                          v_id={book.v_id}
-                                          emailId={book.rawBook?.userEmail || currentUserEmail}
-                                          backendUrl={backendUrl}
-                                          iframeBaseUrl=""
-                                          title={book.title}
-                                          imageUrl={null}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                });
-                              })()}
+                                  });
+                                })()}
                               </div>
                             )}
                           </div>
@@ -1479,11 +1917,14 @@ const MyShelf = () => {
                       ))}
                     </div>
                   )}
-
+                  {/* Green Shelf Custom Layout matching Screenshot 3 */}
                   {activeAssets.type === 'green_shelf' && (
                     <GreenShelf
                       filteredBooks={filteredBooks}
                       decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      lightOpacity={lightOpacity}
                       selectedLightTheme={selectedLightTheme}
                       selectedWallTheme={selectedWallTheme}
                       openMenuId={openMenuId}
@@ -1505,6 +1946,7 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Green-Light Shelf Layout matching Screenshot 2 */}
                   {activeAssets.type === 'green_light_shelf' && (
                     <GreenLightShelf
                       filteredBooks={filteredBooks}
@@ -1531,10 +1973,13 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Light Shelf Layout matching Screenshot 2 */}
                   {activeAssets.type === 'light_shelf' && (
                     <LightShelf
                       filteredBooks={filteredBooks}
                       decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
                       selectedLightTheme={selectedLightTheme}
                       selectedWallTheme={selectedWallTheme}
                       openMenuId={openMenuId}
@@ -1556,6 +2001,7 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Plant-Light Shelf Layout matching Screenshot 2 */}
                   {activeAssets.type === 'plant_light_shelf' && (
                     <PlantLightShelf
                       filteredBooks={filteredBooks}
@@ -1581,51 +2027,24 @@ const MyShelf = () => {
                     />
                   )}
 
-                  {activeShelfStyle === 'customize4' && (
-                    <div
-                      className="absolute left-0 w-full pointer-events-none z-10"
-                      style={{ bottom: '-22%' }}
-                    >
-                      <div className="relative w-full">
-                        <img
-                          src={bluedecor}
-                          alt="Shelf Credenza"
-                          className="w-full h-auto block object-cover drop-shadow-md"
-                        />
-                        {decors.lamp && (
-                          <div
-                            className="absolute pointer-events-none z-20 transition-all duration-300"
-                            style={{
-                              left: '5.2%',
-                              bottom: '50%',
-                              width: '9.2%'
-                            }}
-                          >
-                            <img
-                              src={blueLamp}
-                              alt="Desk Lamp"
-                              className="w-full h-auto block drop-shadow-md relative z-20"
-                            />
-                          </div>
-                        )}
-                        <div
-                          className="absolute pointer-events-none z-15 transition-all duration-300"
-                          style={{
-                            left: '14.8%',
-                            bottom: '50%',
-                            width: '84%',
-                          }}
-                        >
-                          <img
-                            src={blueBookWithPot}
-                            alt="Shelf Decor"
-                            className="w-full h-auto block object-contain drop-shadow-md"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
+                  {/* Bottom Decors for Green Shelf (customize_green): lamp on bottom-left, decor on right */}
+                  {/* Green Shelf decors moved into GreenShelf component */}
+
+
+                  {/* Bottom Decors for Green-Light Shelf (customize_greenlight): lamp in left side, plant in right side matching Screenshot 2 */}
+                  {/* Green-Light decors moved into GreenLightShelf component */}
+
+
+                  {/* Bottom Decors for Light Shelf (customize_light): lamp bottom-left, plantpot bottom-right matching Screenshot 2 */}
+                  {/* Light Shelf decors moved into LightShelf component */}
+
+
+                  {/* Bottom Decors for Plant-Light Shelf (customize_plantlight): base at bottom, leaf on bottom-left, lamp on bottom-right matching Screenshot 2 */}
+                  {/* Plant-Light decors moved into PlantLightShelf component */}
+
+
+                  {/* Blue Rope Shelf (customize_bluerope): modular component */}
                   {activeShelfStyle === 'customize_bluerope' && (
                     <BlueRopeShelf
                       filteredBooks={filteredBooks}
@@ -1653,6 +2072,7 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Window Shelf (customize_windowshelf): modular component */}
                   {activeShelfStyle === 'customize_windowshelf' && (
                     <WindowShelf
                       filteredBooks={filteredBooks}
@@ -1681,6 +2101,7 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Orange Shelf (customize_orange): modular component */}
                   {activeShelfStyle === 'customize_orange' && (
                     <OrangeShelf
                       filteredBooks={filteredBooks}
@@ -1707,6 +2128,7 @@ const MyShelf = () => {
                     />
                   )}
 
+                  {/* Golden Shelf (customize_golden): modular component */}
                   {activeShelfStyle === 'customize_golden' && (
                     <GoldenShelf
                       filteredBooks={filteredBooks}
@@ -1734,1698 +2156,1140 @@ const MyShelf = () => {
                     />
                   )}
 
-                  {shelfLogo && (
-                    <div
-                      className="absolute z-30 pointer-events-none"
-                      style={{
-                        top: activeShelfStyle === 'customize_windowshelf'
-                          ? '6.2%'
-                          : activeShelfStyle === 'customize_golden'
-                          ? '6.2%'
-                          : activeShelfStyle === 'customize_greenlight'
-                          ? '6.2%'
-                          : activeShelfStyle === 'customize_plantlight'
-                          ? '6.2%'
-                          : activeShelfStyle === 'customize_light'
-                          ? '6.2%'
-                          : activeShelfStyle === 'customize_green'
-                          ? '6.0%'
-                          : '6.2%',
-                        left: activeShelfStyle === 'customize_windowshelf'
-                          ? '16.5%'
-                          : activeShelfStyle === 'customize_golden'
-                          ? '5.8%'
-                          : activeShelfStyle === 'customize_greenlight'
-                          ? '8.5%'
-                          : activeShelfStyle === 'customize4'
-                          ? '12.5%'
-                          : activeShelfStyle === 'customize_plantlight'
-                          ? '5.0%'
-                          : activeShelfStyle === 'customize_light'
-                          ? '1.8%'
-                          : activeShelfStyle === 'customize_green'
-                          ? '1.8%'
-                          : '6.2%',
-                        width: '8%',
-                        aspectRatio: '1.8/1',
-                        opacity: (logoOpacity ?? 80) / 100
-                      }}
-                    >
-                      <img
-                        src={shelfLogo.url}
-                        alt="Shelf Logo"
-                        className="w-full h-full block rounded-md"
-                        style={{
-                          objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
-                        }}
-                      />
-                    </div>
-                  )}
-              </div>
-            ) : null}
 
-            <div
-              className="w-full aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
-              style={{
-                backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
-                backgroundSize: '100% 100%',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-              }}
-            >
-              {/* In-shelf Fullscreen Toggle Button (Always visible on shelf top-right) */}
-              <button
-                type="button"
-                onClick={toggleShelfFullscreen}
-                className="absolute top-3.5 right-3.5 z-40 bg-black/50 hover:bg-black/75 text-white p-2 rounded-lg backdrop-blur-md transition-all shadow-md group cursor-pointer"
-                title="Fullscreen Shelf"
-              >
-                <Icon
-                  icon="lucide:maximize-2"
-                  className="w-4 h-4 text-white/90 group-hover:text-white group-hover:scale-110 transition-transform"
-                />
-              </button>
-              {isLoading && (
-                <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
-                  <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-                  <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
-                </div>
-              )}
-                {/* If bg is an array, map over it to render wall blocks */}
-                {Array.isArray(activeAssets.bg) && (
-                  <div className="absolute inset-0 flex flex-col rounded-xl overflow-hidden pointer-events-none">
-                    {Array.from({ length: activeAssets.rowCount }, (_, i) => (
+                  {/* Blue Shelf (customize4): modular component */}
+                  {activeShelfStyle === 'customize4' && (
+                    <BlueShelf
+                      filteredBooks={filteredBooks}
+                      decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
+                      lightOpacity={lightOpacity}
+                      selectedLightTheme={selectedLightTheme}
+                      selectedWallTheme={selectedWallTheme}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      hoveredInfoId={hoveredInfoId}
+                      setHoveredInfoId={setHoveredInfoId}
+                      draggedBookIndex={draggedBookIndex}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDrop={handleDrop}
+                      handleDragEnd={handleDragEnd}
+                      handleRemoveBook={handleRemoveBook}
+                      setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
+                      setAddBookSearch={setAddBookSearch}
+                      setShowAddBookModal={setShowAddBookModal}
+                      LazyPreview={LazyPreview}
+                      backendUrl={backendUrl}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  )}
+
+                  {/* Shelf Logo predefined box with light shadow on left wall */}
+                  <div
+                    className="absolute z-15 transition-all duration-300 group"
+                    style={{
+                      top: activeShelfStyle === 'customize_bluerope'
+                        ? '3.5%'
+                        : activeShelfStyle === 'customize_plantlight'
+                          ? '2.8%'
+                        : activeShelfStyle === 'customize_light'
+                          ? '3.8%'
+                          : activeShelfStyle === 'customize_greenlight'
+                            ? '5.8%'
+                            : activeShelfStyle === 'customize_green'
+                              ? '6.0%'
+                              : '6.2%',
+                      left: activeShelfStyle === 'customize_windowshelf'
+                        ? '16.5%'
+                        : activeShelfStyle === 'customize_bluerope'
+                          ? '14.2%'
+                          : activeShelfStyle === 'customize_golden'
+                            ? '5.8%'
+                            : activeShelfStyle === 'customize_greenlight'
+                              ? '8.5%'
+                              : activeShelfStyle === 'customize4'
+                                ? '12.5%'
+                                : activeShelfStyle === 'customize_green'
+                                  ? '12.0%'
+                                  : '8.8%',
+                      width: '11.2%',
+                      aspectRatio: '16 / 9'
+                    }}
+                  >
+                    {shelfLogo?.url ? (
                       <div
-                        key={i}
-                        className="w-full flex-1 bg-center"
+                        className="w-full h-full flex items-center justify-center overflow-hidden transition-all duration-200"
                         style={{
-                          backgroundImage: `url('${activeAssets.bg[i % activeAssets.bg.length]}')`,
-                          backgroundSize: activeAssets.bgStretch ? '100% 100%' : '100% auto',
-                          backgroundRepeat: activeAssets.bgStretch ? 'no-repeat' : 'repeat',
-                          backgroundPosition: 'center',
+                          opacity: (logoOpacity ?? 100) / 100
                         }}
-                      />
-                    ))}
+                      >
+                        <img
+                          src={shelfLogo.url}
+                          alt="Shelf Logo"
+                          className="w-full h-full block rounded-md"
+                          style={{
+                            objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => setShowLogoModal(true)}
+                        className="w-full h-full rounded-lg border border-dashed border-white/40 hover:border-white/80 bg-white/10 hover:bg-white/20 backdrop-blur-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 group-hover:scale-[1.02]"
+                        title="Add Logo"
+                      >
+                        <Icon icon="lucide:image-plus" className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+                        <span className="text-[10px] font-medium text-white/80 group-hover:text-white transition-colors">
+                          Add Logo
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                </div>
+
+                {/* Shelf Styles Carousel / Pagination */}
+                <div className="mt-2.5 mb-1 flex flex-col gap-1.5">
+                  {(() => {
+                    const allStyles = [
+                      { id: 'customize4', img: blueshade, title: 'Pumps Shelf', bookCount: 8 },
+                      { id: 'customize_green', img: greenshade, title: 'Green Shelf', bookCount: 8 },
+                      { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf', bookCount: 8 },
+                      { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf', bookCount: 8 },
+                      { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf', bookCount: 8 },
+                      { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf', bookCount: 4 },
+                      { id: 'customize_windowshelf', img: windowShelfImg, title: 'Window Shelf', bookCount: 2 },
+                      { id: 'customize_orange', img: orangeShelfImg, title: 'Orange Shelf', bookCount: 2 },
+                      { id: 'customize_golden', img: goldenShelfImg, title: 'Golden Shelf', bookCount: 4 },
+                    ];
+
+                    const filteredStyles = selectedBookCountFilter === 'All'
+                      ? allStyles
+                      : allStyles.filter(s => String(s.bookCount) === selectedBookCountFilter);
+
+                    const itemsPerPage = 5;
+                    const totalPages = Math.max(1, Math.ceil(filteredStyles.length / itemsPerPage));
+                    const currentPage = Math.min(shelfStylesPage, totalPages);
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const visibleStyles = filteredStyles.slice(startIndex, startIndex + itemsPerPage);
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
+                            {/* Pill Tabs: All, 8 Books, 4 Books, 2 Books */}
+                            <div className="inline-flex items-center bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
+                              {[
+                                { id: 'All', label: 'All' },
+                                { id: '8', label: '8 Books' },
+                                { id: '4', label: '4 Books' },
+                                { id: '2', label: '2 Books' }
+                              ].map(tab => (
+                                <button
+                                  key={tab.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBookCountFilter(tab.id);
+                                    setShelfStylesPage(1);
+                                  }}
+                                  className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full transition-all duration-150 cursor-pointer ${selectedBookCountFilter === tab.id
+                                      ? 'bg-[#FF5733] text-white shadow-xs'
+                                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                                    }`}
+                                >
+                                  {tab.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-[11px] font-semibold">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                              <button
+                                key={page}
+                                onClick={() => setShelfStylesPage(page)}
+                                className={`w-4 h-4 rounded flex items-center justify-center transition-all ${currentPage === page
+                                  ? 'bg-[#FF5733] text-white shadow-sm'
+                                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                                  }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Thumbnail Strip */}
+                        <div className="relative flex items-center gap-2">
+                          <button
+                            onClick={() => setShelfStylesPage(prev => (prev > 1 ? prev - 1 : totalPages))}
+                            className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                          >
+                            <Icon icon="lucide:chevron-left" className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="grid grid-cols-5 gap-2 flex-1">
+                            {visibleStyles.map((styleItem) => {
+                              const isSelected = activeShelfStyle === styleItem.id;
+                              return (
+                                <div
+                                  key={styleItem.id}
+                                  onClick={() => {
+                                    setActiveShelfStyle(styleItem.id);
+                                    setSelectedWallTheme(null);
+                                  }}
+                                  className={`group cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-[16/9.5] max-h-[72px] bg-gray-100 relative shadow-xs ${isSelected ? 'border-[#FF5733] ring-1 ring-orange-200' : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <img
+                                    src={styleItem.img}
+                                    alt={styleItem.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <button
+                            onClick={() => setShelfStylesPage(prev => (prev < totalPages ? prev + 1 : 1))}
+                            className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                          >
+                            <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            ) : (
+              /* List View Column */
+              <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pr-2 pb-4">
+                {openDropdown && (
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setOpenDropdown(null)}
+                  />
                 )}
+                <div className="flex gap-4 mb-4 relative z-20">
+                  <div className="relative flex-1 max-w-xs">
+                    <svg className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" placeholder="Search Flipbook..." className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none" />
+                  </div>
+
+                  {/* Flipbook Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenDropdown(openDropdown === 'flipbooks' ? null : 'flipbooks')}
+                      className="flex items-center justify-between w-40 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
+                    >
+                      <span className="text-[#5B738B]">{selectedFolder === 'add_shelf' ? 'Add Shelf' : selectedFolder}</span>
+                      <Icon icon={openDropdown === 'flipbooks' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA]" />
+                    </button>
+
+                    {openDropdown === 'flipbooks' && (
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
+                        {folders.map(folder => (
+                          <div
+                            key={folder.name}
+                            className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedFolder === folder.name ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                            onClick={() => {
+                              handleFlipbookSelect({ target: { value: folder.name } });
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            {folder.name}
+                          </div>
+                        ))}
+                        <div
+                          className={`px-4 py-2 text-sm cursor-pointer border-t border-gray-100 hover:bg-gray-50 transition-colors ${selectedFolder === 'add_shelf' ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                          onClick={() => {
+                            handleFlipbookSelect({ target: { value: 'add_shelf' } });
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          + Add Shelf
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+                      className="flex items-center justify-between w-48 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
+                    >
+                      <span className="text-[#5B738B] truncate mr-2 text-left w-full">{selectedStatus}</span>
+                      <Icon icon={openDropdown === 'status' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA] shrink-0" />
+                    </button>
+
+                    {openDropdown === 'status' && (
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
+                        {['All Status', 'Published - Public', 'Published - Private', 'Unpublished - Public', 'Unpublished - Private'].map((status) => (
+                          <div
+                            key={status}
+                            className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedStatus === status ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                            onClick={() => {
+                              setSelectedStatus(status);
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            {status}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {openMenuId && (
                   <div
                     className="fixed inset-0 z-20"
                     onClick={() => setOpenMenuId(null)}
                   />
                 )}
-
-
-                {activeAssets.type === 'rows' && activeAssets.rowAsset && (
-                  <div className="absolute inset-0 w-full h-full">
-                    {Array.from({ length: activeAssets.rowCount }, (_, i) => (
-                      <div
-                        key={i}
-                        className={`absolute left-0 w-full ${activeAssets.rowPadding ? '' : (activeAssets.padding || 'px-12')}`}
-                        style={{
-                          top: `${newTopOffset + (i * newSpacing) - (activeShelfStyle === 'customize2' && i !== activeAssets.rowCount - 1 ? 3.5 : 0)}%`,
-                          padding: activeAssets.rowPadding || undefined
-                        }}
-                      >
-                        <div className="relative w-full">
-                          {!(activeShelfStyle === 'customize2' && i === activeAssets.rowCount - 1) && (
-                            <img src={activeAssets.rowAsset} alt="Shelf" className="w-full h-auto drop-shadow-lg" />
-                          )}
-                          {activeAssets.rowShadow && (
-                            <img src={activeAssets.rowShadow} alt="Shelf Shadow" className="w-full h-auto -mt-[1%] opacity-90 drop-shadow-md" />
-                          )}
-                          {/* Books Container */}
-                          {!activeAssets.hideBooks && (
-                            <div
-                              className={`absolute inset-x-0 flex items-end ${activeAssets.justify || 'justify-between'}`}
-                              style={activeAssets.bookStyle || { bottom: '15%', padding: '0 5%' }}
-                            >
-                            {(() => {
-                              const booksPerRow = activeShelfStyle === 'customize4' ? 4 : 6;
-                              const rowBooks = filteredBooks.slice(i * booksPerRow, (i + 1) * booksPerRow) || [];
-                              const paddedBooks = [...rowBooks, ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)];
-                              
-                              return paddedBooks.map((book, bIdx) => {
-                                const bookIndex = i * booksPerRow + bIdx;
-                                if (!book) {
-                                  return (
-                                    <div
-                                      key={`empty-${i}-${bIdx}`}
-                                      onDragOver={handleDragOver}
-                                      onDrop={(e) => handleDrop(e, bookIndex)}
-                                      className={`relative flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'}`}
-                                      style={{ width: activeAssets.bookWidth || '12%' }}
-                                    >
-                                      {activeShelfStyle === 'customize4' ? (
-                                        <div
-                                          onClick={() => {
-                                            setSelectedBookIdsToAdd([]);
-                                            setAddBookSearch('');
-                                            setShowAddBookModal(true);
-                                          }}
-                                          className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px]"
-                                          title="Add Book"
-                                        >
-                                          <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                            <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
-                                            <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
-                                              +
-                                            </span>
-                                          </div>
-                                          <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
-                                            Add Book
-                                          </span>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  );
-                                }
-
-                                const emailFolder = book.rawBook?.userEmail ? book.rawBook.userEmail.replace(/[@.]/g, "_") : '';
-                                const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
-                                const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
-                                const basePath = '';
-
-                                return (
-                                  <div
-                                    key={book.v_id || bIdx}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, bookIndex)}
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, bookIndex)}
-                                    onDragEnd={handleDragEnd}
-                                    className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                                    style={{ width: activeAssets.bookWidth || '12%' }}
-                                  >
-                                    <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                      <LazyPreview
-                                        v_id={book.v_id}
-                                        emailId={book.rawBook?.userEmail || currentUserEmail}
-                                        backendUrl={backendUrl}
-                                        iframeBaseUrl={basePath}
-                                        title={book.title}
-                                        imageUrl={null}
-                                      />
-                                    </div>
-
-                                {/* Hover Menu Pill */}
-                                <div className="absolute top-[2%] right-[0vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto">
-                                  <button
-                                    onClick={() => setOpenMenuId(openMenuId === `${i}-${bIdx}` ? null : `${i}-${bIdx}`)}
-                                    className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                                  >
-                                    <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                                  </button>
-                                  <div
-                                    className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                                    onMouseEnter={() => setHoveredInfoId(`${i}-${bIdx}`)}
-                                    onMouseLeave={() => setHoveredInfoId(null)}
-                                  >
-                                    <Icon icon="si:info-fill" className="w-4 h-4" />
-
-                                    {/* Info Tooltip Bridge & Container */}
-                                    <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `${i}-${bIdx}` ? 'block' : 'hidden'} z-[60]`}>
-                                      <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                                        {/* Author Info */}
-                                        <div className="flex items-center gap-2">
-                                          {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                                            <img
-                                              src={book.authorPicture}
-                                              alt={book.authorName}
-                                              className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                                            />
-                                          ) : (
-                                            <div
-                                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                                              style={{ backgroundColor: book.authorBgColor }}
-                                            >
-                                              {(book.authorName || 'U').charAt(0).toUpperCase()}
-                                            </div>
-                                          )}
-                                          <div className="flex flex-col min-w-0 pr-1">
-                                            <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                                            <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                                              <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                              <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        {/* Stats */}
-                                        <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-black font-semibold">{book.pages || 0}</span>
-                                            <span className="font-normal text-gray-500">Pages</span>
-                                          </div>
-                                          <span className="text-gray-300">|</span>
-                                          <span className="flex items-center gap-1">
-                                            <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                                            {book.views || '1.2k'}
-                                          </span>
-                                          <span className="text-gray-300">|</span>
-                                          <span className="flex items-center gap-1">
-                                            <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                                            {book.rating || 4.5}
-                                          </span>
-                                        </div>
-
-                                        {/* Title & Desc & Button */}
-                                        <div className="relative">
-                                          <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                                          <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-
-                                          {/* Action Button */}
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const targetShareId = book.shareId || book.v_id;
-                                              const rawAcc = String(book.access || 'public').toLowerCase();
-                                              if (targetShareId) {
-                                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                              }
-                                            }}
-                                            className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                                          >
-                                            <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                                  
-                                {openMenuId === `${i}-${bIdx}` && (
-                                  <div className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const targetShareId = book.shareId || book.v_id;
-                                        const rawAcc = String(book.access || 'public').toLowerCase();
-                                        if (targetShareId) {
-                                          window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                        }
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                                    >
-                                      Open Book
-                                    </button>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveBook(book.v_id);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                    >
-                                      Remove Book
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          });
-                        })()}
-                          </div>
-                        )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {isLoading ? (
+                    <div className="col-span-full py-20 flex justify-center items-center">
+                      <div className="flex flex-col items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100">
+                        <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
+                        <span className="text-sm font-semibold text-gray-700">Loading Flipbooks...</span>
                       </div>
                     </div>
-                  ))}
-              </div>
-            )}
-                {/* Green Shelf Custom Layout matching Screenshot 3 */}
-{activeAssets.type === 'green_shelf' && (
-                  <GreenShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    selectedLightTheme={selectedLightTheme}
-                    selectedWallTheme={selectedWallTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Green-Light Shelf Layout matching Screenshot 2 */}
-{activeAssets.type === 'green_light_shelf' && (
-                  <GreenLightShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    lightOpacity={lightOpacity}
-                    selectedLightTheme={selectedLightTheme}
-                    selectedWallTheme={selectedWallTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Light Shelf Layout matching Screenshot 2 */}
-{activeAssets.type === 'light_shelf' && (
-                  <LightShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    selectedLightTheme={selectedLightTheme}
-                    selectedWallTheme={selectedWallTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Plant-Light Shelf Layout matching Screenshot 2 */}
-{activeAssets.type === 'plant_light_shelf' && (
-                  <PlantLightShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    selectedLightTheme={selectedLightTheme}
-                    selectedWallTheme={selectedWallTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-
-                {/* Bottom Decors for Blue Shelf (customize4) */}
-                {activeShelfStyle === 'customize4' && (
-                  <div
-                    className="absolute left-0 w-full pointer-events-none z-10"
-                    style={{ bottom: '-22%' }}
-                  >
-                    {/* The Credenza base (bluedecor.webp) lowered to the bottom of the wall */}
-                    <div className="relative w-full">
-                      <img
-                        src={bluedecor}
-                        alt="Shelf Credenza"
-                        className="w-full h-auto block object-cover drop-shadow-md"
-                      />
-
-                      {/* Decors on Credenza: 1st Lamp (left), followed by Decor right beside it */}
-                      {/* 1. Lamp.png on the left with Theme Light Effect */}
-                      {decors.lamp && (
-                        <div
-                          className="absolute pointer-events-none z-20 transition-all duration-300"
-                          style={{
-                            left: '5.2%',
-                            bottom: '50%',
-                            width: '9.2%'
-                          }}
-                        >
-                          {/* Natural Vivid Lamp Light Effects */}
-                          {decors.lights && (
-                            <>
-                              {/* 1. Ambient wall wash behind the lamp */}
-                              <div
-                                className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 z-0"
-                                style={{
-                                  left: '50%',
-                                  top: '28%',
-                                  width: '340%',
-                                  height: '340%',
-                                  background: selectedLightTheme === 'light1'
-                                    ? 'radial-gradient(circle, rgba(251, 191, 36, 0.42) 0%, rgba(245, 158, 11, 0.20) 35%, rgba(217, 119, 6, 0.05) 60%, transparent 80%)'
-                                    : selectedLightTheme === 'light2'
-                                    ? 'radial-gradient(circle, rgba(255, 255, 255, 0.50) 0%, rgba(248, 250, 252, 0.24) 35%, rgba(226, 232, 240, 0.05) 60%, transparent 80%)'
-                                    : 'radial-gradient(circle, rgba(186, 230, 253, 0.42) 0%, rgba(147, 197, 253, 0.18) 35%, rgba(191, 219, 254, 0.05) 60%, transparent 80%)',
-                                  filter: 'blur(22px)',
-                                  mixBlendMode: 'screen'
-                                }}
-                              />
-
-                              {/* 2. Downward pool of light on the wooden credenza tabletop */}
-                              <div
-                                className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300 z-0"
-                                style={{
-                                  left: '50%',
-                                  top: '32%',
-                                  width: '320%',
-                                  height: '160%',
-                                  background: selectedLightTheme === 'light1'
-                                    ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(254, 240, 138, 0.65) 0%, rgba(251, 191, 36, 0.32) 40%, transparent 75%)'
-                                    : selectedLightTheme === 'light2'
-                                    ? 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.35) 40%, transparent 75%)'
-                                    : 'radial-gradient(ellipse 65% 45% at 50% 10%, rgba(240, 249, 255, 0.70) 0%, rgba(186, 230, 253, 0.32) 40%, rgba(147, 197, 253, 0.08) 65%, transparent 80%)',
-                                  filter: 'blur(12px)',
-                                  mixBlendMode: 'screen'
-                                }}
-                              />
-
-                              {/* 3. Lampshade color transformation layer (ensures Blue is visibly vibrant on the dome) */}
-                              <div
-                                className="absolute pointer-events-none transition-all duration-300 z-25"
-                                style={{
-                                  left: '7%',
-                                  top: '4%',
-                                  width: '86%',
-                                  height: '35%',
-                                  borderRadius: '50% 50% 16% 16% / 78% 78% 22% 22%',
-                                  background: selectedLightTheme === 'light1'
-                                    ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 251, 235, 0.95) 0%, rgba(251, 191, 36, 0.70) 50%, rgba(217, 119, 6, 0.30) 85%, transparent 100%)'
-                                    : selectedLightTheme === 'light2'
-                                    ? 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.80) 50%, rgba(203, 213, 225, 0.30) 85%, transparent 100%)'
-                                    : 'radial-gradient(ellipse 75% 65% at 50% 60%, rgba(240, 249, 255, 0.98) 0%, rgba(186, 230, 253, 0.65) 50%, rgba(147, 197, 253, 0.22) 85%, transparent 100%)',
-                                  mixBlendMode: 'screen',
-                                  filter: 'blur(3px)'
-                                }}
-                              />
-
-                              {/* 4. Color tint on the shade surface for unmistakable theme differentiation */}
-                              {selectedLightTheme === 'light3' && (
-                                <div
-                                  className="absolute pointer-events-none transition-all duration-300 z-26"
-                                  style={{
-                                    left: '8%',
-                                    top: '5%',
-                                    width: '84%',
-                                    height: '33%',
-                                    borderRadius: '50% 50% 16% 16% / 78% 78% 22% 22%',
-                                    background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.32) 0%, rgba(186, 230, 253, 0.18) 100%)',
-                                    mixBlendMode: 'color'
-                                  }}
-                                />
-                              )}
-                            </>
-                          )}
-
-                          <img
-                            src={blueLamp}
-                            alt="Desk Lamp"
-                            className="w-full h-auto block drop-shadow-md relative z-20 transition-all duration-300"
-                            style={{
-                              filter: decors.lights
-                                ? (selectedLightTheme === 'light1'
-                                    ? 'brightness(1.06) contrast(1.02)'
-                                    : selectedLightTheme === 'light2'
-                                    ? 'brightness(1.15) contrast(1.02)'
-                                    : 'brightness(1.04) contrast(1.02)')
-                                : 'none'
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* 2. bookwithpot.png placed right beside the lamp */}
-                      <div
-                        className="absolute pointer-events-none z-15 transition-all duration-300"
-                        style={{
-                          left: '14.8%',
-                          bottom: '50%',
-                          width: '84%',
-                        }}
-                      >
-                        <img
-                          src={blueBookWithPot}
-                          alt="Shelf Decor"
-                          className="w-full h-auto block object-contain drop-shadow-md"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Bottom Decors for Green Shelf (customize_green): lamp on bottom-left, decor on right */}
-{/* Green Shelf decors moved into GreenShelf component */}
-
-
-                {/* Bottom Decors for Green-Light Shelf (customize_greenlight): lamp in left side, plant in right side matching Screenshot 2 */}
-{/* Green-Light decors moved into GreenLightShelf component */}
-
-
-                {/* Bottom Decors for Light Shelf (customize_light): lamp bottom-left, plantpot bottom-right matching Screenshot 2 */}
-{/* Light Shelf decors moved into LightShelf component */}
-
-
-                {/* Bottom Decors for Plant-Light Shelf (customize_plantlight): base at bottom, leaf on bottom-left, lamp on bottom-right matching Screenshot 2 */}
-{/* Plant-Light decors moved into PlantLightShelf component */}
-
-
-                {/* Blue Rope Shelf (customize_bluerope): modular component */}
-                {activeShelfStyle === 'customize_bluerope' && (
-                  <BlueRopeShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    setDecors={setDecors}
-                    showLightSwitch={showLightSwitch}
-                    lightOpacity={lightOpacity}
-                    selectedLightTheme={selectedLightTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Window Shelf (customize_windowshelf): modular component */}
-                {activeShelfStyle === 'customize_windowshelf' && (
-                  <WindowShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    setDecors={setDecors}
-                    showLightSwitch={showLightSwitch}
-                    defaultLightType={defaultLightType}
-                    lightOpacity={lightOpacity}
-                    selectedLightTheme={selectedLightTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Orange Shelf (customize_orange): modular component */}
-                {activeShelfStyle === 'customize_orange' && (
-                  <OrangeShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    setDecors={setDecors}
-                    showLightSwitch={showLightSwitch}
-                    selectedLightTheme={selectedLightTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Golden Shelf (customize_golden): modular component */}
-                {activeShelfStyle === 'customize_golden' && (
-                  <GoldenShelf
-                    filteredBooks={filteredBooks}
-                    decors={decors}
-                    setDecors={setDecors}
-                    showLightSwitch={showLightSwitch}
-                    lightOpacity={lightOpacity}
-                    selectedLightTheme={selectedLightTheme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    hoveredInfoId={hoveredInfoId}
-                    setHoveredInfoId={setHoveredInfoId}
-                    draggedBookIndex={draggedBookIndex}
-                    handleDragStart={handleDragStart}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    handleDragEnd={handleDragEnd}
-                    handleRemoveBook={handleRemoveBook}
-                    setSelectedBookIdsToAdd={setSelectedBookIdsToAdd}
-                    setAddBookSearch={setAddBookSearch}
-                    setShowAddBookModal={setShowAddBookModal}
-                    LazyPreview={LazyPreview}
-                    backendUrl={backendUrl}
-                    currentUserEmail={currentUserEmail}
-                  />
-                )}
-
-                {/* Shelf Logo predefined box with light shadow on left wall */}
-                <div
-                  className="absolute z-15 transition-all duration-300 group"
-                  style={{
-                    top: activeShelfStyle === 'customize_plantlight'
-                      ? '2.8%'
-                      : activeShelfStyle === 'customize_light'
-                      ? '3.8%'
-                      : activeShelfStyle === 'customize_greenlight'
-                      ? '5.8%'
-                      : activeShelfStyle === 'customize_green'
-                      ? '6.0%'
-                      : '6.2%',
-                    left: activeShelfStyle === 'customize_windowshelf'
-                      ? '16.5%'
-                      : activeShelfStyle === 'customize_golden'
-                      ? '5.8%'
-                      : activeShelfStyle === 'customize_greenlight'
-                      ? '8.5%'
-                      : activeShelfStyle === 'customize4'
-                      ? '12.5%'
-                      : activeShelfStyle === 'customize_green'
-                      ? '12.0%'
-                      : '8.8%',
-                    width: '11.2%',
-                    aspectRatio: '16 / 9'
-                  }}
-                >
-                  {shelfLogo?.url ? (
-                    <div
-                      className="w-full h-full flex items-center justify-center overflow-hidden transition-all duration-200"
-                      style={{
-                        opacity: (logoOpacity ?? 100) / 100
-                      }}
-                    >
-                      <img
-                        src={shelfLogo.url}
-                        alt="Shelf Logo"
-                        className="w-full h-full block rounded-md"
-                        style={{
-                          objectFit: logoFixType === 'Fill' ? 'fill' : 'contain'
-                        }}
-                      />
-                    </div>
+                  ) : filteredBooks.length === 0 ? (
+                    <div className="col-span-full py-10 flex justify-center text-gray-500">No flipbooks found.</div>
                   ) : (
-                    <div
-                      onClick={() => setShowLogoModal(true)}
-                      className="w-full h-full rounded-lg border border-dashed border-white/40 hover:border-white/80 bg-white/10 hover:bg-white/20 backdrop-blur-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 group-hover:scale-[1.02]"
-                      title="Add Logo"
-                    >
-                      <Icon icon="lucide:image-plus" className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
-                      <span className="text-[10px] font-medium text-white/80 group-hover:text-white transition-colors">
-                        Add Logo
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    filteredBooks.map((book, idx) => (
+                      <div key={book.v_id || idx} className="bg-white rounded-2xl overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-transparent hover:border-gray-100">
+                        {/* Image Area Wrapper */}
+                        <div className="relative w-full aspect-square bg-[#e2b58d] overflow-hidden">
+                          <img src={book.cover || listFrame} alt={book.title || "Flipbook"} className="w-full h-full object-cover" />
 
-            </div>
-
-            {/* Shelf Styles Carousel / Pagination */}
-            <div className="mt-2.5 mb-1 flex flex-col gap-1.5">
-              {(() => {
-                const allStyles = [
-                  { id: 'customize4', img: blueshade, title: 'Pumps Shelf', bookCount: 8 },
-                  { id: 'customize_green', img: greenshade, title: 'Green Shelf', bookCount: 8 },
-                  { id: 'customize_light', img: lightShelfImg, title: 'Light Shelf', bookCount: 8 },
-                  { id: 'customize_plantlight', img: plantLightShelfImg, title: 'Plant-Light Shelf', bookCount: 8 },
-                  { id: 'customize_greenlight', img: greenLightShelfImg, title: 'Green-Light Shelf', bookCount: 8 },
-                  { id: 'customize_bluerope', img: blueRopeShelfImg, title: 'Blue Rope Shelf', bookCount: 4 },
-                  { id: 'customize_windowshelf', img: windowShelfImg, title: 'Window Shelf', bookCount: 2 },
-                  { id: 'customize_orange', img: orangeShelfImg, title: 'Orange Shelf', bookCount: 2 },
-                  { id: 'customize_golden', img: goldenShelfImg, title: 'Golden Shelf', bookCount: 4 },
-                ];
-
-                const filteredStyles = selectedBookCountFilter === 'All'
-                  ? allStyles
-                  : allStyles.filter(s => String(s.bookCount) === selectedBookCountFilter);
-
-                const itemsPerPage = 5;
-                const totalPages = Math.max(1, Math.ceil(filteredStyles.length / itemsPerPage));
-                const currentPage = Math.min(shelfStylesPage, totalPages);
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const visibleStyles = filteredStyles.slice(startIndex, startIndex + itemsPerPage);
-
-                return (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
-                        {/* Pill Tabs: All, 8 Books, 4 Books, 2 Books */}
-                        <div className="inline-flex items-center bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
-                          {[
-                            { id: 'All', label: 'All' },
-                            { id: '8', label: '8 Books' },
-                            { id: '4', label: '4 Books' },
-                            { id: '2', label: '2 Books' }
-                          ].map(tab => (
-                            <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedBookCountFilter(tab.id);
-                                setShelfStylesPage(1);
-                              }}
-                              className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full transition-all duration-150 cursor-pointer ${
-                                selectedBookCountFilter === tab.id
-                                  ? 'bg-[#FF5733] text-white shadow-xs'
-                                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
-                              }`}
-                            >
-                              {tab.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 text-[11px] font-semibold">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                           <button
-                            key={page}
-                            onClick={() => setShelfStylesPage(page)}
-                            className={`w-4 h-4 rounded flex items-center justify-center transition-all ${currentPage === page
-                              ? 'bg-[#FF5733] text-white shadow-sm'
-                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                              }`}
+                            onClick={() => setOpenMenuId(openMenuId === book.v_id ? null : book.v_id)}
+                            className="absolute top-3 right-3 text-white hover:text-gray-200 bg-black/20 rounded-md p-0.5 transition-colors z-30"
                           >
-                            {page}
+                            <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
                           </button>
-                        ))}
-                      </div>
-                    </div>
 
-                    {/* Thumbnail Strip */}
-                    <div className="relative flex items-center gap-2">
-                      <button
-                        onClick={() => setShelfStylesPage(prev => (prev > 1 ? prev - 1 : totalPages))}
-                        className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
-                      >
-                        <Icon icon="lucide:chevron-left" className="w-3.5 h-3.5" />
-                      </button>
+                          {openMenuId === book.v_id && (
+                            <div className="absolute top-[2.5vw] right-[0.8vw] bg-white rounded-[0.5vw] shadow-xl border border-gray-100 py-[0.5vw] w-[9vw] z-40 overflow-hidden">
+                              <button
+                                onClick={() => {
+                                  const targetShareId = book.shareId || book.v_id;
+                                  const rawAcc = String(book.access || 'public').toLowerCase();
+                                  if (targetShareId) {
+                                    window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                  }
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 flex items-center gap-[0.5vw] transition-colors"
+                              >
+                                <Icon icon="mdi:book-open-outline" className="w-[1vw] h-[1vw] text-gray-400" />
+                                Open Book
+                              </button>
 
-                      <div className="grid grid-cols-5 gap-2 flex-1">
-                        {visibleStyles.map((styleItem) => {
-                          const isSelected = activeShelfStyle === styleItem.id;
-                          return (
-                            <div
-                              key={styleItem.id}
-                              onClick={() => {
-                                setActiveShelfStyle(styleItem.id);
-                                setSelectedWallTheme(null);
-                              }}
-                              className={`group cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-[16/9.5] max-h-[72px] bg-gray-100 relative shadow-xs ${isSelected ? 'border-[#FF5733] ring-1 ring-orange-200' : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                            >
-                              <img
-                                src={styleItem.img}
-                                alt={styleItem.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                              />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveBook(book.v_id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-[0.5vw] transition-colors"
+                              >
+                                <Icon icon="mdi:trash-can-outline" className="w-[1vw] h-[1vw] text-red-400" />
+                                Remove Book
+                              </button>
                             </div>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        onClick={() => setShelfStylesPage(prev => (prev < totalPages ? prev + 1 : 1))}
-                        className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
-                      >
-                        <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        ) : (
-          /* List View Column */
-          <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pr-2 pb-4">
-            {openDropdown && (
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setOpenDropdown(null)}
-              />
-            )}
-            <div className="flex gap-4 mb-4 relative z-20">
-              <div className="relative flex-1 max-w-xs">
-                <svg className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" placeholder="Search Flipbook..." className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none" />
-              </div>
-
-              {/* Flipbook Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setOpenDropdown(openDropdown === 'flipbooks' ? null : 'flipbooks')}
-                  className="flex items-center justify-between w-40 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
-                >
-                  <span className="text-[#5B738B]">{selectedFolder === 'add_shelf' ? 'Add Shelf' : selectedFolder}</span>
-                  <Icon icon={openDropdown === 'flipbooks' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA]" />
-                </button>
-
-                {openDropdown === 'flipbooks' && (
-                  <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
-                    {folders.map(folder => (
-                      <div
-                        key={folder.name}
-                        className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedFolder === folder.name ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
-                        onClick={() => {
-                          handleFlipbookSelect({ target: { value: folder.name } });
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        {folder.name}
-                      </div>
-                    ))}
-                    <div
-                      className={`px-4 py-2 text-sm cursor-pointer border-t border-gray-100 hover:bg-gray-50 transition-colors ${selectedFolder === 'add_shelf' ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
-                      onClick={() => {
-                        handleFlipbookSelect({ target: { value: 'add_shelf' } });
-                        setOpenDropdown(null);
-                      }}
-                    >
-                      + Add Shelf
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
-                  className="flex items-center justify-between w-48 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
-                >
-                  <span className="text-[#5B738B] truncate mr-2 text-left w-full">{selectedStatus}</span>
-                  <Icon icon={openDropdown === 'status' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA] shrink-0" />
-                </button>
-
-                {openDropdown === 'status' && (
-                  <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
-                    {['All Status', 'Published - Public', 'Published - Private', 'Unpublished - Public', 'Unpublished - Private'].map((status) => (
-                      <div
-                        key={status}
-                        className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedStatus === status ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
-                        onClick={() => {
-                          setSelectedStatus(status);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        {status}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {openMenuId && (
-              <div
-                className="fixed inset-0 z-20"
-                onClick={() => setOpenMenuId(null)}
-              />
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {isLoading ? (
-                <div className="col-span-full py-20 flex justify-center items-center">
-                  <div className="flex flex-col items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100">
-                    <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-                    <span className="text-sm font-semibold text-gray-700">Loading Flipbooks...</span>
-                  </div>
-                </div>
-              ) : filteredBooks.length === 0 ? (
-                <div className="col-span-full py-10 flex justify-center text-gray-500">No flipbooks found.</div>
-              ) : (
-                filteredBooks.map((book, idx) => (
-                  <div key={book.v_id || idx} className="bg-white rounded-2xl overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-transparent hover:border-gray-100">
-                    {/* Image Area Wrapper */}
-                    <div className="relative w-full aspect-square bg-[#e2b58d] overflow-hidden">
-                      <img src={book.cover || listFrame} alt={book.title || "Flipbook"} className="w-full h-full object-cover" />
-
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === book.v_id ? null : book.v_id)}
-                        className="absolute top-3 right-3 text-white hover:text-gray-200 bg-black/20 rounded-md p-0.5 transition-colors z-30"
-                      >
-                        <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
-                      </button>
-
-                      {openMenuId === book.v_id && (
-                        <div className="absolute top-[2.5vw] right-[0.8vw] bg-white rounded-[0.5vw] shadow-xl border border-gray-100 py-[0.5vw] w-[9vw] z-40 overflow-hidden">
-                          <button
-                            onClick={() => {
-                              const targetShareId = book.shareId || book.v_id;
-                              const rawAcc = String(book.access || 'public').toLowerCase();
-                              if (targetShareId) {
-                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                              }
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 flex items-center gap-[0.5vw] transition-colors"
-                          >
-                            <Icon icon="mdi:book-open-outline" className="w-[1vw] h-[1vw] text-gray-400" />
-                            Open Book
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveBook(book.v_id);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-[0.5vw] transition-colors"
-                          >
-                            <Icon icon="mdi:trash-can-outline" className="w-[1vw] h-[1vw] text-red-400" />
-                            Remove Book
-                          </button>
+                          )}
                         </div>
-                      )}
+
+                        {/* Card Details */}
+                        <div className="p-4 flex flex-col flex-1 bg-white">
+                          {/* Author Info */}
+                          <div className="flex items-center gap-3">
+                            {book.authorPicture && book.authorPicture !== 'color_only' ? (
+                              <img
+                                src={book.authorPicture}
+                                alt={book.authorName}
+                                className="w-9 h-9 rounded-full border border-gray-200 object-cover shrink-0"
+                              />
+                            ) : (
+                              <div
+                                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-inner"
+                                style={{ backgroundColor: book.authorBgColor }}
+                              >
+                                {(book.authorName || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex flex-col min-w-0 pr-1">
+                              <span className="text-sm font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                              <span className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5 truncate">
+                                <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                                <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="flex items-center gap-2 justify-start text-xs text-gray-700 font-medium mt-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <span className="text-black font-semibold">{book.pages || 0}</span>
+                              <span className="font-normal text-gray-500">Pages</span>
+                            </div>
+                            <span className="text-gray-300">|</span>
+                            <span className="flex items-center gap-1">
+                              <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
+                              {book.views || '1.2k'}
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="flex items-center gap-1">
+                              <Icon icon="material-symbols:star" className="w-4 h-4 text-yellow-400" />
+                              {book.rating || 4.5}
+                            </span>
+                          </div>
+
+                          {/* Title & Desc & Button */}
+                          <div className="relative flex-1 mt-3">
+                            <h4 className="text-[15px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
+                            <p className="text-[12px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+
+                            {/* Action Button */}
+                            <button
+                              onClick={() => {
+                                const targetShareId = book.shareId || book.v_id;
+                                const rawAcc = String(book.access || 'public').toLowerCase();
+                                if (targetShareId) {
+                                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
+                                }
+                              }}
+                              className="absolute bottom-0 right-0 bg-black text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
+                            >
+                              <Icon icon="mdi:arrow-top-right" className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )))}
+                </div>
+              </div>
+            )}
+
+            {/* Sidebar matching Screenshot */}
+            {view === 'shelf' ? (
+              <div className="w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-gray-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+                {/* Header: Customize your shelf with icon */}
+                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+                  <div className="w-5 h-5 flex items-center justify-center text-red-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF5733]">
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <path d="M3 9h18" />
+                      <path d="M3 15h18" />
+                      <path d="M9 3v18" />
+                    </svg>
+                  </div>
+                  <h3 className="text-[14px] font-bold text-gray-900 tracking-tight">
+                    Customize your shelf
+                  </h3>
+                </div>
+
+                <div className="flex flex-col gap-5 p-5 overflow-y-auto max-h-[72vh]">
+                  {/* Add Logo Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3.5">
+                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Add Logo</span>
+                      <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
 
-                    {/* Card Details */}
-                    <div className="p-4 flex flex-col flex-1 bg-white">
-                      {/* Author Info */}
-                      <div className="flex items-center gap-3">
-                        {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                          <img
-                            src={book.authorPicture}
-                            alt={book.authorName}
-                            className="w-9 h-9 rounded-full border border-gray-200 object-cover shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-inner"
-                            style={{ backgroundColor: book.authorBgColor }}
-                          >
-                            {(book.authorName || 'U').charAt(0).toUpperCase()}
+                    {/* Hidden File Input */}
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+
+                    {!shelfLogo ? (
+                      /* Initial Add Logo Box (as seen in BrandingPanel & FlipbookInfoModal) */
+                      <div
+                        onClick={() => setShowLogoModal(true)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file && file.type.startsWith('image/')) {
+                            handleLogoFile(file);
+                          }
+                        }}
+                        className="w-full h-24 border-2 border-dashed border-gray-300 rounded-xl bg-white hover:bg-gray-50/70 hover:border-[#FF5733]/60 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all group shadow-2xs"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-orange-50 text-[#FF5733] flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Icon icon="lucide:plus" className="w-4 h-4" strokeWidth={2.5} />
+                        </div>
+                        <span className="text-[13px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
+                          + Add Logo
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          PNG, JPG, SVG up to 10MB
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Logo fix type dropdown with custom polished UI */}
+                        <div className="flex items-center justify-between gap-2 mb-3 relative z-30">
+                          <span className="text-[12px] text-gray-700 font-medium">Logo fix type :</span>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowLogoFixDropdown(!showLogoFixDropdown)}
+                              className="flex items-center justify-between gap-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-[12px] font-semibold rounded-lg px-3 py-1.5 min-w-[90px] shadow-xs transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-400"
+                            >
+                              <span>{logoFixType === 'Fill' ? 'Fill' : 'Fit'}</span>
+                              <Icon
+                                icon="lucide:chevron-down"
+                                className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${showLogoFixDropdown ? 'rotate-180 text-orange-500' : ''}`}
+                              />
+                            </button>
+
+                            {/* Custom Dropdown Menu */}
+                            {showLogoFixDropdown && (
+                              <div className="absolute right-0 top-full mt-1.5 w-28 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+                                {[
+                                  { label: 'Fit', desc: 'Proportional inside box' },
+                                  { label: 'Fill', desc: 'Stretch to edges' }
+                                ].map((opt) => (
+                                  <button
+                                    key={opt.label}
+                                    type="button"
+                                    onClick={() => {
+                                      setLogoFixType(opt.label);
+                                      setShowLogoFixDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between transition-colors cursor-pointer ${logoFixType === opt.label
+                                        ? 'bg-orange-50 text-[#FF5733] font-bold'
+                                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                                      }`}
+                                  >
+                                    <span>{opt.label}</span>
+                                    {logoFixType === opt.label && (
+                                      <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#FF5733]" />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="flex flex-col min-w-0 pr-1">
-                          <span className="text-sm font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                          <span className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5 truncate">
-                            <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
+                        </div>
+
+                        {/* Logo Image Preview Card */}
+                        <div className="flex items-center gap-3 mb-3.5">
+                          <div className="relative w-28 h-16 rounded-lg border border-gray-200 bg-white flex items-center justify-center p-2 shadow-xs overflow-hidden">
+                            <img
+                              src={shelfLogo.url}
+                              alt={shelfLogo.name}
+                              className="w-full h-full transition-opacity duration-150"
+                              style={{
+                                objectFit: logoFixType === 'Fill' ? 'fill' : 'contain',
+                                opacity: (logoOpacity ?? 100) / 100
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowLogoModal(true)}
+                              title="Replace image"
+                              className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 bg-white/80 backdrop-blur-xs p-0.5 rounded transition-colors cursor-pointer"
+                            >
+                              <Icon icon="lucide:sliders-horizontal" className="w-3 h-3 text-gray-600" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="text-[12px] font-semibold text-gray-800 truncate" title={shelfLogo.name}>
+                              {shelfLogo.name}
+                            </span>
+                            <span className="text-[10px] text-gray-400 mb-2">
+                              {shelfLogo.dimensions} &nbsp;•&nbsp; {shelfLogo.size}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setShowLogoModal(true)}
+                                className="px-2.5 py-1 text-[11px] font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors cursor-pointer shadow-2xs"
+                              >
+                                Replace Image
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleRemoveLogo}
+                                title="Delete image"
+                                className="p-1 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Icon icon="lucide:trash-2" className="w-3.5 h-3.5 text-gray-500 hover:text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Opacity Slider */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-[12px] text-gray-700 font-medium">Opacity :</span>
+                          <div className="relative flex-1 flex items-center">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={logoOpacity}
+                              onChange={(e) => setLogoOpacity(Number(e.target.value))}
+                              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF5733]"
+                              style={{
+                                background: `linear-gradient(to right, #FF5733 0%, #FF5733 ${logoOpacity}%, #E5E7EB ${logoOpacity}%, #E5E7EB 100%)`
+                              }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-semibold text-gray-700 min-w-[32px] text-right">
+                            {logoOpacity} %
                           </span>
                         </div>
-                      </div>
+                      </>
+                    )}
+                  </div>
 
-                      {/* Stats */}
-                      <div className="flex items-center gap-2 justify-start text-xs text-gray-700 font-medium mt-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span className="text-black font-semibold">{book.pages || 0}</span>
-                          <span className="font-normal text-gray-500">Pages</span>
-                        </div>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                          {book.views || '1.2k'}
-                        </span>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="material-symbols:star" className="w-4 h-4 text-yellow-400" />
-                          {book.rating || 4.5}
-                        </span>
-                      </div>
-
-                      {/* Title & Desc & Button */}
-                      <div className="relative flex-1 mt-3">
-                        <h4 className="text-[15px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                        <p className="text-[12px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-
-                        {/* Action Button */}
-                        <button
-                          onClick={() => {
-                            const targetShareId = book.shareId || book.v_id;
-                            const rawAcc = String(book.access || 'public').toLowerCase();
-                            if (targetShareId) {
-                              window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                            }
-                          }}
-                          className="absolute bottom-0 right-0 bg-black text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                        >
-                          <Icon icon="mdi:arrow-top-right" className="w-5 h-5" />
-                        </button>
-                      </div>
+                  {/* Wall Themes Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3.5">
+                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Wall Themes</span>
+                      <div className="flex-1 h-px bg-gray-100"></div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2.5">
+                      {wallThemeList.map((wt) => {
+                        const isSelected = selectedWallTheme === wt.img;
+                        return (
+                          <button
+                            key={wt.id}
+                            type="button"
+                            onClick={() => setSelectedWallTheme(wt.img)}
+                            className={`aspect-square rounded-xl overflow-hidden transition-all duration-150 p-0 flex items-center justify-center cursor-pointer border ${isSelected
+                                ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
+                                : 'border-transparent hover:border-gray-200'
+                              }`}
+                          >
+                            <img
+                              src={wt.img}
+                              alt="Wall theme"
+                              className="w-full h-full object-cover rounded-[10px]"
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )))}
-            </div>
-          </div>
-        )}
 
-        {/* Sidebar matching Screenshot */}
-        {view === 'shelf' ? (
-          <div className="w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-gray-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
-            {/* Header: Customize your shelf with icon */}
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
-              <div className="w-5 h-5 flex items-center justify-center text-red-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF5733]">
-                  <rect width="18" height="18" x="3" y="3" rx="2" />
-                  <path d="M3 9h18" />
-                  <path d="M3 15h18" />
-                  <path d="M9 3v18" />
-                </svg>
-              </div>
-              <h3 className="text-[14px] font-bold text-gray-900 tracking-tight">
-                Customize your shelf
-              </h3>
-            </div>
-
-            <div className="flex flex-col gap-5 p-5 overflow-y-auto max-h-[72vh]">
-              {/* Add Logo Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-3.5">
-                  <span className="text-[13px] font-bold text-gray-900 tracking-tight">Add Logo</span>
-                  <div className="flex-1 h-px bg-gray-100"></div>
-                </div>
-
-                {/* Hidden File Input */}
-                <input
-                  type="file"
-                  ref={logoInputRef}
-                  accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
-                  className="hidden"
-                  onChange={handleLogoUpload}
-                />
-
-                {!shelfLogo ? (
-                  /* Initial Add Logo Box (as seen in BrandingPanel & FlipbookInfoModal) */
-                  <div
-                    onClick={() => setShowLogoModal(true)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const file = e.dataTransfer.files?.[0];
-                      if (file && file.type.startsWith('image/')) {
-                        handleLogoFile(file);
-                      }
-                    }}
-                    className="w-full h-24 border-2 border-dashed border-gray-300 rounded-xl bg-white hover:bg-gray-50/70 hover:border-[#FF5733]/60 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all group shadow-2xs"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-orange-50 text-[#FF5733] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Icon icon="lucide:plus" className="w-4 h-4" strokeWidth={2.5} />
+                  {/* Light Theme Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3.5">
+                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Light Theme</span>
+                      <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
-                    <span className="text-[13px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
-                      + Add Logo
-                    </span>
-                    <span className="text-[10px] text-gray-400">
-                      PNG, JPG, SVG up to 10MB
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    {/* Logo fix type dropdown with custom polished UI */}
-                    <div className="flex items-center justify-between gap-2 mb-3 relative z-30">
-                      <span className="text-[12px] text-gray-700 font-medium">Logo fix type :</span>
+
+                    {/* Default Light Type Row with Custom Dropdown UI */}
+                    <div className="flex items-center justify-between mb-3 relative">
+                      <span className="text-[12px] text-gray-700 font-medium">Default Light type</span>
+                      <div className="flex-1 mx-2 border-b border-dotted border-gray-300"></div>
                       <div className="relative">
                         <button
                           type="button"
-                          onClick={() => setShowLogoFixDropdown(!showLogoFixDropdown)}
-                          className="flex items-center justify-between gap-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-[12px] font-semibold rounded-lg px-3 py-1.5 min-w-[90px] shadow-xs transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-400"
+                          onClick={() => setOpenDropdown(openDropdown === 'default_light' ? null : 'default_light')}
+                          className="flex items-center justify-between gap-2 bg-white border border-gray-200 text-gray-700 text-[12px] font-medium rounded-lg px-2.5 py-1 focus:outline-none hover:border-gray-300 transition-colors shadow-2xs cursor-pointer min-w-[96px]"
                         >
-                          <span>{logoFixType === 'Fill' ? 'Fill' : 'Fit'}</span>
+                          <span>{defaultLightType}</span>
                           <Icon
                             icon="lucide:chevron-down"
-                            className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${showLogoFixDropdown ? 'rotate-180 text-orange-500' : ''}`}
+                            className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${openDropdown === 'default_light' ? 'rotate-180' : ''
+                              }`}
                           />
                         </button>
 
                         {/* Custom Dropdown Menu */}
-                        {showLogoFixDropdown && (
-                          <div className="absolute right-0 top-full mt-1.5 w-28 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
-                            {[
-                              { label: 'Fit', desc: 'Proportional inside box' },
-                              { label: 'Fill', desc: 'Stretch to edges' }
-                            ].map((opt) => (
-                              <button
-                                key={opt.label}
-                                type="button"
-                                onClick={() => {
-                                  setLogoFixType(opt.label);
-                                  setShowLogoFixDropdown(false);
-                                }}
-                                className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between transition-colors cursor-pointer ${
-                                  logoFixType === opt.label
-                                    ? 'bg-orange-50 text-[#FF5733] font-bold'
-                                    : 'text-gray-700 hover:bg-gray-50 font-medium'
-                                }`}
-                              >
-                                <span>{opt.label}</span>
-                                {logoFixType === opt.label && (
-                                  <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#FF5733]" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
+                        {openDropdown === 'default_light' && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-40"
+                              onClick={() => setOpenDropdown(null)}
+                            />
+                            <div className="absolute right-0 top-full mt-1.5 w-28 bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1 z-50 overflow-hidden text-[12px]">
+                              {['Turn on', 'Turn off'].map((option) => {
+                                const isSelected = defaultLightType === option;
+                                return (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    onClick={() => {
+                                      setDefaultLightType(option);
+                                      setDecors(prev => ({ ...prev, lights: option === 'Turn on' }));
+                                      setOpenDropdown(null);
+                                    }}
+                                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between transition-colors cursor-pointer ${isSelected
+                                        ? 'bg-orange-50/70 text-[#FF5733] font-semibold'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                      }`}
+                                  >
+                                    <span>{option}</span>
+                                    {isSelected && (
+                                      <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#FF5733]" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
 
-                    {/* Logo Image Preview Card */}
-                    <div className="flex items-center gap-3 mb-3.5">
-                      <div className="relative w-28 h-16 rounded-lg border border-gray-200 bg-white flex items-center justify-center p-2 shadow-xs overflow-hidden">
-                        <img
-                          src={shelfLogo.url}
-                          alt={shelfLogo.name}
-                          className="w-full h-full transition-opacity duration-150"
-                          style={{
-                            objectFit: logoFixType === 'Fill' ? 'fill' : 'contain',
-                            opacity: (logoOpacity ?? 100) / 100
-                          }}
+                    {/* On / Off Light switch Row */}
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[12px] text-gray-700 font-medium">On / Off Light switch</span>
+                      <div className="flex-1 mx-2 border-b border-dotted border-gray-300"></div>
+                      <button
+                        type="button"
+                        onClick={() => setShowLightSwitch(prev => !prev)}
+                        className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${showLightSwitch ? 'bg-[#FF5733]' : 'bg-gray-200'
+                          }`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${showLightSwitch ? 'translate-x-4' : 'translate-x-0'
+                            }`}
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowLogoModal(true)}
-                          title="Replace image"
-                          className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 bg-white/80 backdrop-blur-xs p-0.5 rounded transition-colors cursor-pointer"
-                        >
-                          <Icon icon="lucide:sliders-horizontal" className="w-3 h-3 text-gray-600" />
-                        </button>
-                      </div>
-
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-[12px] font-semibold text-gray-800 truncate" title={shelfLogo.name}>
-                          {shelfLogo.name}
-                        </span>
-                        <span className="text-[10px] text-gray-400 mb-2">
-                          {shelfLogo.dimensions} &nbsp;•&nbsp; {shelfLogo.size}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setShowLogoModal(true)}
-                            className="px-2.5 py-1 text-[11px] font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors cursor-pointer shadow-2xs"
-                          >
-                            Replace Image
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleRemoveLogo}
-                            title="Delete image"
-                            className="p-1 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors cursor-pointer shadow-2xs"
-                          >
-                            <Icon icon="lucide:trash-2" className="w-3.5 h-3.5 text-gray-500 hover:text-red-500" />
-                          </button>
-                        </div>
-                      </div>
+                      </button>
                     </div>
 
-                    {/* Opacity Slider */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-[12px] text-gray-700 font-medium">Opacity :</span>
+                    {/* Light Theme Cards */}
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {lightThemeList.map((lt) => {
+                        const isSelected = selectedLightTheme === lt.id;
+                        return (
+                          <button
+                            key={lt.id}
+                            type="button"
+                            onClick={() => setSelectedLightTheme(lt.id)}
+                            className={`aspect-[4/3] rounded-xl overflow-hidden transition-all duration-150 p-0 flex items-center justify-center cursor-pointer border ${isSelected
+                                ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
+                                : 'border-transparent hover:border-gray-200'
+                              }`}
+                          >
+                            <img
+                              src={lt.img}
+                              alt="Light theme"
+                              className="w-full h-full object-cover rounded-[10px]"
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Light Opacity Slider */}
+                    <div className="flex items-center gap-3 mt-3">
+                      <span className="text-[12px] text-gray-700 font-medium">Light Opacity :</span>
                       <div className="relative flex-1 flex items-center">
                         <input
                           type="range"
                           min="0"
                           max="100"
-                          value={logoOpacity}
-                          onChange={(e) => setLogoOpacity(Number(e.target.value))}
+                          value={lightOpacity}
+                          onChange={(e) => setLightOpacity(Number(e.target.value))}
                           className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF5733]"
                           style={{
-                            background: `linear-gradient(to right, #FF5733 0%, #FF5733 ${logoOpacity}%, #E5E7EB ${logoOpacity}%, #E5E7EB 100%)`
+                            background: `linear-gradient(to right, #FF5733 0%, #FF5733 ${lightOpacity}%, #E5E7EB ${lightOpacity}%, #E5E7EB 100%)`
                           }}
                         />
                       </div>
                       <span className="text-[11px] font-semibold text-gray-700 min-w-[32px] text-right">
-                        {logoOpacity} %
+                        {lightOpacity} %
                       </span>
                     </div>
-                  </>
-                )}
-              </div>
-
-              {/* Wall Themes Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-3.5">
-                  <span className="text-[13px] font-bold text-gray-900 tracking-tight">Wall Themes</span>
-                  <div className="flex-1 h-px bg-gray-100"></div>
-                </div>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {wallThemeList.map((wt) => {
-                    const isSelected = selectedWallTheme === wt.img;
-                    return (
-                      <button
-                        key={wt.id}
-                        type="button"
-                        onClick={() => setSelectedWallTheme(wt.img)}
-                        className={`aspect-square rounded-xl overflow-hidden transition-all duration-150 p-0 flex items-center justify-center cursor-pointer border ${
-                          isSelected
-                            ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
-                            : 'border-transparent hover:border-gray-200'
-                        }`}
-                      >
-                        <img
-                          src={wt.img}
-                          alt="Wall theme"
-                          className="w-full h-full object-cover rounded-[10px]"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Light Theme Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-3.5">
-                  <span className="text-[13px] font-bold text-gray-900 tracking-tight">Light Theme</span>
-                  <div className="flex-1 h-px bg-gray-100"></div>
-                </div>
-
-                {/* Default Light Type Row with Custom Dropdown UI */}
-                <div className="flex items-center justify-between mb-3 relative">
-                  <span className="text-[12px] text-gray-700 font-medium">Default Light type</span>
-                  <div className="flex-1 mx-2 border-b border-dotted border-gray-300"></div>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setOpenDropdown(openDropdown === 'default_light' ? null : 'default_light')}
-                      className="flex items-center justify-between gap-2 bg-white border border-gray-200 text-gray-700 text-[12px] font-medium rounded-lg px-2.5 py-1 focus:outline-none hover:border-gray-300 transition-colors shadow-2xs cursor-pointer min-w-[96px]"
-                    >
-                      <span>{defaultLightType}</span>
-                      <Icon
-                        icon="lucide:chevron-down"
-                        className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${
-                          openDropdown === 'default_light' ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-
-                    {/* Custom Dropdown Menu */}
-                    {openDropdown === 'default_light' && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setOpenDropdown(null)}
-                        />
-                        <div className="absolute right-0 top-full mt-1.5 w-28 bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1 z-50 overflow-hidden text-[12px]">
-                          {['Turn on', 'Turn off'].map((option) => {
-                            const isSelected = defaultLightType === option;
-                            return (
-                              <button
-                                key={option}
-                                type="button"
-                                onClick={() => {
-                                  setDefaultLightType(option);
-                                  setDecors(prev => ({ ...prev, lights: option === 'Turn on' }));
-                                  setOpenDropdown(null);
-                                }}
-                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-orange-50/70 text-[#FF5733] font-semibold'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                              >
-                                <span>{option}</span>
-                                {isSelected && (
-                                  <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#FF5733]" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
                   </div>
-                </div>
 
-                {/* On / Off Light switch Row */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[12px] text-gray-700 font-medium">On / Off Light switch</span>
-                  <div className="flex-1 mx-2 border-b border-dotted border-gray-300"></div>
-                  <button
-                    type="button"
-                    onClick={() => setShowLightSwitch(prev => !prev)}
-                    className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                      showLightSwitch ? 'bg-[#FF5733]' : 'bg-gray-200'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                        showLightSwitch ? 'translate-x-4' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Light Theme Cards */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  {lightThemeList.map((lt) => {
-                    const isSelected = selectedLightTheme === lt.id;
-                    return (
-                      <button
-                        key={lt.id}
-                        type="button"
-                        onClick={() => setSelectedLightTheme(lt.id)}
-                        className={`aspect-[4/3] rounded-xl overflow-hidden transition-all duration-150 p-0 flex items-center justify-center cursor-pointer border ${
-                          isSelected
-                            ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
-                            : 'border-transparent hover:border-gray-200'
-                        }`}
-                      >
-                        <img
-                          src={lt.img}
-                          alt="Light theme"
-                          className="w-full h-full object-cover rounded-[10px]"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Light Opacity Slider */}
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-[12px] text-gray-700 font-medium">Light Opacity :</span>
-                  <div className="relative flex-1 flex items-center">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={lightOpacity}
-                      onChange={(e) => setLightOpacity(Number(e.target.value))}
-                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF5733]"
-                      style={{
-                        background: `linear-gradient(to right, #FF5733 0%, #FF5733 ${lightOpacity}%, #E5E7EB ${lightOpacity}%, #E5E7EB 100%)`
-                      }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-semibold text-gray-700 min-w-[32px] text-right">
-                    {lightOpacity} %
-                  </span>
-                </div>
-              </div>
-
-              {/* Decors (Optional) Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-3.5">
-                  <span className="text-[13px] font-bold text-gray-900 tracking-tight">
-                    Decors <span className="text-gray-400 font-normal text-[11px]">(Optional)</span>
-                  </span>
-                  <div className="flex-1 h-px bg-gray-100"></div>
-                </div>
-
-                <div className="flex flex-col gap-3.5">
-                  {/* Shelf-specific Decors */}
-                  {activeShelfStyle === 'customize_windowshelf' ? (
-                    <>
-                      {/* Light (Pendant Lights) Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:lightbulb" className="w-4 h-4 text-amber-500 stroke-[1.75]" />
-                          <span>Light</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, lightFixture: prev.lightFixture === false ? true : false }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.lightFixture !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.lightFixture !== false ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Plant (Shelf Hanging Vine Plant) Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
-                          <span>Plant</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </>
-                  ) : activeShelfStyle === 'customize_golden' ? (
-                    <>
-                      {/* Plant Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
-                          <span>Plant</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, plant: !prev.plant }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.plant ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.plant ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Decor Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-600 stroke-[1.75]" />
-                          <span>Decor</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, decor: !prev.decor }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.decor ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.decor ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </>
-                  ) : activeShelfStyle === 'customize_orange' ? (
-                    <>
-                      {/* Shelf Plant Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:flower-2" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
-                          <span>Shelf Plant</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, shelfPlant: !prev.shelfPlant }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.shelfPlant ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.shelfPlant ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Globe Decor Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:globe" className="w-4 h-4 text-amber-700 stroke-[1.75]" />
-                          <span>Globe Decor</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, globeDecor: !prev.globeDecor }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.globeDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.globeDecor ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Base Plant Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-700 stroke-[1.75]" />
-                          <span>Base Plant</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, basePlant: !prev.basePlant }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.basePlant ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.basePlant ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Book Decor Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                          <Icon icon="lucide:book-marked" className="w-4 h-4 text-stone-600 stroke-[1.75]" />
-                          <span>Book Decor</span>
-                        </div>
-                        <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => setDecors(prev => ({ ...prev, bookDecor: !prev.bookDecor }))}
-                          className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                            decors.bookDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                              decors.bookDecor ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    /* Lamp Toggle for other shelves */
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
-                        <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
-                        <span>Lamp</span>
-                      </div>
-                      <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
-                      <button
-                        type="button"
-                        onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
-                        className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${
-                          decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
-                        }`}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                            decors.lamp ? 'translate-x-4' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
+                  {/* Decors (Optional) Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3.5">
+                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">
+                        Decors <span className="text-gray-400 font-normal text-[11px]">(Optional)</span>
+                      </span>
+                      <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
-                  )}
+
+                    <div className="flex flex-col gap-3.5">
+                      {/* Shelf-specific Decors */}
+                      {activeShelfStyle === 'customize_windowshelf' ? (
+                        <>
+                          {/* Light (Pendant Lights) Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lightbulb" className="w-4 h-4 text-amber-500 stroke-[1.75]" />
+                              <span>Light</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lightFixture: prev.lightFixture === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lightFixture !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lightFixture !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Plant (Shelf Hanging Vine Plant) Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : activeShelfStyle === 'customize_golden' ? (
+                        <>
+                          {/* Plant Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, plant: !prev.plant }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.plant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.plant ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Decor Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-600 stroke-[1.75]" />
+                              <span>Decor</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, decor: !prev.decor }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.decor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.decor ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : activeShelfStyle === 'customize_orange' ? (
+                        <>
+                          {/* Shelf Plant Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:flower-2" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Shelf Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, shelfPlant: !prev.shelfPlant }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.shelfPlant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.shelfPlant ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Globe Decor Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:globe" className="w-4 h-4 text-amber-700 stroke-[1.75]" />
+                              <span>Globe Decor</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, globeDecor: !prev.globeDecor }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.globeDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.globeDecor ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Base Plant Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-700 stroke-[1.75]" />
+                              <span>Base Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, basePlant: !prev.basePlant }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.basePlant ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.basePlant ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Book Decor Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:book-marked" className="w-4 h-4 text-stone-600 stroke-[1.75]" />
+                              <span>Book Decor</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, bookDecor: !prev.bookDecor }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.bookDecor ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.bookDecor ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : activeAssets.type === 'green_shelf' ? (
+                        <>
+                          {/* Lamp Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                              <span>Lamp</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Decor Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-600 stroke-[1.75]" />
+                              <span>Decor</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, decor: prev.decor === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.decor !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.decor !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : activeAssets.type === 'light_shelf' ? (
+                        <>
+                          {/* Lamp Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                              <span>Lamp</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Plant Pot Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Plant Pot</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : activeShelfStyle === 'customize4' ? (
+                        <>
+                          {/* Lamp Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                              <span>Lamp</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Book with Pot Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-700 stroke-[1.75]" />
+                              <span>Book with Pot</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, bookWithPot: prev.bookWithPot === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.bookWithPot !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.bookWithPot !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        /* Lamp Toggle for other shelves */
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                            <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                            <span>Lamp</span>
+                          </div>
+                          <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                          <button
+                            type="button"
+                            onClick={() => setDecors(prev => ({ ...prev, lamp: !prev.lamp }))}
+                            className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp ? 'bg-[#FF5733]' : 'bg-gray-200'
+                              }`}
+                          >
+                            <div
+                              className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                            />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ) : (
-          /* List View Sidebar (Shelf Usage + Tips) */
-          <div className="w-64 flex flex-col justify-end gap-6 h-full pb-4">
-            {/* Shelf Usage */}
-            <div className="bg-white border border-gray-200 rounded-[14px] p-5">
-              <h3 className="font-medium text-[#475569] mb-4 text-[15px]">Shelf Usage</h3>
-              <div className="h-1.5 w-full bg-[#E2E8F0] rounded-full mb-4">
-                <div className="h-1.5 bg-[#4F46E5] rounded-full" style={{ width: `${Math.min(100, (booksData.length / 50) * 100)}%` }}></div>
-              </div>
-              <div className="flex justify-between text-[13.5px] text-[#475569]">
-                <span>{booksData.length} of 50 Flipbooks Used</span>
-                <span>{Math.round(Math.min(100, (booksData.length / 50) * 100))}%</span>
-              </div>
-            </div>
-
-            {/* Tips */}
-            <div className="bg-[#fef9f4] border border-[#faedd9] rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">💡</span>
-                <h3 className="font-semibold text-sm">Tips</h3>
-              </div>
-              <p className="text-xs text-gray-600 mb-6 leading-relaxed">
-                Drag and Drop flipbooks to rearrange them on your shelf
-              </p>
-              <div className="flex justify-center items-end gap-3 relative px-2 mt-2">
-                <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
-                <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
-
-                <div className="relative z-10 -translate-y-2">
-                  <Icon icon="duo-icons:book" className="w-14 h-14 text-yellow-500 drop-shadow-md" />
-                  <Icon icon="game-icons:click" className="absolute -bottom-3 -right-3 w-8 h-8 text-black" />
+            ) : (
+              /* List View Sidebar (Shelf Usage + Tips) */
+              <div className="w-64 flex flex-col justify-end gap-6 h-full pb-4">
+                {/* Shelf Usage */}
+                <div className="bg-white border border-gray-200 rounded-[14px] p-5">
+                  <h3 className="font-medium text-[#475569] mb-4 text-[15px]">Shelf Usage</h3>
+                  <div className="h-1.5 w-full bg-[#E2E8F0] rounded-full mb-4">
+                    <div className="h-1.5 bg-[#4F46E5] rounded-full" style={{ width: `${Math.min(100, (booksData.length / 50) * 100)}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-[13.5px] text-[#475569]">
+                    <span>{booksData.length} of 50 Flipbooks Used</span>
+                    <span>{Math.round(Math.min(100, (booksData.length / 50) * 100))}%</span>
+                  </div>
                 </div>
 
-                <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
+                {/* Tips */}
+                <div className="bg-[#fef9f4] border border-[#faedd9] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">💡</span>
+                    <h3 className="font-semibold text-sm">Tips</h3>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-6 leading-relaxed">
+                    Drag and Drop flipbooks to rearrange them on your shelf
+                  </p>
+                  <div className="flex justify-center items-end gap-3 relative px-2 mt-2">
+                    <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
+                    <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
+
+                    <div className="relative z-10 -translate-y-2">
+                      <Icon icon="duo-icons:book" className="w-14 h-14 text-yellow-500 drop-shadow-md" />
+                      <Icon icon="game-icons:click" className="absolute -bottom-3 -right-3 w-8 h-8 text-black" />
+                    </div>
+
+                    <Icon icon="duo-icons:book" className="w-10 h-10 text-gray-600" />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
-      </>
+        </>
       )}
 
-            {/* Share Shelf Modal */}
+      {/* Share Shelf Modal */}
       {showShareShelfModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4 transition-opacity animate-in fade-in"
@@ -3480,11 +3344,10 @@ const MyShelf = () => {
                       setShelfLinkCopied(true);
                       setTimeout(() => setShelfLinkCopied(false), 2000);
                     }}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${
-                      shelfLinkCopied
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${shelfLinkCopied
                         ? 'bg-emerald-600 text-white'
                         : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
-                    }`}
+                      }`}
                   >
                     <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
                     <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
@@ -3513,7 +3376,7 @@ const MyShelf = () => {
                     <button
                       key={app.name}
                       type="button"
-                      onClick={() => {}}
+                      onClick={() => { }}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
                     >
                       <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
@@ -3636,12 +3499,34 @@ const MyShelf = () => {
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
               <button onClick={() => setShowAddShelfModal(false)} className="px-5 py-2 border border-gray-200 rounded-md text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-800 transition-colors">Cancel</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (newShelfName.trim()) {
-                    setFolders(prev => [{ name: newShelfName.trim(), books: [] }, ...prev]);
-                    setSelectedFolder(newShelfName.trim());
+                    const createdName = newShelfName.trim();
+                    setFolders(prev => [{ name: createdName, books: [], shelf_design: 4 }, ...prev]);
+                    setSelectedFolder(createdName);
+                    setActiveShelfStyle('customize4');
+                    setSelectedWallTheme(null);
+                    setCurrentView('shelf_detail');
                     setNewShelfName('');
                     setShowAddShelfModal(false);
+
+                    // Persist newly created shelf to backend
+                    if (currentUserEmail) {
+                      try {
+                        await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
+                          emailId: currentUserEmail,
+                          folderName: createdName,
+                          shelf_design: 4
+                        });
+                        await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
+                          emailId: currentUserEmail,
+                          folderName: createdName,
+                          bookIds: []
+                        });
+                      } catch (e) {
+                        console.error("Failed to persist new shelf:", e);
+                      }
+                    }
                   }
                 }}
                 className="px-5 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors"
@@ -3828,8 +3713,8 @@ const MyShelf = () => {
                       {allCreatedBooks.length === 0
                         ? "You haven't created any flipbooks yet."
                         : addBookSearch
-                        ? 'No books matching your search.'
-                        : 'All of your created books are already on this shelf!'}
+                          ? 'No books matching your search.'
+                          : 'All of your created books are already on this shelf!'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       {allCreatedBooks.length === 0
@@ -3849,17 +3734,15 @@ const MyShelf = () => {
                         <div
                           key={b.v_id || idx}
                           onClick={() => toggleSelectBook(b.v_id)}
-                          className={`relative group rounded-xl border-2 cursor-pointer transition-all duration-150 overflow-hidden flex flex-col bg-white ${
-                            isSelected
+                          className={`relative group rounded-xl border-2 cursor-pointer transition-all duration-150 overflow-hidden flex flex-col bg-white ${isSelected
                               ? 'border-[#FF5733] ring-2 ring-orange-200/80 shadow-md'
                               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                          }`}
+                            }`}
                         >
                           {/* Selection Checkbox Badge */}
                           <div
-                            className={`absolute top-2 right-2 z-10 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
-                              isSelected ? 'bg-[#FF5733] text-white shadow-sm' : 'bg-black/35 text-transparent group-hover:text-white/60'
-                            }`}
+                            className={`absolute top-2 right-2 z-10 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${isSelected ? 'bg-[#FF5733] text-white shadow-sm' : 'bg-black/35 text-transparent group-hover:text-white/60'
+                              }`}
                           >
                             <Icon icon="mdi:check" className="w-3.5 h-3.5" />
                           </div>

@@ -10,10 +10,13 @@ import lightShelfBottomTier from '../../../assets/Bookshelf/light_shelf/shelf.pn
 import lightShelfLamp from '../../../assets/Bookshelf/light_shelf/lamp.png';
 import lightShelfPlant from '../../../assets/Bookshelf/light_shelf/plantpot.png';
 import lightShelfBase from '../../../assets/Bookshelf/light_shelf/base.png';
+import lightShelfSwitch from '../../../assets/Bookshelf/light_shelf/switch.png';
 
 const LightShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   selectedLightTheme,
   selectedWallTheme,
   openMenuId,
@@ -486,8 +489,32 @@ const LightShelf = ({
                       </div>
                     )}
 
+                    {/* Wall Light Switch on right side */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-30 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '4.2%',
+                          top: '12.0%',
+                          width: '2.8%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={lightShelfSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200 opacity-100"
+                        />
+                      </div>
+                    )}
+
                     {/* Bottom Right: plantpot.png on credenza */}
-                    {decors.plant && (
+                    {decors?.plant !== false && (
                       <div
                         className="absolute pointer-events-none z-20"
                         style={{

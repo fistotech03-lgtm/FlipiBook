@@ -78,9 +78,9 @@ const GoldenShelf = ({
       <div
         className="absolute pointer-events-none z-15"
         style={{
-          left: '19.0%',
+          left: '18.0%',
           top: '14.0%',
-          width: '71.0%'
+          width: '80.0%'
         }}
       >
         <img
@@ -113,42 +113,42 @@ const GoldenShelf = ({
               { center: '62.78%' }
             ].map(({ center }, beamIdx) => (
               <React.Fragment key={`golden-beam-${beamIdx}`}>
-                {/* 1. Downward Soft Diffuse Wall-Wash Beam */}
+                {/* 1. Vertical Soft Diffuse Wall-Wash - strictly within book width, no left/right spill */}
                 <div
                   className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300"
                   style={{
                     left: center,
                     top: '16%',
-                    width: '16%',
-                    height: '115%',
+                    width: '9.2%',
+                    height: '75%',
                     background:
                       selectedLightTheme === 'light1'
-                        ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.95) 0%, rgba(254, 240, 138, 0.52) 32%, rgba(251, 191, 36, 0.16) 75%, transparent 100%)'
+                        ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.95) 0%, rgba(254, 240, 138, 0.52) 32%, rgba(251, 191, 36, 0.16) 75%, transparent 95%)'
                         : selectedLightTheme === 'light2'
-                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 100%)'
-                        : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 100%)',
+                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 95%)'
+                        : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 95%)',
                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
-                    filter: 'blur(7.5px)',
+                    filter: 'blur(5px)',
                     mixBlendMode: 'screen'
                   }}
                 />
 
-                {/* 2. Narrow Focused Core Shaft */}
+                {/* 2. Narrow Focused Core Shaft - vertical down center of book */}
                 <div
                   className="absolute pointer-events-none -translate-x-1/2 transition-all duration-300"
                   style={{
                     left: center,
                     top: '15%',
-                    width: '6.5%',
-                    height: '85%',
+                    width: '4.2%',
+                    height: '58%',
                     background:
                       selectedLightTheme === 'light1'
-                        ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.60) 25%, rgba(251, 191, 36, 0.15) 70%, transparent 100%)'
+                        ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.60) 25%, rgba(251, 191, 36, 0.15) 70%, transparent 92%)'
                         : selectedLightTheme === 'light2'
-                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 100%)'
-                        : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 100%)',
+                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 92%)'
+                        : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 92%)',
                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
-                    filter: 'blur(4.5px)',
+                    filter: 'blur(3.5px)',
                     mixBlendMode: 'screen'
                   }}
                 />
@@ -162,9 +162,9 @@ const GoldenShelf = ({
       <div
         className="absolute pointer-events-none z-10"
         style={{
-          left: '15.5%',
+          left: '12.5%',
           top: '40.1%',
-          width: '88.8%'
+          width: '94.0%'
         }}
       >
         <img
@@ -179,7 +179,7 @@ const GoldenShelf = ({
         <div
           className="absolute pointer-events-none z-25"
           style={{
-            left: '69.8%',
+            left: '72.5%',
             top: '41.2%',
             width: '13.5%'
           }}
@@ -215,10 +215,10 @@ const GoldenShelf = ({
         className="absolute inset-0 z-20 pointer-events-none"
       >
         {[
-          { center: '25.6%' },
-          { center: '38.8%' },
-          { center: '50.6%' },
-          { center: '63.6%' }
+          { center: '25.4%' },
+          { center: '40.3%' },
+          { center: '53.6%' },
+          { center: '68.2%' }
         ].map(({ center }, slotIdx) => {
           const book = filteredBooks && filteredBooks[slotIdx];
           if (!book) {

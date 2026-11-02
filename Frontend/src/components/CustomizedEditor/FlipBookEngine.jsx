@@ -161,8 +161,29 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
   }
 
   foreignObject[data-type="map"],
-  g[data-type="map"] foreignObject {
+  g[data-type="map"] foreignObject,
+  .map-root-container {
     overflow: hidden !important;
+  }
+
+  .map-stage {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .map-stage iframe,
+  .map-root-container iframe {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
   }
 
   foreignObject video {

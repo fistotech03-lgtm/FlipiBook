@@ -4,7 +4,7 @@ import { Search, AlertCircle, Loader2, X, Copy, Check } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import ColorPicker from '../../../properties/ColorPicker';
 import { DEFAULT_MAP_DATA, MAP_TEMPLATES, generateOverlayHtml, escapeXml } from '../utils/mapElementUtils';
-import { ElementToggle, ElementDropdown } from './ElementUIControls';
+import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
 
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
@@ -13,6 +13,27 @@ const SectionHeader = ({ title }) => (
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
+
+// Helper: update or inject zoom parameter into a Google Maps URL
+const updateUrlZoom = (url, zoomLevel) => {
+  if (!url) return url;
+  if (/([?&]z=)\d+/i.test(url)) {
+    return url.replace(/([?&]z=)\d+/i, `$1${zoomLevel}`);
+  }
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}z=${zoomLevel}`;
+};
+
+// Helper: extract zoom level from a URL, with fallback
+const extractUrlZoom = (url, fallback = 11) => {
+  if (!url) return fallback;
+  const match = url.match(/[?&]z=(\d+)/i);
+  if (match && match[1]) {
+    const val = parseInt(match[1], 10);
+    if (!isNaN(val) && val >= 1 && val <= 21) return val;
+  }
+  return fallback;
+};
 
 // RadioButton component with signature accent
 const RadioButton = ({ label, checked, onChange }) => (
@@ -48,6 +69,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   const [urlInput, setUrlInput] = useState('');
   const [embedCode, setEmbedCode] = useState('');
   const [iframeUrl, setIframeUrl] = useState('');
+  const [zoom, setZoom] = useState(11);
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -100,7 +122,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   }, [selectedElement]);
 
   // Helper: parse user-provided Map URL into an embeddable format
-  const parseMapUrl = (raw) => {
+  const parseMapUrl = (raw, zoomLevel = zoom) => {
     if (!raw || !raw.trim()) return '';
     const trimmed = raw.trim();
 
@@ -117,14 +139,14 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const placeMatch = trimmed.match(/\/maps\/place\/([^/@?]+)/i);
     if (placeMatch && placeMatch[1]) {
       const place = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
     }
 
     // Google Maps search URL: /maps/search/Query/...
     const searchMatch = trimmed.match(/\/maps\/search\/([^/@?]+)/i);
     if (searchMatch && searchMatch[1]) {
       const query = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
     }
 
     // Google Maps query param: ?q=...
@@ -132,7 +154,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       const urlObj = new URL(trimmed);
       const q = urlObj.searchParams.get('q');
       if (q) {
-        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
       }
     } catch (e) {}
 
@@ -146,7 +168,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     }
 
     // Fallback: search query
-    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
   };
 
   // Helper: extract iframe src from embed code
@@ -163,7 +185,11 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   // Universal updater that keeps canvas DOM & attributes in sync
   const updateMapData = (updatedFields = {}) => {
     const nextStyle = updatedFields.style !== undefined ? updatedFields.style : layoutStyle;
-    const nextUrl = updatedFields.url !== undefined ? updatedFields.url : iframeUrl;
+    const nextZoom = updatedFields.zoom !== undefined ? updatedFields.zoom : zoom;
+    let nextUrl = updatedFields.url !== undefined ? updatedFields.url : iframeUrl;
+    if (nextUrl) {
+      nextUrl = updateUrlZoom(nextUrl, nextZoom);
+    }
     const nextSourceType = updatedFields.sourceType !== undefined ? updatedFields.sourceType : sourceType;
     const nextLocation = updatedFields.location !== undefined ? updatedFields.location : location;
     const nextName = updatedFields.name !== undefined ? updatedFields.name : businessName;
@@ -181,6 +207,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
     if (selectedElement) {
       selectedElement.setAttribute('data-map-style', nextStyle);
+      selectedElement.setAttribute('data-zoom', String(nextZoom));
       selectedElement.setAttribute('data-url', nextUrl);
       selectedElement.setAttribute('data-source-type', nextSourceType);
       selectedElement.setAttribute('data-location', nextLocation);
@@ -211,20 +238,28 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         image: nextImage,
         location: nextLocation,
         theme: nextTheme,
-        buttonColor: nextButtonColor,
-        showOpenMapBtn: nextShowOpenMapBtn
+        buttonColor: nextButtonColor
       });
 
       if (fo) {
+        const foW = parseFloat(fo.getAttribute('width')) || 180;
+        const foH = parseFloat(fo.getAttribute('height')) || 135;
+        const baseW = 360;
+        const scale = foW / baseW;
+        const innerW = baseW;
+        const innerH = Math.round(foH / scale);
+
         const isDark = String(nextTheme).toLowerCase().includes('dark');
         const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
 
         fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-            <iframe src="${nextUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: -45px; left: 0; width: 100%; height: calc(100% + 45px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
-            <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
-              ${overlayHtml}
+            <div class="map-stage" style="position: absolute; top: 0; left: 0; width: ${innerW}px; height: ${innerH}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden;">
+              <iframe src="${nextUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+              <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
+                ${overlayHtml}
+              </div>
             </div>
           </div>
         `;
@@ -296,7 +331,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     } else if (data.embedUrl && !data.embedUrl.includes('q=https') && !data.embedUrl.includes('q=http')) {
       finalEmbedUrl = data.embedUrl;
     } else if (type === 'Location' && newName) {
-      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
     }
 
     setIframeUrl(finalEmbedUrl);
@@ -345,7 +380,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
   // Sync state with selected element on canvas
   useEffect(() => {
-    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=&output=embed`;
 
     if (selectedElement) {
       const url = selectedElement.getAttribute('data-url') || defaultUrl;
@@ -355,6 +390,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       const savedEmbed = selectedElement.getAttribute('data-embed-code');
 
       const savedStyle = selectedElement.getAttribute('data-map-style');
+      const savedZoomAttr = selectedElement.getAttribute('data-zoom');
       const savedName = selectedElement.getAttribute('data-business-name');
       const savedAddress = selectedElement.getAttribute('data-business-address');
       const savedRating = selectedElement.getAttribute('data-business-rating');
@@ -366,7 +402,15 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       const savedButtonColor = selectedElement.getAttribute('data-button-color') || '#000000';
       const savedShowOpenMapBtn = selectedElement.getAttribute('data-show-open-map-btn');
 
-      setIframeUrl(url);
+      let parsedZoom = savedZoomAttr ? parseInt(savedZoomAttr, 10) : extractUrlZoom(url, 11);
+      if (isNaN(parsedZoom) || parsedZoom < 1 || parsedZoom > 20) parsedZoom = 11;
+      if (!savedZoomAttr && (url.includes('z=13') || url.includes('z=12'))) {
+        parsedZoom = 11;
+      }
+      setZoom(parsedZoom);
+
+      const effectiveUrl = updateUrlZoom(url, parsedZoom);
+      setIframeUrl(effectiveUrl);
 
       if (savedStyle) {
         setLayoutStyle(savedStyle);
@@ -427,33 +471,19 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       }
 
       const fo = selectedElement.querySelector('foreignObject');
-      const iframe = selectedElement.querySelector('iframe');
-      const stage = fo?.querySelector('.map-stage');
-
       const isDark = String(savedTheme).toLowerCase().includes('dark');
       const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
 
       if (fo) {
-        fo.style.setProperty('overflow', 'hidden', 'important');
-        fo.style.setProperty('border-radius', '0px', 'important');
-        const rootDiv = fo.querySelector('.map-root-container') || fo.querySelector('div');
-        if (rootDiv) {
-          rootDiv.style.setProperty('width', '100%', 'important');
-          rootDiv.style.setProperty('height', '100%', 'important');
-          rootDiv.style.setProperty('overflow', 'hidden', 'important');
-          rootDiv.style.setProperty('border-radius', '0px', 'important');
-        }
+        const foW = parseFloat(fo.getAttribute('width')) || 180;
+        const foH = parseFloat(fo.getAttribute('height')) || 135;
+        const baseW = 360;
+        const scale = foW / baseW;
+        const innerW = baseW;
+        const innerH = Math.round(foH / scale);
 
-        // If an existing map element still has the old .map-stage wrapper, normalize it
-        if (stage) {
-          stage.style.setProperty('width', '100%', 'important');
-          stage.style.setProperty('height', '100%', 'important');
-          stage.style.removeProperty('transform');
-          stage.style.removeProperty('transform-origin');
-        }
+        fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
 
-        // Ensure overlay is present and in sync with current map properties
-        const overlayWrapper = fo.querySelector('.map-overlay-wrapper');
         const effectiveStyle = savedStyle || layoutStyle || 'none';
         const freshOverlayHtml = generateOverlayHtml(effectiveStyle, {
           name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
@@ -469,69 +499,35 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
           showOpenMapBtn: savedShowOpenMapBtn !== null ? savedShowOpenMapBtn !== 'false' : showOpenMapBtn
         });
 
-        if (overlayWrapper) {
-          overlayWrapper.innerHTML = freshOverlayHtml;
-        }
+        const cleanUrl = updateUrlZoom((url || defaultUrl).replace(/&amp;/g, '&'), parsedZoom).replace(/&/g, '&amp;');
 
-        if (iframe) {
-          iframe.style.removeProperty('transform');
-          iframe.style.setProperty('position', 'absolute', 'important');
-          iframe.style.setProperty('top', '-45px', 'important');
-          iframe.style.setProperty('left', '0', 'important');
-          iframe.style.setProperty('width', '100%', 'important');
-          iframe.style.setProperty('height', 'calc(100% + 45px)', 'important');
-          iframe.removeAttribute('width');
-          iframe.removeAttribute('height');
-          iframe.style.setProperty('border', 'none', 'important');
-          iframe.style.setProperty('display', 'block', 'important');
-          iframe.style.setProperty('pointer-events', 'none', 'important');
-          if (isDark) {
-            iframe.style.setProperty('filter', 'invert(90%) hue-rotate(180deg) contrast(95%)', 'important');
-          } else {
-            iframe.style.removeProperty('filter');
-          }
-
-          // If overlay was missing inside existing iframe root container, recreate it
-          if (!overlayWrapper && rootDiv) {
-            const newOverlayWrapper = document.createElement('div');
-            newOverlayWrapper.className = 'map-overlay-wrapper';
-            newOverlayWrapper.style.cssText = 'position: absolute; inset: 0; pointer-events: none;';
-            newOverlayWrapper.innerHTML = freshOverlayHtml;
-            rootDiv.appendChild(newOverlayWrapper);
-          }
-
-          if (onUpdate) {
-            onUpdate(selectedElement.outerHTML);
-          }
-        } else {
-          // Re-render map root container with theme & overlay
-          const effectiveStyle = savedStyle || layoutStyle || 'none';
-          const overlayHtml = generateOverlayHtml(effectiveStyle, {
-            name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
-            address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
-            rating: savedRating || businessRating || DEFAULT_MAP_DATA.rating,
-            reviews: savedReviews || businessReviews || DEFAULT_MAP_DATA.reviews,
-            category: savedCategory || businessCategory || DEFAULT_MAP_DATA.category,
-            phone: savedPhone || businessPhone || DEFAULT_MAP_DATA.phone,
-            image: savedImage || businessImage || DEFAULT_MAP_DATA.image,
-            location: savedLocation || location,
-            theme: savedTheme,
-            buttonColor: savedButtonColor,
-            showOpenMapBtn: savedShowOpenMapBtn !== null ? savedShowOpenMapBtn !== 'false' : showOpenMapBtn
-          });
-
-          fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
-          const cleanUrl = (url || defaultUrl).replace(/&amp;/g, '&').replace(/&/g, '&amp;');
-          fo.innerHTML = `
-            <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
-              <iframe src="${cleanUrl}" style="position: absolute; top: -45px; left: 0; width: 100%; height: calc(100% + 45px); border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
+        fo.innerHTML = `
+          <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
+            <div class="map-stage" style="position: absolute; top: 0; left: 0; width: ${innerW}px; height: ${innerH}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden;">
+              <iframe src="${cleanUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>
               <div class="map-overlay-wrapper" style="position: absolute; inset: 0; pointer-events: none;">
-                ${overlayHtml}
+                ${freshOverlayHtml}
               </div>
             </div>
-          `;
-          if (onUpdate) {
-            onUpdate(selectedElement.outerHTML);
+          </div>
+        `;
+
+        if (onUpdate) {
+          onUpdate(selectedElement.outerHTML);
+        }
+        if (updateElementAttribute && selectedLayerId !== undefined) {
+          let node = selectedElement;
+          let lastSvg = null;
+          while (node) {
+            if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+            node = node.parentElement;
+          }
+          if (lastSvg) {
+            const cloneSvg = lastSvg.cloneNode(true);
+            cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary').forEach(el => el.remove());
+            const serializer = new XMLSerializer();
+            const html = serializer.serializeToString(cloneSvg);
+            updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
           }
         }
       }
@@ -605,7 +601,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     setShowSuggestions(false);
     setErrorMessage('');
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
     setIframeUrl(newUrl);
     updateMapData({
       url: newUrl,
@@ -625,7 +621,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const query = locationInput.trim();
     if (!query) return;
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
     setBusinessName(query);
     setLocation(query);
     setBusinessAddress(query);
@@ -738,6 +734,15 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
   const handleButtonOpacityChange = (newOpacity) => {
     setButtonOpacity(newOpacity);
+  };
+
+  // Handle Zoom Change (1 - 20)
+  const handleZoomChange = (newZoom) => {
+    const val = Math.max(1, Math.min(20, Math.round(Number(newZoom) || 11)));
+    setZoom(val);
+    const updatedUrl = updateUrlZoom(iframeUrl, val);
+    setIframeUrl(updatedUrl);
+    updateMapData({ url: updatedUrl, zoom: val });
   };
 
   // Handle Open in Map Button Toggle
@@ -900,7 +905,47 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         </div>
       )}
 
-      {/* ─── 2. LIVE MAP & OVERLAY PREVIEW CARD ─── */}
+      {/* ─── 2. ZOOM LEVEL ─── */}
+      <SectionHeader title="Zoom Level" />
+      <div className="flex flex-col gap-[0.4vw] w-full">
+        <div className="flex items-center justify-between px-[0.1vw]">
+          <span className="text-[0.7vw] text-gray-500 font-semibold">Map Zoom</span>
+          <div className="flex items-center gap-[0.3vw]">
+            <button
+              type="button"
+              onClick={() => handleZoomChange(zoom - 1)}
+              disabled={zoom <= 1}
+              className="w-[1.2vw] h-[1.2vw] min-w-[18px] min-h-[18px] flex items-center justify-center rounded-[0.3vw] border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-bold text-[0.8vw] cursor-pointer transition-colors shadow-2xs"
+              title="Zoom out"
+            >
+              -
+            </button>
+            <span className="text-[0.75vw] font-mono font-semibold text-gray-700 min-w-[2vw] text-center">
+              {zoom}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleZoomChange(zoom + 1)}
+              disabled={zoom >= 20}
+              className="w-[1.2vw] h-[1.2vw] min-w-[18px] min-h-[18px] flex items-center justify-center rounded-[0.3vw] border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-bold text-[0.8vw] cursor-pointer transition-colors shadow-2xs"
+              title="Zoom in"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div className="px-[0.2vw] py-[0.1vw]">
+          <ElementSlider
+            value={zoom}
+            onChange={handleZoomChange}
+            min={1}
+            max={20}
+            step={1}
+          />
+        </div>
+      </div>
+
+      {/* ─── 3. LIVE MAP & OVERLAY PREVIEW CARD ─── */}
       <div className="relative w-full aspect-[4/3.5] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
         {iframeUrl ? (
           <div className="relative w-full h-full overflow-hidden">
@@ -909,10 +954,10 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
               src={iframeUrl}
               style={{
                 position: 'absolute',
-                top: '-45px',
+                top: 0,
                 left: 0,
                 width: '100%',
-                height: 'calc(100% + 45px)',
+                height: '100%',
                 border: 0,
                 filter: isDarkTheme ? 'invert(90%) hue-rotate(180deg) contrast(95%)' : 'none'
               }}
@@ -948,20 +993,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         )}
       </div>
 
-      {/* "Open in Map" Redirect Button Toggle */}
-      <div className="flex items-center justify-between py-[0.1vw] px-[0.1vw]">
-        <div className="flex flex-col">
-          <span className="text-[0.78vw] font-semibold text-gray-800">Open in Maps</span>
-          <span className="text-[0.65vw] text-gray-400">To add redirect button on map</span>
-        </div>
-        <Toggle
-          checked={showOpenMapBtn}
-          onChange={handleToggleOpenMapBtn}
-          title={showOpenMapBtn ? 'Hide "Open in Map" button' : 'Show "Open in Map" button'}
-        />
-      </div>
-
-      {/* ─── 3. BUTTON COLOR ─── */}
+      {/* ─── 4. BUTTON COLOR ─── */}
       <SectionHeader title="Button Color" />
 
       <div className="flex items-center gap-[0.4vw] w-full">
@@ -996,7 +1028,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         </div>
       </div>
 
-      {/* ─── 4. THEME ─── */}
+      {/* ─── 5. THEME ─── */}
       <SectionHeader title="Theme" />
 
       <CustomSelect

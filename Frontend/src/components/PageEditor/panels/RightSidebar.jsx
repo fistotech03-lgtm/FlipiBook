@@ -1079,11 +1079,22 @@ const RightSidebar = ({
                           selectedElementProps={selectedElementProps}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const el = editorDoc.getElementById(selectedLayerId);
+                            const targetEl = el?.closest?.('[data-type="map"], g[id^="map-"]') || el;
+                            if (targetEl && newHtml) {
+                              const parser = new DOMParser();
+                              const parsedDoc = parser.parseFromString(newHtml, 'text/html');
+                              const freshContainer = parsedDoc.querySelector('.map-root-container');
+                              const currentContainer = targetEl.querySelector('.map-root-container');
+                              if (freshContainer && currentContainer) {
+                                currentContainer.innerHTML = freshContainer.innerHTML;
+                              }
+                            }
                             const svgRoot = (() => {
-                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                              const el = editorDoc.getElementById(selectedLayerId);
                               if (!el) return null;
                               const container = el.closest('.page-svg-container');
                               if (container) {

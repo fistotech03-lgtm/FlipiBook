@@ -270,7 +270,68 @@ export const AddElementsModal = ({
                 {activeCategoryObj.name}
               </span>
 
-              {selectedCategory === 'text' && !searchQuery.trim() ? (
+              {selectedCategory === 'masking' && !searchQuery.trim() ? (
+                (() => {
+                  const gridItems = filteredElements.filter((item) => item.subtopic === 'Grid');
+                  const shapeItems = filteredElements.filter((item) => item.subtopic === 'Shapes');
+                  const letterItems = filteredElements.filter((item) => item.subtopic === 'Letters');
+
+                  return (
+                    <div className="flex flex-col gap-[2vh]">
+                      {/* Grid Section */}
+                      {gridItems.length > 0 && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[0.4vw] pt-[0.8vh] pb-[1.2vh]">
+                            <span className="text-[0.8vw] font-semibold text-gray-800">
+                              Grid
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-200" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+                            {gridItems.map((item) => (
+                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Shapes Section */}
+                      {shapeItems.length > 0 && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
+                            <span className="text-[0.8vw] font-semibold text-gray-800">
+                              Shapes
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-200" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+                            {shapeItems.map((item) => (
+                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Letters Section */}
+                      {letterItems.length > 0 && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
+                            <span className="text-[0.8vw] font-semibold text-gray-800">
+                              Letters
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-200" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
+                            {letterItems.map((item) => (
+                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : selectedCategory === 'text' && !searchQuery.trim() ? (
                 (() => {
                   const titleItems = filteredElements.filter((item) => item.subtopic === 'Titles');
                   const typographyItems = filteredElements.filter((item) => item.subtopic === 'Typography' || !item.subtopic);

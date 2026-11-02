@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Pencil,
-  ArrowLeftRight,
-  Link2,
-  Link2Off
+  ArrowLeftRight
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
+import CornerRadius from '../../../properties/CornerRadius';
 import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
 import { handleScrubHelper } from '../../../properties/propertiesShared';
 import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
@@ -301,11 +300,7 @@ export const ButtonEditor = ({
   const [isIconGalleryOpen, setIsIconGalleryOpen] = useState(false);
 
   // ─── 2. Size & Spacing States ───────────────────────────────────
-  const [paddingW, setPaddingW] = useState(0);
-  const [paddingH, setPaddingH] = useState(0);
-  const [isPaddingLinked, setIsPaddingLinked] = useState(true);
   const [iconGap, setIconGap] = useState(4);
-  const [iconPadding, setIconPadding] = useState(0);
 
   // ─── 3. Button Color States ─────────────────────────────────────
   const [shapeFillColor, setShapeFillColor] = useState('#000000');
@@ -319,7 +314,36 @@ export const ButtonEditor = ({
   const [lineStyle, setLineStyle] = useState('Solid'); // 'Solid', 'Dashed', 'Dotted'
   const [dashL, setDashL] = useState(8);
   const [dashG, setDashG] = useState(4);
-  const [lineCorner, setLineCorner] = useState('Square'); // 'Square', 'Rounded'
+  const [lineCorner, setLineCorner] = useState(() => {
+    if (currentElement) {
+      const btnTemplate = currentElement.getAttribute('data-button-template') || '';
+      const isChevronOrRibbon = currentElement.querySelector('polygon.btn-main-poly') || currentElement.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+      const shapeEl = currentElement.querySelector('.btn-main-poly') || currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect') || currentElement;
+      const slc = shapeEl?.getAttribute('stroke-linecap') || shapeEl?.getAttribute('stroke-linejoin');
+      if (slc) return slc === 'round' ? 'Rounded' : 'Square';
+
+      if (!isChevronOrRibbon) {
+        const rawTl = currentElement.getAttribute('data-tl');
+        const rawTr = currentElement.getAttribute('data-tr');
+        const rawBl = currentElement.getAttribute('data-bl');
+        const rawBr = currentElement.getAttribute('data-br');
+        const rectEl = currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect');
+        const rxVal = rectEl?.getAttribute('rx');
+        const parseR = (val, fb) => {
+          if (val === null || val === undefined || val === '') return fb;
+          const n = parseInt(val, 10);
+          return !isNaN(n) ? n : fb;
+        };
+        const tl = parseR(rawTl !== null ? rawTl : rxVal, 0);
+        const tr = parseR(rawTr !== null ? rawTr : rxVal, 0);
+        const bl = parseR(rawBl !== null ? rawBl : rxVal, 0);
+        const br = parseR(rawBr !== null ? rawBr : rxVal, 0);
+        if (Math.max(tl, tr, bl, br) > 0) return 'Rounded';
+      }
+      return 'Square';
+    }
+    return 'Square';
+  });
 
   // ─── 5. Corner Radius States ────────────────────────────────────
   const [radius, setRadius] = useState(() => {
@@ -339,10 +363,13 @@ export const ButtonEditor = ({
         const n = parseInt(val, 10);
         return !isNaN(n) ? n : fb;
       };
-      const defTl = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defTr = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defBl = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defBr = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+      const btnTemplate = currentElement.getAttribute('data-button-template') || '';
+      const isChevronOrRibbon = currentElement.querySelector('polygon.btn-main-poly') || currentElement.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+      const defFallback = isChevronOrRibbon ? 0 : 12;
+      const defTl = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defTr = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defBl = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defBr = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
 
       return {
         tl: parseR(rawTl !== null ? rawTl : rxVal, defTl),
@@ -507,18 +534,7 @@ export const ButtonEditor = ({
     const savedIconGap = el.getAttribute('data-icon-gap') || '4';
     setIconGap(parseInt(savedIconGap) || 4);
 
-    const savedIconPadding = el.getAttribute('data-icon-padding') || '0';
-    setIconPadding(parseInt(savedIconPadding, 10) || 0);
-
-    // 3. Padding Properties
-    const savedPaddingW = el.getAttribute('data-padding-w');
-    const savedPaddingH = el.getAttribute('data-padding-h');
-    setPaddingW(savedPaddingW !== null ? (parseInt(savedPaddingW, 10) || 0) : 0);
-    setPaddingH(savedPaddingH !== null ? (parseInt(savedPaddingH, 10) || 0) : 0);
-    const savedPadLinked = el.getAttribute('data-padding-linked');
-    setIsPaddingLinked(savedPadLinked !== 'false');
-
-    // 4. Shape Fill & Stroke Properties
+    // Shape Fill & Stroke Properties
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     const shapeEl = mainPoly || rectEl;
@@ -554,8 +570,9 @@ export const ButtonEditor = ({
         setLineStyle('Dashed');
       }
 
-      const slc = shapeEl.getAttribute('stroke-linecap') || 'round';
-      setLineCorner(slc === 'round' ? 'Rounded' : 'Square');
+      const savedCornerLine = el.getAttribute('data-line-corner');
+      const slc = savedCornerLine || shapeEl.getAttribute('stroke-linejoin') || shapeEl.getAttribute('stroke-linecap') || 'butt';
+      setLineCorner(slc === 'round' || slc === 'Rounded' ? 'Rounded' : 'Square');
 
       const savedDashL = el.getAttribute('data-dash-l') || '8';
       const savedDashG = el.getAttribute('data-dash-g') || '4';
@@ -574,10 +591,13 @@ export const ButtonEditor = ({
       return !isNaN(num) ? num : fallback;
     };
 
-    const defaultTl = isSlantedBorder ? 24 : 12;
-    const defaultTr = isSlantedBorder ? 0 : 12;
-    const defaultBl = isSlantedBorder ? 0 : 12;
-    const defaultBr = isSlantedBorder ? 24 : 12;
+    const btnTemplate = el.getAttribute('data-button-template') || '';
+    const isChevronOrRibbon = el.querySelector('polygon.btn-main-poly') || el.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+    const defFallback = isChevronOrRibbon ? 0 : 12;
+    const defaultTl = isSlantedBorder ? 24 : defFallback;
+    const defaultTr = isSlantedBorder ? 0 : defFallback;
+    const defaultBl = isSlantedBorder ? 0 : defFallback;
+    const defaultBr = isSlantedBorder ? 24 : defFallback;
 
     const rawTl = el.getAttribute('data-tl');
     const rawTr = el.getAttribute('data-tr');
@@ -591,6 +611,44 @@ export const ButtonEditor = ({
       br: parseRadiusAttr(rawBr !== null ? rawBr : rectEl?.getAttribute('rx'), defaultBr)
     };
     setRadius(loadedRadius);
+
+    // If corner radius contains any value > 0 (and not a fixed polygon/chevron style), ensure lineCorner is Rounded.
+    // If all corner radii are 0, default to Square if not previously set.
+    const maxLoadedR = isChevronOrRibbon ? 0 : Math.max(loadedRadius.tl, loadedRadius.tr, loadedRadius.bl, loadedRadius.br);
+    if (maxLoadedR > 0) {
+      setLineCorner('Rounded');
+      el.setAttribute('data-line-corner', 'Rounded');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'round');
+        targetEl.setAttribute('stroke-linejoin', 'round');
+        targetEl.style.strokeLinecap = 'round';
+        targetEl.style.strokeLinejoin = 'round';
+      }
+      const borderRect = el.querySelector('rect.btn-border');
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'round');
+        borderRect.setAttribute('stroke-linejoin', 'round');
+        borderRect.style.strokeLinecap = 'round';
+        borderRect.style.strokeLinejoin = 'round';
+      }
+    } else {
+      const savedCornerLine = el.getAttribute('data-line-corner');
+      const slc = savedCornerLine || (shapeEl?.getAttribute('stroke-linejoin')) || (shapeEl?.getAttribute('stroke-linecap')) || 'butt';
+      const resolvedCorner = (slc === 'round' || slc === 'Rounded') ? 'Rounded' : 'Square';
+      setLineCorner(resolvedCorner);
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      const cap = resolvedCorner === 'Rounded' ? 'round' : 'butt';
+      const join = resolvedCorner === 'Rounded' ? 'round' : 'miter';
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', cap);
+        targetEl.setAttribute('stroke-linejoin', join);
+        targetEl.style.strokeLinecap = cap;
+        targetEl.style.strokeLinejoin = join;
+      }
+    }
 
     if (isSlantedBorder) {
       el.setAttribute('data-tl', loadedRadius.tl.toString());
@@ -630,8 +688,6 @@ export const ButtonEditor = ({
         savedIconName,
         savedIconHtml || iconHtml,
         savedIconViewBox || iconViewBox,
-        savedPaddingW !== null ? (parseInt(savedPaddingW, 10) || 0) : 0,
-        savedPaddingH !== null ? (parseInt(savedPaddingH, 10) || 0) : 0,
         parseInt(savedIconGap) || 4,
         savedPlacement,
         loadedRadius,
@@ -861,7 +917,7 @@ export const ButtonEditor = ({
     window.dispatchEvent(new CustomEvent('force-update-selection-box'));
   };
 
-  // Dynamically update button width, height, position text & icon with padding & gap
+  // Dynamically update button width, height, position text & icon with gap
   const updateButtonDimensions = (
     textVal = buttonText,
     currentFontSize = fontSize,
@@ -870,14 +926,11 @@ export const ButtonEditor = ({
     currentIconName = iconName,
     currentIconHtml = iconHtml,
     currentIconViewBox = iconViewBox,
-    currentPaddingW = paddingW,
-    currentPaddingH = paddingH,
     currentIconGap = iconGap,
     currentPlacement = iconPlacement,
     currentRadius = radius,
     currentIconColor = iconColor,
-    currentIconBgColor = iconBgColor,
-    currentIconPadding = iconPadding
+    currentIconBgColor = iconBgColor
   ) => {
     const el = resolveTargetElement();
     if (!el) return;
@@ -912,10 +965,10 @@ export const ButtonEditor = ({
       currentIconBgColor !== 'transparent'
     );
 
-    const badgeRadius = Math.max(14, Math.round(iconSize * 0.85)) + (parseInt(currentIconPadding, 10) || 0);
+    const badgeRadius = Math.max(14, Math.round(iconSize * 0.85));
     const effectiveIconWidth = (hasIconBg || (badgeEl && badgeEl.getAttribute('display') !== 'none' && badgeEl.getAttribute('fill') !== 'none'))
-      ? Math.max(iconSize + (parseInt(currentIconPadding, 10) || 0) * 2, badgeRadius * 2)
-      : iconSize + (parseInt(currentIconPadding, 10) || 0) * 2;
+      ? Math.max(iconSize, badgeRadius * 2)
+      : iconSize;
 
     const totalContentWidth = hasIconVal
       ? measuredWidth + currentIconGap + effectiveIconWidth
@@ -924,10 +977,9 @@ export const ButtonEditor = ({
     const btnTemplate = el.getAttribute('data-button-template');
     const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
 
-    // Padding scaling: paddingW and paddingH act as visual padding
-    // Base padding for button: horizPad = 16 + paddingW, vertPad = 10 + paddingH
-    const horizPad = 16 + currentPaddingW * 2;
-    const vertPad = 10 + currentPaddingH * 2;
+    // Base padding for button: horizPad = 16, vertPad = 10
+    const horizPad = 16;
+    const vertPad = 10;
 
     // Allow the button to naturally scale down when font size is decreased
     // while keeping a minimum touch target
@@ -1343,7 +1395,7 @@ export const ButtonEditor = ({
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
       textEl.textContent = newVal;
-      updateButtonDimensions(newVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+      updateButtonDimensions(newVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1357,7 +1409,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-family', val);
       textEl.style.fontFamily = val;
-      updateButtonDimensions(buttonText, fontSize, val, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+      updateButtonDimensions(buttonText, fontSize, val, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1371,7 +1423,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-size', val.toString());
       textEl.style.fontSize = `${val}px`;
-      updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+      updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1411,7 +1463,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-has-icon', val ? 'true' : 'false');
-    updateButtonDimensions(buttonText, fontSize, fontFamily, val, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, val, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1421,7 +1473,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-placement', val);
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, val, radius, iconColor, iconBgColor);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, val, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1431,7 +1483,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-color', color);
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, color, iconBgColor);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, color, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1482,8 +1534,6 @@ export const ButtonEditor = ({
       iconName,
       iconHtml,
       iconViewBox,
-      paddingW,
-      paddingH,
       iconGap,
       iconPlacement,
       radius,
@@ -1563,58 +1613,8 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-gap', gap.toString());
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, gap, iconPlacement, radius, iconColor, iconBgColor, iconPadding);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, gap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
-  };
-
-  const handleIconPaddingChange = (pad) => {
-    const num = Math.max(0, pad);
-    setIconPadding(num);
-    const el = resolveTargetElement();
-    if (!el) return;
-
-    el.setAttribute('data-icon-padding', num.toString());
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, iconColor, iconBgColor, num);
-    syncButtonToCanvas();
-  };
-
-  // Padding Handlers
-  const handlePaddingChange = (type, val) => {
-    const num = Math.max(0, val);
-    const el = resolveTargetElement();
-    if (type === 'w') {
-      setPaddingW(num);
-      if (isPaddingLinked) setPaddingH(num);
-      if (el) {
-        el.setAttribute('data-padding-w', num.toString());
-        if (isPaddingLinked) el.setAttribute('data-padding-h', num.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, num, isPaddingLinked ? num : paddingH);
-        syncButtonToCanvas();
-      }
-    } else {
-      setPaddingH(num);
-      if (isPaddingLinked) setPaddingW(num);
-      if (el) {
-        el.setAttribute('data-padding-h', num.toString());
-        if (isPaddingLinked) el.setAttribute('data-padding-w', num.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, isPaddingLinked ? num : paddingW, num);
-        syncButtonToCanvas();
-      }
-    }
-  };
-
-  const handleTogglePaddingLink = (linked) => {
-    setIsPaddingLinked(linked);
-    const el = resolveTargetElement();
-    if (el) {
-      el.setAttribute('data-padding-linked', linked ? 'true' : 'false');
-      if (linked) {
-        setPaddingH(paddingW);
-        el.setAttribute('data-padding-h', paddingW.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingW);
-        syncButtonToCanvas();
-      }
-    }
   };
 
   // Button Color Handler
@@ -1695,6 +1695,14 @@ export const ButtonEditor = ({
     el.setAttribute('data-stroke-alignment', 'Outside');
     el.setAttribute('data-stroke-position', 'Outside');
 
+    const btnTemplate = el.getAttribute('data-button-template') || '';
+    const isChevronOrRibbon = el.querySelector('polygon.btn-main-poly') || el.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+    const maxR = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
+    const currentLineCorner = maxR > 0 ? 'Rounded' : lineCorner;
+    const isRound = currentLineCorner === 'Rounded';
+    const lineCap = isRound ? 'round' : 'butt';
+    const lineJoin = isRound ? 'round' : 'miter';
+
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     const targetEl = mainPoly || rectEl;
@@ -1705,6 +1713,10 @@ export const ButtonEditor = ({
       targetEl.style.paintOrder = 'stroke fill';
       targetEl.setAttribute('stroke-width', (num * 2).toString());
       targetEl.style.strokeWidth = `${num * 2}px`;
+      targetEl.setAttribute('stroke-linecap', lineCap);
+      targetEl.setAttribute('stroke-linejoin', lineJoin);
+      targetEl.style.strokeLinecap = lineCap;
+      targetEl.style.strokeLinejoin = lineJoin;
     }
 
     const borderRect = el.querySelector('rect.btn-border');
@@ -1712,6 +1724,10 @@ export const ButtonEditor = ({
       borderRect.setAttribute('paint-order', 'stroke fill');
       borderRect.style.paintOrder = 'stroke fill';
       borderRect.setAttribute('stroke-width', (num * 2).toString());
+      borderRect.setAttribute('stroke-linecap', lineCap);
+      borderRect.setAttribute('stroke-linejoin', lineJoin);
+      borderRect.style.strokeLinecap = lineCap;
+      borderRect.style.strokeLinejoin = lineJoin;
     }
 
     syncButtonToCanvas();
@@ -1789,9 +1805,14 @@ export const ButtonEditor = ({
     const el = resolveTargetElement();
     if (!el) return;
 
+    el.setAttribute('data-line-corner', val);
+
     const isRound = val === 'Rounded';
     const lineCap = isRound ? 'round' : 'butt';
     const lineJoin = isRound ? 'round' : 'miter';
+
+    el.setAttribute('stroke-linecap', lineCap);
+    el.setAttribute('stroke-linejoin', lineJoin);
 
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
@@ -1800,12 +1821,20 @@ export const ButtonEditor = ({
     if (targetEl) {
       targetEl.setAttribute('stroke-linecap', lineCap);
       targetEl.setAttribute('stroke-linejoin', lineJoin);
+      targetEl.style.strokeLinecap = lineCap;
+      targetEl.style.strokeLinejoin = lineJoin;
     }
     const borderRect = el.querySelector('rect.btn-border');
     if (borderRect) {
       borderRect.setAttribute('stroke-linecap', lineCap);
       borderRect.setAttribute('stroke-linejoin', lineJoin);
+      borderRect.style.strokeLinecap = lineCap;
+      borderRect.style.strokeLinejoin = lineJoin;
     }
+    el.querySelectorAll('polygon, path, rect').forEach(shape => {
+      shape.setAttribute('stroke-linecap', lineCap);
+      shape.setAttribute('stroke-linejoin', lineJoin);
+    });
 
     syncButtonToCanvas();
   };
@@ -1839,7 +1868,43 @@ export const ButtonEditor = ({
       borderRect.setAttribute('ry', maxR.toString());
     }
 
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, newRadius);
+    if (maxR > 0) {
+      setLineCorner('Rounded');
+      el.setAttribute('data-line-corner', 'Rounded');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'round');
+        targetEl.setAttribute('stroke-linejoin', 'round');
+        targetEl.style.strokeLinecap = 'round';
+        targetEl.style.strokeLinejoin = 'round';
+      }
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'round');
+        borderRect.setAttribute('stroke-linejoin', 'round');
+        borderRect.style.strokeLinecap = 'round';
+        borderRect.style.strokeLinejoin = 'round';
+      }
+    } else {
+      setLineCorner('Square');
+      el.setAttribute('data-line-corner', 'Square');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'butt');
+        targetEl.setAttribute('stroke-linejoin', 'miter');
+        targetEl.style.strokeLinecap = 'butt';
+        targetEl.style.strokeLinejoin = 'miter';
+      }
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'butt');
+        borderRect.setAttribute('stroke-linejoin', 'miter');
+        borderRect.style.strokeLinecap = 'butt';
+        borderRect.style.strokeLinejoin = 'miter';
+      }
+    }
+
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, newRadius);
     syncButtonToCanvas();
   };
 
@@ -1857,7 +1922,7 @@ export const ButtonEditor = ({
       el.setAttribute('data-tr', maxR.toString());
       el.setAttribute('data-bl', maxR.toString());
       el.setAttribute('data-br', maxR.toString());
-      updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, unifiedRadius);
+      updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, unifiedRadius);
     }
     syncButtonToCanvas();
   };
@@ -2043,73 +2108,6 @@ export const ButtonEditor = ({
         />
       </PropertyRow>
 
-      {/* Row 4.1: Padding (Horizontal & Vertical with Link toggle & Mouse Drag Scrubbing) */}
-      <PropertyRow label="Padding">
-        <div className="flex items-center gap-[0.4vw] w-full">
-          {/* Horizontal Padding (Width adjustment) with mouse dragger */}
-          <div
-            onPointerDown={(e) => {
-              if (e.target.tagName === 'INPUT') return;
-              handleScrubHelper(e, paddingW, (newVal) => {
-                handlePaddingChange('w', Math.max(0, parseInt(newVal, 10) || 0));
-              }, 4);
-            }}
-            title={isPaddingLinked ? "Drag horizontally to adjust Width & Height padding, or type value" : "Drag horizontally to adjust Width padding, or type value"}
-            className="flex-1 flex items-center h-[2.2vw] min-h-[30px] border border-gray-200 rounded-[0.5vw] bg-white px-[0.4vw] shadow-2xs focus-within:border-[#E05638] cursor-ew-resize select-none hover:border-gray-300 transition-colors"
-          >
-            <span className="text-[0.72vw] font-bold text-gray-500 cursor-ew-resize select-none mr-[0.2vw]">W</span>
-            <input
-              type="number"
-              min={0}
-              value={paddingW}
-              onPointerDown={(e) => e.stopPropagation()}
-              onChange={(e) => handlePaddingChange('w', parseFloat(e.target.value) || 0)}
-              className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent no-spin cursor-text"
-            />
-          </div>
-
-          {/* Link / Unlink toggle button */}
-          <button
-            type="button"
-            onClick={() => handleTogglePaddingLink(!isPaddingLinked)}
-            className={`w-[1.9vw] h-[2.2vw] min-h-[30px] rounded-[0.5vw] border flex items-center justify-center cursor-pointer transition-all ${
-              isPaddingLinked
-                ? 'border-[#E05638] bg-[#E05638]/10 text-[#E05638]'
-                : 'border-gray-200 hover:border-gray-300 bg-gray-50 text-gray-400'
-            }`}
-            title={isPaddingLinked ? 'Linked (Click to unlink)' : 'Unlinked (Click to link)'}
-          >
-            {isPaddingLinked ? (
-              <Link2 className="w-[0.9vw] h-[0.9vw]" />
-            ) : (
-              <Link2Off className="w-[0.9vw] h-[0.9vw]" />
-            )}
-          </button>
-
-          {/* Vertical Padding (Height adjustment) with mouse dragger */}
-          <div
-            onPointerDown={(e) => {
-              if (e.target.tagName === 'INPUT') return;
-              handleScrubHelper(e, paddingH, (newVal) => {
-                handlePaddingChange('h', Math.max(0, parseInt(newVal, 10) || 0));
-              }, 4);
-            }}
-            title={isPaddingLinked ? "Drag horizontally to adjust Width & Height padding, or type value" : "Drag horizontally to adjust Height padding, or type value"}
-            className="flex-1 flex items-center h-[2.2vw] min-h-[30px] border border-gray-200 rounded-[0.5vw] bg-white px-[0.4vw] shadow-2xs focus-within:border-[#E05638] cursor-ew-resize select-none hover:border-gray-300 transition-colors"
-          >
-            <span className="text-[0.72vw] font-bold text-gray-500 cursor-ew-resize select-none mr-[0.2vw]">H</span>
-            <input
-              type="number"
-              min={0}
-              value={paddingH}
-              onPointerDown={(e) => e.stopPropagation()}
-              onChange={(e) => handlePaddingChange('h', parseFloat(e.target.value) || 0)}
-              className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent no-spin cursor-text"
-            />
-          </div>
-        </div>
-      </PropertyRow>
-
       {/* Row 4.2: Gap (Slider with Value Badge matching Coral Theme) */}
       <PropertyRow label="Gap">
         <div className="flex items-center gap-[0.6vw] w-full">
@@ -2184,32 +2182,6 @@ export const ButtonEditor = ({
             />
           </PropertyRow>
 
-          {/* Icon Padding (Slider with Value Badge) */}
-          <PropertyRow label="Icon Padding">
-            <div className="flex items-center gap-[0.6vw] w-full">
-              <div className="flex-1 flex items-center">
-                <ElementSlider
-                  min={0}
-                  max={30}
-                  step={1}
-                  value={iconPadding}
-                  onChange={(val) => handleIconPaddingChange(Math.max(0, parseInt(val, 10) || 0))}
-                />
-              </div>
-              <div className="w-[3.2vw] h-[1.8vw] min-h-[26px] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs px-[0.2vw]">
-                <input
-                  type="number"
-                  min={0}
-                  max={30}
-                  value={iconPadding}
-                  onChange={(e) => handleIconPaddingChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.78vw] text-gray-700 font-semibold outline-none bg-transparent no-spin"
-                />
-                <span className="text-[0.68vw] text-gray-400 font-semibold pr-[0.1vw]">px</span>
-              </div>
-            </div>
-          </PropertyRow>
-
           {/* Icon Color */}
           <PropertyRow label="Icon Color">
             <ColorInput
@@ -2262,50 +2234,105 @@ export const ButtonEditor = ({
       </div>
 
       {/* Stroke Settings Grid */}
-      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
-        {/* Stroke Width & Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.6vw]">
-          {/* Stroke Width */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                −
-              </button>
-              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                <input
-                  type="number"
-                  value={strokeWidth}
-                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
+      {(() => {
+        const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+        const el = resolveTargetElement();
+        const btnTemplate = el?.getAttribute('data-button-template') || '';
+        const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+
+        const maxCurrentRadius = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
+        const hasCornerRadius = maxCurrentRadius > 0;
+        const isLineCornerDisabled = isStrokeDisabled || hasCornerRadius;
+        const effectiveLineCorner = hasCornerRadius ? 'Rounded' : lineCorner;
+
+        return (
+          <div className={`flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+            {/* Stroke Width & Line Corner */}
+            <div className="grid grid-cols-2 gap-[0.6vw]">
+              {/* Stroke Width */}
+              <div className="flex flex-col gap-[0.25vw]">
+                <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+                <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                    <input
+                      type="number"
+                      disabled={isStrokeDisabled}
+                      value={strokeWidth}
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Corner */}
+              <div className="flex flex-col gap-[0.25vw] relative">
+                <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+                <ElementDropdown
+                  disabled={isLineCornerDisabled}
+                  value={effectiveLineCorner}
+                  onChange={handleLineCornerChange}
+                  options={['Square', 'Rounded']}
+                  buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                +
-              </button>
             </div>
           </div>
+        );
+      })()}
 
-          {/* Line Corner */}
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-            <ElementDropdown
-              value={lineCorner}
-              onChange={handleLineCornerChange}
-              options={['Square', 'Rounded']}
-              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
+      {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
+      {(() => {
+        const el = resolveTargetElement();
+        const btnTemplate = el?.getAttribute('data-button-template') || '';
+        const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly');
+        // Templates that shouldn't show corner radius: fixed pill shapes or chevron/ribbon polygons
+        const isFixedShape =
+          isChevronOrRibbon ||
+          btnTemplate === 'like-chevron' ||
+          btnTemplate === 'upload-ribbon' ||
+          btnTemplate === 'lemon-ribbon' ||
+          btnTemplate === 'solid-pill' ||
+          btnTemplate === 'white-pill-badge' ||
+          btnTemplate === 'social-badge' ||
+          btnTemplate === 'gradient-pill' ||
+          btnTemplate === 'mint-frost' ||
+          btnTemplate === 'lavender-badge' ||
+          btnTemplate === 'pearl-pill' ||
+          btnTemplate === 'angled-slice';
+
+        if (isFixedShape) return null;
+
+        return (
+          <div className="flex flex-col">
+            <CornerRadius
+              radius={radius}
+              onCornerChange={handleCornerChange}
+              isRadiusLinked={isRadiusLinked}
+              onToggleLinked={handleToggleRadiusLink}
+              openSubSection={openSection === 'cornerRadius' ? 'cornerRadius' : null}
+              setOpenSubSection={(s) => setOpenSection(s === 'cornerRadius' ? 'cornerRadius' : null)}
+              className="pl-[0.5vw]"
             />
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
       <SectionHeader title="Effects" />

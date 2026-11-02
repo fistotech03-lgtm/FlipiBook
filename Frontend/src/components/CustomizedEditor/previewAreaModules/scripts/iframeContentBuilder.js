@@ -242,15 +242,32 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                     }
 
                     /* Map element strict isolation in preview */
-                    g[data-type="map"] foreignObject {
+                    g[data-type="map"] foreignObject,
+                    foreignObject[data-type="map"],
+                    .map-root-container {
                         overflow: hidden !important;
                     }
                     g[data-type="map"] foreignObject * {
                         -webkit-user-select: auto !important;
                         user-select: auto !important;
                     }
-                    .map-root-container {
+                    .map-stage {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
                         overflow: hidden !important;
+                    }
+                    .map-stage iframe,
+                    .map-root-container iframe {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        border: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        display: block !important;
                     }
 
                     /* Enable pointer events on map controls & embeds in preview */

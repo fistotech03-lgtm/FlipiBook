@@ -1543,7 +1543,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         </div>
 
         {/* Stroke Settings */}
-        <div className="flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw]">
+        <div className={`flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeNone ? 'opacity-40 pointer-events-none' : ''}`}>
           {/* Stroke Width & Line Corner */}
           <div className="grid grid-cols-2 gap-[0.75vw]">
             {/* Stroke Width Stepper */}
@@ -1552,11 +1552,12 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
                 <button
                   type="button"
+                  disabled={isStrokeNone}
                   onClick={() => handleSetBackgroundColor(prev => ({
                     ...prev,
                     strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
                 >
                   −
                 </button>
@@ -1565,6 +1566,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                     type="number"
                     min="0"
                     max="100"
+                    disabled={isStrokeNone}
                     value={Math.round(parseFloat(backgroundColor?.strokeWeight) || 0)}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
@@ -1572,16 +1574,17 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                         handleSetBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
                       }
                     }}
-                    className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
+                    className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
                   />
                 </div>
                 <button
                   type="button"
+                  disabled={isStrokeNone}
                   onClick={() => handleSetBackgroundColor(prev => ({
                     ...prev,
                     strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
                   }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
                 >
                   +
                 </button>
@@ -1592,6 +1595,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             <div className="flex flex-col gap-[0.3vw]">
               <span className="text-[0.76vw] font-semibold text-[#546274]">Line Corner</span>
               <ElementDropdown
+                disabled={isStrokeNone}
                 value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
                 onChange={(val) => handleSetBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
                 options={['Square', 'Rounded']}

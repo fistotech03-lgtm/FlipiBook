@@ -1263,50 +1263,59 @@ const ElementEmbedProperties = ({
       </div>
 
       {/* Stroke Settings Grid */}
-      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
-        {/* Stroke Width & Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.6vw]">
-          {/* Stroke Width */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                −
-              </button>
-              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                <input
-                  type="number"
-                  value={strokeWidth}
-                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin"
+      {(() => {
+        const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+        return (
+          <div className={`flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+            {/* Stroke Width & Line Corner */}
+            <div className="grid grid-cols-2 gap-[0.6vw]">
+              {/* Stroke Width */}
+              <div className="flex flex-col gap-[0.25vw]">
+                <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+                <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                    <input
+                      type="number"
+                      disabled={isStrokeDisabled}
+                      value={strokeWidth}
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Corner */}
+              <div className="flex flex-col gap-[0.25vw] relative">
+                <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+                <ElementDropdown
+                  disabled={isStrokeDisabled}
+                  value={lineCorner}
+                  onChange={handleLineCornerChange}
+                  options={['Square', 'Rounded']}
+                  buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                +
-              </button>
             </div>
           </div>
-
-          {/* Line Corner */}
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-            <ElementDropdown
-              value={lineCorner}
-              onChange={handleLineCornerChange}
-              options={['Square', 'Rounded']}
-              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-            />
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ─── 4. EFFECTS ─── */}
       <SectionHeader title="Effects" />

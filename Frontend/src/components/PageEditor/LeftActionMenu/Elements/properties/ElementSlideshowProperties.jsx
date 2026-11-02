@@ -146,7 +146,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     showArrows: true,
     showDots: true,
     imageFitType: 'Fit',
-    transitionEffect: 'Linear',
     dragToSlide: false,
     dotColor: '#EC5137',
     dotOpacity: 100,
@@ -208,11 +207,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     }
   }, [selectedElement?.id, slideshowImages, flipbookVId]);
   const isHoveringRef = useRef(false);
-
-  const transitionEffectRef = useRef(slideshowSettings.transitionEffect || 'Linear');
-  useEffect(() => {
-    transitionEffectRef.current = slideshowSettings.transitionEffect || 'Linear';
-  }, [slideshowSettings.transitionEffect]);
 
   const [showGallery, setShowGallery] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
@@ -515,7 +509,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           showArrows: true,
           showDots: true,
           imageFitType: 'Fit',
-          transitionEffect: 'Linear',
           dragToSlide: false,
           dotColor: '#000000',
           dotOpacity: 100,
@@ -1570,36 +1563,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       // Let applyDesign handle the DOM update directly
       isUpdatingDOM.current = true;
       (applyDesignRef.current || applyDesign)(newIdx);
-
-      // Apply transition animation to 3-frame carousel frames based on selected effect
-      const effect = (transitionEffectRef.current || slideshowSettings.transitionEffect || 'Linear').toLowerCase();
-      const rects = targetElement.querySelectorAll('rect:not([fill="transparent"]):not(.bbox-anchor):not(.slideshow-container-bg)');
-      const centerRect = rects[2];
-      if (centerRect && effect !== 'linear') {
-        const duration = 380;
-        if (effect === 'fade') {
-          centerRect.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration, easing: 'ease-out' });
-        } else if (effect === 'flip') {
-          centerRect.style.transformBox = 'fill-box';
-          centerRect.style.transformOrigin = '50% 50%';
-          centerRect.animate([
-            { transform: 'perspective(400px) rotateY(90deg)', opacity: 0.3 },
-            { transform: 'perspective(400px) rotateY(0deg)', opacity: 1 }
-          ], { duration, easing: 'ease-out' });
-        } else if (effect === 'reveal') {
-          const startClip = dir === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-          centerRect.animate([
-            { clipPath: startClip },
-            { clipPath: 'inset(0 0 0 0)' }
-          ], { duration, easing: 'ease-in-out' });
-        } else if (effect === 'slide' || effect === 'push') {
-          const dx = dir === 'next' ? 40 : -40;
-          centerRect.animate([
-            { translate: `${dx}px 0px`, opacity: 0.4 },
-            { translate: '0px 0px', opacity: 1 }
-          ], { duration, easing: 'ease-out' });
-        }
-      }
       return;
     }
 
@@ -1607,9 +1570,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     const images = liveRunnerImagesRef.current;
     const nextUrl = images[newIdx]?.url;
     if (!nextUrl || !imgEl) return;
-
-    const effect = (transitionEffectRef.current || 'Linear').toLowerCase();
-    const duration = 400;
 
     isAnimatingRef.current = true;
     if (typeof setIsUpdatingDOM === 'function') setIsUpdatingDOM(true);
@@ -1706,119 +1666,9 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     animEl.style.transformBox = 'fill-box';
     animEl.style.transformOrigin = 'center';
 
-    // Create a temporary clone for seamless simultaneous transitions
-    const clone = animEl.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.classList.add('slideshow-transition-clone');
-    clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-    clone.style.pointerEvents = 'none';
-
-    // Handle pattern duplication for simultaneous animation if the image is inside a pattern
-    let newPattern = null;
-    if (imgEl && imgEl.closest && imgEl.closest('pattern')) {
-      const originalPattern = imgEl.closest('pattern');
-      if (originalPattern && originalPattern.parentNode) {
-        newPattern = originalPattern.cloneNode(true);
-        const clonedPatternId = 'pattern-clone-' + Date.now() + Math.random().toString(36).substring(2, 7);
-        newPattern.setAttribute('id', clonedPatternId);
-        originalPattern.parentNode.appendChild(newPattern);
-
-        const origId = originalPattern.getAttribute('id');
-        const updateFillStroke = (el) => {
-          ['fill', 'stroke'].forEach(attr => {
-            const val = el.getAttribute(attr) || el.style?.[attr];
-            if (val && val.includes(`#${origId}`)) {
-              const newVal = val.replace(`#${origId}`, `#${clonedPatternId}`);
-              if (el.hasAttribute(attr)) el.setAttribute(attr, newVal);
-              if (el.style?.[attr]) el.style[attr] = newVal;
-            }
-          });
-        };
-        updateFillStroke(clone);
-        clone.querySelectorAll('*').forEach(updateFillStroke);
-      }
-    }
-
-    animEl.parentNode.insertBefore(clone, animEl);
-
-    // Swap src on the original element immediately (it will act as the incoming element)
+    // Swap src on the original element immediately
     setElSrc(nextUrl, images[newIdx]);
-
-    // Calculate dimensions for translations using visual width
-    let w = 100;
-    try {
-      const cropStr = animEl.getAttribute('data-crop-data');
-      if (cropStr && cropStr !== 'null') {
-        const origW = parseFloat(animEl.getAttribute('data-crop-orig-w') || animEl.getAttribute('width') || 100);
-        const crop = JSON.parse(cropStr);
-        w = origW * (parseFloat(crop.width) / 100);
-      } else {
-        w = animEl.getBBox().width;
-      }
-    } catch (e) {
-      w = animEl.clientWidth || 100;
-    }
-
-    let realAnim;
-
-    if (effect === 'fade') {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: 0 }, { opacity: baseOpacity }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'push') {
-      const dx = dir === 'next' ? -w : w;
-      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-      realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'linear') {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
-    } else if (effect === 'slide') {
-      const dx = dir === 'next' ? -w : w;
-      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-      realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'flip') {
-      animEl.style.transformBox = 'fill-box';
-      animEl.style.transformOrigin = 'center';
-      clone.animate([{ opacity: 0 }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([
-        { rotate: 'y 90deg', opacity: 0 },
-        { rotate: 'y 0deg', opacity: baseOpacity }
-      ], { duration, easing: 'ease-out', fill: 'forwards' });
-    } else if (effect === 'reveal') {
-      const startClip = dir === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([{ clipPath: startClip }, { clipPath: 'inset(0 0 0 0)' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
-    }
-
-    // Cleanup and finalize when animation finishes
-    const cleanupAnim = () => {
-      if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
-      if (newPattern && newPattern.parentNode) newPattern.parentNode.removeChild(newPattern);
-
-      // Additional failsafe for SVG filters in Safari
-      if (animEl.style.filter === 'none') {
-        animEl.style.removeProperty('filter');
-      }
-    };
-
-    realAnim.onfinish = () => {
-      cleanupAnim();
-      realAnim.cancel();
-      animEl.style.transformBox = '';
-      animEl.style.transformOrigin = '';
-      finalize();
-    };
-
-    // Fallback in case onfinish doesn't fire (especially for 0 duration)
-    setTimeout(() => {
-      cleanupAnim();
-      animEl.style.transformBox = '';
-      animEl.style.transformOrigin = '';
-      finalize();
-    }, duration + 20);
-
+    finalize();
   }, [activePageIndex, selectedElement, opacity, setIsUpdatingDOM]);
 
   const runnerSettingsStr = JSON.stringify({
@@ -2640,22 +2490,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           checked={slideshowSettings.infiniteLoop ?? true}
           onChange={(checked) => updateSetting('infiniteLoop', checked)}
         />
-      </div>
-
-      {/* Slide Effect */}
-      <div className="flex items-center justify-between">
-        <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Slide Effect</span>
-        <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-        <div className="relative">
-          <PremiumDropdown
-            options={['Linear', 'Fade', 'Flip', 'Reveal', 'Slide']}
-            value={slideshowSettings.transitionEffect || 'Linear'}
-            onChange={(val) => updateSetting('transitionEffect', val)}
-            width="6.8vw"
-            align="right"
-            buttonClassName="!border-gray-200 !border !rounded-[0.4vw] !text-[0.75vw] !font-semibold !h-[2vw] !bg-white shadow-2xs"
-          />
-        </div>
       </div>
 
       {/* Manual Navigation Button */}

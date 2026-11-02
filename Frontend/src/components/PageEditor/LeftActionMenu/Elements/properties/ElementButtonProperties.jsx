@@ -2302,20 +2302,10 @@ export const ButtonEditor = ({
         const el = resolveTargetElement();
         const btnTemplate = el?.getAttribute('data-button-template') || '';
         const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly');
-        // Templates that shouldn't show corner radius: fixed pill shapes or chevron/ribbon polygons
+        // Chevron polygon cannot have SVG corner radius. Other button styles (pills, badges, cards) can customize Corner Radius.
         const isFixedShape =
           isChevronOrRibbon ||
-          btnTemplate === 'like-chevron' ||
-          btnTemplate === 'upload-ribbon' ||
-          btnTemplate === 'lemon-ribbon' ||
-          btnTemplate === 'solid-pill' ||
-          btnTemplate === 'white-pill-badge' ||
-          btnTemplate === 'social-badge' ||
-          btnTemplate === 'gradient-pill' ||
-          btnTemplate === 'mint-frost' ||
-          btnTemplate === 'lavender-badge' ||
-          btnTemplate === 'pearl-pill' ||
-          btnTemplate === 'angled-slice';
+          btnTemplate === 'like-chevron';
 
         if (isFixedShape) return null;
 

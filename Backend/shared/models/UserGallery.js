@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 
 /**
  * Base media item stored in gallery arrays

@@ -21,6 +21,24 @@ export const getTopLevelFrames = (svg) => {
 };
 
 /**
+ * Checks if an element is a root page frame (the page container <g> directly under <svg>).
+ */
+export const isPageRootElement = (el, svg) => {
+  if (!el) return false;
+  const tag = el.tagName?.toLowerCase();
+  if (tag === 'svg') return true;
+  const parent = el.parentElement;
+  if (!parent) return false;
+  const isDirectUnderSvg = (svg && parent === svg) || parent.tagName?.toLowerCase() === 'svg';
+  if (!isDirectUnderSvg) return false;
+  const dataType = el.getAttribute?.('data-type');
+  const name = el.getAttribute?.('data-name');
+  if (dataType === 'frame') return true;
+  if (name && /^Page\s*\d+$/i.test(name)) return true;
+  return false;
+};
+
+/**
  * Returns direct children of a given container element that have IDs and act as child frames.
  */
 export const getDirectChildFrames = (el) => {

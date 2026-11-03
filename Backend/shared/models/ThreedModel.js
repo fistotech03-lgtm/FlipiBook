@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 const crypto = require('crypto');
 
 const generateId = () => crypto.randomBytes(10).toString('hex');

@@ -1,48 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import {
-  Upload,
   Plus,
-  Trash2,
-  Edit2,
-  ArrowRightLeft
+  Trash2
 } from 'lucide-react';
-import ColorPicker from '../../../../ColorPicker';
-import ImageAdjustModal from './ImageAdjustModal';
+import Color from '../../../properties/Color';
 import Effect from '../../../properties/Effect';
-import { ElementSlider, ElementDropdown } from './ElementUIControls';
 import { DEFAULT_FRAME_IMAGE } from '../utils/imageFramingUtils';
-
-const PropertySlider = ({ label, value, onChange, onPointerUp, min = 0, max = 100 }) => {
-  return (
-    <div className="flex items-center gap-[0.5vw] py-[0.4vw]">
-      <span className="text-[0.8vw] font-semibold text-gray-600 whitespace-nowrap min-w-[5.5vw]">{label} :</span>
-      <div className="flex-grow flex items-center gap-[1vw]">
-        <ElementSlider
-          min={min}
-          max={max}
-          step={1}
-          value={value || 0}
-          onChange={(val) => onChange(val)}
-          onPointerUp={onPointerUp}
-          className="flex-grow"
-        />
-        <div className="w-[2.8vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-100 rounded-[0.4vw] shadow-sm flex-shrink-0">
-          <input
-            type="number"
-            min={min}
-            max={max}
-            value={value || 0}
-            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-            onBlur={onPointerUp}
-            onKeyDown={(e) => { if (e.key === 'Enter') onPointerUp(); }}
-            className="w-full text-center text-[0.8vw] text-gray-700 font-semibold outline-none bg-transparent"
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
+import { updateShapeMaskTransform, updateShapeMaskFilters, updateShapeMaskOpacity, ensurePatternImageNode, applySvgGradientOrSolid } from '../utils/shapeMaskUtils';
+import { parseGradient } from '../../../../ColorPicker';
+import ImageAdjustmentModal, { AdjustmentIcon } from '../../../modals/ImageAdjustmentModal';
+import { PropertySlider } from '../../../properties/propertiesShared';
 
 const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIndex, updateElementAttribute, selectedElementProps }) => {
   const [slots, setSlots] = useState([]);
@@ -52,20 +19,72 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
   const [activeSlotId, setActiveSlotId] = useState(null);
   const [slotRadii, setSlotRadii] = useState({});
   const [slotRotations, setSlotRotations] = useState({});
+  const [slotOpacities, setSlotOpacities] = useState({});
   const [slotMeta, setSlotMeta] = useState({});
-  const slotReplaceRefs = useRef({});
-  const activeSlotRef = useRef(null);
-  const adjustStateRef = useRef({ isAdjusting: false, slotId: null, isPanning: false, startX: 0, startY: 0, matrix: null, rotateStr: '', imgNode: null, bbox: null, startMatrix: null, path: null });
-
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustTargetSlotId, setAdjustTargetSlotId] = useState(null);
+  const [slotFilters, setSlotFilters] = useState({});
+  const slotReplaceRefs = useRef({});
+  const activeSlotRef = useRef(null);
 
-  const [openSubSection, setOpenSubSection] = useState('slots');
+  const currentSlotFilters = (adjustTargetSlotId && slotFilters[adjustTargetSlotId]) || {
+    exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0
+  };
+
+  const handleAdjustmentChange = (key, val) => {
+    if (!adjustTargetSlotId) return;
+    const nextFilters = {
+      ...currentSlotFilters,
+      [key]: val
+    };
+    setSlotFilters(prev => ({
+      ...prev,
+      [adjustTargetSlotId]: nextFilters
+    }));
+
+    const path = selectedElement?.querySelector(`[data-pattern-id="${adjustTargetSlotId}"], [fill*="${adjustTargetSlotId}"]`);
+    if (!path) return;
+
+    updateShapeMaskFilters({
+      selectedElement: path,
+      selectedLayerId,
+      activePageIndex,
+      filters: nextFilters,
+      updateElementAttribute,
+      doc: selectedElement.ownerDocument || document
+    });
+  };
+
+  const handleResetAllAdjustments = () => {
+    if (!adjustTargetSlotId) return;
+    const reset = { exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 };
+    setSlotFilters(prev => ({
+      ...prev,
+      [adjustTargetSlotId]: reset
+    }));
+
+    const path = selectedElement?.querySelector(`[data-pattern-id="${adjustTargetSlotId}"], [fill*="${adjustTargetSlotId}"]`);
+    if (!path) return;
+
+    updateShapeMaskFilters({
+      selectedElement: path,
+      selectedLayerId,
+      activePageIndex,
+      filters: reset,
+      updateElementAttribute,
+      doc: selectedElement.ownerDocument || document
+    });
+  };
+
+  const [openSubSection, setOpenSubSection] = useState('color');
   const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [showStrokeSettings, setShowStrokeSettings] = useState(false);
+  const [isStrokeStyleOpen, setIsStrokeStyleOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const [strokeSettingsPos, setStrokeSettingsPos] = useState({ top: 0, right: 0 });
+  const [isDashPosOpen, setIsDashPosOpen] = useState(false);
+  const [activePopup, setActivePopup] = useState(null);
   const [showDetailedPicker, setShowDetailedPicker] = useState(false);
-
-  const [localFillHex, setLocalFillHex] = useState(null);
-  const [localStrokeHex, setLocalStrokeHex] = useState(null);
 
   const colorsOnPage = React.useMemo(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
@@ -82,43 +101,189 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     return Array.from(colors).slice(0, 12);
   }, [selectedElementProps, activePageIndex]);
 
+  const frameBgFill = selectedElementProps?.['data-frame-bg-fill'] !== undefined
+    ? selectedElementProps['data-frame-bg-fill']
+    : (selectedElement?.getAttribute('data-frame-bg-fill') || 'none');
+
+  const frameBgOpacity = selectedElementProps?.['data-frame-bg-opacity'] !== undefined
+    ? parseFloat(selectedElementProps['data-frame-bg-opacity']) * 100
+    : (selectedElement?.hasAttribute('data-frame-bg-opacity') ? parseFloat(selectedElement.getAttribute('data-frame-bg-opacity')) * 100 : 100);
+
+  const frameStroke = selectedElementProps?.['data-frame-stroke'] !== undefined
+    ? selectedElementProps['data-frame-stroke']
+    : (selectedElement?.getAttribute('data-frame-stroke') || selectedElement?.querySelector('[stroke]:not(.frame-bg-rect):not([stroke="none"])')?.getAttribute('stroke') || 'none');
+
+  const frameStrokeOpacity = selectedElementProps?.['data-frame-stroke-opacity'] !== undefined
+    ? parseFloat(selectedElementProps['data-frame-stroke-opacity']) * 100
+    : (selectedElement?.hasAttribute('data-frame-stroke-opacity') ? parseFloat(selectedElement.getAttribute('data-frame-stroke-opacity')) * 100 : 100);
+
+  const frameStrokeWidth = parseFloat(selectedElementProps?.['data-frame-stroke-width'] !== undefined
+    ? selectedElementProps['data-frame-stroke-width']
+    : (selectedElement?.getAttribute('data-frame-stroke-width') || selectedElement?.querySelector('[data-stroke-width]')?.getAttribute('data-stroke-width') || 0));
+
+  const activePath = activeSlotId && selectedElement
+    ? selectedElement.querySelector(`[data-pattern-id="${activeSlotId}"], [fill*="${activeSlotId}"]`)
+    : null;
+  const activePattern = activeSlotId && selectedElement
+    ? (selectedElement.querySelector(`pattern[id="${activeSlotId}"]`) || selectedElement.ownerDocument?.querySelector?.(`pattern[id="${activeSlotId}"]`))
+    : null;
+  const activeBgRect = activePattern?.querySelector?.('rect.mask-bg-fill');
+
+  const resolvedFill = activeSlotId
+    ? (activeBgRect?.getAttribute('fill') || activePath?.getAttribute('data-original-fill') || 'none')
+    : frameBgFill;
+
+  const resolvedFillOpacity = activeSlotId
+    ? (activeBgRect && activeBgRect.hasAttribute('fill-opacity')
+        ? parseFloat(activeBgRect.getAttribute('fill-opacity')) * 100
+        : (activePath && activePath.hasAttribute('data-slot-fill-opacity')
+            ? parseFloat(activePath.getAttribute('data-slot-fill-opacity')) * 100
+            : 100))
+    : frameBgOpacity;
+
+  const resolvedStroke = activeSlotId
+    ? (activePath?.getAttribute('stroke') || 'none')
+    : frameStroke;
+
+  const resolvedStrokeOpacity = activeSlotId && activePath && activePath.hasAttribute('stroke-opacity')
+    ? parseFloat(activePath.getAttribute('stroke-opacity')) * 100
+    : frameStrokeOpacity;
+
+  const resolvedStrokeWidth = activeSlotId && activePath && activePath.hasAttribute('data-stroke-width')
+    ? parseFloat(activePath.getAttribute('data-stroke-width')) || 0
+    : frameStrokeWidth;
+
+  const frameStrokeDasharray = selectedElementProps?.['data-frame-stroke-dasharray'] !== undefined
+    ? selectedElementProps['data-frame-stroke-dasharray']
+    : (selectedElement?.getAttribute('data-frame-stroke-dasharray') || 'none');
+
+  const frameStrokeLinecap = selectedElementProps?.['data-frame-stroke-linecap'] || selectedElement?.getAttribute('data-frame-stroke-linecap') || 'square';
+  const frameStrokePosition = selectedElementProps?.['data-frame-stroke-position'] || selectedElement?.getAttribute('data-frame-stroke-position') || 'Outside';
+
+  const parsedFillGrad = (resolvedFill && typeof resolvedFill === 'string' && resolvedFill.includes('gradient')) ? parseGradient(resolvedFill) : null;
+
   const backgroundColor = {
-    fill: selectedElementProps?.['data-frame-bg-fill'] || 'none',
-    fillOpacity: selectedElementProps?.['data-frame-bg-opacity'] ? parseFloat(selectedElementProps['data-frame-bg-opacity']) * 100 : 100,
-    stroke: selectedElementProps?.['data-frame-stroke'] || 'none',
-    strokeOpacity: selectedElementProps?.['data-frame-stroke-opacity'] ? parseFloat(selectedElementProps['data-frame-stroke-opacity']) * 100 : 100,
-    fillType: 'solid',
-    fillGradientType: 'linear',
-    fillStops: [],
-    fillAngle: 0,
-    fillRadius: 100,
-    strokeType: 'solid',
+    fill: resolvedFill,
+    fillOpacity: resolvedFillOpacity,
+    stroke: resolvedStroke,
+    strokeOpacity: resolvedStrokeOpacity,
+    fillType: parsedFillGrad ? 'gradient' : (resolvedFill.includes('gradient') ? 'gradient' : 'solid'),
+    fillGradientType: parsedFillGrad ? parsedFillGrad.type.toLowerCase() : 'linear',
+    fillStops: parsedFillGrad ? JSON.stringify(parsedFillGrad.stops.map(s => ({ color: s.color, offset: s.offset, opacity: s.opacity / 100 }))) : undefined,
+    fillAngle: parsedFillGrad ? parsedFillGrad.angle || 0 : 0,
+    fillRadius: parsedFillGrad ? parsedFillGrad.radius || 100 : 100,
+    strokeType: resolvedStroke.includes('gradient') ? 'gradient' : 'solid',
     strokeGradientType: 'linear',
     strokeStops: [],
     strokeAngle: 0,
     strokeRadius: 100,
-    strokeWeight: parseFloat(selectedElementProps?.['data-frame-stroke-width'] || 0),
-    strokeDashStyle: ((selectedElementProps?.['data-frame-stroke-dasharray']) && selectedElementProps['data-frame-stroke-dasharray'] !== 'none') ? 'Dashed' : 'Solid',
-    strokeDasharrayValue: selectedElementProps?.['data-frame-stroke-dasharray'] || 'none',
-    strokeDashLength: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[0]) || 10,
-    strokeDashGap: parseInt((selectedElementProps?.['data-frame-stroke-dasharray'] === 'none' ? '10,10' : (selectedElementProps?.['data-frame-stroke-dasharray'] || '10,10')).split(',')[1]) || 10,
-    strokeLinecap: (selectedElementProps?.['data-frame-stroke-linecap'] === 'round' || selectedElementProps?.['stroke-linecap'] === 'round' || selectedElementProps?.['stroke-linejoin'] === 'round') ? 'round' : 'square',
-    strokePosition: selectedElementProps?.['data-frame-stroke-position'] || 'Outside',
+    strokeWeight: resolvedStrokeWidth,
+    strokeDashStyle: (frameStrokeDasharray && frameStrokeDasharray !== 'none') ? 'Dashed' : 'Solid',
+    strokeDasharrayValue: frameStrokeDasharray,
+    strokeDashLength: parseInt((frameStrokeDasharray === 'none' ? '10,10' : (frameStrokeDasharray || '10,10')).split(',')[0]) || 10,
+    strokeDashGap: parseInt((frameStrokeDasharray === 'none' ? '10,10' : (frameStrokeDasharray || '10,10')).split(',')[1]) || 10,
+    strokeLinecap: (frameStrokeLinecap === 'round' || selectedElementProps?.['stroke-linecap'] === 'round' || selectedElementProps?.['stroke-linejoin'] === 'round') ? 'round' : 'square',
+    strokePosition: frameStrokePosition,
   };
 
   const handleSetBackgroundColor = (updater) => {
     const next = typeof updater === 'function' ? updater(backgroundColor) : updater;
+    if (!selectedElement) return;
+
+    const fillVal = next.fill !== 'none' && next.fill !== '#' ? next.fill : 'none';
+    const fillOp = next.fillOpacity !== undefined ? (next.fillOpacity / 100).toString() : '1';
+    const strokeVal = next.stroke !== 'none' && next.stroke !== '#' ? next.stroke : 'none';
+    const strokeOp = next.strokeOpacity !== undefined ? (next.strokeOpacity / 100).toString() : '1';
+    const sw = parseFloat(next.strokeWeight !== undefined ? next.strokeWeight : backgroundColor.strokeWeight) || 0;
+    const pos = next.strokePosition || backgroundColor.strokePosition || 'Outside';
+    const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
+      ? 'none'
+      : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
+    const cap = next.strokeLinecap || backgroundColor.strokeLinecap || 'square';
+
+    if (activeSlotId) {
+      // -------------------------------------------------------------
+      // 1. SLOT-SPECIFIC: Target strictly the active slot path & pattern
+      // -------------------------------------------------------------
+      const allPaths = Array.from(selectedElement.querySelectorAll('path, polygon, rect:not(.frame-bg-rect), circle, ellipse'));
+      const targetPaths = allPaths.filter(p => p.dataset.patternId === activeSlotId || p.getAttribute('fill')?.includes(activeSlotId));
+      const pathsToUse = targetPaths.length > 0 ? targetPaths : (activePath ? [activePath] : []);
+
+      pathsToUse.forEach(path => {
+        path.setAttribute('data-original-fill', fillVal);
+        path.setAttribute('data-slot-fill-opacity', fillOp);
+        path.setAttribute('stroke', strokeVal);
+        path.setAttribute('stroke-opacity', strokeOp);
+        path.setAttribute('data-stroke-width', sw.toString());
+        path.setAttribute('data-stroke-position', pos);
+        path.setAttribute('vector-effect', 'non-scaling-stroke');
+        path.setAttribute('stroke-dasharray', dashValue);
+        path.setAttribute('stroke-linecap', cap);
+        path.setAttribute('stroke-linejoin', cap === 'round' ? 'round' : 'miter');
+
+        if (pos === 'Outside') {
+          path.setAttribute('stroke-width', (sw * 2).toString());
+          path.setAttribute('paint-order', 'stroke fill');
+          path.style.paintOrder = 'stroke fill';
+        } else if (pos === 'Inside') {
+          path.setAttribute('stroke-width', (sw * 2).toString());
+          path.setAttribute('paint-order', 'fill stroke');
+          path.style.paintOrder = 'fill stroke';
+        } else {
+          path.setAttribute('stroke-width', sw.toString());
+          path.setAttribute('paint-order', 'normal');
+          path.style.paintOrder = 'normal';
+        }
+
+        const pat = selectedElement.querySelector(`pattern[id="${activeSlotId}"]`) ||
+          selectedElement.ownerDocument?.querySelector?.(`pattern[id="${activeSlotId}"]`) ||
+          document.getElementById(activeSlotId);
+        if (pat) {
+          let bgRect = pat.querySelector('rect.mask-bg-fill');
+          if (!bgRect) {
+            bgRect = (selectedElement.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bgRect.setAttribute('class', 'mask-bg-fill');
+            pat.insertBefore(bgRect, pat.firstChild);
+          }
+          applySvgGradientOrSolid({
+            targetEl: bgRect,
+            fillVal,
+            fillOp,
+            idPrefix: `grad-${activeSlotId}-bg`,
+            doc: selectedElement.ownerDocument || document,
+            svgRoot: selectedElement.closest('svg') || selectedElement.ownerDocument?.querySelector('svg')
+          });
+        }
+      });
+
+      syncDomChanges();
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // 2. GLOBAL FRAME STYLING (No active slot selected)
+    // -------------------------------------------------------------
     const updates = {};
     if (backgroundColor.fill !== next.fill) updates['data-frame-bg-fill'] = next.fill;
     if (backgroundColor.fillOpacity !== next.fillOpacity) updates['data-frame-bg-opacity'] = (next.fillOpacity / 100).toString();
-    if (backgroundColor.stroke !== next.stroke) updates['data-frame-stroke'] = next.stroke;
-    if (backgroundColor.strokeOpacity !== next.strokeOpacity) updates['data-frame-stroke-opacity'] = (next.strokeOpacity / 100).toString();
-    if (backgroundColor.strokeWeight !== next.strokeWeight) updates['data-frame-stroke-width'] = next.strokeWeight.toString();
+    if (backgroundColor.stroke !== next.stroke) {
+      updates['data-frame-stroke'] = next.stroke;
+      updates['stroke'] = next.stroke;
+      updates['data-stroke-color'] = next.stroke;
+    }
+    if (backgroundColor.strokeOpacity !== next.strokeOpacity) {
+      updates['data-frame-stroke-opacity'] = (next.strokeOpacity / 100).toString();
+      updates['stroke-opacity'] = (next.strokeOpacity / 100).toString();
+    }
+    if (backgroundColor.strokeWeight !== next.strokeWeight || backgroundColor.strokePosition !== next.strokePosition) {
+      updates['data-frame-stroke-width'] = sw.toString();
+      updates['data-stroke-width'] = sw.toString();
+      updates['data-stroke-position'] = pos;
+      updates['vector-effect'] = 'non-scaling-stroke';
+    }
     if (backgroundColor.strokeDashStyle !== next.strokeDashStyle || backgroundColor.strokeDashLength !== next.strokeDashLength || backgroundColor.strokeDashGap !== next.strokeDashGap || backgroundColor.strokeDasharrayValue !== next.strokeDasharrayValue) {
-      const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
-        ? 'none'
-        : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
       updates['data-frame-stroke-dasharray'] = dashValue;
+      updates['stroke-dasharray'] = dashValue;
     }
     if (backgroundColor.strokeLinecap !== next.strokeLinecap && next.strokeLinecap !== undefined) {
       updates['data-frame-stroke-linecap'] = next.strokeLinecap;
@@ -132,43 +297,80 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     if (Object.keys(updates).length > 0) {
       Object.entries(updates).forEach(([k, v]) => selectedElement.setAttribute(k, v));
 
-      let bgRect = selectedElement.querySelector('.frame-bg-rect');
-      if (!bgRect) {
-        updateFramePadding(framePadding, true);
-        bgRect = selectedElement.querySelector('.frame-bg-rect');
-      }
+      const allPaths = Array.from(selectedElement.querySelectorAll('path, polygon, rect:not(.frame-bg-rect), circle, ellipse'));
+      allPaths.forEach(path => {
+        path.setAttribute('data-original-fill', fillVal);
+        path.setAttribute('stroke', strokeVal);
+        path.setAttribute('stroke-opacity', strokeOp);
+        path.setAttribute('data-stroke-width', sw.toString());
+        path.setAttribute('data-stroke-position', pos);
+        path.setAttribute('vector-effect', 'non-scaling-stroke');
+        path.setAttribute('stroke-dasharray', dashValue);
+        path.setAttribute('stroke-linecap', cap);
+        path.setAttribute('stroke-linejoin', cap === 'round' ? 'round' : 'miter');
 
-      if (bgRect) {
-        bgRect.setAttribute('fill', next.fill !== 'none' && next.fill !== '#' ? next.fill : 'none');
-        if (next.fillOpacity !== undefined) bgRect.setAttribute('fill-opacity', next.fillOpacity / 100);
-        bgRect.setAttribute('stroke', next.stroke !== 'none' && next.stroke !== '#' ? next.stroke : 'none');
-        if (next.strokeOpacity !== undefined) bgRect.setAttribute('stroke-opacity', next.strokeOpacity / 100);
-        if (next.strokeWeight !== undefined) {
-          const sw = parseFloat(next.strokeWeight) || 0;
-          bgRect.setAttribute('paint-order', 'stroke fill');
-          bgRect.style.paintOrder = 'stroke fill';
-          bgRect.setAttribute('stroke-width', (sw * 2).toString());
-          bgRect.setAttribute('data-frame-stroke-width', sw.toString());
+        if (pos === 'Outside') {
+          path.setAttribute('stroke-width', (sw * 2).toString());
+          path.setAttribute('paint-order', 'stroke fill');
+          path.style.paintOrder = 'stroke fill';
+        } else if (pos === 'Inside') {
+          path.setAttribute('stroke-width', (sw * 2).toString());
+          path.setAttribute('paint-order', 'fill stroke');
+          path.style.paintOrder = 'fill stroke';
+        } else {
+          path.setAttribute('stroke-width', sw.toString());
+          path.setAttribute('paint-order', 'normal');
+          path.style.paintOrder = 'normal';
         }
-        const dashValue = (next.strokeDashStyle === 'none' || next.strokeDashStyle === 'Solid')
-          ? 'none'
-          : (next.strokeDasharrayValue || `${next.strokeDashLength || 10},${next.strokeDashGap || 10}`);
-        bgRect.setAttribute('stroke-dasharray', dashValue);
-        if (next.strokeLinecap !== undefined) {
-          bgRect.setAttribute('stroke-linecap', next.strokeLinecap);
-          bgRect.setAttribute('stroke-linejoin', next.strokeLinecap === 'round' ? 'round' : 'miter');
-        }
-      }
 
-      // Gap color is now handled perfectly by the frame-bg-rect showing through the SVG mask holes.
-      // We no longer apply strokes to the paths to fake gaps!
-      const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'))
-        .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
-      paths.forEach(path => {
-        path.removeAttribute('stroke');
-        path.removeAttribute('stroke-opacity');
-        path.removeAttribute('stroke-width');
+        const pFill = path.getAttribute('fill') || '';
+        const match = pFill.match(/url\(['"]?#([^)'"]+)['"]?\)/);
+        if (match && match[1]) {
+          const patId = match[1];
+          const pat = selectedElement.querySelector(`pattern[id="${patId}"]`) ||
+            selectedElement.ownerDocument?.querySelector?.(`pattern[id="${patId}"]`) ||
+            document.getElementById(patId);
+          if (pat) {
+            let bgRect = pat.querySelector('rect.mask-bg-fill');
+            if (!bgRect) {
+              bgRect = (selectedElement.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'rect');
+              bgRect.setAttribute('class', 'mask-bg-fill');
+              pat.insertBefore(bgRect, pat.firstChild);
+            }
+            applySvgGradientOrSolid({
+              targetEl: bgRect,
+              fillVal,
+              fillOp,
+              idPrefix: `grad-${patId}-bg`,
+              doc: selectedElement.ownerDocument || document,
+              svgRoot: selectedElement.closest('svg') || selectedElement.ownerDocument?.querySelector('svg')
+            });
+          }
+        }
       });
+
+      // Handle frame-bg-rect boundary if framePadding > 0
+      const framePaddingVal = parseFloat(selectedElement.getAttribute('data-frame-padding') || 0);
+      let boundary = selectedElement.querySelector('.frame-bg-rect');
+      if (framePaddingVal > 0) {
+        if (!boundary) {
+          updateFramePadding(framePaddingVal, true);
+          boundary = selectedElement.querySelector('.frame-bg-rect');
+        }
+        if (boundary) {
+          applySvgGradientOrSolid({
+            targetEl: boundary,
+            fillVal,
+            fillOp,
+            idPrefix: `grad-${selectedLayerId}-frame-bg`,
+            doc: selectedElement.ownerDocument || document,
+            svgRoot: selectedElement.closest('svg') || selectedElement.ownerDocument?.querySelector('svg')
+          });
+          boundary.setAttribute('stroke', 'none');
+        }
+      } else if (boundary) {
+        boundary.remove();
+      }
 
       syncDomChanges();
       updateElementAttribute(activePageIndex, selectedLayerId, updates);
@@ -223,220 +425,18 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
   useEffect(() => {
     if (!selectedElement) return;
 
+    // Clean up any stale boundary rectangle if framePadding is 0
+    const framePaddingVal = parseFloat(selectedElement.getAttribute('data-frame-padding') || 0);
+    const existingBoundary = selectedElement.querySelector('.frame-bg-rect');
+    if (existingBoundary && framePaddingVal <= 0) {
+      existingBoundary.remove();
+      syncDomChanges();
+    }
+
     // Find all paths that use a pattern for fill
     const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
     const imageSlots = [];
     const listeners = [];
-
-    const updateAdjustTransform = () => {
-      if (!adjustStateRef.current.matrix) return;
-      const m = adjustStateRef.current.matrix;
-      const transformStr = `${adjustStateRef.current.rotateStr || ''}matrix(${m[0]} ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]})`;
-      if (adjustStateRef.current.imgNode) {
-        adjustStateRef.current.imgNode.setAttribute('transform', transformStr);
-      }
-      const ghost = selectedElement.querySelector('#ghost-layer');
-      if (ghost) {
-        const ghostImg = ghost.querySelector('image, img');
-        const outline = ghost.querySelector('rect');
-        if (ghostImg) ghostImg.setAttribute('transform', transformStr);
-        if (outline) outline.setAttribute('transform', transformStr);
-      }
-    };
-
-    const enterAdjustMode = (patternId, path) => {
-      const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
-      if (!pattern) return;
-      let imgNode = pattern.querySelector('image, img');
-      if (!imgNode) {
-        const useNode = pattern.querySelector('use');
-        if (useNode) {
-          const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
-          const targetId = href.replace('#', '');
-          imgNode = selectedElement.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
-        }
-      }
-      if (!imgNode) return; // Cannot adjust empty slot
-
-      adjustStateRef.current.isAdjusting = true;
-      adjustStateRef.current.slotId = patternId;
-      adjustStateRef.current.imgNode = imgNode;
-      adjustStateRef.current.path = path;
-      adjustStateRef.current.bbox = path.getBBox();
-
-      const transformStr = imgNode.getAttribute('transform');
-      let matrix = [1, 0, 0, 1, 0, 0];
-      let rotateStr = '';
-      if (transformStr) {
-        const rMatch = transformStr.match(/rotate\([^)]+\)/);
-        if (rMatch) rotateStr = rMatch[0] + ' ';
-
-        const match = transformStr.match(/matrix\(([^)]+)\)/);
-        if (match) {
-          matrix = match[1].split(/[ ,]+/).map(parseFloat);
-        }
-      }
-      adjustStateRef.current.matrix = matrix;
-      adjustStateRef.current.rotateStr = rotateStr;
-
-      let ghost = selectedElement.querySelector('#ghost-layer');
-      if (ghost) ghost.remove();
-
-      ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      ghost.id = 'ghost-layer';
-      ghost.style.pointerEvents = 'none';
-
-      // Inherit path's transform to match local coordinate space
-      let combinedTransform = path.getAttribute('transform') || '';
-      const pt = pattern.getAttribute('patternTransform');
-      if (pt) {
-        combinedTransform = `${combinedTransform} ${pt}`.trim();
-      }
-      if (combinedTransform) {
-        ghost.setAttribute('transform', combinedTransform);
-      }
-
-      const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      const bbox = adjustStateRef.current.bbox;
-
-      const pcu = pattern.getAttribute('patternContentUnits');
-      if (!pcu || pcu === 'objectBoundingBox') {
-        wrapper.setAttribute('transform', `translate(${bbox.x}, ${bbox.y}) scale(${bbox.width}, ${bbox.height})`);
-      } else {
-        wrapper.setAttribute('transform', `translate(0, 0)`);
-      }
-
-      const ghostImg = imgNode.cloneNode(true);
-      ghostImg.setAttribute('opacity', '0.4');
-
-      const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      outline.setAttribute('fill', 'none');
-      outline.setAttribute('stroke', '#f59e0b');
-      outline.setAttribute('vector-effect', 'non-scaling-stroke');
-      outline.setAttribute('stroke-dasharray', '5,5');
-
-      let iw = imgNode.getAttribute('width');
-      let ih = imgNode.getAttribute('height');
-      if (!iw || iw.includes('%')) iw = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.width.toString();
-      if (!ih || ih.includes('%')) ih = (!pcu || pcu === 'objectBoundingBox') ? '1' : bbox.height.toString();
-
-      outline.setAttribute('width', iw);
-      outline.setAttribute('height', ih);
-
-      const imgTransform = ghostImg.getAttribute('transform');
-      if (imgTransform) outline.setAttribute('transform', imgTransform);
-
-      wrapper.appendChild(ghostImg);
-      wrapper.appendChild(outline);
-      ghost.appendChild(wrapper);
-
-      // Insert sibling to inherit group transforms
-      if (path.parentNode) {
-        path.parentNode.insertBefore(ghost, path.nextSibling);
-      } else {
-        selectedElement.appendChild(ghost);
-      }
-
-      const highlightId = `highlight-${patternId}`;
-      let highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-      if (highlight) {
-        highlight.setAttribute('stroke', '#f59e0b');
-        highlight.setAttribute('stroke-dasharray', '8,4');
-      }
-    };
-
-    const exitAdjustMode = () => {
-      adjustStateRef.current.isAdjusting = false;
-      const ghost = selectedElement.querySelector('#ghost-layer');
-      if (ghost) ghost.remove();
-
-      if (adjustStateRef.current.slotId) {
-        const highlightId = `highlight-${adjustStateRef.current.slotId}`;
-        const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) {
-          highlight.setAttribute('stroke', '#2563eb');
-          highlight.setAttribute('stroke-dasharray', '4,5');
-        }
-      }
-      adjustStateRef.current.slotId = null;
-      syncDomChanges();
-    };
-
-    const handlePointerMove = (e) => {
-      if (!adjustStateRef.current.isPanning) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      let dx = e.clientX - adjustStateRef.current.startX;
-      let dy = e.clientY - adjustStateRef.current.startY;
-
-      let pcu = 'objectBoundingBox';
-      if (adjustStateRef.current.slotId && adjustStateRef.current.path) {
-        const pattern = adjustStateRef.current.path.ownerSVGElement?.querySelector(`pattern[id="${adjustStateRef.current.slotId}"]`);
-        if (pattern) {
-          pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
-
-          // Read rotation from patternTransform (old) OR from image transform (new)
-          let rot = 0;
-          const pt = pattern.getAttribute('patternTransform');
-          if (pt) {
-            const match = pt.match(/rotate\(([-0-9.]+)/);
-            if (match) rot = parseFloat(match[1]);
-          } else if (adjustStateRef.current.rotateStr) {
-            const match = adjustStateRef.current.rotateStr.match(/rotate\(([-0-9.]+)/);
-            if (match) rot = parseFloat(match[1]);
-          }
-
-          if (rot !== 0) {
-            const rad = -rot * Math.PI / 180;
-            const dxRot = dx * Math.cos(rad) - dy * Math.sin(rad);
-            const dyRot = dx * Math.sin(rad) + dy * Math.cos(rad);
-            dx = dxRot;
-            dy = dyRot;
-          }
-        }
-      }
-
-      let scaleX = 1;
-      let scaleY = 1;
-      if (adjustStateRef.current.path) {
-        const ctm = adjustStateRef.current.path.getScreenCTM();
-        if (ctm) {
-          scaleX = ctm.a || 1;
-          scaleY = ctm.d || 1;
-        }
-      }
-
-      const bbox = adjustStateRef.current.bbox;
-      let tx_delta, ty_delta;
-
-      if (pcu === 'userSpaceOnUse') {
-        tx_delta = dx / scaleX;
-        ty_delta = dy / scaleY;
-      } else {
-        tx_delta = (dx / scaleX) / bbox.width;
-        ty_delta = (dy / scaleY) / bbox.height;
-      }
-
-      const m = adjustStateRef.current.startMatrix;
-      if (!m || !adjustStateRef.current.matrix) return;
-      const newTx = m[4] + tx_delta;
-      const newTy = m[5] + ty_delta;
-
-      adjustStateRef.current.matrix[4] = newTx;
-      adjustStateRef.current.matrix[5] = newTy;
-
-      updateAdjustTransform();
-    };
-
-    const handlePointerUp = (e) => {
-      if (adjustStateRef.current.isPanning) {
-        adjustStateRef.current.isPanning = false;
-      }
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
 
     paths.forEach((path, idx) => {
       const fill = path.getAttribute('fill');
@@ -445,6 +445,30 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         const match = fill.match(/url\(#([^)]+)\)/);
         if (match && match[1]) {
           const patternId = match[1];
+
+          // Ensure pattern has mask-bg-fill
+          const pat = selectedElement.querySelector(`pattern[id="${patternId}"]`) ||
+            selectedElement.ownerDocument?.querySelector?.(`pattern[id="${patternId}"]`) ||
+            document.getElementById(patternId);
+          if (pat) {
+            ensurePatternImageNode(pat, selectedElement, selectedElement.ownerDocument || document);
+
+            let bgRect = pat.querySelector('rect.mask-bg-fill');
+            if (!bgRect) {
+              bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              bgRect.setAttribute('class', 'mask-bg-fill');
+              bgRect.setAttribute('width', '1');
+              bgRect.setAttribute('height', '1');
+              bgRect.setAttribute('x', '0');
+              bgRect.setAttribute('y', '0');
+              const curFill = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
+              bgRect.setAttribute('fill', curFill !== '#' ? curFill : 'none');
+              const curOp = selectedElement.getAttribute('data-frame-bg-opacity');
+              if (curOp) bgRect.setAttribute('fill-opacity', curOp);
+              pat.insertBefore(bgRect, pat.firstChild);
+            }
+          }
+
           // We'll update currentImage later via a function that runs initially and on mutations
           imageSlots.push({
             id: patternId,
@@ -516,66 +540,11 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             }
           };
 
-          const handleDoubleClick = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-              exitAdjustMode();
-            } else {
-              if (adjustStateRef.current.isAdjusting) {
-                exitAdjustMode();
-              }
-              enterAdjustMode(patternId, path);
-            }
-          };
-
-          const handlePointerDown = (e) => {
-            if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-              e.preventDefault();
-              e.stopPropagation();
-              adjustStateRef.current.isPanning = true;
-              adjustStateRef.current.startX = e.clientX;
-              adjustStateRef.current.startY = e.clientY;
-              adjustStateRef.current.startMatrix = [...adjustStateRef.current.matrix];
-            }
-          };
-
-          const handleWheel = (e) => {
-            if (adjustStateRef.current.isAdjusting && adjustStateRef.current.slotId === patternId) {
-              e.preventDefault();
-              e.stopPropagation();
-
-              const zoomDelta = e.deltaY < 0 ? 1.05 : 0.95;
-              const m = adjustStateRef.current.matrix;
-
-              let pcu = 'objectBoundingBox';
-              const pattern = selectedElement?.querySelector(`pattern[id="${patternId}"]`);
-              if (pattern) pcu = pattern.getAttribute('patternContentUnits') || 'objectBoundingBox';
-
-              let cx = 0.5;
-              let cy = 0.5;
-              if (pcu === 'userSpaceOnUse' && adjustStateRef.current.bbox) {
-                cx = adjustStateRef.current.bbox.x + adjustStateRef.current.bbox.width / 2;
-                cy = adjustStateRef.current.bbox.y + adjustStateRef.current.bbox.height / 2;
-              }
-
-              m[0] *= zoomDelta;
-              m[3] *= zoomDelta;
-              m[4] = cx + (m[4] - cx) * zoomDelta;
-              m[5] = cy + (m[5] - cy) * zoomDelta;
-
-              updateAdjustTransform();
-            }
-          };
-
           path.addEventListener('mouseenter', handleMouseEnter);
           path.addEventListener('mouseleave', handleMouseLeave);
           path.addEventListener('click', handleSingleClick);
-          path.addEventListener('dblclick', handleDoubleClick);
-          path.addEventListener('pointerdown', handlePointerDown);
-          path.addEventListener('wheel', handleWheel, { passive: false });
 
-          listeners.push({ path, handleMouseEnter, handleMouseLeave, handleSingleClick, handleDoubleClick, handlePointerDown, handleWheel, removeHighlight });
+          listeners.push({ path, handleMouseEnter, handleMouseLeave, handleSingleClick, removeHighlight });
         }
       }
     });
@@ -631,67 +600,90 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     }
 
     // Load initial gap and radius from the first valid path
+    const savedGap = parseFloat(selectedElement.getAttribute('data-frame-gap'));
+    if (!isNaN(savedGap)) {
+      setGap(savedGap);
+    } else {
+      setGap(0);
+    }
     if (paths.length > 0) {
       const firstPath = paths[0];
-      setGap(parseFloat(firstPath.getAttribute('stroke-width')) || 0);
       setRadius(parseFloat(firstPath.getAttribute('rx')) || parseFloat(firstPath.getAttribute('data-rx')) || 0);
     }
 
     // Load per-slot radii
     const initialRadii = {};
     const initialRotations = {};
+    const initialOpacities = {};
     paths.forEach(p => {
-      const pId = p.dataset.patternId;
-      if (pId) {
-        initialRadii[pId] = parseFloat(p.getAttribute('rx')) || parseFloat(p.getAttribute('data-rx')) || 0;
-        const pattern = selectedElement.querySelector(`pattern[id="${pId}"]`);
-        if (pattern) {
-          // Check patternTransform (old method) or image rotate (new method)
-          const pt = pattern.getAttribute('patternTransform');
-          let foundRot = false;
-          if (pt) {
-            const match = pt.match(/rotate\(([-0-9.]+)/);
-            if (match) {
-              initialRotations[pId] = parseFloat(match[1]);
-              foundRot = true;
-            }
-          }
-          if (!foundRot) {
-            const imgNode = pattern.querySelector('image, img');
-            if (imgNode) {
-              const tf = imgNode.getAttribute('transform');
-              if (tf) {
-                const match = tf.match(/rotate\(([-0-9.]+)/);
-                if (match) initialRotations[pId] = parseFloat(match[1]);
-              }
-            }
-          }
-        }
-      }
+       const pId = p.dataset.patternId;
+       if (pId) {
+           initialRadii[pId] = parseFloat(p.getAttribute('rx')) || parseFloat(p.getAttribute('data-rx')) || 0;
+           const pattern = selectedElement.querySelector(`pattern[id="${pId}"]`);
+           if (pattern) {
+               // Check patternTransform (old method) or image rotate (new method)
+               const pt = pattern.getAttribute('patternTransform');
+               let foundRot = false;
+               if (pt) {
+                   const match = pt.match(/rotate\(([-0-9.]+)/);
+                   if (match) {
+                       initialRotations[pId] = parseFloat(match[1]);
+                       foundRot = true;
+                   }
+               }
+               const imgNode = pattern.querySelector('image, img');
+               if (imgNode) {
+                   if (!foundRot) {
+                       const tf = imgNode.getAttribute('transform');
+                       if (tf) {
+                           const match = tf.match(/rotate\(([-0-9.]+)/);
+                           if (match) initialRotations[pId] = parseFloat(match[1]);
+                       }
+                   }
+                   const opAttr = imgNode.getAttribute('opacity') || p.getAttribute('data-slot-opacity') || selectedElement.getAttribute('data-slot-opacity');
+                   if (opAttr !== null && opAttr !== undefined && opAttr !== '') {
+                       const val = parseFloat(opAttr);
+                       initialOpacities[pId] = val <= 1 ? Math.round(val * 100) : Math.round(val);
+                   } else {
+                       initialOpacities[pId] = 100;
+                   }
+               }
+           }
+       }
     });
     setSlotRadii(initialRadii);
     setSlotRotations(initialRotations);
+    setSlotOpacities(initialOpacities);
 
+    const initialFilters = {};
+    paths.forEach(p => {
+      const pId = p.dataset.patternId;
+      if (pId) {
+        initialFilters[pId] = {
+          exposure: parseFloat(p.getAttribute('data-effect-exposure') || '0'),
+          contrast: parseFloat(p.getAttribute('data-effect-contrast') || '0'),
+          saturation: parseFloat(p.getAttribute('data-effect-saturation') || '0'),
+          temperature: parseFloat(p.getAttribute('data-effect-temperature') || '0'),
+          tint: parseFloat(p.getAttribute('data-effect-tint') || '0'),
+          highlights: parseFloat(p.getAttribute('data-effect-highlights') || '0'),
+          shadows: parseFloat(p.getAttribute('data-effect-shadows') || '0')
+        };
+      }
+    });
+    setSlotFilters(initialFilters);
+    
     setFramePadding(parseFloat(selectedElement.getAttribute('data-frame-padding')) || 0);
 
     return () => {
-      listeners.forEach(({ path, handleMouseEnter, handleMouseLeave, handleSingleClick, handleDoubleClick, handlePointerDown, handleWheel, removeHighlight }) => {
+      listeners.forEach(({ path, handleMouseEnter, handleMouseLeave, handleSingleClick, removeHighlight }) => {
         path.removeEventListener('mouseenter', handleMouseEnter);
         path.removeEventListener('mouseleave', handleMouseLeave);
         path.removeEventListener('click', handleSingleClick);
-        path.removeEventListener('dblclick', handleDoubleClick);
-        if (handlePointerDown) path.removeEventListener('pointerdown', handlePointerDown);
-        if (handleWheel) path.removeEventListener('wheel', handleWheel);
         removeHighlight();
       });
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
       if (observer) observer.disconnect();
       activeSlotRef.current = null;
       setActiveSlotId(null);
-
-      const ghost = selectedElement?.querySelector('#ghost-layer');
-      if (ghost) ghost.remove();
     };
   }, [selectedElement, selectedLayerId]);
 
@@ -766,40 +758,11 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         opacity: 100
       }
     }));
+    setSlotOpacities(prev => ({
+      ...prev,
+      [slotId]: 100
+    }));
     updateSlotImage(slotId, DEFAULT_FRAME_IMAGE);
-  };
-
-  const handleSaveAdjustedImage = ({
-    croppedUrl,
-    originalUrl,
-    cropData,
-    fixType,
-    opacity: adjustedOpacity,
-    filters
-  }) => {
-    if (!adjustTargetSlotId) return;
-    const slotId = adjustTargetSlotId;
-
-    const img = new window.Image();
-    img.onload = () => {
-      setSlotMeta(prev => ({
-        ...prev,
-        [slotId]: {
-          name: prev[slotId]?.name || 'Image Name .jpg',
-          meta: `${img.width} X ${img.height} • ${prev[slotId]?.size || '24MB'}`,
-          originalUrl: originalUrl || prev[slotId]?.originalUrl || croppedUrl,
-          cropData,
-          fixType,
-          opacity: adjustedOpacity,
-          filters
-        }
-      }));
-      updateSlotImage(slotId, croppedUrl);
-    };
-    img.src = croppedUrl;
-
-    setShowAdjustModal(false);
-    setAdjustTargetSlotId(null);
   };
 
   const handleImageDrop = async (e, slotId) => {
@@ -879,19 +842,15 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         clone.setAttribute('stroke-width', newGap);
         clone.setAttribute('stroke-linejoin', 'round');
         mask.appendChild(clone);
-
-        path.removeAttribute('stroke');
-        path.removeAttribute('stroke-opacity');
-        path.removeAttribute('stroke-width');
+        
         path.setAttribute('mask', `url(#${maskId})`);
       } else {
-        path.removeAttribute('stroke');
-        path.removeAttribute('stroke-opacity');
-        path.removeAttribute('stroke-width');
         path.removeAttribute('mask');
-        mask.remove();
+        if (mask) mask.remove();
       }
     });
+
+    selectedElement.setAttribute('data-frame-gap', newGap.toString());
 
     paths.forEach(path => {
       // Radius translates to rx/ry for rect, or data-rx for shapes
@@ -1081,46 +1040,39 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     });
 
     slotsToUpdate.forEach(patternId => {
-      const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
       const path = paths.find(p => p.getAttribute('data-pattern-id') === patternId || p.dataset?.patternId === patternId);
-      if (pattern && path) {
-        let bbox = { x: 0, y: 0, width: 100, height: 100 };
-        try { bbox = path.getBBox(); } catch (e) { }
-        const cx = bbox.x + bbox.width / 2;
-        const cy = bbox.y + bbox.height / 2;
+      if (path) {
+        updateShapeMaskTransform({
+          selectedElement: path,
+          angle: angle
+        });
+      }
+    });
 
-        const pcu = pattern.getAttribute('patternContentUnits');
-        let matrixStr = '';
-        const imgNode = pattern.querySelector('image, img');
+    if (!skipSync) syncDomChanges();
+  };
 
-        if (imgNode) {
-          let tf = imgNode.getAttribute('transform') || '';
-          let m = [1, 0, 0, 1, 0, 0];
-          const mMatch = tf.match(/matrix\(([^)]+)\)/);
-          if (mMatch) {
-            m = mMatch[1].split(/[ ,]+/).map(parseFloat);
-          }
+  const updateOpacity = (opacityVal, skipSync = false) => {
+    if (!selectedElement) return;
 
-          if (pcu !== 'userSpaceOnUse') {
-            // Upgrade from objectBoundingBox to userSpaceOnUse on the fly!
-            m[0] = m[0] * bbox.width;
-            m[2] = m[2] * bbox.width;
-            m[1] = m[1] * bbox.height;
-            m[3] = m[3] * bbox.height;
-            m[4] = bbox.x + m[4] * bbox.width;
-            m[5] = bbox.y + m[5] * bbox.height;
-            pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-            pattern.removeAttribute('patternTransform');
-          }
+    const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'))
+      .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
 
-          matrixStr = `matrix(${m.join(' ')})`;
+    const slotsToUpdate = activeSlotId ? [activeSlotId] : paths.map(p => p.dataset.patternId).filter(Boolean);
+    
+    setSlotOpacities(prev => {
+      const next = { ...prev };
+      slotsToUpdate.forEach(id => { next[id] = opacityVal; });
+      return next;
+    });
 
-          if (angle !== 0) {
-            imgNode.setAttribute('transform', `rotate(${angle}, ${cx}, ${cy}) ${matrixStr}`.trim());
-          } else {
-            imgNode.setAttribute('transform', matrixStr);
-          }
-        }
+    slotsToUpdate.forEach(patternId => {
+      const path = paths.find(p => p.getAttribute('data-pattern-id') === patternId || p.dataset?.patternId === patternId);
+      if (path) {
+        updateShapeMaskOpacity({
+          selectedElement: path,
+          opacity: opacityVal
+        });
       }
     });
 
@@ -1133,32 +1085,37 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
     if (!pattern) return;
 
-    // Find the shape that uses this pattern to get its aspect ratio
-    const shapeEl = selectedElement.querySelector(`[fill="url(#${patternId})"]`);
+    const shapeEl = selectedElement.querySelector(`[fill="url(#${patternId})"]`) ||
+      selectedElement.querySelector(`[data-pattern-id="${patternId}"]`);
     if (!shapeEl) return;
 
-    // Load the image to get its width and height
     const img = new window.Image();
     img.onload = () => {
       const imgW = img.width;
       const imgH = img.height;
 
-      // Compute the correct matrix to cover the slot (object-fit: cover equivalent in objectBoundingBox space)
-      let bbox = { width: 100, height: 100 };
-      try {
-        bbox = shapeEl.getBBox();
-      } catch (e) { }
-      if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100 };
+      shapeEl.setAttribute('data-mask-enabled', 'true');
+      shapeEl.setAttribute('data-masked-image-url', dataUrl);
+      shapeEl.setAttribute('data-slot-original-url', dataUrl);
+      shapeEl.setAttribute('data-slot-image-meta', `${imgW} X ${imgH}`);
+      shapeEl.setAttribute('data-slot-pan-x', '0');
+      shapeEl.setAttribute('data-slot-pan-y', '0');
+      shapeEl.setAttribute('data-slot-zoom', '1');
 
-      const slotW = bbox.width;
-      const slotH = bbox.height;
-
-      const scale = Math.max(slotW / imgW, slotH / imgH);
-      const finalW = imgW * scale;
-      const finalH = imgH * scale;
-
-      const tx_user = (slotW - finalW) / 2;
-      const ty_user = (slotH - finalH) / 2;
+      let bgRect = pattern.querySelector('rect.mask-bg-fill');
+      if (!bgRect) {
+        bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bgRect.setAttribute('class', 'mask-bg-fill');
+        bgRect.setAttribute('width', '1');
+        bgRect.setAttribute('height', '1');
+        bgRect.setAttribute('x', '0');
+        bgRect.setAttribute('y', '0');
+        const curFill = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
+        bgRect.setAttribute('fill', curFill !== '#' ? curFill : 'none');
+        const curOp = selectedElement.getAttribute('data-frame-bg-opacity');
+        if (curOp) bgRect.setAttribute('fill-opacity', curOp);
+        pattern.insertBefore(bgRect, pattern.firstChild);
+      }
 
       let imageNode = pattern.querySelector('image, img');
       const useNode = pattern.querySelector('use');
@@ -1172,24 +1129,22 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         pattern.appendChild(imageNode);
       }
 
-      imageNode.setAttribute('width', imgW);
-      imageNode.setAttribute('height', imgH);
-      imageNode.removeAttribute('preserveAspectRatio');
-
-      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-      pattern.removeAttribute('patternTransform'); // Clear old pt when upgrading
-
-      const existingTf = imageNode.getAttribute('transform') || '';
-      let rotateStr = '';
-      const rMatch = existingTf.match(/rotate\([^)]+\)/);
-      if (rMatch) rotateStr = rMatch[0] + ' ';
-
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${bbox.x + tx_user} ${bbox.y + ty_user})`);
-
       imageNode.setAttribute('href', dataUrl);
       imageNode.setAttribute('xlink:href', dataUrl);
 
-      // Save changes
+      const curOpacity = shapeEl.getAttribute('data-slot-opacity') || selectedElement.getAttribute('data-slot-opacity');
+      if (curOpacity !== null && curOpacity !== undefined && curOpacity !== '') {
+        const dec = Math.max(0, Math.min(1, parseFloat(curOpacity) / 100)).toString();
+        imageNode.setAttribute('opacity', dec);
+      }
+
+      updateShapeMaskTransform({
+        selectedElement: shapeEl,
+        panX: 0,
+        panY: 0,
+        zoom: 1
+      });
+
       if (!skipSync) {
         syncDomChanges();
       }
@@ -1197,58 +1152,16 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     img.src = dataUrl;
   };
 
-  const isFillNone = !backgroundColor?.fill || backgroundColor.fill === 'none' || backgroundColor.fill === 'transparent' || backgroundColor.fill === '#';
-  const isStrokeNone = !backgroundColor?.stroke || backgroundColor.stroke === 'none' || backgroundColor.stroke === 'transparent' || backgroundColor.stroke === '#';
 
-  const currentFillHex = localFillHex !== null
-    ? localFillHex
-    : (isFillNone ? 'NONE' : backgroundColor.fill);
-
-  const currentStrokeHex = localStrokeHex !== null
-    ? localStrokeHex
-    : (isStrokeNone ? 'NONE' : backgroundColor.stroke);
-
-  const handleHexSubmit = (type, val) => {
-    let clean = (val || '').trim();
-    if (clean.toLowerCase() === 'none' || clean === '' || clean === '#' || clean.toLowerCase() === 'transparent') {
-      if (type === 'fill') {
-        setLocalFillHex(null);
-        handleSetBackgroundColor(prev => ({ ...prev, fill: 'none' }));
-      } else {
-        setLocalStrokeHex(null);
-        handleSetBackgroundColor(prev => ({ ...prev, stroke: 'none' }));
-      }
-      return;
-    }
-
-    if (!clean.startsWith('#')) clean = '#' + clean;
-    if (/^#[0-9A-Fa-f]{3,8}$/.test(clean)) {
-      if (type === 'fill') {
-        setLocalFillHex(null);
-        handleSetBackgroundColor(prev => ({ ...prev, fill: clean, fillType: 'solid' }));
-      } else {
-        setLocalStrokeHex(null);
-        handleSetBackgroundColor(prev => ({
-          ...prev,
-          stroke: clean,
-          strokeType: 'solid',
-          strokeWeight: (parseFloat(prev.strokeWeight) || 0) === 0 ? 3 : prev.strokeWeight
-        }));
-      }
-    } else {
-      if (type === 'fill') setLocalFillHex(null);
-      else setLocalStrokeHex(null);
-    }
-  };
 
   return (
-    <div className="flex flex-col gap-[1vw] font-sans select-none text-gray-800">
+    <div className="flex flex-col gap-[1.2vw] font-sans select-none text-gray-800">
       {/* Title Header */}
-      <div className="flex items-center gap-[0.75vw] mb-[0.2vw]">
-        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">
+      <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">
           Image Framing Properties
         </span>
-        <div className="h-[0.1vw] flex-1 bg-gray-200 mr-[-3vw]"></div>
+        <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
       {/* ── 1. Top Section: Add Images Dashed Button (shown before upload) ── */}
@@ -1260,14 +1173,14 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               slotReplaceRefs.current[targetSlot.id]?.click();
             }
           }}
-          className="w-full py-[0.8vw] border-2 border-dashed border-gray-300 rounded-[0.75vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-semibold text-[0.85vw]"
+          className="w-full py-[1vw] border-2 border-dashed border-gray-300 rounded-[0.55vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer font-medium text-[0.85vw]"
         >
           <Plus size="1vw" />
           <span>Add Images</span>
         </div>
       )}
 
-      {/* ── 2. Images Slots List (matching reference image) ── */}
+      {/* ── 2. Images Slots List (exact layout of ShapeProperties) ── */}
       {slots.length > 0 && (
         <div className="flex flex-col gap-[0.6vw]">
           {slots.map((slot, i) => {
@@ -1281,12 +1194,32 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               <div
                 key={slot.id}
                 onClick={() => {
+                  if (slots.length > 1 && selectedElement) {
+                    selectedElement.querySelectorAll('[data-highlight-id]').forEach(el => el.remove());
+                  }
+
                   if (activeSlotId === slot.id) {
                     setActiveSlotId(null);
                     activeSlotRef.current = null;
                   } else {
                     setActiveSlotId(slot.id);
                     activeSlotRef.current = slot.id;
+
+                    if (slots.length > 1 && selectedElement) {
+                      const highlightId = `highlight-${slot.id}`;
+                      const path = slot.path || selectedElement.querySelector(`[data-pattern-id="${slot.id}"], [fill*="${slot.id}"]`);
+                      if (path) {
+                        const highlight = path.cloneNode();
+                        highlight.setAttribute('data-highlight-id', highlightId);
+                        highlight.setAttribute('pointer-events', 'none');
+                        highlight.setAttribute('fill', 'none');
+                        highlight.setAttribute('stroke', '#2563eb');
+                        highlight.setAttribute('stroke-width', '2');
+                        highlight.setAttribute('vector-effect', 'non-scaling-stroke');
+                        highlight.setAttribute('stroke-dasharray', '4,5');
+                        selectedElement.appendChild(highlight);
+                      }
+                    }
                   }
                 }}
                 onDragOver={(e) => {
@@ -1294,78 +1227,76 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
                   e.stopPropagation();
                 }}
                 onDrop={(e) => handleImageDrop(e, slot.id)}
-                className={`flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border rounded-[0.75vw] shadow-2xs transition-all cursor-pointer ${isSelected || (!slot.currentImage || slot.currentImage === DEFAULT_FRAME_IMAGE)
-                    ? 'border-blue-500 ring-1 ring-blue-500/30'
-                    : 'border-gray-200/90 hover:border-gray-300'
-                  }`}
+                className={`flex items-center gap-[0.9vw] p-[0.8vw] bg-white rounded-[0.55vw] border shadow-2xs transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 shadow-xs'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+                }`}
               >
-                {/* Left Section: Thumbnail + Meta (moveable grip removed) */}
-                <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
-                  {/* Thumbnail with Replace button overlay */}
-                  <div
-                    className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] border border-gray-200 shrink-0 overflow-hidden group/thumb cursor-pointer shadow-2xs bg-gray-100 flex items-center justify-center"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      slotReplaceRefs.current[slot.id]?.click();
-                    }}
-                    title="Click to replace image"
-                  >
-                    {slot.currentImage ? (
-                      <>
-                        <img
-                          src={slot.currentImage}
-                          alt={meta.name}
-                          className="w-full h-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
-                        />
-                        {/* Replace Overlay Button over the image */}
-                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
-                          <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                          <span className="text-[0.52vw] font-semibold text-white tracking-wide">Replace</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-indigo-600">
-                        <Plus size="0.9vw" />
-                      </div>
-                    )}
-                  </div>
+                {/* Thumbnail */}
+                <div
+                  className="relative w-[7.6vw] h-[5.6vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group"
+                >
+                  <img
+                    src={slot.currentImage || DEFAULT_FRAME_IMAGE}
+                    alt={meta.name}
+                    className="w-full h-full object-cover"
+                  />
 
-                  {/* File Name & Dimensions block */}
-                  <div className="flex flex-col min-w-0 flex-1 py-[0.1vw]">
-                    <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={meta.name}>
-                      {meta.name}
-                    </span>
-                    <span className="text-[0.68vw] text-gray-400 font-medium truncate" title={meta.meta}>
-                      {meta.meta}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right Actions: Pencil / Edit & Delete Trash */}
-                <div className="flex items-center gap-[0.3vw] shrink-0 ml-[0.4vw]">
+                  {/* Adjustment Icon Button (Top Right) */}
                   <button
                     type="button"
+                    data-adjustment-trigger="true"
                     onClick={(e) => {
                       e.stopPropagation();
                       setAdjustTargetSlotId(slot.id);
-                      setShowAdjustModal(true);
+                      setShowAdjustModal(prev => (adjustTargetSlotId === slot.id ? !prev : true));
                     }}
-                    className="p-[0.3vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
-                    title="Edit Image Adjustment"
+                    className={`absolute top-[0.35vw] right-[0.35vw] w-[1.7vw] h-[1.7vw] rounded-[0.35vw] shadow-md border flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer z-10 ${
+                      showAdjustModal && adjustTargetSlotId === slot.id
+                        ? 'bg-gray-100 text-gray-900 border-gray-300'
+                        : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50'
+                    }`}
+                    title="Image Adjustments"
                   >
-                    <Edit2 size="0.95vw" />
+                    <AdjustmentIcon className="w-[0.95vw] h-[0.95vw]" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSlotImage(slot.id);
-                    }}
-                    className="p-[0.3vw] text-[#e02424] hover:text-red-700 hover:bg-red-50 rounded-[0.35vw] transition-colors cursor-pointer"
-                    title="Remove Image"
-                  >
-                    <Trash2 size="0.95vw" />
-                  </button>
+                </div>
+
+                {/* Info & Actions */}
+                <div className="flex flex-col flex-1 min-w-0 justify-between py-[0.15vw]">
+                  <div className="flex flex-col gap-[0.2vw]">
+                    <span className="text-[0.82vw] font-semibold text-gray-900 truncate" title={meta.name}>
+                      {meta.name}
+                    </span>
+                    <span className="text-[0.75vw] text-gray-500 font-medium truncate">
+                      {meta.meta}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-[0.5vw] mt-[0.7vw]">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        slotReplaceRefs.current[slot.id]?.click();
+                      }}
+                      className="px-[0.7vw] h-[1.9vw] bg-white hover:bg-gray-50 text-gray-700 text-[0.8vw] font-medium rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-gray-400 cursor-pointer transition-colors"
+                    >
+                      Replace image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSlotImage(slot.id);
+                      }}
+                      className="h-[1.9vw] px-[0.5vw] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-red-200 cursor-pointer transition-colors"
+                      title="Delete image"
+                    >
+                      <Trash2 className="w-[0.85vw] h-[0.85vw]" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Hidden File Input for this slot */}
@@ -1389,12 +1320,12 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       )}
 
       {/* ── 3. Properties Sliders ── */}
-      <div className="flex flex-col gap-[0.5vw] mt-[0.5vw]">
+      <div className="flex flex-col gap-[0.4vw]">
         {slots.length > 1 && (
-          <PropertySlider
-            label="Partition Gap"
-            value={gap}
-            onChange={(val) => updateGapAndRadius(val, radius, true)}
+          <PropertySlider 
+            label="Partition" 
+            value={gap} 
+            onChange={(val) => updateGapAndRadius(val, radius, true)} 
             onPointerUp={syncDomChanges}
             min={0}
             max={50}
@@ -1402,9 +1333,9 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         )}
 
         {slots.some(s => s.path.tagName.toLowerCase() === 'rect') && (
-          <PropertySlider
-            label="Corner Radius"
-            value={activeSlotId ? (slotRadii[activeSlotId] || 0) : radius}
+          <PropertySlider 
+            label="Corner" 
+            value={activeSlotId ? (slotRadii[activeSlotId] || 0) : radius} 
             onChange={(val) => {
               if (activeSlotId) {
                 updateSlotRadius(activeSlotId, val, true);
@@ -1418,299 +1349,138 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
           />
         )}
 
-        <PropertySlider
-          label="Rotation"
-          value={activeSlotId ? (slotRotations[activeSlotId] || 0) : (Object.values(slotRotations)[0] || 0)}
-          onChange={(val) => updateRotation(val, true)}
+        <PropertySlider 
+          label="Opacity" 
+          value={activeSlotId ? (slotOpacities[activeSlotId] ?? 100) : (Object.values(slotOpacities)[0] ?? 100)} 
+          onChange={(val) => updateOpacity(val, true)} 
           onPointerUp={syncDomChanges}
-          min={-180}
-          max={180}
+          min={0} 
+          max={100} 
+          unit="%"
+        />
+
+        <PropertySlider 
+          label="Rotation" 
+          value={activeSlotId ? (slotRotations[activeSlotId] || 0) : (Object.values(slotRotations)[0] || 0)} 
+          onChange={(val) => updateRotation(val, true)} 
+          onPointerUp={syncDomChanges}
+          min={-180} 
+          max={180} 
+          unit="°"
         />
       </div>
 
-      {/* ===================== 4. FILL COLOR ===================== */}
-      <div className="flex flex-col gap-[0.5vw]">
-        <div className="flex items-center mt-[0.5vw] gap-[0.5vw]">
-          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Fill Color</span>
-          <div className="h-[1px] flex-1 bg-gray-200"></div>
-        </div>
+      {/* ===================== 4. APPEARANCE: COLOR ===================== */}
+      <Color
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        backgroundColor={backgroundColor}
+        setBackgroundColor={handleSetBackgroundColor}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showStrokeSettings={showStrokeSettings}
+        setShowStrokeSettings={setShowStrokeSettings}
+        isStrokeStyleOpen={isStrokeStyleOpen}
+        setIsStrokeStyleOpen={setIsStrokeStyleOpen}
+        dropdownPos={dropdownPos}
+        setDropdownPos={setDropdownPos}
+        strokeSettingsPos={strokeSettingsPos}
+        setStrokeSettingsPos={setStrokeSettingsPos}
+        isDashPosOpen={isDashPosOpen}
+        setIsDashPosOpen={setIsDashPosOpen}
+        activePopup={activePopup}
+        setActivePopup={setActivePopup}
+        colorsOnPage={colorsOnPage}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+        hideFill={false}
+        noAccordion={true}
+      />
 
-        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
-          {/* Swatch */}
-          <button
-            type="button"
-            onClick={() => setActiveColorPicker(activeColorPicker === 'fill' ? null : 'fill')}
-            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
-            title="Choose Fill Color"
-          >
-            {isFillNone ? (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
-            ) : (
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundColor: backgroundColor.fill,
-                  opacity: (backgroundColor.fillOpacity ?? 100) / 100
-                }}
-              />
-            )}
-          </button>
+      {/* ===================== 5. APPEARANCE: EFFECTS ===================== */}
+      <Effect
+        isShape={true}
+        openSubSection={openSubSection}
+        setOpenSubSection={setOpenSubSection}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+        hideBlur={true}
+        hideInnerShadow={true}
+        noAccordion={true}
+      />
 
-          {/* Hex & Opacity Input */}
-          <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
-            <input
-              type="text"
-              value={currentFillHex.toUpperCase()}
-              onChange={(e) => setLocalFillHex(e.target.value)}
-              onBlur={() => handleHexSubmit('fill', currentFillHex)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit('fill', currentFillHex); }}
-              className="text-[0.76vw] font-semibold text-gray-700 w-[5vw] outline-none uppercase bg-transparent"
-            />
-            <div className="flex items-center">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={Math.round(backgroundColor?.fillOpacity !== undefined ? backgroundColor.fillOpacity : 100)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
-                    handleSetBackgroundColor(prev => ({ ...prev, fillOpacity: Math.min(100, Math.max(0, val)) }));
-                  }
-                }}
-                className="w-[2vw] text-right text-[0.74vw] text-gray-500 font-semibold outline-none bg-transparent no-spin"
-              />
-              <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ===================== IMAGE ADJUSTMENT MODAL ===================== */}
+      <ImageAdjustmentModal
+        isOpen={showAdjustModal}
+        onClose={() => {
+          setShowAdjustModal(false);
+          setAdjustTargetSlotId(null);
+        }}
+        filters={currentSlotFilters}
+        onChange={handleAdjustmentChange}
+        onResetAll={handleResetAllAdjustments}
+      />
 
-      {/* ===================== 5. STROKE COLOR ===================== */}
-      <div className="flex flex-col gap-[0.5vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Stroke Color</span>
-          <div className="h-[1px] flex-1 bg-gray-200"></div>
-        </div>
-
-        {/* Row 1: Swatch + Hex/Opacity + Format */}
-        <div className="flex items-center ml-[0.5vw] mt-[0.5vw] gap-[0.5vw]">
-          <button
-            type="button"
-            onClick={() => setActiveColorPicker(activeColorPicker === 'stroke' ? null : 'stroke')}
-            className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-all flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-white"
-            title="Choose Stroke Color"
-          >
-            {isStrokeNone ? (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45"></div>
-            ) : (
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundColor: backgroundColor.stroke,
-                  opacity: (backgroundColor.strokeOpacity ?? 100) / 100
-                }}
-              />
-            )}
-          </button>
-
-          <div className="flex-1 h-[2.2vw] bg-white border border-gray-200 rounded-[0.45vw] flex items-center justify-between px-[0.6vw] shadow-sm focus-within:border-indigo-500 transition-all">
-            <input
-              type="text"
-              value={currentStrokeHex.toUpperCase()}
-              onChange={(e) => setLocalStrokeHex(e.target.value)}
-              onBlur={() => handleHexSubmit('stroke', currentStrokeHex)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit('stroke', currentStrokeHex); }}
-              className="text-[0.76vw] font-semibold text-gray-700 w-[5vw] outline-none uppercase bg-transparent"
-            />
-            <div className="flex items-center">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={Math.round(backgroundColor?.strokeOpacity !== undefined ? backgroundColor.strokeOpacity : 100)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
-                    handleSetBackgroundColor(prev => ({ ...prev, strokeOpacity: Math.min(100, Math.max(0, val)) }));
-                  }
-                }}
-                className="w-[2vw] text-right text-[0.74vw] text-gray-500 font-semibold outline-none bg-transparent no-spin"
-              />
-              <span className="text-[0.74vw] text-gray-500 font-semibold ml-[0.1vw]">%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Stroke Settings */}
-        <div className={`flex flex-col gap-[0.8vw] ml-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeNone ? 'opacity-40 pointer-events-none' : ''}`}>
-          {/* Stroke Width & Line Corner */}
-          <div className="grid grid-cols-2 gap-[0.75vw]">
-            {/* Stroke Width Stepper */}
-            <div className="flex flex-col gap-[0.3vw]">
-              <span className="text-[0.76vw] font-semibold text-[#546274]">Stroke Width</span>
-              <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-                <button
-                  type="button"
-                  disabled={isStrokeNone}
-                  onClick={() => handleSetBackgroundColor(prev => ({
-                    ...prev,
-                    strokeWeight: Math.max(0, (parseFloat(prev.strokeWeight) || 0) - 1)
-                  }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
-                >
-                  −
-                </button>
-                <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs focus-within:border-indigo-500">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    disabled={isStrokeNone}
-                    value={Math.round(parseFloat(backgroundColor?.strokeWeight) || 0)}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val)) {
-                        handleSetBackgroundColor(prev => ({ ...prev, strokeWeight: Math.max(0, val) }));
-                      }
-                    }}
-                    className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
-                  />
-                </div>
-                <button
-                  type="button"
-                  disabled={isStrokeNone}
-                  onClick={() => handleSetBackgroundColor(prev => ({
-                    ...prev,
-                    strokeWeight: (parseFloat(prev.strokeWeight) || 0) + 1
-                  }))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {/* Line Corner */}
-            <div className="flex flex-col gap-[0.3vw]">
-              <span className="text-[0.76vw] font-semibold text-[#546274]">Line Corner</span>
-              <ElementDropdown
-                disabled={isStrokeNone}
-                value={backgroundColor?.strokeLinecap === 'round' ? 'Rounded' : 'Square'}
-                onChange={(val) => handleSetBackgroundColor(prev => ({ ...prev, strokeLinecap: val === 'Rounded' ? 'round' : 'square' }))}
-                options={['Square', 'Rounded']}
-                buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ===================== 6. EFFECTS ===================== */}
-      <div className="flex flex-col mt-[0.5vw] gap-[0.5vw]">
-        <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-semibold text-black whitespace-nowrap">Effects</span>
-          <div className="h-[1px] flex-1 bg-gray-200"></div>
-        </div>
-
-        <Effect
-          hideHeader={true}
-          isShape={false}
-          openSubSection={openSubSection}
-          setOpenSubSection={setOpenSubSection}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-          hideBlur={true}
-          hideInnerShadow={true}
-        />
-      </div>
-
-      {/* ===================== IMAGE ADJUST MODAL ===================== */}
-      {showAdjustModal && adjustTargetSlotId && (
-        <ImageAdjustModal
-          isOpen={showAdjustModal}
-          onClose={() => {
-            setShowAdjustModal(false);
-            setAdjustTargetSlotId(null);
-          }}
-          imageSrc={
-            slotMeta[adjustTargetSlotId]?.originalUrl ||
-            slots.find(s => s.id === adjustTargetSlotId)?.currentImage ||
-            DEFAULT_FRAME_IMAGE
-          }
-          initialFixType={slotMeta[adjustTargetSlotId]?.fixType || 'Fit'}
-          initialOpacity={slotMeta[adjustTargetSlotId]?.opacity !== undefined ? slotMeta[adjustTargetSlotId]?.opacity : 100}
-          initialFilters={slotMeta[adjustTargetSlotId]?.filters || null}
-          initialCrop={slotMeta[adjustTargetSlotId]?.cropData || null}
-          frameAspectRatio={(() => {
-            const slot = slots.find(s => s.id === adjustTargetSlotId);
-            if (slot && slot.path) {
-              try {
-                const bbox = slot.path.getBBox();
-                if (bbox.width && bbox.height) {
-                  return bbox.width / bbox.height;
-                }
-              } catch (e) { }
-            }
-            return 130 / 140;
-          })()}
-          onSave={handleSaveAdjustedImage}
-        />
-      )}
-
-      {/* ===================== 7. COLOR PICKER PORTAL ===================== */}
-      {activeColorPicker && !activeColorPicker.startsWith('effect-') && !activeColorPicker.startsWith('data-effect-') && createPortal(
-        <div
-          className="fixed z-[5000]"
-          style={{
-            top: '50%',
-            right: '19.5vw',
-            transform: 'translateY(-50%)'
-          }}
-        >
-          <div className="animate-in fade-in zoom-in-95 duration-200">
-            <ColorPicker
-              key={activeColorPicker}
-              color={activeColorPicker === 'fill' ? (backgroundColor?.fill || 'none') : (backgroundColor?.stroke || 'none')}
-              opacity={activeColorPicker === 'fill' ? (backgroundColor?.fillOpacity ?? 100) : (backgroundColor?.strokeOpacity ?? 100)}
-              onChange={(newColor) => {
-                if (activeColorPicker === 'fill') {
-                  setLocalFillHex(null);
-                  handleSetBackgroundColor(prev => ({ ...prev, fill: newColor, fillType: 'solid' }));
-                } else {
-                  setLocalStrokeHex(null);
-                  handleSetBackgroundColor(prev => ({
-                    ...prev,
-                    stroke: newColor,
-                    strokeType: 'solid',
-                    strokeWeight: newColor === 'none' ? prev.strokeWeight : ((parseFloat(prev.strokeWeight) || 0) === 0 ? 3 : prev.strokeWeight)
-                  }));
-                }
-              }}
-              onOpacityChange={(newOpacity) => {
-                const num = parseFloat(newOpacity);
-                if (!isNaN(num)) {
-                  if (activeColorPicker === 'fill') {
-                    handleSetBackgroundColor(prev => ({ ...prev, fillOpacity: num }));
-                  } else {
-                    handleSetBackgroundColor(prev => ({ ...prev, strokeOpacity: num }));
-                  }
-                }
-              }}
-              onClose={() => setActiveColorPicker(null)}
-              colorsOnPage={colorsOnPage || []}
-              disableGradient={activeColorPicker === 'stroke'}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* CUSTOM CSS */}
+      <style>{`
+        .hide-opacity-bar .space-y-\\[1vw\\] > div:nth-child(2) {
+          display: none !important;
+        }
+        input[type='range'] {
+          position: relative;
+        }
+        input[type='range']::before {
+          content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1;
+        }
+        input[type='range']::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          height: 1.1vw;
+          width: 1.1vw;
+          border-radius: 50%;
+          background: #ffffff;
+          border: 0.1vw solid #e5e7eb;
+          box-shadow: 0 0.1vw 0.3vw rgba(0,0,0,0.1);
+          cursor: pointer;
+          position: relative;
+          z-index: 2;
+        }
+        input[type='range'].blue-thumb::-webkit-slider-thumb {
+          background: #6366f1;
+          border-color: #6366f1;
+          height: 0.8vw;
+          width: 0.8vw;
+        }
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

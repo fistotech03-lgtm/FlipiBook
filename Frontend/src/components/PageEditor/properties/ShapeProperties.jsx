@@ -12,9 +12,22 @@ import {
   ArrowRightLeft,
   Plus
 } from 'lucide-react';
-import ImageAdjustModal from '../LeftActionMenu/Elements/properties/ImageAdjustModal';
+import ReplaceMediaModal from '../modals/ReplaceMediaModal';
+import ImageAdjustmentModal, { AdjustmentIcon } from '../modals/ImageAdjustmentModal';
 import { DEFAULT_FRAME_IMAGE } from '../LeftActionMenu/Elements/utils/imageFramingUtils';
 import { getShapeCornerDefaults, buildCornerRadiusPath } from '../LeftActionMenu/Elements/utils/shapeElementUtils';
+import {
+  getShapeMaskState,
+  applyShapeImageMask,
+  removeShapeMask,
+  deleteShapeMaskImage,
+  updateShapeMaskRotation,
+  updateShapeMaskOpacity,
+  updateShapeMaskFilters,
+  updateShapeMaskTransform,
+  applySvgGradientOrSolid
+} from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { parseGradient } from './ColorPicker';
 import { PropertySlider } from './propertiesShared';
 
 // ShapeAppearanceControls export for backwards compatibility
@@ -106,8 +119,11 @@ const ShapeProperties = ({
   const [slotImageName, setSlotImageName] = useState('Image Name .jpg');
   const [slotImageMeta, setSlotImageMeta] = useState('1920 X 1080 • 24MB');
   const [slotRotation, setSlotRotation] = useState(0);
+  const [slotOpacity, setSlotOpacity] = useState(100);
+  const [slotFilters, setSlotFilters] = useState({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
   const [isMaskEnabled, setIsMaskEnabled] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
   const fileInputRef = useRef(null);
   const adjustStateRef = useRef({
     isAdjusting: false,
@@ -224,6 +240,7 @@ const ShapeProperties = ({
           setSlotImage(null);
           setSlotOriginalImage(null);
           setSlotRotation(0);
+          setSlotOpacity(100);
         } else if (e.detail?.url) {
           setSlotImage(e.detail.url);
           setSlotOriginalImage(e.detail.url);
@@ -236,190 +253,71 @@ const ShapeProperties = ({
 
   useEffect(() => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
-    const hasMaskEnabledAttr = selectedElement.getAttribute('data-mask-enabled') === 'true' ||
-      selectedElement.querySelector('[data-mask-enabled="true"]') !== null ||
-      (selectedElement.getAttribute('fill') && selectedElement.getAttribute('fill').includes('url(#pattern-')) ||
-      selectedElement.querySelector('[fill*="url(#pattern-"]') !== null ||
-      Boolean(selectedElementProps?.['data-mask-enabled'] === 'true') ||
-      Boolean(selectedElementProps?.['data-masked-image-url']);
-
-    setIsMaskEnabled(Boolean(hasMaskEnabledAttr));
-    if (!hasMaskEnabledAttr) {
-      setSlotImage(null);
-      setSlotOriginalImage(null);
-      setSlotRotation(0);
-    }
-
-    let svgRoot = selectedElement;
-    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
-      svgRoot = svgRoot.parentElement;
-    }
-
-    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-      shapeEl = selectedElement;
-    }
-
-    if (shapeEl) {
-      const fill = shapeEl.getAttribute('fill') || '';
-      if (fill.includes('url(')) {
-        const match = fill.match(/url\(['"]?#([^)'"]+)['"]?\)/);
-        if (match && match[1]) {
-          const patternId = match[1];
-          const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
-          if (pattern) {
-            const imgNode = pattern.querySelector('image, img');
-            if (imgNode) {
-              const newHref = imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href');
-              if (newHref) {
-                setSlotImage(newHref);
-                setIsMaskEnabled(true);
-                const savedName = shapeEl.getAttribute('data-slot-image-name') || selectedElement.getAttribute('data-slot-image-name');
-                if (savedName) setSlotImageName(savedName);
-                const savedMeta = shapeEl.getAttribute('data-slot-image-meta') || selectedElement.getAttribute('data-slot-image-meta');
-                if (savedMeta) setSlotImageMeta(savedMeta);
-                const savedOrig = shapeEl.getAttribute('data-slot-original-url') || selectedElement.getAttribute('data-slot-original-url');
-                setSlotOriginalImage(savedOrig || newHref);
-                const tf = imgNode.getAttribute('transform') || '';
-                const rMatch = tf.match(/rotate\(([-0-9.]+)/);
-                if (rMatch) setSlotRotation(parseFloat(rMatch[1]));
-              }
-            }
-          }
-        }
-      } else if (selectedElementProps?.['data-masked-image-url']) {
-        setSlotImage(selectedElementProps['data-masked-image-url']);
-        setSlotOriginalImage(selectedElementProps['data-masked-image-url']);
-        setIsMaskEnabled(true);
-      }
+    const maskState = getShapeMaskState({ selectedElement, selectedElementProps, doc });
+    setIsMaskEnabled(maskState.isMaskEnabled);
+    setSlotImage(maskState.slotImage);
+    setSlotOriginalImage(maskState.slotOriginalImage);
+    setSlotImageName(maskState.slotImageName);
+    setSlotImageMeta(maskState.slotImageMeta);
+    setSlotRotation(maskState.slotRotation);
+    setSlotOpacity(maskState.slotOpacity !== undefined ? maskState.slotOpacity : 100);
+    if (maskState.slotFilters) {
+      setSlotFilters(maskState.slotFilters);
     }
   }, [selectedLayerId, selectedElementProps]);
 
   // Image Mask Handlers
   const handleRemoveMask = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
-    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-      shapeEl = selectedElement;
-    }
+    const origFill = selectedElementProps?.['data-original-fill'] || '#3194FC';
+    removeShapeMask({
+      selectedElement,
+      selectedLayerId,
+      activePageIndex,
+      updateElementAttribute,
+      originalFillFallback: origFill,
+      doc
+    });
 
-    let svgRoot = selectedElement;
-    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
-      svgRoot = svgRoot.parentElement;
-    }
-
-    if (shapeEl) {
-      shapeEl.removeAttribute('data-mask-enabled');
-      const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
-      if (patternMatch && patternMatch[1]) {
-        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
-        if (pat) pat.remove();
-      }
-      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
-      shapeEl.setAttribute('fill', origFill);
-      shapeEl.removeAttribute('data-pattern-id');
-      shapeEl.removeAttribute('data-masked-image-url');
-      shapeEl.removeAttribute('data-slot-image-name');
-      shapeEl.removeAttribute('data-slot-image-meta');
-      shapeEl.removeAttribute('data-slot-original-url');
-    }
-
-    selectedElement.removeAttribute('data-mask-enabled');
-    selectedElement.removeAttribute('data-slot-image-name');
-    selectedElement.removeAttribute('data-slot-image-meta');
-    selectedElement.removeAttribute('data-slot-original-url');
     setSlotImage(null);
     setSlotOriginalImage(null);
     setSlotImageName('Image Name .jpg');
     setSlotImageMeta('300 X 300 • 24MB');
     setSlotRotation(0);
+    setSlotOpacity(100);
+    setSlotFilters({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
     setIsMaskEnabled(false);
-
-    window.__skipCanvasUpdateForPage = activePageIndex;
-    if (svgRoot) {
-      const cloneSvg = svgRoot.cloneNode(true);
-      cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
-      const serializer = new XMLSerializer();
-      const html = serializer.serializeToString(cloneSvg);
-      updateElementAttribute(activePageIndex, selectedLayerId, {
-        '__dom_sync__': html,
-        'data-mask-enabled': 'false',
-        'data-masked-image-url': null,
-        'fill': selectedElementProps?.['data-original-fill'] || '#3194FC'
-      });
-    }
-    window.dispatchEvent(new CustomEvent('shape-mask-toggled', { detail: { layerId: selectedLayerId, enabled: false } }));
   };
 
   const handleDeleteImage = () => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
-    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-      shapeEl = selectedElement;
-    }
-
-    let svgRoot = selectedElement;
-    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
-      svgRoot = svgRoot.parentElement;
-    }
-
-    if (shapeEl) {
-      const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
-      if (patternMatch && patternMatch[1]) {
-        const pat = (svgRoot || selectedElement).querySelector(`pattern[id="${patternMatch[1]}"]`);
-        if (pat) pat.remove();
-      }
-      const origFill = shapeEl.getAttribute('data-original-fill') || '#3194FC';
-      shapeEl.setAttribute('fill', origFill);
-      shapeEl.removeAttribute('data-pattern-id');
-      shapeEl.removeAttribute('data-masked-image-url');
-      shapeEl.removeAttribute('data-slot-image-name');
-      shapeEl.removeAttribute('data-slot-image-meta');
-      shapeEl.removeAttribute('data-slot-original-url');
-      shapeEl.removeAttribute('data-slot-crop-data');
-      shapeEl.removeAttribute('data-slot-fix-type');
-      shapeEl.removeAttribute('data-slot-opacity');
-      shapeEl.removeAttribute('data-slot-filters');
-      shapeEl.setAttribute('data-mask-enabled', 'true');
-    }
-
-    selectedElement.removeAttribute('data-slot-image-name');
-    selectedElement.removeAttribute('data-slot-image-meta');
-    selectedElement.removeAttribute('data-slot-original-url');
-    selectedElement.removeAttribute('data-slot-crop-data');
-    selectedElement.removeAttribute('data-slot-fix-type');
-    selectedElement.removeAttribute('data-slot-opacity');
-    selectedElement.removeAttribute('data-slot-filters');
-    selectedElement.setAttribute('data-mask-enabled', 'true');
+    const origFill = selectedElementProps?.['data-original-fill'] || '#3194FC';
+    deleteShapeMaskImage({
+      selectedElement,
+      selectedLayerId,
+      activePageIndex,
+      updateElementAttribute,
+      originalFillFallback: origFill,
+      doc
+    });
 
     setSlotImage(null);
     setSlotOriginalImage(null);
     setSlotImageName('Image Name .jpg');
     setSlotImageMeta('300 X 300 • 24MB');
     setSlotRotation(0);
+    setSlotOpacity(100);
+    setSlotFilters({ exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 });
     setIsMaskEnabled(true);
-
-    window.__skipCanvasUpdateForPage = activePageIndex;
-    if (svgRoot) {
-      const cloneSvg = svgRoot.cloneNode(true);
-      cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer').forEach(el => el.remove());
-      const serializer = new XMLSerializer();
-      const html = serializer.serializeToString(cloneSvg);
-      updateElementAttribute(activePageIndex, selectedLayerId, {
-        '__dom_sync__': html,
-        'data-masked-image-url': null,
-        'fill': selectedElementProps?.['data-original-fill'] || '#3194FC'
-      });
-    }
   };
 
   const applyImageMask = useCallback((
@@ -429,131 +327,27 @@ const ShapeProperties = ({
     originalDataUrl = null
   ) => {
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
-    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-      shapeEl = selectedElement;
-    }
-    if (!shapeEl) return;
-
-    shapeEl.setAttribute('data-mask-enabled', 'true');
-    selectedElement.setAttribute('data-mask-enabled', 'true');
-    if (!shapeEl.hasAttribute('data-original-fill')) {
-      shapeEl.setAttribute('data-original-fill', shapeEl.getAttribute('fill') || '#3194FC');
-    }
-    setIsMaskEnabled(true);
-
-    const svgRoot = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
-    let defs = svgRoot ? svgRoot.querySelector('defs') : selectedElement.querySelector('defs');
-    if (!defs && svgRoot) {
-      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      svgRoot.insertBefore(defs, svgRoot.firstChild);
-    } else if (!defs) {
-      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      selectedElement.insertBefore(defs, selectedElement.firstChild);
-    }
-
-    const patternId = `pattern-${selectedLayerId}`;
-    let pattern = defs.querySelector(`pattern[id="${patternId}"]`);
-    if (!pattern) {
-      pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-      pattern.setAttribute('id', patternId);
-      defs.appendChild(pattern);
-    }
-    pattern.setAttribute('patternUnits', 'objectBoundingBox');
-    pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-    pattern.setAttribute('width', '1');
-    pattern.setAttribute('height', '1');
-    pattern.removeAttribute('x');
-    pattern.removeAttribute('y');
-    pattern.removeAttribute('patternTransform');
-    pattern.removeAttribute('viewBox');
-
-    shapeEl.setAttribute('fill', `url(#${patternId})`);
-    if (selectedElement !== shapeEl) {
-      selectedElement.setAttribute('fill', `url(#${patternId})`);
-    }
-
-    const img = new window.Image();
-    img.onload = () => {
-      const imgW = img.naturalWidth || img.width;
-      const imgH = img.naturalHeight || img.height;
-
-      const dims = `${imgW} X ${imgH}`;
-      const meta = `${dims} • ${sizeStr || '24MB'}`;
-      if (name) setSlotImageName(name);
-      setSlotImageMeta(meta);
-
-      const origToSave = originalDataUrl || dataUrl;
-      setSlotOriginalImage(origToSave);
-
-      if (shapeEl) {
-        if (name) shapeEl.setAttribute('data-slot-image-name', name);
-        shapeEl.setAttribute('data-slot-image-meta', meta);
-        shapeEl.setAttribute('data-slot-original-url', origToSave);
+    applyShapeImageMask({
+      selectedElement,
+      selectedLayerId,
+      activePageIndex,
+      dataUrl,
+      name,
+      sizeStr,
+      originalDataUrl,
+      updateElementAttribute,
+      doc,
+      onSuccess: ({ meta, origToSave }) => {
+        setIsMaskEnabled(true);
+        if (name) setSlotImageName(name);
+        setSlotImageMeta(meta);
+        setSlotOriginalImage(origToSave);
+        setSlotImage(dataUrl);
       }
-      if (selectedElement) {
-        if (name) selectedElement.setAttribute('data-slot-image-name', name);
-        selectedElement.setAttribute('data-slot-image-meta', meta);
-        selectedElement.setAttribute('data-slot-original-url', origToSave);
-      }
-
-      let bbox = { width: 100, height: 100, x: 0, y: 0 };
-      try {
-        bbox = shapeEl.getBBox();
-      } catch (e) { }
-      if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100, x: 0, y: 0 };
-
-      const slotW = bbox.width;
-      const slotH = bbox.height;
-
-      const scale = Math.max(slotW / imgW, slotH / imgH);
-      const finalW = imgW * scale;
-      const finalH = imgH * scale;
-
-      const tx_user = (slotW - finalW) / 2;
-      const ty_user = (slotH - finalH) / 2;
-
-      let imageNode = pattern.querySelector('image, img');
-      if (!imageNode) {
-        imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        pattern.appendChild(imageNode);
-      }
-
-      imageNode.setAttribute('width', imgW);
-      imageNode.setAttribute('height', imgH);
-      imageNode.removeAttribute('preserveAspectRatio');
-      imageNode.removeAttribute('x');
-      imageNode.removeAttribute('y');
-
-      const existingTf = imageNode.getAttribute('transform') || '';
-      let rotateStr = '';
-      const rMatch = existingTf.match(/rotate\([^)]+\)/);
-      if (rMatch) rotateStr = rMatch[0] + ' ';
-
-      imageNode.setAttribute('transform', `${rotateStr}matrix(${scale} 0 0 ${scale} ${tx_user} ${ty_user})`);
-      imageNode.setAttribute('href', dataUrl);
-      imageNode.setAttribute('xlink:href', dataUrl);
-
-      setSlotImage(dataUrl);
-
-      window.__skipCanvasUpdateForPage = activePageIndex;
-      let rootSvg = selectedElement.closest('svg') || doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || doc.querySelector('svg');
-      if (rootSvg) {
-        const cloneSvg = rootSvg.cloneNode(true);
-        cloneSvg.querySelectorAll('[data-highlight-id], #ghost-layer, .selection-overlay-layer').forEach(el => el.remove());
-        const serializer = new XMLSerializer();
-        const html = serializer.serializeToString(cloneSvg);
-        updateElementAttribute(activePageIndex, selectedLayerId, {
-          '__dom_sync__': html,
-          'fill': `url(#${patternId})`,
-          'data-masked-image-url': dataUrl
-        });
-      }
-    };
-    img.src = dataUrl;
+    });
   }, [selectedLayerId, activePageIndex, updateElementAttribute]);
 
   const handleFileChange = async (e) => {
@@ -583,84 +377,70 @@ const ShapeProperties = ({
     e.target.value = '';
   };
 
-  const handleSaveAdjustedImage = ({ croppedUrl, originalUrl }) => {
-    const origUrlToKeep = originalUrl || slotOriginalImage || croppedUrl;
-    setSlotOriginalImage(origUrlToKeep);
+  const handleAdjustmentChange = (key, val) => {
+    const nextFilters = { ...slotFilters, [key]: val };
+    setSlotFilters(nextFilters);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
+    if (!selectedElement) return;
 
-    const img = new window.Image();
-    img.onload = () => {
-      const imgW = img.naturalWidth || img.width;
-      const imgH = img.naturalHeight || img.height;
-      const dims = `${imgW} X ${imgH}`;
-      const sizePart = slotImageMeta?.includes('•') ? slotImageMeta.split('•')[1].trim() : '24MB';
-      const meta = `${dims} • ${sizePart}`;
-      setSlotImageMeta(meta);
+    updateShapeMaskFilters({
+      selectedElement,
+      selectedLayerId,
+      activePageIndex,
+      filters: nextFilters,
+      updateElementAttribute,
+      doc
+    });
+  };
 
-      applyImageMask(croppedUrl, slotImageName, meta, origUrlToKeep);
-    };
-    img.src = croppedUrl;
+  const handleResetAllAdjustments = () => {
+    const reset = { exposure: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0 };
+    setSlotFilters(reset);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
+    if (!selectedElement) return;
 
-    setShowAdjustModal(false);
+    updateShapeMaskFilters({
+      selectedElement,
+      selectedLayerId,
+      activePageIndex,
+      filters: reset,
+      updateElementAttribute,
+      doc
+    });
   };
 
   const updateRotation = (angle, skipSync = false) => {
     setSlotRotation(angle);
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const selectedElement = doc.getElementById(selectedLayerId);
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
     if (!selectedElement) return;
 
-    let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-    if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-      shapeEl = selectedElement;
-    }
-    if (!shapeEl) return;
+    updateShapeMaskRotation({
+      selectedElement,
+      angle,
+      doc,
+      onSync: () => {
+        if (!skipSync) syncDomChanges();
+      }
+    });
+  };
 
-    const patternMatch = (shapeEl.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
-    if (!patternMatch || !patternMatch[1]) return;
-    const patternId = patternMatch[1];
+  const updateOpacity = (val, skipSync = false) => {
+    setSlotOpacity(val);
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const selectedElement = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId) || doc.querySelector(`[id="${CSS.escape(selectedLayerId)}"]`);
+    if (!selectedElement) return;
 
-    let svgRoot = selectedElement;
-    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
-      svgRoot = svgRoot.parentElement;
-    }
-    const pattern = (svgRoot || selectedElement).querySelector(`pattern[id="${patternId}"]`) || doc.getElementById(patternId);
-    if (!pattern) return;
-
-    let bbox = { x: 0, y: 0, width: 100, height: 100 };
-    try { bbox = shapeEl.getBBox(); } catch (e) { }
-    const cx = bbox.width / 2;
-    const cy = bbox.height / 2;
-
-    const pcu = pattern.getAttribute('patternContentUnits');
-    const imgNode = pattern.querySelector('image, img');
-    if (!imgNode) return;
-
-    let tf = imgNode.getAttribute('transform') || '';
-    let m = [1, 0, 0, 1, 0, 0];
-    const mMatch = tf.match(/matrix\(([^)]+)\)/);
-    if (mMatch) {
-      m = mMatch[1].split(/[ ,]+/).map(parseFloat);
-    }
-
-    if (pcu !== 'userSpaceOnUse') {
-      m[0] = m[0] * bbox.width;
-      m[2] = m[2] * bbox.width;
-      m[1] = m[1] * bbox.height;
-      m[3] = m[3] * bbox.height;
-      m[4] = m[4] * bbox.width;
-      m[5] = m[5] * bbox.height;
-      pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-      pattern.removeAttribute('patternTransform');
-    }
-
-    const matrixStr = `matrix(${m.join(' ')})`;
-    if (angle !== 0) {
-      imgNode.setAttribute('transform', `rotate(${angle}, ${cx}, ${cy}) ${matrixStr}`.trim());
-    } else {
-      imgNode.setAttribute('transform', matrixStr);
-    }
-
-    if (!skipSync) syncDomChanges();
+    updateShapeMaskOpacity({
+      selectedElement,
+      opacity: val,
+      doc,
+      onSync: () => {
+        if (!skipSync) syncDomChanges();
+      }
+    });
   };
 
   const hasUploadedImage = Boolean(slotImage && slotImage !== DEFAULT_FRAME_IMAGE);
@@ -806,8 +586,17 @@ const ShapeProperties = ({
           }
         }
 
+        const hasMask = Boolean(
+          target.getAttribute('data-mask-enabled') === 'true' ||
+          el.getAttribute('data-mask-enabled') === 'true' ||
+          (target.getAttribute('fill') && target.getAttribute('fill').includes('url(#pattern-'))
+        );
+        if (hasMask) {
+          updateShapeMaskTransform({ selectedElement: target });
+        }
+
         window.__skipCanvasUpdateForPage = activePageIndex;
-        let svgRoot = el;
+        let svgRoot = target || el;
         while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') svgRoot = svgRoot.parentElement;
         if (svgRoot) {
           const cloneSvg = svgRoot.cloneNode(true);
@@ -935,8 +724,17 @@ const ShapeProperties = ({
           }
         }
 
+        const hasMask = Boolean(
+          targetShape.getAttribute('data-mask-enabled') === 'true' ||
+          el.getAttribute('data-mask-enabled') === 'true' ||
+          (targetShape.getAttribute('fill') && targetShape.getAttribute('fill').includes('url(#pattern-'))
+        );
+        if (hasMask) {
+          updateShapeMaskTransform({ selectedElement: targetShape });
+        }
+
         window.__skipCanvasUpdateForPage = activePageIndex;
-        let svgRoot = el;
+        let svgRoot = targetShape || el;
         while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') svgRoot = svgRoot.parentElement;
         if (svgRoot) {
           const cloneSvg = svgRoot.cloneNode(true);
@@ -955,12 +753,29 @@ const ShapeProperties = ({
   };
 
   // Color State
-  const rawFill = selectedElementProps?.['data-masked-image-url']
-    ? (selectedElementProps?.['data-original-fill'] || '#d0ccff')
+  const docForColor = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+  const liveElForColor = docForColor.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+  const isCurrentlyMasked = Boolean(
+    isMaskEnabled ||
+    slotImage ||
+    selectedElementProps?.['data-mask-enabled'] === 'true' ||
+    selectedElementProps?.['data-masked-image-url'] ||
+    (selectedElementProps?.fill && selectedElementProps.fill.includes('url(#pattern-')) ||
+    liveElForColor?.getAttribute('data-mask-enabled') === 'true' ||
+    liveElForColor?.hasAttribute('data-masked-image-url') ||
+    (liveElForColor?.getAttribute('fill') && liveElForColor.getAttribute('fill').includes('url(#pattern-')) ||
+    liveElForColor?.querySelector?.('[data-mask-enabled="true"]') ||
+    liveElForColor?.querySelector?.('[fill*="url(#pattern-"]')
+  );
+
+  const rawFill = isCurrentlyMasked
+    ? (selectedElementProps?.['data-original-fill'] || liveElForColor?.getAttribute('data-original-fill') || liveElForColor?.querySelector?.('[data-original-fill]')?.getAttribute('data-original-fill') || '#3194FC')
     : (selectedElementProps?.fill || '#000000');
-  const safeFill = (!rawFill || rawFill === 'inherit')
-    ? (selectedElementProps?.['data-fill-color'] || '#000000')
+  const safeFill = (!rawFill || rawFill === 'inherit' || rawFill.includes('url(#pattern-'))
+    ? (selectedElementProps?.['data-fill-color'] || '#3194FC')
     : rawFill;
+
+  const parsedFillGrad = (safeFill && typeof safeFill === 'string' && safeFill.includes('gradient')) ? parseGradient(safeFill) : null;
 
   const rawStroke = selectedElementProps?.['data-stroke-color'] || selectedElementProps?.stroke;
   const safeStroke = (!rawStroke || rawStroke === 'inherit')
@@ -975,11 +790,11 @@ const ShapeProperties = ({
     fillOpacity: selectedElementProps?.opacity ? parseFloat(selectedElementProps.opacity) * 100 : 100,
     stroke: safeStroke,
     strokeOpacity: selectedElementProps?.['stroke-opacity'] ? parseFloat(selectedElementProps['stroke-opacity']) * 100 : 100,
-    fillType: selectedElementProps?.['fill-type'] || 'solid',
-    fillGradientType: selectedElementProps?.['fill-gradient-type'] || 'linear',
-    fillStops: selectedElementProps?.['fill-stops'],
-    fillAngle: parseFloat(selectedElementProps?.['fill-angle'] || 0),
-    fillRadius: parseFloat(selectedElementProps?.['fill-radius'] || 100),
+    fillType: selectedElementProps?.['fill-type'] || (parsedFillGrad ? 'gradient' : 'solid'),
+    fillGradientType: selectedElementProps?.['fill-gradient-type'] || (parsedFillGrad ? parsedFillGrad.type.toLowerCase() : 'linear'),
+    fillStops: selectedElementProps?.['fill-stops'] || (parsedFillGrad ? JSON.stringify(parsedFillGrad.stops.map(s => ({ color: s.color, offset: s.offset, opacity: s.opacity / 100 }))) : undefined),
+    fillAngle: parseFloat(selectedElementProps?.['fill-angle'] ?? (parsedFillGrad?.angle || 0)),
+    fillRadius: parseFloat(selectedElementProps?.['fill-radius'] ?? (parsedFillGrad?.radius || 100)),
     strokeType: selectedElementProps?.['stroke-type'] || 'solid',
     strokeGradientType: selectedElementProps?.['stroke-gradient-type'] || 'linear',
     strokeStops: selectedElementProps?.['stroke-stops'],
@@ -997,15 +812,155 @@ const ShapeProperties = ({
   const handleSetBackgroundColor = (updater) => {
     const next = typeof updater === 'function' ? updater(backgroundColor) : updater;
 
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+
+    const isMaskedShape = Boolean(
+      isMaskEnabled ||
+      slotImage ||
+      selectedElementProps?.['data-mask-enabled'] === 'true' ||
+      selectedElementProps?.['data-masked-image-url'] ||
+      (selectedElementProps?.fill && selectedElementProps.fill.includes('url(#pattern-')) ||
+      liveEl?.getAttribute('data-mask-enabled') === 'true' ||
+      liveEl?.hasAttribute('data-masked-image-url') ||
+      (liveEl?.getAttribute('fill') && liveEl.getAttribute('fill').includes('url(#pattern-')) ||
+      liveEl?.querySelector?.('[data-mask-enabled="true"]') ||
+      liveEl?.querySelector?.('[fill*="url(#pattern-"]')
+    );
+
     const updates = {};
-    if (backgroundColor.fill !== next.fill) {
-      if (selectedElementProps?.['data-masked-image-url']) {
-        updates['data-original-fill'] = next.fill;
+    const fillOp = next.fillOpacity !== undefined ? next.fillOpacity : backgroundColor.fillOpacity;
+
+    const fillChanged = backgroundColor.fill !== next.fill ||
+      backgroundColor.fillType !== next.fillType ||
+      backgroundColor.fillGradientType !== next.fillGradientType ||
+      backgroundColor.fillStops !== next.fillStops ||
+      backgroundColor.fillAngle !== next.fillAngle ||
+      backgroundColor.fillRadius !== next.fillRadius;
+
+    let hasAppliedGradient = false;
+
+    if (fillChanged) {
+      const fillVal = next.fill;
+
+      if (isMaskedShape) {
+        updates['data-original-fill'] = fillVal;
+        updates['data-original-fill-opacity'] = (fillOp / 100).toString();
+
+        const patternMatch = (liveEl?.getAttribute('fill') || liveEl?.querySelector?.('path, circle, rect, polygon')?.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
+        if (patternMatch && patternMatch[1]) {
+          const pat = (liveEl?.closest('svg') || doc).querySelector(`pattern[id="${patternMatch[1]}"]`) ||
+            doc.getElementById(patternMatch[1]) ||
+            document.getElementById(patternMatch[1]);
+          if (pat) {
+            let bgRect = pat.querySelector('rect.mask-bg-fill');
+            if (!bgRect) {
+              bgRect = (liveEl?.ownerDocument || doc).createElementNS('http://www.w3.org/2000/svg', 'rect');
+              bgRect.setAttribute('class', 'mask-bg-fill');
+              pat.insertBefore(bgRect, pat.firstChild);
+            }
+
+            if (pat.getAttribute('patternUnits') === 'userSpaceOnUse') {
+              let bbox;
+              try {
+                let shapeEl = liveEl.querySelector('path, polygon, rect, circle, ellipse');
+                if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(liveEl.tagName?.toLowerCase())) shapeEl = liveEl;
+                bbox = shapeEl ? shapeEl.getBBox() : { x: 0, y: 0, width: 100, height: 100 };
+              } catch {
+                bbox = { x: 0, y: 0, width: 100, height: 100 };
+              }
+              const baseW = bbox.width > 0 ? bbox.width : 100;
+              const baseH = bbox.height > 0 ? bbox.height : 100;
+              const padX = Math.max(baseW * 2, 200);
+              const padY = Math.max(baseH * 2, 200);
+
+              bgRect.setAttribute('x', String(padX));
+              bgRect.setAttribute('y', String(padY));
+              bgRect.setAttribute('width', String(baseW));
+              bgRect.setAttribute('height', String(baseH));
+            } else {
+              bgRect.setAttribute('x', '0');
+              bgRect.setAttribute('y', '0');
+              bgRect.setAttribute('width', '1');
+              bgRect.setAttribute('height', '1');
+            }
+
+            const res = applySvgGradientOrSolid({
+              targetEl: bgRect,
+              fillVal,
+              fillOp,
+              idPrefix: `grad-${patternMatch[1]}-bg`,
+              doc,
+              svgRoot: liveEl?.closest('svg') || doc.querySelector('svg')
+            });
+
+            if (res.isGradient) {
+              hasAppliedGradient = true;
+              if (res.parsed) {
+                updates['fill-type'] = 'gradient';
+                updates['fill-gradient-type'] = res.parsed.type.toLowerCase();
+                updates['fill-stops'] = JSON.stringify(res.parsed.stops.map(s => ({ color: s.color, offset: s.offset, opacity: s.opacity / 100 })));
+                updates['fill-angle'] = String(res.parsed.angle || 0);
+                updates['fill-radius'] = String(res.parsed.radius || 100);
+              }
+            } else {
+              updates['fill-type'] = 'solid';
+            }
+          }
+        }
       } else {
-        updates['fill'] = next.fill;
+        // Unmasked Shape
+        let targetShape = liveEl;
+        if (liveEl?.tagName?.toLowerCase() === 'g') {
+          const inner = liveEl.querySelector('path, polygon, rect, circle, ellipse, line');
+          if (inner) targetShape = inner;
+        }
+
+        const res = applySvgGradientOrSolid({
+          targetEl: targetShape || liveEl,
+          fillVal,
+          fillOp,
+          idPrefix: `grad-${selectedLayerId}-fill`,
+          doc,
+          svgRoot: liveEl?.closest('svg') || doc.querySelector('svg')
+        });
+
+        updates['fill'] = res.fillAttr;
+        updates['data-fill-color'] = fillVal;
+
+        if (res.isGradient) {
+          hasAppliedGradient = true;
+          if (res.parsed) {
+            updates['fill-type'] = 'gradient';
+            updates['fill-gradient-type'] = res.parsed.type.toLowerCase();
+            updates['fill-stops'] = JSON.stringify(res.parsed.stops.map(s => ({ color: s.color, offset: s.offset, opacity: s.opacity / 100 })));
+            updates['fill-angle'] = String(res.parsed.angle || 0);
+            updates['fill-radius'] = String(res.parsed.radius || 100);
+          }
+        } else {
+          updates['fill-type'] = 'solid';
+        }
       }
     }
-    if (backgroundColor.fillOpacity !== next.fillOpacity) updates['opacity'] = (next.fillOpacity / 100).toString();
+    if (backgroundColor.fillOpacity !== next.fillOpacity) {
+      if (isMaskedShape) {
+        updates['data-original-fill-opacity'] = (next.fillOpacity / 100).toString();
+        const patternMatch = (liveEl?.getAttribute('fill') || liveEl?.querySelector?.('path, circle, rect, polygon')?.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
+        if (patternMatch && patternMatch[1]) {
+          const pat = (liveEl?.closest('svg') || doc).querySelector(`pattern[id="${patternMatch[1]}"]`) ||
+            doc.getElementById(patternMatch[1]) ||
+            document.getElementById(patternMatch[1]);
+          if (pat) {
+            let bgRect = pat.querySelector('rect.mask-bg-fill');
+            if (bgRect) {
+              bgRect.setAttribute('fill-opacity', (next.fillOpacity / 100).toString());
+            }
+          }
+        }
+      } else {
+        updates['opacity'] = (next.fillOpacity / 100).toString();
+      }
+    }
     if (backgroundColor.stroke !== next.stroke) {
       updates['stroke'] = next.stroke;
       updates['data-stroke-color'] = next.stroke;
@@ -1017,6 +972,7 @@ const ShapeProperties = ({
       updates['data-stroke-width'] = sw.toString();
       updates['data-stroke-position'] = pos;
       updates['vector-effect'] = 'non-scaling-stroke';
+
       if (pos === 'Outside') {
         updates['stroke-width'] = (sw * 2).toString();
         updates['strokeWidth'] = (sw * 2).toString();
@@ -1056,10 +1012,11 @@ const ShapeProperties = ({
     if (backgroundColor.strokeRadius !== next.strokeRadius) updates['stroke-radius'] = next.strokeRadius;
 
     // Direct live DOM updates for fluid feedback
-    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    const liveEl = doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
     if (liveEl) {
       Object.entries(updates).forEach(([k, v]) => {
+        if (k === 'fill' && isMaskedShape) {
+          return;
+        }
         if (v === 'none' && (k === 'fill' || k === 'stroke')) {
           liveEl.setAttribute(k, 'none');
         } else {
@@ -1069,6 +1026,12 @@ const ShapeProperties = ({
       });
       const childShapes = liveEl.querySelectorAll('path, polygon, rect, circle, ellipse, line, polyline');
       childShapes.forEach(child => {
+        if (isMaskedShape) {
+          if (updates['stroke']) child.setAttribute('stroke', updates['stroke']);
+          if (updates['stroke-width']) child.setAttribute('stroke-width', updates['stroke-width']);
+          if (updates['stroke-dasharray']) child.setAttribute('stroke-dasharray', updates['stroke-dasharray']);
+          if (updates['data-original-fill']) child.setAttribute('data-original-fill', updates['data-original-fill']);
+        }
         if (updates['vector-effect']) child.setAttribute('vector-effect', updates['vector-effect']);
         if (updates['paint-order']) {
           child.setAttribute('paint-order', updates['paint-order']);
@@ -1077,6 +1040,10 @@ const ShapeProperties = ({
         if (updates['stroke-linecap']) child.setAttribute('stroke-linecap', updates['stroke-linecap']);
         if (updates['stroke-linejoin']) child.setAttribute('stroke-linejoin', updates['stroke-linejoin']);
       });
+    }
+
+    if (isMaskedShape || hasAppliedGradient) {
+      syncDomChanges();
     }
 
     if (Object.keys(updates).length > 0) {
@@ -1158,6 +1125,17 @@ const ShapeProperties = ({
     if (Object.keys(updates).length > 0) updateElementAttribute(activePageIndex, selectedLayerId, updates);
   };
 
+  const doc = (typeof document !== 'undefined' ? (document.getElementById('main-flipbook-editor')?.contentDocument || document) : null);
+  const selectedElement = (selectedLayerId && doc) ? (doc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId)) : null;
+
+  const isFlattened = Boolean(
+    selectedElement?.getAttribute?.('data-flattened') === 'true' ||
+    selectedElement?.getAttribute?.('data-type') === 'vector-path' ||
+    selectedElementProps?.['data-type'] === 'vector-path' ||
+    selectedElementProps?.['data-flattened'] === 'true' ||
+    (selectedElement?.tagName?.toLowerCase() === 'path' && !selectedElement?.getAttribute?.('data-is-element-shape'))
+  );
+
   return (
     <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
 
@@ -1177,7 +1155,7 @@ const ShapeProperties = ({
               if (isMaskEnabled || hasUploadedImage) {
                 handleRemoveMask();
               } else {
-                window.dispatchEvent(new CustomEvent('trigger-mask'));
+                window.dispatchEvent(new CustomEvent('trigger-mask', { detail: { layerId: selectedLayerId } }));
               }
             }}
             className={`flex items-center justify-center gap-[0.45vw] h-[2.2vw] px-[0.7vw] rounded-[0.45vw] border transition-all cursor-pointer shadow-2xs font-medium text-[0.8vw] ${
@@ -1194,13 +1172,19 @@ const ShapeProperties = ({
           {/* Flatten Button */}
           <button
             type="button"
+            disabled={isFlattened}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('trigger-flatten'));
+              if (isFlattened) return;
+              window.dispatchEvent(new CustomEvent('trigger-flatten', { detail: { layerId: selectedLayerId } }));
             }}
-            className="flex items-center justify-center gap-[0.45vw] h-[2.2vw] px-[0.7vw] rounded-[0.45vw] border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-2xs font-medium text-[0.8vw]"
-            title="Flatten shape to vector path and edit points"
+            className={`flex items-center justify-center gap-[0.45vw] h-[2.2vw] px-[0.7vw] rounded-[0.45vw] border transition-all shadow-2xs font-medium text-[0.8vw] ${
+              isFlattened
+                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer'
+            }`}
+            title={isFlattened ? "Shape is already flattened" : "Flatten shape to vector path and edit points"}
           >
-            <FlattenIcon size="1.05vw" className="text-gray-600" />
+            <FlattenIcon size="1.05vw" className={isFlattened ? "text-gray-400" : "text-gray-600"} />
             <span className="truncate">Flatten</span>
           </button>
         </div>
@@ -1232,10 +1216,11 @@ const ShapeProperties = ({
             </div>
           )}
 
-          {/* Uploaded Image Preview Card */}
+          {/* Uploaded Image Preview Card (Exact layout & style of ImageProperties) */}
           {hasUploadedImage && (
             <>
               <div
+                className="flex items-center gap-[0.9vw] p-[0.8vw] bg-white rounded-[0.55vw] border border-gray-200 shadow-2xs"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1245,68 +1230,85 @@ const ShapeProperties = ({
                   e.stopPropagation();
                   const files = e.dataTransfer.files;
                   if (files && files.length > 0) {
-                    handleFileChange({ target: { files } });
+                    const file = files[0];
+                    if (file.type.startsWith('image/') && file.type !== 'image/gif') {
+                      handleFileChange({ target: { files: [file] } });
+                    }
                   }
                 }}
-                className="flex items-center justify-between p-[0.6vw] px-[0.75vw] bg-white border border-gray-200 rounded-[0.55vw] shadow-2xs"
               >
-                {/* Left Section: Thumbnail + Meta (moveable grip removed) */}
-                <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
-                  <div
-                    className="relative w-[3.8vw] h-[2.8vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group cursor-pointer"
+                {/* Thumbnail */}
+                <div className="relative w-[7.6vw] h-[5.6vw] rounded-[0.45vw] overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-2xs group">
+                  <img
+                    src={slotImage || DEFAULT_FRAME_IMAGE}
+                    alt={slotImageName || 'Image Name .jpg'}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Adjustment Icon Button (Top Right) */}
+                  <button
+                    type="button"
+                    data-adjustment-trigger="true"
                     onClick={(e) => {
                       e.stopPropagation();
-                      fileInputRef.current?.click();
+                      window.dispatchEvent(new CustomEvent('trigger-image-adjust', { detail: { layerId: selectedLayerId } }));
+                      setShowAdjustModal(prev => !prev);
                     }}
-                    title="Click to replace image"
+                    className={`absolute top-[0.35vw] right-[0.35vw] w-[1.7vw] h-[1.7vw] rounded-[0.35vw] shadow-md border flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer z-10 ${
+                      showAdjustModal ? 'bg-gray-100 text-gray-900 border-gray-300' : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50'
+                    }`}
+                    title="Image Adjustments"
                   >
-                    <img
-                      src={slotImage || DEFAULT_FRAME_IMAGE}
-                      alt={slotImageName || 'Image Name .jpg'}
-                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200 cursor-pointer">
-                      <ArrowRightLeft size="0.75vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                      <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
-                    </div>
-                  </div>
+                    <AdjustmentIcon className="w-[0.95vw] h-[0.95vw]" />
+                  </button>
+                </div>
 
-                  <div className="flex flex-col min-w-0 flex-1 py-[0.1vw]">
-                    <span className="text-[0.8vw] font-semibold text-gray-800 truncate" title={slotImageName || 'Image Name .jpg'}>
+                {/* Info & Actions */}
+                <div className="flex flex-col flex-1 min-w-0 justify-between py-[0.15vw]">
+                  <div className="flex flex-col gap-[0.2vw]">
+                    <span className="text-[0.82vw] font-semibold text-gray-900 truncate" title={slotImageName || 'Image Name .jpg'}>
                       {slotImageName || 'Image Name .jpg'}
                     </span>
-                    <span className="text-[0.68vw] text-gray-400 font-medium truncate" title={slotImageMeta || '300 X 300 • 24MB'}>
+                    <span className="text-[0.75vw] text-gray-500 font-medium truncate">
                       {slotImageMeta || '300 X 300 • 24MB'}
                     </span>
                   </div>
-                </div>
 
-                {/* Right Actions: Edit pencil & Delete Trash */}
-                <div className="flex items-center gap-[0.3vw] shrink-0 ml-[0.4vw]">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAdjustModal(true);
-                    }}
-                    className="p-[0.3vw] text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
-                    title="Edit Image Adjustment"
-                  >
-                    <Edit2 size="0.95vw" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteImage();
-                    }}
-                    className="p-[0.3vw] text-[#e02424] hover:text-red-700 hover:bg-red-50 rounded-[0.35vw] transition-colors cursor-pointer"
-                    title="Remove Image"
-                  >
-                    <Trash2 size="0.95vw" />
-                  </button>
+                  <div className="flex items-center gap-[0.5vw] mt-[0.7vw]">
+                    <button
+                      type="button"
+                      onClick={() => setShowReplaceModal(true)}
+                      className="px-[0.7vw] h-[1.9vw] bg-white hover:bg-gray-50 text-gray-700 text-[0.8vw] font-medium rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-gray-400 cursor-pointer transition-colors"
+                    >
+                      Replace image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage()}
+                      className="h-[1.9vw] px-[0.5vw] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-[0.4vw] border border-gray-300 shadow-2xs hover:border-red-200 cursor-pointer transition-colors"
+                      title="Delete image"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[0.85vw] h-[0.85vw]">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              <PropertySlider
+                label="Opacity"
+                value={slotOpacity}
+                onChange={(val) => updateOpacity(val, true)}
+                onPointerUp={syncDomChanges}
+                min={0}
+                max={100}
+                unit="%"
+              />
 
               <PropertySlider
                 label="Rotation"
@@ -1425,38 +1427,21 @@ const ShapeProperties = ({
         noAccordion={true}
       />
 
-      {/* ===================== IMAGE ADJUST MODAL ===================== */}
-      {showAdjustModal && (
-        <ImageAdjustModal
-          isOpen={showAdjustModal}
-          onClose={() => setShowAdjustModal(false)}
-          imageSrc={slotOriginalImage || slotImage || DEFAULT_FRAME_IMAGE}
-          initialFixType="Fit"
-          initialOpacity={100}
-          initialFilters={null}
-          initialCrop={null}
-          frameAspectRatio={(() => {
-            const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-            const selectedElement = doc.getElementById(selectedLayerId);
-            if (selectedElement) {
-              try {
-                let shapeEl = selectedElement.querySelector('path, polygon, rect, circle, ellipse');
-                if (!shapeEl && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(selectedElement.tagName?.toLowerCase())) {
-                  shapeEl = selectedElement;
-                }
-                if (shapeEl) {
-                  const bbox = shapeEl.getBBox();
-                  if (bbox.width && bbox.height) {
-                    return bbox.width / bbox.height;
-                  }
-                }
-              } catch (e) { }
-            }
-            return 1;
-          })()}
-          onSave={handleSaveAdjustedImage}
-        />
-      )}
+      {/* ===================== IMAGE ADJUSTMENT MODAL ===================== */}
+      <ImageAdjustmentModal
+        isOpen={showAdjustModal}
+        onClose={() => setShowAdjustModal(false)}
+        filters={slotFilters}
+        onChange={handleAdjustmentChange}
+        onResetAll={handleResetAllAdjustments}
+      />
+
+      {/* ===================== REPLACE MEDIA MODAL ===================== */}
+      <ReplaceMediaModal
+        show={showReplaceModal}
+        onClose={() => setShowReplaceModal(false)}
+        onReplace={(file) => handleFileChange({ target: { files: [file] } })}
+      />
 
       {/* CUSTOM CSS */}
       <style>{`

@@ -87,7 +87,7 @@ export class ElementSearchIndex {
         }
       }
 
-      // Extract searchable tokens from name, type, and category
+      // Extract searchable tokens from name, type, category, and subtopic
       const tokenSources = [item.name, item.category, item.subtopic, item.type, item.tag, item.id].filter(Boolean);
       const uniqueTokens = new Set();
 

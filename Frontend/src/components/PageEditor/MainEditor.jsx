@@ -45,9 +45,10 @@ import {
   StylesModal,
   IconsModal
 } from './LeftActionMenu';
-import { getTopLevelFrames, hitTest as hitTestExt } from './mainEditor/utils/frameHierarchyUtils';
+import { getTopLevelFrames, hitTest as hitTestExt, isPageRootElement } from './mainEditor/utils/frameHierarchyUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
+import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
 
 // Re-export geometry utilities for backward compatibility with external components
 
@@ -161,6 +162,12 @@ const MainEditor = ({
       setIsIconsModalOpen(false);
       if (!pdfDefaultsSetRef.current) {
         if (setActiveTopTool) setActiveTopTool('interaction');
+        if (multiSelectedIds && multiSelectedIds.size > 0 && setMultiSelectedIds) {
+          setMultiSelectedIds(new Set());
+        }
+        document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
+        const boundsPoly = document.getElementById('overlay-poly-selected-multi-selection-bounds');
+        if (boundsPoly) boundsPoly.remove();
         pdfDefaultsSetRef.current = true;
       }
       if (marqueeOverlayRef1.current) {
@@ -175,12 +182,6 @@ const MainEditor = ({
       }
       if (marqueeOverlayRef2.current) marqueeOverlayRef2.current.style.display = 'none';
       { const sb = document.getElementById('marquee-screen-box'); if (sb) sb.style.display = 'none'; }
-      if (multiSelectedIds && multiSelectedIds.size > 0 && setMultiSelectedIds) {
-        setMultiSelectedIds(new Set());
-      }
-      document.querySelectorAll('.overlay-type-multi-child-selected').forEach(el => el.remove());
-      const boundsPoly = document.getElementById('overlay-poly-selected-multi-selection-bounds');
-      if (boundsPoly) boundsPoly.remove();
     }
   }, [isConvertedFlipbook, setActiveTopTool]);
 
@@ -626,6 +627,7 @@ const MainEditor = ({
     nodeEditSplitSegIdxRef,
     nodeEditScreenNodesRef,
     nodeEditScreenSegmentsRef,
+    nodeEditImageAdjustRef,
     vectraPenSessionRef,
     drawingPathRef,
     drawingPointsRef,
@@ -842,14 +844,16 @@ const MainEditor = ({
       }
     }
 
-    // Suppress regular selection box and resize handles when in Path Node Edit Mode
-    if (nodeEditModeRef.current) {
+    // Suppress regular selection box and resize handles when in Path Node Edit Mode or Shape Image Adjust Mode
+    if (nodeEditModeRef.current || window.__isAdjustingShapeImage || document.body.classList.contains('shape-adjust-active')) {
       clearOverlayType('selected');
       clearOverlayType('entered');
       clearOverlayType('child-selected');
       document.querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle').forEach(h => h.remove());
-      if (nodeEditPathRef.current && nodeEditPaperPathRef.current) {
+      if (nodeEditModeRef.current && nodeEditPathRef.current && nodeEditPaperPathRef.current) {
         drawNodeEditOverlay(nodeEditPathRef.current, nodeEditPaperPathRef.current, nodeEditPageIndexRef.current);
+      } else if (window.__shapeImageAdjustTarget) {
+        drawShapeImageAdjustOverlay(window.__shapeImageAdjustTarget, activePageIndex, zoom);
       }
       return;
     }
@@ -874,9 +878,14 @@ const MainEditor = ({
       }
     });
 
-    if (multiSelectedIds.size > 1) {
+    const validMultiIds = new Set(Array.from(multiSelectedIds || []).filter(id => {
+      const el = document.getElementById(id);
+      return el && !isPageRootElement(el, el.closest('svg'));
+    }));
+
+    if (validMultiIds.size > 1) {
       if (localTrimView) {
-        multiSelectedIds.forEach(id => {
+        validMultiIds.forEach(id => {
           document.querySelectorAll(`[id="${id}"]`).forEach(el => {
             const svg = el.closest('svg');
             if (svg && isElementCompletelyOutside(el, svg)) {
@@ -887,10 +896,10 @@ const MainEditor = ({
           });
         });
       }
-      drawMultiSelectionHighlight(multiSelectedIds, 'selected');
+      drawMultiSelectionHighlight(validMultiIds, 'selected');
     } else {
-      const idsToHighlight = multiSelectedIds.size > 0
-        ? multiSelectedIds
+      const idsToHighlight = validMultiIds.size > 0
+        ? validMultiIds
         : (selectedLayerId ? new Set([selectedLayerId]) : new Set());
 
       idsToHighlight.forEach(id => {
@@ -1291,6 +1300,7 @@ const getDraggableElement = (target, canvasRoot) => {
     nodeEditSplitSegIdxRef,
     nodeEditScreenNodesRef,
     nodeEditScreenSegmentsRef,
+    nodeEditImageAdjustRef,
     vectraPenSessionRef,
     paperScopeRef,
     marqueeRef,

@@ -38,6 +38,7 @@ export const useInteractEngine = ({
   saveModifiedPageHtml,
   getDraggableElement,
   getTopLevelFrames,
+  isPageRootElement,
   hitTest,
   selectedLayerIdRef,
   multiSelectedIdsRef,
@@ -413,13 +414,47 @@ export const useInteractEngine = ({
             }
 
             // 2. AUTO-SELECT if not already selected
+            const isMultiKey = Boolean(event.shiftKey || event.metaKey || (event.ctrlKey && !event.altKey));
             const isSelected = (selectedLayerIdRef.current === elementToDrag.id) ||
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
-            if (!isSelected) {
+            if (isMultiKey) {
+              if (isPageRootElement(elementToDrag, svgElement)) {
+                return;
+              }
+              const nextSet = new Set(multiSelectedIdsRef.current);
+              const primaryId = selectedLayerIdRef.current;
+              const primaryEl = primaryId ? svgElement.querySelector(`[id="${primaryId}"]`) : null;
+              if (primaryId && !isPageRootElement(primaryEl, svgElement)) {
+                nextSet.add(primaryId);
+              }
+              // Purge any root elements
+              for (const id of Array.from(nextSet)) {
+                const el = svgElement.querySelector(`[id="${id}"]`);
+                if (isPageRootElement(el, svgElement)) {
+                  nextSet.delete(id);
+                }
+              }
+              if (nextSet.has(elementToDrag.id)) {
+                nextSet.delete(elementToDrag.id);
+                const remaining = [...nextSet];
+                selectedLayerIdRef.current = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+              } else {
+                nextSet.add(elementToDrag.id);
+                selectedLayerIdRef.current = elementToDrag.id;
+              }
+              multiSelectedIdsRef.current = nextSet;
+              const idToSelect = selectedLayerIdRef.current;
+              queueMicrotask(() => {
+                if (setSelectedLayerId) setSelectedLayerId(idToSelect);
+                if (setMultiSelectedIds) setMultiSelectedIds(nextSet);
+              });
+            } else if (!isSelected) {
               // Force update refs immediately so drag logic sees the selection
+              const isRoot = isPageRootElement(elementToDrag, svgElement);
               selectedLayerIdRef.current = elementToDrag.id;
-              multiSelectedIdsRef.current = new Set([elementToDrag.id]);
+              const nextMulti = isRoot ? new Set() : new Set([elementToDrag.id]);
+              multiSelectedIdsRef.current = nextMulti;
 
               // Clear previous stale selection overlays immediately before drawing new one
               clearOverlayType('selected');
@@ -434,7 +469,7 @@ export const useInteractEngine = ({
               const idToSelect = elementToDrag.id;
               queueMicrotask(() => {
                 if (setSelectedLayerId) setSelectedLayerId(idToSelect);
-                if (setMultiSelectedIds) setMultiSelectedIds(new Set([idToSelect]));
+                if (setMultiSelectedIds) setMultiSelectedIds(nextMulti);
               });
             }
 
@@ -1385,8 +1420,9 @@ export const useInteractEngine = ({
               if (overlay) {
                 const attrsToSync = ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'transform', 'points'];
                 const svg = targetEl.ownerSVGElement;
-                const clip = svg?.querySelector(`clipPath[id="clip-shape-${targetEl.id}"]`);
-                const mask = svg?.querySelector(`mask[id="mask-shape-${targetEl.id}"]`);
+                const safeId = (targetEl.id || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+                const clip = svg?.querySelector(`clipPath[id="clip-shape-${safeId}"]`);
+                const mask = svg?.querySelector(`mask[id="mask-shape-${safeId}"]`);
                 const refShape = clip ? clip.firstChild : (mask ? mask.lastChild : null);
 
                 attrsToSync.forEach(attr => {

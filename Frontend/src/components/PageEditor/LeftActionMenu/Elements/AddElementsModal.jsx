@@ -160,6 +160,61 @@ export const AddElementsModal = ({
     return searchElementCatalog(searchQuery, selectedCategory);
   }, [isOpen, searchQuery, selectedCategory]);
 
+  const [selectedSubtopic, setSelectedSubtopic] = useState('all');
+
+  // Reset selectedSubtopic whenever selectedCategory changes
+  useEffect(() => {
+    setSelectedSubtopic('all');
+  }, [selectedCategory]);
+
+  const maskingSubtopics = useMemo(() => {
+    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
+    return SUBTOPIC_ORDER.map((name) => ({
+      id: name,
+      name,
+      count: filteredElements.filter((el) => el.subtopic === name).length
+    }));
+  }, [filteredElements]);
+
+  // Extract distinct subtopics from elements in the selected category
+  const availableSubtopics = useMemo(() => {
+    if (!isOpen) return [];
+    const subs = new Set();
+    filteredElements.forEach((el) => {
+      if (el.subtopic) subs.add(el.subtopic);
+    });
+    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
+    return Array.from(subs).sort((a, b) => {
+      const idxA = SUBTOPIC_ORDER.indexOf(a);
+      const idxB = SUBTOPIC_ORDER.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [filteredElements, isOpen]);
+
+  const displayedElements = useMemo(() => {
+    if (selectedSubtopic === 'all') return filteredElements;
+    return filteredElements.filter((el) => el.subtopic === selectedSubtopic);
+  }, [filteredElements, selectedSubtopic]);
+
+  const groupedBySubtopic = useMemo(() => {
+    if (availableSubtopics.length === 0 || selectedSubtopic !== 'all') return null;
+    const groups = [];
+    availableSubtopics.forEach((sub) => {
+      const items = filteredElements.filter((el) => el.subtopic === sub);
+      if (items.length > 0) {
+        groups.push({ title: sub, items });
+      }
+    });
+    const noSubItems = filteredElements.filter((el) => !el.subtopic);
+    if (noSubItems.length > 0) {
+      groups.push({ title: 'Other', items: noSubItems });
+    }
+    return groups;
+  }, [availableSubtopics, filteredElements, selectedSubtopic]);
+
   const activeCategoryObj = useMemo(() => {
     return ELEMENT_CATEGORIES.find((c) => c.id === selectedCategory) || ELEMENT_CATEGORIES[0];
   }, [selectedCategory]);
@@ -257,134 +312,59 @@ export const AddElementsModal = ({
 
           {/* Body: 2 Columns */}
           <div className="flex-1 min-h-0 flex border-t border-gray-100 mt-[0.2vh] overflow-hidden">
-            {/* Left Categories Sidebar Component */}
+            {/* Left Categories Sidebar Component with Subtopics Tree */}
             <CategorySidebarList
               categories={ELEMENT_CATEGORIES}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
+              subtopics={maskingSubtopics}
+              selectedSubtopic={selectedSubtopic}
+              onSelectSubtopic={setSelectedSubtopic}
             />
 
             {/* Right Elements Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.5vw] flex flex-col">
-              <span className="text-[0.8vw] font-bold text-gray-700 mb-[0.9vh] block">
-                {activeCategoryObj.name}
-              </span>
-
-              {selectedCategory === 'masking' && !searchQuery.trim() ? (
-                (() => {
-                  const gridItems = filteredElements.filter((item) => item.subtopic === 'Grid');
-                  const shapeItems = filteredElements.filter((item) => item.subtopic === 'Shapes');
-                  const letterItems = filteredElements.filter((item) => item.subtopic === 'Letters');
-
-                  return (
-                    <div className="flex flex-col gap-[2vh]">
-                      {/* Grid Section */}
-                      {gridItems.length > 0 && (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-[0.4vw] pt-[0.8vh] pb-[1.2vh]">
-                            <span className="text-[0.8vw] font-semibold text-gray-800">
-                              Grid
-                            </span>
-                            <div className="flex-1 h-[1px] bg-gray-200" />
-                          </div>
-                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
-                            {gridItems.map((item) => (
-                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Shapes Section */}
-                      {shapeItems.length > 0 && (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
-                            <span className="text-[0.8vw] font-semibold text-gray-800">
-                              Shapes
-                            </span>
-                            <div className="flex-1 h-[1px] bg-gray-200" />
-                          </div>
-                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
-                            {shapeItems.map((item) => (
-                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Letters Section */}
-                      {letterItems.length > 0 && (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
-                            <span className="text-[0.8vw] font-semibold text-gray-800">
-                              Letters
-                            </span>
-                            <div className="flex-1 h-[1px] bg-gray-200" />
-                          </div>
-                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
-                            {letterItems.map((item) => (
-                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.6vw] flex flex-col">
+              {groupedBySubtopic ? (
+                <div className="flex flex-col gap-[2vh]">
+                  {groupedBySubtopic.map(({ title, items }) => (
+                    <div key={title} className="flex flex-col">
+                      <div className="flex items-center justify-between mb-[0.6vh]">
+                        <span className="text-[0.74vw] font-bold text-gray-800 tracking-tight">
+                          {title}
+                        </span>
+                        <span className="text-[0.58vw] text-gray-400 font-semibold bg-gray-100 px-[0.35vw] py-[0.1vh] rounded-[0.25vw]">
+                          {items.length}
+                        </span>
+                      </div>
+                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                        {items.map((item) => (
+                          <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                        ))}
+                      </div>
                     </div>
-                  );
-                })()
-              ) : selectedCategory === 'text' && !searchQuery.trim() ? (
-                (() => {
-                  const titleItems = filteredElements.filter((item) => item.subtopic === 'Titles');
-                  const typographyItems = filteredElements.filter((item) => item.subtopic === 'Typography' || !item.subtopic);
-
-                  return (
-                    <div className="flex flex-col gap-[2vh]">
-                      {/* Titles Section (JSON animations only) */}
-                      {titleItems.length > 0 && (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-[0.4vw] pt-[0.8vh] pb-[1.2vh]">
-                            <span className="text-[0.8vw] font-semibold text-gray-800">
-                              Titles
-                            </span>
-                            <div className="flex-1 h-[1px] bg-gray-200" />
-                          </div>
-                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
-                            {titleItems.map((item) => (
-                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Typography Section */}
-                      {typographyItems.length > 0 && (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-[0.4vw] pt-[1.8vh] pb-[1.8vh]">
-                            <span className="text-[0.8vw] font-semibold text-gray-800 ">
-                              Typography
-                            </span>
-                            <div className="flex-1 h-[1px] bg-gray-200" />
-                          </div>
-                          <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]">
-                            {typographyItems.map((item) => (
-                              <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()
-              ) : (
-                <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[1vw] gap-x-[0.8vw] gap-y-[1.5vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[1vh]'}`}>
-                  {filteredElements.map((item) => (
-                    <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                   ))}
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between mb-[0.6vh]">
+                    <span className="text-[0.74vw] font-bold text-gray-800 tracking-tight">
+                      {selectedCategory === 'masking' && selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
+                    </span>
+                    <span className="text-[0.58vw] text-gray-400 font-semibold bg-gray-100 px-[0.35vw] py-[0.1vh] rounded-[0.25vw]">
+                      {displayedElements.length}
+                    </span>
+                  </div>
+                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                    {displayedElements.map((item) => (
+                      <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
+                    ))}
 
-                  {filteredElements.length === 0 && (
-                    <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
-                      No elements found in {activeCategoryObj.name}
-                    </div>
-                  )}
+                    {displayedElements.length === 0 && (
+                      <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
+                        No elements found in {selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -118,6 +118,187 @@ const ANIMATION_GALLERY_ITEMS = [
   { id: 'pulse', label: 'Pulse', icon: 'Circle' },
 ];
 
+/* ===== EXTRA ELEMENT ANIMATIONS (added; existing animations untouched) ===== */
+const EXTRA_WAAPI_ANIMATIONS = {
+  /* ---- Emphasis (new ones; heartbeat/swing/tada/wobble/jello/rubber-band already exist) ---- */
+  'flash': [
+    { opacity: 1 }, { opacity: 0, offset: 0.25 }, { opacity: 1, offset: 0.5 }, { opacity: 0, offset: 0.75 }, { opacity: 1 },
+  ],
+  'head-shake': [
+    { transform: 'perspective(400px) translateX(0px) rotateY(0deg)' },
+    { transform: 'perspective(400px) translateX(-6px) rotateY(-9deg)', offset: 0.065 },
+    { transform: 'perspective(400px) translateX(5px) rotateY(7deg)', offset: 0.185 },
+    { transform: 'perspective(400px) translateX(-3px) rotateY(-5deg)', offset: 0.315 },
+    { transform: 'perspective(400px) translateX(2px) rotateY(3deg)', offset: 0.435 },
+    { transform: 'perspective(400px) translateX(0px) rotateY(0deg)' },
+  ],
+  'shake-x': [
+    { transform: 'translateX(0px)' },
+    { transform: 'translateX(-10px)', offset: 0.1 }, { transform: 'translateX(10px)', offset: 0.2 },
+    { transform: 'translateX(-10px)', offset: 0.3 }, { transform: 'translateX(10px)', offset: 0.4 },
+    { transform: 'translateX(-10px)', offset: 0.5 }, { transform: 'translateX(10px)', offset: 0.6 },
+    { transform: 'translateX(-10px)', offset: 0.7 }, { transform: 'translateX(10px)', offset: 0.8 },
+    { transform: 'translateX(-10px)', offset: 0.9 }, { transform: 'translateX(0px)' },
+  ],
+  'shake-y': [
+    { transform: 'translateY(0px)' },
+    { transform: 'translateY(-10px)', offset: 0.1 }, { transform: 'translateY(10px)', offset: 0.2 },
+    { transform: 'translateY(-10px)', offset: 0.3 }, { transform: 'translateY(10px)', offset: 0.4 },
+    { transform: 'translateY(-10px)', offset: 0.5 }, { transform: 'translateY(10px)', offset: 0.6 },
+    { transform: 'translateY(-10px)', offset: 0.7 }, { transform: 'translateY(10px)', offset: 0.8 },
+    { transform: 'translateY(-10px)', offset: 0.9 }, { transform: 'translateY(0px)' },
+  ],
+  'jack-in-the-box': [
+    { transform: 'scale(0.1) rotate(30deg)', transformOrigin: 'center bottom', opacity: 0 },
+    { transform: 'scale(0.5) rotate(-10deg)', transformOrigin: 'center bottom', opacity: 1, offset: 0.5 },
+    { transform: 'scale(0.7) rotate(3deg)', transformOrigin: 'center bottom', opacity: 1, offset: 0.7 },
+    { transform: 'scale(1) rotate(0deg)', transformOrigin: 'center bottom', opacity: 1 },
+  ],
+  'hinge': [
+    { transform: 'translate(0px,0px) rotate(0deg)', transformOrigin: 'left top', opacity: 1 },
+    { transform: 'translate(0px,0px) rotate(80deg)', transformOrigin: 'left top', opacity: 1, offset: 0.2 },
+    { transform: 'translate(0px,0px) rotate(60deg)', transformOrigin: 'left top', opacity: 1, offset: 0.4 },
+    { transform: 'translate(0px,0px) rotate(80deg)', transformOrigin: 'left top', opacity: 1, offset: 0.6 },
+    { transform: 'translate(0px,0px) rotate(60deg)', transformOrigin: 'left top', opacity: 1, offset: 0.8 },
+    { transform: 'translate(0px,700px) rotate(60deg)', transformOrigin: 'left top', opacity: 0 },
+  ],
+
+  /* ---- Special ---- */
+  'swing-in': [
+    { transform: 'perspective(400px) rotateX(-100deg)', transformOrigin: 'center top', opacity: 0 },
+    { transform: 'perspective(400px) rotateX(60deg)', transformOrigin: 'center top', opacity: 1, offset: 0.4 },
+    { transform: 'perspective(400px) rotateX(-20deg)', transformOrigin: 'center top', opacity: 1, offset: 0.6 },
+    { transform: 'perspective(400px) rotateX(10deg)', transformOrigin: 'center top', opacity: 1, offset: 0.8 },
+    { transform: 'perspective(400px) rotateX(0deg)', transformOrigin: 'center top', opacity: 1 },
+  ],
+  'spiral-in': [
+    { transform: 'rotate(-720deg) scale(0)', opacity: 0 },
+    { transform: 'rotate(0deg) scale(1)', opacity: 1 },
+  ],
+  'spiral-out': [
+    { transform: 'rotate(0deg) scale(1)', opacity: 1 },
+    { transform: 'rotate(720deg) scale(0)', opacity: 0 },
+  ],
+  // Shape "morph" built from scale + skew + rotate (border-radius does not work on SVG nodes)
+  'morph': [
+    { transform: 'scale(0.3,1.6) skew(-20deg,0deg) rotate(-15deg)', opacity: 0 },
+    { transform: 'scale(1.3,0.8) skew(12deg,0deg) rotate(8deg)', opacity: 1, offset: 0.4 },
+    { transform: 'scale(0.92,1.06) skew(-5deg,0deg) rotate(-3deg)', opacity: 1, offset: 0.7 },
+    { transform: 'scale(1,1) skew(0deg,0deg) rotate(0deg)', opacity: 1 },
+  ],
+  'skew-in': [
+    { transform: 'translate(-100px,0px) skew(-30deg,0deg)', opacity: 0 },
+    { transform: 'translate(20px,0px) skew(15deg,0deg)', opacity: 1, offset: 0.6 },
+    { transform: 'translate(-5px,0px) skew(-5deg,0deg)', opacity: 1, offset: 0.8 },
+    { transform: 'translate(0px,0px) skew(0deg,0deg)', opacity: 1 },
+  ],
+  'skew-out': [
+    { transform: 'translate(0px,0px) skew(0deg,0deg)', opacity: 1 },
+    { transform: 'translate(-10px,0px) skew(-5deg,0deg)', opacity: 1, offset: 0.2 },
+    { transform: 'translate(100px,0px) skew(30deg,0deg)', opacity: 0 },
+  ],
+  'elastic-in': [
+    { transform: 'scale(0)', opacity: 0 },
+    { transform: 'scale(1.25)', opacity: 1, offset: 0.3 },
+    { transform: 'scale(0.9)', opacity: 1, offset: 0.5 },
+    { transform: 'scale(1.08)', opacity: 1, offset: 0.7 },
+    { transform: 'scale(0.97)', opacity: 1, offset: 0.85 },
+    { transform: 'scale(1)', opacity: 1 },
+  ],
+  'elastic-out': [
+    { transform: 'scale(1)', opacity: 1 },
+    { transform: 'scale(0.88)', opacity: 1, offset: 0.2 },
+    { transform: 'scale(1.18)', opacity: 1, offset: 0.4 },
+    { transform: 'scale(0)', opacity: 0 },
+  ],
+  // Expand = grows in sideways, Collapse = shrinks away vertically
+  'expand': [
+    { transform: 'scale(0.001,1)', opacity: 0 },
+    { transform: 'scale(1,1)', opacity: 1 },
+  ],
+  'collapse': [
+    { transform: 'scale(1,1)', opacity: 1 },
+    { transform: 'scale(1,0.001)', opacity: 0 },
+  ],
+  'blur-out': [
+    { filter: 'blur(0px)', opacity: 1 },
+    { filter: 'blur(20px)', opacity: 0 },
+  ],
+  'zoom-out-up': [
+    { transform: 'translate(0px,0px) scale(1)', opacity: 1 },
+    { transform: 'translate(0px,60px) scale(0.475)', opacity: 1, offset: 0.4 },
+    { transform: 'translate(0px,-300px) scale(0.1)', opacity: 0 },
+  ],
+  'zoom-out-down': [
+    { transform: 'translate(0px,0px) scale(1)', opacity: 1 },
+    { transform: 'translate(0px,-60px) scale(0.475)', opacity: 1, offset: 0.4 },
+    { transform: 'translate(0px,300px) scale(0.1)', opacity: 0 },
+  ],
+};
+
+
+const EXTRA_LOOP_ANIMATIONS = ['flash', 'head-shake', 'shake-x', 'shake-y'];
+
+
+const EXTRA_LOOP_TRANSITION = (duration) => ({ repeat: Infinity, duration });
+
+const EXTRA_ANIMATION_VARIANTS = {
+  'flash': { animate: { opacity: [1, 0, 1, 0, 1] }, transition: EXTRA_LOOP_TRANSITION(1.5) },
+  'head-shake': { animate: { x: [0, -6, 5, -3, 2, 0], rotateY: [0, -9, 7, -5, 3, 0] }, transition: EXTRA_LOOP_TRANSITION(1.2) },
+  'shake-x': { animate: { x: [0, -8, 8, -8, 8, -8, 8, 0] }, transition: EXTRA_LOOP_TRANSITION(0.9) },
+  'shake-y': { animate: { y: [0, -8, 8, -8, 8, -8, 8, 0] }, transition: EXTRA_LOOP_TRANSITION(0.9) },
+  'jack-in-the-box': { initial: { scale: 0.1, rotate: 30, opacity: 0 }, animate: { scale: 1, rotate: 0, opacity: 1 } },
+  'hinge': { animate: { rotate: [0, 80, 60, 80, 60, 60], y: [0, 0, 0, 0, 0, 60], opacity: [1, 1, 1, 1, 1, 0], transformOrigin: 'left top' }, transition: EXTRA_LOOP_TRANSITION(2) },
+  'swing-in': { initial: { rotateX: -100, opacity: 0, transformOrigin: 'center top' }, animate: { rotateX: 0, opacity: 1, transformOrigin: 'center top' } },
+  'spiral-in': { initial: { rotate: -540, scale: 0, opacity: 0 }, animate: { rotate: 0, scale: 1, opacity: 1 } },
+  'spiral-out': { initial: { rotate: 0, scale: 1, opacity: 1 }, animate: { rotate: 540, scale: 0, opacity: 0 } },
+  'morph': { initial: { scaleX: 0.4, scaleY: 1.4, skewX: -20, opacity: 0 }, animate: { scaleX: 1, scaleY: 1, skewX: 0, opacity: 1 } },
+  'skew-in': { initial: { x: -60, skewX: -30, opacity: 0 }, animate: { x: 0, skewX: 0, opacity: 1 } },
+  'skew-out': { initial: { x: 0, skewX: 0, opacity: 1 }, animate: { x: 60, skewX: 30, opacity: 0 } },
+  'elastic-in': { initial: { scale: 0, opacity: 0 }, animate: { scale: [0, 1.25, 0.9, 1.08, 1], opacity: 1 } },
+  'elastic-out': { initial: { scale: 1, opacity: 1 }, animate: { scale: [1, 0.88, 1.18, 0], opacity: [1, 1, 1, 0] } },
+  'expand': { initial: { scaleX: 0, opacity: 0 }, animate: { scaleX: 1, opacity: 1 } },
+  'collapse': { initial: { scaleY: 1, opacity: 1 }, animate: { scaleY: 0, opacity: 0 } },
+  'blur-out': { initial: { filter: 'blur(0px)', opacity: 1 }, animate: { filter: 'blur(12px)', opacity: 0 } },
+  'zoom-out-up': { initial: { scale: 1, y: 0, opacity: 1 }, animate: { scale: 0.1, y: -60, opacity: 0 } },
+  'zoom-out-down': { initial: { scale: 1, y: 0, opacity: 1 }, animate: { scale: 0.1, y: 60, opacity: 0 } },
+};
+
+
+const EXTRA_GALLERY_ITEMS = [
+  { id: 'heartbeat', label: 'Heart Beat', icon: 'Circle', sectionTitle: 'Emphasis' },
+  { id: 'flash', label: 'Flash', icon: 'Circle' },
+  { id: 'head-shake', label: 'Head Shake', icon: 'Circle' },
+  { id: 'swing', label: 'Swing', icon: 'Circle' },
+  { id: 'tada', label: 'Tada', icon: 'Circle' },
+  { id: 'wobble', label: 'Wobble', icon: 'Circle' },
+  { id: 'jello', label: 'Jello', icon: 'Circle' },
+  { id: 'rubber-band', label: 'Rubber Band', icon: 'Circle' },
+  { id: 'shake-x', label: 'Shake X', icon: 'Circle' },
+  { id: 'shake-y', label: 'Shake Y', icon: 'Circle' },
+  { id: 'jack-in-the-box', label: 'Jack In The Box', icon: 'Circle' },
+  { id: 'hinge', label: 'Hinge', icon: 'Circle' },
+
+  { id: 'swing-in', label: 'Swing In', icon: 'Bars', sectionTitle: 'Special animations' },
+  { id: 'spiral-in', label: 'Spiral In', icon: 'Bars' },
+  { id: 'spiral-out', label: 'Spiral Out', icon: 'Bars' },
+  { id: 'morph', label: 'Morph', icon: 'Bars' },
+  { id: 'skew-in', label: 'Skew In', icon: 'Bars' },
+  { id: 'skew-out', label: 'Skew Out', icon: 'Bars' },
+  { id: 'elastic-in', label: 'Elastic In', icon: 'Bars' },
+  { id: 'elastic-out', label: 'Elastic Out', icon: 'Bars' },
+  { id: 'expand', label: 'Expand', icon: 'Bars' },
+  { id: 'collapse', label: 'Collapse', icon: 'Bars' },
+  { id: 'blur-out', label: 'Blur Out', icon: 'Bars' },
+  { id: 'zoom-out-up', label: 'Zoom Out Up', icon: 'Bars' },
+  { id: 'zoom-out-down', label: 'Zoom Out Down', icon: 'Bars' },
+];
+
+Object.assign(WAAPI_ANIMATIONS, EXTRA_WAAPI_ANIMATIONS);
+Object.assign(ANIMATION_VARIANTS, EXTRA_ANIMATION_VARIANTS);
+ANIMATION_GALLERY_ITEMS.push(...EXTRA_GALLERY_ITEMS);
+/* ===== END EXTRA ELEMENT ANIMATIONS ===== */
+
 const EASING_OPTIONS = [
   'Linear',
   'Smooth',
@@ -1562,7 +1743,11 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
             <div className="anim-panel-gallery-content flex-1 px-[1vw] py-[1vw] overflow-y-auto custom-scrollbar">
               <div className="anim-panel-gallery-grid grid grid-cols-4 gap-x-[0.5vw] gap-y-[0.5vw]">
                 {(galleryKind === 'text' ? TEXT_EFFECT_GALLERY_ITEMS : ANIMATION_GALLERY_ITEMS).map((anim, idx) => (
-                  <div key={anim.id} className="anim-panel-gallery-item group cursor-pointer flex flex-col items-center" onClick={(e) => {
+                  <React.Fragment key={anim.id}>
+                  {anim.sectionTitle && galleryKind !== 'text' && (
+                    <div className="col-span-4 text-[0.75vw] font-semibold text-gray-900 mt-[0.6vw]">{anim.sectionTitle}</div>
+                  )}
+                  <div className="anim-panel-gallery-item group cursor-pointer flex flex-col items-center" onClick={(e) => {
                     setTempSelectedAnim(anim.id);
                     if (galleryKind === 'text') {
                       if (anim.id === 'none') stopTextPreview();
@@ -1613,6 +1798,7 @@ const AnimationPanel = ({ selectedElement, onUpdate }) => {
                     </div>
                     <span className={`anim-panel-item-label text-[0.6vw] mt-[0.6vw] font-medium text-center leading-tight transition-colors ${tempSelectedAnim === anim.id ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>{anim.label}</span>
                   </div>
+                  </React.Fragment>
                 ))}
               </div>
             </div>

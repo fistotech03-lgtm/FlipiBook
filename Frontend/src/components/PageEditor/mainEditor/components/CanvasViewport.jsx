@@ -149,7 +149,28 @@ export const CanvasViewport = ({
                         const isTypeActive = activeMainTool === 'type';
 
                         const pageHtml = pages[displayIndex]?.html;
-                        const isPageEmpty = !pages[displayIndex]?.isHidden && (!pageHtml || (pages[displayIndex]?.layers?.length === 1 && (!pages[displayIndex].layers[0].children || pages[displayIndex].layers[0].children.length === 0)));
+                        const pageLayers = pages[displayIndex]?.layers || [];
+                        const hasLayerElements = pageLayers.some(
+                          (layer) =>
+                            (Array.isArray(layer.children) && layer.children.length > 0) ||
+                            (layer.type !== 'g' && layer.type !== 'frame')
+                        );
+                        const hasHtmlElements = (() => {
+                          if (!pageHtml) return false;
+                          const cleanHtml = pageHtml
+                            .replace(/<defs[\s\S]*?<\/defs>/gi, '')
+                            .replace(/<style[\s\S]*?<\/style>/gi, '')
+                            .replace(/<rect\b[^>]*data-name=["\']Overlay["\'][^>]*\/>/gi, '')
+                            .replace(/<rect\b[^>]*data-name=["\']Overlay["\'][^>]*>[\s\S]*?<\/rect>/gi, '')
+                            .replace(/<rect\b[^>]*data-type=["\']background["\'][^>]*\/>/gi, '')
+                            .replace(/<rect\b[^>]*data-type=["\']background["\'][^>]*>[\s\S]*?<\/rect>/gi, '');
+                          return /<(path|image|text|foreignobject|circle|ellipse|polygon|polyline|use|video)\b/i.test(cleanHtml);
+                        })();
+
+                        const isPageEmpty =
+                          !pages[displayIndex]?.isHidden &&
+                          !hasHtmlElements &&
+                          (!pageHtml || (!hasLayerElements && pageLayers.length <= 1));
 
                         return (
                           <div

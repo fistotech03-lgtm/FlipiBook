@@ -447,9 +447,18 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
           const patternId = match[1];
 
           // Ensure pattern has mask-bg-fill
-          const pat = selectedElement.querySelector(`pattern[id="${patternId}"]`) ||
+          let pat = selectedElement.querySelector(`pattern[id="${patternId}"]`) ||
             selectedElement.ownerDocument?.querySelector?.(`pattern[id="${patternId}"]`) ||
             document.getElementById(patternId);
+
+          if (!pat) {
+            const allPatterns = Array.from(selectedElement.querySelectorAll('pattern'));
+            const unassignedPattern = allPatterns.find(p => !p.id) || allPatterns[idx];
+            if (unassignedPattern) {
+              unassignedPattern.setAttribute('id', patternId);
+              pat = unassignedPattern;
+            }
+          }
           if (pat) {
             ensurePatternImageNode(pat, selectedElement, selectedElement.ownerDocument || document);
 

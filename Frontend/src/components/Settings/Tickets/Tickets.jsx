@@ -61,16 +61,16 @@ export default function Tickets() {
       <div className="flex items-start justify-between gap-[2vw] mb-[1.8vw]">
         <div>
           <div className="flex items-center gap-[0.55vw]">
-            <h1 className="text-[1.35vw] font-semibold text-gray-800 tracking-tight leading-tight">
+            <h1 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">
               Support Tickets
             </h1>
             {isAdminUser && (
-              <span className="px-[0.55vw] py-[0.15vw] rounded-full text-[0.66vw] font-medium bg-purple-100 text-purple-700 border border-purple-200">
+              <span className="px-[0.55vw] py-[0.15vw] rounded-full text-[0.68vw] font-medium bg-purple-100 text-purple-700 border border-purple-200">
                 Staff Admin View
               </span>
             )}
           </div>
-          <p className="text-[0.74vw] text-gray-500 mt-[0.25vw] font-normal">
+          <p className="text-[0.78vw] text-gray-500 mt-[0.35vw]">
             Track and manage your support inquiries with Flipibook engineering
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function Tickets() {
         <button
           type="button"
           onClick={() => setIsRaiseModalOpen(true)}
-          className="flex items-center gap-[0.35vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.78vw] font-medium px-[1.05vw] py-[0.48vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer whitespace-nowrap"
+          className="flex items-center gap-[0.35vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.78vw] font-semibold h-[2.15vw] px-[1.1vw] rounded-[0.55vw] shadow-xs transition-all cursor-pointer whitespace-nowrap"
         >
           <Plus className="w-[0.85vw] h-[0.85vw]" />
           <span>Raise Ticket</span>
@@ -87,22 +87,22 @@ export default function Tickets() {
       </div>
 
       {/* Filter Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.2vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-100 rounded-[0.9vw] p-[1.1vw] shadow-xs mb-[1.5vw]">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-[0.75vw]">
           
           {/* Status Segmented Tabs */}
-          <div className="flex items-center p-[0.25vw] bg-gray-100 rounded-[0.55vw] border border-gray-200 self-start sm:self-auto overflow-x-auto max-w-full">
+          <div className="flex items-center p-[0.2vw] bg-gray-100 rounded-[0.55vw] border border-gray-200 self-start sm:self-auto overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`flex items-center gap-[0.45vw] px-[0.8vw] py-[0.38vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-[0.45vw] px-[0.85vw] h-[1.9vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'all'
                   ? 'bg-[#222428] text-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <span>All Tickets</span>
-              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.65vw] font-medium ${
+              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.68vw] font-medium ${
                 statusFilter === 'all'
                   ? 'bg-white/20 text-white'
                   : 'bg-gray-200 text-gray-700'
@@ -114,7 +114,7 @@ export default function Tickets() {
             <button
               type="button"
               onClick={() => setStatusFilter('open')}
-              className={`flex items-center gap-[0.45vw] px-[0.8vw] py-[0.38vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-[0.45vw] px-[0.85vw] h-[1.9vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'open'
                   ? 'bg-[#222428] text-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
@@ -122,7 +122,7 @@ export default function Tickets() {
             >
               <CircleDot className={`w-[0.75vw] h-[0.75vw] ${statusFilter === 'open' ? 'text-white' : 'text-emerald-600'}`} />
               <span>Open</span>
-              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.65vw] font-medium ${
+              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.68vw] font-medium ${
                 statusFilter === 'open'
                   ? 'bg-white/20 text-white'
                   : 'bg-[#DCFCE7] text-[#16A34A]'
@@ -134,7 +134,7 @@ export default function Tickets() {
             <button
               type="button"
               onClick={() => setStatusFilter('closed')}
-              className={`flex items-center gap-[0.45vw] px-[0.8vw] py-[0.38vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-[0.45vw] px-[0.85vw] h-[1.9vw] rounded-[0.45vw] text-[0.76vw] font-medium transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'closed'
                   ? 'bg-[#222428] text-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
@@ -142,7 +142,7 @@ export default function Tickets() {
             >
               <CheckCircle2 className={`w-[0.75vw] h-[0.75vw] ${statusFilter === 'closed' ? 'text-white' : 'text-gray-500'}`} />
               <span>Closed</span>
-              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.65vw] font-medium ${
+              <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.68vw] font-medium ${
                 statusFilter === 'closed'
                   ? 'bg-white/20 text-white'
                   : 'bg-gray-200 text-gray-700'
@@ -163,7 +163,7 @@ export default function Tickets() {
                 ...TICKET_MODULES.filter(m => m.id !== 'all').map(mod => ({ value: mod.id, label: mod.name }))
               ]}
               width="w-[10vw] min-w-[130px]"
-              buttonClassName="h-[2.2vw] py-[0.35vw] text-[0.76vw] rounded-[0.5vw] border-gray-200 text-gray-700 font-medium"
+              buttonClassName="h-[2.15vw] py-[0.35vw] text-[0.78vw] rounded-[0.55vw] border-gray-200 text-gray-700 font-medium focus:border-[#EC5137]"
             />
 
             {/* Date Filter Dropdown */}
@@ -178,7 +178,7 @@ export default function Tickets() {
                 { value: 'custom', label: 'Custom Date' }
               ]}
               width="w-[9.5vw] min-w-[125px]"
-              buttonClassName="h-[2.2vw] py-[0.35vw] text-[0.76vw] rounded-[0.5vw] border-gray-200 text-gray-700 font-medium"
+              buttonClassName="h-[2.15vw] py-[0.35vw] text-[0.78vw] rounded-[0.55vw] border-gray-200 text-gray-700 font-medium focus:border-[#EC5137]"
             />
 
             {/* Custom Date Input */}
@@ -187,7 +187,7 @@ export default function Tickets() {
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="h-[2.2vw] px-[0.75vw] text-[0.76vw] font-medium rounded-[0.5vw] border border-gray-200 bg-white text-gray-800 focus:outline-none focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] shadow-xs cursor-pointer"
+                className="h-[2.15vw] px-[0.85vw] text-[0.78vw] font-medium rounded-[0.55vw] border border-gray-200 bg-white text-gray-800 focus:outline-none focus:border-[#EC5137] shadow-xs cursor-pointer"
               />
             )}
 
@@ -199,7 +199,7 @@ export default function Tickets() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search subject, ID..."
-                className="w-full h-[2.2vw] pl-[2vw] pr-[1.8vw] text-[0.76vw] rounded-[0.5vw] border border-gray-200 bg-white focus:outline-none focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] text-gray-800 placeholder:text-gray-400 font-normal shadow-xs"
+                className="w-full h-[2.15vw] pl-[2vw] pr-[1.8vw] text-[0.78vw] rounded-[0.55vw] border border-gray-200 bg-white focus:outline-none focus:border-[#EC5137] text-gray-900 placeholder:text-gray-400 font-normal shadow-xs"
               />
               {searchQuery && (
                 <button
@@ -217,7 +217,7 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="h-[2.2vw] px-[0.75vw] rounded-[0.5vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-900 text-[0.74vw] font-medium flex items-center gap-[0.35vw] transition-colors cursor-pointer shrink-0 shadow-xs active:scale-[0.98]"
+                className="h-[2.15vw] px-[0.85vw] rounded-[0.55vw] bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-900 text-[0.78vw] font-medium flex items-center gap-[0.35vw] transition-colors cursor-pointer shrink-0 shadow-xs active:scale-[0.98]"
                 title="Reset all active filters"
               >
                 <RotateCcw className="w-[0.75vw] h-[0.75vw]" />
@@ -232,13 +232,13 @@ export default function Tickets() {
       {/* Ticket Table View */}
       <div className="w-full">
         {!hasLoadedOnce && isLoading ? (
-          <div className="w-full bg-white rounded-[1vw] border border-gray-200 p-[3vw] text-center shadow-sm flex flex-col items-center justify-center min-h-[16vw]">
+          <div className="w-full bg-white rounded-[0.9vw] border border-gray-100 p-[3vw] text-center shadow-xs flex flex-col items-center justify-center min-h-[16vw]">
             <Loader2 className="w-[1.8vw] h-[1.8vw] animate-spin text-[#EC5137] mb-[0.6vw]" />
-            <p className="text-[0.85vw] font-medium text-gray-800">Loading support tickets...</p>
-            <p className="text-[0.72vw] text-gray-400 mt-[0.2vw]">Retrieving latest tickets from server</p>
+            <p className="text-[0.88vw] font-semibold text-gray-900">Loading support tickets...</p>
+            <p className="text-[0.74vw] text-gray-500 mt-[0.2vw]">Retrieving latest tickets from server</p>
           </div>
         ) : filteredTickets.length > 0 ? (
-          <div className="w-full bg-white rounded-[1vw] border border-gray-200 shadow-sm overflow-hidden mb-[1.5vw]">
+          <div className="w-full bg-white rounded-[0.9vw] border border-gray-100 shadow-xs overflow-hidden mb-[1.5vw]">
             <div className="w-full overflow-hidden">
               <table className="w-full table-fixed text-left border-collapse">
                 <colgroup>
@@ -254,7 +254,7 @@ export default function Tickets() {
                   <col className="w-[5%]" />
                 </colgroup>
                 <thead>
-                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-[0.76vw] font-medium text-gray-700 select-none">
+                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-[0.74vw] font-semibold text-gray-700 select-none">
                     <th className="py-[0.75vw] px-[0.6vw] text-center whitespace-nowrap">S.No</th>
                     <th className="py-[0.75vw] px-[0.6vw] whitespace-nowrap">Ticket ID</th>
                     <th className="py-[0.75vw] px-[0.6vw] whitespace-nowrap">Subject</th>
@@ -267,7 +267,7 @@ export default function Tickets() {
                     <th className="py-[0.75vw] px-[0.4vw] whitespace-nowrap text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-[0.75vw]">
+                <tbody className="divide-y divide-gray-100 text-[0.76vw]">
                   {paginatedTickets.map((ticket, index) => {
                     const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
                     const messageCount = (ticket.messages && ticket.messages.length) || 1;
@@ -287,24 +287,24 @@ export default function Tickets() {
                       <tr 
                         key={ticket.id}
                         onClick={() => handleSelectTicket(ticket)}
-                        className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                        className="hover:bg-gray-50/60 transition-colors cursor-pointer group"
                       >
                         {/* S.No */}
-                        <td className="py-[0.9vw] px-[0.6vw] text-center whitespace-nowrap align-middle text-[0.76vw] font-medium text-gray-700">
+                        <td className="py-[0.85vw] px-[0.6vw] text-center whitespace-nowrap align-middle text-[0.76vw] font-medium text-gray-700">
                           {serialNumber}
                         </td>
 
                         {/* Ticket ID */}
-                        <td className="py-[0.9vw] px-[0.6vw] whitespace-nowrap align-middle">
+                        <td className="py-[0.85vw] px-[0.6vw] whitespace-nowrap align-middle">
                           <span className="font-mono text-[0.78vw] font-medium text-gray-800 group-hover:text-[#EC5137] transition-colors">
                             #{ticket.id}
                           </span>
                         </td>
 
                         {/* Subject & Description */}
-                        <td className="py-[0.9vw] px-[0.6vw] align-middle overflow-hidden">
+                        <td className="py-[0.85vw] px-[0.6vw] align-middle overflow-hidden">
                           <div className="min-w-0 pr-[0.4vw]">
-                            <p className="text-[0.82vw] font-medium text-gray-800 group-hover:text-[#EC5137] transition-colors truncate">
+                            <p className="text-[0.82vw] font-medium text-gray-900 group-hover:text-[#EC5137] transition-colors truncate">
                               {ticket.subject}
                             </p>
                             {ticket.description && (
@@ -316,19 +316,19 @@ export default function Tickets() {
                         </td>
 
                         {/* Category */}
-                        <td className="py-[0.9vw] px-[0.6vw] align-middle text-[0.76vw] text-gray-700 font-medium overflow-hidden">
+                        <td className="py-[0.85vw] px-[0.6vw] align-middle text-[0.76vw] text-gray-700 font-medium overflow-hidden">
                           <span className="truncate block" title={categoryName}>
                             {categoryName}
                           </span>
                         </td>
 
                         {/* Date Ticket Raised */}
-                        <td className="py-[0.9vw] px-[0.6vw] whitespace-nowrap align-middle text-[0.76vw] text-gray-500 font-normal">
+                        <td className="py-[0.85vw] px-[0.6vw] whitespace-nowrap align-middle text-[0.76vw] text-gray-500 font-normal">
                           {dateRaised}
                         </td>
 
                         {/* Last Activity */}
-                        <td className="py-[0.9vw] px-[0.6vw] whitespace-nowrap align-middle">
+                        <td className="py-[0.85vw] px-[0.6vw] whitespace-nowrap align-middle">
                           <div className="flex flex-col text-[0.76vw] text-gray-700 leading-tight">
                             <span className="font-medium text-gray-800">{lastActivity}</span>
                             <span className="text-[0.68vw] text-gray-400 font-normal mt-[0.1vw]">
@@ -338,7 +338,7 @@ export default function Tickets() {
                         </td>
 
                         {/* Messages */}
-                        <td className="py-[0.9vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
+                        <td className="py-[0.85vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
                           <span className="inline-flex items-center justify-center gap-[0.25vw] text-[0.74vw] font-medium text-gray-600">
                             <MessageSquare className="w-[0.8vw] h-[0.8vw] text-gray-400" />
                             <span>{messageCount}</span>
@@ -346,7 +346,7 @@ export default function Tickets() {
                         </td>
 
                         {/* Attachments */}
-                        <td className="py-[0.9vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
+                        <td className="py-[0.85vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
                           <span className="inline-flex items-center justify-center gap-[0.25vw] text-[0.74vw] font-medium text-gray-600">
                             <Paperclip className="w-[0.8vw] h-[0.8vw] text-gray-400" />
                             <span>{attachmentCount}</span>
@@ -354,7 +354,7 @@ export default function Tickets() {
                         </td>
 
                         {/* Status */}
-                        <td className="py-[0.9vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
+                        <td className="py-[0.85vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
                           {isClosed ? (
                             <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full inline-block">
                               Closed
@@ -367,7 +367,7 @@ export default function Tickets() {
                         </td>
 
                         {/* Action */}
-                        <td className="py-[0.9vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
+                        <td className="py-[0.85vw] px-[0.4vw] whitespace-nowrap text-center align-middle">
                           <div className="inline-flex items-center justify-center">
                             <button
                               type="button"
@@ -398,12 +398,12 @@ export default function Tickets() {
                   {Math.min(currentPage * ITEMS_PER_PAGE, filteredTickets.length)}
                 </strong> of <strong className="font-semibold text-gray-900">{filteredTickets.length}</strong> tickets
               </span>
-              <div className="flex items-center gap-[0.3vw]">
+              <div className="flex items-center gap-[0.35vw]">
                 <button 
                   type="button"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  className="p-[0.35vw] rounded-[0.45vw] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="h-[2.15vw] px-[0.65vw] rounded-[0.45vw] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs flex items-center justify-center"
                   title="Previous page"
                 >
                   <ChevronLeft className="w-[0.85vw] h-[0.85vw]" />
@@ -413,10 +413,10 @@ export default function Tickets() {
                     key={pageNum}
                     type="button"
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`px-[0.65vw] py-[0.2vw] rounded-[0.45vw] font-medium text-[0.74vw] transition-all cursor-pointer ${
+                    className={`h-[2.15vw] px-[0.75vw] rounded-[0.45vw] font-medium text-[0.76vw] transition-all cursor-pointer flex items-center justify-center ${
                       currentPage === pageNum
                         ? 'bg-[#EC5137] text-white shadow-xs'
-                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-xs'
                     }`}
                   >
                     {pageNum}
@@ -426,7 +426,7 @@ export default function Tickets() {
                   type="button"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  className="p-[0.35vw] rounded-[0.45vw] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="h-[2.15vw] px-[0.65vw] rounded-[0.45vw] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs flex items-center justify-center"
                   title="Next page"
                 >
                   <ChevronRight className="w-[0.85vw] h-[0.85vw]" />
@@ -436,12 +436,12 @@ export default function Tickets() {
           </div>
         ) : (
           /* Empty Filter State */
-          <div className="w-full bg-white rounded-[1vw] border border-gray-200 p-[3.5vw] text-center shadow-sm flex flex-col items-center justify-center">
+          <div className="w-full bg-white rounded-[0.9vw] border border-gray-100 p-[3.5vw] text-center shadow-xs flex flex-col items-center justify-center">
             <div className="w-[3.2vw] h-[3.2vw] rounded-full bg-orange-50 text-[#EC5137] flex items-center justify-center mb-[0.9vw]">
               <Search className="w-[1.6vw] h-[1.6vw]" />
             </div>
-            <h3 className="text-[1vw] font-semibold text-gray-800 mb-[0.3vw]">No tickets found</h3>
-            <p className="text-[0.74vw] text-gray-500 max-w-[22vw] mb-[1.2vw] font-normal leading-relaxed">
+            <h3 className="text-[1.1vw] font-bold text-gray-900 mb-[0.3vw]">No tickets found</h3>
+            <p className="text-[0.78vw] text-gray-500 max-w-[22vw] mb-[1.2vw] font-normal leading-relaxed">
               {hasActiveFilters 
                 ? 'No tickets match the selected status, module, or search filters. Try clearing filters to see all tickets.'
                 : 'You have not submitted any support tickets yet. Click "Raise Ticket" whenever you need assistance.'}
@@ -450,7 +450,7 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="px-[1vw] py-[0.45vw] rounded-[0.5vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.76vw] font-medium transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                className="h-[2.15vw] px-[1.1vw] rounded-[0.55vw] bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.78vw] font-medium transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 Clear All Filters
               </button>
@@ -458,7 +458,7 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={() => setIsRaiseModalOpen(true)}
-                className="px-[1.1vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.78vw] font-medium transition-all shadow-xs cursor-pointer flex items-center gap-[0.35vw]"
+                className="h-[2.15vw] px-[1.1vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.78vw] font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-[0.35vw]"
               >
                 <Plus className="w-[0.85vw] h-[0.85vw]" />
                 <span>Raise Your First Ticket</span>
@@ -471,37 +471,37 @@ export default function Tickets() {
       {/* Delete / Cancel Ticket Confirmation Modal */}
       {ticketToDelete && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-[1vw] bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-150">
-          <div className="bg-white rounded-[1vw] shadow-xl w-full max-w-[28vw] p-[1.5vw] border border-gray-200 flex flex-col">
+          <div className="bg-white rounded-[0.9vw] shadow-xl w-full max-w-[28vw] p-[1.5vw] border border-gray-100 flex flex-col">
             <div className="flex items-center gap-[0.7vw] mb-[0.8vw]">
               <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-[1.2vw] h-[1.2vw]" />
               </div>
               <div>
-                <h3 className="text-[1vw] font-semibold text-gray-800">
+                <h3 className="text-[1.1vw] font-bold text-gray-900 leading-tight">
                   Cancel Ticket #{ticketToDelete.id}?
                 </h3>
-                <p className="text-[0.72vw] text-gray-500 font-normal">
+                <p className="text-[0.74vw] text-gray-500 font-normal mt-[0.1vw]">
                   This will remove your request before support team replies
                 </p>
               </div>
             </div>
 
-            <p className="text-[0.76vw] text-gray-600 mb-[1.2vw] leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.5vw] border border-gray-200">
-              Are you sure you want to cancel & delete <strong className="text-gray-900 font-medium">"{ticketToDelete.subject}"</strong>? This action cannot be undone.
+            <p className="text-[0.76vw] text-gray-700 mb-[1.2vw] leading-relaxed font-normal bg-[#f8f9fa] p-[0.85vw] rounded-[0.55vw] border border-gray-100">
+              Are you sure you want to cancel & delete <strong className="text-gray-900 font-semibold">"{ticketToDelete.subject}"</strong>? This action cannot be undone.
             </p>
 
             <div className="flex items-center justify-end gap-[0.6vw]">
               <button
                 type="button"
                 onClick={() => setTicketToDelete(null)}
-                className="px-[0.9vw] py-[0.45vw] text-[0.76vw] font-medium text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+                className="h-[2.15vw] px-[1.1vw] rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 Keep Ticket
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-[1vw] py-[0.48vw] text-[0.76vw] font-medium text-white bg-red-600 hover:bg-red-700 rounded-[0.5vw] transition-colors shadow-xs cursor-pointer flex items-center gap-[0.35vw] active:scale-[0.98]"
+                className="h-[2.15vw] px-[1.1vw] rounded-[0.55vw] text-[0.78vw] font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-xs cursor-pointer flex items-center gap-[0.35vw] active:scale-[0.98]"
               >
                 <Trash2 className="w-[0.8vw] h-[0.8vw]" />
                 <span>Yes, Cancel Ticket</span>

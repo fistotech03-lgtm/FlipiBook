@@ -164,7 +164,7 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-[1vw]"
     >
       <div 
-        className="w-full max-w-[34vw] bg-white rounded-[1vw] shadow-xl border border-gray-200 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
+        className="w-full max-w-[34vw] bg-white rounded-[0.9vw] shadow-xl border border-gray-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
@@ -173,13 +173,13 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-[0.65vw]">
               <div className="mt-[0.1vw] text-[#EC5137]">
-                <LifeBuoy className="w-[1.15vw] h-[1.15vw]" />
+                <LifeBuoy className="w-[1.2vw] h-[1.2vw]" />
               </div>
               <div className="flex flex-col">
-                <h2 className="text-[1.15vw] font-semibold text-gray-800 leading-tight">
+                <h2 className="text-[1.2vw] font-bold text-gray-900 leading-tight">
                   Raise Support Ticket
                 </h2>
-                <p className="text-[0.72vw] text-gray-500 mt-[0.2vw] font-normal">
+                <p className="text-[0.74vw] text-gray-500 mt-[0.2vw] font-normal">
                   Direct inquiry to our support and engineering team.
                 </p>
               </div>
@@ -199,7 +199,7 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="px-[1.6vw] pb-[0.8vw] pt-[0.9vw] flex flex-col gap-[0.85vw] overflow-y-auto [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full">
             {/* Module Selector with CustomDropdown */}
-            <div className="flex flex-col gap-[0.25vw]">
+            <div className="flex flex-col gap-[0.3vw]">
               <label className="text-[0.74vw] font-medium text-gray-700">
                 Department / Module <span className="text-gray-400 font-normal">(Optional)</span>
               </label>
@@ -211,12 +211,12 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                   label: m.name
                 }))}
                 placeholder="Select a module..."
-                buttonClassName="h-[2.3vw] py-[0.35vw] text-[0.76vw] rounded-[0.5vw] border-gray-200 text-gray-800 font-normal"
+                buttonClassName="h-[2.15vw] py-[0.35vw] text-[0.78vw] rounded-[0.55vw] border-gray-200 text-gray-800 font-normal focus:border-[#EC5137]"
               />
             </div>
 
             {/* Subject */}
-            <div className="flex flex-col gap-[0.25vw]">
+            <div className="flex flex-col gap-[0.3vw]">
               <label className="text-[0.74vw] font-medium text-gray-700">
                 Subject <span className="text-[#EC5137]">*</span>
               </label>
@@ -225,12 +225,12 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Brief summary of the issue..."
-                className="w-full px-[0.85vw] py-[0.52vw] text-[0.76vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-gray-800 placeholder-gray-400 font-normal transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] text-[0.78vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:border-[#EC5137] outline-none text-gray-900 placeholder:text-gray-400 font-normal transition-colors"
               />
             </div>
 
             {/* Description */}
-            <div className="flex flex-col gap-[0.25vw]">
+            <div className="flex flex-col gap-[0.3vw]">
               <label className="text-[0.74vw] font-medium text-gray-700">
                 Description <span className="text-[#EC5137]">*</span>
               </label>
@@ -239,22 +239,22 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Explain the problem in detail (what happened, steps taken, error message)..."
-                className="w-full p-[0.85vw] text-[0.76vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none resize-y text-gray-800 placeholder-gray-400 font-normal leading-relaxed transition-colors"
+                className="w-full p-[0.85vw] text-[0.78vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:border-[#EC5137] outline-none resize-y text-gray-900 placeholder:text-gray-400 font-normal leading-relaxed transition-colors"
               />
             </div>
 
             {/* Attachment */}
-            <div className="flex flex-col gap-[0.25vw]">
+            <div className="flex flex-col gap-[0.3vw]">
               <div className="flex items-center justify-between mb-[0.1vw]">
                 <label className="text-[0.74vw] font-medium text-gray-700">
                   Image Attachments <span className="text-gray-400 font-normal">(Optional, max 5)</span>
                 </label>
-                <span className="text-[0.66vw] text-gray-400 font-normal">
+                <span className="text-[0.68vw] text-gray-400 font-normal">
                   {attachments.length}/5 images • {formatFileSize(totalBytes)}/4 MB
                 </span>
               </div>
 
-              <div className="border border-dashed border-gray-200 rounded-[0.5vw] p-[0.85vw] bg-[#f8f9fa] transition-colors">
+              <div className="border border-dashed border-gray-200 rounded-[0.55vw] p-[0.85vw] bg-[#f8f9fa] transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[0.6vw]">
                   <div className="flex items-center gap-[0.55vw]">
                     <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-orange-100/70 text-[#EC5137] flex items-center justify-center shrink-0">
@@ -264,13 +264,13 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                       <p className="text-[0.76vw] font-medium text-gray-800">
                         Upload JPG, PNG, JPEG, or WebP
                       </p>
-                      <p className="text-[0.66vw] text-gray-400 font-normal">
+                      <p className="text-[0.68vw] text-gray-400 font-normal">
                         Max 10 MB per image • Auto-resized to 1920px & compressed
                       </p>
                     </div>
                   </div>
 
-                  <label className={`px-[0.75vw] py-[0.38vw] rounded-[0.45vw] border border-gray-200 bg-white text-[0.74vw] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors shadow-xs shrink-0 flex items-center justify-center gap-[0.35vw] ${
+                  <label className={`h-[1.9vw] px-[0.75vw] rounded-[0.45vw] border border-gray-200 bg-white text-[0.74vw] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors shadow-xs shrink-0 flex items-center justify-center gap-[0.35vw] ${
                     attachments.length >= 5 || isCompressing ? 'opacity-50 pointer-events-none' : ''
                   }`}>
                     {isCompressing ? (
@@ -299,7 +299,7 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                     {attachments.map((att, idx) => (
                       <div 
                         key={idx} 
-                        className="flex items-center justify-between p-[0.45vw] rounded-[0.45vw] bg-white border border-gray-200 shadow-xs gap-[0.45vw]"
+                        className="flex items-center justify-between p-[0.45vw] rounded-[0.45vw] bg-white border border-gray-100 shadow-xs gap-[0.45vw]"
                       >
                         <div className="flex items-center gap-[0.45vw] min-w-0">
                           <img 
@@ -320,7 +320,7 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
                         <button
                           type="button"
                           onClick={() => removeAttachment(idx)}
-                          className="text-gray-400 hover:text-red-500 p-[0.25vw] rounded-[0.3vw] hover:bg-red-50 transition-colors shrink-0"
+                          className="text-gray-400 hover:text-red-500 p-[0.25vw] rounded-[0.3vw] hover:bg-red-50 transition-colors shrink-0 cursor-pointer"
                           title="Remove image"
                         >
                           <Trash2 className="w-[0.8vw] h-[0.8vw]" />
@@ -333,7 +333,7 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
             </div>
 
             {error && (
-              <div className="flex items-center gap-[0.45vw] text-[0.74vw] font-medium text-red-600 bg-red-50 p-[0.65vw] rounded-[0.5vw] border border-red-200">
+              <div className="flex items-center gap-[0.45vw] text-[0.74vw] font-medium text-red-600 bg-red-50 p-[0.65vw] rounded-[0.55vw] border border-red-200">
                 <AlertCircle className="w-[0.85vw] h-[0.85vw] shrink-0" />
                 <span>{error}</span>
               </div>
@@ -345,14 +345,14 @@ export default function RaiseTicketModal({ isOpen, onClose, onSubmit, defaultMod
             <button
               type="button"
               onClick={onClose}
-              className="px-[1.05vw] py-[0.48vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.76vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
+              className="h-[2.15vw] px-[1.1vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.78vw] font-medium text-gray-700 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isCompressing}
-              className="px-[1.25vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.76vw] font-medium shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-[0.38vw]"
+              className="h-[2.15vw] px-[1.2vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.78vw] font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-[0.38vw]"
             >
               <Send className="w-[0.8vw] h-[0.8vw]" />
               <span>{isSubmitting ? 'Submitting...' : 'Submit Ticket'}</span>

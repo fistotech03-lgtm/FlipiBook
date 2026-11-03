@@ -63,14 +63,14 @@ const ChangePassword = ({ onBack, onSuccess }) => {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-12vw)] flex flex-col p-[1.5vw] font-sans">
+    <div className="w-full min-h-[calc(100vh-12vw)] flex flex-col font-sans">
       {/* Top Navigation: Back to Account Page */}
       <div className="mb-[1vw] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-[0.7vw]">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 px-[0.8vw] py-[0.45vw] rounded-[0.5vw] shadow-xs text-[0.78vw] font-medium transition-colors cursor-pointer group active:scale-[0.98]"
+            className="flex items-center gap-[0.4vw] text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 px-[0.9vw] py-[0.45vw] rounded-[0.5vw] shadow-xs text-[0.78vw] font-medium transition-colors cursor-pointer group active:scale-[0.98]"
           >
             <Icon
               icon="lucide:arrow-left"
@@ -79,7 +79,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
             <span>Back to Account</span>
           </button>
           <span className="text-gray-300">|</span>
-          <span className="text-[0.76vw] text-gray-500 font-medium">
+          <span className="text-[0.76vw] text-gray-400 font-normal">
             Sign-in & Security &gt; Change Password
           </span>
         </div>
@@ -87,13 +87,13 @@ const ChangePassword = ({ onBack, onSuccess }) => {
 
       {/* Main Container Card - Centered both horizontally and vertically (middle) */}
       <div className="w-full flex-1 flex items-center justify-center py-[2vw]">
-        <div className="w-full max-w-[40vw] bg-white border border-gray-200 rounded-[1vw] p-[2.2vw] shadow-sm">
+        <div className="w-full max-w-[38vw] bg-white border border-gray-200/80 rounded-[0.8vw] p-[2vw] shadow-xs">
           {/* Header */}
           <div className="pb-[1.4vw] border-b border-gray-100">
-            <h1 className="text-[1.25vw] font-semibold text-gray-900 leading-tight">
+            <h1 className="text-[1.25vw] font-bold text-gray-900 leading-tight">
               Change Password
             </h1>
-            <p className="text-[0.76vw] text-gray-500 mt-[0.25vw] font-normal leading-relaxed">
+            <p className="text-[0.76vw] text-gray-400 mt-[0.25vw] font-normal leading-relaxed">
               Ensure your account is using a long, random password to stay secure.
             </p>
           </div>
@@ -110,7 +110,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
         <form onSubmit={handleSubmit} className="mt-[1.5vw] flex flex-col gap-[1.2vw]">
           {/* Current Password */}
           <div className="flex flex-col gap-[0.35vw]">
-            <label className="text-[0.78vw] font-medium text-gray-700">
+            <label className="text-[0.76vw] font-medium text-gray-700">
               Current Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -119,7 +119,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
                 placeholder="Enter your current password"
                 value={form.currentPassword}
                 onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.8vw] rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add]"
+                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.78vw] rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] text-gray-800 placeholder:text-gray-400 shadow-xs"
                 autoFocus
               />
               <button
@@ -134,7 +134,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
 
           {/* New Password */}
           <div className="flex flex-col gap-[0.35vw]">
-            <label className="text-[0.78vw] font-medium text-gray-700">
+            <label className="text-[0.76vw] font-medium text-gray-700">
               New Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -143,7 +143,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
                 placeholder="At least 6 characters"
                 value={form.newPassword}
                 onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.8vw] rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add]"
+                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.78vw] rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] text-gray-800 placeholder:text-gray-400 shadow-xs"
               />
               <button
                 type="button"
@@ -157,7 +157,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
 
           {/* Confirm Password */}
           <div className="flex flex-col gap-[0.35vw]">
-            <label className="text-[0.78vw] font-medium text-gray-700">
+            <label className="text-[0.76vw] font-medium text-gray-700">
               Confirm New Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -166,7 +166,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
                 placeholder="Re-enter new password"
                 value={form.confirmPassword}
                 onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.8vw] rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add]"
+                className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.78vw] rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] text-gray-800 placeholder:text-gray-400 shadow-xs"
               />
               <button
                 type="button"
@@ -183,7 +183,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-[0.45vw] bg-[#4c5add] hover:bg-[#3f4bb8] disabled:bg-[#9fa6eb] text-white text-[0.82vw] font-medium px-[1.5vw] py-[0.6vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-[0.45vw] bg-[#EC5137] hover:bg-[#d94128] disabled:opacity-50 text-white text-[0.78vw] font-medium px-[1.4vw] py-[0.55vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
             >
               {isSubmitting ? (
                 <>
@@ -201,7 +201,7 @@ const ChangePassword = ({ onBack, onSuccess }) => {
             <button
               type="button"
               onClick={onBack}
-              className="px-[1.2vw] py-[0.6vw] rounded-[0.5vw] border border-gray-300 text-gray-700 hover:bg-gray-50 text-[0.82vw] font-medium transition-colors cursor-pointer"
+              className="px-[1.1vw] py-[0.55vw] rounded-[0.5vw] border border-gray-200 text-gray-700 hover:bg-gray-50 text-[0.78vw] font-medium transition-colors cursor-pointer shadow-xs"
             >
               Cancel
             </button>

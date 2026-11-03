@@ -276,7 +276,7 @@ const Effect = ({
               { id: 'drop-shadow', label: 'Drop Shadow' },
               { id: 'inner-shadow', label: 'Inner Shadow' },
               { id: 'blur', label: 'Blur' }
-            ].map(effect => {
+            ].filter(effect => !(effect.id === 'blur' && hideBlur) && !(effect.id === 'inner-shadow' && hideInnerShadow)).map(effect => {
               const isActive = pseudoProps[`data-effect-${effect.id}`] === 'true';
               return (
                 <div

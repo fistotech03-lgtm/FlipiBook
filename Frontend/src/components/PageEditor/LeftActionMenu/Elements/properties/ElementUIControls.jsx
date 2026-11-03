@@ -163,7 +163,7 @@ export const ElementDropdown = ({
           e.stopPropagation();
           if (!disabled) setIsOpen(!isOpen);
         }}
-        className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.65vw] rounded-[0.45vw] text-[0.78vw] font-medium transition-all cursor-pointer shadow-2xs select-none ${
+        className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.65vw] rounded-[0.45vw] text-[0.78vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         } ${
           isOpen
@@ -172,7 +172,7 @@ export const ElementDropdown = ({
         } ${buttonClassName}`}
       >
         <span
-          className="truncate font-medium text-gray-800 text-left"
+          className="truncate font-semibold text-gray-800 text-left"
           style={isFont && value ? { fontFamily: `'${value}', sans-serif` } : {}}
         >
           {displayLabel}
@@ -200,7 +200,7 @@ export const ElementDropdown = ({
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`px-[0.85vw] py-[0.45vw] text-[0.78vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer group ${
+                className={`px-[0.85vw] py-[0.45vw] text-[0.78vw] font-semibold transition-colors text-left flex items-center justify-between cursor-pointer group ${
                   isSelected
                     ? 'text-[#E05638] bg-[#FFF2EE] font-semibold'
                     : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'

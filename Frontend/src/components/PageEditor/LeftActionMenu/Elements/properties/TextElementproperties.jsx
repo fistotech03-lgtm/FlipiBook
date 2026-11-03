@@ -71,7 +71,7 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 100, step = 1, 
             disabled={disabled}
             className="w-full min-w-0 text-center text-[0.8vw] text-gray-700 font-semibold outline-none bg-transparent no-spin disabled:text-gray-400"
           />
-          {unit && <span className="text-[0.65vw] text-gray-400 font-medium select-none">{unit}</span>}
+          {unit && <span className="text-[0.65vw] text-gray-400 font-semibold select-none">{unit}</span>}
         </div>
       </div>
     </div>
@@ -1359,7 +1359,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
         <div className="flex flex-col mt-[0.5vw] p-[1vw] bg-white border border-rose-200 rounded-[0.75vw] shadow-sm mb-[0.2vw]">
           <SectionHeader title="Motion Title Content" icon={<AlignLeft size="0.9vw" className="text-rose-500" />} />
           <div className="flex flex-col gap-[0.4vw]">
-            <span className="text-[0.75vw] font-medium text-gray-500">
+            <span className="text-[0.75vw] font-semibold text-gray-500">
               Primary Title:
             </span>
             <input
@@ -1367,12 +1367,12 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
               value={motionGraphicText}
               onChange={handleMotionGraphicTextChange}
               placeholder="PRIMARY TEXT"
-              className="w-full p-[0.6vw] text-[0.85vw] font-black text-rose-600 bg-rose-50/40 border border-rose-300 rounded-[0.5vw] outline-none focus:border-rose-500 uppercase tracking-widest"
+              className="w-full p-[0.6vw] text-[0.85vw] font-semibold text-rose-600 bg-rose-50/40 border border-rose-300 rounded-[0.5vw] outline-none focus:border-rose-500 uppercase tracking-widest"
             />
 
             {(motionGraphicSubText !== '' || selectedElement.getAttribute('data-subtext') !== null || selectedElement.querySelector('.motion-text-subcontent, .motion-subtext-content, .flipi-text-b, .box-title-b')) && (
               <div className="flex flex-col gap-[0.4vw] mt-[0.4vw]">
-                <span className="text-[0.75vw] font-medium text-gray-500">
+                <span className="text-[0.75vw] font-semibold text-gray-500">
                   Secondary Subtitle:
                 </span>
                 <input
@@ -1380,7 +1380,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
                   value={motionGraphicSubText}
                   onChange={handleMotionGraphicSubTextChange}
                   placeholder="SECONDARY TEXT"
-                  className="w-full p-[0.6vw] text-[0.85vw] font-black text-amber-600 bg-amber-50/40 border border-amber-300 rounded-[0.5vw] outline-none focus:border-amber-500 uppercase tracking-widest"
+                  className="w-full p-[0.6vw] text-[0.85vw] font-semibold text-amber-600 bg-amber-50/40 border border-amber-300 rounded-[0.5vw] outline-none focus:border-amber-500 uppercase tracking-widest"
                 />
               </div>
             )}
@@ -1393,7 +1393,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
         <div className="flex flex-col mt-[0.5vw] p-[1vw] bg-white border border-gray-200 rounded-[0.75vw] shadow-sm mb-[0.2vw]">
           <SectionHeader title="Kinetic Text Content" icon={<AlignLeft size="0.9vw" />} />
           <div className="flex flex-col gap-[0.4vw]">
-            <span className="text-[0.75vw] font-medium text-gray-500">
+            <span className="text-[0.75vw] font-semibold text-gray-500">
               Enter words (each line forms an animated word row):
             </span>
             <textarea
@@ -1401,7 +1401,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
               value={kineticText}
               onChange={handleKineticTextChange}
               placeholder="CODING&#10;KINETIC&#10;TYPE"
-              className="w-full p-[0.6vw] text-[0.85vw] font-bold text-gray-800 bg-gray-50 border border-gray-300 rounded-[0.5vw] outline-none focus:border-indigo-500 uppercase tracking-wider"
+              className="w-full p-[0.6vw] text-[0.85vw] font-semibold text-gray-800 bg-gray-50 border border-gray-300 rounded-[0.5vw] outline-none focus:border-indigo-500 uppercase tracking-wider"
             />
           </div>
         </div>
@@ -1559,7 +1559,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
                 type="text"
                 value={textColor}
                 onChange={(e) => handleTextColorChange(e.target.value)}
-                className="w-full min-w-0 text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent uppercase"
+                className="w-full min-w-0 text-[0.75vw] font-semibold text-gray-700 outline-none bg-transparent uppercase"
                 maxLength={7}
               />
             </div>
@@ -1604,7 +1604,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
                   type="text"
                   value={subTextColor}
                   onChange={(e) => handleSubTextColorChange(e.target.value)}
-                  className="w-full min-w-0 text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent uppercase"
+                  className="w-full min-w-0 text-[0.75vw] font-semibold text-gray-700 outline-none bg-transparent uppercase"
                   maxLength={7}
                 />
               </div>
@@ -1649,7 +1649,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
                 type="text"
                 value={strokeColor}
                 onChange={(e) => handleOutlineColorChange(e.target.value)}
-                className="w-full min-w-0 text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent uppercase"
+                className="w-full min-w-0 text-[0.75vw] font-semibold text-gray-700 outline-none bg-transparent uppercase"
                 maxLength={7}
               />
             </div>
@@ -1696,7 +1696,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
                 type="text"
                 value={bgColor}
                 onChange={(e) => handleBgColorChange(e.target.value)}
-                className="w-full min-w-0 text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent uppercase"
+                className="w-full min-w-0 text-[0.75vw] font-semibold text-gray-700 outline-none bg-transparent uppercase"
                 placeholder="transparent"
                 maxLength={7}
               />
@@ -1705,7 +1705,7 @@ const TextElementEditor = ({ selectedElement, updateElementAttribute, selectedLa
               <button
                 type="button"
                 onClick={() => handleBgColorChange('transparent')}
-                className="px-[0.5vw] py-[0.25vw] text-[0.7vw] font-bold text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded border border-gray-200 transition-colors cursor-pointer"
+                className="px-[0.5vw] py-[0.25vw] text-[0.7vw] font-semibold text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded border border-gray-200 transition-colors cursor-pointer"
                 title="Remove background"
               >
                 Clear

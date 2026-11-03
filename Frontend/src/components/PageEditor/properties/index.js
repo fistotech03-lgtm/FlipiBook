@@ -8,6 +8,7 @@ export { default as PageProperties, getDocumentInfo } from './PageProperties';
 export { default as TextProperties, default as TextEditor } from './TextProperties';
 export { default as VideoProperties, default as VideoEditor } from './VideoProperties';
 export { default as ShapeProperties, ElementShapesProperties, ShapeAppearanceControls } from './ShapeProperties';
+export { default as ElementTitlesProperties } from '../LeftActionMenu/Elements/properties/ElementTitlesProperties';
 export { default as TextElementEditor } from '../LeftActionMenu/Elements/properties/TextElementproperties';
 export { default as TextElementproperties } from '../LeftActionMenu/Elements/properties/TextElementproperties';
 export { default as ElementButtonProperties } from '../LeftActionMenu/Elements/properties/ElementButtonProperties';

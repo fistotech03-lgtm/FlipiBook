@@ -13,14 +13,14 @@ import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIContro
 const SectionHeader = ({ title, icon: IconComponent }) => (
   <div className="flex items-center gap-[0.4vw] my-[0.3vw]">
     {IconComponent && <IconComponent size="0.9vw" className="text-[#EA543A]" />}
-    <h2 className="text-[0.8vw] font-bold text-[#1e2538] whitespace-nowrap tracking-tight">{title}</h2>
+    <h2 className="text-[0.8vw] font-semibold text-[#1e2538] whitespace-nowrap tracking-tight">{title}</h2>
     <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
   </div>
 );
 
 const PropertySlider = ({ label, value, onChange, min = 0, max = 360, step = 1, unit = '' }) => (
   <div className="flex items-center justify-between py-[0.1vw]">
-    <span className="text-[0.7vw] font-medium text-gray-700 w-[5.5vw]">{label} :</span>
+    <span className="text-[0.7vw] font-semibold text-gray-700 w-[5.5vw]">{label} :</span>
     <div className="flex-grow flex items-center gap-[0.5vw]">
       <ElementSlider
         min={min}
@@ -31,7 +31,7 @@ const PropertySlider = ({ label, value, onChange, min = 0, max = 360, step = 1, 
         className="flex-grow"
       />
       <div className="w-[3.2vw] h-[1.6vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-        <span className="text-center text-[0.7vw] text-gray-700 font-medium select-none">
+        <span className="text-center text-[0.7vw] text-gray-700 font-semibold select-none">
           {value !== undefined ? value : min}{unit}
         </span>
       </div>
@@ -524,11 +524,11 @@ const ElementDecoratorProperties = ({
       <div className="flex items-center justify-between pb-[0.3vw] border-b border-gray-100">
         <div className="flex items-center gap-[0.4vw]">
           <Sparkles className="w-[1vw] h-[1vw] text-indigo-600" />
-          <span className="text-[0.88vw] font-bold text-gray-900 truncate max-w-[12vw]">
+          <span className="text-[0.88vw] font-semibold text-gray-900 truncate max-w-[12vw]">
             {presetTitle}
           </span>
         </div>
-        <span className="text-[0.6vw] font-bold text-indigo-600 uppercase bg-indigo-50 border border-indigo-200/50 px-[0.4vw] py-[0.1vw] rounded">
+        <span className="text-[0.6vw] font-semibold text-indigo-600 uppercase bg-indigo-50 border border-indigo-200/50 px-[0.4vw] py-[0.1vw] rounded">
           {categoryName}
         </span>
       </div>
@@ -573,7 +573,7 @@ const ElementDecoratorProperties = ({
                         setDuration(pill.val);
                         applyUpdates({ duration: pill.val });
                       }}
-                      className={`text-[0.6vw] px-[0.35vw] py-[0.1vw] rounded font-medium transition-colors ${
+                      className={`text-[0.6vw] px-[0.35vw] py-[0.1vw] rounded font-semibold transition-colors ${
                         duration === pill.val
                           ? 'bg-indigo-600 text-white'
                           : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-400'
@@ -613,7 +613,7 @@ const ElementDecoratorProperties = ({
                       setLoopMode(m.id);
                       applyUpdates({ loopMode: m.id });
                     }}
-                    className={`text-[0.68vw] py-[0.25vw] rounded-[0.3vw] font-medium text-center border transition-all ${
+                    className={`text-[0.68vw] py-[0.25vw] rounded-[0.3vw] font-semibold text-center border transition-all ${
                       loopMode === m.id
                         ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
                         : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
@@ -696,7 +696,7 @@ const ElementDecoratorProperties = ({
               />
 
               <div className="flex items-center justify-between py-[0.1vw]">
-                <span className="text-[0.7vw] font-medium text-gray-700 w-[5.5vw]">Dash Style :</span>
+                <span className="text-[0.7vw] font-semibold text-gray-700 w-[5.5vw]">Dash Style :</span>
                 <div className="flex-grow">
                   <ElementDropdown
                     value={dashStyle}
@@ -725,7 +725,7 @@ const ElementDecoratorProperties = ({
                       applyUpdates({ glowEnabled: next });
                     }}
                   />
-                  <span className="text-[0.7vw] font-medium text-gray-700">Glow Aura</span>
+                  <span className="text-[0.7vw] font-semibold text-gray-700">Glow Aura</span>
                 </div>
               </div>
 

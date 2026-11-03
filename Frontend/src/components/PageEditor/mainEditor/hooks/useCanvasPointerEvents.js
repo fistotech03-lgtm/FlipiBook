@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/purity, react-hooks/immutability */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   pathToDCombo,
   getPaperSegments, getPaperCurves, cleanPaperPathData, mergeMeetingNodes, applyHandleDrag, deleteSelectedNodeOrHandle
@@ -11,9 +11,11 @@ import {
   clearOverlayType
 } from '../utils/geometryUtils';
 import { clearSmartGuides } from '../utils/smartGuides';
-import { getTopLevelFrames, getDirectChildFrames, hitTest } from '../utils/frameHierarchyUtils';
+import { getTopLevelFrames, getDirectChildFrames, hitTest, isPageRootElement } from '../utils/frameHierarchyUtils';
 import { useInlineTextEditor } from './useInlineTextEditor';
 import editCacheManager from '../../utils/EditCacheManager';
+import { updateShapeMaskTransform } from '../../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { drawShapeImageAdjustOverlay } from '../../penTool/penOverlayEngine';
 
 /**
  * Hook managing canvas pointer interactions:
@@ -76,6 +78,7 @@ export const useCanvasPointerEvents = ({
   nodeEditSplitSegIdxRef,
   nodeEditScreenNodesRef,
   nodeEditScreenSegmentsRef,
+  nodeEditImageAdjustRef,
   vectraPenSessionRef,
   paperScopeRef,
   marqueeRef,
@@ -121,6 +124,51 @@ export const useCanvasPointerEvents = ({
     }
     return activeId ? svg.querySelector(`[id="${activeId}"]`) : (hitRoot || svg.querySelector('g[data-type="frame"]') || svg.querySelector('g'));
   };
+
+  const shapeImageAdjustTargetRef = useRef(null);
+  const shapeImageAdjustPageIndexRef = useRef(null);
+
+  const exitShapeImageAdjust = useCallback(() => {
+    if (!shapeImageAdjustTargetRef.current && !window.__isAdjustingShapeImage) return;
+    const target = shapeImageAdjustTargetRef.current;
+    shapeImageAdjustTargetRef.current = null;
+    shapeImageAdjustPageIndexRef.current = null;
+    window.__isAdjustingShapeImage = false;
+    window.__shapeImageAdjustTarget = null;
+    window.__shapeImageAdjustGhostRect = null;
+    document.body.classList.remove('shape-adjust-active');
+    if (target) {
+      target.removeAttribute('data-image-adjust-active');
+      target.parentElement?.removeAttribute('data-image-adjust-active');
+    }
+    document.querySelectorAll('[id^="highlight-overlay-"] #node-edit-overlay-group').forEach(g => {
+      g.innerHTML = '';
+    });
+  }, []);
+
+  const startShapeImageAdjust = useCallback((targetEl, pageIndex) => {
+    if (!targetEl) return;
+    exitShapeImageAdjust();
+    if (nodeEditModeRef.current) {
+      exitNodeEditMode();
+    }
+    const shapeEl = targetEl.tagName?.toLowerCase() === 'g'
+      ? (targetEl.querySelector('path, rect, circle, ellipse, polygon') || targetEl)
+      : targetEl;
+    shapeImageAdjustTargetRef.current = shapeEl;
+    shapeImageAdjustPageIndexRef.current = pageIndex;
+    window.__isAdjustingShapeImage = true;
+    window.__shapeImageAdjustTarget = shapeEl;
+    document.body.classList.add('shape-adjust-active');
+    shapeEl.setAttribute('data-image-adjust-active', 'true');
+    if (targetEl !== shapeEl) {
+      targetEl.setAttribute('data-image-adjust-active', 'true');
+    }
+    // Clean up normal selection box and handles immediately
+    document.querySelectorAll('[id^="highlight-overlay-html-"] .resize-handle').forEach(h => h.remove());
+    document.querySelectorAll('.selection-overlay-layer polygon, .selection-overlay-layer g.overlay-type-selected').forEach(el => el.remove());
+    drawShapeImageAdjustOverlay(shapeEl, pageIndex, zoom);
+  }, [zoom, exitNodeEditMode, exitShapeImageAdjust]);
 
   // ── Screen-space marquee box (unscaled, pixel-snapped like smart guides) ──
   const getScreenMarqueeBox = () => {
@@ -252,6 +300,43 @@ export const useCanvasPointerEvents = ({
       }
     };
 
+    // ── STANDALONE SHAPE IMAGE ADJUST MODE (Unflattened masked shapes) ────────
+    if (shapeImageAdjustTargetRef.current) {
+      const target = shapeImageAdjustTargetRef.current;
+      const rect = target.getBoundingClientRect();
+      const ghostRect = window.__shapeImageAdjustGhostRect;
+      const isInsideShape = (
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom
+      );
+      const isInsideGhost = Boolean(ghostRect && (
+        e.clientX >= ghostRect.left && e.clientX <= ghostRect.right &&
+        e.clientY >= ghostRect.top && e.clientY <= ghostRect.bottom
+      ));
+
+      if (isInsideShape || isInsideGhost) {
+        const pIdx = shapeImageAdjustPageIndexRef.current !== null ? shapeImageAdjustPageIndexRef.current : activePageIndex;
+        nodeEditDragRef.current = {
+          mode: 'image-pan',
+          pathEl: target,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          startPanX: parseFloat(target.getAttribute('data-slot-pan-x') || '0'),
+          startPanY: parseFloat(target.getAttribute('data-slot-pan-y') || '0'),
+          startZoom: parseFloat(target.getAttribute('data-slot-zoom') || '1'),
+          bbox: rect,
+          scale: zoom / 100,
+          pageIndex: pIdx,
+          isStandaloneAdjust: true
+        };
+        suppressClickRef.current = true;
+        e.stopPropagation();
+        return;
+      } else {
+        exitShapeImageAdjust();
+      }
+    }
+
     // ── NODE EDIT MODE: Handle node, handle, and line segment dragging ──────────
     if (nodeEditModeRef.current && nodeEditPathRef.current && activeMainTool !== 'pen') {
       const pathEl = nodeEditPathRef.current;
@@ -293,6 +378,11 @@ export const useCanvasPointerEvents = ({
       const mousePt = new paperScopeRef.current.Point(pt.x, pt.y);
 
       if (hitSegIdx !== -1 && !isNaN(hitSegIdx)) {
+        if (nodeEditImageAdjustRef?.current || pathEl.getAttribute('data-image-adjust-active') === 'true') {
+          if (nodeEditImageAdjustRef) nodeEditImageAdjustRef.current = false;
+          pathEl.removeAttribute('data-image-adjust-active');
+          drawNodeEditOverlay(pathEl, paperPath, pageIndex);
+        }
         if (hitHandleSide === 'point') {
           // Deleting an anchor point is ONLY performed if the Pen Subtract tool is active
           if (selectedPenToolRef.current === 'subtract') {
@@ -488,6 +578,11 @@ export const useCanvasPointerEvents = ({
       }
 
       if (hitCurveIdx !== -1 && hitSeg1Idx !== -1 && hitSeg2Idx !== -1) {
+        if (nodeEditImageAdjustRef?.current || pathEl.getAttribute('data-image-adjust-active') === 'true') {
+          if (nodeEditImageAdjustRef) nodeEditImageAdjustRef.current = false;
+          pathEl.removeAttribute('data-image-adjust-active');
+          drawNodeEditOverlay(pathEl, paperPath, pageIndex);
+        }
         const curves = getPaperCurves(paperPath);
         const segments = getPaperSegments(paperPath);
         const curve = curves[hitCurveIdx];
@@ -566,6 +661,47 @@ export const useCanvasPointerEvents = ({
           }
         }
 
+        suppressClickRef.current = true;
+        e.stopPropagation();
+        return;
+      }
+
+      // Check if clicking inside a masked shape's body to pan/move the image inside
+      const hasImageMask = Boolean(
+        pathEl.getAttribute?.('data-mask-enabled') === 'true' ||
+        pathEl.getAttribute?.('data-masked-image-url') ||
+        pathEl.closest?.('[data-mask-enabled="true"]') !== null ||
+        (pathEl.getAttribute?.('fill') && pathEl.getAttribute?.('fill').includes('url(#pattern-')) ||
+        pathEl.closest?.('[fill*="url(#pattern-"]') !== null
+      );
+      const rect = pathEl.getBoundingClientRect();
+      const isInsideBbox = (
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom
+      );
+      const isInsideShape = isInsideBbox || (e.target === pathEl || pathEl.contains(e.target)) || hitTest(pathEl, e.clientX, e.clientY) || (paperPath?.contains && paperPath.contains(mousePt));
+
+      if (hasImageMask && isInsideShape) {
+        if (!nodeEditImageAdjustRef?.current || pathEl.getAttribute('data-image-adjust-active') !== 'true') {
+          if (nodeEditImageAdjustRef) nodeEditImageAdjustRef.current = true;
+          pathEl.setAttribute('data-image-adjust-active', 'true');
+          drawNodeEditOverlay(pathEl, paperPath, pageIndex);
+        }
+
+        nodeEditDragRef.current = {
+          mode: 'image-pan',
+          pathEl,
+          paperPath,
+          startPt: pt,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          startPanX: parseFloat(pathEl.getAttribute('data-slot-pan-x') || '0'),
+          startPanY: parseFloat(pathEl.getAttribute('data-slot-pan-y') || '0'),
+          startZoom: parseFloat(pathEl.getAttribute('data-slot-zoom') || '1'),
+          bbox: rect,
+          scale: zoom / 100,
+          pageIndex
+        };
         suppressClickRef.current = true;
         e.stopPropagation();
         return;
@@ -799,12 +935,22 @@ export const useCanvasPointerEvents = ({
 
         switch (selectedShapeTool) {
           case 'rectangle':
-          case 'free-frame':
             shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             shape.setAttribute('x', pt.x);
             shape.setAttribute('y', pt.y);
             shape.setAttribute('width', '0');
             shape.setAttribute('height', '0');
+            shape.setAttribute('data-is-element-shape', 'true');
+            shape.setAttribute('data-shape-id', 'rounded-rectangle');
+            shape.setAttribute('data-shape-title', 'Rectangle');
+            shape.setAttribute('data-shape-type', 'rectangle');
+            shape.setAttribute('data-tl', '0');
+            shape.setAttribute('data-tr', '0');
+            shape.setAttribute('data-bl', '0');
+            shape.setAttribute('data-br', '0');
+            shape.setAttribute('data-corner-linked', 'true');
+            shape.setAttribute('rx', '0');
+            shape.setAttribute('ry', '0');
             break;
           case 'circle':
             shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
@@ -812,6 +958,17 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('cy', pt.y);
             shape.setAttribute('rx', '0');
             shape.setAttribute('ry', '0');
+            shape.setAttribute('data-is-element-shape', 'true');
+            shape.setAttribute('data-shape-id', 'true-circle');
+            shape.setAttribute('data-shape-title', 'Circle');
+            shape.setAttribute('data-shape-type', 'ellipse');
+            break;
+          case 'free-frame':
+            shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            shape.setAttribute('x', pt.x);
+            shape.setAttribute('y', pt.y);
+            shape.setAttribute('width', '0');
+            shape.setAttribute('height', '0');
             break;
           case 'line':
             shape = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -828,7 +985,11 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('data-cy', pt.y);
             shape.setAttribute('data-count', selectedShapeTool === 'polygon' ? '3' : '5');
             shape.setAttribute('data-ratio', '40');
+            shape.setAttribute('data-radius', '0');
             shape.setAttribute('data-shape-type', selectedShapeTool);
+            shape.setAttribute('data-is-element-shape', 'true');
+            shape.setAttribute('data-shape-id', selectedShapeTool === 'polygon' ? 'sharp-triangle' : 'chubby-5-point-star');
+            shape.setAttribute('data-shape-title', selectedShapeTool === 'polygon' ? 'Polygon' : 'Star');
             break;
         }
 
@@ -838,6 +999,15 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('fill', 'none');
             shape.setAttribute('stroke', '#000000');
             shape.setAttribute('stroke-width', '1');
+            shape.setAttribute('data-stroke-color', '#000000');
+            shape.setAttribute('data-stroke-width', '1');
+            shape.setAttribute('data-name', `Line ${id.substr(0, 4)}`);
+            shape.setAttribute('data-type', 'shape');
+            shape.setAttribute('data-shape-type', 'line');
+            shape.setAttribute('data-is-element-shape', 'true');
+            shape.setAttribute('data-shape-id', 'straight-line');
+            shape.setAttribute('data-shape-title', 'Line');
+            shape.setAttribute('vector-effect', 'non-scaling-stroke');
           } else if (selectedShapeTool === 'free-frame') {
             const zoomScale = zoom / 100;
             shape.setAttribute('fill', 'transparent');
@@ -847,13 +1017,23 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('data-interaction', 'open-link');
             shape.setAttribute('data-interaction-value', '');
             shape.setAttribute('data-drawing', 'true');
+            shape.setAttribute('data-name', 'Free Frame');
+            shape.setAttribute('data-type', 'shape');
           } else {
             shape.setAttribute('fill', '#d0ccff');
             shape.setAttribute('stroke', 'none');
             shape.setAttribute('stroke-width', '0');
+            shape.setAttribute('data-fill-color', '#d0ccff');
+            shape.setAttribute('data-stroke-color', 'none');
+            shape.setAttribute('data-stroke-width', '0');
+            shape.setAttribute('data-stroke-position', 'Outside');
+            shape.setAttribute('paint-order', 'stroke fill');
+            shape.style.paintOrder = 'stroke fill';
+            shape.setAttribute('vector-effect', 'non-scaling-stroke');
+            const formattedName = selectedShapeTool.charAt(0).toUpperCase() + selectedShapeTool.slice(1);
+            shape.setAttribute('data-name', `${formattedName} ${id.substr(0, 4)}`);
+            shape.setAttribute('data-type', 'shape');
           }
-          shape.setAttribute('data-name', selectedShapeTool === 'free-frame' ? 'Free Frame' : `${selectedShapeTool} ${id.substr(0, 4)}`);
-          shape.setAttribute('data-type', 'shape');
 
           parentEl.appendChild(shape);
           drawingShapeRef.current = shape;
@@ -965,14 +1145,37 @@ export const useCanvasPointerEvents = ({
 
       // Cache candidates and their bounding boxes for the marquee operation
       const isInteractiveTool = activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
-      let marqueeCandidates = candidates.filter(el => {
+      let candidatePool = candidates;
+      if (!candidatePool || candidatePool.length === 0) {
+        candidatePool = getTopLevelFrames(svg);
+      }
+
+      // Expand any root page frames so candidatePool contains the actual content elements
+      const expandedCandidates = [];
+      (candidatePool || []).forEach(el => {
+        if (!el) return;
+        if (isPageRootElement(el, svg)) {
+          expandedCandidates.push(...getDirectChildFrames(el));
+        } else {
+          expandedCandidates.push(el);
+        }
+      });
+      candidatePool = expandedCandidates;
+
+      let marqueeCandidates = candidatePool.filter(el => {
+        if (!el || !el.id) return false;
+        if (isPageRootElement(el, svg)) return false;
+
         const isFreeFrame = el.getAttribute('data-name') === 'Free Frame' || el.getAttribute('data-type') === 'free-frame' || el.id?.startsWith('free-frame');
         if (isFreeFrame && !isInteractiveTool) return false;
 
-        const isOverlay = el.getAttribute('data-name') === 'Overlay';
-        const isBasePage = topFrames.some(f => f.id === el.id);
+        const isOverlay = el.getAttribute('data-name') === 'Overlay' || el.id === 'ghost-layer' || el.classList?.contains('selection-overlay-layer');
+        const isPageBackground = el.getAttribute('data-page-background') === 'true' || el.getAttribute('data-is-background') === 'true';
         const isPdfBg = el.getAttribute('data-name')?.includes('PDF Background') || el.getAttribute('data-type') === 'pdf-vector-layer';
         const isShield = el.getAttribute('data-name') === 'Document Shield' || el.getAttribute('data-type') === 'shield';
+        const isHiddenOrLocked = el.getAttribute('data-hidden') === 'true' || el.getAttribute('data-locked') === 'true';
+        if (isHiddenOrLocked || isOverlay || isPageBackground || isPdfBg || isShield) return false;
+
         if (isConvertedFlipbook) {
           const isHotspot = el.getAttribute('data-is-hotspot') === 'true' || el.getAttribute('data-type') === 'hotspot';
           const isFreeFrameCandidate = isFreeFrame && isInteractiveTool;
@@ -980,7 +1183,7 @@ export const useCanvasPointerEvents = ({
           const isIcon = el.getAttribute('data-type') === 'icon';
           return isHotspot || isFreeFrameCandidate || isShape || isIcon;
         }
-        return !isOverlay && !isBasePage && !isPdfBg && !isShield;
+        return true;
       });
 
       marqueeCandidatesRef.current = marqueeCandidates.map(el => ({
@@ -1033,12 +1236,41 @@ export const useCanvasPointerEvents = ({
     // ── NODE EDIT MODE: Drag node(s), handle, or line segment ─────────────────
     if (nodeEditDragRef.current) {
       const { mode, segIdx, handleSide, pathEl, paperPath, startPt, startPoints, curveIndex, startHandle1, startHandle2 } = nodeEditDragRef.current;
-      const svgEl = pathEl.ownerSVGElement;
+
+      if (mode === 'image-pan') {
+        const { pathEl: panPathEl, startClientX, startClientY, startPanX, startPanY, startZoom, bbox, scale, isStandaloneAdjust } = nodeEditDragRef.current;
+        const currentScale = scale || (zoom / 100) || 1;
+        const dxPx = (e.clientX - startClientX) / currentScale;
+        const dyPx = (e.clientY - startClientY) / currentScale;
+        const unscaledW = (bbox && bbox.width > 0) ? (bbox.width / currentScale) : 100;
+        const unscaledH = (bbox && bbox.height > 0) ? (bbox.height / currentScale) : 100;
+        const normDx = dxPx / unscaledW;
+        const normDy = dyPx / unscaledH;
+        const newPanX = Math.round((startPanX + normDx) * 1000) / 1000;
+        const newPanY = Math.round((startPanY + normDy) * 1000) / 1000;
+
+        updateShapeMaskTransform({
+          selectedElement: panPathEl,
+          panX: newPanX,
+          panY: newPanY,
+          zoom: startZoom
+        });
+        if (isStandaloneAdjust || shapeImageAdjustTargetRef.current) {
+          const pIdx = shapeImageAdjustPageIndexRef.current !== null ? shapeImageAdjustPageIndexRef.current : activePageIndex;
+          drawShapeImageAdjustOverlay(panPathEl, pIdx, zoom);
+        } else if (typeof drawNodeEditOverlay === 'function' && nodeEditPaperPathRef?.current) {
+          drawNodeEditOverlay(panPathEl, nodeEditPaperPathRef.current, nodeEditPageIndexRef?.current !== null ? nodeEditPageIndexRef.current : activePageIndex);
+        }
+        suppressClickRef.current = true;
+        return;
+      }
+
+      const svgEl = pathEl?.ownerSVGElement;
       if (!svgEl) return;
       const pt = getLocalPoint(svgEl, pathEl, e.clientX, e.clientY);
       paperScopeRef.current.activate();
       const mousePoint = new paperScopeRef.current.Point(pt.x, pt.y);
-      const delta = mousePoint.subtract(new paperScopeRef.current.Point(startPt.x, startPt.y));
+      const delta = (startPt && startPt.x !== undefined) ? mousePoint.subtract(new paperScopeRef.current.Point(startPt.x, startPt.y)) : null;
 
       if (mode === 'node') {
         if (startPoints && Object.keys(startPoints).length > 0) {
@@ -1296,6 +1528,8 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
             shape.setAttribute('data-rx', radius);
             shape.setAttribute('data-ry', radius);
+            shape.setAttribute('data-cx', start.x);
+            shape.setAttribute('data-cy', start.y);
             break;
           }
           case 'star': {
@@ -1313,6 +1547,8 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
             shape.setAttribute('data-rx', rOuter);
             shape.setAttribute('data-ry', rOuter);
+            shape.setAttribute('data-cx', start.x);
+            shape.setAttribute('data-cy', start.y);
             break;
           }
         }
@@ -1701,6 +1937,8 @@ export const useCanvasPointerEvents = ({
               shape.setAttribute('d', `M ${points.join(' L ')} Z`);
               shape.setAttribute('data-rx', radius);
               shape.setAttribute('data-ry', radius);
+              shape.setAttribute('data-cx', start.x);
+              shape.setAttribute('data-cy', start.y);
             }
           }
         }
@@ -1774,6 +2012,125 @@ export const useCanvasPointerEvents = ({
     };
   }, [selectedPenTool, activeMainTool, updatePageHtml, setActiveMainTool, setSelectedLayerId]);
 
+  // ── Wheel-to-zoom on masked shape while in node edit mode ──────────────────
+  useEffect(() => {
+    const handleShapeMaskWheel = (e) => {
+      const isStandalone = Boolean(shapeImageAdjustTargetRef.current);
+      if (!nodeEditModeRef.current && !isStandalone) return;
+      const rawEl = isStandalone ? shapeImageAdjustTargetRef.current : nodeEditPathRef.current;
+      const pathEl = (rawEl?.id ? document.getElementById(rawEl.id) : null) || rawEl;
+      if (!pathEl) return;
+      const hasImageMask = Boolean(
+        pathEl.getAttribute?.('data-mask-enabled') === 'true' ||
+        pathEl.getAttribute?.('data-masked-image-url') ||
+        pathEl.closest?.('[data-mask-enabled="true"]') !== null ||
+        (pathEl.getAttribute?.('fill') && pathEl.getAttribute?.('fill').includes('url(#pattern-')) ||
+        pathEl.closest?.('[fill*="url(#pattern-"]') !== null
+      );
+      if (!hasImageMask) return;
+
+      const rect = pathEl.getBoundingClientRect();
+      const ghostRect = window.__shapeImageAdjustGhostRect;
+      const isOverShape = (
+        e.clientX >= (rect.left - 20) && e.clientX <= (rect.right + 20) &&
+        e.clientY >= (rect.top - 20) && e.clientY <= (rect.bottom + 20)
+      );
+      const isOverGhost = Boolean(ghostRect && (
+        e.clientX >= (ghostRect.left - 20) && e.clientX <= (ghostRect.right + 20) &&
+        e.clientY >= (ghostRect.top - 20) && e.clientY <= (ghostRect.bottom + 20)
+      ));
+      if (!isOverShape && !isOverGhost) return;
+
+      // Only zoom image when image adjust mode is active
+      const isAdjustActive = isStandalone || Boolean(pathEl.getAttribute('data-image-adjust-active') === 'true' || nodeEditImageAdjustRef?.current === true);
+      if (!isAdjustActive) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const currentZoom = parseFloat(pathEl.getAttribute('data-slot-zoom') || '1');
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      const newZoom = Math.round(Math.min(Math.max(0.5, currentZoom + delta), 5.0) * 100) / 100;
+
+      updateShapeMaskTransform({
+        selectedElement: pathEl,
+        zoom: newZoom,
+        onSync: () => {
+          if (pathEl.ownerSVGElement && saveModifiedPageHtml) {
+            const pIdx = nodeEditPageIndexRef.current !== null ? nodeEditPageIndexRef.current : activePageIndex;
+            saveModifiedPageHtml(pIdx, pathEl.ownerSVGElement);
+          }
+        }
+      });
+      if (isStandalone) {
+        const pIdx = shapeImageAdjustPageIndexRef.current !== null ? shapeImageAdjustPageIndexRef.current : activePageIndex;
+        drawShapeImageAdjustOverlay(pathEl, pIdx, zoom);
+      } else if (typeof drawNodeEditOverlay === 'function' && nodeEditPaperPathRef?.current) {
+        drawNodeEditOverlay(pathEl, nodeEditPaperPathRef.current, nodeEditPageIndexRef?.current !== null ? nodeEditPageIndexRef.current : activePageIndex);
+      }
+    };
+
+    window.addEventListener('wheel', handleShapeMaskWheel, { passive: false, capture: true });
+    window.addEventListener('trigger-exit-shape-adjust', exitShapeImageAdjust);
+    return () => {
+      window.removeEventListener('wheel', handleShapeMaskWheel, { capture: true });
+      window.removeEventListener('trigger-exit-shape-adjust', exitShapeImageAdjust);
+    };
+  }, [activePageIndex, saveModifiedPageHtml, zoom, exitShapeImageAdjust]);
+
+  useEffect(() => {
+    window.__startShapeImageAdjust = startShapeImageAdjust;
+    window.__exitShapeImageAdjust = exitShapeImageAdjust;
+    return () => {
+      window.__startShapeImageAdjust = null;
+      window.__exitShapeImageAdjust = null;
+    };
+  }, [startShapeImageAdjust, exitShapeImageAdjust]);
+
+  useEffect(() => {
+    const handleTriggerImageAdjust = (e) => {
+      if (e?.detail?.targetEl) {
+        startShapeImageAdjust(e.detail.targetEl, e.detail.pageIndex ?? activePageIndex);
+        return;
+      }
+      const layerId = e?.detail?.layerId;
+      if (!layerId) return;
+      const svg = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`) || document.querySelector('svg');
+      let targetPath = svg?.querySelector(`[id="${CSS.escape(layerId)}"]`) || document.getElementById(layerId);
+      if (!targetPath) return;
+
+      const slotId = e?.detail?.slotId;
+      if (slotId && targetPath) {
+        const slotEl = targetPath.querySelector(`[data-pattern-id="${slotId}"], [fill*="${slotId}"]`);
+        if (slotEl) targetPath = slotEl;
+      }
+
+      const isFlattened = Boolean(
+        targetPath.getAttribute('data-flattened') === 'true' ||
+        targetPath.closest?.('[data-flattened="true"]')
+      );
+      if (!isFlattened) {
+        startShapeImageAdjust(targetPath, activePageIndex);
+        return;
+      }
+
+      const validPath = targetPath.tagName?.toLowerCase() === 'path' ? targetPath : (targetPath.querySelector?.('path') || targetPath);
+      if (!nodeEditModeRef.current || nodeEditPathRef.current !== validPath) {
+        if (typeof enterNodeEditMode === 'function') {
+          enterNodeEditMode(validPath, activePageIndex);
+        }
+      }
+      if (nodeEditImageAdjustRef) nodeEditImageAdjustRef.current = true;
+      validPath.setAttribute('data-image-adjust-active', 'true');
+      if (nodeEditPaperPathRef.current && typeof drawNodeEditOverlay === 'function') {
+        drawNodeEditOverlay(validPath, nodeEditPaperPathRef.current, activePageIndex);
+      }
+    };
+
+    window.addEventListener('trigger-image-adjust', handleTriggerImageAdjust);
+    return () => window.removeEventListener('trigger-image-adjust', handleTriggerImageAdjust);
+  }, [activePageIndex, enterNodeEditMode, drawNodeEditOverlay, startShapeImageAdjust]);
+
   // ── FIGMA-STYLE MOUSE LEAVE: clear all hovers ─────────────────────────────────
   const handleSvgMouseLeave = (e) => {
     if ((e.buttons & 1) === 0 && (marqueeDataRef.current || marqueeRef.current)) {
@@ -1799,6 +2156,10 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
+      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
+      if (typographyParent && typographyParent.id) {
+        resolvedId = typographyParent.id;
+      }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
         resolvedId = shapeParent.id;
@@ -1832,7 +2193,10 @@ export const useCanvasPointerEvents = ({
       selectedLayerIdRef.current = id;
     }
 
-    const newSet = id ? new Set([id]) : new Set();
+    const targetEl = id ? document.getElementById(id) : null;
+    const isRoot = isPageRootElement(targetEl, targetEl?.closest?.('svg') || null);
+
+    const newSet = (id && !isRoot) ? new Set([id]) : new Set();
     multiSelectedIdsRef.current = newSet;
     setMultiSelectedIds(newSet);
 
@@ -2022,6 +2386,57 @@ export const useCanvasPointerEvents = ({
       const polySelectionId = e.target.id.replace(/^overlay-poly-(selected|child-selected|hover|child-hover|entered|multi-child-selected)-/, '');
 
       if (polySelectionId === 'multi' || polySelectionId === 'multi-selection-bounds') {
+        const isMultiKey = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
+        const elementsUnder = (typeof document !== 'undefined' && typeof document.elementsFromPoint === 'function')
+          ? document.elementsFromPoint(e.clientX, e.clientY)
+          : [];
+        let hitUnder = null;
+        for (const el of elementsUnder) {
+          if (el && el !== svg && svg.contains(el) && el.id && !el.id.startsWith('overlay-') && !el.id.startsWith('resize-handle-') && !el.id.startsWith('rotate-handle-') && el.getAttribute('data-name') !== 'Overlay') {
+            hitUnder = getDraggableElement(el, svg);
+            if (hitUnder && hitUnder.id) break;
+          }
+        }
+
+        if (hitUnder && hitUnder.id) {
+          if (isMultiKey) {
+            if (isPageRootElement(hitUnder, svg)) return;
+            const currentSet = new Set(multiSelectedIdsRef.current);
+            const primaryId = selectedLayerIdRef.current;
+            const primaryEl = primaryId ? svg.querySelector(`[id="${primaryId}"]`) : null;
+            if (primaryId && !isPageRootElement(primaryEl, svg)) currentSet.add(primaryId);
+
+            // Strip any root IDs
+            for (const id of Array.from(currentSet)) {
+              const el = svg.querySelector(`[id="${id}"]`);
+              if (isPageRootElement(el, svg)) currentSet.delete(id);
+            }
+
+            if (currentSet.has(hitUnder.id)) {
+              currentSet.delete(hitUnder.id);
+              if (primaryId === hitUnder.id) {
+                const remaining = [...currentSet];
+                const newPrimary = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+                if (setSelectedLayerId) {
+                  setSelectedLayerId(newPrimary);
+                  selectedLayerIdRef.current = newPrimary;
+                }
+              }
+            } else {
+              currentSet.add(hitUnder.id);
+              if (setSelectedLayerId) {
+                setSelectedLayerId(hitUnder.id);
+                selectedLayerIdRef.current = hitUnder.id;
+              }
+            }
+            multiSelectedIdsRef.current = currentSet;
+            if (setMultiSelectedIds) setMultiSelectedIds(currentSet);
+            return;
+          } else {
+            setSingleSelection(hitUnder.id);
+            return;
+          }
+        }
         return;
       }
 
@@ -2035,10 +2450,20 @@ export const useCanvasPointerEvents = ({
         if (isFreeFrame && activeTopToolRef.current !== 'interaction' && activeTopToolRef.current !== 'animation') {
           return;
         }
-        if (e.shiftKey && !e.ctrlKey) {
+        const isMultiKey = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
+        if (isMultiKey) {
+          if (isPageRootElement(clickedEl, svg)) return;
           const currentSet = new Set(multiSelectedIdsRef.current);
           const primaryId = selectedLayerIdRef.current;
-          if (primaryId) currentSet.add(primaryId);
+          const primaryEl = primaryId ? svg.querySelector(`[id="${primaryId}"]`) : null;
+          if (primaryId && !isPageRootElement(primaryEl, svg)) currentSet.add(primaryId);
+
+          // Strip any root IDs
+          for (const id of Array.from(currentSet)) {
+            const el = svg.querySelector(`[id="${id}"]`);
+            if (isPageRootElement(el, svg)) currentSet.delete(id);
+          }
+
           if (currentSet.has(polySelectionId)) {
             currentSet.delete(polySelectionId);
             if (primaryId === polySelectionId) {
@@ -2057,7 +2482,7 @@ export const useCanvasPointerEvents = ({
             }
           }
           multiSelectedIdsRef.current = currentSet;
-          setMultiSelectedIds(currentSet);
+          if (setMultiSelectedIds) setMultiSelectedIds(currentSet);
           return;
         }
 
@@ -2137,36 +2562,67 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // ── Shift + Click (no Ctrl): Multi-select toggle ───────────────────────────
+    // ── Shift / Cmd / Ctrl + Click: Multi-select toggle ─────────────────────────
     // Works at top-level OR inside an entered frame, but does NOT enter frames.
-    if (e.shiftKey && !e.ctrlKey) {
+    const isMultiSelectClick = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
+    if (isMultiSelectClick) {
       const frameId = currentFrameIdRef.current;
 
       // Determine candidate element pool (same as current navigation level)
-      let candidates;
+      let candidates = [];
       if (frameId) {
         const frameEl = svg.querySelector(`[id="${frameId}"]`);
         candidates = frameEl ? getDirectChildFrames(frameEl) : [];
-      } else {
+      }
+      if (candidates.length === 0) {
         candidates = getTopLevelFrames(svg);
       }
+
+      // Expand any root page frame in candidates so we test against its child elements, never the page container
+      const expandedCandidates = [];
+      candidates.forEach(c => {
+        if (isPageRootElement(c, svg)) {
+          expandedCandidates.push(...getDirectChildFrames(c));
+        } else {
+          expandedCandidates.push(c);
+        }
+      });
+      candidates = expandedCandidates;
 
       // Find the topmost candidate hit at this point
       let hitEl = null;
       for (let i = candidates.length - 1; i >= 0; i--) {
-        if (hitTest(candidates[i], e.clientX, e.clientY)) {
+        if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {
           hitEl = candidates[i];
           break;
         }
       }
 
-      if (hitEl) {
+      if (!hitEl) {
+        const directTarget = getDraggableElement(e.target, svg);
+        if (directTarget && directTarget.id && directTarget !== svg && directTarget.tagName.toLowerCase() !== 'svg') {
+          if (!isPageRootElement(directTarget, svg)) {
+            hitEl = directTarget;
+          }
+        }
+      }
+
+      if (hitEl && hitEl.id) {
+        if (isPageRootElement(hitEl, svg)) return;
+
         // Toggle this element in/out of the multi-selection
         const currentSet = new Set(multiSelectedIdsRef.current);
 
-        // Always keep the primary selectedLayerId in the set (if it exists)
+        // Always keep the primary selectedLayerId in the set (if it exists AND is not root)
         const primaryId = selectedLayerIdRef.current;
-        if (primaryId) currentSet.add(primaryId);
+        const primaryEl = primaryId ? svg.querySelector(`[id="${primaryId}"]`) : null;
+        if (primaryId && !isPageRootElement(primaryEl, svg)) currentSet.add(primaryId);
+
+        // Strip any root IDs
+        for (const id of Array.from(currentSet)) {
+          const el = svg.querySelector(`[id="${id}"]`);
+          if (isPageRootElement(el, svg)) currentSet.delete(id);
+        }
 
         if (currentSet.has(hitEl.id)) {
           currentSet.delete(hitEl.id);
@@ -2181,7 +2637,7 @@ export const useCanvasPointerEvents = ({
           }
         } else {
           currentSet.add(hitEl.id);
-          // The most recently shift-clicked element becomes primary
+          // The most recently clicked element becomes primary
           if (setSelectedLayerId) {
             setSelectedLayerId(hitEl.id);
             selectedLayerIdRef.current = hitEl.id;
@@ -2189,7 +2645,7 @@ export const useCanvasPointerEvents = ({
         }
 
         multiSelectedIdsRef.current = currentSet;
-        setMultiSelectedIds(currentSet);
+        if (setMultiSelectedIds) setMultiSelectedIds(currentSet);
       }
       // Shift+Click on empty space does nothing (don't clear multi-selection)
       return;
@@ -2552,15 +3008,71 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // Check if double click targets a compound element (button, audio, shape, qr, map, embed, etc.)
-    const compoundParent = (directTextEl || e.target)?.closest?.(
-      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    let effectiveTarget = directTextEl || e.target;
+    if (effectiveTarget && effectiveTarget.tagName?.toLowerCase() === 'polygon' && effectiveTarget.id?.includes('overlay-poly-')) {
+      const polyId = effectiveTarget.id.replace(/^overlay-poly-(selected|child-selected|hover|child-hover|entered|multi-child-selected)-/, '');
+      const underlying = svg.querySelector(`[id="${polyId}"]`);
+      if (underlying) effectiveTarget = underlying;
+    }
+    if ((!effectiveTarget || effectiveTarget === svg || effectiveTarget.closest?.('[id^="highlight-overlay"]')) && selectedLayerIdRef.current) {
+      const selEl = svg.querySelector(`[id="${CSS.escape(selectedLayerIdRef.current)}"]`) || document.getElementById(selectedLayerIdRef.current);
+      if (selEl) effectiveTarget = selEl;
+    }
+
+    // Check if double click targets compound elements or unflattened shapes
+    const isFlattenedClick = Boolean(
+      effectiveTarget?.closest?.('[data-flattened="true"]') ||
+      effectiveTarget?.getAttribute?.('data-flattened') === 'true' ||
+      effectiveTarget?.getAttribute?.('data-type') === 'vector-path'
     );
-    if (compoundParent) {
-      if (compoundParent.id) {
-        setSingleSelection(compoundParent.id);
+
+    if (!isFlattenedClick) {
+      // 1. Check if double-clicked inside an image frame (or its slots)
+      const frameParent = effectiveTarget?.closest?.(
+        '[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]'
+      );
+      if (frameParent) {
+        if (frameParent.id) {
+          setSingleSelection(frameParent.id);
+        }
+        let slotPath = (effectiveTarget && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(effectiveTarget.tagName?.toLowerCase()))
+          ? effectiveTarget
+          : null;
+        if (!slotPath && typeof document.elementsFromPoint === 'function') {
+          const under = document.elementsFromPoint(e.clientX, e.clientY);
+          slotPath = under.find(el => el.closest && el.closest(`[id="${frameParent.id}"]`) && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(el.tagName?.toLowerCase()));
+        }
+        if (!slotPath) {
+          slotPath = frameParent.querySelector('[fill*="url(#pattern-"]') || frameParent.querySelector('path, polygon, rect, circle, ellipse');
+        }
+        if (slotPath) {
+          const container = frameParent.closest('.page-svg-container');
+          const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
+          startShapeImageAdjust(slotPath, pageIdx);
+          return;
+        }
       }
-      return;
+
+      const compoundParent = effectiveTarget?.closest?.(
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      );
+      if (compoundParent) {
+        if (compoundParent.id) {
+          setSingleSelection(compoundParent.id);
+        }
+        const hasMask = Boolean(
+          compoundParent.getAttribute('data-mask-enabled') === 'true' ||
+          compoundParent.getAttribute('data-masked-image-url') ||
+          (compoundParent.getAttribute('fill') && compoundParent.getAttribute('fill').includes('url(#pattern-')) ||
+          compoundParent.querySelector?.('[data-mask-enabled="true"], [fill*="url(#pattern-"]')
+        );
+        if (hasMask) {
+          const container = compoundParent.closest('.page-svg-container');
+          const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
+          startShapeImageAdjust(compoundParent, pageIdx);
+        }
+        return;
+      }
     }
 
     if (directTextEl && directTextEl.getAttribute('data-locked') !== 'true' && directTextEl.getAttribute('data-type') !== 'video' && !directTextEl.querySelector('video, iframe')) {
@@ -2590,12 +3102,59 @@ export const useCanvasPointerEvents = ({
       if (underlying) clickedEl = underlying;
     }
     let target = getDraggableElement(clickedEl, e.currentTarget) || (selectedLayerIdRef.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null);
-    const targetCompound = target?.closest?.(
-      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    const isFlattenedTarget = Boolean(
+      target?.getAttribute?.('data-flattened') === 'true' ||
+      target?.closest?.('[data-flattened="true"]') !== null
     );
+    const hasImageMaskTarget = Boolean(
+      target?.getAttribute?.('data-mask-enabled') === 'true' ||
+      target?.closest?.('[data-mask-enabled="true"]') !== null ||
+      (target?.getAttribute?.('fill') && target.getAttribute('fill').includes('url(#pattern-')) ||
+      target?.closest?.('[fill*="url(#pattern-"]') !== null
+    );
+
+    const targetFrame = target?.closest?.(
+      '[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]'
+    );
+    if (targetFrame) {
+      if (targetFrame.id) {
+        setSingleSelection(targetFrame.id);
+      }
+      let slotPath = (target && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(target.tagName?.toLowerCase()))
+        ? target
+        : null;
+      if (!slotPath && typeof document.elementsFromPoint === 'function') {
+        const under = document.elementsFromPoint(e.clientX, e.clientY);
+        slotPath = under.find(el => el.closest && el.closest(`[id="${targetFrame.id}"]`) && ['path', 'polygon', 'rect', 'circle', 'ellipse'].includes(el.tagName?.toLowerCase()));
+      }
+      if (!slotPath) {
+        slotPath = targetFrame.querySelector('[fill*="url(#pattern-"]') || targetFrame.querySelector('path, polygon, rect, circle, ellipse');
+      }
+      if (slotPath) {
+        const container = targetFrame.closest('.page-svg-container');
+        const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
+        startShapeImageAdjust(slotPath, pageIdx);
+        return;
+      }
+    }
+
+    const targetCompound = !isFlattenedTarget ? target?.closest?.(
+      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+    ) : null;
     if (targetCompound) {
       if (targetCompound.id) {
         setSingleSelection(targetCompound.id);
+      }
+      const hasMask = Boolean(
+        targetCompound.getAttribute('data-mask-enabled') === 'true' ||
+        targetCompound.getAttribute('data-masked-image-url') ||
+        (targetCompound.getAttribute('fill') && targetCompound.getAttribute('fill').includes('url(#pattern-')) ||
+        targetCompound.querySelector?.('[data-mask-enabled="true"], [fill*="url(#pattern-"]')
+      );
+      if (hasMask) {
+        const container = targetCompound.closest('.page-svg-container');
+        const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
+        startShapeImageAdjust(targetCompound, pageIdx);
       }
       return;
     }
@@ -2616,67 +3175,35 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // ── SHAPE WITH IMAGE MASK: Check if double-clicking an element shape with an image pattern/mask ───
-    if (target && !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase())) {
-      const shapeContainer = target.closest?.('[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"]') ||
-        (target.getAttribute?.('data-is-element-shape') === 'true' || target.getAttribute?.('data-shape-type') ? target : null);
-      const testShape = shapeContainer || target;
-      
-      const hasImageMask = Boolean(
-        testShape.getAttribute?.('data-mask-enabled') === 'true' ||
-        testShape.querySelector?.('[data-mask-enabled="true"]') !== null ||
-        (testShape.getAttribute?.('fill') && testShape.getAttribute?.('fill').includes('url(#pattern-')) ||
-        testShape.querySelector?.('[fill*="url(#pattern-"]') !== null
-      );
-
-      if (hasImageMask) {
-        const shapeId = shapeContainer?.id || target.id || selectedLayerIdRef.current;
-        if (shapeId) {
-          if (setSelectedLayerId) {
-            setSelectedLayerId(shapeId);
-            selectedLayerIdRef.current = shapeId;
-          }
-          window.dispatchEvent(new CustomEvent('trigger-shape-adjust', { detail: { elementId: shapeId } }));
-          return;
-        }
-      }
-    }
-
-    // ── NODE EDIT MODE: Check if double-clicking a vector/path/shape element ───
+    // ── NODE EDIT MODE: Double-clicking a vector path, flattened shape, or masked shape ───────
     const isModuleWithoutPenEdit = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
     if (!isModuleWithoutPenEdit && target && !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase())) {
-      // Restrict element shapes (which use Element Shape Properties) from entering pen tool node edit mode on double click
-      const isElementShapeTarget = Boolean(
+      const tag = target.tagName?.toLowerCase();
+      const dataType = target.getAttribute?.('data-type') || '';
+      const isFlattened = isFlattenedTarget;
+      const isElementShapeTarget = !isFlattened && Boolean(
         target.getAttribute?.('data-is-element-shape') === 'true' ||
         target.getAttribute?.('data-shape-type') !== null ||
         target.getAttribute?.('data-type') === 'shape' ||
         target.closest?.('[data-is-element-shape="true"]') !== null ||
         target.closest?.('[data-shape-type]') !== null ||
-        target.closest?.('[data-type="shape"]') !== null ||
-        (typeof target.querySelector === 'function' && (
-          target.querySelector('[data-is-element-shape="true"]') !== null ||
-          target.querySelector('[data-shape-type]') !== null ||
-          target.querySelector('[data-type="shape"]') !== null
-        ))
+        target.closest?.('[data-type="shape"]') !== null
       );
 
-      const tag = target.tagName?.toLowerCase();
-      const dataType = target.getAttribute?.('data-type') || '';
-      const isVectorOrPath = !isElementShapeTarget && (
-        tag === 'path' ||
-        dataType === 'vector-path'
+      const isVectorOrPath = (
+        isFlattened ||
+        (!isElementShapeTarget && (tag === 'path' || dataType === 'vector-path'))
       ) && target.getAttribute?.('data-locked') !== 'true' &&
         target.getAttribute?.('data-name') !== 'Overlay' &&
         target.getAttribute?.('data-type') !== 'frame' &&
         target.getAttribute?.('data-type') !== 'background';
 
-      if (isVectorOrPath && target.id) {
-        if (tag === 'path' || dataType === 'vector-path') {
-          const container = target.closest('.page-svg-container');
-          const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
-          enterNodeEditMode(target, pageIdx);
-          return;
-        }
+      if (isVectorOrPath && (target.id || target.closest?.('[id]'))) {
+        const container = target.closest('.page-svg-container');
+        const pageIdx = container ? parseInt(container.getAttribute('data-page-index')) : activePageIndex;
+        const validPathTarget = target.tagName?.toLowerCase() === 'path' ? target : (target.querySelector?.('path') || target);
+        enterNodeEditMode(validPathTarget, pageIdx);
+        return;
       }
     }
 

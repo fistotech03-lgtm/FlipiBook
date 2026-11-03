@@ -124,19 +124,19 @@ const syncLiveFilters = (el) => {
 // Section Header matching standard styling
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
 
-// PropertyRow matching exact alignment (w-[5.6vw] pl-[0.5vw])
+// PropertyRow matching exact alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
         {label}
       </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -183,10 +183,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
           maxLength={isGradient ? 10 : 7}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -1649,11 +1649,11 @@ const ElementAudioProperties = ({
 
         {/* Audio Information & Action Buttons */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="text-[0.85vw] font-medium text-gray-800 truncate" title={audioName}>
+          <div className="text-[0.85vw] font-semibold text-gray-800 truncate" title={audioName}>
             {audioName}
           </div>
 
-          <div className="text-[0.7vw] text-gray-400 font-medium flex items-center gap-[0.35vw] mt-[0.1vw]">
+          <div className="text-[0.7vw] text-gray-400 font-semibold flex items-center gap-[0.35vw] mt-[0.1vw]">
             <span>{audioDurationText}</span>
             <span className="text-[0.6vw]">•</span>
             <span>{audioSizeText}</span>
@@ -1666,7 +1666,7 @@ const ElementAudioProperties = ({
               type="button"
               onClick={handleReplaceAudioClick}
               disabled={isUploading}
-              className="px-[0.75vw] py-[0.25vw] bg-white border border-gray-200 hover:border-gray-300 rounded-[0.4vw] text-[0.75vw] text-gray-700 font-medium shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
+              className="px-[0.75vw] py-[0.25vw] bg-white border border-gray-200 hover:border-gray-300 rounded-[0.4vw] text-[0.75vw] text-gray-700 font-semibold shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
             >
               {isUploading ? 'Uploading...' : 'Replace Audio'}
             </button>
@@ -1769,7 +1769,7 @@ const ElementAudioProperties = ({
               }}
             />
           </div>
-          <span className="text-[0.8vw] text-gray-800 font-medium w-[2.8vw] text-right shrink-0">
+          <span className="text-[0.8vw] text-gray-800 font-semibold w-[2.8vw] text-right shrink-0">
             {defaultVolume} %
           </span>
         </div>
@@ -1780,13 +1780,13 @@ const ElementAudioProperties = ({
 
       {/* Play/Pause Button */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Play/Pause Button</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Play/Pause Button</span>
         <Toggle checked={controlPlayPause} onChange={setControlPlayPause} />
       </div>
 
       {/* Skip Forward/Backward */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Skip Forward/Backward</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Skip Forward/Backward</span>
         <div className="flex items-center gap-[0.5vw]">
           {/* Stepper < 5 sec > */}
           <div className="h-[2vw] flex items-center border border-gray-200 rounded-[0.4vw] bg-white px-[0.35vw] shadow-2xs">
@@ -1798,7 +1798,7 @@ const ElementAudioProperties = ({
             >
               <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
             </button>
-            <span className="text-[0.75vw] text-gray-800 font-medium px-[0.3vw] whitespace-nowrap">
+            <span className="text-[0.75vw] text-gray-800 font-semibold px-[0.3vw] whitespace-nowrap">
               {skipSeconds} sec
             </span>
             <button
@@ -1816,25 +1816,25 @@ const ElementAudioProperties = ({
 
       {/* Duration */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Duration</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Duration</span>
         <Toggle checked={controlDuration} onChange={setControlDuration} />
       </div>
 
       {/* Volume Control */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Volume Control</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Volume Control</span>
         <Toggle checked={controlVolume} onChange={setControlVolume} />
       </div>
 
       {/* Loop Button */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Loop Button</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Loop Button</span>
         <Toggle checked={controlLoop} onChange={setControlLoop} />
       </div>
 
       {/* Mute */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium">Mute</span>
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Mute</span>
         <Toggle checked={controlMute} onChange={setControlMute} />
       </div>
 

@@ -5,6 +5,7 @@ import {
   TransformProperties,
   PageProperties,
   ShapeProperties,
+  ElementTitlesProperties,
   TextElementEditor,
   ElementButtonProperties,
   ImageFramingProperties,
@@ -416,6 +417,7 @@ const RightSidebar = ({
       // If the selected element is an internal child of a compound shape/button/audio/media group,
       // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
       const compoundGroup = el?.closest?.(
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
         '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
         '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
         '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -427,7 +429,8 @@ const RightSidebar = ({
 
       const rootId = doc.querySelector('svg > g')?.id;
       const overlayId = doc.querySelector('[data-name="Overlay"]')?.id;
-      const isPageSelected = !selectedLayerId || selectedLayerId === rootId || selectedLayerId === overlayId;
+      const isRootPageElement = el && (el.getAttribute('data-type') === 'frame' || el.getAttribute('data-name')?.startsWith('Page ') || el.getAttribute('data-name')?.startsWith('Slide '));
+      const isPageSelected = !selectedLayerId || (selectedLayerId === rootId && isRootPageElement) || selectedLayerId === overlayId;
 
       if (el && !isPageSelected) {
         let w = '0', h = '0', x = '0', y = '0', r = '0';
@@ -436,6 +439,7 @@ const RightSidebar = ({
         const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
         let actualEl = editorDoc.getElementById(el.id || selectedLayerId);
         const actualCompound = actualEl?.closest?.(
+          '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
           '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
           '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
           '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -580,10 +584,20 @@ const RightSidebar = ({
               props['stroke-linejoin'] = innerShape.getAttribute('stroke-linejoin');
             }
             Array.from(innerShape.attributes).forEach(attr => {
-              if (['data-shape-type', 'data-shape-id', 'data-shape-title', 'data-name', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked', 'x', 'y', 'width', 'height'].includes(attr.name)) {
+              if ([
+                'data-shape-type', 'data-shape-id', 'data-shape-title', 'data-name', 'data-count', 'data-ratio', 'data-radius', 'data-cx', 'data-cy', 'data-rx', 'rx', 'data-tl', 'data-tr', 'data-bl', 'data-br', 'data-corner-linked', 'x', 'y', 'width', 'height',
+                'data-masked-image-url', 'data-mask-enabled', 'data-original-fill', 'data-original-stroke',
+                'data-slot-image-name', 'data-slot-image-meta', 'data-slot-original-url',
+                'data-slot-pan-x', 'data-slot-pan-y', 'data-slot-zoom',
+                'data-slot-base-x', 'data-slot-base-y', 'data-slot-base-w', 'data-slot-base-h'
+              ].includes(attr.name)) {
                 props[attr.name] = attr.value;
               }
             });
+            const innerFill = innerShape.getAttribute('fill');
+            if (innerFill && innerFill.includes('url(#pattern-')) {
+              props.fill = innerFill;
+            }
             const innerD = innerShape.getAttribute('d') || '';
             const isInnerDiamond = props['data-shape-type'] === 'diamond' ||
               props['data-shape-id'] === 'rounded-diamond' ||
@@ -638,7 +652,27 @@ const RightSidebar = ({
           (!el.getAttribute('data-is-image-group') && !el.getAttribute('data-is-video-group') && !el.getAttribute('data-is-gif-group') && dataType !== 'icon' && lowerDataName !== 'icon' && !lowerId.includes('icon'))
         ) && el.getAttribute('data-is-image-group') !== 'true' && el.getAttribute('data-is-video-group') !== 'true' && el.getAttribute('data-is-gif-group') !== 'true' && dataType !== 'icon' && lowerDataName !== 'icon' && !lowerId.includes('icon');
 
-        const isImage = !isUserGroup && (lowerTagName.includes('image') ||
+        const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
+          el.getAttribute('data-shape-type') !== null ||
+          el.getAttribute('data-type') === 'shape' ||
+          el.getAttribute('data-type') === 'vector-path' ||
+          el.getAttribute('data-mask-enabled') === 'true' ||
+          lowerId.startsWith('vpath-') ||
+          (el.closest && (
+            el.closest('[data-is-element-shape="true"]') !== null ||
+            el.closest('[data-shape-type]') !== null ||
+            el.closest('[data-type="shape"]') !== null ||
+            el.closest('[data-type="vector-path"]') !== null ||
+            el.closest('[data-mask-enabled="true"]') !== null
+          )) ||
+          (el.querySelector && (
+            el.querySelector('[data-is-element-shape="true"]') !== null ||
+            el.querySelector('[data-shape-type]') !== null ||
+            el.querySelector('[data-type="shape"]') !== null ||
+            el.querySelector('[data-type="vector-path"]') !== null
+          ));
+
+        const isImage = !isUserGroup && !isElementShape && el.getAttribute('data-type') !== 'vector-path' && (lowerTagName.includes('image') ||
           lowerTagName === 'img' ||
           dataType === 'image' ||
           lowerDataName.includes('image') ||
@@ -651,25 +685,16 @@ const RightSidebar = ({
         const isText = (lowerTagName === 'text' || lowerTagName === 'tspan' || (lowerTagName === 'foreignobject' && !isVideo)) || dataType === 'text' || lowerDataName.includes('text') || lowerId.includes('text');
         const isIcon = dataType === 'icon' || dataType === 'hotspot' || lowerDataName.includes('icon') || lowerDataName.includes('hotspot') || lowerId.includes('icon') || lowerId.includes('hotspot') || lowerTagName.includes('lucide') || el.classList.contains('lucide') || el.classList.contains('iconify');
 
-                const isElementShape = el.getAttribute('data-is-element-shape') === 'true' ||
-          el.getAttribute('data-shape-type') !== null ||
-          el.getAttribute('data-type') === 'shape' ||
-          (el.closest && (
-            el.closest('[data-is-element-shape="true"]') !== null ||
-            el.closest('[data-shape-type]') !== null ||
-            el.closest('[data-type="shape"]') !== null
-          )) ||
-          (el.querySelector && (
-            el.querySelector('[data-is-element-shape="true"]') !== null ||
-            el.querySelector('[data-shape-type]') !== null ||
-            el.querySelector('[data-type="shape"]') !== null
-          ));
+        const isElementTitle = el.getAttribute('data-subtopic') === 'Titles' ||
+          el.getAttribute('data-typography-type') === 'motion-graphic' ||
+          el.getAttribute('data-motion-template') !== null ||
+          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"]') !== null;
 
         const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
           el.getAttribute('data-typography-type') === 'kinetic' ||
           el.getAttribute('data-typography-type') === 'motion-graphic' ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('typography-')) ||
-          (el.querySelector && el.querySelector('[data-is-element-typography="true"], [data-typography-type]'));
+          el.getAttribute('data-motion-template') !== null ||
+          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"]') !== null;
 
         const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
         const isElementButton = el.getAttribute('data-is-element-button') === 'true' ||
@@ -733,11 +758,13 @@ const RightSidebar = ({
         props.isQRCode = isQRCode;
 
         props.isElementShape = isElementShape;
+        props.isElementTitle = isElementTitle;
         props.isElementTypography = isElementTypography;
         props.isElementButton = isElementButton;
         props.isImageFrame = isImageFrame;
         props.isUserGroup = isUserGroup &&
           !isElementShape &&
+          !isElementTitle &&
           !isElementTypography &&
           !isElementButton &&
           !isImageFrame &&
@@ -756,12 +783,12 @@ const RightSidebar = ({
           props.isElementShape = false;
         }
 
-        props.isImage = (isElementButton || isElementShape) ? false : isImage;
-        props.isText = (isElementButton || isElementShape) ? false : isText;
-        props.isVideo = (isElementButton || isElementShape) ? false : isVideo;
-        props.isGif = (isElementButton || isElementShape) ? false : isGif;
-        props.isIcon = (isElementButton || isElementShape) ? false : isIcon;
-        props.isPdfBackground = (isElementButton || isElementShape) ? false : isPdfBackground;
+        props.isImage = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isImage;
+        props.isText = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isText;
+        props.isVideo = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isVideo;
+        props.isGif = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isGif;
+        props.isIcon = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isIcon;
+        props.isPdfBackground = (isElementButton || isElementShape || isElementTitle || isElementTypography) ? false : isPdfBackground;
 
         return props;
       }
@@ -1079,11 +1106,22 @@ const RightSidebar = ({
                           selectedElementProps={selectedElementProps}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const el = editorDoc.getElementById(selectedLayerId);
+                            const targetEl = el?.closest?.('[data-type="map"], g[id^="map-"]') || el;
+                            if (targetEl && newHtml) {
+                              const parser = new DOMParser();
+                              const parsedDoc = parser.parseFromString(newHtml, 'text/html');
+                              const freshContainer = parsedDoc.querySelector('.map-root-container');
+                              const currentContainer = targetEl.querySelector('.map-root-container');
+                              if (freshContainer && currentContainer) {
+                                currentContainer.innerHTML = freshContainer.innerHTML;
+                              }
+                            }
                             const svgRoot = (() => {
-                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                              const el = editorDoc.getElementById(selectedLayerId);
                               if (!el) return null;
                               const container = el.closest('.page-svg-container');
                               if (container) {
@@ -1267,15 +1305,25 @@ const RightSidebar = ({
                           updateElementAttribute={updateElementAttribute}
                           selectedElementProps={selectedElementProps}
                         />
+                      ) : selectedElementProps?.isElementTitle ? (
+                        <ElementTitlesProperties
+                          selectedElement={(() => {
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            return editorDoc.getElementById(selectedLayerId);
+                          })()}
+                          selectedLayerId={selectedLayerId}
+                          activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
+                        />
                       ) : selectedElementProps?.isElementTypography ? (
                         <TextElementEditor
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                             return editorDoc.getElementById(selectedLayerId);
                           })()}
-                          updateElementAttribute={updateElementAttribute}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
+                          updateElementAttribute={updateElementAttribute}
                         />
                       ) : selectedElementProps?.isText ? (
                         <TextProperties

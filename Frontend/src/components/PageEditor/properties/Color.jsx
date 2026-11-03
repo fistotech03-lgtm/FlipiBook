@@ -389,9 +389,18 @@ const Color = ({
             defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.remove();
           }
 
+          const isMaskedShape = Boolean(
+            el.getAttribute('data-mask-enabled') === 'true' ||
+            el.getAttribute('data-masked-image-url') ||
+            (el.getAttribute('fill') && el.getAttribute('fill').includes('url(#pattern-'))
+          );
+
           if (isEligibleShape) {
             if (!isStrokeGradient) {
               el.setAttribute('stroke', backgroundColor.stroke);
+            }
+            if (el.hasAttribute('data-original-stroke')) {
+              el.removeAttribute('data-original-stroke');
             }
 
             // Outside stroke: stroke-width is sw * 2 with paint-order: stroke fill (inner half is covered by fill)

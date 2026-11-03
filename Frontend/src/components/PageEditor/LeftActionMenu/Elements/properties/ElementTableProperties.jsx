@@ -90,19 +90,19 @@ const parseRgbaColor = (colorStr, defaultHex = '#ffffff') => {
 // Section Header matching standard styling
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
+    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
 );
 
-// PropertyRow matching exact alignment (w-[5.6vw] pl-[0.5vw])
+// PropertyRow matching exact alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
+    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
+      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
         {label}
       </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
+      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
       {children}
@@ -150,10 +150,10 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
             if (!val.startsWith('#') && val.length > 0) val = '#' + val;
             onChange(val);
           }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
+          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
           maxLength={7}
         />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
       </div>
     </div>
   );
@@ -175,7 +175,7 @@ const ElementTableProperties = ({
   const [borderColor, setBorderColor] = useState('#d1d5db');
   const [borderOpacity, setBorderOpacity] = useState(100);
   const [borderWidth, setBorderWidth] = useState(2);
-  const [borderRadius, setBorderRadius] = useState(4);
+  const [borderRadius, setBorderRadius] = useState(0);
 
   // Structure states
   const [rowsCount, setRowsCount] = useState(3);
@@ -302,9 +302,12 @@ const ElementTableProperties = ({
       td.style.setProperty('box-shadow', 'inset 0 0 0 1000px rgba(37, 99, 235, 0.12)', 'important');
     } else {
       td.removeAttribute('data-cell-selected');
+      td.removeAttribute('contenteditable');
       td.style.removeProperty('outline');
       td.style.removeProperty('outline-offset');
       td.style.removeProperty('box-shadow');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
     }
   };
 
@@ -432,6 +435,11 @@ const ElementTableProperties = ({
     setIsList(list);
     setAutoWidth(aWidth);
     setAutoHeight(aHeight);
+
+    // Initial check on element selection to auto-expand if content overflows
+    setTimeout(() => {
+      fitTableHeightToContent(el);
+    }, 60);
     setSelectedCellText('');
   };
 
@@ -467,7 +475,7 @@ const ElementTableProperties = ({
   const clearCellSelection = (targetEl) => {
     const el = targetEl || getTargetElement();
     if (el) {
-      el.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+      el.querySelectorAll('td[data-cell-selected], th[data-cell-selected], td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
         markCellSelected(td, 0, 0, false);
       });
       syncInspectorWithTable(el);
@@ -619,6 +627,9 @@ const ElementTableProperties = ({
         const nextTd = table.querySelector(`td[data-row="${nextR}"][data-col="${nextC}"]`);
         if (nextTd) {
           selectCellRange(el, nextR, nextC, nextR, nextC, false);
+          nextTd.setAttribute('contenteditable', 'true');
+          nextTd.style.cursor = 'text';
+          nextTd.style.userSelect = 'text';
           nextTd.focus();
         }
       }
@@ -629,6 +640,9 @@ const ElementTableProperties = ({
         const nextTd = table.querySelector(`td[data-row="${nextR}"][data-col="${c}"]`);
         if (nextTd) {
           selectCellRange(el, nextR, c, nextR, c, false);
+          nextTd.setAttribute('contenteditable', 'true');
+          nextTd.style.cursor = 'text';
+          nextTd.style.userSelect = 'text';
           nextTd.focus();
         }
       }
@@ -659,6 +673,18 @@ const ElementTableProperties = ({
           const curR = parseInt(td.getAttribute('data-row') || '0', 10);
           const curC = parseInt(td.getAttribute('data-col') || '0', 10);
           handleCellMouseEnter(curR, curC);
+        });
+        td.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          td.setAttribute('contenteditable', 'true');
+          td.style.cursor = 'text';
+          td.style.userSelect = 'text';
+          td.focus();
+        });
+        td.addEventListener('blur', () => {
+          td.removeAttribute('contenteditable');
+          td.style.cursor = 'default';
+          td.style.userSelect = 'none';
         });
         td.addEventListener('keydown', (e) => handleCellKeyDown(e, td));
       });
@@ -733,11 +759,34 @@ const ElementTableProperties = ({
       });
     }
 
+    fitTableHeightToContent(el);
     syncChanges(el);
     if (typeof window.drawOverlayHighlight === 'function') {
       window.drawOverlayHighlight(el, 'selected');
     }
   };
+
+  // Automatically fit bounding box height to table contents to avoid cutoff
+  const fitTableHeightToContent = (el) => {
+    if (!el) return;
+    const isAutoH = el.getAttribute('data-auto-height') !== 'false';
+    if (!isAutoH) return;
+    const fo = el.querySelector('foreignObject');
+    const table = el.querySelector('table');
+    const overlay = el.querySelector('.svg-table-overlay, .svg-image-stroke-overlay');
+    if (!fo || !table) return;
+
+    const scrollH = table.scrollHeight || table.offsetHeight;
+    if (scrollH && scrollH > 20) {
+      const curH = parseFloat(fo.getAttribute('height') || '0');
+      if (Math.abs(scrollH - curH) > 2) {
+        const newH = Math.max(scrollH, 40);
+        fo.setAttribute('height', String(newH));
+        if (overlay) overlay.setAttribute('height', String(newH));
+      }
+    }
+  };
+
 
   // Automatically check if table overflows the page bounds and fit it
   // If table was stretched by an outer scale matrix, bake the scale into foreignObject width & height and reset scale to 1
@@ -858,7 +907,13 @@ const ElementTableProperties = ({
     if (!el) return;
     const existingTable = el.querySelector('table');
     if (existingTable) {
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       return;
     }
 
@@ -888,7 +943,7 @@ const ElementTableProperties = ({
     for (let r = 0; r < rows; r++) {
       rowsHtml += `<tr style="height: ${rowHeightPct}%; box-sizing: border-box;">`;
       for (let c = 0; c < cols; c++) {
-        rowsHtml += `<td contenteditable="true" data-row="${r}" data-col="${c}" style="width: ${colWidthPct}%; height: 100%; border: ${Math.max(1, Math.round(bWidth / 2))}px solid ${bColor}; padding: 6px 8px; color: #000000; text-align: left; vertical-align: middle; box-sizing: border-box; word-break: break-word; outline: none; background-color: #ffffff;"></td>`;
+        rowsHtml += `<td data-row="${r}" data-col="${c}" style="width: ${colWidthPct}%; height: 100%; border: ${Math.max(1, Math.round(bWidth / 2))}px solid ${bColor}; padding: 6px 8px; color: #000000; text-align: left; vertical-align: middle; box-sizing: border-box; word-break: break-word; outline: none; background-color: #ffffff; cursor: default; user-select: none;"></td>`;
       }
       rowsHtml += '</tr>';
     }
@@ -896,14 +951,6 @@ const ElementTableProperties = ({
     fo.innerHTML = `<div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${bRadius}px;overflow:hidden;display:block;margin:0;padding:0;white-space:normal;line-height:normal;pointer-events:auto;"><table style="width:100%;height:100%;border-collapse:collapse;border:${bWidth}px solid ${bColor};background-color:${tColor};font-family:'Poppins',sans-serif;font-size:13px;table-layout:fixed;margin:0;padding:0;white-space:normal;box-sizing:border-box;"><tbody>${rowsHtml}</tbody></table></div>`;
 
     el.appendChild(fo);
-
-    const overlayRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    overlayRect.setAttribute('class', 'svg-table-overlay svg-image-stroke-overlay');
-    overlayRect.setAttribute('width', w.toString());
-    overlayRect.setAttribute('height', h.toString());
-    overlayRect.setAttribute('fill', 'transparent');
-    overlayRect.setAttribute('pointer-events', 'none');
-    el.appendChild(overlayRect);
 
     el.setAttribute('data-type', 'table-frame');
     el.setAttribute('data-rows', rows.toString());
@@ -913,6 +960,12 @@ const ElementTableProperties = ({
     el.setAttribute('data-border-width', bWidth.toString());
     el.setAttribute('data-border-radius', bRadius.toString());
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     syncChanges(el);
   };
@@ -929,6 +982,14 @@ const ElementTableProperties = ({
     ensureTableStructure(el);
     // Ensure table fits inside the page
     checkAndFitTable(el);
+    // Remove any ghost overlay rects that were saved on the table
+    el.querySelectorAll('rect.svg-table-overlay, rect.svg-image-stroke-overlay, rect.table-fill-layer').forEach(r => r.remove());
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
 
     const bStyle = el.getAttribute('data-border-style') || 'solid';
@@ -937,7 +998,7 @@ const ElementTableProperties = ({
     const bColor = el.getAttribute('data-border-color') || '#d1d5db';
     const bOpacity = parseInt(el.getAttribute('data-border-opacity') || '100', 10);
     const bWidth = parseInt(el.getAttribute('data-border-width') || '2', 10);
-    const bRadius = parseInt(el.getAttribute('data-border-radius') || '4', 10);
+    const bRadius = parseInt(el.getAttribute('data-border-radius') || '0', 10);
 
     setBorderStyle(bStyle);
     setThemeColor(tColor);
@@ -997,6 +1058,7 @@ const ElementTableProperties = ({
         if (selectedCellKeys.has(`${r}_${c}`)) {
           setSelectedCellText(e.target.textContent || '');
         }
+        fitTableHeightToContent(el);
         syncChanges(el);
       }
     };
@@ -1224,6 +1286,7 @@ const ElementTableProperties = ({
       }
     }
 
+    fitTableHeightToContent(el);
     syncChanges(el);
     if (typeof window.drawOverlayHighlight === 'function') {
       window.drawOverlayHighlight(el, 'selected');
@@ -1374,7 +1437,8 @@ const ElementTableProperties = ({
         for (let c = minC; c <= maxC; c++) {
           const cell = row.getCell(c);
           const td = document.createElement('td');
-          td.setAttribute('contenteditable', 'true');
+          td.style.cursor = 'default';
+          td.style.userSelect = 'none';
           td.setAttribute('data-row', (r - minR).toString());
           td.setAttribute('data-col', (c - minC).toString());
           td.style.border = borderCss;
@@ -1434,7 +1498,13 @@ const ElementTableProperties = ({
       setIsScrollable(true);
       applyTableStyles({ isScrollable: true });
       fitTableToPage(el);
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     } catch (err) {
       console.error('Failed to import Excel:', err);
@@ -1603,6 +1673,12 @@ const ElementTableProperties = ({
       });
     });
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     checkAndFitTable(el);
     syncChanges(el);
@@ -1638,7 +1714,8 @@ const ElementTableProperties = ({
 
     trs.forEach((tr) => {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.border = `${bW}px ${borderStyle} ${bColorRgba}`;
       newTd.style.padding = `${paddingY}px ${paddingX}px`;
       newTd.style.color = cColorRgba;
@@ -1702,6 +1779,12 @@ const ElementTableProperties = ({
       }
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     const activeR = selectedCellKeys.size > 0 ? parseInt(Array.from(selectedCellKeys)[0].split('_')[0], 10) : 0;
     selectCellRange(el, activeR, insertColIdx, activeR, insertColIdx, false);
@@ -1750,6 +1833,12 @@ const ElementTableProperties = ({
       });
     });
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     clearCellSelection(el);
     applyTableStyles();
@@ -1792,7 +1881,8 @@ const ElementTableProperties = ({
     const colWidthPct = (100 / Math.max(1, currentCols)).toFixed(3);
     for (let c = 0; c < currentCols; c++) {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.width = `${colWidthPct}%`;
       newTd.style.height = '100%';
       newTd.style.border = `${bW}px ${borderStyle} ${bColorRgba}`;
@@ -1846,6 +1936,12 @@ const ElementTableProperties = ({
       if (overlay) overlay.setAttribute('height', newH.toString());
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     const activeC = selectedCellKeys.size > 0 ? parseInt(Array.from(selectedCellKeys)[0].split('_')[1], 10) : 0;
     selectCellRange(el, insertRowIdx, activeC, insertRowIdx, activeC, false);
@@ -1902,6 +1998,12 @@ const ElementTableProperties = ({
       if (overlay) overlay.setAttribute('height', newH.toString());
     }
 
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     clearCellSelection(el);
     applyTableStyles();
@@ -1972,7 +2074,8 @@ const ElementTableProperties = ({
       if (parentRow && span > 1) {
         for (let i = 1; i < span; i++) {
           const newTd = document.createElement('td');
-          newTd.setAttribute('contenteditable', 'true');
+          newTd.style.cursor = 'default';
+          newTd.style.userSelect = 'none';
           newTd.style.border = `${Math.max(1, Math.round(borderWidth / 2))}px ${borderStyle} ${hexToRgba(borderColor, borderOpacity)}`;
           newTd.style.padding = `${paddingY}px ${paddingX}px`;
           newTd.style.color = hexToRgba(cellColor, cellOpacity);
@@ -1986,6 +2089,12 @@ const ElementTableProperties = ({
         }
       }
     });
+    // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
     attachCellListeners(el);
     syncChanges(el);
   };
@@ -1996,7 +2105,8 @@ const ElementTableProperties = ({
     const lastRow = el.querySelector('tr:last-child');
     if (lastRow) {
       const newTd = document.createElement('td');
-      newTd.setAttribute('contenteditable', 'true');
+      newTd.style.cursor = 'default';
+      newTd.style.userSelect = 'none';
       newTd.style.border = `${Math.max(1, Math.round(borderWidth / 2))}px ${borderStyle} ${hexToRgba(borderColor, borderOpacity)}`;
       newTd.style.padding = `${paddingY}px ${paddingX}px`;
       newTd.style.color = hexToRgba(cellColor, cellOpacity);
@@ -2007,7 +2117,13 @@ const ElementTableProperties = ({
       newTd.style.outline = 'none';
       newTd.style.backgroundColor = 'transparent';
       lastRow.appendChild(newTd);
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     }
   };
@@ -2024,7 +2140,13 @@ const ElementTableProperties = ({
         lastRow.remove();
         setRowsCount(Math.max(1, rowsCount - 1));
       }
-      attachCellListeners(el);
+      // Clean up any legacy active contenteditable on existing cells
+    el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+      td.removeAttribute('contenteditable');
+      td.style.cursor = 'default';
+      td.style.userSelect = 'none';
+    });
+    attachCellListeners(el);
       syncChanges(el);
     }
   };
@@ -2061,7 +2183,7 @@ const ElementTableProperties = ({
         <div className="grid grid-cols-2 gap-[0.5vw] pl-[0.5vw] pr-[0.2vw]">
           <button
             onClick={handleCopyCells}
-            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-medium"
+            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-semibold"
             title="Copy selected cells or table to clipboard (TSV)"
           >
             <Copy size="0.85vw" />
@@ -2070,7 +2192,7 @@ const ElementTableProperties = ({
 
           <button
             onClick={() => handlePasteCells()}
-            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-medium"
+            className="flex items-center justify-center gap-[0.4vw] border border-gray-200 rounded-[0.4vw] h-[2vw] bg-white hover:bg-gray-50 hover:border-gray-300 active:scale-98 transition-all text-gray-700 shadow-2xs text-[0.72vw] font-semibold"
             title="Paste tabular text into table"
           >
             <ClipboardPaste size="0.85vw" />
@@ -2083,7 +2205,7 @@ const ElementTableProperties = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-[0.4vw]">
               <MousePointer size="0.85vw" className="text-[#E05638]" />
-              <span className="text-[0.75vw] font-bold text-gray-700">
+              <span className="text-[0.75vw] font-semibold text-gray-700">
                 {getSelectionCoordinateLabel()}
               </span>
             </div>
@@ -2105,7 +2227,7 @@ const ElementTableProperties = ({
                     }
                   }
                 }}
-                className="text-[0.7vw] text-gray-500 hover:text-gray-700 font-medium cursor-pointer"
+                className="text-[0.7vw] text-gray-500 hover:text-gray-700 font-semibold cursor-pointer"
               >
                 Select All
               </button>
@@ -2114,7 +2236,7 @@ const ElementTableProperties = ({
 
           {selectedCellKeys.size > 0 && (
             <div className="flex flex-col gap-[0.2vw] mt-[0.2vw]">
-              <span className="text-[0.7vw] text-gray-500 font-medium">Edit Selected Content:</span>
+              <span className="text-[0.7vw] text-gray-500 font-semibold">Edit Selected Content:</span>
               <textarea
                 value={selectedCellText}
                 onChange={(e) => {
@@ -2150,10 +2272,10 @@ const ElementTableProperties = ({
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
               <div className="flex items-center gap-[0.6vw]">
-                <span className="font-bold text-[0.85vw] text-gray-700">
+                <span className="font-semibold text-[0.85vw] text-gray-700">
                   {BORDER_STYLES.find(s => s.id === borderStyle)?.icon || '—'}
                 </span>
-                <span className="text-[0.78vw] font-medium text-gray-700 capitalize">
+                <span className="text-[0.78vw] font-semibold text-gray-700 capitalize">
                   {BORDER_STYLES.find(s => s.id === borderStyle)?.label || 'Solid'}
                 </span>
               </div>
@@ -2174,7 +2296,7 @@ const ElementTableProperties = ({
                       borderStyle === style.id ? 'bg-[#E05638]/10 font-semibold text-[#E05638]' : 'text-gray-700'
                     }`}
                   >
-                    <span className="w-[1.5vw] font-bold text-gray-600">{style.icon}</span>
+                    <span className="w-[1.5vw] font-semibold text-gray-600">{style.icon}</span>
                     <span>{style.label}</span>
                   </div>
                 ))}
@@ -2186,64 +2308,64 @@ const ElementTableProperties = ({
         {/* Border Presets Grid */}
         <div className="flex flex-col gap-[0.3vw] pl-[0.5vw] pr-[0.2vw]">
           <div className="flex items-center justify-between">
-            <span className="text-[0.74vw] text-gray-700 font-medium">Border Presets</span>
-            <span className="text-[0.68vw] text-gray-400 font-medium">
+            <span className="text-[0.74vw] text-gray-700 font-semibold">Border Presets</span>
+            <span className="text-[0.68vw] text-gray-400 font-semibold">
               {selectedCellKeys.size > 0 ? `${selectedCellKeys.size} cells` : 'Whole table'}
             </span>
           </div>
           <div className="grid grid-cols-4 gap-[0.35vw]">
             <button
               onClick={() => applyBorderPreset('all')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="All Borders"
             >
               All
             </button>
             <button
               onClick={() => applyBorderPreset('outer')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Outer Box Border"
             >
               Outer
             </button>
             <button
               onClick={() => applyBorderPreset('none')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="No Border"
             >
               None
             </button>
             <button
               onClick={() => applyBorderPreset('bottom')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Bottom Border"
             >
               Bottom
             </button>
             <button
               onClick={() => applyBorderPreset('top')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Top Border"
             >
               Top
             </button>
             <button
               onClick={() => applyBorderPreset('left')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Left Border"
             >
               Left
             </button>
             <button
               onClick={() => applyBorderPreset('right')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-medium text-gray-700 active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-gray-50 hover:border-[#E05638] text-[0.72vw] font-semibold text-gray-700 active:scale-98 transition-all shadow-2xs"
               title="Right Border"
             >
               Right
             </button>
             <button
               onClick={() => applyBorderPreset('clear')}
-              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-red-50 hover:border-red-300 text-red-600 text-[0.72vw] font-medium active:scale-98 transition-all shadow-2xs"
+              className="border border-gray-200 rounded-[0.4vw] h-[1.9vw] bg-white hover:bg-red-50 hover:border-red-300 text-red-600 text-[0.72vw] font-semibold active:scale-98 transition-all shadow-2xs"
               title="Clear All Borders"
             >
               Clear
@@ -2298,7 +2420,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{borderWidth}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{borderWidth}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2322,7 +2444,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{borderRadius}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{borderRadius}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2335,7 +2457,7 @@ const ElementTableProperties = ({
         {/* Scroll Option Toggle */}
         <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
           <div className="flex items-center gap-[0.4vw]">
-            <span className="text-[0.78vw] font-medium text-gray-700">Scroll Option</span>
+            <span className="text-[0.78vw] font-semibold text-gray-700">Scroll Option</span>
             <span className={`text-[0.6vw] px-[0.35vw] py-[0.08vw] rounded font-semibold ${
               isScrollable ? 'bg-[#E05638]/10 text-[#E05638]' : 'bg-gray-100 text-gray-500'
             }`}>
@@ -2381,7 +2503,7 @@ const ElementTableProperties = ({
                 <polyline points="12 19 5 12 12 5" />
                 <line x1="5" y1="5" x2="5" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Left</span>
+              <span className="text-[0.68vw] font-semibold">+ Left</span>
             </button>
             <button
               onClick={() => handleInsertColumn('right')}
@@ -2393,7 +2515,7 @@ const ElementTableProperties = ({
                 <polyline points="12 5 19 12 12 19" />
                 <line x1="19" y1="5" x2="19" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Right</span>
+              <span className="text-[0.68vw] font-semibold">+ Right</span>
             </button>
             <button
               onClick={handleSelectEntireCol}
@@ -2408,7 +2530,7 @@ const ElementTableProperties = ({
               title={selectedCellKeys.size > 0 ? "Delete selected column(s)" : "Delete last column"}
             >
               <Trash2 size="0.75vw" />
-              <span className="text-[0.68vw] font-medium">Delete</span>
+              <span className="text-[0.68vw] font-semibold">Delete</span>
             </button>
           </div>
         </PropertyRow>
@@ -2426,7 +2548,7 @@ const ElementTableProperties = ({
                 <polyline points="5 12 12 5 19 12" />
                 <line x1="5" y1="5" x2="19" y2="5" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Above</span>
+              <span className="text-[0.68vw] font-semibold">+ Above</span>
             </button>
             <button
               onClick={() => handleInsertRow('below')}
@@ -2438,7 +2560,7 @@ const ElementTableProperties = ({
                 <polyline points="19 12 12 19 5 12" />
                 <line x1="5" y1="19" x2="19" y2="19" />
               </svg>
-              <span className="text-[0.68vw] font-medium">+ Below</span>
+              <span className="text-[0.68vw] font-semibold">+ Below</span>
             </button>
             <button
               onClick={handleSelectEntireRow}
@@ -2453,14 +2575,14 @@ const ElementTableProperties = ({
               title={selectedCellKeys.size > 0 ? "Delete selected row(s)" : "Delete last row"}
             >
               <Trash2 size="0.75vw" />
-              <span className="text-[0.68vw] font-medium">Delete</span>
+              <span className="text-[0.68vw] font-semibold">Delete</span>
             </button>
           </div>
         </PropertyRow>
 
         {/* Cell Operation */}
         <div className="flex flex-col gap-[0.4vw] mt-[0.2vw] pl-[0.5vw] pr-[0.2vw]">
-          <span className="text-[0.78vw] text-gray-700 font-medium">Cell Operation</span>
+          <span className="text-[0.78vw] text-gray-700 font-semibold">Cell Operation</span>
           <div className="grid grid-cols-2 gap-[0.5vw]">
             <button
               onClick={handleMergeCells}
@@ -2471,7 +2593,7 @@ const ElementTableProperties = ({
                 <path d="M16 9l4 3-4 3" />
                 <line x1="12" y1="5" x2="12" y2="19" />
               </svg>
-              <span className="text-[0.72vw] font-medium">Merge Cells</span>
+              <span className="text-[0.72vw] font-semibold">Merge Cells</span>
             </button>
             <button
               onClick={handleUnmergeCells}
@@ -2483,7 +2605,7 @@ const ElementTableProperties = ({
                 <polyline points="7 9 4 12 7 15" />
                 <polyline points="17 9 20 12 17 15" />
               </svg>
-              <span className="text-[0.72vw] font-medium">Unmerge Cells</span>
+              <span className="text-[0.72vw] font-semibold">Unmerge Cells</span>
             </button>
           </div>
 
@@ -2546,7 +2668,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontFamilyOpen(!isFontFamilyOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700 truncate">{fontFamily}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700 truncate">{fontFamily}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
             </button>
             {isFontFamilyOpen && (
@@ -2577,7 +2699,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontSizeOpen(!isFontSizeOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700">{fontSize}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700">{fontSize}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0" />
             </button>
             {isFontSizeOpen && (
@@ -2610,7 +2732,7 @@ const ElementTableProperties = ({
               onClick={() => setIsFontWeightOpen(!isFontWeightOpen)}
               className="w-full flex items-center justify-between border border-gray-200 rounded-[0.5vw] h-[2.5vw] px-[0.7vw] bg-white hover:border-[#E05638] transition-colors shadow-2xs"
             >
-              <span className="text-[0.78vw] font-medium text-gray-700 truncate">{fontWeight}</span>
+              <span className="text-[0.78vw] font-semibold text-gray-700 truncate">{fontWeight}</span>
               <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0" />
             </button>
             {isFontWeightOpen && (
@@ -2647,7 +2769,7 @@ const ElementTableProperties = ({
             }`}
             title="Auto Table Width"
           >
-            <span className="text-[0.72vw] font-medium">Auto</span>
+            <span className="text-[0.72vw] font-semibold">Auto</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12h16" />
               <polyline points="7 9 4 12 7 15" />
@@ -2669,7 +2791,7 @@ const ElementTableProperties = ({
             }`}
             title="Auto Row Height"
           >
-            <span className="text-[0.72vw] font-medium">Auto</span>
+            <span className="text-[0.72vw] font-semibold">Auto</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 4v16" />
               <polyline points="9 7 12 4 15 7" />
@@ -2709,11 +2831,11 @@ const ElementTableProperties = ({
               applyTableStyles({ isBold: next });
             }}
             className={`flex items-center justify-center border rounded-[0.5vw] h-[2.5vw] shadow-2xs transition-colors ${
-              isBold ? 'border-[#E05638] bg-[#E05638]/5 text-[#E05638] font-bold' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700'
+              isBold ? 'border-[#E05638] bg-[#E05638]/5 text-[#E05638] font-semibold' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700'
             }`}
             title="Bold"
           >
-            <span className="font-extrabold text-[0.9vw]">B</span>
+            <span className="font-semibold text-[0.9vw]">B</span>
           </button>
 
           {/* Strikethrough / Dash */}
@@ -2728,7 +2850,7 @@ const ElementTableProperties = ({
             }`}
             title="Strikethrough"
           >
-            <span className="font-bold text-[1vw] leading-none">—</span>
+            <span className="font-semibold text-[1vw] leading-none">—</span>
           </button>
 
           {/* List */}
@@ -2762,7 +2884,7 @@ const ElementTableProperties = ({
               <polyline points="7 12 12 17 17 12" />
               <line x1="4" y1="21" x2="20" y2="21" />
             </svg>
-            <span className="text-[0.74vw] font-medium text-[#E05638] capitalize">
+            <span className="text-[0.74vw] font-semibold text-[#E05638] capitalize">
               {verticalAlign} Align
             </span>
           </button>
@@ -2778,7 +2900,7 @@ const ElementTableProperties = ({
             }`}
           >
             <WrapText size="1vw" strokeWidth={2.2} className="text-gray-600" />
-            <span className="text-[0.74vw] font-medium">Text Wrapping</span>
+            <span className="text-[0.74vw] font-semibold">Text Wrapping</span>
           </button>
         </div>
 
@@ -2801,7 +2923,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{paddingX}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{paddingX}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2825,7 +2947,7 @@ const ElementTableProperties = ({
               }}
             />
             <div className="w-[3.2vw] h-[1.8vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.4vw] shadow-2xs">
-              <span className="text-[0.75vw] text-gray-700 font-medium">{paddingY}px</span>
+              <span className="text-[0.75vw] text-gray-700 font-semibold">{paddingY}px</span>
             </div>
           </div>
         </PropertyRow>
@@ -2837,7 +2959,7 @@ const ElementTableProperties = ({
 
         {/* Drop Shadow toggle */}
         <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-          <span className="text-[0.78vw] font-medium text-gray-700">Drop Shadow</span>
+          <span className="text-[0.78vw] font-semibold text-gray-700">Drop Shadow</span>
           <Toggle
             checked={hasDropShadow}
             onChange={(next) => {

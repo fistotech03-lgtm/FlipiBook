@@ -5,6 +5,8 @@ require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose');
+global.mongoose = mongoose;
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 

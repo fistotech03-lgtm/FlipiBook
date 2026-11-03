@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 const crypto = require('crypto');
 
 const flipbookMediaItemSchema = new mongoose.Schema(

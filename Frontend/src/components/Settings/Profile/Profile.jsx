@@ -149,6 +149,16 @@ const defaultProfile = {
   avatarBgColor: '#E8D4C8',
   about: '',
   mobile: '',
+  contact1: '',
+  contact1CountryCode: '+91',
+  contact1Label: 'Contact 1',
+  contact2: '',
+  contact2CountryCode: '+91',
+  contact2Label: 'Contact 2',
+  contact3: '',
+  contact3CountryCode: '+91',
+  contact3Label: 'Contact 3',
+  contactCount: 2,
   profileType: 'Individual',
   professionalTitle: '',
   companyName: '',
@@ -191,7 +201,6 @@ const Profile = () => {
   const context = useOutletContext();
   const navigate = useNavigate();
   const [localProfileData, setLocalProfileData] = useState({});
-  const [previewUser, setPreviewUser] = useState(null);
 
   const effectiveAuthUser = context?.user || authUser || getInitialUser();
   const user = useMemo(() => ({
@@ -200,9 +209,7 @@ const Profile = () => {
     ...localProfileData
   }), [effectiveAuthUser, localProfileData]);
 
-  const displayUser = useMemo(() => {
-    return previewUser ? { ...user, ...previewUser } : user;
-  }, [user, previewUser]);
+  const displayUser = user;
 
   const setUser = useCallback((updater) => {
     setLocalProfileData(prev => {
@@ -240,6 +247,21 @@ const Profile = () => {
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [activeStatsBookId, setActiveStatsBookId] = useState(null);
   const [isAvatarPopupOpen, setIsAvatarPopupOpen] = useState(false);
+  const bannerPopupRef = useRef(null);
+  const avatarPopupRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (bannerPopupRef.current && !bannerPopupRef.current.contains(e.target)) {
+        setIsColorPickerOpen(false);
+      }
+      if (avatarPopupRef.current && !avatarPopupRef.current.contains(e.target)) {
+        setIsAvatarPopupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
   const [activeTab, setActiveTab] = useState('Edit Profile');
   const [editProfileActions, setEditProfileActions] = useState(null);
   const [bannerBg, setBannerBg] = useState({
@@ -322,6 +344,16 @@ const Profile = () => {
             about: p.about !== undefined ? p.about : (user.about || ''),
             mobile: p.mobile !== undefined ? p.mobile : (user.mobile || ''),
             countryCode: p.countryCode || user.countryCode || '+91',
+            contact1: p.contact1 !== undefined ? p.contact1 : (user.contact1 || p.mobile || user.mobile || ''),
+            contact1CountryCode: p.contact1CountryCode || user.contact1CountryCode || p.countryCode || user.countryCode || '+91',
+            contact1Label: p.contact1Label !== undefined ? p.contact1Label : (user.contact1Label || 'Contact 1'),
+            contact2: p.contact2 !== undefined ? p.contact2 : (user.contact2 || ''),
+            contact2CountryCode: p.contact2CountryCode || user.contact2CountryCode || '+91',
+            contact2Label: p.contact2Label !== undefined ? p.contact2Label : (user.contact2Label || 'Contact 2'),
+            contact3: p.contact3 !== undefined ? p.contact3 : (user.contact3 || ''),
+            contact3CountryCode: p.contact3CountryCode || user.contact3CountryCode || '+91',
+            contact3Label: p.contact3Label !== undefined ? p.contact3Label : (user.contact3Label || 'Contact 3'),
+            contactCount: p.contactCount !== undefined ? p.contactCount : (user.contactCount || 2),
             displayName: p.displayName || p.name || user.displayName || '',
             profileType: p.profileType || user.profileType || 'Individual',
             professionalTitle: p.professionalTitle || p.title || user.professionalTitle || user.title || '',
@@ -567,7 +599,7 @@ const Profile = () => {
 
         {/* Top right menu icon - Moved outside banner wrapper to avoid stacking context issues */}
         <div className="sticky top-0 z-[60] w-full pointer-events-none" style={{ height: 0 }}>
-          <div className="absolute top-[1vw] right-[1vw] pointer-events-auto flex items-center gap-[0.4vw]">
+          <div ref={bannerPopupRef} className="absolute top-[1vw] right-[1vw] pointer-events-auto flex items-center gap-[0.4vw]">
             {(bannerBg.type === 'image' || bannerBg.type === 'media') && bannerBg.value && (
               <button
                 onClick={() => {
@@ -697,7 +729,7 @@ const Profile = () => {
                 </div>
 
                 {/* Camera Edit Icon badge matching screenshot */}
-                <div className="absolute top-[1.5vw] right-[0.8vw] z-20">
+                <div ref={avatarPopupRef} className="absolute top-[1.5vw] right-[0.8vw] z-20">
                   <button
                     onClick={() => {
                       setIsAvatarPopupOpen(!isAvatarPopupOpen);
@@ -1278,7 +1310,6 @@ const Profile = () => {
                     user={user}
                     setUser={setUser}
                     onActionReady={setEditProfileActions}
-                    onPreviewChange={setPreviewUser}
                   />
                 )}
 

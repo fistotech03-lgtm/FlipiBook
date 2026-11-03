@@ -11,10 +11,13 @@ import plantLightPlant from '../../../assets/Bookshelf/plant-light/plant.png';
 import plantLightDecor from '../../../assets/Bookshelf/plant-light/decor.png';
 import plantLightLeaf from '../../../assets/Bookshelf/plant-light/leaf.png';
 import plantLightLamp from '../../../assets/Bookshelf/plant-light/lamp.png';
+import plantLightSwitch from '../../../assets/Bookshelf/plant-light/switch.png';
 
 const PlantLightShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   selectedLightTheme,
   selectedWallTheme,
   openMenuId,
@@ -65,9 +68,33 @@ const PlantLightShelf = ({
                       />
                     </div>
 
+                    {/* Wall Light Switch in top-right */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-35 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '4.5%',
+                          top: '9.0%',
+                          width: '2.5%'
+                        }}
+                        title={decors?.lights ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={plantLightSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200"
+                        />
+                      </div>
+                    )}
+
                     {/* Shelf 1 (Top Tier Plank): spans from left 8.25% to right 100% */}
                     <div
-                      className="absolute pointer-events-none z-10"
+                      className="absolute pointer-events-none z-10 transition-all duration-300"
                       style={{
                         top: '35.5%',
                         left: '8.25%',
@@ -77,30 +104,35 @@ const PlantLightShelf = ({
                       <img
                         src={plantLightShelf1}
                         alt="Plant Shelf Tier 1"
-                        className="w-full h-auto block drop-shadow-md"
+                        className="w-full h-auto block drop-shadow-md transition-all duration-300"
+                        style={{
+                          filter: decors.lights !== false ? 'none' : 'brightness(0.78) contrast(0.92)'
+                        }}
                       />
                     </div>
 
                     {/* Shelf 1 Plant Image (Over Shelf 1): Hanging leafy vine on left, dried floral vase on right */}
-                    <div
-                      className="absolute pointer-events-none z-25"
-                      style={{
-                        top: '35.5%',
-                        left: '8.8%',
-                        width: '85.0%',
-                        transform: 'translateY(-58%)'
-                      }}
-                    >
-                      <img
-                        src={plantLightPlant}
-                        alt="Shelf 1 Plants and Vase"
-                        className="w-full h-auto block"
-                      />
-                    </div>
+                    {decors.plant !== false && (
+                      <div
+                        className="absolute pointer-events-none z-25"
+                        style={{
+                          top: '35.5%',
+                          left: '8.8%',
+                          width: '85.0%',
+                          transform: 'translateY(-58%)'
+                        }}
+                      >
+                        <img
+                          src={plantLightPlant}
+                          alt="Shelf 1 Plants and Vase"
+                          className="w-full h-auto block"
+                        />
+                      </div>
+                    )}
 
                     {/* Shelf 2 (Bottom Tier Plank): shorter plank width matching asset aspect and screenshot */}
                     <div
-                      className="absolute pointer-events-none z-10"
+                      className="absolute pointer-events-none z-10 transition-all duration-300"
                       style={{
                         top: '70.46%',
                         left: '8.37%',
@@ -110,12 +142,15 @@ const PlantLightShelf = ({
                       <img
                         src={plantLightShelf2}
                         alt="Plant Shelf Tier 2"
-                        className="w-full h-auto block drop-shadow-md"
+                        className="w-full h-auto block drop-shadow-md transition-all duration-300"
+                        style={{
+                          filter: decors.lights !== false ? 'none' : 'brightness(0.78) contrast(0.92)'
+                        }}
                       />
                     </div>
 
                     {/* Shelf 2 Decor (Over Shelf 2 on Left Side): Incense, candle & book stack */}
-                    {decors.plant && (
+                    {decors.decor !== false && (
                       <div
                         className="absolute pointer-events-none z-25"
                         style={{
@@ -352,23 +387,25 @@ const PlantLightShelf = ({
                     </div>
 
                     {/* Left Side Bottom Corner: leaf.png (Tropical Leaves in Foreground) */}
-                    <div
-                      className="absolute pointer-events-none z-30"
-                      style={{
-                        left: 0,
-                        bottom: 0,
-                        width: '16.35%'
-                      }}
-                    >
-                      <img
-                        src={plantLightLeaf}
-                        alt="Bottom Left Leaf"
-                        className="w-full h-auto block"
-                      />
-                    </div>
+                    {decors.leaf !== false && (
+                      <div
+                        className="absolute pointer-events-none z-30"
+                        style={{
+                          left: 0,
+                          bottom: 0,
+                          width: '16.35%'
+                        }}
+                      >
+                        <img
+                          src={plantLightLeaf}
+                          alt="Bottom Left Leaf"
+                          className="w-full h-auto block"
+                        />
+                      </div>
+                    )}
 
                     {/* Right Side Bottom Corner: lamp.png (Warm Mushroom Table Lamp on Credenza) */}
-                    {decors.lamp && (
+                    {decors.lamp !== false && (
                       <div
                         className="absolute pointer-events-none z-20 transition-all duration-300"
                         style={{

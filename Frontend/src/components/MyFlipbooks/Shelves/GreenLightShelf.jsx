@@ -9,10 +9,13 @@ import greenLightLamp from '../../../assets/Bookshelf/greenlight/lamp.png';
 import greenLightPlant from '../../../assets/Bookshelf/greenlight/plant.png';
 import greenLightBase from '../../../assets/Bookshelf/greenlight/base.png';
 import greenLightFixture from '../../../assets/Bookshelf/greenlight/light.png';
+import greenLightSwitch from '../../../assets/Bookshelf/greenlight/switch.png';
 
 const GreenLightShelf = ({
   filteredBooks,
   decors,
+  setDecors,
+  showLightSwitch = true,
   lightOpacity = 100,
   selectedLightTheme,
   selectedWallTheme,
@@ -63,6 +66,30 @@ const GreenLightShelf = ({
                         className="w-full h-full block object-cover object-top"
                       />
                     </div>
+
+                    {/* Wall Light Switch in top-right */}
+                    {showLightSwitch && (
+                      <div
+                        onClick={() => {
+                          if (typeof setDecors === 'function') {
+                            setDecors(prev => ({ ...prev, lights: !prev.lights }));
+                          }
+                        }}
+                        className="absolute pointer-events-auto cursor-pointer z-35 transition-transform duration-150 active:scale-95 hover:scale-105 group"
+                        style={{
+                          right: '4.5%',
+                          top: '10.0%',
+                          width: '2.5%'
+                        }}
+                        title={decors?.lights !== false ? "Turn Lights Off" : "Turn Lights On"}
+                      >
+                        <img
+                          src={greenLightSwitch}
+                          alt="Switch"
+                          className="w-full h-auto block drop-shadow-md transition-all duration-200"
+                        />
+                      </div>
+                    )}
 
                     {/* 2 Tiers of Shelves and Spotlights */}
                     {[
@@ -400,7 +427,7 @@ const GreenLightShelf = ({
                       </div>
 
                     {/* Bottom Left: lamp.png with books placed on credenza */}
-                    {decors.lamp && (
+                    {decors.lamp !== false && (
                       <div
                         className="absolute pointer-events-none z-20 transition-all duration-300"
                         style={{
@@ -512,7 +539,7 @@ const GreenLightShelf = ({
                     )}
 
                     {/* Bottom Right: plant.png in vase with spherical decor placed on credenza */}
-                    {decors.plant && (
+                    {decors.plant !== false && (
                       <div
                         className="absolute pointer-events-none z-20"
                         style={{

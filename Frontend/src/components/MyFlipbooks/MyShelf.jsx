@@ -37,7 +37,7 @@ import orangeShelfImg from '../../assets/Bookshelf/orange_shelf/orange_shelf.png
 import orangeSheet from '../../assets/Bookshelf/orange_shelf/orangesheet.png';
 import goldenShelfImg from '../../assets/Bookshelf/golden_shelf/goldenshelf.png';
 import goldenShelfSheet from '../../assets/Bookshelf/golden_shelf/sheet.png';
-import greenshade from '../../assets/Bookshelf/greenshelf/greenshade.svg';
+import greenshade from '../../assets/Bookshelf/greenshelf/greenshade.png';
 import greensheet from '../../assets/Bookshelf/greenshelf/Green_sheet.png';
 import lightShelfImg from '../../assets/Bookshelf/light_shelf/light-sheld.svg';
 import lightShelfSheet from '../../assets/Bookshelf/light_shelf/lightsheet.png';
@@ -167,6 +167,7 @@ const MyShelf = () => {
     plant: true,
     decor: true,
     lamp: true,
+    leaf: true,
     lights: true,
     shelfPlant: true,
     globeDecor: true,
@@ -225,6 +226,51 @@ const MyShelf = () => {
     } catch (e) { }
     return '';
   })();
+
+  const getShelfStorageKey = (folderName) => {
+    const email = currentUserEmail ? currentUserEmail.toLowerCase() : 'guest';
+    const name = folderName || 'default';
+    return `flipibook_shelf_customization_${email}_${name}`;
+  };
+
+  const loadSavedShelfSettings = (folderName) => {
+    try {
+      const raw = localStorage.getItem(getShelfStorageKey(folderName));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const saveShelfSettings = (folderName, settings) => {
+    try {
+      localStorage.setItem(getShelfStorageKey(folderName), JSON.stringify(settings));
+    } catch (e) {
+      console.warn("Failed to save shelf settings:", e);
+    }
+  };
+
+  // Check URL query parameters on initial mount (for shared links or direct shelf navigation)
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlShelf = searchParams.get('shelf') || searchParams.get('folder');
+      const urlLight = searchParams.get('light');
+
+      if (urlShelf) {
+        setSelectedFolder(urlShelf);
+        setCurrentView('shelf_detail');
+      }
+
+      if (urlLight === 'off' || urlLight === 'false' || urlLight === '0') {
+        setDefaultLightType('Turn off');
+        setDecors(prev => ({ ...prev, lights: false }));
+      } else if (urlLight === 'on' || urlLight === 'true' || urlLight === '1') {
+        setDefaultLightType('Turn on');
+        setDecors(prev => ({ ...prev, lights: true }));
+      }
+    } catch (e) { }
+  }, []);
 
   useEffect(() => {
     const fetchMyBooks = async () => {
@@ -379,11 +425,17 @@ const MyShelf = () => {
           });
         }
 
-        const newFolders = Object.keys(folderMap).map(folderName => ({
-          name: folderName,
-          books: folderMap[folderName],
-          shelf_design: (folderDesignMap[folderName] === 1 || !folderDesignMap[folderName]) ? 4 : folderDesignMap[folderName]
-        }));
+        const newFolders = Object.keys(folderMap).map(folderName => {
+          const saved = loadSavedShelfSettings(folderName);
+          const rawDesign = folderDesignMap[folderName];
+          return {
+            name: folderName,
+            books: folderMap[folderName],
+            shelf_design: saved?.shelf_design || ((rawDesign === 1 || !rawDesign) ? 4 : rawDesign),
+            defaultLightType: saved?.defaultLightType || 'Turn on',
+            ...saved
+          };
+        });
 
         setFolders(newFolders);
         if (newFolders.length > 0 && !selectedFolder) {
@@ -532,14 +584,53 @@ const MyShelf = () => {
     }
   };
 
-  // Sync active shelf style with the selected folder
+  // Sync active shelf style and customization settings with the selected folder
   useEffect(() => {
+    if (!selectedFolder) return;
+
+    // Check URL query override for light (from shared link)
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlLight = searchParams.get('light');
+
+    const saved = loadSavedShelfSettings(selectedFolder);
     const currentFolder = folders.find(f => f.name === selectedFolder);
-    if (currentFolder && currentFolder.shelf_design) {
-      const designId = String(currentFolder.shelf_design).startsWith('customize')
-        ? currentFolder.shelf_design
-        : (currentFolder.shelf_design === 1 ? 'customize4' : `customize${currentFolder.shelf_design}`);
+
+    const savedDesign = saved?.shelf_design || currentFolder?.shelf_design;
+    if (savedDesign) {
+      const designId = String(savedDesign).startsWith('customize')
+        ? savedDesign
+        : (savedDesign === 1 ? 'customize4' : `customize${savedDesign}`);
       setActiveShelfStyle(designId);
+    }
+
+    // Determine defaultLightType to apply (saved state or shared URL override)
+    let lightTypeToApply = saved?.defaultLightType || currentFolder?.defaultLightType;
+    if (urlLight === 'off' || urlLight === 'false' || urlLight === '0') {
+      lightTypeToApply = 'Turn off';
+    } else if (urlLight === 'on' || urlLight === 'true' || urlLight === '1') {
+      lightTypeToApply = 'Turn on';
+    }
+
+    if (lightTypeToApply) {
+      setDefaultLightType(lightTypeToApply);
+      setDecors(prev => ({ ...prev, lights: lightTypeToApply === 'Turn on' }));
+    } else {
+      setDefaultLightType('Turn on');
+      setDecors(prev => ({ ...prev, lights: true }));
+    }
+
+    if (saved) {
+      if (saved.selectedWallTheme !== undefined) setSelectedWallTheme(saved.selectedWallTheme);
+      if (saved.selectedLightTheme) setSelectedLightTheme(saved.selectedLightTheme);
+      if (saved.showLightSwitch !== undefined) setShowLightSwitch(saved.showLightSwitch);
+      if (saved.lightOpacity !== undefined) setLightOpacity(saved.lightOpacity);
+      if (saved.decors) {
+        setDecors(prev => ({
+          ...prev,
+          ...saved.decors,
+          lights: lightTypeToApply ? lightTypeToApply === 'Turn on' : (saved.lights !== undefined ? saved.lights : true)
+        }));
+      }
     }
   }, [folders, selectedFolder]);
 
@@ -600,8 +691,27 @@ const MyShelf = () => {
       return;
     }
 
+    const isLightOn = defaultLightType === 'Turn on';
+
+    // Persist full customization settings for this folder
+    const settingsToSave = {
+      shelf_design: targetStyle,
+      defaultLightType: defaultLightType,
+      lights: isLightOn,
+      selectedWallTheme: selectedWallTheme,
+      selectedLightTheme: selectedLightTheme,
+      showLightSwitch: showLightSwitch,
+      lightOpacity: lightOpacity,
+      decors: {
+        ...decors,
+        lights: isLightOn
+      }
+    };
+    saveShelfSettings(selectedFolder, settingsToSave);
+
     // Update local state for the folder immediately
-    setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelf_design: targetStyle } : f));
+    setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, ...settingsToSave } : f));
+    setDecors(prev => ({ ...prev, lights: isLightOn }));
 
     if (currentUserEmail) {
       try {
@@ -612,7 +722,9 @@ const MyShelf = () => {
         await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
           emailId: currentUserEmail,
           folderName: selectedFolder,
-          shelf_design: shelfDesignValue
+          shelf_design: shelfDesignValue,
+          defaultLightType: defaultLightType,
+          lights: isLightOn
         }).catch(err => console.warn("Backend update-shelf-design notice:", err));
       } catch (err) {
         console.error("Failed to update shelf design:", err);
@@ -966,7 +1078,7 @@ const MyShelf = () => {
   const newSpacing = spacing / heightRatio;
 
   return (
-    <div className="flex flex-col w-full h-full px-4 pb-0 pt-1 overflow-visible font-sans text-gray-800">
+    <div className="flex flex-col w-full h-full min-h-0 px-4 pb-2 pt-1 font-sans text-gray-800">
 
       {/* Header (shown in Overview and in List View) */}
       {(currentView === 'overview' || view === 'list') && (
@@ -1094,10 +1206,10 @@ const MyShelf = () => {
         <>
 
           {/* Main Content */}
-          <div className="flex items-start gap-6 relative">
+          <div className="flex-1 flex items-stretch gap-6 relative min-h-0">
             {view === 'shelf' ? (
               /* Left Shelf Column (Header + Shelf + Styles) */
-              <div className="flex-1 flex flex-col min-w-0">
+              <div className="flex-1 flex flex-col justify-between min-w-0 h-full">
                 {/* Shelf View Header scoped to Shelf width (ends at shelf right edge) */}
                 <div className="flex flex-col mb-3 w-full -mt-1">
                   {/* Back to My Shelf Link */}
@@ -1381,6 +1493,8 @@ const MyShelf = () => {
                       <GreenLightShelf
                         filteredBooks={filteredBooks}
                         decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
                         lightOpacity={lightOpacity}
                         selectedLightTheme={selectedLightTheme}
                         selectedWallTheme={selectedWallTheme}
@@ -1434,6 +1548,8 @@ const MyShelf = () => {
                       <PlantLightShelf
                         filteredBooks={filteredBooks}
                         decors={decors}
+                        setDecors={setDecors}
+                        showLightSwitch={showLightSwitch}
                         selectedLightTheme={selectedLightTheme}
                         selectedWallTheme={selectedWallTheme}
                         openMenuId={openMenuId}
@@ -1647,7 +1763,7 @@ const MyShelf = () => {
                 ) : null}
 
                 <div
-                  className="w-full aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
+                  className="w-full flex-1 min-h-[300px] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
                   style={{
                     backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
                     backgroundSize: '100% 100%',
@@ -1951,6 +2067,8 @@ const MyShelf = () => {
                     <GreenLightShelf
                       filteredBooks={filteredBooks}
                       decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
                       lightOpacity={lightOpacity}
                       selectedLightTheme={selectedLightTheme}
                       selectedWallTheme={selectedWallTheme}
@@ -2006,6 +2124,8 @@ const MyShelf = () => {
                     <PlantLightShelf
                       filteredBooks={filteredBooks}
                       decors={decors}
+                      setDecors={setDecors}
+                      showLightSwitch={showLightSwitch}
                       selectedLightTheme={selectedLightTheme}
                       selectedWallTheme={selectedWallTheme}
                       openMenuId={openMenuId}
@@ -2251,7 +2371,7 @@ const MyShelf = () => {
                 </div>
 
                 {/* Shelf Styles Carousel / Pagination */}
-                <div className="mt-2.5 mb-1 flex flex-col gap-1.5">
+                <div className="mt-2 mb-0 flex flex-col gap-1.5 shrink-0">
                   {(() => {
                     const allStyles = [
                       { id: 'customize4', img: blueshade, title: 'Pumps Shelf', bookCount: 8 },
@@ -2582,9 +2702,9 @@ const MyShelf = () => {
 
             {/* Sidebar matching Screenshot */}
             {view === 'shelf' ? (
-              <div className="w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-gray-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+              <div className="w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-gray-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden h-full max-h-full">
                 {/* Header: Customize your shelf with icon */}
-                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100 shrink-0">
                   <div className="w-5 h-5 flex items-center justify-center text-red-500">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF5733]">
                       <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -2598,7 +2718,7 @@ const MyShelf = () => {
                   </h3>
                 </div>
 
-                <div className="flex flex-col gap-5 p-5 overflow-y-auto max-h-[72vh]">
+                <div className="flex-1 flex flex-col gap-5 p-5 overflow-y-auto">
                   {/* Add Logo Section */}
                   <div>
                     <div className="flex items-center gap-2 mb-3.5">
@@ -3180,6 +3300,48 @@ const MyShelf = () => {
                             </button>
                           </div>
                         </>
+                      ) : (activeShelfStyle === 'customize_greenlight' || activeAssets.type === 'green_light_shelf') ? (
+                        <>
+                          {/* Lamp Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                              <span>Lamp</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lamp: prev.lamp === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Plant Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
                       ) : activeShelfStyle === 'customize4' ? (
                         <>
                           {/* Lamp Toggle */}
@@ -3217,6 +3379,88 @@ const MyShelf = () => {
                             >
                               <div
                                 className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.bookWithPot !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+                        </>
+                      ) : (activeShelfStyle === 'customize_plantlight' || activeAssets.type === 'plant_light_shelf') ? (
+                        <>
+                          {/* Lamp Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:lamp" className="w-4 h-4 text-gray-600 stroke-[1.75]" />
+                              <span>Lamp</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, lamp: prev.lamp === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.lamp !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.lamp !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Decor Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:flower-2" className="w-4 h-4 text-amber-600 stroke-[1.75]" />
+                              <span>Decor</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, decor: prev.decor === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.decor !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.decor !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Plant Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:sprout" className="w-4 h-4 text-emerald-600 stroke-[1.75]" />
+                              <span>Plant</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, plant: prev.plant === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.plant !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.plant !== false ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Leaf Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[12px] font-medium text-gray-700">
+                              <Icon icon="lucide:leaf" className="w-4 h-4 text-emerald-700 stroke-[1.75]" />
+                              <span>Leaf</span>
+                            </div>
+                            <div className="flex-1 mx-3 border-b border-dotted border-gray-300"></div>
+                            <button
+                              type="button"
+                              onClick={() => setDecors(prev => ({ ...prev, leaf: prev.leaf === false ? true : false }))}
+                              className={`w-9 h-5 flex items-center rounded-full p-[2px] transition-colors duration-200 ease-in-out cursor-pointer ${decors.leaf !== false ? 'bg-[#FF5733]' : 'bg-gray-200'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${decors.leaf !== false ? 'translate-x-4' : 'translate-x-0'
                                   }`}
                               />
                             </button>
@@ -3323,72 +3567,124 @@ const MyShelf = () => {
 
             {/* Modal Body */}
             <div className="p-6 flex flex-col gap-5 bg-white">
-              {/* Dummy Link Box */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Shareable Shelf Link
-                </label>
-                <div className="flex items-center gap-2 p-1.5 pl-3 border border-gray-200 rounded-xl bg-gray-50/80 focus-within:border-[#FF5733] focus-within:bg-white transition-all">
-                  <Icon icon="lucide:link" className="w-4 h-4 text-gray-400 shrink-0" />
-                  <input
-                    type="text"
-                    readOnly
-                    value="https://flipibook.com/shelf/collection/sh-9382104"
-                    className="w-full bg-transparent text-xs text-gray-700 font-medium focus:outline-none select-all truncate"
-                  />
-                  <button
-                    onClick={() => {
-                      if (navigator.clipboard) {
-                        navigator.clipboard.writeText("https://flipibook.com/shelf/collection/sh-9382104");
-                      }
-                      setShelfLinkCopied(true);
-                      setTimeout(() => setShelfLinkCopied(false), 2000);
-                    }}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${shelfLinkCopied
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
-                      }`}
-                  >
-                    <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
-                    <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const shareShelfUrl = typeof window !== 'undefined'
+                  ? `${window.location.origin}/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`
+                  : `https://flipibook.com/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`;
 
-              {/* Social Media Apps */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2.5">
-                  Share on Social Media
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                  {[
-                    { name: 'WhatsApp', icon: 'logos:whatsapp-icon', bg: 'hover:bg-emerald-50 hover:border-emerald-200' },
-                    { name: 'Facebook', icon: 'logos:facebook', bg: 'hover:bg-blue-50 hover:border-blue-200' },
-                    { name: 'X / Twitter', icon: 'ri:twitter-x-fill', bg: 'hover:bg-gray-100 hover:border-gray-300', color: 'text-black' },
-                    { name: 'LinkedIn', icon: 'logos:linkedin-icon', bg: 'hover:bg-sky-50 hover:border-sky-200' },
-                    { name: 'Instagram', icon: 'skill-icons:instagram', bg: 'hover:bg-pink-50 hover:border-pink-200' },
-                    { name: 'Pinterest', icon: 'logos:pinterest', bg: 'hover:bg-red-50 hover:border-red-200' },
-                    { name: 'Telegram', icon: 'logos:telegram', bg: 'hover:bg-cyan-50 hover:border-cyan-200' },
-                    { name: 'Reddit', icon: 'logos:reddit-icon', bg: 'hover:bg-orange-50 hover:border-orange-200' },
-                    { name: 'Email', icon: 'fluent-emoji-flat:envelope', bg: 'hover:bg-gray-100 hover:border-gray-300' },
-                    { name: 'Embed', icon: 'lucide:code-2', bg: 'hover:bg-purple-50 hover:border-purple-200', color: 'text-purple-600' },
-                  ].map((app) => (
-                    <button
-                      key={app.name}
-                      type="button"
-                      onClick={() => { }}
-                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
-                    >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
-                        <Icon icon={app.icon} className={`w-6 h-6 ${app.color || ''}`} />
+                const handleSocialShare = (appName) => {
+                  const encUrl = encodeURIComponent(shareShelfUrl);
+                  const encTitle = encodeURIComponent(`Check out my bookshelf "${selectedFolder || 'My Shelf'}" on FlipiBook!`);
+                  switch (appName) {
+                    case 'WhatsApp':
+                      window.open(`https://api.whatsapp.com/send?text=${encTitle}%20${encUrl}`, '_blank');
+                      break;
+                    case 'Facebook':
+                      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encUrl}`, '_blank');
+                      break;
+                    case 'X / Twitter':
+                      window.open(`https://twitter.com/intent/tweet?text=${encTitle}&url=${encUrl}`, '_blank');
+                      break;
+                    case 'LinkedIn':
+                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encUrl}`, '_blank');
+                      break;
+                    case 'Pinterest':
+                      window.open(`https://pinterest.com/pin/create/button/?url=${encUrl}&description=${encTitle}`, '_blank');
+                      break;
+                    case 'Telegram':
+                      window.open(`https://t.me/share/url?url=${encUrl}&text=${encTitle}`, '_blank');
+                      break;
+                    case 'Reddit':
+                      window.open(`https://reddit.com/submit?url=${encUrl}&title=${encTitle}`, '_blank');
+                      break;
+                    case 'Email':
+                      window.open(`mailto:?subject=${encTitle}&body=${encUrl}`, '_blank');
+                      break;
+                    case 'Embed':
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(`<iframe src="${shareShelfUrl}" width="100%" height="600" frameborder="0"></iframe>`);
+                        toast?.success?.("Embed code copied to clipboard!");
+                      }
+                      break;
+                    default:
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(shareShelfUrl);
+                        toast?.success?.("Link copied!");
+                      }
+                  }
+                };
+
+                return (
+                  <>
+                    {/* Share Link Box */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        Shareable Shelf Link
+                      </label>
+                      <div className="flex items-center gap-2 p-1.5 pl-3 border border-gray-200 rounded-xl bg-gray-50/80 focus-within:border-[#FF5733] focus-within:bg-white transition-all">
+                        <Icon icon="lucide:link" className="w-4 h-4 text-gray-400 shrink-0" />
+                        <input
+                          type="text"
+                          readOnly
+                          value={shareShelfUrl}
+                          className="w-full bg-transparent text-xs text-gray-700 font-medium focus:outline-none select-all truncate"
+                        />
+                        <button
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(shareShelfUrl);
+                            }
+                            setShelfLinkCopied(true);
+                            setTimeout(() => setShelfLinkCopied(false), 2000);
+                          }}
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs ${shelfLinkCopied
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
+                            }`}
+                        >
+                          <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
+                          <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
+                        </button>
                       </div>
-                      <span className="text-[11px] font-medium text-gray-700 mt-1.5 group-hover:text-gray-900 truncate max-w-full">
-                        {app.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    </div>
+
+                    {/* Social Media Apps */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2.5">
+                        Share on Social Media
+                      </label>
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                        {[
+                          { name: 'WhatsApp', icon: 'logos:whatsapp-icon', bg: 'hover:bg-emerald-50 hover:border-emerald-200' },
+                          { name: 'Facebook', icon: 'logos:facebook', bg: 'hover:bg-blue-50 hover:border-blue-200' },
+                          { name: 'X / Twitter', icon: 'ri:twitter-x-fill', bg: 'hover:bg-gray-100 hover:border-gray-300', color: 'text-black' },
+                          { name: 'LinkedIn', icon: 'logos:linkedin-icon', bg: 'hover:bg-sky-50 hover:border-sky-200' },
+                          { name: 'Instagram', icon: 'skill-icons:instagram', bg: 'hover:bg-pink-50 hover:border-pink-200' },
+                          { name: 'Pinterest', icon: 'logos:pinterest', bg: 'hover:bg-red-50 hover:border-red-200' },
+                          { name: 'Telegram', icon: 'logos:telegram', bg: 'hover:bg-cyan-50 hover:border-cyan-200' },
+                          { name: 'Reddit', icon: 'logos:reddit-icon', bg: 'hover:bg-orange-50 hover:border-orange-200' },
+                          { name: 'Email', icon: 'fluent-emoji-flat:envelope', bg: 'hover:bg-gray-100 hover:border-gray-300' },
+                          { name: 'Embed', icon: 'lucide:code-2', bg: 'hover:bg-purple-50 hover:border-purple-200', color: 'text-purple-600' },
+                        ].map((app) => (
+                          <button
+                            key={app.name}
+                            type="button"
+                            onClick={() => handleSocialShare(app.name)}
+                            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
+                          >
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                              <Icon icon={app.icon} className={`w-6 h-6 ${app.color || ''}`} />
+                            </div>
+                            <span className="text-[11px] font-medium text-gray-700 mt-1.5 group-hover:text-gray-900 truncate max-w-full">
+                              {app.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Modal Footer */}

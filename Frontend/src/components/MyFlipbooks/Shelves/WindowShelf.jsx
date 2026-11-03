@@ -241,7 +241,7 @@ const WindowShelf = ({
         className="absolute z-20 flex items-end justify-center pointer-events-auto"
         style={{
           left: '46.0%',
-          top: '30.8%',
+          top: '32.5%',
           width: '21.0%',
           height: '26.0%',
           gap: '12%'

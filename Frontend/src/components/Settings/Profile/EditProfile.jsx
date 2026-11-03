@@ -230,10 +230,20 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
     const initialServices = rawServices !== null
       ? rawServices
-      : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs'];
+      : [];
 
     return {
       ...user,
+      contact1: user?.contact1 !== undefined ? user.contact1 : (user?.mobile || ''),
+      contact1CountryCode: user?.contact1CountryCode || user?.countryCode || '+91',
+      contact1Label: user?.contact1Label || 'Contact 1',
+      contact2: user?.contact2 || '',
+      contact2CountryCode: user?.contact2CountryCode || '+91',
+      contact2Label: user?.contact2Label || 'Contact 2',
+      contact3: user?.contact3 || '',
+      contact3CountryCode: user?.contact3CountryCode || '+91',
+      contact3Label: user?.contact3Label || 'Contact 3',
+      contactCount: user?.contactCount !== undefined ? user.contactCount : 2,
       services: initialServices,
       skills: initialServices,
       visibilitySettings: {
@@ -321,6 +331,16 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
       prevUserKeyRef.current = userKey;
       setEditedUser({
         ...user,
+        contact1: user?.contact1 !== undefined ? user.contact1 : (user?.mobile || ''),
+        contact1CountryCode: user?.contact1CountryCode || user?.countryCode || '+91',
+        contact1Label: user?.contact1Label || 'Contact 1',
+        contact2: user?.contact2 || '',
+        contact2CountryCode: user?.contact2CountryCode || '+91',
+        contact2Label: user?.contact2Label || 'Contact 2',
+        contact3: user?.contact3 || '',
+        contact3CountryCode: user?.contact3CountryCode || '+91',
+        contact3Label: user?.contact3Label || 'Contact 3',
+        contactCount: user?.contactCount !== undefined ? user.contactCount : 2,
         visibilitySettings: {
           showInExplore: true,
           showContact: true,
@@ -341,16 +361,16 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
       about: (u.about || '').trim(),
       mobile: (u.mobile || '').trim(),
       countryCode: (u.countryCode || '+91').trim(),
-      contact1: (u.contact1 || '').trim(),
-      contact1CountryCode: (u.contact1CountryCode || '').trim(),
-      contact1Label: (u.contact1Label || '').trim(),
+      contact1: (u.contact1 || u.mobile || '').trim(),
+      contact1CountryCode: (u.contact1CountryCode || u.countryCode || '+91').trim(),
+      contact1Label: (u.contact1Label || 'Contact 1').trim(),
       contact2: (u.contact2 || '').trim(),
-      contact2CountryCode: (u.contact2CountryCode || '').trim(),
-      contact2Label: (u.contact2Label || '').trim(),
+      contact2CountryCode: (u.contact2CountryCode || '+91').trim(),
+      contact2Label: (u.contact2Label || 'Contact 2').trim(),
       contact3: (u.contact3 || '').trim(),
-      contact3CountryCode: (u.contact3CountryCode || '').trim(),
-      contact3Label: (u.contact3Label || '').trim(),
-      contactCount: u.contactCount,
+      contact3CountryCode: (u.contact3CountryCode || '+91').trim(),
+      contact3Label: (u.contact3Label || 'Contact 3').trim(),
+      contactCount: u.contactCount !== undefined ? u.contactCount : 2,
       companyName: (u.companyName || u.agencyName || u.businessName || '').trim(),
       profileType: (u.profileType || 'Individual').trim(),
       professionalTitle: (u.professionalTitle || u.title || '').trim(),
@@ -565,6 +585,16 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   const handleCancel = () => {
     setEditedUser({
       ...user,
+      contact1: user?.contact1 !== undefined ? user.contact1 : (user?.mobile || ''),
+      contact1CountryCode: user?.contact1CountryCode || user?.countryCode || '+91',
+      contact1Label: user?.contact1Label || 'Contact 1',
+      contact2: user?.contact2 || '',
+      contact2CountryCode: user?.contact2CountryCode || '+91',
+      contact2Label: user?.contact2Label || 'Contact 2',
+      contact3: user?.contact3 || '',
+      contact3CountryCode: user?.contact3CountryCode || '+91',
+      contact3Label: user?.contact3Label || 'Contact 3',
+      contactCount: user?.contactCount !== undefined ? user.contactCount : 2,
       visibilitySettings: {
         showInExplore: true,
         showContact: true,
@@ -601,6 +631,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   const [isAddingService, setIsAddingService] = useState(false);
   const [newServiceInput, setNewServiceInput] = useState('');
 
+  const profileTypeRef = useRef(null);
+  const industryRef = useRef(null);
+  const experienceRef = useRef(null);
+  const teamSizeRef = useRef(null);
+  const companySizeRef = useRef(null);
+  const addingServiceRef = useRef(null);
+
   const profileTypeOptions = [
     { label: 'Individual', icon: 'lucide:user' },
     { label: 'Freelancer', icon: 'lucide:briefcase' },
@@ -628,6 +665,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   const [editingContactKey, setEditingContactKey] = useState(null); // 'contact1' | 'contact2' | 'contact3'
 
   const teamSizeOptions = [
+    'Not Specified',
     '1 - 5 Peoples',
     '5 - 10 Peoples',
     '10 - 20 Peoples',
@@ -745,17 +783,33 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (profileTypeRef.current && !profileTypeRef.current.contains(e.target)) {
+        setIsProfileTypeOpen(false);
+      }
+      if (industryRef.current && !industryRef.current.contains(e.target)) {
+        setIsIndustryOpen(false);
+      }
+      if (experienceRef.current && !experienceRef.current.contains(e.target)) {
+        setIsExperienceOpen(false);
+      }
+      if (teamSizeRef.current && !teamSizeRef.current.contains(e.target)) {
+        setIsTeamSizeOpen(false);
+      }
+      if (companySizeRef.current && !companySizeRef.current.contains(e.target)) {
+        setIsCompanySizeOpen(false);
+      }
+      if (addingServiceRef.current && !addingServiceRef.current.contains(e.target)) {
+        setIsAddingService(false);
+      }
       if (socialDropdownRef.current && !socialDropdownRef.current.contains(e.target)) {
         setIsAddingSocial(false);
       }
     };
-    if (isAddingSocial) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAddingSocial]);
+  }, []);
 
   const handleAddSocial = (key) => {
     if (!activeSocialKeys.includes(key)) {
@@ -859,7 +913,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
             {/* Row 3: Profile Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-              <div className="relative">
+              <div className="relative" ref={profileTypeRef}>
                 <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Profile Type <span className="text-red-500">*</span>
                 </label>
@@ -904,7 +958,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Industry Type & Company / Organization Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
-                  <div className="relative">
+                  <div className="relative" ref={industryRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
@@ -960,7 +1014,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Company Size & Business Gmail */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Company Size */}
-                  <div className="relative">
+                  <div className="relative" ref={companySizeRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Company Size
                     </label>
@@ -1022,7 +1076,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Industry Type & Agency Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
-                  <div className="relative">
+                  <div className="relative" ref={industryRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
@@ -1078,7 +1132,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Team Size & Business Gmail */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Team Size */}
-                  <div className="relative">
+                  <div className="relative" ref={teamSizeRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Team Size
                     </label>
@@ -1140,7 +1194,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Industry Type & Business / Brand Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
-                  <div className="relative">
+                  <div className="relative" ref={industryRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
@@ -1196,7 +1250,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 {/* Row: Experience & Business Gmail */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Experience */}
-                  <div className="relative">
+                  <div className="relative" ref={experienceRef}>
                     <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Experience <span className="text-red-500">*</span>
                     </label>
@@ -1282,7 +1336,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
               </label>
               <div className="w-full border border-gray-200 rounded-[0.7vw] p-[0.7vw] bg-white flex flex-wrap items-center gap-[0.6vw] min-h-[3vw]">
                 {isAddingService ? (
-                  <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.5vw] px-[0.6vw] py-[0.35vw] bg-[#EC5137]/5">
+                  <div ref={addingServiceRef} className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.5vw] px-[0.6vw] py-[0.35vw] bg-[#EC5137]/5">
                     <input
                       type="text"
                       autoFocus

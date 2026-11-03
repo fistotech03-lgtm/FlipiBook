@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Volume2,
@@ -7,15 +7,19 @@ import {
   ChevronRight,
   Trash2,
   Play,
-  Pause
+  Pause,
+  ArrowRightLeft,
+  Check,
+  Upload
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../../../utils/assetUtils';
 import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
-import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
+import ColorPicker, { parseGradient, generateGradientString } from '../../../properties/ColorPicker';
+import { handleScrubHelper } from '../../../properties/Color';
 import Effect from '../../../properties/Effect';
-import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
+import { ElementToggle, ElementSlider } from './ElementUIControls';
 import {
   AUDIO_TEMPLATES,
   getAudioSvgCode,
@@ -123,19 +127,17 @@ const syncLiveFilters = (el) => {
 
 // Section Header matching standard styling
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
-    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    <div className="flex-1 h-[1px] bg-gray-200" />
   </div>
 );
 
 // PropertyRow matching exact alignment
 const PropertyRow = ({ label, children, className = '' }) => (
   <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
-      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
-        {label}
-      </span>
+    <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold">
+      <span className="text-[0.8vw]">{label}</span>
       <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
     </div>
     <div className="flex-1 min-w-0">
@@ -144,49 +146,156 @@ const PropertyRow = ({ label, children, className = '' }) => (
   </div>
 );
 
-// Toggle Switch matching exact reference design
-const Toggle = ElementToggle;
+// Custom Select Dropdown matching ElementQRCodeProperties
+const CustomSelect = ({ value, onChange, options, placeholder = 'Select...' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
 
-// Custom Dropdown matching exact reference design
-const CustomDropdown = ElementDropdown;
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
-// Color Swatch + Hex Input Box
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const isGradient = Boolean(color && typeof color === 'string' && color.includes('gradient'));
-  const isNone = color === 'none' || color === 'transparent';
-  const displayColor = isGradient
-    ? 'GRADIENT'
-    : isNone
-    ? 'NONE'
-    : (color && color.startsWith('#') ? color.toUpperCase() : (color || '#000000'));
+  const selectedOption = options.find((opt) => String(opt.value) === String(value));
 
   return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
-        style={{ background: isNone ? '#ffffff' : (color || '#000000') }}
-        title="Click to open color palette"
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full h-[2vw] min-h-[30px] flex items-center justify-between bg-white border ${
+          isOpen ? 'border-[#4D47FF] ring-1 ring-[#4D47FF] shadow-xs' : 'border-gray-300 hover:border-gray-400'
+        } rounded-[0.4vw] px-[0.6vw] text-[0.8vw] text-gray-800 transition-colors cursor-pointer shadow-2xs font-medium`}
       >
-        {isNone && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
-      </div>
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
-          maxLength={isGradient ? 10 : 7}
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+        <ChevronDown
+          size="0.8vw"
+          className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
+            isOpen ? 'rotate-180 text-[#4D47FF]' : ''
+          }`}
         />
-        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
+          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.5vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.25vw] max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+            {options.map((opt) => {
+              const isSelected = String(opt.value) === String(value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
+                    isSelected
+                      ? 'text-[#4D47FF] bg-gray-50 font-semibold'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {isSelected && <Check size="0.8vw" className="text-[#4D47FF] flex-shrink-0 ml-[0.3vw]" />}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Reused Fill Color Card matching ElementQRCodeProperties and Color.jsx
+const FillColorCard = ({
+  label,
+  color,
+  opacity = 100,
+  onColorChange,
+  onOpacityChange,
+  onPickerToggle,
+  isPickerActive
+}) => {
+  const isNone = !color || color === 'none' || color === 'transparent' || color === '#';
+  const isGradient = Boolean(color && typeof color === 'string' && color.includes('gradient'));
+  const displayHex = isGradient
+    ? 'GRADIENT'
+    : isNone
+    ? '#'
+    : (String(color).startsWith('#') ? String(color).toUpperCase() : '#' + String(color).toUpperCase());
+
+  return (
+    <div className="flex flex-col gap-[0.4vw]">
+      {label && (
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{label}</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch */}
+        <div
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border ${
+            isPickerActive ? 'border-[#4D47FF] ring-2 ring-[#4D47FF]/20' : 'border-gray-300'
+          } shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 color-swatch-trigger`}
+          onClick={onPickerToggle}
+          title={`Change ${label || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{
+              background: isNone ? 'white' : color,
+            }}
+          />
+          {isNone && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayHex}
+            disabled={isGradient}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              if (val === '' || val === '#') {
+                onColorChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onColorChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={isGradient ? 10 : 8}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-100 rounded text-gray-500"
+            onPointerDown={(e) => {
+              if (!onOpacityChange) return;
+              const currentPct = Math.round(Number(opacity) || 100);
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val, 10);
+                const clamped = Math.min(Math.max(isNaN(num) ? 100 : num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to scrub opacity"
+          >
+            <span className="text-[0.72vw] font-medium">{Math.round(Number(opacity) || 100)}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -647,6 +756,7 @@ const ElementAudioProperties = ({
   const initialColors = extractAudioColors(selectedElement);
   const [iconColor, setIconColor] = useState(() => initialColors.iconColor);
   const [bgColor, setBgColor] = useState(() => initialColors.bgColor);
+  const [bgOpacity, setBgOpacity] = useState(100);
   const [strokeColor, setStrokeColor] = useState(() => initialColors.strokeColor);
 
   // ColorPicker & Effects States
@@ -664,6 +774,20 @@ const ElementAudioProperties = ({
       opacity: 35
     }
   });
+
+  const handleToggleColorPicker = (type) => {
+    setActiveColorPicker((prev) => (prev === type ? null : type));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (activeColorPicker && !e.target.closest('.color-picker-portal') && !e.target.closest('.color-swatch-trigger')) {
+        setActiveColorPicker(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeColorPicker]);
 
   // Helper to persist attribute on element & editor state
   const updateAttribute = useCallback(
@@ -950,6 +1074,19 @@ const ElementAudioProperties = ({
     setIconColor(extracted.iconColor);
     setBgColor(extracted.bgColor);
     setStrokeColor(extracted.strokeColor);
+
+    const fillOpAttr = selectedElement.getAttribute('data-fill-opacity');
+    if (fillOpAttr !== null) {
+      setBgOpacity(Math.round(parseFloat(fillOpAttr) * 100));
+    } else {
+      const fillLayer = selectedElement.querySelector('.audio-fill-layer');
+      const op = fillLayer?.getAttribute('fill-opacity');
+      if (op !== null && op !== undefined) {
+        setBgOpacity(Math.round(parseFloat(op) * 100));
+      } else {
+        setBgOpacity(100);
+      }
+    }
 
     // If element was missing color attributes or had the old #900000 corruption, heal it on canvas
     const rootEl = selectedElement.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || selectedElement;
@@ -1714,13 +1851,25 @@ const ElementAudioProperties = ({
     if (onUpdate) onUpdate();
   };
 
+  const handleBgOpacityChange = (val) => {
+    setBgOpacity(val);
+    const opVal = (val / 100).toString();
+    updateAttribute('data-fill-opacity', opVal);
+    if (selectedElement) {
+      const fillLayer = selectedElement.querySelector('.audio-fill-layer');
+      if (fillLayer) {
+        fillLayer.setAttribute('fill-opacity', opVal);
+      }
+    }
+    if (onUpdate) onUpdate();
+  };
+
   const handleStrokeColorChange = (val) => {
     setStrokeColor(val);
     updateAttribute('data-stroke-color', val);
     applyColorsToCanvas(selectedElement, { stroke: val });
     if (onUpdate) onUpdate();
   };
-
 
   const COLOR_MAP = {
     iconColor: {
@@ -1737,22 +1886,29 @@ const ElementAudioProperties = ({
     }
   };
 
+  const isColorPickerOpen = Boolean(activeColorPicker && COLOR_MAP[activeColorPicker]);
+  const colorsOnPageList = useMemo(() => {
+    return [iconColor, bgColor, strokeColor].filter(
+      (c) => typeof c === 'string' && c.startsWith('#')
+    );
+  }, [iconColor, bgColor, strokeColor]);
+
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
+    <div className="w-full flex flex-col gap-[1.2vw] pb-[2vw] font-sans text-gray-800 pt-[0.2vw] select-none overflow-x-hidden">
       {/* ── 1. Upload Audio Section ── */}
       <SectionHeader title="Upload Audio" />
 
-      <div className="flex items-center gap-[0.8vw] pl-[0.5vw] pr-[0.2vw] py-[0.2vw]">
+      <div className="bg-white border border-gray-200 rounded-[0.5vw] p-[0.6vw] shadow-2xs flex items-center gap-[0.8vw] my-[0.1vw]">
         {/* Blue Squircle Music App Icon with subtle 3D shadow */}
         <div
-          className="w-[3.8vw] h-[3.8vw] rounded-[0.8vw] bg-gradient-to-br from-[#29b6f6] to-[#0288d1] flex items-center justify-center relative overflow-hidden shadow-[0_4px_12px_rgba(2,136,209,0.25)] flex-shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+          className="w-[3.6vw] h-[3.6vw] min-w-[50px] min-h-[50px] rounded-[0.7vw] bg-gradient-to-br from-[#29b6f6] to-[#0288d1] flex items-center justify-center relative overflow-hidden shadow-[0_4px_12px_rgba(2,136,209,0.25)] flex-shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
           onClick={togglePlayPause}
           title={isPlaying ? "Pause Audio" : "Play Audio"}
         >
           {isPlaying ? (
-            <Pause className="w-[1.6vw] h-[1.6vw] text-white fill-white drop-shadow-md animate-pulse" />
+            <Pause className="w-[1.5vw] h-[1.5vw] text-white fill-white drop-shadow-md animate-pulse" />
           ) : (
-            <svg viewBox="0 0 64 64" className="w-[2.3vw] h-[2.3vw]">
+            <svg viewBox="0 0 64 64" className="w-[2.2vw] h-[2.2vw]">
               <defs>
                 <filter id="music-note-shadow" x="-30%" y="-30%" width="160%" height="160%">
                   <feDropShadow dx="2" dy="2.5" stdDeviation="1.5" floodColor="#01579b" floodOpacity="0.45" />
@@ -1769,35 +1925,36 @@ const ElementAudioProperties = ({
 
         {/* Audio Information & Action Buttons */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="text-[0.85vw] font-semibold text-gray-800 truncate" title={audioName}>
+          <div className="text-[0.82vw] font-semibold text-gray-900 truncate" title={audioName}>
             {audioName}
           </div>
 
-          <div className="text-[0.7vw] text-gray-400 font-semibold flex items-center gap-[0.35vw] mt-[0.1vw]">
+          <div className="text-[0.68vw] text-gray-400 font-medium flex items-center gap-[0.35vw] mt-[0.15vw]">
             <span>{audioDurationText}</span>
-            <span className="text-[0.6vw]">•</span>
+            <span className="text-[0.55vw]">•</span>
             <span>{audioSizeText}</span>
-            <span className="text-[0.6vw]">•</span>
+            <span className="text-[0.55vw]">•</span>
             <span>{audioFormatText}</span>
           </div>
 
-          <div className="flex items-center gap-[0.4vw] mt-[0.4vw]">
+          <div className="flex items-center gap-[0.4vw] mt-[0.45vw]">
             <button
               type="button"
               onClick={handleReplaceAudioClick}
               disabled={isUploading}
-              className="px-[0.75vw] py-[0.25vw] bg-white border border-gray-200 hover:border-gray-300 rounded-[0.4vw] text-[0.75vw] text-gray-700 font-semibold shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
+              className="h-[1.9vw] min-h-[26px] px-[0.7vw] bg-white border border-gray-300 hover:border-gray-400 rounded-[0.4vw] text-[0.74vw] text-gray-700 font-medium shadow-2xs hover:bg-gray-50 flex items-center gap-[0.3vw] transition-colors cursor-pointer"
             >
-              {isUploading ? 'Uploading...' : 'Replace Audio'}
+              <ArrowRightLeft className="w-[0.75vw] h-[0.75vw] text-gray-500" />
+              <span>{isUploading ? 'Uploading...' : 'Replace Audio'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleRemoveAudio}
-              className="w-[1.8vw] h-[1.8vw] bg-white border border-gray-200 hover:border-red-300 rounded-[0.4vw] flex items-center justify-center text-gray-400 hover:text-red-500 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer"
+              className="w-[1.9vw] h-[1.9vw] min-w-[26px] min-h-[26px] bg-white border border-gray-200 hover:border-red-300 rounded-[0.4vw] flex items-center justify-center text-gray-400 hover:text-red-500 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer"
               title="Delete Audio"
             >
-              <Trash2 size="0.85vw" />
+              <Trash2 className="w-[0.8vw] h-[0.8vw]" />
             </button>
           </div>
         </div>
@@ -1817,7 +1974,7 @@ const ElementAudioProperties = ({
 
       {/* Playback Speed */}
       <PropertyRow label="Playback Speed">
-        <CustomDropdown
+        <CustomSelect
           value={playbackSpeed}
           options={SPEED_OPTIONS}
           onChange={(val) => {
@@ -1833,7 +1990,7 @@ const ElementAudioProperties = ({
 
       {/* Behaviour */}
       <PropertyRow label="Behaviour">
-        <CustomDropdown
+        <CustomSelect
           value={behaviour}
           options={BEHAVIOUR_OPTIONS}
           onChange={(val) => {
@@ -1851,123 +2008,147 @@ const ElementAudioProperties = ({
       </PropertyRow>
 
       {/* Default Volume */}
-      <PropertyRow label="Default Volume">
-        <div className="flex items-center gap-[0.5vw] w-full h-[2.5vw]">
-          <Volume2 className="w-[1vw] h-[1vw] text-[#E05638] shrink-0" />
-          <div className="flex-1 flex items-center relative">
-            <ElementSlider
-              min={0}
-              max={100}
-              step={1}
-              value={defaultVolume}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setDefaultVolume(val);
-                updateAttribute('data-audio-volume', (val / 100).toString());
-                if (audioRef.current) {
-                  audioRef.current.volume = val / 100;
-                  if (val > 0 && isMuted) {
-                    setIsMuted(false);
-                    audioRef.current.muted = false;
-                    updateAttribute('data-audio-muted', 'false');
-                    updateMuteIconOnCanvas(false);
-                  }
-                }
-                if (selectedElement) {
-                  const volFill = selectedElement.querySelector('.volume-fill');
-                  const volKnob = selectedElement.querySelector('.volume-knob');
-                  const volBg = selectedElement.querySelector('.volume-bg');
-                  if (volFill && volKnob) {
-                    const bgX = volBg ? parseFloat(volBg.getAttribute('x') || '0') : 0;
-                    const bgWidth = volBg ? parseFloat(volBg.getAttribute('width') || '50') : 50;
-                    const fillW = (val / 100) * bgWidth;
-                    volFill.setAttribute('width', fillW.toString());
-                    volKnob.setAttribute('cx', (bgX + fillW).toString());
-                  }
-                }
-                if (onUpdate) onUpdate();
-              }}
-            />
-          </div>
-          <span className="text-[0.8vw] text-gray-800 font-semibold w-[2.8vw] text-right shrink-0">
-            {defaultVolume} %
-          </span>
+      <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+        <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold">
+          <span className="text-[0.8vw]">Default Volume</span>
+          <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
         </div>
-      </PropertyRow>
+        <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={defaultVolume}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              setDefaultVolume(val);
+              updateAttribute('data-audio-volume', (val / 100).toString());
+              if (audioRef.current) {
+                audioRef.current.volume = val / 100;
+                if (val > 0 && isMuted) {
+                  setIsMuted(false);
+                  audioRef.current.muted = false;
+                  updateAttribute('data-audio-muted', 'false');
+                  updateMuteIconOnCanvas(false);
+                }
+              }
+              if (selectedElement) {
+                const volFill = selectedElement.querySelector('.volume-fill');
+                const volKnob = selectedElement.querySelector('.volume-knob');
+                const volBg = selectedElement.querySelector('.volume-bg');
+                if (volFill && volKnob) {
+                  const bgX = volBg ? parseFloat(volBg.getAttribute('x') || '0') : 0;
+                  const bgWidth = volBg ? parseFloat(volBg.getAttribute('width') || '50') : 50;
+                  const fillW = (val / 100) * bgWidth;
+                  volFill.setAttribute('width', fillW.toString());
+                  volKnob.setAttribute('cx', (bgX + fillW).toString());
+                }
+              }
+              if (onUpdate) onUpdate();
+            }}
+            className="w-full cursor-pointer custom-range-slider"
+            style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${defaultVolume}%, #E2E8F0 ${defaultVolume}%, #E2E8F0 100%)` }}
+          />
+        </div>
+        <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs shrink-0">
+          {defaultVolume}%
+        </div>
+      </div>
 
       {/* ── 3. Audio Player Controls Sub-section ── */}
       <SectionHeader title="Audio Player Controls" />
 
-      {/* Skip Forward/Backward */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Skip Forward/Backward</span>
-        <div className="flex items-center gap-[0.5vw]">
-          {/* Stepper < 5 sec > */}
-          <div className="h-[2vw] flex items-center border border-gray-200 rounded-[0.4vw] bg-white px-[0.35vw] shadow-2xs">
-            <button
-              type="button"
-              onClick={handlePrevStep}
-              className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
-              title="Decrease skip duration"
-            >
-              <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
-            </button>
-            <span className="text-[0.75vw] text-gray-800 font-semibold px-[0.3vw] whitespace-nowrap">
-              {skipSeconds} sec
-            </span>
-            <button
-              type="button"
-              onClick={handleNextStep}
-              className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
-              title="Increase skip duration"
-            >
-              <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
-            </button>
+      <div className="bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs overflow-hidden divide-y divide-gray-100 my-[0.1vw]">
+        {/* Play/Pause Button */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Play/Pause Button</span>
+          <ElementToggle checked={controlPlayPause} onChange={setControlPlayPause} activeColor="#4D47FF" />
+        </div>
+
+        {/* Skip Forward/Backward */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Skip Forward/Backward</span>
+          <div className="flex items-center gap-[0.5vw]">
+            <div className="h-[1.9vw] min-h-[26px] flex items-center border border-gray-200 rounded-[0.35vw] bg-white px-[0.35vw] shadow-2xs">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+                title="Decrease skip duration"
+              >
+                <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
+              </button>
+              <span className="text-[0.72vw] text-gray-800 font-medium px-[0.3vw] whitespace-nowrap">
+                {skipSeconds} sec
+              </span>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+                title="Increase skip duration"
+              >
+                <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
+              </button>
+            </div>
+            <ElementToggle checked={controlSkip} onChange={setControlSkip} activeColor="#4D47FF" />
           </div>
+        </div>
+
+        {/* Duration */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Duration</span>
+          <ElementToggle checked={controlDuration} onChange={setControlDuration} activeColor="#4D47FF" />
+        </div>
+
+        {/* Volume Control */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Volume Control</span>
+          <ElementToggle checked={controlVolume} onChange={setControlVolume} activeColor="#4D47FF" />
+        </div>
+
+        {/* Loop Button */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Loop Button</span>
+          <ElementToggle checked={controlLoop} onChange={setControlLoop} activeColor="#4D47FF" />
+        </div>
+
+        {/* Mute */}
+        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
+          <span className="text-[0.8vw] text-gray-800 font-medium">Mute</span>
+          <ElementToggle checked={controlMute} onChange={setControlMute} activeColor="#4D47FF" />
         </div>
       </div>
 
       {/* ── 4. Colors Section ── */}
-      <SectionHeader title="Colors" />
+      <FillColorCard
+        label="Icon Color"
+        color={iconColor}
+        onColorChange={handleIconColorChange}
+        onPickerToggle={() => handleToggleColorPicker('iconColor')}
+        isPickerActive={activeColorPicker === 'iconColor'}
+      />
 
-      {/* Icon Color */}
-      <PropertyRow label="Icon Color">
-        <ColorInput
-          color={iconColor}
-          onChange={handleIconColorChange}
-          opacity={100}
-          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
-          isActive={activeColorPicker === 'iconColor'}
-        />
-      </PropertyRow>
+      <FillColorCard
+        label="Bg Color"
+        color={bgColor}
+        opacity={bgOpacity}
+        onColorChange={handleBgColorChange}
+        onOpacityChange={handleBgOpacityChange}
+        onPickerToggle={() => handleToggleColorPicker('bgColor')}
+        isPickerActive={activeColorPicker === 'bgColor'}
+      />
 
-      {/* Bg Color */}
-      <PropertyRow label="Bg Color">
-        <ColorInput
-          color={bgColor}
-          onChange={handleBgColorChange}
-          opacity={100}
-          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'bgColor' ? null : 'bgColor'))}
-          isActive={activeColorPicker === 'bgColor'}
-        />
-      </PropertyRow>
+      <FillColorCard
+        label="Stroke Color"
+        color={strokeColor}
+        onColorChange={handleStrokeColorChange}
+        onPickerToggle={() => handleToggleColorPicker('strokeColor')}
+        isPickerActive={activeColorPicker === 'strokeColor'}
+      />
 
-      {/* Stroke Color */}
-      <PropertyRow label="Stroke Color">
-        <ColorInput
-          color={strokeColor}
-          onChange={handleStrokeColorChange}
-          opacity={100}
-          onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
-          isActive={activeColorPicker === 'strokeColor'}
-        />
-      </PropertyRow>
-
-      {/* ── 5. Effects Section ── */}
-      <SectionHeader title="Effects" />
-
+      {/* ── 5. Effects Section (Drop Shadow only matching ElementQRCodeProperties) ── */}
       <Effect
-        isShape={false}
+        noAccordion={true}
         openSubSection={openSubSection}
         setOpenSubSection={setOpenSubSection}
         activeEffects={activeEffects}
@@ -1980,23 +2161,19 @@ const ElementAudioProperties = ({
         setShowDetailedPicker={setShowDetailedPicker}
         hideBlur={true}
         hideInnerShadow={true}
-        hideHeader={true}
       />
 
       {/* ── ColorPicker Portal Popup ── */}
-      {activeColorPicker && COLOR_MAP[activeColorPicker] && createPortal(
+      {isColorPickerOpen && COLOR_MAP[activeColorPicker] && createPortal(
         <div
-          className="fixed z-[5000]"
+          className="fixed z-[5000] color-picker-portal"
           style={{
             top: '50%',
             right: '19.5vw',
             transform: 'translateY(-50%)'
           }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
-            className="fixed inset-0 z-[-1]"
-            onClick={() => setActiveColorPicker(null)}
-          />
           <div className="animate-in fade-in zoom-in-95 duration-200">
             <ColorPicker
               color={COLOR_MAP[activeColorPicker].value}
@@ -2005,11 +2182,11 @@ const ElementAudioProperties = ({
                   COLOR_MAP[activeColorPicker].onChange(newVal);
                 }
               }}
-              opacity={100}
-              onOpacityChange={() => {}}
+              opacity={activeColorPicker === 'bgColor' ? bgOpacity : 100}
+              onOpacityChange={activeColorPicker === 'bgColor' ? handleBgOpacityChange : () => {}}
               onClose={() => setActiveColorPicker(null)}
               disableGradient={activeColorPicker !== 'bgColor'}
-              colorsOnPage={[]}
+              colorsOnPage={colorsOnPageList}
             />
           </div>
         </div>,

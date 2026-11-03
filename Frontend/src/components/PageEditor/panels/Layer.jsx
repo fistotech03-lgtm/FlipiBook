@@ -161,8 +161,9 @@ const LayerItem = ({
 
     // Check compound parent in live DOM (e.g. clicking internal child of a compound shape/button)
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${pageIndex}"]`);
     if (selectedLayerId) {
-      const selEl = doc.getElementById(selectedLayerId);
+      const selEl = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || doc.getElementById(selectedLayerId);
       if (selEl) {
         const isInternalText = ['text', 'tspan', 'foreignobject'].includes(selEl.tagName?.toLowerCase());
         const compound = selEl.closest?.(
@@ -174,15 +175,13 @@ const LayerItem = ({
           '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
         );
         if (compound && compound.id === layer.id) return true;
-        const layerEl = doc.getElementById(layer.id);
-        if (layerEl && (layerEl.contains(selEl) || selEl.contains(layerEl))) return true;
       }
     }
 
     // Check if any multi-selected ID is an internal child of this compound layer
     if (multiSelectedIds && multiSelectedIds.size > 0) {
       for (const id of multiSelectedIds) {
-        const el = doc.getElementById(id);
+        const el = pageContainer?.querySelector(`[id="${id}"]`) || doc.getElementById(id);
         if (el) {
           const comp = el.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
           if (comp && comp.id === layer.id) return true;
@@ -1550,8 +1549,13 @@ const Layer = ({
                                   }
                                   if ((!effectiveLayers || effectiveLayers.length === 0) && page.html) {
                                     try {
-                                      const doc = new DOMParser().parseFromString(page.html, 'image/svg+xml');
-                                      const svgEl = doc.querySelector('svg');
+                                      const parser = new DOMParser();
+                                      let doc = parser.parseFromString(page.html, 'image/svg+xml');
+                                      let svgEl = doc.querySelector('svg');
+                                      if (!svgEl || doc.querySelector('parsererror')) {
+                                        doc = parser.parseFromString(page.html, 'text/html');
+                                        svgEl = doc.querySelector('svg');
+                                      }
                                       if (svgEl) {
                                         effectiveLayers = parseLayersFromSVG(svgEl);
                                         pageCacheManager.setCachedLayers(page.id, page.html, effectiveLayers);

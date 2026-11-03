@@ -8,6 +8,5 @@ export { default as ElementQRCodeProperties } from './ElementQRCodeProperties';
 export { default as ElementMapProperties } from './ElementMapProperties';
 export { default as ElementEmbedProperties } from './ElementEmbedProperties';
 export { default as ElementSlideshowProperties } from './ElementSlideshowProperties';
-export { default as ElementDecoratorProperties } from './ElementDecoratorProperties';
 export { default as ElementAudioProperties } from './ElementAudioProperties';
 export * from './ElementUIControls';

@@ -1,9 +1,4 @@
-let Redis = null;
-try {
-  Redis = require('ioredis');
-} catch (e) {
-  // ioredis is not installed or optional; will fall back to in-memory mode
-}
+const Redis = require('ioredis');
 
 let redisClient = null;
 let isConnected = false;
@@ -16,13 +11,9 @@ const initRedis = () => {
   if (redisClient) return redisClient;
 
   const redisUrl = process.env.REDIS_URL || null;
-  if (!redisUrl || !Redis) {
+  if (!redisUrl) {
     if (!hasLoggedFailure) {
-      if (!Redis) {
-        console.log('[Redis] ioredis module not installed. Falling back to in-memory mode.');
-      } else {
-        console.log('[Redis] No REDIS_URL configured. Falling back to in-memory mode.');
-      }
+      console.log('[Redis] No REDIS_URL configured. Falling back to in-memory mode.');
       hasLoggedFailure = true;
     }
     return null;

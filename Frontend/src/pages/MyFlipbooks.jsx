@@ -1848,7 +1848,7 @@ export default function MyFlipbooks() {
                         onCountsChange={setThreeDCounts}
                     />
                 ) : dashboardMode === 'shelf' ? (
-                    <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
+                    <div className="flex-1 w-full h-full overflow-hidden min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs flex flex-col">
                         <MyShelf />
                     </div>
                 ) : dashboardMode === 'gallery' ? (
@@ -2175,3 +2175,4 @@ export default function MyFlipbooks() {
         </CreateBookLayout>
     );
 }
+

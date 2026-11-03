@@ -39,7 +39,7 @@ const BlueRopeShelf = ({
                     <div
                       className="absolute left-0 top-0 pointer-events-none z-10"
                       style={{
-                        bottom: '8.4%',
+                        bottom: '7.2%',
                         width: '12.4%'
                       }}
                     >
@@ -190,7 +190,7 @@ const BlueRopeShelf = ({
                       className="absolute pointer-events-none z-20"
                       style={{
                         left: '13.6%',
-                        bottom: '8.5%',
+                        bottom: '7.2%',
                         width: '12.6%'
                       }}
                     >

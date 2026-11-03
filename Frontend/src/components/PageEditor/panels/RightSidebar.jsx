@@ -14,7 +14,6 @@ import {
   ElementMapProperties,
   ElementEmbedProperties,
   ElementSlideshowProperties,
-  ElementDecoratorProperties,
   ElementAudioProperties,
   PenToolProperties,
   ImageProperties,
@@ -413,6 +412,14 @@ const RightSidebar = ({
       const parser = new DOMParser();
       const doc = parser.parseFromString(page.html, 'image/svg+xml');
       let el = doc.getElementById(selectedLayerId);
+      if (!el) {
+        // Fallback to querying the live canvas DOM directly
+        const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+        const liveEl = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || document.getElementById(selectedLayerId);
+        if (liveEl) {
+          el = liveEl;
+        }
+      }
 
       // If the selected element is an internal child of a compound shape/button/audio/media group,
       // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
@@ -736,10 +743,6 @@ const RightSidebar = ({
           el.getAttribute('data-is-slideshow') === 'true' ||
           (el.getAttribute('id') && el.getAttribute('id').startsWith('slideshow-'));
 
-        const isDecorator = el.getAttribute('data-type') === 'animated-decorator' ||
-          el.getAttribute('data-is-animated-decorator') === 'true' ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('decorator-'));
-
         const audioParent = el?.closest?.('[data-type="audio-frame"], g[id^="audio-"]');
         const isAudio = el.getAttribute('data-type') === 'audio-frame' ||
           (el.getAttribute('id') && el.getAttribute('id').startsWith('audio-')) ||
@@ -752,7 +755,6 @@ const RightSidebar = ({
         props.isMap = isMap;
         props.isEmbed = isEmbed;
         props.isSlideshow = isSlideshow;
-        props.isDecorator = isDecorator;
 
         props.isTable = isTable;
         props.isQRCode = isQRCode;
@@ -760,6 +762,12 @@ const RightSidebar = ({
         props.isElementShape = isElementShape;
         props.isElementTitle = isElementTitle;
         props.isElementTypography = isElementTypography;
+        if (isElementTitle) {
+          props.titleId = el.id || selectedLayerId;
+        }
+        if (isElementTypography) {
+          props.typographyId = el.id || selectedLayerId;
+        }
         props.isElementButton = isElementButton;
         props.isImageFrame = isImageFrame;
         props.isUserGroup = isUserGroup &&
@@ -773,7 +781,6 @@ const RightSidebar = ({
           !isMap &&
           !isEmbed &&
           !isSlideshow &&
-          !isDecorator &&
           !isAudio;
 
         if (isElementButton) {
@@ -1175,36 +1182,6 @@ const RightSidebar = ({
                           flipbookVId={effectiveVId}
                           onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
                         />
-                      ) : selectedElementProps?.isDecorator ? (
-                        <ElementDecoratorProperties
-                          selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            return editorDoc.getElementById(selectedLayerId);
-                          })()}
-                          selectedElementProps={selectedElementProps}
-                          selectedLayerId={selectedLayerId}
-                          activePageIndex={activePageIndex}
-                          updateElementAttribute={updateElementAttribute}
-                          onUpdate={(newHtml) => {
-                            window.__skipCanvasUpdateForPage = activePageIndex;
-                            if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
-                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
-                            } else {
-                              const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                              const el = editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
-                              if (!el) return;
-                              const container = el.closest('.page-svg-container');
-                              const svgRoot = container ? (container.querySelector('[id^="canvas-content-"] svg') || container.querySelector('svg')) : el.closest('svg');
-                              if (svgRoot) {
-                                const cloneSvg = svgRoot.cloneNode(true);
-                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
-                                const serializer = new XMLSerializer();
-                                const html = serializer.serializeToString(cloneSvg);
-                                updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
-                              }
-                            }
-                          }}
-                        />
                       ) : selectedElementProps?.isAudio ? (
                         <ElementAudioProperties
                           selectedElement={(() => {
@@ -1308,8 +1285,9 @@ const RightSidebar = ({
                       ) : selectedElementProps?.isElementTitle ? (
                         <ElementTitlesProperties
                           selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            return editorDoc.getElementById(selectedLayerId);
+                            const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+                            const targetId = selectedElementProps?.titleId || selectedLayerId;
+                            return pageContainer?.querySelector(`[id="${targetId}"]`) || document.getElementById(targetId);
                           })()}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
@@ -1318,8 +1296,9 @@ const RightSidebar = ({
                       ) : selectedElementProps?.isElementTypography ? (
                         <TextElementEditor
                           selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            return editorDoc.getElementById(selectedLayerId);
+                            const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+                            const targetId = selectedElementProps?.typographyId || selectedLayerId;
+                            return pageContainer?.querySelector(`[id="${targetId}"]`) || document.getElementById(targetId);
                           })()}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}

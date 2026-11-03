@@ -44,5 +44,4 @@ export { default as UploadProperties } from './UploadProperties';
 export { default as ElementMapProperties } from '../LeftActionMenu/Elements/properties/ElementMapProperties';
 export { default as ElementEmbedProperties } from '../LeftActionMenu/Elements/properties/ElementEmbedProperties';
 export { default as ElementSlideshowProperties } from '../LeftActionMenu/Elements/properties/ElementSlideshowProperties';
-export { default as ElementDecoratorProperties } from '../LeftActionMenu/Elements/properties/ElementDecoratorProperties';
 export { default as ElementAudioProperties } from '../LeftActionMenu/Elements/properties/ElementAudioProperties';

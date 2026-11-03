@@ -46,6 +46,7 @@ import {
   IconsModal
 } from './LeftActionMenu';
 import { getTopLevelFrames, hitTest as hitTestExt, isPageRootElement } from './mainEditor/utils/frameHierarchyUtils';
+import { parseLayersFromSVG } from './utils/editorUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
 import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
@@ -387,7 +388,7 @@ const MainEditor = ({
     };
   }, [activeTopTool]);
 
-  const saveModifiedPageHtml = (targetPageIndex, targetSvg) => {
+  const saveModifiedPageHtml = (targetPageIndex, targetSvg, explicitLayers = null) => {
     if (!updatePageHtmlRef.current) return;
     window.__skipCanvasUpdateForPage = targetPageIndex;
     const tempDiv = document.createElement('div');
@@ -406,6 +407,33 @@ const MainEditor = ({
         el.setAttribute('style', st.replace(/"/g, "'"));
       }
     });
+
+    // Auto-heal any image frame where pattern IDs were lost
+    const healImageFrames = (root) => {
+      if (!root) return;
+      const frames = root.querySelectorAll('[data-type="image-frame"], [data-is-image-frame="true"], g[id^="image-frame-"]');
+      frames.forEach((frame) => {
+        const shapes = frame.querySelectorAll('[fill*="url(#"]');
+        const patterns = Array.from(frame.querySelectorAll('pattern'));
+        if (patterns.length > 0) {
+          shapes.forEach((shape, idx) => {
+            const fill = shape.getAttribute('fill') || '';
+            const match = fill.match(/url\(#([^)]+)\)/);
+            if (match && match[1]) {
+              const patId = match[1];
+              if (!frame.querySelector(`pattern[id="${patId}"]`)) {
+                const unassigned = patterns.find((p) => !p.id) || patterns[idx];
+                if (unassigned) {
+                  unassigned.setAttribute('id', patId);
+                }
+              }
+            }
+          });
+        }
+      });
+    };
+    healImageFrames(tempDiv);
+    healImageFrames(targetSvg);
 
     let finalHtml = tempDiv.innerHTML;
     // Auto-heal any broken unescaped span style attributes
@@ -427,10 +455,13 @@ const MainEditor = ({
     finalHtml = finalHtml
       .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
       .replace(/<\/\s*br\s*>/gi, '');
+
+    const resolvedLayers = explicitLayers || (targetSvg && typeof parseLayersFromSVG === 'function' ? parseLayersFromSVG(targetSvg) : null);
+
     if (updatePageHtmlRef.current) {
-      updatePageHtmlRef.current(targetPageIndex, finalHtml);
+      updatePageHtmlRef.current(targetPageIndex, finalHtml, resolvedLayers);
     } else if (typeof updatePageHtml === 'function') {
-      updatePageHtml(targetPageIndex, finalHtml);
+      updatePageHtml(targetPageIndex, finalHtml, resolvedLayers);
     }
   };
 

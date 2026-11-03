@@ -198,8 +198,12 @@ export const usePageManager = ({
         } else {
           try {
             const parser = new DOMParser();
-            const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
+            let doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
+            let svgEl = doc.querySelector('svg');
+            if (!svgEl || doc.querySelector('parsererror')) {
+              doc = parser.parseFromString(sanitizedHtml, 'text/html');
+              svgEl = doc.querySelector('svg');
+            }
             if (svgEl) {
               const pageGroup = svgEl.querySelector('[data-type="frame"]') ||
                                 svgEl.querySelector('[data-name="Overlay"]')?.parentElement;

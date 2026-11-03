@@ -7,7 +7,6 @@ import { QR_ITEMS } from './categories/qrCodeCatalog.jsx';
 import { MAP_ITEMS } from './categories/mapCatalog.jsx';
 import { EMBED_ITEMS } from './categories/embedsCatalog.jsx';
 import { SLIDESHOW_ITEMS } from './categories/slideshowCatalog.jsx';
-import { DECORATOR_ITEMS } from './categories/decoratorsCatalog.jsx';
 import { AUDIO_ITEMS } from './categories/audioCatalog.jsx';
 import React from 'react';
 import { Icon } from '@iconify/react';
@@ -25,8 +24,6 @@ export const ELEMENT_CATEGORIES = [
   { id: 'slideshow', name: 'Slideshow', icon: 'lucide:presentation' },
   { id: 'google-maps', name: 'Google Maps', icon: 'lucide:map-pin' },
   { id: 'tables', name: 'Tables', icon: 'lucide:table' },
-  { id: 'decorators', name: 'Decorators', icon: 'lucide:sparkles' },
-
 ];
 
 /**
@@ -95,9 +92,6 @@ export const ELEMENT_ITEMS = [
 
   // --- Slideshow & Interactive Carousels ---
   ...SLIDESHOW_ITEMS,
-
-  // --- Animated Motion Decorators ---
-  ...DECORATOR_ITEMS,
 
   // --- Interactive Audio Players ---
   ...AUDIO_ITEMS,

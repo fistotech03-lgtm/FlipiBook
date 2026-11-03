@@ -149,11 +149,15 @@ export const usePreviewZoom = ({
       return;
     }
 
+    let rafId = null;
+
     const computeFitScale = () => {
       const screen = screenRef.current;
       if (!screen) return;
 
       const { clientWidth, clientHeight } = screen;
+      if (!clientWidth || !clientHeight) return;
+
       const isCurrentlyFullscreen = (document.fullscreenElement === containerRef.current) || isFullscreen;
 
       const wFactor = 0.70;
@@ -166,32 +170,49 @@ export const usePreviewZoom = ({
       const availablePageW = isSinglePage ? availableW : availableW / 2;
       const availablePageH = availableH;
 
-      const scaleX = availablePageW / (baseDimensions.width || 210);
-      const scaleY = availablePageH / (baseDimensions.height || 297);
+      const baseW = (baseDimensions && Number.isFinite(baseDimensions.width) && baseDimensions.width > 0) ? baseDimensions.width : 210;
+      const baseH = (baseDimensions && Number.isFinite(baseDimensions.height) && baseDimensions.height > 0) ? baseDimensions.height : 297;
+
+      const scaleX = availablePageW / baseW;
+      const scaleY = availablePageH / baseH;
       const scale = Math.min(scaleX, scaleY);
 
-      setWIDTH(Math.round(baseDimensions.width * scale * baseZoom));
-      setHEIGHT(Math.round(baseDimensions.height * scale * baseZoom));
-      setActualPhysicalZoom(baseZoom);
+      const physicalZoom = Number.isFinite(baseZoom) && baseZoom > 0 ? baseZoom : 1;
+
+      if (Number.isFinite(scale) && scale > 0) {
+        const newW = Math.round(baseW * scale * physicalZoom);
+        const newH = Math.round(baseH * scale * physicalZoom);
+        if (newW > 10 && newH > 10) {
+          setWIDTH(prev => (Math.abs(prev - newW) >= 2 ? newW : prev));
+          setHEIGHT(prev => (Math.abs(prev - newH) >= 2 ? newH : prev));
+          setActualPhysicalZoom(prev => (Math.abs(prev - physicalZoom) > 0.01 ? physicalZoom : prev));
+        }
+      }
     };
 
-    const observer = new ResizeObserver(computeFitScale);
+    const scheduleCompute = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(computeFitScale);
+    };
+
+    const observer = new ResizeObserver(scheduleCompute);
     observer.observe(screenRef.current);
 
     const onFSChange = () => {
-      requestAnimationFrame(computeFitScale);
+      scheduleCompute();
     };
     document.addEventListener('fullscreenchange', onFSChange);
     document.addEventListener('webkitfullscreenchange', onFSChange);
 
-    computeFitScale();
+    scheduleCompute();
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
       document.removeEventListener('fullscreenchange', onFSChange);
       document.removeEventListener('webkitfullscreenchange', onFSChange);
     };
-  }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions, isTurnJs, isSinglePage, screenRef, containerRef]);
+  }, [activeDevice, isSidebarOpen, isFullscreen, zoom, manualZoom, interactionZoom, baseDimensions?.width, baseDimensions?.height, isTurnJs, isSinglePage, screenRef, containerRef]);
 
   const handleZoomIn = useCallback(() => setManualZoom(prev => Math.min(prev + 0.05, 2)), [setManualZoom]);
   const handleZoomOut = useCallback(() => setManualZoom(prev => Math.max(prev - 0.05, 0.5)), [setManualZoom]);

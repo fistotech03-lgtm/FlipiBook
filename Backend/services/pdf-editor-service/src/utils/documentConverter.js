@@ -12,11 +12,16 @@ let cachedLibreOfficePath = null;
 
 const CANDIDATE_SOFFICE_PATHS = [
   process.env.LIBREOFFICE_PATH,
+  '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+  '/Applications/LibreOffice.app/Contents/MacOS/libreoffice',
+  '/opt/homebrew/bin/soffice',
+  '/opt/homebrew/bin/libreoffice',
+  '/usr/local/bin/soffice',
+  '/usr/local/bin/libreoffice',
   'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
   'C:\\Program Files\\LibreOffice\\program\\soffice.com',
   'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
   '/usr/bin/soffice',
-  '/usr/local/bin/soffice',
   '/usr/bin/libreoffice',
   'soffice.exe',
   'soffice.com',

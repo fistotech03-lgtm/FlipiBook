@@ -1,3 +1,4 @@
+import { update3FrameSlideshow } from '../../LeftActionMenu/Elements/utils/slideshowElementUtils';
 import { useEffect } from 'react';
 
 /**
@@ -43,6 +44,16 @@ export const useSlideshowManager = () => {
             // Update DOM attributes
             el.setAttribute('data-active-index', nextIndex.toString());
             el._lastSlideTime = now;
+
+            // If 3-frame or coverflow/flat slideshow, use specialized frame updater
+            const is3Frame = el.getAttribute('data-type') === 'slideshow' ||
+              el.getAttribute('data-is-slideshow') === 'true' ||
+              el.querySelectorAll('rect:not([fill="transparent"]):not(.bbox-anchor):not(.slideshow-container-bg)').length >= 3;
+            if (is3Frame) {
+              update3FrameSlideshow(el, images, nextIndex, settings);
+              window.dispatchEvent(new CustomEvent('slideshow-index-changed', { detail: { id: el.id, index: nextIndex } }));
+              return;
+            }
 
             // ── Resolve the actual <image>/<img>, including SVG pattern fills ──
             const _findImgInPattern = (node) => {

@@ -35,44 +35,96 @@ export const useCanvasContextMenuAndBadges = ({
       return;
     }
 
-    const frameId = currentFrameIdRef?.current;
+    let targetEl = e.target;
     let layerId = null;
 
-    if (frameId) {
-      const frameEl = svg.querySelector(`[id="${frameId}"]`);
-      if (frameEl && hitTest(frameEl, e.clientX, e.clientY)) {
-        const children = getDirectChildFrames(frameEl);
-        for (let i = children.length - 1; i >= 0; i--) {
-          if (hitTest(children[i], e.clientX, e.clientY)) {
-            layerId = children[i].id;
-            break;
-          }
-        }
-        if (!layerId) layerId = frameId;
+    // Check if clicked directly on an active selection overlay / polygon / handle
+    if (targetEl && (targetEl.id?.includes('overlay-poly-') || targetEl.id?.includes('overlay-path-'))) {
+      const polyId = targetEl.id
+        .replace(/^overlay-poly-(selected|child-selected|hover|child-hover|entered|multi-child-selected)-/, '')
+        .replace(/^overlay-path-(selected|child-selected|hover|child-hover|entered)-/, '');
+      if (polyId === 'multi' || polyId === 'multi-selection-bounds') {
+        layerId = selectedLayerId;
+      } else if (polyId) {
+        layerId = polyId;
       }
-    } else {
-      const topLevelEls = getTopLevelFrames(svg);
-      for (let i = topLevelEls.length - 1; i >= 0; i--) {
-        if (hitTest(topLevelEls[i], e.clientX, e.clientY)) {
-          layerId = topLevelEls[i].id;
-          break;
+    } else if (targetEl?.closest?.('#ghost-layer, [data-highlight-id], .selection-overlay-layer, .selection-overlay-root, [data-name="Overlay"]')) {
+      if (selectedLayerId) {
+        layerId = selectedLayerId;
+      }
+    }
+
+    if (!layerId) {
+      // Find compound parent if clicked inside a shape, button, image group, video group, etc.
+      const compoundParent = targetEl?.parentElement?.closest?.(
+        'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
+        'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+        'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
+        'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+      ) || (targetEl?.tagName?.toLowerCase() === 'g' && targetEl?.matches?.(
+        '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
+        '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
+        '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+        '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+      ) ? targetEl : null);
+
+      if (compoundParent && compoundParent.id) {
+        layerId = compoundParent.id;
+      } else {
+        const withId = targetEl?.closest?.('[id]');
+        if (withId && withId.id && withId.id !== 'main-svg-root' && withId.tagName?.toLowerCase() !== 'svg') {
+          layerId = withId.id;
         }
       }
     }
 
     if (!layerId) {
-      const target = e.target.closest('[id]');
-      if (target && target.id && target.id !== 'main-svg-root') {
-        layerId = target.id;
+      const frameId = currentFrameIdRef?.current;
+      if (frameId) {
+        const frameEl = svg.querySelector(`[id="${frameId}"]`);
+        if (frameEl && hitTest(frameEl, e.clientX, e.clientY)) {
+          const children = getDirectChildFrames(frameEl);
+          for (let i = children.length - 1; i >= 0; i--) {
+            if (hitTest(children[i], e.clientX, e.clientY)) {
+              layerId = children[i].id;
+              break;
+            }
+          }
+          if (!layerId) layerId = frameId;
+        }
+      } else {
+        const topLevelEls = getTopLevelFrames(svg);
+        for (let i = topLevelEls.length - 1; i >= 0; i--) {
+          if (hitTest(topLevelEls[i], e.clientX, e.clientY)) {
+            layerId = topLevelEls[i].id;
+            break;
+          }
+        }
       }
     }
 
     if (!layerId) return;
 
-    const layerEl = svg.querySelector(`[id="${layerId}"]`);
+    let layerEl = svg.querySelector(`[id="${layerId}"]`);
+    if (layerEl) {
+      const compParent = layerEl.parentElement?.closest?.(
+        'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
+        'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
+        'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
+        'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+      );
+      if (compParent && compParent.id) {
+        layerId = compParent.id;
+        layerEl = compParent;
+      }
+    }
     const isOverlay = layerEl ? layerEl.getAttribute('data-name') === 'Overlay' : false;
 
-    if (!multiSelectedIds.has(layerId)) {
+    // Never deselect an already-selected element on right click!
+    // If clicked element is already in selection, keep the current selection intact.
+    // If not selected, select the right-clicked element.
+    const isAlreadySelected = (selectedLayerId === layerId) || (multiSelectedIds && multiSelectedIds.has(layerId));
+    if (!isAlreadySelected) {
       if (setSelectedLayerId) setSelectedLayerId(layerId);
       if (setMultiSelectedIds) setMultiSelectedIds(new Set([layerId]));
     }

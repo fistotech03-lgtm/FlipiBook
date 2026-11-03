@@ -5,15 +5,14 @@ require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose');
+global.mongoose = mongoose;
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.AUTH_PORT || process.env.PORT || 5001;
-
-// Connect to MongoDB Database
-connectDB();
 
 // Middleware
 const allowedOrigins = [
@@ -63,5 +62,7 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Auth Service] Running on port ${PORT}`);
 });
+
+connectDB();
 
 module.exports = app;

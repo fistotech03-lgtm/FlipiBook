@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const Flipbook = require('../models/Flipbook');
+const Flipbook = require('../../../../shared/models/Flipbook');
 
 /**
  * Generate unique ID (nanoid replacement)
@@ -60,17 +60,20 @@ const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flip
  */
 const resolveFolder = (folderName) => {
   if (Array.isArray(folderName)) {
-    const realFolders = folderName.filter(
-      (f) => f && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
+    const flat = folderName.flat(Infinity);
+    const realFolders = flat.filter(
+      (f) => f && typeof f === 'string' && !VIRTUAL_FOLDERS.has(String(f).trim().toLowerCase())
     );
-    return realFolders.length > 0 ? String(realFolders[0]).trim() : 'My_Flipbooks';
+    return realFolders.length > 0 ? resolveFolder(realFolders[0]) : 'default';
   }
   if (typeof folderName === 'string' && folderName.trim()) {
     const clean = folderName.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase())) return 'My_Flipbooks';
+    const lower = clean.toLowerCase();
+    if (VIRTUAL_FOLDERS.has(lower) || lower === 'my flipbooks' || lower === 'default' || lower === 'fol_default') return 'default';
+    if (clean.startsWith('fol_')) return 'default';
     return clean;
   }
-  return 'My_Flipbooks';
+  return 'default';
 };
 
 /**
@@ -88,7 +91,7 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
     flipbookName || (doc ? doc.flipbookName : 'Untitled_Document'),
     'Untitled_Document'
   );
-  const effectiveFolder = resolveFolder(folderName || (doc ? doc.folderName : 'My_Flipbooks'));
+  const effectiveFolder = resolveFolder(folderName || (doc ? doc.folderName : 'default'));
 
   const sanitizedEmail = sanitizeEmail(effectiveEmail);
   const storageRoot = getStorageRoot();
@@ -101,7 +104,7 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
   let bookDir = path.join(
     storageRoot,
     userFolders[0] || sanitizedEmail,
-    'My_Flipbooks',
+    'books',
     effectiveFolder,
     effectiveBook
   );
@@ -119,8 +122,9 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
     if (found) break;
     for (const variant of dirVariants) {
       const candidates = [
-        path.join(storageRoot, uf, 'My_Flipbooks', effectiveFolder, variant),
-        path.join(storageRoot, uf, 'My_Flipbooks', 'My_Flipbooks', variant),
+        path.join(storageRoot, uf, 'books', effectiveFolder, variant),
+        path.join(storageRoot, uf, 'books', 'default', variant),
+        path.join(storageRoot, uf, 'books', variant),
         path.join(storageRoot, uf, effectiveFolder, variant),
         path.join(storageRoot, uf, variant)
       ];
@@ -133,13 +137,13 @@ const resolveFlipbookPaths = async ({ v_id, emailId, folderName, flipbookName })
       }
       if (found) break;
 
-      // Also scan subdirectories inside My_Flipbooks
-      const myFlipbooksDir = path.join(storageRoot, uf, 'My_Flipbooks');
-      if (fs.existsSync(myFlipbooksDir)) {
+      // Also scan subdirectories inside books
+      const subDir = path.join(storageRoot, uf, 'books');
+      if (fs.existsSync(subDir)) {
         try {
-          const subdirs = fs.readdirSync(myFlipbooksDir);
+          const subdirs = fs.readdirSync(subDir);
           for (const sd of subdirs) {
-            const nestedCand = path.join(myFlipbooksDir, sd, variant);
+            const nestedCand = path.join(subDir, sd, variant);
             if (fs.existsSync(nestedCand)) {
               bookDir = nestedCand;
               found = true;
@@ -197,6 +201,67 @@ const initFlipbookStorage = (bookDir) => {
   }
 };
 
+const WORKSPACE_FOLDERS = [
+  'gallery',
+  'gallery/pageEditorgallery',
+  'gallery/pageEditorgallery/images',
+  'gallery/pageEditorgallery/videos',
+  'gallery/pageEditorgallery/gifs',
+  'gallery/customizationGallery',
+  'gallery/customizationGallery/images',
+  'gallery/customizationGallery/videos',
+  'gallery/3dGallery',
+  'gallery/3dGallery/models',
+  'gallery/3dGallery/texture',
+  'gallery/3dGallery/snapshot',
+  'books',
+  'books/default',
+  'userdetails',
+  'userdetails/profile',
+  'userdetails/company_logo'
+];
+
+const ensureDirPerms = (p) => {
+  if (!fs.existsSync(p)) {
+    try { fs.mkdirSync(p, { recursive: true, mode: 0o777 }); } catch (e) {}
+  }
+  try { fs.chmodSync(p, 0o777); } catch (e) {}
+};
+
+/**
+ * Ensure user's physical workspace folders exist on disk for both customUserId and email
+ */
+const ensureUserWorkspace = (userId, emailId, folderName = null) => {
+  try {
+    const storageRoot = getStorageRoot();
+    ensureDirPerms(storageRoot);
+
+    const dirName = userId ? String(userId) : (emailId ? emailId.trim().toLowerCase().replace(/[@.]/g, '_') : null);
+    if (!dirName) return null;
+
+    const userDir = path.join(storageRoot, dirName);
+    ensureDirPerms(userDir);
+
+    for (const wf of WORKSPACE_FOLDERS) {
+      const fp = path.join(userDir, wf);
+      ensureDirPerms(fp);
+    }
+
+    const defaultBooks = path.join(userDir, 'books', 'default');
+    ensureDirPerms(defaultBooks);
+
+    if (folderName) {
+      const customF = path.join(userDir, 'books', folderName);
+      ensureDirPerms(customF);
+    }
+
+    return userDir;
+  } catch (err) {
+    console.error('[Storage Helper] Error ensuring user workspace:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   generateId,
   getStorageRoot,
@@ -205,5 +270,6 @@ module.exports = {
   sanitizeName,
   resolveFolder,
   resolveFlipbookPaths,
-  initFlipbookStorage
+  initFlipbookStorage,
+  ensureUserWorkspace
 };

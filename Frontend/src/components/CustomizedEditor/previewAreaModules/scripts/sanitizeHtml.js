@@ -4,6 +4,22 @@ export const sanitizeHtmlForPreview = (rawHtml) => {
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawHtml, 'text/html');
 
+        const rootSvg = doc.querySelector('svg');
+        if (rootSvg) {
+            const w = rootSvg.getAttribute('width');
+            const h = rootSvg.getAttribute('height');
+            const vb = rootSvg.getAttribute('viewBox');
+            if (!vb && w && h && !w.includes('%') && !h.includes('%')) {
+                const nw = parseFloat(w);
+                const nh = parseFloat(h);
+                if (!isNaN(nw) && !isNaN(nh)) {
+                    rootSvg.setAttribute('viewBox', `0 0 ${nw} ${nh}`);
+                }
+            }
+            rootSvg.setAttribute('width', '100%');
+            rootSvg.setAttribute('height', '100%');
+        }
+
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
             const hideControls = (fo && fo.getAttribute('data-show-controls') === 'false') || iframe.getAttribute('data-show-controls') === 'false';

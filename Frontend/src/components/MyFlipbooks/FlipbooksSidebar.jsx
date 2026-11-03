@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Copy, Library } from 'lucide-react';
+import { BookOpen, Heart, Trash2, Plus, Folder, MoreVertical, X, ArrowRight, ArrowLeft, Box, RotateCcw, Edit2, Library, Images } from 'lucide-react';
 import CustomScrollbar from '../CustomScrollbar';
 import { FolderSkeleton } from './FlipbookSkeleton';
 
@@ -26,7 +26,6 @@ export default function FlipbooksSidebar({
     onCreateFolder,
     onRenameFolder,
     onDeleteFolder,
-    onDuplicateFolder,
     onReorderFolders,
     creatingFolderName,
     storage,
@@ -38,6 +37,7 @@ export default function FlipbooksSidebar({
     setDashboardMode,
     active3dFolder = 'All Models',
     setActive3dFolder,
+    threeDCounts = { allCount: 0, recentCount: 0 },
     // Optional overrides for backwards compatibility
     navigate: navigateProp,
     FOLDER_COLORS = DEFAULT_FOLDER_COLORS,
@@ -64,6 +64,60 @@ export default function FlipbooksSidebar({
     const [editingId, setEditingId] = useState(null);
     const [tempName, setTempName] = useState('');
 
+    // Toggleable Storage Box state
+    const [isStorageBoxOpen, setIsStorageBoxOpen] = useState(false);
+    const storageContainerRef = useRef(null);
+
+    // Real-time Duplicate Detection for Folder Creation
+    const isNewFolderDuplicate = useMemo(() => {
+        const trimmed = newFolderInputName.trim().toLowerCase();
+        if (!trimmed) return false;
+        const reserved = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+        if (reserved.includes(trimmed)) return true;
+        return (folders || []).some(f => {
+            const name = (f.name || '').trim().toLowerCase();
+            if ((f.isDefault || name === 'default') && (trimmed === 'my flipbooks' || trimmed === 'default')) return true;
+            return name === trimmed;
+        });
+    }, [newFolderInputName, folders]);
+
+    // Real-time Duplicate Detection for Folder Renaming
+    const isEditFolderDuplicate = useMemo(() => {
+        if (!editingId) return false;
+        const trimmed = tempName.trim().toLowerCase();
+        if (!trimmed) return false;
+        const currentFolder = (folders || []).find(f => f.id === editingId);
+        if (currentFolder && (currentFolder.name || '').trim().toLowerCase() === trimmed) {
+            return false;
+        }
+        const reserved = ['recent book', 'recent', 'trash', 'favorites', 'all flipbook', 'all flipbooks'];
+        if (reserved.includes(trimmed)) return true;
+        return (folders || []).some(f => {
+            if (f.id === editingId) return false;
+            const name = (f.name || '').trim().toLowerCase();
+            if ((f.isDefault || name === 'default') && (trimmed === 'my flipbooks' || trimmed === 'default')) return true;
+            return name === trimmed;
+        });
+    }, [editingId, tempName, folders]);
+
+    useEffect(() => {
+        if (!isStorageBoxOpen) return;
+        const handleOutsideClick = (e) => {
+            if (storageContainerRef.current && !storageContainerRef.current.contains(e.target)) {
+                setIsStorageBoxOpen(false);
+            }
+        };
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') setIsStorageBoxOpen(false);
+        };
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('keydown', handleEsc);
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideClick);
+            document.removeEventListener('keydown', handleEsc);
+        };
+    }, [isStorageBoxOpen]);
+
     const handleAddFolderClick = rest.handleAddFolderClick || (() => {
         setIsCreatingFolder(true);
         setNewFolderInputName('');
@@ -74,6 +128,9 @@ export default function FlipbooksSidebar({
         if (!trimmed) {
             setIsCreatingFolder(false);
             setNewFolderInputName('');
+            return;
+        }
+        if (isNewFolderDuplicate) {
             return;
         }
         setIsCreatingFolder(false);
@@ -92,8 +149,11 @@ export default function FlipbooksSidebar({
             return;
         }
         const folder = folders.find(f => f.id === editingId);
-        if (!folder || folder.name === tempName.trim()) {
+        if (!folder || folder.name.trim() === tempName.trim()) {
             setEditingId(null);
+            return;
+        }
+        if (isEditFolderDuplicate) {
             return;
         }
         const currentFolderId = folder.id;
@@ -106,6 +166,9 @@ export default function FlipbooksSidebar({
     const handleKeyDown = rest.handleKeyDown || ((e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            if (isEditFolderDuplicate) {
+                return;
+            }
             saveEdit();
         } else if (e.key === 'Escape') {
             setEditingId(null);
@@ -168,14 +231,6 @@ export default function FlipbooksSidebar({
         }
     };
 
-    const handleDuplicateFolder = (folder) => {
-        if (onDuplicateFolder) {
-            onDuplicateFolder(folder);
-        } else if (rest.handleDuplicateFolder) {
-            rest.handleDuplicateFolder(folder);
-        }
-    };
-
     useEffect(() => {
         if ((isCreatingFolder || creatingFolderName) && folderListRef.current) {
             folderListRef.current.scrollTo({
@@ -184,122 +239,151 @@ export default function FlipbooksSidebar({
             });
         }
     }, [isCreatingFolder, creatingFolderName, folderListRef]);
-    // 3D Folders state matching the reference mockup
-    const [threeDFolders, setThreeDFolders] = React.useState([
-        { id: '3d-1', name: 'Motors', count: 1, color: '#f59e0b' },
-        { id: '3d-2', name: 'Pumps', count: 2, color: '#f43f5e' },
-        { id: '3d-3', name: 'Models for Book', count: 1, color: '#10b981' },
-        { id: '3d-4', name: 'Texture added Models', count: 4, color: '#38bdf8' },
-    ]);
-    const [isCreating3dFolder, setIsCreating3dFolder] = React.useState(false);
-    const [new3dFolderInputName, setNew3dFolderInputName] = React.useState('');
-    const [editing3dFolderId, setEditing3dFolderId] = React.useState(null);
-    const [temp3dFolderName, setTemp3dFolderName] = React.useState('');
 
-    const startEditing3dFolder = (folder) => {
-        setEditing3dFolderId(folder.id);
-        setTemp3dFolderName(folder.name);
-    };
-
-    const save3dEdit = () => {
-        if (!editing3dFolderId || !temp3dFolderName.trim()) {
-            setEditing3dFolderId(null);
-            return;
-        }
-        const trimmed = temp3dFolderName.trim();
-        const currentFolder = threeDFolders.find(f => f.id === editing3dFolderId);
-        if (currentFolder && active3dFolder === currentFolder.name) {
-            setActive3dFolder?.(trimmed);
-        }
-        setThreeDFolders(prev => prev.map(f => f.id === editing3dFolderId ? { ...f, name: trimmed } : f));
-        setEditing3dFolderId(null);
-        setTemp3dFolderName('');
-    };
-
-    const handle3dKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            save3dEdit();
-        } else if (e.key === 'Escape') {
-            setEditing3dFolderId(null);
-            setTemp3dFolderName('');
-        }
-    };
-
-    const handleDuplicate3dFolder = (folder) => {
-        const baseName = folder.name.replace(/ \(Copy( \d+)?\)$/, '');
-        let newName = `${baseName} (Copy)`;
-        let counter = 1;
-        while (threeDFolders.some(f => f.name.toLowerCase() === newName.toLowerCase())) {
-            counter++;
-            newName = `${baseName} (Copy ${counter})`;
-        }
-        const newFolder = {
-            id: `3d-${Date.now()}`,
-            name: newName,
-            count: folder.count || 0,
-            color: folder.color || '#f59e0b'
-        };
-        setThreeDFolders(prev => [...prev, newFolder]);
-        setActive3dFolder?.(newName);
-    };
-
-    const handleDelete3dFolder = (folder) => {
-        setThreeDFolders(prev => prev.filter(f => f.id !== folder.id));
-        if (active3dFolder === folder.name) {
-            setActive3dFolder?.('All Models');
-        }
-    };
-
-    const saveNew3dFolder = () => {
-        if (!new3dFolderInputName.trim()) {
-            setIsCreating3dFolder(false);
-            setNew3dFolderInputName('');
-            return;
-        }
-        const trimmed = new3dFolderInputName.trim();
-        setThreeDFolders(prev => [
-            ...prev,
-            {
-                id: `3d-${Date.now()}`,
-                name: trimmed,
-                count: 0,
-                color: FOLDER_COLORS[prev.length % FOLDER_COLORS.length]
-            }
-        ]);
-        setActive3dFolder?.(trimmed);
-        setIsCreating3dFolder(false);
-        setNew3dFolderInputName('');
-    };
 
     // Quick Access counts
-    const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
+    const allCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent' && !b.isOtherUserBook).length;
     const recentCount = books.filter(b => !b.trash && (b.folder === 'Recent Book' || b.folder === 'Recent')).length;
     const favoritesCount = books.filter(b => !b.trash && b.folder !== 'Trash' && b.folder !== 'Recent Book' && b.folder !== 'Recent' && Boolean(b.isFavorite || b.favorite || b.isFav)).length;
     const trashCount = books.filter(b => Boolean(b.trash || b.folder === 'Trash') && b.folder !== 'Recent Book' && b.folder !== 'Recent').length;
 
-    // Storage formatting
-    const fallbackBooksSize = Array.isArray(books) ? books.reduce((acc, b) => acc + (b.sizeBytes || b.fileSize || 0), 0) : 0;
-    const effectiveUsed = (typeof storage?.used === 'number' && !isNaN(storage.used)) ? storage.used : fallbackBooksSize;
-    const effectiveTotal = storage?.total > 0 ? storage.total : (300 * 1024 * 1024);
+    // Helper to safely parse sizes to bytes (supports numbers or formatted strings like "36.8 MB", "500 KB")
+    const parseSizeToBytes = (val) => {
+        if (typeof val === 'number' && !isNaN(val)) return Math.max(0, Math.round(val));
+        if (typeof val === 'string') {
+            const trimmed = val.trim();
+            const match = trimmed.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i);
+            if (match) {
+                const num = parseFloat(match[1]);
+                if (isNaN(num)) return 0;
+                const unit = (match[2] || 'B').toUpperCase();
+                const mult = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024, TB: 1024 * 1024 * 1024 * 1024 };
+                return Math.round(num * (mult[unit] || 1));
+            }
+        }
+        return 0;
+    };
+
+    // Calculate real-time active storage consumed by flipbooks on screen (excluding duplicate Recent pointers & favorited external books)
+    const liveBooksSize = useMemo(() => {
+        if (!Array.isArray(books)) return 0;
+        return books.reduce((acc, b) => {
+            if (b.isOtherUserBook || b.folder === 'Recent Book' || b.folder === 'Recent' || String(b.id || '').startsWith('Recent_')) {
+                return acc;
+            }
+            const pagesBytes = Array.isArray(b.pagesList)
+                ? b.pagesList.reduce((s, p) => s + parseSizeToBytes(p?.size), 0)
+                : 0;
+            const bookBytes = Math.max(
+                parseSizeToBytes(b.sizeBytes),
+                parseSizeToBytes(b.fileSize),
+                parseSizeToBytes(b.size),
+                pagesBytes
+            );
+            return acc + bookBytes;
+        }, 0);
+    }, [books]);
+
+    // Effective used storage: The greater of backend quota (which includes Gallery + Flipbook Assets + Disk)
+    // or the live sum of active books visible on the user dashboard
+    const effectiveUsed = Math.max(
+        (typeof storage?.used === 'number' && !isNaN(storage.used)) ? storage.used : 0,
+        liveBooksSize
+    );
+    const effectiveTotal = storage?.total > 0 ? storage.total : (300 * 1000 * 1000);
 
     const formatMB = (bytes) => {
         if (!bytes || bytes <= 0) return '0 MB';
-        const mb = bytes / (1024 * 1024);
+        const mb = bytes / 1000000;
         if (mb < 0.1) return '0.1 MB';
         if (mb < 100) return `${parseFloat(mb.toFixed(1))} MB`;
         return `${Math.round(mb)} MB`;
     };
 
     const usedFormatted = formatMB(effectiveUsed);
-    const totalFormatted = effectiveTotal >= 1024 * 1024 * 1024
-        ? `${Math.round(effectiveTotal / (1024 * 1024 * 1024))} GB`
-        : `${Math.round(effectiveTotal / (1024 * 1024))} MB`;
+    const totalFormatted = effectiveTotal >= 1000000000
+        ? `${Math.round(effectiveTotal / 1000000000)} GB`
+        : `${Math.round(effectiveTotal / 1000000)} MB`;
     const storagePercent = effectiveTotal > 0 ? Math.min(100, Math.round((effectiveUsed / effectiveTotal) * 100)) : 0;
+
+    // Dynamic storage gradient flow and theme
+    // <= 50%: Clean white flow
+    // > 50% & < 85%: Gradient flow starting in crisp white, transitioning to glowing orange
+    // >= 85%: Deep dark gradient flow from white through orange to warning red
+    const storageTheme = useMemo(() => {
+        if (storagePercent >= 85) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#ea543a',
+                endColor: '#ef4444',
+                accentColor: '#ef4444',
+                glow: 'rgba(239, 68, 68, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 40%, #ea543a 70%, #ef4444 100%)',
+                badgeBg: '#ef4444'
+            };
+        }
+        if (storagePercent > 50) {
+            return {
+                startColor: '#ffffff',
+                midColor: '#fb923c',
+                endColor: '#ea543a',
+                accentColor: '#ea543a',
+                glow: 'rgba(234, 84, 58, 0.45)',
+                linearCss: 'linear-gradient(90deg, #ffffff 0%, #fb923c 50%, #ea543a 100%)',
+                badgeBg: '#ea543a'
+            };
+        }
+        return {
+            startColor: '#ffffff',
+            midColor: '#ffffff',
+            endColor: '#cbd5e1',
+            accentColor: '#ffffff',
+            glow: 'rgba(255, 255, 255, 0.35)',
+            linearCss: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
+            badgeBg: '#ffffff'
+        };
+    }, [storagePercent]);
+
+    // Continuous Conic Gradient background for unbroken circular progress flow
+    const conicBackground = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+
+        if (p <= 0) {
+            return 'transparent';
+        }
+
+        if (p <= 50) {
+            // 0% to 50%: Pure clean crisp white arc
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        if (p < 85) {
+            // > 50% and < 85%: Starts white at 12 o'clock, smoothly flows into warm orange at 50%, reaching radiant orange at tip
+            const whiteStop = Math.min(140, deg * 0.55);
+            return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+        }
+
+        // >= 85%: Starts white, flows into orange at 50%, reaching warning crimson red at tip
+        const whiteStop = 120;
+        return `conic-gradient(from 0deg, #ffffff 0deg, #ffffff ${whiteStop}deg, #fb923c 180deg, #ea543a 270deg, #ef4444 ${deg}deg, transparent ${deg}deg, transparent 360deg)`;
+    }, [storagePercent]);
+
+    // Tip coordinates for rounded end cap along the circular stroke
+    const tipCoords = useMemo(() => {
+        const p = Math.min(Math.max(storagePercent, 0), 100);
+        const deg = (p / 100) * 360;
+        const rad = (deg - 90) * (Math.PI / 180);
+        return {
+            left: (50 + 46.5 * Math.cos(rad)).toFixed(2),
+            top: (50 + 46.5 * Math.sin(rad)).toFixed(2)
+        };
+    }, [storagePercent]);
 
     const isBooksActive = dashboardMode === 'books' && activeFolder !== 'Favorites' && activeFolder !== 'Trash';
     const is3dActive = dashboardMode === '3d';
     const isShelfActive = dashboardMode === 'shelf';
+    const isGalleryActive = dashboardMode === 'gallery';
     const isFavoritesActive = dashboardMode === 'favorites' || (dashboardMode === 'books' && activeFolder === 'Favorites');
     const isTrashActive = dashboardMode === 'trash' || (dashboardMode === 'books' && activeFolder === 'Trash');
 
@@ -387,6 +471,29 @@ export default function FlipbooksSidebar({
                         </div>
                     </div>
 
+                    {/* Gallery Page Switcher */}
+                    <div
+                        onClick={() => {
+                            if (setDashboardMode) {
+                                setDashboardMode('gallery');
+                            }
+                            if (activeFolder === 'Favorites' || activeFolder === 'Trash') {
+                                setActiveFolder('All Flipbook');
+                            }
+                            setSelectedBooks([]);
+                        }}
+                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                            isGalleryActive
+                                ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                        }`}
+                    >
+                        <div className="flex items-center gap-[0.75vw]">
+                            <Images size="1.15vw" className={`shrink-0 ${isGalleryActive ? 'text-white' : 'text-gray-300'}`} />
+                            <span>Gallery</span>
+                        </div>
+                    </div>
+
                     {/* Favorites */}
                     <div
                         onClick={() => {
@@ -442,19 +549,14 @@ export default function FlipbooksSidebar({
                             <span className="text-[0.95vw] font-bold text-white">
                                 {dashboardMode === '3d' ? '3D Folders' : 'Your Folders'}
                             </span>
-                            <button
-                                onClick={() => {
-                                    if (dashboardMode === '3d') {
-                                        setIsCreating3dFolder(true);
-                                        setNew3dFolderInputName('');
-                                    } else {
-                                        handleAddFolderClick();
-                                    }
-                                }}
-                                className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
-                            >
-                                <Plus size="0.85vw" /> Add
-                            </button>
+                            {dashboardMode !== '3d' && (
+                                <button
+                                    onClick={handleAddFolderClick}
+                                    className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
+                                >
+                                    <Plus size="0.85vw" /> Add
+                                </button>
+                            )}
                         </div>
 
                 {/* Scrollable Folder List */}
@@ -466,26 +568,8 @@ export default function FlipbooksSidebar({
                     className="flex-1 pr-[0.25vw] pb-[1vw]"
                 >
                     {dashboardMode === '3d' ? (
-                        /* 3D Folders List */
+                        /* 3D Folders List - Only Default Folder (All Models) & Recent */
                         <div className="space-y-[0.25vw]">
-                            {/* All Models */}
-                            <div
-                                onClick={() => setActive3dFolder?.('All Models')}
-                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                    (!active3dFolder || active3dFolder === 'All Models')
-                                        ? 'bg-[#2c3749] text-white font-medium'
-                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
-                                }`}
-                            >
-                                <div className="flex items-center gap-[0.75vw]">
-                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white' : 'text-gray-300'}`} />
-                                    <span>All Models</span>
-                                </div>
-                                <span className={`text-[0.8vw] ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                    8
-                                </span>
-                            </div>
-
                             {/* Recent */}
                             <div
                                 onClick={() => setActive3dFolder?.('Recent')}
@@ -500,129 +584,31 @@ export default function FlipbooksSidebar({
                                     <span>Recent</span>
                                 </div>
                                 <span className={`text-[0.8vw] ${active3dFolder === 'Recent' ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                    4
+                                    {threeDCounts?.recentCount ?? 0}
                                 </span>
                             </div>
 
-                            {/* Custom 3D Folders */}
-                            {threeDFolders.map((folder, index) => {
-                                const isEditing = editing3dFolderId === folder.id;
-                                const isActive = active3dFolder === folder.name;
-                                const isMenuOpen = activeMenuId === folder.id;
-
-                                return isEditing ? (
-                                    <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            value={temp3dFolderName}
-                                            onChange={(e) => setTemp3dFolderName(e.target.value)}
-                                            onBlur={save3dEdit}
-                                            onKeyDown={handle3dKeyDown}
-                                            className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div
-                                        key={folder.id}
-                                        onClick={() => setActive3dFolder?.(folder.name)}
-                                        className={`relative group folder-item-row w-full flex items-center gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] text-left cursor-pointer select-none ${
-                                            isActive
-                                                ? 'bg-[#2c3749] text-white font-medium'
-                                                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
-                                        }`}
-                                    >
-                                        <Folder
-                                            size="1.15vw"
-                                            className="shrink-0 fill-current"
-                                            style={{ color: folder.color }}
-                                        />
-                                        <span className="truncate flex-1 font-medium">{folder.name}</span>
-
-                                        <div className="relative flex items-center justify-end h-[1.5vw] min-w-[1.5vw]">
-                                            <span className={`folder-count-span text-[0.8vw] transition-all duration-200 ease-in-out ${isActive ? 'text-white font-medium' : 'text-gray-400 font-normal'} ${isMenuOpen ? 'has-active-menu pr-[2vw]' : 'pr-[0.25vw] group-hover:pr-[2vw]'}`}>
-                                                {folder.count}
-                                            </span>
-
-                                            {/* Options Menu Trigger */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (activeMenuId === folder.id) {
-                                                        setActiveMenuId(null);
-                                                    } else {
-                                                        const rect = e.currentTarget.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        const isDropup = spaceBelow < 120;
-                                                        setFolderMenuPos({
-                                                            top: isDropup ? rect.top - 5 : rect.bottom + 5,
-                                                            left: rect.right,
-                                                            isDropup
-                                                        });
-                                                        setActiveMenuId(folder.id);
-                                                    }
-                                                }}
-                                                className={`folder-menu-btn absolute right-0 p-[0.3vw] flex items-center justify-center rounded-[0.4vw] bg-transparent transition-all cursor-pointer hover:bg-[#344257] text-gray-400 hover:text-white ${
-                                                    isMenuOpen ? 'active opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                                }`}
-                                            >
-                                                <MoreVertical size="0.9vw" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {/* New 3D Folder Inline Input */}
-                            {isCreating3dFolder && (
-                                <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        placeholder="Folder Name..."
-                                        value={new3dFolderInputName}
-                                        onChange={(e) => setNew3dFolderInputName(e.target.value)}
-                                        onBlur={saveNew3dFolder}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                saveNew3dFolder();
-                                            }
-                                            if (e.key === 'Escape') {
-                                                setIsCreating3dFolder(false);
-                                                setNew3dFolderInputName('');
-                                            }
-                                        }}
-                                        className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none placeholder-gray-500"
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        /* Flipbook Folders List */
-                        <div className="space-y-[0.25vw]">
-                            {/* All Flipbooks */}
+                            {/* All Models */}
                             <div
-                                onClick={() => {
-                                    if (setDashboardMode) setDashboardMode('books');
-                                    setActiveFolder('All Flipbook');
-                                    setSelectedBooks([]);
-                                }}
+                                onClick={() => setActive3dFolder?.('All Models')}
                                 className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
-                                    (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                    (!active3dFolder || active3dFolder === 'All Models')
                                         ? 'bg-[#2c3749] text-white font-medium'
                                         : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
                                 }`}
                             >
                                 <div className="flex items-center gap-[0.75vw]">
-                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
-                                    <span>All Flipbooks</span>
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Models</span>
                                 </div>
-                                <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                    {allCount}
+                                <span className={`text-[0.8vw] ${(!active3dFolder || active3dFolder === 'All Models') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {threeDCounts?.allCount ?? 0}
                                 </span>
                             </div>
-
+                        </div>
+                    ) : (
+                        /* Flipbook Folders List */
+                        <div className="space-y-[0.25vw]">
                             {/* Recent */}
                             <div
                                 onClick={() => {
@@ -645,6 +631,28 @@ export default function FlipbooksSidebar({
                                 </span>
                             </div>
 
+                            {/* All Flipbooks */}
+                            <div
+                                onClick={() => {
+                                    if (setDashboardMode) setDashboardMode('books');
+                                    setActiveFolder('All Flipbook');
+                                    setSelectedBooks([]);
+                                }}
+                                className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                    (activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks')
+                                        ? 'bg-[#2c3749] text-white font-medium'
+                                        : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                }`}
+                            >
+                                <div className="flex items-center gap-[0.75vw]">
+                                    <Folder size="1.15vw" className={`shrink-0 fill-current ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white' : 'text-gray-300'}`} />
+                                    <span>All Flipbooks</span>
+                                </div>
+                                <span className={`text-[0.8vw] ${(activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks') ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    {allCount}
+                                </span>
+                            </div>
+
                             {/* Custom Folders */}
                             {isLoadingFolders && (!folders || folders.length === 0) ? (
                                 <FolderSkeleton count={4} />
@@ -658,19 +666,34 @@ export default function FlipbooksSidebar({
                                 const folderColor = FOLDER_COLORS[index % FOLDER_COLORS.length];
 
                                 return isEditing ? (
-                                    <div key={folder.id} className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm">
+                                    <div
+                                        key={folder.id}
+                                        style={{ border: isEditFolderDuplicate ? '1.5px solid #ef4444' : '1.5px solid #ffffff' }}
+                                        className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] shadow-sm flex flex-col"
+                                    >
                                         <input
                                             autoFocus
                                             type="text"
                                             value={tempName}
-
-                                        onChange={(e) => setTempName(e.target.value)}
-                                        onBlur={saveEdit}
-                                        onKeyDown={handleKeyDown}
-                                        className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
-                                    />
-                                </div>
-                            ) : (
+                                            onChange={(e) => setTempName(e.target.value)}
+                                            onBlur={() => {
+                                                if (isEditFolderDuplicate) {
+                                                    setEditingId(null);
+                                                    setTempName('');
+                                                } else {
+                                                    saveEdit();
+                                                }
+                                            }}
+                                            onKeyDown={handleKeyDown}
+                                            className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none"
+                                        />
+                                        {isEditFolderDuplicate && (
+                                            <p className="text-[#ef4444] text-[0.65vw] font-medium mt-[0.2vw] px-[0.1vw]">
+                                                This folder name already exists
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
                                 <div
                                     key={folder.id}
                                     draggable={!isEditing}
@@ -739,37 +762,54 @@ export default function FlipbooksSidebar({
 
                         {/* New Folder Input */}
                         {isCreatingFolder && (
-                            <div className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div
+                                style={{ border: isNewFolderDuplicate ? '1.5px solid #ef4444' : '1.5px solid #ffffff' }}
+                                className="w-full px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] shadow-sm flex flex-col animate-in fade-in slide-in-from-top-2 duration-300"
+                            >
                                 <input
                                     autoFocus
                                     type="text"
                                     placeholder="Folder Name..."
                                     value={newFolderInputName}
                                     onChange={(e) => setNewFolderInputName(e.target.value)}
-                                    onBlur={saveNewFolder}
+                                    onBlur={() => {
+                                        if (isNewFolderDuplicate) {
+                                            setIsCreatingFolder(false);
+                                            setNewFolderInputName('');
+                                        } else {
+                                            saveNewFolder();
+                                        }
+                                    }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
+                                            if (isNewFolderDuplicate) {
+                                                return;
+                                            }
                                             saveNewFolder();
-                                        }
-                                        if (e.key === 'Escape') {
+                                        } else if (e.key === 'Escape') {
                                             setIsCreatingFolder(false);
                                             setNewFolderInputName('');
                                         }
                                     }}
                                     className="w-full text-[0.875vw] font-medium text-white bg-transparent focus:outline-none placeholder-gray-500"
                                 />
+                                {isNewFolderDuplicate && (
+                                    <p className="text-[#ef4444] text-[0.65vw] font-medium mt-[0.2vw] px-[0.1vw]">
+                                        This folder name already exists
+                                    </p>
+                                )}
                             </div>
                         )}
 
                         {/* Creating Folder Loading Row */}
                         {creatingFolderName && (
-                            <div className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] border border-[#ec5137] bg-[#1c2636] text-[#ec5137] text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
+                            <div style={{ border: '1.5px solid #ffffff' }} className="w-full flex items-center justify-between gap-[0.75vw] px-[0.85vw] py-[0.55vw] rounded-[0.5vw] bg-[#1c2636] text-white text-[0.875vw] font-medium shadow-sm animate-in fade-in duration-200">
                                 <div className="flex items-center gap-[0.75vw] min-w-0 flex-1">
-                                    <Folder size="1.15vw" className="text-[#ec5137] fill-current shrink-0" />
+                                    <Folder size="1.15vw" className="text-amber-500 fill-current shrink-0" />
                                     <span className="truncate">{creatingFolderName}</span>
                                 </div>
-                                <div className="w-[1.1vw] h-[1.1vw] border-[2px] border-[#ec5137] border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                <div className="w-[1.1vw] h-[1.1vw] border-[2px] border-white border-t-transparent rounded-full animate-spin shrink-0"></div>
                             </div>
                         )}
                     </div>
@@ -781,142 +821,151 @@ export default function FlipbooksSidebar({
                 )}
             </div>
 
-            {/* Storage & Upgrade Profile Card */}
-            <div className="mt-auto relative z-30 pt-[0.6vw] flex-none">
-                <div className="w-full bg-white rounded-[0.5vw] p-[0.8vw] border border-gray-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col select-none relative">
-                    {/* Top Header: Database/Storage Icon + Title + Close Button */}
-                    <div className="flex items-center justify-between mb-[0.55vw]">
-                        <div className="flex items-center gap-[0.5vw]">
-                            <div className="relative flex items-center justify-center">
-                                <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
-                                    <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
-                                    <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
-                                </svg>
-                                <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
-                            </div>
-                            <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
-                        </div>
-
-                        {!isUpgradeCardClosed && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsUpgradeCardClosed(true);
-                                    try {
-                                        localStorage.setItem('hide_upgrade_card', 'true');
-                                        sessionStorage.setItem('hide_upgrade_card', 'true');
-                                    } catch (err) {}
-                                }}
-                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-[0.2vw] rounded-full transition-colors cursor-pointer flex items-center justify-center -mr-[0.2vw] -mt-[0.2vw]"
-                                title="Close Upgrade"
-                                aria-label="Close Upgrade"
-                            >
-                                <X size="0.85vw" strokeWidth={2.2} />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-[0.32vw] bg-[#e5e7eb] rounded-full overflow-hidden mb-[0.45vw]">
+            {/* Storage & Upgrade Profile Toggleable Widget */}
+            <div ref={storageContainerRef} className="mt-auto relative z-30 pt-[0.6vw] flex-none">
+                {/* Floating Storage Card Popover (Shown on click toggle) */}
+                {isStorageBoxOpen && (
+                    <>
+                        {/* Backdrop to close modal when clicking outside */}
                         <div
-                            className="h-full bg-[#ea543a] rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${storagePercent}%` }}
-                        ></div>
-                    </div>
+                            className="fixed inset-0 z-40"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsStorageBoxOpen(false);
+                            }}
+                        />
 
-                    {/* Storage Usage Stats */}
-                    <div className="flex items-center justify-between text-[0.7vw] text-[#4b5563] font-semibold mb-[0.6vw]">
-                        <span>
-                            {isLoadingStorage ? 'Calculating...' : `${usedFormatted} of ${totalFormatted} used`}
-                        </span>
-                        <span className="text-[#374151] font-semibold">{storagePercent}%</span>
-                    </div>
-
-                    {/* Divider line & Upgrade Profile Button */}
-                    {!isUpgradeCardClosed && (
-                        <>
-                            <div className="border-t border-[#f3f4f6] mb-[0.65vw]"></div>
-
-                            <div className="relative">
-                                {/* 3D Gold Crown */}
-                                <div className="absolute -top-[1.05vw] -left-[0.5vw] w-[2.35vw] h-[1.88vw] -rotate-[16deg] z-20 select-none pointer-events-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]">
-                                    <svg viewBox="0 0 68 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                                        <defs>
-                                            <linearGradient id="goldGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <stop offset="0%" stopColor="#FFF7C2" />
-                                                <stop offset="20%" stopColor="#FAD04C" />
-                                                <stop offset="50%" stopColor="#E5A620" />
-                                                <stop offset="80%" stopColor="#FCE082" />
-                                                <stop offset="100%" stopColor="#A86B06" />
-                                            </linearGradient>
-                                            <linearGradient id="goldShine" x1="0%" y1="100%" x2="100%" y2="0%">
-                                                <stop offset="0%" stopColor="#7A4B00" />
-                                                <stop offset="35%" stopColor="#FFDE6A" />
-                                                <stop offset="65%" stopColor="#CF8B13" />
-                                                <stop offset="100%" stopColor="#FFFDF2" />
-                                            </linearGradient>
-                                            <radialGradient id="crownVelvet" cx="50%" cy="40%" r="60%">
-                                                <stop offset="0%" stopColor="#8A151B" />
-                                                <stop offset="70%" stopColor="#5E0B10" />
-                                                <stop offset="100%" stopColor="#3B0508" />
-                                            </radialGradient>
-                                            <radialGradient id="rubyGem" cx="35%" cy="35%" r="65%">
-                                                <stop offset="0%" stopColor="#FF6B6B" />
-                                                <stop offset="40%" stopColor="#DC2626" />
-                                                <stop offset="100%" stopColor="#7F1D1D" />
-                                            </radialGradient>
-                                            <radialGradient id="blueGem" cx="35%" cy="35%" r="65%">
-                                                <stop offset="0%" stopColor="#60A5FA" />
-                                                <stop offset="50%" stopColor="#2563EB" />
-                                                <stop offset="100%" stopColor="#1E3A8A" />
-                                            </radialGradient>
-                                            <radialGradient id="emeraldGem" cx="35%" cy="35%" r="65%">
-                                                <stop offset="0%" stopColor="#34D399" />
-                                                <stop offset="50%" stopColor="#059669" />
-                                                <stop offset="100%" stopColor="#064E3B" />
-                                            </radialGradient>
-                                            <radialGradient id="pearlSphere" cx="35%" cy="35%" r="65%">
-                                                <stop offset="0%" stopColor="#FFFFFF" />
-                                                <stop offset="60%" stopColor="#FFF3D6" />
-                                                <stop offset="100%" stopColor="#D4A747" />
-                                            </radialGradient>
-                                        </defs>
-
-                                        <path d="M 12 40 C 14 26, 54 26, 56 40 Z" fill="url(#crownVelvet)" opacity="0.9" />
-                                        <path d="M 10 40 Q 34 20 34 11 Q 34 20 58 40" stroke="url(#goldGradMain)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                                        <path d="M 7 42 Q 34 47 61 42 L 59 50 Q 34 54 9 50 Z" fill="url(#goldShine)" stroke="#7A4B00" strokeWidth="0.8" />
-                                        <circle cx="16" cy="46.5" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                        <circle cx="28" cy="48" r="2" fill="url(#blueGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                        <circle cx="40" cy="48" r="2" fill="url(#rubyGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                        <circle cx="52" cy="46.5" r="2" fill="url(#emeraldGem)" stroke="#FFEAA7" strokeWidth="0.5" />
-                                        <path d="M 7 42 L 3 19 L 20 30 L 34 11 L 48 30 L 65 19 L 61 42 Q 34 47 7 42 Z" fill="url(#goldGradMain)" stroke="#8A5A00" strokeWidth="0.9" />
-                                        <path d="M 10 40 L 7 24 L 20 32 L 34 15 L 48 32 L 61 24 L 58 40 Q 34 44 10 40 Z" fill="url(#goldShine)" opacity="0.6" />
-                                        <circle cx="3" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                        <circle cx="20" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                        <circle cx="34" cy="10" r="4.1" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                        <circle cx="48" cy="29" r="2.8" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                        <circle cx="65" cy="18" r="3.2" fill="url(#pearlSphere)" stroke="#B3770E" strokeWidth="0.7" />
-                                        <polygon points="34,22 38.5,28 34,34 29.5,28" fill="url(#rubyGem)" stroke="#FFF3B0" strokeWidth="0.8" />
-                                        <circle cx="20" cy="36" r="1.6" fill="url(#blueGem)" />
-                                        <circle cx="48" cy="36" r="1.6" fill="url(#emeraldGem)" />
-                                    </svg>
+                        <div className="absolute bottom-[calc(100%+0.6vw)] left-0 w-full bg-white rounded-[0.6vw] p-[0.85vw] border border-gray-200/90 shadow-[0_12px_32px_rgba(0,0,0,0.35)] flex flex-col select-none z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            {/* Top Header: Database/Storage Icon + Title + Close Button */}
+                            <div className="flex items-center justify-between mb-[0.55vw]">
+                                <div className="flex items-center gap-[0.5vw]">
+                                    <div className="relative flex items-center justify-center">
+                                        <svg width="0.95vw" height="0.95vw" viewBox="0 0 24 24" fill="none" stroke="#ea543a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
+                                            <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
+                                            <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
+                                        </svg>
+                                        <div className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] bg-[#ea543a] rounded-full ring-2 ring-white"></div>
+                                    </div>
+                                    <span className="text-[0.82vw] font-semibold text-[#374151]">Storage</span>
                                 </div>
 
                                 <button
-                                    onClick={() => navigate('/settings/profile')}
-                                    className="w-full relative overflow-hidden py-[0.52vw] px-[0.8vw] rounded-[0.65vw] text-[0.78vw] font-medium text-white flex items-center justify-center gap-[0.45vw] shadow-[0_4px_14px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.35)] active:scale-[0.99] transition-all cursor-pointer group"
-                                    style={{
-                                        background: 'radial-gradient(ellipse at 50% 30%, #25282d 0%, #15171a 70%, #0d0e10 100%)'
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsStorageBoxOpen(false);
                                     }}
+                                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-[0.2vw] rounded-full transition-colors cursor-pointer flex items-center justify-center -mr-[0.2vw] -mt-[0.2vw]"
+                                    title="Close Storage"
+                                    aria-label="Close Storage"
                                 >
-                                    <span className="tracking-wide">Upgrade Profile</span>
-                                    <ArrowRight size="0.85vw" strokeWidth={2.4} className="transition-transform group-hover:translate-x-[0.15vw]" />
+                                    <X size="0.85vw" strokeWidth={2.2} />
                                 </button>
                             </div>
-                        </>
-                    )}
+
+                            {/* Progress Bar */}
+                            <div className="w-full h-[0.32vw] bg-[#e5e7eb] rounded-full overflow-hidden mb-[0.45vw]">
+                                <div
+                                    className="h-full rounded-full transition-all duration-500 ease-out"
+                                    style={{
+                                        width: `${storagePercent}%`,
+                                        background: storageTheme.linearCss
+                                    }}
+                                ></div>
+                            </div>
+
+                            {/* Storage Usage Stats */}
+                            <div className="flex items-center justify-between text-[0.7vw] text-[#4b5563] font-semibold mb-[0.55vw]">
+                                <span>
+                                    {isLoadingStorage ? 'Calculating...' : `${usedFormatted} of ${totalFormatted} used`}
+                                </span>
+                                <span style={{ color: storageTheme.accentColor }} className="font-semibold transition-colors duration-300">{storagePercent}%</span>
+                            </div>
+
+                            {/* Small Upgrade Button with Gradient Background */}
+                            <div className="pt-[0.45vw] border-t border-[#f3f4f6]">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsStorageBoxOpen(false);
+                                        navigate('/settings/profile');
+                                    }}
+                                    className="w-full py-[0.42vw] px-[0.75vw] rounded-[0.5vw] text-[0.75vw] font-semibold text-white flex items-center justify-center gap-[0.35vw] shadow-[0_3px_12px_rgba(234,84,58,0.3)] hover:shadow-[0_4px_16px_rgba(234,84,58,0.45)] hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer group"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #fb923c 0%, #ea543a 50%, #dc2626 100%)'
+                                    }}
+                                >
+                                    <span>Upgrade</span>
+                                    <ArrowRight size="0.75vw" strokeWidth={2.4} className="transition-transform group-hover:translate-x-[0.15vw]" />
+                                </button>
+                            </div>
+
+                            {/* Downward pointer caret */}
+                            <div className="absolute -bottom-[0.35vw] left-[1.1vw] w-[0.7vw] h-[0.7vw] bg-white border-r border-b border-gray-200/90 rotate-45"></div>
+                        </div>
+                    </>
+                )}
+
+                {/* Collapsed Trigger Button: Storage Icon with circular percentage border */}
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => setIsStorageBoxOpen((prev) => !prev)}
+                        className={`relative flex items-center justify-center p-[0.2vw] rounded-full transition-all duration-200 cursor-pointer focus:outline-none group ${
+                            isStorageBoxOpen ? 'scale-105' : 'hover:scale-105'
+                        }`}
+                        title={`Storage: ${storagePercent}% used (${usedFormatted} of ${totalFormatted}) - Click to toggle details`}
+                        aria-expanded={isStorageBoxOpen}
+                        aria-label="Toggle storage usage details"
+                    >
+                        {/* Circular Progress Ring */}
+                        <div className="relative w-[2.6vw] h-[2.6vw] min-w-[40px] min-h-[40px] flex items-center justify-center">
+                            {/* Background Track Circle */}
+                            <div className="absolute inset-0 rounded-full border-[2.6px] border-[#243042] bg-[#141a24] box-border" />
+
+                            {/* Continuous Conic Gradient Progress Arc */}
+                            <div
+                                className="absolute inset-0 rounded-full pointer-events-none transition-all duration-700 ease-out"
+                                style={{
+                                    background: conicBackground,
+                                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2.8px), #fff calc(100% - 2.6px))',
+                                    filter: `drop-shadow(0 0 4px ${storageTheme.glow})`
+                                }}
+                            />
+
+
+                            {/* End Round Cap at active progress tip */}
+                            {storagePercent > 1 && storagePercent < 99 && (
+                                <div
+                                    className="absolute w-[2.6px] h-[2.6px] rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-700 ease-out"
+                                    style={{
+                                        top: `${tipCoords.top}%`,
+                                        left: `${tipCoords.left}%`,
+                                        backgroundColor: storageTheme.accentColor,
+                                        boxShadow: `0 0 4px ${storageTheme.glow}`
+                                    }}
+                                />
+                            )}
+
+                            {/* Database/Storage Icon Centered Inside */}
+                            <div className="relative z-10 flex items-center justify-center pointer-events-none">
+                                <div className="relative flex items-center justify-center">
+                                    <svg width="1.1vw" height="1.1vw" className="min-w-[16px] min-h-[16px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                        <ellipse cx="12" cy="5" rx="8.5" ry="2.8" />
+                                        <path d="M3.5 5v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8V5" />
+                                        <path d="M3.5 12v7c0 1.55 3.8 2.8 8.5 2.8s8.5-1.25 8.5-2.8v-7" />
+                                    </svg>
+                                    <div
+                                        className="absolute -top-[0.08vw] -right-[0.1vw] w-[0.32vw] h-[0.32vw] min-w-[5px] min-h-[5px] rounded-full ring-2 ring-[#1b2433] transition-colors duration-500"
+                                        style={{ backgroundColor: storageTheme.badgeBg }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -933,11 +982,10 @@ export default function FlipbooksSidebar({
                         }}
                     >
                         {(() => {
-                            const flipbookFolder = folders?.find(f => f.id === activeMenuId);
-                            const threeDFolder = threeDFolders?.find(f => f.id === activeMenuId);
-                            const folder = flipbookFolder || threeDFolder;
+                            const folder = folders?.find(f => f.id === activeMenuId);
                             if (!folder) return null;
-                            const is3d = Boolean(threeDFolder);
+                            const fLower = (folder.name || '').toLowerCase().trim();
+                            const isDefault = Boolean(folder.isDefault) || fLower === 'my flipbooks' || fLower === 'default';
 
                             return (
                                 <>
@@ -945,47 +993,28 @@ export default function FlipbooksSidebar({
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setActiveMenuId(null);
-                                            if (is3d) {
-                                                startEditing3dFolder(folder);
-                                            } else {
-                                                startEditing(folder);
-                                            }
+                                            startEditing(folder);
                                         }}
-                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors border-b border-[#253346] group cursor-pointer"
+                                        className={`w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors group cursor-pointer ${
+                                            !isDefault ? 'border-b border-[#253346]' : ''
+                                        }`}
                                     >
                                         <Edit2 size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
                                         <span>Rename</span>
                                     </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveMenuId(null);
-                                            if (is3d) {
-                                                handleDuplicate3dFolder(folder);
-                                            } else {
-                                                handleDuplicateFolder(folder);
-                                            }
-                                        }}
-                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-gray-200 hover:bg-[#2c3749] hover:text-white transition-colors border-b border-[#253346] group cursor-pointer"
-                                    >
-                                        <Copy size="0.88vw" className="text-gray-400 group-hover:text-white transition-colors shrink-0" />
-                                        <span>Duplicate</span>
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveMenuId(null);
-                                            if (is3d) {
-                                                handleDelete3dFolder(folder);
-                                            } else {
+                                    {!isDefault && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveMenuId(null);
                                                 handleDeleteFolderClick(folder);
-                                            }
-                                        }}
-                                        className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-[#f87171] hover:bg-[#ef4444] hover:text-white transition-colors group cursor-pointer"
-                                    >
-                                        <Trash2 size="0.88vw" className="text-[#f87171] group-hover:text-white transition-colors shrink-0" />
-                                        <span>Delete</span>
-                                    </button>
+                                            }}
+                                            className="w-full flex items-center gap-[0.55vw] px-[0.8vw] py-[0.625vw] text-[0.75vw] font-medium text-[#f87171] hover:bg-[#ef4444] hover:text-white transition-colors group cursor-pointer"
+                                        >
+                                            <Trash2 size="0.88vw" className="text-[#f87171] group-hover:text-white transition-colors shrink-0" />
+                                            <span>Delete</span>
+                                        </button>
+                                    )}
                                 </>
                             );
                         })()}

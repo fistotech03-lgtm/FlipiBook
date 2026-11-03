@@ -1,5 +1,5 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-const TEXTURE_BASE_URL = `${BACKEND_URL}/textures`;
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL !== undefined ? import.meta.env.VITE_BACKEND_URL : '') || '';
+const TEXTURE_BASE_URL = BACKEND_URL ? `${BACKEND_URL}/textures` : '/textures';
 
 export const textureData = [
   {
@@ -331,3 +331,24 @@ export const textureData = [
     },
   },
 ];
+
+let cachedMaterials = null;
+
+export const fetchMaterials = async () => {
+  if (cachedMaterials) return cachedMaterials;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/presets/materials`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.materials) && data.materials.length > 0) {
+        cachedMaterials = data.materials;
+        return data.materials;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch materials from backend, using default presets:", err);
+  }
+  cachedMaterials = textureData;
+  return textureData;
+};
+

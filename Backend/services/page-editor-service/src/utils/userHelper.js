@@ -66,7 +66,7 @@ const getFlipbookUserQuery = (req) => {
   if (customUserId) {
     conds.push({ userID: customUserId });
   }
-  if (emailId) {
+  if (conds.length === 0 && emailId) {
     conds.push({ userEmail: emailId });
   }
 

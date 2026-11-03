@@ -54,7 +54,7 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
     setPasswordError('');
     setIsSubmittingPassword(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       
       let isVerified = false;
 
@@ -104,7 +104,7 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
     setPasswordError('');
     setIsSubmittingPassword(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const emailId = getUserEmail();
       const currentVid = v_id || shareId;
 
@@ -162,7 +162,7 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
     setOtpError('');
     setIsSubmittingPassword(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const emailId = getUserEmail();
       const currentVid = v_id || shareId;
 
@@ -204,7 +204,7 @@ const PasswordProtectModal = ({ v_id, shareId, onUnlock }) => {
 
 
       const emailId = user?.emailId || user?.email;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const currentVid = v_id || shareId;
 
       const updatedShare = {

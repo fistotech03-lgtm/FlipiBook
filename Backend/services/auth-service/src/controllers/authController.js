@@ -1,9 +1,9 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const User = require("../models/User");
-const LoginLog = require("../models/LoginLog");
-const SignupOtp = require("../models/SignupOtp");
+const User = require("../../../../shared/models/User");
+const LoginLog = require("../models/loginLog");
+const SignupOtp = require("../models/signupOtp");
 const {
   generateToken,
   generateRefreshToken,
@@ -12,6 +12,64 @@ const {
 } = require("../utils/jwtHelper");
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 const { createUserWorkspace } = require("../utils/workspaceHelper");
+const { parseUserAgent, resolveLocation } = require("../utils/deviceParser");
+const { getRedis, isAvailable } = require("../../../../shared/redisClient");
+
+/**
+ * Fast Redis session blacklisting & profile caching helpers
+ */
+const isSessionRevokedInRedis = async (sessionId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return false;
+  try {
+    const val = await redis.get(`revoked:session:${sessionId}`);
+    return val === "1";
+  } catch (_) {
+    return false;
+  }
+};
+
+const markSessionRevokedInRedis = async (sessionId, ttlSeconds = 7 * 24 * 60 * 60) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return;
+  try {
+    await redis.set(`revoked:session:${sessionId}`, "1", "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const getCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return null;
+  try {
+    const raw = await redis.get(`user:profile:${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const setCachedUserProfile = async (userId, userDoc, ttlSeconds = 300) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId || !userDoc) return;
+  try {
+    const payload = {
+      _id: userDoc._id ? String(userDoc._id) : undefined,
+      name: userDoc.name || "",
+      picture: userDoc.picture || "",
+      emailId: userDoc.emailId || "",
+      userID: userDoc.userID || ""
+    };
+    await redis.set(`user:profile:${userId}`, JSON.stringify(payload), "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const purgeCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return;
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch (_) {}
+};
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -63,6 +121,13 @@ const normalizeIp = (ip) => {
   return clean;
 };
 
+const isIPv4 = (ip) => {
+  if (!ip || typeof ip !== "string") return false;
+  const parts = String(ip).trim().split(".");
+  if (parts.length !== 4) return false;
+  return parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
+};
+
 /**
  * Extract client IP address accurately from request across multiple proxy hops.
  * Prioritizes real routable public IPs over internal Docker / loopback IPs.
@@ -70,14 +135,17 @@ const normalizeIp = (ip) => {
 const getClientIp = (req) => {
   const candidates = [];
 
-  // 1. Cloudflare direct client header
-  if (req.headers?.["cf-connecting-ip"]) {
-    candidates.push(req.headers["cf-connecting-ip"]);
-  }
-
-  // 2. Explicit gateway forwarded client IP
+  // 1. Explicit client reported IP in header or body
   if (req.headers?.["x-client-ip"]) {
     candidates.push(req.headers["x-client-ip"]);
+  }
+  if (req.body?.ipAddress) {
+    candidates.push(req.body.ipAddress);
+  }
+
+  // 2. Cloudflare direct client header
+  if (req.headers?.["cf-connecting-ip"]) {
+    candidates.push(req.headers["cf-connecting-ip"]);
   }
 
   // 3. X-Real-IP (set by Nginx / Traefik / Dokploy)
@@ -104,14 +172,26 @@ const getClientIp = (req) => {
     .map(normalizeIp)
     .filter((ip) => Boolean(ip) && ip !== "unknown");
 
-  // First priority: find the first non-private, non-loopback public routable IP
+  // 1. Highest priority: public routable IPv4 address
+  const publicIpv4 = normalizedList.find((ip) => isIPv4(ip) && !isPrivateOrLoopbackIp(ip));
+  if (publicIpv4) {
+    return publicIpv4;
+  }
+
+  // 2. Secondary priority: any public routable IP
   const publicIp = normalizedList.find((ip) => !isPrivateOrLoopbackIp(ip));
   if (publicIp) {
     return publicIp;
   }
 
-  // Fallback: return the first normalized IP or default 127.0.0.1
-  return normalizedList[0] || "127.0.0.1";
+  // 3. Fallback: private IPv4 (e.g. 192.168.x.x, 10.x.x.x, or 127.0.0.1)
+  const privateIpv4 = normalizedList.find((ip) => isIPv4(ip));
+  if (privateIpv4) {
+    return privateIpv4;
+  }
+
+  // 4. Default loopback IPv4
+  return "127.0.0.1";
 };
 
 /**
@@ -182,29 +262,31 @@ const verifyGoogleIdentity = async ({ accessToken, credential }) => {
  * otherwise modern browsers will reject and drop the cookie.
  */
 const isSecureConnection = (req) => {
+  // If connection is explicitly HTTP (not HTTPS), cookies MUST NOT have secure: true,
+  // otherwise browsers (Chrome/Firefox/Safari) will drop the cookie immediately.
+  const forwardedProto = req?.headers?.["x-forwarded-proto"];
+  const origin = req?.headers?.origin;
+  const referer = req?.headers?.referer;
+
+  if (forwardedProto === "http" || origin?.startsWith("http:") || referer?.startsWith("http:")) {
+    return false;
+  }
+
   // 1. If connection is explicitly HTTPS (via TLS terminating reverse proxy like Nginx, Dokploy/Traefik, Cloudflare)
   if (
     req?.secure ||
-    req?.headers?.["x-forwarded-proto"]?.includes("https") ||
-    req?.headers?.origin?.startsWith("https:") ||
-    req?.headers?.referer?.startsWith("https:")
+    forwardedProto?.includes("https") ||
+    origin?.startsWith("https:") ||
+    referer?.startsWith("https:")
   ) {
     return true;
   }
+
   // 2. If configured CLIENT_URL in docker-compose is HTTPS (testing / production environments)
   if (process.env.CLIENT_URL?.startsWith("https:")) {
     return true;
   }
-  // 3. If forwarded host is a live external domain (not localhost, not 127.0.0.1, not docker internal 'backend')
-  const forwardedHost = req?.headers?.["x-forwarded-host"] || "";
-  if (
-    forwardedHost &&
-    !forwardedHost.includes("localhost") &&
-    !forwardedHost.includes("127.0.0.1") &&
-    !forwardedHost.includes("backend")
-  ) {
-    return true;
-  }
+
   return false;
 };
 
@@ -212,7 +294,7 @@ const isSecureConnection = (req) => {
  * Helper to securely attach HttpOnly cookies for Access Token and Refresh Token (7 days)
  * and a non-sensitive cookie indicator for client UI routing
  */
-const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
+const setAuthCookies = (res, accessToken, refreshToken = null, req = null, user = null) => {
   const isSecure = isSecureConnection(req);
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -225,7 +307,9 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
   };
 
   // 1. HttpOnly Access Token cookie
-  res.cookie("token", accessToken, cookieOptions);
+  if (accessToken) {
+    res.cookie("token", accessToken, cookieOptions);
+  }
 
   // 2. HttpOnly Refresh Token cookie (7 days)
   if (refreshToken) {
@@ -237,6 +321,20 @@ const setAuthCookies = (res, accessToken, refreshToken = null, req = null) => {
     ...cookieOptions,
     httpOnly: false,
   });
+
+  // 4. Non-sensitive client user display info for instant UI hydration without localStorage
+  if (user) {
+    const safeUserData = {
+      name: user.name || "",
+      emailId: user.emailId || user.email || "",
+      email: user.emailId || user.email || "",
+      picture: user.picture || "",
+    };
+    res.cookie("flipibook_user", encodeURIComponent(JSON.stringify(safeUserData)), {
+      ...cookieOptions,
+      httpOnly: false,
+    });
+  }
 };
 
 const clearAuthCookies = (res, req = null) => {
@@ -250,108 +348,14 @@ const clearAuthCookies = (res, req = null) => {
   res.clearCookie("token", cookieOpts);
   res.clearCookie("refreshToken", cookieOpts);
   res.clearCookie("flipibook_logged_in", { ...cookieOpts, httpOnly: false });
+  res.clearCookie("flipibook_user", { ...cookieOpts, httpOnly: false });
 };
 
 /**
- * 1. User Signup
+ * 1. User Signup - Strictly requires email OTP verification
  */
 const signup = async (req, res) => {
-  try {
-    const { name, emailId, password } = req.body;
-
-    if (!emailId || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password are required" });
-    }
-
-    const cleanEmail = emailId.trim().toLowerCase();
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ emailId: cleanEmail });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user (pre-save hook generates FLIPI0001 userID)
-    const user = new User({
-      name: name ? name.trim() : "",
-      emailId: cleanEmail,
-      password: hashedPassword,
-    });
-
-    await user.save();
-
-    // Create user storage workspace
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
-    }
-
-    // Capture IP & Create Login Log
-    const ipAddress = getClientIp(req);
-    const userAgent = req.headers["user-agent"] || "";
-
-    let loginLog = null;
-    try {
-      loginLog = await LoginLog.create({
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
-        userObjectId: user._id,
-        emailId: user.emailId,
-        ipAddress,
-        userAgent,
-        loginTime: new Date(),
-        status: "ACTIVE",
-        loginMethod: "EMAIL_PASSWORD",
-      });
-    } catch (logErr) {
-      console.error("[Signup LoginLog Error]:", logErr.message);
-    }
-
-    const token = generateToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: loginLog?._id,
-    });
-
-    const refreshToken = generateRefreshToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: loginLog?._id,
-    });
-
-    setAuthCookies(res, token, refreshToken, req);
-
-    return res.status(201).json({
-      success: true,
-      message: "Account created successfully",
-      token,
-      user: {
-        name: user.name,
-        picture: user.picture,
-      },
-    });
-  } catch (error) {
-    console.error("[Signup Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during signup",
-      });
-  }
+  return sendSignupOtp(req, res);
 };
 
 /**
@@ -504,20 +508,38 @@ const verifySignupOtp = async (req, res) => {
     // Clean up pending OTP record
     await SignupOtp.deleteOne({ _id: pendingSignup._id });
 
-    // Capture IP & Create Login Log
+    // Capture Device, IP & Create Login Log
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType: "NEW_DEVICE_LOGIN",
         loginMethod: "EMAIL_PASSWORD",
       });
     } catch (logErr) {
@@ -528,17 +550,19 @@ const verifySignupOtp = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
 
     return res.status(201).json({
       success: true,
@@ -632,8 +656,53 @@ const login = async (req, res) => {
     }
 
     // Compare password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not have a password. Please sign in with Google.",
+      });
+    }
+
+    // Capture Device, IP & Geo Location
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      // Record failed login attempt in audit history
+      try {
+        await LoginLog.create({
+          userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
+          userObjectId: user._id,
+          emailId: user.emailId,
+          sessionId: new mongoose.Types.ObjectId().toString(),
+          deviceId: clientDeviceId,
+          ipAddress,
+          userAgent,
+          browser,
+          operatingSystem,
+          deviceType,
+          location,
+          loginTime: new Date(),
+          lastActiveAt: new Date(),
+          status: "EXPIRED",
+          isRevoked: true,
+          eventType: "FAILED_LOGIN",
+          loginMethod: "EMAIL_PASSWORD",
+        });
+      } catch (failedLogErr) {
+        console.warn("[Failed Login Log Warning]:", failedLogErr.message);
+      }
+
       return res
         .status(400)
         .json({
@@ -642,20 +711,67 @@ const login = async (req, res) => {
         });
     }
 
-    // Track Login in LoginLog Table
-    const ipAddress = getClientIp(req);
-    const userAgent = req.headers["user-agent"] || "";
+    // Determine if this is a newly seen device for this account
+    let eventType = "SUCCESSFUL_LOGIN";
+    try {
+      const prevDeviceLog = await LoginLog.findOne({
+        $or: [
+          { userId: user.userID },
+          { userObjectId: user._id },
+          { emailId: user.emailId.toLowerCase() }
+        ],
+        deviceId: clientDeviceId
+      });
+      if (!prevDeviceLog) {
+        eventType = "NEW_DEVICE_LOGIN";
+      }
+    } catch (checkErr) {
+      console.warn("[Device Check Warning]:", checkErr.message);
+    }
+
+    // Close any previous active session on this exact same device for this user
+    try {
+      await LoginLog.updateMany(
+        {
+          $or: [
+            { userId: user.userID },
+            { userObjectId: user._id },
+            { emailId: user.emailId.toLowerCase() }
+          ],
+          deviceId: clientDeviceId,
+          status: "ACTIVE"
+        },
+        {
+          $set: {
+            status: "LOGGED_OUT",
+            logoutTime: new Date()
+          }
+        }
+      );
+    } catch (staleErr) {
+      console.warn("[Stale Session Cleanup Warning]:", staleErr.message);
+    }
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType,
         loginMethod: "EMAIL_PASSWORD",
       });
     } catch (logErr) {
@@ -666,17 +782,26 @@ const login = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
+
+    // Ensure user storage workspace & subfolders exist
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Login]:", wsErr.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -750,15 +875,11 @@ const googleLogin = async (req, res) => {
     }
 
     if (!user) {
-      // Auto-register google user with a secure random password hash
-      const randomPassword = crypto.randomBytes(32).toString("hex") + "!FliPi";
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(randomPassword, salt);
-
+      // For Google sign up, leave password empty (user can add password later via OTP)
       user = new User({
         name: verifiedName,
         emailId: cleanEmail,
-        password: hashedPassword,
+        password: "",
         picture: verifiedPicture,
       });
 
@@ -776,20 +897,79 @@ const googleLogin = async (req, res) => {
       await user.save();
     }
 
-    // Log the Google Sign-in event
+    // Log the Google Sign-in event with device tracking
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const browser = req.body?.browser || parsed.browser;
+    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
+    const deviceType = req.body?.deviceType || parsed.deviceType;
+    const location = resolveLocation(req, ipAddress);
+    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
+    const sessionObjectId = new mongoose.Types.ObjectId();
+    const sessionId = sessionObjectId.toString();
+
+    // Determine if this is a newly seen device for this account
+    let eventType = "SUCCESSFUL_LOGIN";
+    try {
+      const prevDeviceLog = await LoginLog.findOne({
+        $or: [
+          { userId: user.userID },
+          { userObjectId: user._id },
+          { emailId: user.emailId.toLowerCase() }
+        ],
+        deviceId: clientDeviceId
+      });
+      if (!prevDeviceLog) {
+        eventType = "NEW_DEVICE_LOGIN";
+      }
+    } catch (checkErr) {
+      console.warn("[Google Device Check Warning]:", checkErr.message);
+    }
+
+    // Close any previous active session on this exact same device for this user
+    try {
+      await LoginLog.updateMany(
+        {
+          $or: [
+            { userId: user.userID },
+            { userObjectId: user._id },
+            { emailId: user.emailId.toLowerCase() }
+          ],
+          deviceId: clientDeviceId,
+          status: "ACTIVE"
+        },
+        {
+          $set: {
+            status: "LOGGED_OUT",
+            logoutTime: new Date()
+          }
+        }
+      );
+    } catch (staleErr) {
+      console.warn("[Google Stale Session Cleanup Warning]:", staleErr.message);
+    }
 
     let loginLog = null;
     try {
       loginLog = await LoginLog.create({
+        _id: sessionObjectId,
         userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
         userObjectId: user._id,
         emailId: user.emailId,
+        sessionId,
+        deviceId: clientDeviceId,
         ipAddress,
         userAgent,
+        browser,
+        operatingSystem,
+        deviceType,
+        location,
         loginTime: new Date(),
+        lastActiveAt: new Date(),
         status: "ACTIVE",
+        isRevoked: false,
+        eventType,
         loginMethod: "GOOGLE",
       });
     } catch (logErr) {
@@ -800,17 +980,26 @@ const googleLogin = async (req, res) => {
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.userID,
       emailId: user.emailId,
       id: user._id,
-      sessionId: loginLog?._id,
+      sessionId: sessionId,
+      deviceId: clientDeviceId,
     });
 
-    setAuthCookies(res, token, refreshToken, req);
+    setAuthCookies(res, token, refreshToken, req, user);
+
+    // Ensure user storage workspace & subfolders exist
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Login]:", wsErr.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -856,6 +1045,15 @@ const forgotPassword = async (req, res) => {
         .json({ success: false, message: "No account found with this email" });
     }
 
+    // Google-only / passwordless accounts cannot use Forgot Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -883,6 +1081,129 @@ const forgotPassword = async (req, res) => {
 };
 
 /**
+ * 4b. Send OTP to Add Password for Google or passwordless accounts
+ * POST /api/auth/send-add-password-otp
+ */
+const sendAddPasswordOtp = async (req, res) => {
+  try {
+    const emailId = req.body?.emailId || req.user?.emailId || req.user?.email;
+
+    if (!emailId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No account found with this email" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.otp = {
+      code: hashOtp(otp),
+      expiresAt,
+    };
+
+    await user.save();
+
+    await sendOtpEmail(cleanEmail, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your email to add password",
+    });
+  } catch (error) {
+    console.error("[Send Add Password OTP Error]:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: error.message || "Failed to send OTP" });
+  }
+};
+
+/**
+ * 4c. Set Initial Password with OTP
+ * POST /api/auth/set-password-otp
+ */
+const setPasswordWithOtp = async (req, res) => {
+  try {
+    const emailId = req.body?.emailId || req.user?.emailId || req.user?.email;
+    const { otp, password } = req.body;
+
+    if (!emailId || !otp || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    const cleanEmail = emailId.trim().toLowerCase();
+    const user = await User.findOne({ emailId: cleanEmail });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (!user.otp || !user.otp.code) {
+      return res.status(400).json({
+        success: false,
+        message: "No OTP requested or code has already been used",
+      });
+    }
+
+    if (new Date() > new Date(user.otp.expiresAt)) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    if (!safeCompare(user.otp.code, hashOtp(otp))) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid OTP code" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    user.otp = {
+      code: null,
+      expiresAt: null,
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been added successfully",
+    });
+  } catch (error) {
+    console.error("[Set Password With OTP Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to set password",
+    });
+  }
+};
+
+/**
  * 5. Reset Password with OTP verification
  */
 const resetPassword = async (req, res) => {
@@ -905,6 +1226,15 @@ const resetPassword = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
+    }
+
+    // Google-only / passwordless accounts cannot use Reset Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
     }
 
     if (!user.otp || !user.otp.code) {
@@ -945,7 +1275,15 @@ const resetPassword = async (req, res) => {
 
     await user.save();
 
-    // Revoke any existing active sessions upon password reset (OWASP standard)
+    // Revoke any existing active sessions in Redis & DB upon password reset (OWASP standard)
+    try {
+      const activeSessions = await LoginLog.find({ userId: user.userID, status: "ACTIVE" }).select("sessionId");
+      for (const s of activeSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+      purgeCachedUserProfile(user._id);
+    } catch (_) {}
+
     await LoginLog.updateMany(
       { userId: user.userID, status: "ACTIVE" },
       { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
@@ -988,34 +1326,52 @@ const logout = async (req, res) => {
 
     let updatedCount = 0;
 
+    const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
+    if (targetSessionId) {
+      markSessionRevokedInRedis(targetSessionId);
+    }
+    if (decoded?.id) {
+      purgeCachedUserProfile(decoded.id);
+    }
+
     try {
       const dbUpdatePromise = (async () => {
-        // 1. Try updating specific session by sessionId
-        if (decoded?.sessionId && mongoose.Types.ObjectId.isValid(decoded.sessionId)) {
-          const resSession = await LoginLog.updateOne(
-            { _id: decoded.sessionId },
-            { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
+        const targetDeviceId = decoded?.deviceId || req.headers["x-device-id"] || req.cookies?.flipibook_device_id || null;
+
+        const sessionMatches = [
+          targetSessionId ? { sessionId: String(targetSessionId) } : null,
+          targetSessionId && mongoose.Types.ObjectId.isValid(targetSessionId) ? { _id: targetSessionId } : null,
+          targetDeviceId ? { deviceId: targetDeviceId } : null,
+        ].filter(Boolean);
+
+        const orClauses = [
+          decoded?.id && mongoose.Types.ObjectId.isValid(decoded.id)
+            ? { userObjectId: decoded.id }
+            : null,
+          decoded?.userId ? { userId: decoded.userId } : null,
+          decoded?.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
+        ].filter(Boolean);
+
+        // Terminate ONLY this specific session / device, preserving other active sessions
+        if (sessionMatches.length > 0 && orClauses.length > 0) {
+          const resSession = await LoginLog.updateMany(
+            {
+              $or: orClauses,
+              $and: [{ $or: sessionMatches }],
+              status: { $in: ["ACTIVE", "active"] },
+            },
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT", isRevoked: true } }
           );
           updatedCount = resSession.modifiedCount;
-        }
-
-        // 2. Fallback: if specific session was not found, update any ACTIVE session for this user
-        if (updatedCount === 0 && (decoded?.id || decoded?.userId || decoded?.emailId)) {
-          const orClauses = [
-            decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)
-              ? { userObjectId: decoded.id }
-              : null,
-            decoded.userId ? { userId: decoded.userId } : null,
-            decoded.emailId ? { emailId: decoded.emailId.toLowerCase() } : null,
-          ].filter(Boolean);
-
-          if (orClauses.length > 0) {
-            const resUser = await LoginLog.updateMany(
-              { $or: orClauses, status: "ACTIVE" },
-              { $set: { logoutTime: new Date(), status: "LOGGED_OUT" } }
-            );
-            updatedCount = resUser.modifiedCount;
-          }
+        } else if (sessionMatches.length > 0) {
+          const resSession = await LoginLog.updateMany(
+            {
+              $or: sessionMatches,
+              status: { $in: ["ACTIVE", "active"] },
+            },
+            { $set: { logoutTime: new Date(), status: "LOGGED_OUT", isRevoked: true } }
+          );
+          updatedCount = resSession.modifiedCount;
         }
       })();
 
@@ -1115,17 +1471,47 @@ const verifySession = async (req, res) => {
     if (accessToken) {
       const decodedAccess = verifyToken(accessToken);
       if (decodedAccess && decodedAccess.id) {
-        // Verify session is active in LoginLog
-        if (decodedAccess.sessionId && mongoose.Types.ObjectId.isValid(decodedAccess.sessionId)) {
-          const session = await LoginLog.findById(decodedAccess.sessionId);
-          if (session && session.status === "LOGGED_OUT") {
+        // Verify session is active in LoginLog (safeguarded against DB buffering delay)
+        if (decodedAccess.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedAccess.sessionId)) {
             clearAuthCookies(res, req);
             return res.status(200).json({
               success: true,
               isAuthenticated: false,
               user: null,
-              message: "Session has been logged out",
+              message: "Session has been revoked or logged out",
             });
+          }
+
+          try {
+            const session = await LoginLog.findOne({
+              $or: [
+                { sessionId: String(decodedAccess.sessionId) },
+                mongoose.Types.ObjectId.isValid(decodedAccess.sessionId) ? { _id: decodedAccess.sessionId } : null
+              ].filter(Boolean)
+            });
+
+            if (session && (session.status === "LOGGED_OUT" || session.status === "REVOKED" || session.isRevoked === true)) {
+              clearAuthCookies(res, req);
+              return res.status(200).json({
+                success: true,
+                isAuthenticated: false,
+                user: null,
+                message: "Session has been revoked or logged out",
+              });
+            }
+
+            // Update lastActiveAt throttled (once every 60s)
+            if (session && session.status === "ACTIVE") {
+              const lastActive = session.lastActiveAt ? new Date(session.lastActiveAt).getTime() : 0;
+              if (Date.now() - lastActive > 60000) {
+                session.lastActiveAt = new Date();
+                await session.save().catch(() => {});
+              }
+            }
+          } catch (sessionErr) {
+            console.warn("[Verify Session] Warning checking LoginLog:", sessionErr.message);
           }
         }
         targetUserId = decodedAccess.id;
@@ -1139,17 +1525,43 @@ const verifySession = async (req, res) => {
       const decodedRefresh = verifyToken(refreshToken);
       if (decodedRefresh && decodedRefresh.id) {
         tokenEmail = decodedRefresh.emailId || null;
-        // Verify session is active in LoginLog
+        // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedRefresh.sessionId) {
-          const session = await LoginLog.findById(decodedRefresh.sessionId);
-          if (session && session.status === "LOGGED_OUT") {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedRefresh.sessionId)) {
             clearAuthCookies(res, req);
             return res.status(200).json({
               success: true,
               isAuthenticated: false,
               user: null,
-              message: "Session has been logged out",
+              message: "Session has been revoked or logged out",
             });
+          }
+
+          try {
+            const session = await LoginLog.findOne({
+              $or: [
+                { sessionId: String(decodedRefresh.sessionId) },
+                mongoose.Types.ObjectId.isValid(decodedRefresh.sessionId) ? { _id: decodedRefresh.sessionId } : null
+              ].filter(Boolean)
+            });
+
+            if (session && (session.status === "LOGGED_OUT" || session.status === "REVOKED" || session.isRevoked === true)) {
+              clearAuthCookies(res, req);
+              return res.status(200).json({
+                success: true,
+                isAuthenticated: false,
+                user: null,
+                message: "Session has been revoked or logged out",
+              });
+            }
+
+            if (session && session.status === "ACTIVE") {
+              session.lastActiveAt = new Date();
+              await session.save().catch(() => {});
+            }
+          } catch (sessionErr) {
+            console.warn("[Verify Session] Warning checking refresh LoginLog:", sessionErr.message);
           }
         }
 
@@ -1159,10 +1571,9 @@ const verifySession = async (req, res) => {
           emailId: decodedRefresh.emailId,
           id: decodedRefresh.id,
           sessionId: decodedRefresh.sessionId,
+          deviceId: decodedRefresh.deviceId,
         });
 
-        // Set the refreshed Access Token cookie while maintaining the 7-day Refresh Token
-        setAuthCookies(res, newAccessToken, refreshToken, req);
         targetUserId = decodedRefresh.id;
         activeToken = newAccessToken;
       }
@@ -1189,28 +1600,42 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 5. Retrieve user details by ID
+    // 5. Retrieve user details by ID (Check fast Redis cache first)
     let user = null;
-    if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
-      user = await User.findById(targetUserId).select(
-        "name picture emailId userID",
-      );
+    if (targetUserId) {
+      user = await getCachedUserProfile(targetUserId);
+    }
+
+    if (!user && targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
+      try {
+        user = await User.findById(targetUserId).select(
+          "name picture emailId userID",
+        );
+        if (user) {
+          setCachedUserProfile(targetUserId, user);
+        }
+      } catch (userErr) {
+        console.warn("[Verify Session] User lookup by ID warning:", userErr.message);
+      }
     }
 
     // Fallback: If not found by _id, check if user exists by verified email in token
     if (!user && tokenEmail) {
-      user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
-        "name picture emailId userID",
-      );
-      if (user) {
-        // Auto-repair cookie session with current active user _id
-        const repairedAccessToken = generateToken({
-          userId: user.userID,
-          emailId: user.emailId,
-          id: user._id,
-        });
-        setAuthCookies(res, repairedAccessToken, refreshToken, req);
-        activeToken = repairedAccessToken;
+      try {
+        user = await User.findOne({ emailId: tokenEmail.trim().toLowerCase() }).select(
+          "name picture emailId userID",
+        );
+        if (user) {
+          // Auto-repair cookie session with current active user _id
+          const repairedAccessToken = generateToken({
+            userId: user.userID,
+            emailId: user.emailId,
+            id: user._id,
+          });
+          activeToken = repairedAccessToken;
+        }
+      } catch (emailErr) {
+        console.warn("[Verify Session] User lookup by email warning:", emailErr.message);
       }
     }
 
@@ -1225,6 +1650,16 @@ const verifySession = async (req, res) => {
       });
     }
 
+    // Refresh cookies with user display info for instant client hydration
+    setAuthCookies(res, activeToken, refreshToken, req, user);
+
+    // Ensure user storage workspace & subfolders exist on session verification
+    try {
+      createUserWorkspace(user);
+    } catch (wsErr) {
+      console.warn("[Workspace Creation Warning on Verify Session]:", wsErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       isAuthenticated: true,
@@ -1233,14 +1668,394 @@ const verifySession = async (req, res) => {
         name: user.name,
         picture: user.picture,
         emailId: user.emailId,
+        email: user.emailId,
       },
     });
   } catch (error) {
     console.error("[Verify Session Error]:", error);
     return res.status(500).json({
       success: false,
-      isAuthenticated: false,
       message: "Server error verifying session",
+    });
+  }
+};
+
+/**
+ * 9. Get Active Sessions for Current Account
+ */
+const getActiveSessions = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    if (userQueries.length === 0) {
+      return res.status(400).json({ success: false, message: "User identity unknown" });
+    }
+
+    // 1. Identify the caller environment
+    const userAgent = req.headers["user-agent"] || "";
+    const parsed = parseUserAgent(userAgent);
+    const callerBrowser = req.headers["x-client-browser"] || parsed.browser;
+    const callerOS = req.headers["x-client-os"] || parsed.operatingSystem;
+    const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || null;
+    const callerSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+
+    // 2. Fetch all ACTIVE sessions for this user (safely matches isRevoked: false, null, or undefined)
+    const sessions = await LoginLog.find({
+      $or: userQueries,
+      status: { $in: ["ACTIVE", "active"] },
+      isRevoked: { $ne: true },
+    })
+      .sort({ lastActiveAt: -1 })
+      .limit(20)
+      .lean();
+
+    // 3. Find if caller's device/session is already in the active list
+    let callerSessionFound = sessions.find((s) => {
+      if (callerSessionId && (s.sessionId === callerSessionId || s._id?.toString() === callerSessionId)) {
+        return true;
+      }
+      if (callerDeviceId && s.deviceId === callerDeviceId) {
+        return true;
+      }
+      return false;
+    });
+
+    // 4. Auto-heal: If authenticated caller has no active session record, register one immediately
+    if (!callerSessionFound) {
+      try {
+        const sessionObjectId = new mongoose.Types.ObjectId();
+        const ipAddress = getClientIp(req);
+        const location = resolveLocation(req, ipAddress);
+        const assignedDeviceId = callerDeviceId || `dev_${callerBrowser.toLowerCase()}_${crypto.randomBytes(8).toString("hex")}`;
+
+        const createdSession = await LoginLog.create({
+          _id: sessionObjectId,
+          userId: req.user.userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+          userObjectId: req.user.id,
+          emailId: req.user.emailId,
+          sessionId: sessionObjectId.toString(),
+          deviceId: assignedDeviceId,
+          ipAddress,
+          userAgent,
+          browser: callerBrowser,
+          operatingSystem: callerOS,
+          deviceType: parsed.deviceType,
+          location,
+          loginTime: new Date(),
+          lastActiveAt: new Date(),
+          status: "ACTIVE",
+          isRevoked: false,
+          eventType: "SUCCESSFUL_LOGIN",
+          loginMethod: "TOKEN_AUTH",
+        });
+
+        const createdObj = createdSession.toObject ? createdSession.toObject() : createdSession;
+        sessions.unshift(createdObj);
+        callerSessionFound = createdObj;
+      } catch (healErr) {
+        console.warn("[Auto-heal Session Warning]:", healErr.message);
+      }
+    } else {
+      // Touch lastActiveAt throttled (every 30s) and auto-update IP/location if previously loopback
+      try {
+        const detectedIp = getClientIp(req);
+        const updates = {};
+        if (
+          detectedIp &&
+          isIPv4(detectedIp) &&
+          !isPrivateOrLoopbackIp(detectedIp) &&
+          (!isIPv4(callerSessionFound.ipAddress) || callerSessionFound.ipAddress === "127.0.0.1" || isPrivateOrLoopbackIp(callerSessionFound.ipAddress))
+        ) {
+          callerSessionFound.ipAddress = detectedIp;
+          updates.ipAddress = detectedIp;
+        }
+
+        const clientLoc = req.headers["x-client-location"] || (req.body?.location ? req.body.location : null);
+        if (clientLoc && (!callerSessionFound.location || callerSessionFound.location === "Unknown Location" || callerSessionFound.location === "Coimbatore, India")) {
+          callerSessionFound.location = clientLoc;
+          updates.location = clientLoc;
+        }
+
+        const lastActiveTime = callerSessionFound.lastActiveAt ? new Date(callerSessionFound.lastActiveAt).getTime() : 0;
+        if (Date.now() - lastActiveTime > 30000) {
+          callerSessionFound.lastActiveAt = new Date();
+          updates.lastActiveAt = new Date();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await LoginLog.updateOne(
+            { _id: callerSessionFound._id },
+            { $set: updates }
+          );
+        }
+      } catch (touchErr) {
+        // ignore
+      }
+    }
+
+    // 5. Map sessions and accurately mark isCurrent for the caller device
+    let hasCurrentMatched = false;
+    const mappedSessions = sessions.map((sess) => {
+      let isCurrent = false;
+      if (!hasCurrentMatched) {
+        if (callerSessionId && (sess.sessionId === callerSessionId || sess._id?.toString() === callerSessionId)) {
+          isCurrent = true;
+        } else if (callerDeviceId && sess.deviceId === callerDeviceId) {
+          isCurrent = true;
+        } else if (callerSessionFound && (sess.sessionId === callerSessionFound.sessionId || sess._id?.toString() === callerSessionFound._id?.toString())) {
+          isCurrent = true;
+        }
+      }
+      if (isCurrent) hasCurrentMatched = true;
+
+      return {
+        id: sess._id,
+        sessionId: sess.sessionId || sess._id.toString(),
+        deviceId: sess.deviceId,
+        browser: sess.browser || "Unknown Browser",
+        operatingSystem: sess.operatingSystem || "Unknown OS",
+        deviceType: sess.deviceType || "desktop",
+        ipAddress: sess.ipAddress || "127.0.0.1",
+        location: sess.location || "Unknown Location",
+        lastActiveAt: sess.lastActiveAt || sess.loginTime || sess.createdAt,
+        loginTime: sess.loginTime || sess.createdAt,
+        isCurrent,
+        loginMethod: sess.loginMethod,
+      };
+    });
+
+    // Fallback if neither sessionId nor deviceId matched: match by same browser & OS
+    if (!hasCurrentMatched && mappedSessions.length > 0) {
+      const sameBrowserSession = mappedSessions.find(
+        (s) => s.browser === callerBrowser && s.operatingSystem === callerOS
+      );
+      if (sameBrowserSession) {
+        sameBrowserSession.isCurrent = true;
+      } else {
+        mappedSessions[0].isCurrent = true;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      sessions: mappedSessions,
+    });
+  } catch (error) {
+    console.error("[Get Active Sessions Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve active sessions",
+    });
+  }
+};
+
+/**
+ * 10. Revoke a Specific Session
+ */
+const revokeSession = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "Session ID is required" });
+    }
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const sessionQuery = [
+      { sessionId: String(sessionId) },
+      mongoose.Types.ObjectId.isValid(sessionId) ? { _id: sessionId } : null,
+    ].filter(Boolean);
+
+    const targetSession = await LoginLog.findOne({
+      $and: [
+        { $or: sessionQuery },
+        { $or: userQueries },
+      ],
+    });
+
+    if (!targetSession) {
+      return res.status(404).json({
+        success: false,
+        message: "Session not found or already terminated",
+      });
+    }
+
+    targetSession.status = "REVOKED";
+    targetSession.isRevoked = true;
+    targetSession.logoutTime = new Date();
+    await targetSession.save();
+
+    // Instantly blacklist revoked session in Redis (< 0.5ms)
+    if (targetSession.sessionId) {
+      await markSessionRevokedInRedis(targetSession.sessionId);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Session successfully logged out and revoked",
+    });
+  } catch (error) {
+    console.error("[Revoke Session Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke session",
+    });
+  }
+};
+
+/**
+ * 11. Revoke All Other Sessions Except Current
+ */
+const revokeOtherSessions = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+    const currentDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || null;
+
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const filter = {
+      $or: userQueries,
+      status: { $in: ["ACTIVE", "active"] },
+      isRevoked: { $ne: true },
+    };
+
+    const excludeQueries = [
+      currentSessionId ? { sessionId: currentSessionId } : null,
+      currentSessionId && mongoose.Types.ObjectId.isValid(currentSessionId) ? { _id: currentSessionId } : null,
+      currentDeviceId ? { deviceId: currentDeviceId } : null,
+    ].filter(Boolean);
+
+    if (excludeQueries.length > 0) {
+      filter.$nor = excludeQueries;
+    }
+
+    // Instantly blacklist other sessions in Redis (< 0.5ms)
+    try {
+      const revokedSessions = await LoginLog.find(filter).select("sessionId");
+      for (const s of revokedSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+    } catch (_) {}
+
+    const result = await LoginLog.updateMany(filter, {
+      $set: {
+        status: "REVOKED",
+        isRevoked: true,
+        logoutTime: new Date(),
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully logged out ${result.modifiedCount} other device(s)`,
+      revokedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("[Revoke Other Sessions Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke other sessions",
+    });
+  }
+};
+
+/**
+ * 12. Get Recent Login Activities History
+ */
+const getRecentActivities = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const { limit = 20 } = req.query;
+    const userQueries = [
+      req.user.userId ? { userId: req.user.userId } : null,
+      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
+      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
+    ].filter(Boolean);
+
+    const logs = await LoginLog.find({
+      $or: userQueries,
+    })
+      .sort({ createdAt: -1 })
+      .limit(Math.min(Math.max(1, Number(limit) || 20), 50))
+      .lean();
+
+    const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
+    const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || null;
+    const detectedPublicIp = req.headers["x-client-ip"] || getClientIp(req);
+
+    const activities = logs.map((log) => {
+      const isCurrent = Boolean(
+        (currentSessionId && (log.sessionId === currentSessionId || log._id.toString() === currentSessionId)) ||
+        (callerDeviceId && log.deviceId === callerDeviceId)
+      );
+
+      let effectiveIp = log.ipAddress || "127.0.0.1";
+      if (
+        isCurrent &&
+        detectedPublicIp &&
+        isIPv4(detectedPublicIp) &&
+        !isPrivateOrLoopbackIp(detectedPublicIp) &&
+        (!isIPv4(effectiveIp) || effectiveIp === "127.0.0.1" || isPrivateOrLoopbackIp(effectiveIp))
+      ) {
+        effectiveIp = detectedPublicIp;
+      }
+
+      return {
+        id: log._id,
+        sessionId: log.sessionId,
+        device: `${log.browser || "Browser"} on ${log.operatingSystem || "Device"}`,
+        browser: log.browser || "Unknown",
+        operatingSystem: log.operatingSystem || "Unknown",
+        deviceType: log.deviceType || "desktop",
+        location: log.location || "Unknown Location",
+        date: log.createdAt || log.loginTime,
+        ipAddress: effectiveIp,
+        status: log.status,
+        eventType: log.eventType || "SUCCESSFUL_LOGIN",
+        isCurrent,
+        loginMethod: log.loginMethod,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      activities,
+    });
+  } catch (error) {
+    console.error("[Get Recent Activities Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve login activities",
     });
   }
 };
@@ -1254,7 +2069,13 @@ module.exports = {
   googleLogin,
   forgotPassword,
   resetPassword,
+  sendAddPasswordOtp,
+  setPasswordWithOtp,
   logout,
   getLoginLogs,
   verifySession,
+  getActiveSessions,
+  revokeSession,
+  revokeOtherSessions,
+  getRecentActivities,
 };

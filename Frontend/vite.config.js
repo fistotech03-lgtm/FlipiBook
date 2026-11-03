@@ -5,12 +5,15 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendTarget =
-    env.BACKEND_URL || env.VITE_BACKEND_URL || process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000";
+    env.VITE_BACKEND_URL ||
+    env.BACKEND_URL ||
+    process.env.BACKEND_URL ||
+    "http://localhost:8000";
 
   return {
     plugins: [react(), tailwindcss()],
     optimizeDeps: {
-      include: ["gifuct-js", "ogl"],
+      include: ["gifuct-js", "ogl", "@tanstack/react-query"],
     },
     build: {
       chunkSizeWarningLimit: 1200,
@@ -22,6 +25,9 @@ export default defineConfig(({ mode }) => {
             }
             if (id.includes('node_modules/jspdf/') || id.includes('node_modules/html2canvas/')) {
               return 'export-libs';
+            }
+            if (id.includes('ImageFraming') || id.includes('imageFramingCatalog') || id.includes('imageFramingUtils')) {
+              return 'image-framing';
             }
           }
         }
@@ -37,6 +43,16 @@ export default defineConfig(({ mode }) => {
           secure: false,
         },
         "/storage": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        "/hdri": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        "/textures": {
           target: backendTarget,
           changeOrigin: true,
           secure: false,

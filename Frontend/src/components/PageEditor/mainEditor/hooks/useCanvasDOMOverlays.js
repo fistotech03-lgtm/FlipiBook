@@ -481,6 +481,57 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
 
       const shapes = svg.querySelectorAll('[data-stroke-position="Outside"], [data-stroke-position="Inside"]');
       shapes.forEach(el => {
+        // Vector shapes (rect, circle, ellipse, path, polygon, etc.) keep stroke directly on the element!
+        const isVectorShape = ['path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line'].includes(el.tagName.toLowerCase()) ||
+          el.getAttribute('data-type') === 'shape' ||
+          el.getAttribute('data-is-element-shape') === 'true';
+
+        const isMaskedShape = Boolean(
+          el.getAttribute('data-mask-enabled') === 'true' ||
+          el.getAttribute('data-masked-image-url') ||
+          (el.getAttribute('fill') && el.getAttribute('fill').includes('url(#pattern-')) ||
+          el.closest?.('[data-mask-enabled="true"]') !== null ||
+          el.closest?.('[fill*="url(#pattern-"]') !== null
+        );
+
+        if (isVectorShape) {
+          // Restore original stroke if previously hidden by overlay code
+          const origStroke = el.getAttribute('data-original-stroke') || el.getAttribute('stroke') || el.getAttribute('data-stroke-color');
+          if (origStroke && origStroke !== 'none') {
+            el.setAttribute('stroke', origStroke);
+            el.removeAttribute('data-original-stroke');
+          }
+          const origSw = parseFloat(el.getAttribute('data-stroke-width') || el.getAttribute('stroke-width') || '0');
+          if (origSw > 0) {
+            const pos = el.getAttribute('data-stroke-position') || 'Outside';
+            if (isMaskedShape) {
+              // Masked shapes: keep native stroke directly on the shape element in 100% lockstep
+              el.setAttribute('stroke-width', origSw.toString());
+              el.setAttribute('paint-order', 'normal');
+              el.style.paintOrder = 'normal';
+            } else if (pos === 'Outside') {
+              el.setAttribute('stroke-width', (origSw * 2).toString());
+              el.setAttribute('paint-order', 'stroke fill');
+              el.style.paintOrder = 'stroke fill';
+            } else if (pos === 'Inside') {
+              el.setAttribute('stroke-width', (origSw * 2).toString());
+              el.setAttribute('paint-order', 'fill stroke');
+              el.style.paintOrder = 'fill stroke';
+            } else {
+              el.setAttribute('stroke-width', origSw.toString());
+              el.setAttribute('paint-order', 'normal');
+              el.style.paintOrder = 'normal';
+            }
+          }
+          el.setAttribute('vector-effect', 'non-scaling-stroke');
+          const existingOverlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
+          if (existingOverlay) existingOverlay.remove();
+          const safeId = (el.id || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+          defs?.querySelector(`mask[id="mask-shape-${safeId}"]`)?.remove();
+          defs?.querySelector(`clipPath[id="clip-shape-${safeId}"]`)?.remove();
+          return;
+        }
+
         // Skip elements that manage their own stroke offsets (Images, Videos, and their dedicated overlays)
         if (
           el.tagName.toLowerCase() === 'image' ||
@@ -510,6 +561,13 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
         if (el.hasAttribute('stroke-width')) {
           el.removeAttribute('stroke-width');
         }
+        el.setAttribute('paint-order', 'normal');
+        el.style.paintOrder = 'normal';
+
+        if (!el.id) {
+          el.id = `shape-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+        }
+        const safeElId = (el.id || 'unknown').replace(/[^a-zA-Z0-9-_]/g, '_');
 
         let overlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
         if (!overlay) {
@@ -525,7 +583,6 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
         }
 
         if (pos === 'Inside') {
-          const safeElId = (el.id || 'unknown').replace(/[^a-zA-Z0-9-_]/g, '_');
           let clip = defs.querySelector(`clipPath[id="clip-shape-${safeElId}"]`);
           if (!clip) {
             clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
@@ -537,7 +594,6 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
           overlay.setAttribute('clip-path', `url(#clip-shape-${safeElId})`);
           overlay.removeAttribute('mask');
         } else {
-          const safeElId = (el.id || 'unknown').replace(/[^a-zA-Z0-9-_]/g, '_');
           let mask = defs.querySelector(`mask[id="mask-shape-${safeElId}"]`);
           if (!mask) {
             mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
@@ -559,10 +615,11 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
         }
 
         // Sync visual attributes
-        overlay.setAttribute('stroke', el.getAttribute('data-original-stroke') || '#000');
+        overlay.setAttribute('stroke', el.getAttribute('data-original-stroke') || el.getAttribute('data-stroke-color') || '#000');
         overlay.setAttribute('stroke-width', (sw * 2).toString());
         overlay.setAttribute('fill', 'none');
         overlay.setAttribute('stroke-opacity', el.getAttribute('data-stroke-opacity') || '1');
+        overlay.setAttribute('vector-effect', 'non-scaling-stroke');
 
         const dashArray = el.getAttribute('data-stroke-dasharray') || el.getAttribute('stroke-dasharray');
         if (dashArray && dashArray !== 'none') overlay.setAttribute('stroke-dasharray', dashArray);
@@ -573,7 +630,7 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
 
         // Sync geometry
         const attrsToSync = ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'points'];
-        const refShape = pos === 'Inside' ? defs.querySelector(`clipPath[id="clip-shape-${el.id}"]`)?.firstChild : defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.lastChild;
+        const refShape = pos === 'Inside' ? defs.querySelector(`clipPath[id="clip-shape-${safeElId}"]`)?.firstChild : defs.querySelector(`mask[id="mask-shape-${safeElId}"]`)?.lastChild;
 
         attrsToSync.forEach(attr => {
           const val = el.getAttribute(attr);
@@ -601,6 +658,7 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
 
       // Sync video / iframe elements inside foreignObjects
       svg.querySelectorAll('foreignObject iframe').forEach(iframe => {
+        if (iframe.closest && iframe.closest('[data-type="map"], g[id^="map-"]')) return;
         const fo = iframe.closest('foreignObject');
         if (fo) {
           const foW = parseFloat(fo.getAttribute('width') || '0');
@@ -677,11 +735,12 @@ export const useCanvasDOMOverlays = ({ activePageIndex = 0 }) => {
       svg.querySelectorAll('.svg-shape-stroke-overlay').forEach(overlay => {
         const targetId = overlay.getAttribute('data-target');
         const target = svg.querySelector(`[id="${targetId}"]`);
-        if (!target || target.getAttribute('data-stroke-position') === 'Center') {
+        if (!target || target.getAttribute('data-stroke-position') === 'Center' || parseFloat(target.getAttribute('data-stroke-width') || '0') <= 0) {
           overlay.remove();
-          const mask = defs?.querySelector(`mask[id="mask-shape-${targetId}"]`);
+          const safeId = (targetId || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+          const mask = defs?.querySelector(`mask[id="mask-shape-${safeId}"]`);
           if (mask) mask.remove();
-          const clip = defs?.querySelector(`clipPath[id="clip-shape-${targetId}"]`);
+          const clip = defs?.querySelector(`clipPath[id="clip-shape-${safeId}"]`);
           if (clip) clip.remove();
         }
       });

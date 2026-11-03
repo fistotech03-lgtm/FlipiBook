@@ -1080,7 +1080,7 @@ const Sound = ({
                         const portMatch = origin.match(/:(\d+)/);
                         if (portMatch) return origin.replace(portMatch[0], ':5000');
                     }
-                    return 'http://localhost:5000';
+                    return '';
                 };
                 const backendUrl = getBackendUrl();
                 const res = await axios.get(`${backendUrl}/api/flipbook/public/get/${targetVId}`);

@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
+import paper from 'paper';
 import {
   pathToD,
   deleteSelectedNodeOrHandle,
   cleanPaperPathData,
-  getPaperSegments
+  getPaperSegments,
+  parseSingleMatrix
 } from '../../penTool';
 import { getElementMatrix, matrixToTransform } from '../utils/geometryUtils';
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
+import { updateShapeMaskTransform, applySvgGradientOrSolid } from '../../LeftActionMenu/Elements/utils/shapeMaskUtils';
 
 /**
  * Hook managing canvas keyboard shortcuts:
@@ -47,6 +50,7 @@ export const useCanvasKeyboardShortcuts = ({
   nodeEditSelectedHandleSideRef,
   nodeEditSelectedCurveIdxRef,
   paperScopeRef,
+  enterNodeEditMode,
   exitNodeEditMode,
   drawNodeEditOverlay,
   drawOverlayHighlight,
@@ -82,6 +86,11 @@ export const useCanvasKeyboardShortcuts = ({
           return;
         }
 
+        if (window.__isAdjustingShapeImage || document.body.classList.contains('shape-adjust-active')) {
+          window.dispatchEvent(new CustomEvent('trigger-exit-shape-adjust'));
+          return;
+        }
+
         if (nodeEditModeRef?.current) {
           const pathEl = nodeEditPathRef.current;
           const pIdx = nodeEditPageIndexRef.current;
@@ -113,6 +122,12 @@ export const useCanvasKeyboardShortcuts = ({
       } else if (e.key === 'P' && e.shiftKey) {
         if (setActiveMainTool) setActiveMainTool('pen');
         if (setSelectedPenTool) setSelectedPenTool('pencil');
+      } else if (e.key.toLowerCase() === 'm' && (e.ctrlKey || e.metaKey) && e.altKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('trigger-mask'));
+      } else if (e.key.toLowerCase() === 'e' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('trigger-flatten'));
       } else if (e.key.toLowerCase() === 'g' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
 
@@ -389,16 +404,819 @@ export const useCanvasKeyboardShortcuts = ({
       handleKeyDown({ key: 'G', ctrlKey: true, shiftKey: true, preventDefault: () => { } });
     };
 
+    const handleTriggerMask = (e) => {
+      const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+      const activeContainer = doc.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`) || document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+      const svg = activeContainer?.querySelector('svg') || doc.querySelector('svg');
+      if (!svg) return;
+
+      let ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
+        ? Array.from(multiSelectedIdsRef.current)
+        : (selectedLayerIdRef?.current ? [selectedLayerIdRef.current] : []);
+      if (e?.detail?.layerId && !ids.includes(e.detail.layerId)) {
+        ids.push(e.detail.layerId);
+      }
+      if (ids.length === 0) return;
+
+      const elements = ids.map(id => svg.querySelector(`[id="${CSS.escape(id)}"]`) || doc.getElementById(id) || document.getElementById(id)).filter(Boolean);
+      if (elements.length === 0) return;
+
+      // Check if selected element is already part of a mask group to toggle/unmask
+      const existingMaskGroup = elements.find(el => el.getAttribute('data-type') === 'mask-group' || el.closest('[data-type="mask-group"]'));
+      if (existingMaskGroup) {
+        const mg = existingMaskGroup.getAttribute('data-type') === 'mask-group' ? existingMaskGroup : existingMaskGroup.closest('[data-type="mask-group"]');
+        if (mg && mg.parentNode) {
+          const parent = mg.parentNode;
+          const maskUid = mg.getAttribute('data-mask-id') || mg.id;
+          const clipDef = svg.querySelector(`clipPath[id="clip-${maskUid}"]`);
+          if (clipDef) clipDef.remove();
+
+          const unmaskedIds = [];
+          const children = Array.from(mg.children);
+          children.forEach(child => {
+            if (child.getAttribute('data-name') === 'Mask Content' || child.hasAttribute('clip-path')) {
+              Array.from(child.children).forEach(nestedChild => {
+                parent.insertBefore(nestedChild, mg);
+                if (nestedChild.id) unmaskedIds.push(nestedChild.id);
+              });
+            } else {
+              parent.insertBefore(child, mg);
+              if (child.id) unmaskedIds.push(child.id);
+            }
+          });
+          parent.removeChild(mg);
+
+          if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
+          if (unmaskedIds.length > 0) {
+            if (setSelectedLayerId) setSelectedLayerId(unmaskedIds[0]);
+            if (setMultiSelectedIds) setMultiSelectedIds(new Set(unmaskedIds));
+          }
+          return;
+        }
+      }
+
+      // 2. Multi-selection or single-selection mask creation
+      let maskEl = null;
+      let targetEls = [];
+
+      if (elements.length >= 2) {
+        elements.sort((a, b) => {
+          const pos = a.compareDocumentPosition(b);
+          return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+        });
+        maskEl = elements[0];
+        targetEls = elements.slice(1);
+      } else if (elements.length === 1) {
+        const el = elements[0];
+        const isShape = el.getAttribute('data-is-element-shape') === 'true' ||
+                        el.getAttribute('data-shape-type') ||
+                        el.getAttribute('data-type') === 'vector-path' ||
+                        el.id?.startsWith('vpath-') ||
+                        el.querySelector('[data-is-element-shape="true"]') !== null ||
+                        ['path', 'rect', 'circle', 'ellipse', 'polygon', 'g'].includes(el.tagName.toLowerCase());
+
+        if (isShape) {
+          const shapeTarget = el.getAttribute('data-is-element-shape') === 'true'
+            ? el
+            : (el.querySelector('[data-is-element-shape="true"]') || el.querySelector('path, polygon, rect, circle, ellipse') || el);
+
+          const isMasked = shapeTarget.getAttribute('data-mask-enabled') === 'true' ||
+                          el.getAttribute('data-mask-enabled') === 'true' ||
+                          (shapeTarget.getAttribute('fill') && shapeTarget.getAttribute('fill').includes('url(#pattern-')) ||
+                          shapeTarget.hasAttribute('data-masked-image-url');
+
+          if (isMasked) {
+            // Unmask
+            shapeTarget.removeAttribute('data-mask-enabled');
+            el.removeAttribute('data-mask-enabled');
+            const patternMatch = (shapeTarget.getAttribute('fill') || '').match(/url\(['"]?#([^)'"]+)['"]?\)/);
+            if (patternMatch && patternMatch[1]) {
+              const defs = svg.querySelector('defs');
+              const pat = defs ? defs.querySelector(`pattern[id="${patternMatch[1]}"]`) : null;
+              if (pat) pat.remove();
+            }
+            const origFill = shapeTarget.getAttribute('data-original-fill') || '#3194FC';
+            shapeTarget.setAttribute('fill', origFill);
+            shapeTarget.removeAttribute('data-pattern-id');
+            shapeTarget.removeAttribute('data-masked-image-url');
+            shapeTarget.removeAttribute('data-slot-image-name');
+            shapeTarget.removeAttribute('data-slot-image-meta');
+            shapeTarget.removeAttribute('data-slot-original-url');
+            shapeTarget.removeAttribute('data-slot-crop-data');
+            shapeTarget.removeAttribute('data-slot-fix-type');
+            shapeTarget.removeAttribute('data-slot-opacity');
+            shapeTarget.removeAttribute('data-slot-filters');
+            el.removeAttribute('data-slot-image-name');
+            el.removeAttribute('data-slot-image-meta');
+            el.removeAttribute('data-slot-original-url');
+            el.removeAttribute('data-slot-crop-data');
+            el.removeAttribute('data-slot-fix-type');
+            el.removeAttribute('data-slot-opacity');
+            el.removeAttribute('data-slot-filters');
+
+            if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
+            window.dispatchEvent(new CustomEvent('shape-mask-toggled', { detail: { layerId: el.id, enabled: false } }));
+            return;
+          } else {
+            // Mask mode enabled
+            shapeTarget.setAttribute('data-mask-enabled', 'true');
+            el.setAttribute('data-mask-enabled', 'true');
+            if (!shapeTarget.hasAttribute('data-original-fill')) {
+              shapeTarget.setAttribute('data-original-fill', shapeTarget.getAttribute('fill') || '#3194FC');
+            }
+
+            if (nodeEditModeRef?.current && typeof exitNodeEditMode === 'function') {
+              exitNodeEditMode();
+            }
+
+            if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
+            if (typeof setActiveMainTool === 'function') {
+              setActiveMainTool('select');
+            }
+            window.dispatchEvent(new CustomEvent('shape-mask-toggled', { detail: { layerId: el.id, enabled: true } }));
+            return;
+          }
+        }
+
+        maskEl = elements[0];
+        const parent = maskEl.parentNode;
+        if (parent && parent !== svg) {
+          const siblings = Array.from(parent.children).filter(el => el.id && el.id !== maskEl.id && el.tagName.toLowerCase() !== 'defs');
+          if (siblings.length > 0) {
+            targetEls = siblings;
+          }
+        }
+      }
+
+      if (!maskEl || targetEls.length === 0) return;
+
+      const maskUid = 'mask-' + Date.now();
+      let defs = svg.querySelector('defs');
+      if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.insertBefore(defs, svg.firstChild);
+      }
+
+      const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+      clipPath.id = `clip-${maskUid}`;
+      
+      const maskClone = maskEl.cloneNode(true);
+      maskClone.removeAttribute('id');
+      clipPath.appendChild(maskClone);
+      defs.appendChild(clipPath);
+
+      const parent = maskEl.parentNode;
+      const maskGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      maskGroup.id = maskUid;
+      maskGroup.setAttribute('data-name', 'Mask Group');
+      maskGroup.setAttribute('data-type', 'mask-group');
+      maskGroup.setAttribute('data-mask-id', maskUid);
+
+      parent.insertBefore(maskGroup, maskEl);
+      maskGroup.appendChild(maskEl);
+
+      const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      contentGroup.setAttribute('clip-path', `url(#clip-${maskUid})`);
+      contentGroup.setAttribute('data-name', 'Mask Content');
+      targetEls.forEach(el => {
+        contentGroup.appendChild(el);
+      });
+      maskGroup.appendChild(contentGroup);
+
+      if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
+      if (setSelectedLayerId) setSelectedLayerId(maskGroup.id);
+      if (setMultiSelectedIds) setMultiSelectedIds(new Set([maskGroup.id]));
+    };
+
+    const handleTriggerFlatten = (e) => {
+      const activeContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+      const svg = activeContainer?.querySelector('svg');
+      if (!svg) return;
+
+      let ids = (multiSelectedIdsRef?.current && multiSelectedIdsRef.current.size > 0)
+        ? Array.from(multiSelectedIdsRef.current)
+        : (selectedLayerIdRef?.current ? [selectedLayerIdRef.current] : []);
+      if (e?.detail?.layerId && !ids.includes(e.detail.layerId)) {
+        ids.push(e.detail.layerId);
+      }
+      if (ids.length === 0) return;
+
+      let elements = ids.map(id => svg.querySelector(`[id="${CSS.escape(id)}"]`) || document.getElementById(id)).filter(Boolean);
+      elements = elements.filter(el => {
+        const dType = el.getAttribute?.('data-type');
+        const dName = el.getAttribute?.('data-name');
+        return dType !== 'frame' && dType !== 'background' && dType !== 'shield' && dName !== 'Overlay' && el.tagName?.toLowerCase() !== 'svg';
+      });
+      if (elements.length === 0) return;
+
+      // Expand compound groups if child was selected, or promote child to compound group
+      elements = elements.map(el => {
+        const compoundGroup = el.parentElement?.closest?.(
+          '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], [data-is-image-frame="true"], [data-type="mask-group"]'
+        ) || el.closest?.(
+          '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], [data-is-image-frame="true"], [data-type="mask-group"]'
+        );
+        return compoundGroup || el;
+      });
+      // Deduplicate elements
+      elements = Array.from(new Set(elements));
+
+      const lastEl = elements[elements.length - 1];
+      const parent = lastEl?.parentNode;
+      if (!parent) return;
+
+      if (paperScopeRef?.current) {
+        paperScopeRef.current.activate();
+      }
+      let paperScope = paperScopeRef?.current;
+      if (!paperScope && typeof paper !== 'undefined') {
+        try {
+          paperScope = new paper.PaperScope();
+          paperScope.setup(document.createElement('canvas'));
+          if (paperScopeRef) paperScopeRef.current = paperScope;
+        } catch (err) {
+          console.warn('PaperScope fallback init error:', err);
+        }
+      }
+      if (!paperScope) return;
+
+      const createPaperItemFromNode = (node) => {
+        const tag = node.tagName?.toLowerCase();
+        if (tag === 'circle') {
+          const cx = parseFloat(node.getAttribute('cx') || '0');
+          const cy = parseFloat(node.getAttribute('cy') || '0');
+          const r = parseFloat(node.getAttribute('r') || '0');
+          return new paperScope.Path.Circle(new paperScope.Point(cx, cy), r);
+        }
+        if (tag === 'ellipse') {
+          const cx = parseFloat(node.getAttribute('cx') || '0');
+          const cy = parseFloat(node.getAttribute('cy') || '0');
+          const rx = parseFloat(node.getAttribute('rx') || '0');
+          const ry = parseFloat(node.getAttribute('ry') || '0');
+          return new paperScope.Path.Ellipse(new paperScope.Rectangle(cx - rx, cy - ry, rx * 2, ry * 2));
+        }
+        if (tag === 'rect') {
+          const x = parseFloat(node.getAttribute('x') || '0');
+          const y = parseFloat(node.getAttribute('y') || '0');
+          const w = parseFloat(node.getAttribute('width') || '0');
+          const h = parseFloat(node.getAttribute('height') || '0');
+          const rx = parseFloat(node.getAttribute('rx') || '0');
+          const ry = parseFloat(node.getAttribute('ry') || rx || '0');
+          if (rx > 0 || ry > 0) {
+            return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h), new paperScope.Size(rx, ry));
+          }
+          return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h));
+        }
+        if (tag === 'polygon' || tag === 'polyline') {
+          const pointsAttr = node.getAttribute('points') || '';
+          const pairs = pointsAttr.trim().split(/[\s,]+/).map(parseFloat).filter(n => !isNaN(n));
+          if (pairs.length >= 4) {
+            const p = new paperScope.Path();
+            for (let i = 0; i < pairs.length; i += 2) {
+              p.add(new paperScope.Point(pairs[i], pairs[i + 1]));
+            }
+            if (tag === 'polygon') p.closed = true;
+            return p;
+          }
+        }
+        if (tag === 'line') {
+          const x1 = parseFloat(node.getAttribute('x1') || '0');
+          const y1 = parseFloat(node.getAttribute('y1') || '0');
+          const x2 = parseFloat(node.getAttribute('x2') || '0');
+          const y2 = parseFloat(node.getAttribute('y2') || '0');
+          return new paperScope.Path.Line(new paperScope.Point(x1, y1), new paperScope.Point(x2, y2));
+        }
+        if (tag === 'image') {
+          const x = parseFloat(node.getAttribute('x') || '0');
+          const y = parseFloat(node.getAttribute('y') || '0');
+          const w = parseFloat(node.getAttribute('width') || '0');
+          const h = parseFloat(node.getAttribute('height') || '0');
+          return new paperScope.Path.Rectangle(new paperScope.Rectangle(x, y, w, h));
+        }
+        if (tag === 'path') {
+          const d = node.getAttribute('d');
+          if (d) {
+            try {
+              const item = new paperScope.CompoundPath(d);
+              if (item.children && item.children.length === 1) return item.children[0];
+              return item;
+            } catch {
+              try {
+                return new paperScope.Path(d);
+              } catch (e) {
+                return null;
+              }
+            }
+          }
+        }
+        return null;
+      };
+
+      const collectShapesWithStyles = (node, inherited = {}) => {
+        let list = [];
+        const tag = node.tagName?.toLowerCase();
+
+        if (node.id === 'ghost-layer' || node.getAttribute?.('data-name') === 'Overlay' || tag === 'defs' || tag === 'clippath') {
+          return list;
+        }
+
+        const rawFill = node.getAttribute?.('data-fill-color') || node.getAttribute?.('fill') || node.style?.fill;
+        const nodeFill = (rawFill && rawFill !== 'inherit') ? rawFill : inherited.fill;
+        const rawOriginalFill = node.getAttribute?.('data-original-fill');
+        const rawOriginalFillOp = node.getAttribute?.('data-original-fill-opacity');
+        const rawStrokeOp = node.getAttribute?.('stroke-opacity') || node.getAttribute?.('data-stroke-opacity');
+        const rawOriginalStroke = node.getAttribute?.('data-original-stroke');
+        const rawSlotOpacity = node.getAttribute?.('data-slot-opacity');
+        const rawSlotRotation = node.getAttribute?.('data-slot-rotation');
+
+        // Check data-stroke-color, data-original-stroke, then stroke attribute/style, or overlay
+        const explicitStroke = node.getAttribute?.('data-stroke-color') || node.getAttribute?.('data-original-stroke');
+        const standardStroke = node.getAttribute?.('stroke') || node.style?.stroke;
+        const overlay = (node.id && node.parentNode) ? node.parentNode.querySelector?.(`.svg-shape-stroke-overlay[data-target="${node.id}"]`) : null;
+        const overlayStroke = overlay ? (overlay.getAttribute?.('data-stroke-color') || overlay.getAttribute?.('stroke')) : null;
+        const rawStroke = (explicitStroke && explicitStroke !== 'none' && explicitStroke !== '#' && explicitStroke !== 'inherit')
+          ? explicitStroke
+          : ((standardStroke && standardStroke !== 'inherit' && standardStroke !== 'none' && standardStroke !== '#')
+            ? standardStroke
+            : ((overlayStroke && overlayStroke !== 'inherit' && overlayStroke !== 'none' && overlayStroke !== '#') ? overlayStroke : null));
+
+        const nodeStroke = (rawStroke !== null && rawStroke !== undefined)
+          ? rawStroke
+          : (inherited.stroke && inherited.stroke !== 'none' && inherited.stroke !== 'inherit' && inherited.stroke !== '#' ? inherited.stroke : (rawStroke || standardStroke || inherited.stroke));
+
+        const rawStrokeWidth = node.getAttribute?.('data-stroke-width') || node.getAttribute?.('stroke-width') || node.style?.strokeWidth || (overlay ? (overlay.getAttribute?.('data-stroke-width') || overlay.getAttribute?.('stroke-width')) : null);
+        const nodeStrokeWidth = (rawStrokeWidth && rawStrokeWidth !== 'inherit' && rawStrokeWidth !== '0') ? rawStrokeWidth : (inherited.strokeWidth || rawStrokeWidth);
+        const nodeOpacity = node.getAttribute?.('opacity') || node.style?.opacity;
+        const nodeLinecap = node.getAttribute?.('stroke-linecap') || node.style?.strokeLinecap;
+        const nodeLinejoin = node.getAttribute?.('stroke-linejoin') || node.style?.strokeLinejoin;
+        const nodePaintOrder = node.getAttribute?.('paint-order') || node.style?.paintOrder;
+        const nodeStrokeDash = node.getAttribute?.('stroke-dasharray') || node.getAttribute?.('data-stroke-dasharray');
+        const nodeDataStrokeWidth = node.getAttribute?.('data-stroke-width') || inherited.dataStrokeWidth;
+        const nodeDataStrokePos = node.getAttribute?.('data-stroke-position') || inherited.dataStrokePos;
+
+        const effective = {
+          fill: (nodeFill && nodeFill !== 'inherit') ? nodeFill : (inherited.fill || '#3194FC'),
+          stroke: (nodeStroke && nodeStroke !== 'inherit') ? nodeStroke : (inherited.stroke || 'none'),
+          strokeWidth: (nodeStrokeWidth && nodeStrokeWidth !== 'inherit') ? nodeStrokeWidth : (inherited.strokeWidth || '0'),
+          opacity: (nodeOpacity && nodeOpacity !== 'inherit') ? nodeOpacity : inherited.opacity,
+          linecap: (nodeLinecap && nodeLinecap !== 'inherit') ? nodeLinecap : inherited.linecap,
+          linejoin: (nodeLinejoin && nodeLinejoin !== 'inherit') ? nodeLinejoin : inherited.linejoin,
+          paintOrder: nodePaintOrder || inherited.paintOrder,
+          strokeDash: nodeStrokeDash || inherited.strokeDash,
+          dataStrokeWidth: nodeDataStrokeWidth,
+          dataStrokePos: nodeDataStrokePos,
+          originalFill: rawOriginalFill || inherited.originalFill,
+          originalFillOpacity: rawOriginalFillOp || inherited.originalFillOpacity,
+          strokeOpacity: rawStrokeOp || inherited.strokeOpacity,
+          originalStroke: rawOriginalStroke || inherited.originalStroke,
+          slotOpacity: rawSlotOpacity !== null && rawSlotOpacity !== undefined ? rawSlotOpacity : inherited.slotOpacity,
+          slotRotation: rawSlotRotation !== null && rawSlotRotation !== undefined ? rawSlotRotation : inherited.slotRotation,
+        };
+
+        const imgUrl = node.getAttribute?.('data-masked-image-url') || node.getAttribute?.('data-slot-original-url') || node.getAttribute?.('href') || node.getAttribute?.('xlink:href');
+        if (imgUrl) {
+          effective.imageUrl = imgUrl;
+        }
+        const imgName = node.getAttribute?.('data-slot-image-name');
+        if (imgName) effective.imageName = imgName;
+        const imgMeta = node.getAttribute?.('data-slot-image-meta');
+        if (imgMeta) effective.imageMeta = imgMeta;
+        const origUrl = node.getAttribute?.('data-slot-original-url');
+        if (origUrl) effective.originalUrl = origUrl;
+        const panX = node.getAttribute?.('data-slot-pan-x');
+        if (panX !== null && panX !== undefined) effective.panX = panX;
+        const panY = node.getAttribute?.('data-slot-pan-y');
+        if (panY !== null && panY !== undefined) effective.panY = panY;
+        const zoomVal = node.getAttribute?.('data-slot-zoom');
+        if (zoomVal !== null && zoomVal !== undefined) effective.zoom = zoomVal;
+        const baseW = node.getAttribute?.('data-slot-base-w');
+        if (baseW) effective.baseW = baseW;
+        const baseH = node.getAttribute?.('data-slot-base-h');
+        if (baseH) effective.baseH = baseH;
+        const baseX = node.getAttribute?.('data-slot-base-x');
+        if (baseX) effective.baseX = baseX;
+        const baseY = node.getAttribute?.('data-slot-base-y');
+        if (baseY) effective.baseY = baseY;
+
+        // If node has pattern fill, check image inside pattern
+        if (effective.fill && effective.fill.includes('url(#')) {
+          const patMatch = effective.fill.match(/#([^)'"]+)/);
+          if (patMatch) {
+            const patEl = svg.querySelector(`pattern[id="${patMatch[1]}"]`);
+            if (patEl) {
+              const pBg = patEl.querySelector?.('rect.mask-bg-fill');
+              if (pBg) {
+                const bgFill = pBg.getAttribute('fill');
+                if (bgFill && bgFill !== 'none' && bgFill !== '#' && !effective.originalFill) {
+                  effective.originalFill = bgFill;
+                }
+                const bgOp = pBg.getAttribute('fill-opacity');
+                if (bgOp && !effective.originalFillOpacity) effective.originalFillOpacity = bgOp;
+              }
+              const pImg = patEl.querySelector?.('image, img');
+              if (pImg) {
+                const pHref = pImg.getAttribute('href') || pImg.getAttribute('xlink:href') || pImg.src;
+                if (pHref) effective.imageUrl = pHref;
+                const pTf = pImg.getAttribute('transform');
+                if (pTf) effective.imgTransform = pTf;
+                const pOp = pImg.getAttribute('opacity');
+                if (pOp !== null && pOp !== undefined && (effective.slotOpacity === null || effective.slotOpacity === undefined)) {
+                  effective.slotOpacity = pOp;
+                }
+              }
+            }
+          }
+        }
+
+        if (tag === 'g') {
+          if (node.getAttribute?.('data-type') === 'mask-group') {
+            const clipUrl = node.querySelector?.('[clip-path]')?.getAttribute?.('clip-path') || node.getAttribute?.('clip-path');
+            const clipIdMatch = (clipUrl || '').match(/#([^)'"]+)/);
+            if (clipIdMatch) {
+              const clipEl = svg.querySelector(`clipPath[id="${clipIdMatch[1]}"]`);
+              if (clipEl) {
+                Array.from(clipEl.children).forEach(clipChild => {
+                  list = list.concat(collectShapesWithStyles(clipChild, effective));
+                });
+                const innerImg = node.querySelector?.('image, img');
+                if (innerImg) {
+                  const href = innerImg.getAttribute('href') || innerImg.getAttribute('xlink:href') || innerImg.src;
+                  if (href) effective.imageUrl = href;
+                }
+                return list;
+              }
+            }
+          }
+
+          Array.from(node.children).forEach(child => {
+            list = list.concat(collectShapesWithStyles(child, effective));
+          });
+        } else {
+          list.push({ node, styles: effective });
+        }
+        return list;
+      };
+
+      const allShapes = [];
+      elements.forEach(el => {
+        allShapes.push(...collectShapesWithStyles(el));
+      });
+
+      if (allShapes.length === 0) return;
+
+      const validPaths = [];
+      let baseFill = null;
+      let baseStroke = null;
+      let baseStrokeWidth = null;
+      let baseOpacity = null;
+      let baseLinecap = null;
+      let baseLinejoin = null;
+      let basePaintOrder = null;
+      let baseStrokeDash = null;
+      let baseDataStrokeWidth = null;
+      let baseDataStrokePos = null;
+      let baseImageUrl = null;
+      let baseImageName = null;
+      let baseImageMeta = null;
+      let baseOriginalUrl = null;
+      let basePanX = null;
+      let basePanY = null;
+      let baseZoom = null;
+      let baseImgTransform = null;
+      let baseBaseX = null;
+      let baseBaseY = null;
+      let baseBaseW = null;
+      let baseBaseH = null;
+      let baseOriginalFill = null;
+      let baseOriginalFillOpacity = null;
+      let baseStrokeOpacity = null;
+      let baseOriginalStroke = null;
+      let baseSlotOpacity = null;
+      let baseSlotRotation = null;
+
+      allShapes.forEach(({ node, styles }) => {
+        try {
+          const paperItem = createPaperItemFromNode(node);
+          if (!paperItem) {
+            // Direct path data fallback if paperItem couldn't be parsed
+            const rawD = node.getAttribute?.('d');
+            if (rawD) {
+              if (baseFill === null && styles.fill) baseFill = styles.fill;
+              if (baseStroke === null && styles.stroke) baseStroke = styles.stroke;
+              validPaths.push({ node, bakedD: rawD, styles });
+            }
+            return;
+          }
+
+          // Bake transforms up to parent container where flatPath will be inserted!
+          // Stopping at parent prevents doubling the parent's transform!
+          let curr = node;
+          const matrices = [];
+          while (curr && curr !== parent && curr.tagName && curr.tagName.toLowerCase() !== 'svg') {
+            const transformAttr = curr.getAttribute?.('transform');
+            const styleTransform = curr.style?.transform || curr.style?.translate;
+            if (transformAttr || styleTransform) {
+              matrices.unshift(parseSingleMatrix(curr));
+            }
+            curr = curr.parentElement;
+          }
+          let combinedMatrix = new DOMMatrix();
+          matrices.forEach(m => {
+            combinedMatrix = combinedMatrix.multiply(m);
+          });
+
+          if (!combinedMatrix.isIdentity) {
+            const paperMatrix = new paperScope.Matrix(
+              combinedMatrix.a, combinedMatrix.b,
+              combinedMatrix.c, combinedMatrix.d,
+              combinedMatrix.e, combinedMatrix.f
+            );
+            paperItem.transform(paperMatrix);
+          }
+
+          let bakedD = cleanPaperPathData ? cleanPaperPathData(paperItem) : null;
+          if (!bakedD || bakedD.trim() === '') {
+            bakedD = paperItem.pathData;
+          }
+
+          if (bakedD) {
+            if (baseFill === null && styles.fill && styles.fill !== 'inherit') baseFill = styles.fill;
+            if (baseStroke === null && styles.stroke && styles.stroke !== 'inherit' && styles.stroke !== '#') baseStroke = styles.stroke;
+            if (!baseStrokeWidth && styles.strokeWidth && styles.strokeWidth !== '0') baseStrokeWidth = styles.strokeWidth;
+            if (!baseOpacity && styles.opacity) baseOpacity = styles.opacity;
+            if (!baseLinecap && styles.linecap) baseLinecap = styles.linecap;
+            if (!baseLinejoin && styles.linejoin) baseLinejoin = styles.linejoin;
+            if (!basePaintOrder && styles.paintOrder) basePaintOrder = styles.paintOrder;
+            if (!baseStrokeDash && styles.strokeDash) baseStrokeDash = styles.strokeDash;
+            if (!baseDataStrokeWidth && styles.dataStrokeWidth) baseDataStrokeWidth = styles.dataStrokeWidth;
+            if (!baseDataStrokePos && styles.dataStrokePos) baseDataStrokePos = styles.dataStrokePos;
+            if (!baseImageUrl && styles.imageUrl) baseImageUrl = styles.imageUrl;
+            if (!baseImageName && styles.imageName) baseImageName = styles.imageName;
+            if (!baseImageMeta && styles.imageMeta) baseImageMeta = styles.imageMeta;
+            if (!baseOriginalUrl && styles.originalUrl) baseOriginalUrl = styles.originalUrl;
+            if (!basePanX && styles.panX) basePanX = styles.panX;
+            if (!basePanY && styles.panY) basePanY = styles.panY;
+            if (!baseZoom && styles.zoom) baseZoom = styles.zoom;
+            if (!baseImgTransform && styles.imgTransform) baseImgTransform = styles.imgTransform;
+            if (!baseBaseX && styles.baseX) baseBaseX = styles.baseX;
+            if (!baseBaseY && styles.baseY) baseBaseY = styles.baseY;
+            if (!baseBaseW && styles.baseW) baseBaseW = styles.baseW;
+            if (!baseBaseH && styles.baseH) baseBaseH = styles.baseH;
+            if (baseOriginalFill === null && styles.originalFill) baseOriginalFill = styles.originalFill;
+            if (baseOriginalFillOpacity === null && styles.originalFillOpacity) baseOriginalFillOpacity = styles.originalFillOpacity;
+            if (baseStrokeOpacity === null && styles.strokeOpacity) baseStrokeOpacity = styles.strokeOpacity;
+            if (baseOriginalStroke === null && styles.originalStroke) baseOriginalStroke = styles.originalStroke;
+            if (baseSlotOpacity === null && styles.slotOpacity !== undefined && styles.slotOpacity !== null) baseSlotOpacity = styles.slotOpacity;
+            if (baseSlotRotation === null && styles.slotRotation !== undefined && styles.slotRotation !== null) baseSlotRotation = styles.slotRotation;
+            const pBounds = paperItem.bounds ? { x: paperItem.bounds.x, y: paperItem.bounds.y, width: paperItem.bounds.width, height: paperItem.bounds.height } : null;
+            validPaths.push({ node, bakedD, styles, bounds: pBounds });
+          }
+        } catch (err) {
+          console.warn('Error processing shape in flatten:', err);
+        }
+      });
+
+      if (validPaths.length === 0) return;
+
+      let combinedD = '';
+      let unitedBounds = null;
+      if (validPaths.length === 1) {
+        combinedD = validPaths[0].bakedD;
+        unitedBounds = validPaths[0].bounds;
+      } else if (validPaths.length >= 2) {
+        try {
+          let united = null;
+          for (const item of validPaths) {
+            let p;
+            try {
+              p = new paperScope.CompoundPath(item.bakedD);
+              if (p.children && p.children.length === 1) p = p.children[0];
+            } catch {
+              p = new paperScope.Path(item.bakedD);
+            }
+            if (!united) {
+              united = p;
+            } else {
+              try {
+                const u = united.unite(p);
+                if (u && u.pathData) {
+                  united = u;
+                } else {
+                  united = new paperScope.CompoundPath({ children: [united, p] });
+                }
+              } catch (e) {
+                united = new paperScope.CompoundPath({ children: [united, p] });
+              }
+            }
+          }
+          if (united) {
+            combinedD = cleanPaperPathData ? cleanPaperPathData(united) : united.pathData;
+            unitedBounds = united.bounds ? { x: united.bounds.x, y: united.bounds.y, width: united.bounds.width, height: united.bounds.height } : null;
+          }
+        } catch (err) {
+          console.warn('Paper.js union fallback:', err);
+        }
+        if (!combinedD) {
+          combinedD = validPaths.map(p => p.bakedD).join(' ');
+        }
+      }
+
+      const flatPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const flatPathId = `vpath-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+      flatPath.id = flatPathId;
+      flatPath.setAttribute('data-name', 'Vector Path');
+      flatPath.setAttribute('data-type', 'vector-path');
+      flatPath.setAttribute('data-flattened', 'true');
+      flatPath.setAttribute('vector-effect', 'non-scaling-stroke');
+      flatPath.setAttribute('d', combinedD);
+
+      // Preserve image as an SVG pattern fill if shape or selection had an image
+      if (baseImageUrl) {
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svg.insertBefore(defs, svg.firstChild);
+        }
+        const patId = `pattern-${flatPathId}`;
+        let pattern = defs.querySelector(`pattern[id="${patId}"]`);
+        if (!pattern) {
+          pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+          pattern.id = patId;
+          defs.appendChild(pattern);
+        }
+        pattern.setAttribute('patternUnits', 'objectBoundingBox');
+        pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
+        pattern.setAttribute('width', '1');
+        pattern.setAttribute('height', '1');
+
+        let bgRect = pattern.querySelector('rect.mask-bg-fill');
+        if (!bgRect) {
+          bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bgRect.setAttribute('class', 'mask-bg-fill');
+          bgRect.setAttribute('width', '1');
+          bgRect.setAttribute('height', '1');
+          bgRect.setAttribute('x', '0');
+          bgRect.setAttribute('y', '0');
+          pattern.appendChild(bgRect);
+        }
+        const effectiveBgFill = baseOriginalFill || (baseFill && !baseFill.includes('url(#') ? baseFill : '#3194FC');
+        applySvgGradientOrSolid({
+          targetEl: bgRect,
+          fillVal: effectiveBgFill,
+          fillOp: baseOriginalFillOpacity || '1',
+          idPrefix: `grad-${patId}-bg`,
+          doc: svg.ownerDocument || document,
+          svgRoot: svg
+        });
+
+        let img = pattern.querySelector('image, img');
+        if (!img) {
+          img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+          pattern.appendChild(img);
+        }
+        img.setAttribute('href', baseImageUrl);
+        img.setAttribute('xlink:href', baseImageUrl);
+        img.setAttribute('preserveAspectRatio', 'none');
+        if (baseSlotOpacity !== null && baseSlotOpacity !== undefined) {
+          const dec = Math.max(0, Math.min(1, parseFloat(baseSlotOpacity) / 100)).toString();
+          img.setAttribute('opacity', dec);
+        }
+
+        baseFill = `url(#${patId})`;
+      }
+
+      if (baseFill && baseFill !== 'inherit' && baseFill !== 'none') {
+        flatPath.setAttribute('fill', baseFill);
+        flatPath.setAttribute('data-fill-color', baseFill);
+      } else if (baseFill === 'none') {
+        flatPath.setAttribute('fill', 'none');
+        flatPath.removeAttribute('data-fill-color');
+      } else {
+        flatPath.setAttribute('fill', '#3194FC');
+        flatPath.setAttribute('data-fill-color', '#3194FC');
+      }
+
+      if (baseOriginalFill) {
+        flatPath.setAttribute('data-original-fill', baseOriginalFill);
+      }
+      if (baseOriginalFillOpacity) {
+        flatPath.setAttribute('data-original-fill-opacity', baseOriginalFillOpacity);
+      }
+
+      if (baseImageUrl) {
+        flatPath.setAttribute('data-mask-enabled', 'true');
+        flatPath.setAttribute('data-masked-image-url', baseImageUrl);
+        if (baseOriginalUrl) flatPath.setAttribute('data-slot-original-url', baseOriginalUrl);
+        if (baseImageName) flatPath.setAttribute('data-slot-image-name', baseImageName);
+        if (baseImageMeta) flatPath.setAttribute('data-slot-image-meta', baseImageMeta);
+        if (basePanX !== null && basePanX !== undefined) flatPath.setAttribute('data-slot-pan-x', String(basePanX));
+        if (basePanY !== null && basePanY !== undefined) flatPath.setAttribute('data-slot-pan-y', String(basePanY));
+        if (baseZoom !== null && baseZoom !== undefined) flatPath.setAttribute('data-slot-zoom', String(baseZoom));
+        if (baseSlotOpacity !== null && baseSlotOpacity !== undefined) flatPath.setAttribute('data-slot-opacity', String(baseSlotOpacity));
+        if (baseSlotRotation !== null && baseSlotRotation !== undefined) flatPath.setAttribute('data-slot-rotation', String(baseSlotRotation));
+      }
+      if (baseStroke && baseStroke !== 'none' && baseStroke !== 'inherit' && baseStroke !== '#' && baseStroke !== 'transparent') {
+        flatPath.setAttribute('stroke', baseStroke);
+        flatPath.setAttribute('data-stroke-color', baseStroke);
+        if (baseOriginalStroke) flatPath.setAttribute('data-original-stroke', baseOriginalStroke);
+        if (baseStrokeOpacity) {
+          flatPath.setAttribute('stroke-opacity', baseStrokeOpacity);
+          flatPath.setAttribute('data-stroke-opacity', baseStrokeOpacity);
+        }
+        const sw = (baseDataStrokeWidth && baseDataStrokeWidth !== '0') ? baseDataStrokeWidth : (baseStrokeWidth || '1');
+        const pos = baseDataStrokePos || 'Center';
+        flatPath.setAttribute('data-stroke-position', pos);
+        flatPath.setAttribute('data-stroke-width', sw);
+        flatPath.setAttribute('stroke-width', sw);
+        flatPath.setAttribute('paint-order', 'stroke fill');
+        flatPath.style.paintOrder = 'stroke fill';
+
+        if (baseStrokeDash) {
+          flatPath.setAttribute('stroke-dasharray', baseStrokeDash);
+          flatPath.setAttribute('data-stroke-dasharray', baseStrokeDash);
+        }
+        if (baseLinecap) flatPath.setAttribute('stroke-linecap', baseLinecap);
+        if (baseLinejoin) flatPath.setAttribute('stroke-linejoin', baseLinejoin);
+      } else {
+        flatPath.setAttribute('stroke', 'none');
+        flatPath.setAttribute('stroke-width', '0');
+        flatPath.removeAttribute('data-stroke-color');
+        flatPath.removeAttribute('data-stroke-width');
+      }
+      if (baseOpacity && baseOpacity !== '1') {
+        flatPath.setAttribute('opacity', baseOpacity);
+      }
+
+      parent.insertBefore(flatPath, lastEl.nextSibling);
+
+      if (baseImageUrl) {
+        let flatBbox = null;
+        try {
+          flatBbox = flatPath.getBBox();
+        } catch (e) { }
+
+        const flatX = (flatBbox && flatBbox.width > 0) ? flatBbox.x : (unitedBounds ? unitedBounds.x : 0);
+        const flatY = (flatBbox && flatBbox.height > 0) ? flatBbox.y : (unitedBounds ? unitedBounds.y : 0);
+        const flatW = (flatBbox && flatBbox.width > 0) ? flatBbox.width : (unitedBounds ? unitedBounds.width : 100);
+        const flatH = (flatBbox && flatBbox.height > 0) ? flatBbox.height : (unitedBounds ? unitedBounds.height : 100);
+
+        flatPath.setAttribute('data-slot-base-x', String(flatX));
+        flatPath.setAttribute('data-slot-base-y', String(flatY));
+        flatPath.setAttribute('data-slot-base-w', String(flatW));
+        flatPath.setAttribute('data-slot-base-h', String(flatH));
+
+        const rMatch = (baseImgTransform || '').match(/rotate\(([-0-9.]+)/);
+        const initialAngle = rMatch ? parseFloat(rMatch[1]) : (baseSlotRotation !== null && baseSlotRotation !== undefined ? parseFloat(baseSlotRotation) : 0);
+
+        updateShapeMaskTransform({
+          selectedElement: flatPath,
+          panX: basePanX !== null && basePanX !== undefined ? parseFloat(basePanX) : 0,
+          panY: basePanY !== null && basePanY !== undefined ? parseFloat(basePanY) : 0,
+          zoom: baseZoom !== null && baseZoom !== undefined ? parseFloat(baseZoom) : 1,
+          angle: initialAngle,
+          doc: svg.ownerDocument || document
+        });
+      }
+
+      elements.forEach(el => {
+        const overlay = el.parentNode?.querySelector(`.svg-shape-stroke-overlay[data-target="${el.id}"]`);
+        if (overlay) overlay.remove();
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+
+      if (updatePageHtml) updatePageHtml(activePageIndex, svg.outerHTML);
+      if (saveModifiedPageHtml) saveModifiedPageHtml(activePageIndex, svg);
+
+      if (setSelectedLayerId) setSelectedLayerId(flatPath.id);
+      if (selectedLayerIdRef) selectedLayerIdRef.current = flatPath.id;
+      if (setMultiSelectedIds) setMultiSelectedIds(new Set([flatPath.id]));
+      if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([flatPath.id]);
+
+      window.dispatchEvent(new CustomEvent('trigger-rebind-selection', { detail: { layerId: flatPath.id, pageIndex: activePageIndex } }));
+
+      // Immediately enter vector node edit mode so anchor points and curve handles are editable
+      setTimeout(() => {
+        const livePath = svg.querySelector(`[id="${CSS.escape(flatPath.id)}"]`) || document.getElementById(flatPath.id) || flatPath;
+        if (livePath && typeof enterNodeEditMode === 'function') {
+          enterNodeEditMode(livePath, activePageIndex);
+        }
+      }, 50);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('trigger-group', handleTriggerGroup);
     window.addEventListener('trigger-ungroup', handleTriggerUngroup);
+    window.addEventListener('trigger-mask', handleTriggerMask);
+    window.addEventListener('trigger-flatten', handleTriggerFlatten);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('trigger-group', handleTriggerGroup);
       window.removeEventListener('trigger-ungroup', handleTriggerUngroup);
+      window.removeEventListener('trigger-mask', handleTriggerMask);
+      window.removeEventListener('trigger-flatten', handleTriggerFlatten);
     };
-  }, [activePageIndex, activeTopTool, activeMainTool, setActiveMainTool, selectedPenTool, setSelectedPenTool, pages, updatePageHtml, saveModifiedPageHtml, setSelectedLayerId, setMultiSelectedIds, setCurrentFrameId, currentFrameIdRef, selectedLayerIdRef, multiSelectedIdsRef, vectraPenSessionRef, drawingPathRef, commitAndExitPenDrawing, clearVectraOverlay, renderVectraOverlay, nodeEditModeRef, nodeEditPaperPathRef, nodeEditPathRef, nodeEditPageIndexRef, nodeEditSelectedSegIndicesRef, nodeEditSelectedSegIdxRef, nodeEditSelectedHandleSideRef, nodeEditSelectedCurveIdxRef, paperScopeRef, exitNodeEditMode, drawNodeEditOverlay, drawOverlayHighlight, drawMultiSelectionHighlight, isAltPressedRef, drawMeasurementOverlayRef, lastMousePosRef]);
+  }, [activePageIndex, activeTopTool, activeMainTool, setActiveMainTool, selectedPenTool, setSelectedPenTool, pages, updatePageHtml, saveModifiedPageHtml, setSelectedLayerId, setMultiSelectedIds, setCurrentFrameId, currentFrameIdRef, selectedLayerIdRef, multiSelectedIdsRef, vectraPenSessionRef, drawingPathRef, commitAndExitPenDrawing, clearVectraOverlay, renderVectraOverlay, nodeEditModeRef, nodeEditPaperPathRef, nodeEditPathRef, nodeEditPageIndexRef, nodeEditSelectedSegIndicesRef, nodeEditSelectedSegIdxRef, nodeEditSelectedHandleSideRef, nodeEditSelectedCurveIdxRef, paperScopeRef, enterNodeEditMode, exitNodeEditMode, drawNodeEditOverlay, drawOverlayHighlight, drawMultiSelectionHighlight, isAltPressedRef, drawMeasurementOverlayRef, lastMousePosRef]);
 };
 
 export default useCanvasKeyboardShortcuts;

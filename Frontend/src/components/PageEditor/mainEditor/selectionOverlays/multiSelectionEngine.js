@@ -1,4 +1,5 @@
 import { getVisualBBox, getElementMatrix } from '../utils/geometryUtils';
+import { isPageRootElement } from '../utils/frameHierarchyUtils';
 import {
   getOverlayForElement,
   getHtmlOverlayForElement,
@@ -199,7 +200,7 @@ export const createMultiSelectionEngine = ({
         return;
       }
       elements.forEach(el => {
-        if (isElementHidden(el)) {
+        if (isElementHidden(el) || isPageRootElement(el)) {
           purgeElementOverlays(el);
           return;
         }

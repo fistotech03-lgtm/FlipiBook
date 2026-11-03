@@ -89,7 +89,7 @@ const LeadFormPopup = ({
 
         setIsSubmitting(true);
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
             await axios.post(`${backendUrl}/api/flipbook/submit-lead`, {
                 v_id: vId,
                 shareId: shareId,

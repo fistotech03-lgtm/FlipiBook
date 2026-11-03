@@ -18,7 +18,11 @@ export default function CreateBookLayout({
   initialView: controlledInitialView = 'upload',
   initialTemplateId,
   existingFlipbooks = [],
-  initialFiles = null
+  currentFolder = 'My Flipbooks',
+  initialFiles = null,
+  storage = null,
+  emailId = '',
+  onStorageExceeded = null
 }) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [modalView, setModalView] = useState('upload');
@@ -71,7 +75,11 @@ export default function CreateBookLayout({
           initialView={controlledInitialView || modalView}
           initialTemplateId={initialTemplateId}
           existingFlipbooks={existingFlipbooks}
+          currentFolder={currentFolder}
           initialFiles={initialFiles || droppedFiles}
+          storage={storage}
+          emailId={emailId}
+          onStorageExceeded={onStorageExceeded}
         />
       </div>
     </CreateFlipbookContext.Provider>

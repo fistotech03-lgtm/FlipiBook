@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   openAuthModal,
@@ -142,22 +143,72 @@ export const useActiveBook = () => {
   const dispatch = useDispatch();
   const activeBook = useSelector((state) => state.activeBook);
 
+  const setCurrentBookAction = useCallback((bookOrUpdater) => {
+    dispatch((dispatchThunk, getState) => {
+      const current = getState().activeBook.currentBook;
+      const next = typeof bookOrUpdater === 'function' ? bookOrUpdater(current) : bookOrUpdater;
+      if (next !== current) {
+        dispatchThunk(setCurrentBook(next));
+      }
+    });
+  }, [dispatch]);
+
+  const setBookNameAction = useCallback((nameOrUpdater) => {
+    dispatch((dispatchThunk, getState) => {
+      const current = getState().activeBook.bookName;
+      const next = typeof nameOrUpdater === 'function' ? nameOrUpdater(current) : nameOrUpdater;
+      if (next !== current) {
+        dispatchThunk(setBookName(next));
+      }
+    });
+  }, [dispatch]);
+
+  const setFolderAction = useCallback((folderOrUpdater) => {
+    dispatch((dispatchThunk, getState) => {
+      const current = getState().activeBook.folder;
+      const next = typeof folderOrUpdater === 'function' ? folderOrUpdater(current) : folderOrUpdater;
+      if (next !== current) {
+        dispatchThunk(setFolder(next));
+      }
+    });
+  }, [dispatch]);
+
+  const setHasUnsavedChangesAction = useCallback((valOrUpdater) => {
+    dispatch((dispatchThunk, getState) => {
+      const current = getState().activeBook.hasUnsavedChanges;
+      const next = typeof valOrUpdater === 'function' ? valOrUpdater(current) : valOrUpdater;
+      if (next !== current) {
+        dispatchThunk(setHasUnsavedChanges(next));
+      }
+    });
+  }, [dispatch]);
+
+  const setIsSavingAction = useCallback((valOrUpdater) => {
+    dispatch((dispatchThunk, getState) => {
+      const current = getState().activeBook.isSaving;
+      const next = typeof valOrUpdater === 'function' ? valOrUpdater(current) : valOrUpdater;
+      if (next !== current) {
+        dispatchThunk(setIsSaving(next));
+      }
+    });
+  }, [dispatch]);
+
   return {
     ...activeBook,
-    setCurrentBook: (book) => dispatch(setCurrentBook(book)),
-    setBookName: (name) => dispatch(setBookName(name)),
-    setFolder: (folder) => dispatch(setFolder(folder)),
-    setHasUnsavedChanges: (val) => dispatch(setHasUnsavedChanges(val)),
-    setIsSaving: (val) => dispatch(setIsSaving(val)),
-    toggleAutoSave: (val) => dispatch(toggleAutoSave(val)),
-    setActiveDevice: (device) => dispatch(setActiveDevice(device)),
-    triggerSave: () => dispatch(triggerSave()),
-    triggerExport: () => dispatch(triggerExport()),
-    triggerClear: () => dispatch(triggerClear()),
-    triggerPreview: () => dispatch(triggerPreview()),
-    setExportContext: (ctx) => dispatch(setExportContext(ctx)),
-    setSaveSuccessInfo: (info) => dispatch(setSaveSuccessInfo(info)),
-    resetActiveBook: () => dispatch(resetActiveBook()),
+    setCurrentBook: setCurrentBookAction,
+    setBookName: setBookNameAction,
+    setFolder: setFolderAction,
+    setHasUnsavedChanges: setHasUnsavedChangesAction,
+    setIsSaving: setIsSavingAction,
+    toggleAutoSave: useCallback((val) => dispatch(toggleAutoSave(val)), [dispatch]),
+    setActiveDevice: useCallback((device) => dispatch(setActiveDevice(device)), [dispatch]),
+    triggerSave: useCallback(() => dispatch(triggerSave()), [dispatch]),
+    triggerExport: useCallback(() => dispatch(triggerExport()), [dispatch]),
+    triggerClear: useCallback(() => dispatch(triggerClear()), [dispatch]),
+    triggerPreview: useCallback(() => dispatch(triggerPreview()), [dispatch]),
+    setExportContext: useCallback((ctx) => dispatch(setExportContext(ctx)), [dispatch]),
+    setSaveSuccessInfo: useCallback((info) => dispatch(setSaveSuccessInfo(info)), [dispatch]),
+    resetActiveBook: useCallback(() => dispatch(resetActiveBook()), [dispatch]),
   };
 };
 

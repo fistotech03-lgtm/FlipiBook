@@ -357,7 +357,7 @@ export const convertSvgTextToOutlines = async (svgString) => {
     const fontStyle = innerDiv.style.fontStyle || fo.getAttribute('font-style') || 'normal';
     const rawFill = innerDiv.style.color || fo.getAttribute('fill') || '#000000';
     const fill = (rawFill === 'transparent' || rawFill === 'rgba(0, 0, 0, 0)') ? 'none' : rawFill;
-    const rawTextAlign = innerDiv.style.textAlign || fo.getAttribute('text-anchor') || 'left';
+    const rawTextAlign = fo.getAttribute('data-text-align') || innerDiv.style.textAlign || fo.getAttribute('text-anchor') || 'left';
     const textAlign = rawTextAlign === 'middle' ? 'center' : (rawTextAlign === 'end' ? 'right' : rawTextAlign);
     const lineHeightRatio = parseFloat(innerDiv.style.lineHeight || fo.getAttribute('data-line-height') || '1.2') || 1.2;
 
@@ -410,6 +410,21 @@ export const convertSvgTextToOutlines = async (svgString) => {
         } else if (textAlign === 'right') {
           const textW = font.getAdvanceWidth(lineText, fontSize);
           lineX = x + Math.max(0, w - textW);
+        } else if (textAlign === 'justify' && i < lines.length - 1 && lineText.trim().includes(' ')) {
+          const words = lineText.trim().split(/\s+/);
+          if (words.length > 1) {
+            let wordsW = 0;
+            words.forEach(wd => { wordsW += font.getAdvanceWidth(wd, fontSize); });
+            const totalGap = Math.max(0, w - wordsW);
+            const gapPerSpace = totalGap / (words.length - 1);
+            let curWordX = x;
+            words.forEach(wd => {
+              const pData = font.getPath(wd, curWordX, baselineY, fontSize).toPathData(2);
+              if (pData) combinedPathData += (combinedPathData ? ' ' : '') + pData;
+              curWordX += font.getAdvanceWidth(wd, fontSize) + gapPerSpace;
+            });
+            continue;
+          }
         }
 
         const pathData = font.getPath(lineText, lineX, baselineY, fontSize).toPathData(2);
@@ -428,36 +443,52 @@ export const convertSvgTextToOutlines = async (svgString) => {
         fo.remove();
       }
     } else {
-      // ── Method B: Native SVG <text> fallback for Inkscape --export-text-to-path ──
-      const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
-      if (foId) g.setAttribute('id', foId);
-      if (transform) g.setAttribute('transform', transform);
-
+      // ── Method B: Native SVG <text> (Vector-Studio Clean Standard) ──────────
+      // Produces clean, standards-compliant SVG <text> elements without redundant <g> wrappers.
       const textEl = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
-      const textAnchor = textAlign === 'center' ? 'middle' : (textAlign === 'right' ? 'end' : 'start');
-      const anchorX = textAlign === 'center' ? (x + w / 2) : (textAlign === 'right' ? (x + w) : x);
+      if (foId) textEl.setAttribute('id', foId);
+      if (transform) textEl.setAttribute('transform', transform);
+      textEl.setAttribute('data-type', 'text');
+
+      const isCenter = textAlign === 'center' || textAlign === 'middle';
+      const isRight = textAlign === 'right' || textAlign === 'end';
+      const isJustify = textAlign === 'justify';
+
+      const textAnchor = isCenter ? 'middle' : (isRight ? 'end' : 'start');
+      const anchorX = isCenter ? (x + w / 2) : (isRight ? (x + w) : x);
       const lineStep = fontSize * lineHeightRatio;
       const baselineOffset = fontSize * 0.85;
 
       textEl.setAttribute('x', anchorX.toFixed(2));
       textEl.setAttribute('y', (y + baselineOffset).toFixed(2));
-      textEl.setAttribute('font-family', fontFamily);
+      textEl.setAttribute('font-family', fontFamily.replace(/['"]/g, ''));
       textEl.setAttribute('font-size', fontSize.toString());
       textEl.setAttribute('font-weight', fontWeight);
       textEl.setAttribute('font-style', fontStyle);
       textEl.setAttribute('fill', fill);
       textEl.setAttribute('text-anchor', textAnchor);
+      textEl.setAttribute('data-text-align', textAlign);
+      if (isJustify) {
+        textEl.setAttribute('text-align', 'justify');
+      }
 
-      lines.forEach((lineText, idx) => {
-        const tspan = doc.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.setAttribute('x', anchorX.toFixed(2));
-        tspan.setAttribute('y', (y + baselineOffset + idx * lineStep).toFixed(2));
-        tspan.textContent = lineText;
-        textEl.appendChild(tspan);
-      });
+      if (lines.length === 1) {
+        textEl.textContent = lines[0];
+      } else {
+        lines.forEach((lineText, idx) => {
+          const tspan = doc.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', anchorX.toFixed(2));
+          tspan.setAttribute('y', (y + baselineOffset + idx * lineStep).toFixed(2));
+          if (isJustify && idx < lines.length - 1 && w > 0 && lineText.trim().includes(' ')) {
+            tspan.setAttribute('textLength', w.toFixed(2));
+            tspan.setAttribute('lengthAdjust', 'spacing');
+          }
+          tspan.textContent = lineText;
+          textEl.appendChild(tspan);
+        });
+      }
 
-      g.appendChild(textEl);
-      fo.replaceWith(g);
+      fo.replaceWith(textEl);
     }
   }
 

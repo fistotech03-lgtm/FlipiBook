@@ -13,9 +13,9 @@ import {
   useNavigate,
 } from "react-router-dom";
 import axios from "axios";
-import { saveToDB } from "../../utils/dbUtils";
+import { getPageEditorState, savePageEditorState, ensureCleanBook } from "../../utils/dbUtils";
 import Layer from "./panels/Layer";
-import MainEditor from "./MainEditor";
+import MainEditor from "./MainEditor.jsx";
 import RightSidebar from "./panels/RightSidebar";
 import TooltipCustomization from "./modals/TooltipCustomization";
 import TemplateModal from "./modals/TemplateModal";
@@ -27,12 +27,9 @@ import Model3DPreviewModal from "./modals/Interaction3DPreview";
 import PasswordProtectModal from "./modals/PasswordProtectModal";
 import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
-import {
-  getSupabaseBaseUrl,
-  resolveUploadsPath,
-  setGlobalProjectBaseUrl,
-} from "../../utils/assetUtils";
+import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
+import { queryClient } from "../../queryClient";
 
 import {
   parseLayersFromSVG,
@@ -97,9 +94,26 @@ const PageEditor = () => {
   } = useOutletContext();
 
   // ── Core States ────────────────────────────────────────────────────────────
-  const [pages, setPages] = useState([]);
+  const [pages, setPages] = useState(() => {
+    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
+      return location.state.pages.map((p, idx) => ({
+        id: p.id || p.v_id || `page_${idx + 1}`,
+        v_id: p.v_id || p.id || `page_${idx + 1}`,
+        name: p.name || p.pageName || `Page ${idx + 1}`,
+        fileName: p.fileName || `${idx + 1}.svg`,
+        pageNumber: p.pageNumber || idx + 1,
+        isHidden: Boolean(p.isHidden || p.hide === 1),
+        html: p.html || p.content || '',
+        layers: Array.isArray(p.layers) ? p.layers : [],
+        isLazy: false
+      }));
+    }
+    return [];
+  });
   const [activePageIndex, setActivePageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    return !(location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0);
+  });
   const [isDoublePage, setIsDoublePage] = useState(false);
   const [isRulerEnabled, setIsRulerEnabled] = useState(() => {
     const saved = localStorage.getItem("isRulerEnabled");
@@ -111,37 +125,18 @@ const PageEditor = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [selectedLayerId, setSelectedLayerIdRaw] = useState(null);
+
+  // Clear previous book from IndexedDB when opening a new book
+  useEffect(() => {
+    if (v_id) {
+      ensureCleanBook(v_id);
+    }
+  }, [v_id]);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
   const [clipboard, setClipboard] = useState(null);
   const [currentFrameId, setCurrentFrameId] = useState(null);
   const [activeMainTool, setActiveMainTool] = useState("select");
   const [activeTopTool, setActiveTopTool] = useState("editor");
-
-  const sanitizedEmail = (user?.emailId || user?.email || "").replace(/[@.]/g, "_");
-  const actualFolderName = resolvePhysicalFolder(
-    currentBook?.folderName || folder || location.state?.folderName,
-  );
-  const bookName =
-    currentBook?.flipbookName ||
-    location.state?.flipbookName ||
-    "Untitled Flipbook";
-  const userFolder =
-    currentBook?.userID ||
-    user?.user_id ||
-    user?.userID ||
-    sanitizedEmail ||
-    "FLIPI0002";
-
-  const projectBaseUrl = useMemo(
-    () => getSupabaseBaseUrl(userFolder, actualFolderName, bookName),
-    [userFolder, actualFolderName, bookName],
-  );
-
-  useEffect(() => {
-    if (projectBaseUrl) {
-      setGlobalProjectBaseUrl(projectBaseUrl);
-    }
-  }, [projectBaseUrl]);
 
   const [pdfProcessing, setPdfProcessing] = useState(null);
   const [alertState, setAlertState] = useState({
@@ -186,10 +181,12 @@ const PageEditor = () => {
     });
   }, []);
 
-  // Cleanup cache manager on unmount
+  // Cleanup cache manager and invalidate books cache on unmount
   useEffect(() => {
     return () => {
       pageCacheManager.destroy();
+      queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
+      queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     };
   }, []);
 
@@ -541,6 +538,7 @@ const PageEditor = () => {
       setPages,
       currentBook,
       v_id,
+      folder,
       setHasUnsavedChanges,
       isSaving,
       setIsSaving,
@@ -646,14 +644,19 @@ const PageEditor = () => {
     };
   }, [setSaveHandler, saveFlipbook, popupEditContext, pages]);
 
+  const handleClearEditorWithDB = useCallback(async () => {
+    handleClearAllPages();
+    await clearEditorState();
+  }, [handleClearAllPages]);
+
   useEffect(() => {
     if (setClearHandler) {
-      setClearHandler(() => handleClearAllPages);
+      setClearHandler(() => handleClearEditorWithDB);
     }
     return () => {
       if (setClearHandler) setClearHandler(null);
     };
-  }, [setClearHandler, handleClearAllPages]);
+  }, [setClearHandler, handleClearEditorWithDB]);
 
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
@@ -661,10 +664,11 @@ const PageEditor = () => {
     }
     window.dispatchEvent(new CustomEvent("trigger-manual-save"));
 
-    if (pages && pages.length > 0) {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    if (pages && pages.length > 0 && activeVId) {
       try {
-        await saveToDB("editor_autosave", {
-          v_id: v_id,
+        await savePageEditorState({
+          v_id: activeVId,
           pages: popupEditContext ? popupEditContext.backup.pages : pages,
           activePageIndex: popupEditContext
             ? popupEditContext.backup.activePageIndex
@@ -681,9 +685,16 @@ const PageEditor = () => {
     }
 
     setTimeout(() => {
-      const shareId = currentBook?.shareId || currentBook?.share?.shareId;
-      if (shareId) {
-        window.open(`/preview?shareId=${shareId}`, "_blank");
+      const activeVId = v_id || currentBook?.v_id;
+      const candidateShareId =
+        currentBook?.Customized_Settings?.Visibility?.shareId ||
+        currentBook?.Visibility?.shareId ||
+        (currentBook?.shareId && currentBook.shareId !== activeVId ? currentBook.shareId : null) ||
+        (currentBook?.share?.shareId && currentBook.share.shareId !== activeVId ? currentBook.share.shareId : null);
+      if (candidateShareId && candidateShareId !== activeVId) {
+        window.open(`/preview?shareId=${candidateShareId}${activeVId ? `&v_id=${activeVId}` : ''}`, "_blank");
+      } else if (activeVId) {
+        window.open(`/preview?v_id=${activeVId}`, "_blank");
       } else {
         window.open("/preview", "_blank");
       }
@@ -759,21 +770,25 @@ const PageEditor = () => {
     autoSaveTimerRef,
   ]);
 
-  // Sync state to IndexedDB for Preview / Customized Editor
+  // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
   useEffect(() => {
-    if (pages.length > 0 && !isLoading) {
-      saveToDB("editor_autosave", {
-        v_id: v_id,
-        pages: popupEditContext ? popupEditContext.backup.pages : pages,
-        activePageIndex: popupEditContext
-          ? popupEditContext.backup.activePageIndex
-          : activePageIndex,
-        pageName:
-          currentBook?.flipbookName ||
-          location.state?.flipbookName ||
-          "Untitled Flipbook",
-        timestamp: Date.now(),
-      });
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    if (pages.length > 0 && !isLoading && activeVId) {
+      const timer = setTimeout(() => {
+        savePageEditorState({
+          v_id: activeVId,
+          pages: popupEditContext ? popupEditContext.backup.pages : pages,
+          activePageIndex: popupEditContext
+            ? popupEditContext.backup.activePageIndex
+            : activePageIndex,
+          pageName:
+            currentBook?.flipbookName ||
+            location.state?.flipbookName ||
+            "Untitled Flipbook",
+          timestamp: Date.now(),
+        });
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [
     pages,
@@ -905,31 +920,167 @@ const PageEditor = () => {
   // ── Initial Flipbook Loader ───────────────────────────────────────────────
   useEffect(() => {
     const initializeEditor = async () => {
-      setIsLoading(true);
-      try {
-        if (v_id) {
-          try {
-            const backendUrl =
-              import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+      const activeVId = v_id || location.state?.v_id;
+      // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
+      if (!activeVId) {
+        const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+        const targetFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+          ? location.state.folder_v_id
+          : (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+        navigate(`/editor/${encodeURIComponent(targetFolderVId)}/${generatedVId}`, {
+          replace: true,
+          state: { ...(location.state || {}), v_id: generatedVId, folder_v_id: targetFolderVId }
+        });
+        return;
+      }
 
+      // Auto-heal: If folder in URL contains folder name (e.g. "My Flipbooks") instead of folder_v_id, normalize URL
+      if (activeVId && folder && !folder.startsWith('fol_')) {
+        const initialFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+          ? location.state.folder_v_id
+          : 'fol_default';
+        navigate(`/editor/${encodeURIComponent(initialFolderVId)}/${activeVId}`, {
+          replace: true,
+          state: { ...(location.state || {}), folder_v_id: initialFolderVId }
+        });
+      }
+
+      // 0. Instantly initialize new books in memory (zero latency, no upfront DB creation)
+      if (location.state?.isNewBook) {
+        console.log("[PageEditor] Instantly initializing new book:", activeVId);
+        const count = location.state.pageCount || 12;
+        const newBookPages = Array.from({ length: count }, (_, i) => {
+          const name = `Page ${i + 1}`;
+          let html, layers;
+          if (location.state?.templatePages?.[i]) {
+            html = location.state.templatePages[i];
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "image/svg+xml");
+            const svgEl = doc.querySelector("svg");
+            layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+          } else {
+            const def = createDefaultPageDataRef.current(
+              name,
+              location.state.width || 210,
+              location.state.height || 297,
+            );
+            html = def.html;
+            layers = def.layers;
+          }
+          const pageUniqueId = `page_${i + 1}_${activeVId}`;
+          return {
+            id: pageUniqueId,
+            v_id: pageUniqueId,
+            name,
+            html,
+            layers,
+          };
+        });
+
+        setPages(newBookPages);
+        const newFirstRootId = newBookPages[0]?.layers?.[0]?.id;
+        if (newFirstRootId) {
+          setSelectedLayerIdRaw(newFirstRootId);
+          setMultiSelectedIds(new Set([newFirstRootId]));
+          setCurrentFrameId(newFirstRootId);
+        }
+        setCurrentBook({
+          v_id: activeVId,
+          flipbookName: location.state?.flipbookName || "Untitled Flipbook",
+          folderName: resolvePhysicalFolder(location.state?.folderName),
+          folder_v_id: location.state?.folder_v_id || folder,
+          templateId: location.state?.templateId,
+          orientation: location.state?.orientation,
+          width: location.state?.width || 210,
+          height: location.state?.height || 297,
+          bookType: location.state?.bookType || (location.state?.isTemplate ? 'template' : 'plain'),
+          isTemplate: Boolean(location.state?.isTemplate),
+          templateName: location.state?.templateName || '',
+        });
+
+        setIsLoading(false);
+        isFirstLoadRef.current = false;
+        setHasUnsavedChanges(true);
+
+        // If auto-save is enabled, sync in the background to the backend
+        if (isAutoSaveEnabled) {
+          console.log("[PageEditor] Auto-save enabled, initiating background sync to backend...");
+          setTimeout(() => {
+            saveFlipbook(false, newBookPages);
+          }, 800);
+        }
+        return;
+      }
+
+      let hasLocalCachedPages = false;
+      let loadedCachedPages = null;
+      try {
+        if (activeVId) {
+          // 1. Quick-load cached state from IndexedDB for instant UI render & refresh persistence
+          try {
+            await ensureCleanBook(activeVId);
+            const cachedState = await getPageEditorState(activeVId);
+            if (
+              cachedState &&
+              cachedState.v_id === activeVId &&
+              Array.isArray(cachedState.pages) &&
+              cachedState.pages.length > 0
+            ) {
+              console.log("[PageEditor] Quick-load cache hit from IndexedDB for", activeVId);
+              setPages(cachedState.pages);
+              hasLocalCachedPages = true;
+              loadedCachedPages = cachedState.pages;
+              if (
+                typeof cachedState.activePageIndex === "number" &&
+                cachedState.activePageIndex >= 0
+              ) {
+                setActivePageIndex(cachedState.activePageIndex);
+              }
+              if (cachedState.bookName || cachedState.pageName) {
+                setCurrentBook((prev) => ({
+                  ...(prev || {}),
+                  v_id: activeVId,
+                  flipbookName:
+                    cachedState.pageName ||
+                    cachedState.bookName ||
+                    prev?.flipbookName ||
+                    "Untitled Flipbook",
+                }));
+              }
+              setIsLoading(false);
+            }
+          } catch (cacheErr) {
+            console.warn("[PageEditor] IndexedDB quick-load warning:", cacheErr);
+          }
+
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+
+            const userEmail = user?.emailId || user?.email || location.state?.emailId || 'user@flipibook.com';
             const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
               params: {
-                emailId: user?.emailId || user?.email,
-                v_id,
-                folderName: folder || location.state?.folderName,
-                bookName: decodeURIComponent(v_id),
+                v_id: activeVId,
+                folder_id: folder,
+                folderName: location.state?.folderName,
+                bookName: decodeURIComponent(activeVId),
               },
+              withCredentials: true,
             });
 
             if (res.data && res.data.pages) {
               const parser = new DOMParser();
-              const userEmail = user?.emailId || user?.email;
               const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
               const actualFolderName = resolvePhysicalFolder(
                 res.data.meta?.folderName ||
                   folder ||
                   location.state?.folderName,
               );
+              const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+              const resolvedFolderVId =
+                (isFolId(res.data.meta?.folder_v_id) ? res.data.meta.folder_v_id : null) ||
+                (isFolId(res.data.meta?.folder_id) ? res.data.meta.folder_id : null) ||
+                (isFolId(location.state?.folder_v_id) ? location.state.folder_v_id : null) ||
+                (isFolId(folder) ? folder : 'fol_default');
               const bookName =
                 res.data.meta?.flipbookName ||
                 location.state?.flipbookName ||
@@ -960,9 +1111,17 @@ const PageEditor = () => {
                 fetchedSettings.orientation ||
                 location.state?.orientation;
 
+              const fetchedShareId =
+                res.data.share?.shareId ||
+                fetchedSettings?.Visibility?.shareId ||
+                fetchedMeta?.Customized_Settings?.Visibility?.shareId;
+
               setCurrentBook((prev) => ({
                 ...(prev || {}),
                 ...(fetchedMeta || {}),
+                v_id: res.data.meta?.v_id || res.data.v_id || activeVId,
+                folder_v_id: resolvedFolderVId,
+                folder_id: resolvedFolderVId,
                 folderName: actualFolderName,
                 flipbookName:
                   fetchedMeta.flipbookName ||
@@ -973,7 +1132,18 @@ const PageEditor = () => {
                 height: targetHeight,
                 templateId: targetTemplateId,
                 orientation: targetOrientation,
+                shareId: fetchedShareId,
+                Customized_Settings: fetchedSettings || fetchedMeta?.Customized_Settings || {},
+                share: res.data.share || (fetchedShareId ? { shareId: fetchedShareId } : undefined)
               }));
+
+              // Auto-normalize URL to show folder_v_id instead of folder name in address bar
+              if (!folder || !folder.startsWith('fol_') || folder !== resolvedFolderVId) {
+                navigate(`/editor/${encodeURIComponent(resolvedFolderVId)}/${activeVId}`, {
+                  replace: true,
+                  state: { ...(location.state || {}), folder_v_id: resolvedFolderVId }
+                });
+              }
 
               const bookVId = res.data.meta?.v_id || res.data.v_id || v_id;
 
@@ -1035,6 +1205,9 @@ const PageEditor = () => {
                 }
 
                 let updatedHtml = pageHtml;
+                if (updatedHtml.includes("My_Flipbooks/")) {
+                  updatedHtml = updatedHtml.split("My_Flipbooks/").join("books/");
+                }
                 if (updatedHtml.includes("../assets/")) {
                   updatedHtml = updatedHtml
                     .split("../assets/")
@@ -1085,6 +1258,14 @@ const PageEditor = () => {
                   updatedHtml,
                   "image/svg+xml",
                 );
+                const rootFrame = doc.querySelector('g[data-type="frame"]') || doc.querySelector('svg > g');
+                if (rootFrame && rootFrame.hasAttribute('clip-path')) {
+                  rootFrame.removeAttribute('clip-path');
+                  if (rootFrame.style) {
+                    rootFrame.style.removeProperty('clip-path');
+                    rootFrame.style.removeProperty('-webkit-clip-path');
+                  }
+                }
                 const allEls = doc.querySelectorAll("*");
                 allEls.forEach((el) => {
                   const hasDropShadow =
@@ -1102,6 +1283,50 @@ const PageEditor = () => {
                     hasBackgroundBlur
                   ) {
                     syncFilters(doc, el);
+                  }
+
+                  // Guard & auto-heal: Audio elements & their controls must never be converted to shapes
+                  const isAudioOrInsideAudio =
+                    (el.classList && el.classList.contains("audio-fill-layer")) ||
+                    (typeof el.closest === "function" && (el.closest('[data-type="audio-frame"]') || el.closest('g[id^="audio-"]'))) ||
+                    (() => {
+                      let p = el.parentNode;
+                      while (p && p.getAttribute) {
+                        if (
+                          p.getAttribute("data-type") === "audio-frame" ||
+                          (p.id && p.id.startsWith("audio-"))
+                        ) {
+                          return true;
+                        }
+                        p = p.parentNode;
+                      }
+                      return false;
+                    })();
+
+                  if (isAudioOrInsideAudio) {
+                    if (el.classList && el.classList.contains("audio-fill-layer")) {
+                      el.removeAttribute("data-shape-type");
+                      if (el.tagName && el.tagName.toLowerCase() === "path") {
+                        const rect = doc.createElementNS(
+                          "http://www.w3.org/2000/svg",
+                          "rect",
+                        );
+                        Array.from(el.attributes).forEach((a) => {
+                          if (a.name !== "d" && a.name !== "data-shape-type") {
+                            rect.setAttribute(a.name, a.value);
+                          }
+                        });
+                        if (!rect.getAttribute("rx")) {
+                          const audioParent = typeof el.closest === "function" ? el.closest('[data-audio-template]') : null;
+                          const tpl = audioParent ? audioParent.getAttribute("data-audio-template") : null;
+                          if (tpl === "sunset-vibrant") rect.setAttribute("rx", "27");
+                          else if (tpl === "silver-mono") rect.setAttribute("rx", "26");
+                          else rect.setAttribute("rx", "24");
+                        }
+                        if (el.parentNode) el.parentNode.replaceChild(rect, el);
+                      }
+                    }
+                    return; // Skip shape processing for all audio children
                   }
 
                   const shapeType =
@@ -1262,6 +1487,88 @@ const PageEditor = () => {
             }
           } catch (err) {
             console.error("Failed to fetch flipbook:", err);
+            // Fallback to IndexedDB offline cache if available
+            try {
+              const offlineCached = await getPageEditorState(activeVId);
+              if (
+                offlineCached &&
+                offlineCached.v_id === activeVId &&
+                Array.isArray(offlineCached.pages) &&
+                offlineCached.pages.length > 0
+              ) {
+                console.log("[PageEditor] Loaded flipbook from IndexedDB offline storage.");
+                toast?.error?.("Network error: Loaded offline version from local storage.");
+                setIsLoading(false);
+                return;
+              }
+            } catch (offlineErr) {
+              console.warn("[PageEditor] IndexedDB offline fallback check error:", offlineErr);
+            }
+            // Fallback: If template data was passed in navigation state, load it into canvas with activeVId!
+            if (location.state && (location.state.templatePages || location.state.initialTemplateSvg || location.state.pageCount)) {
+              console.log("[PageEditor] Loading template pages directly from navigation state for book:", activeVId);
+              const count = location.state.pageCount || (location.state.templatePages ? location.state.templatePages.length : 12);
+              const fallbackTemplatePages = Array.from({ length: count }, (_item, i) => {
+                const name = `Page ${i + 1}`;
+                let html, layers;
+                if (location.state?.templatePages?.[i]) {
+                  html = location.state.templatePages[i];
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, "image/svg+xml");
+                  const svgEl = doc.querySelector("svg");
+                  layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+                } else if (i === 0 && location.state?.initialTemplateSvg) {
+                  html = location.state.initialTemplateSvg;
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, "image/svg+xml");
+                  const svgEl = doc.querySelector("svg");
+                  layers = svgEl ? parseLayersFromSVG(svgEl) : [];
+                } else {
+                  const def = createDefaultPageDataRef.current(
+                    name,
+                    location.state.width,
+                    location.state.height,
+                  );
+                  html = def.html;
+                  layers = def.layers;
+                }
+                const pageUniqueId = `page_${i + 1}_${activeVId}`;
+                return {
+                  id: pageUniqueId,
+                  v_id: pageUniqueId,
+                  name,
+                  html,
+                  layers,
+                };
+              });
+              setPages(fallbackTemplatePages);
+
+              const newFirstRootId = fallbackTemplatePages[0]?.layers?.[0]?.id;
+              if (newFirstRootId) {
+                setSelectedLayerIdRaw(newFirstRootId);
+                setMultiSelectedIds(new Set([newFirstRootId]));
+                setCurrentFrameId(newFirstRootId);
+              }
+              setCurrentBook((prev) => ({
+                ...(prev || {}),
+                v_id: activeVId,
+                flipbookName:
+                  location.state?.flipbookName ||
+                  prev?.flipbookName ||
+                  "Untitled Flipbook",
+                folderName: resolvePhysicalFolder(
+                  location.state?.folderName || prev?.folderName,
+                ),
+                templateId: location.state?.templateId,
+                orientation: location.state?.orientation,
+                width: location.state?.width,
+                height: location.state?.height,
+                bookType: location.state?.bookType || prev?.bookType || (location.state?.isTemplate || prev?.isTemplate ? 'template' : 'plain'),
+                isTemplate: Boolean(location.state?.isTemplate || prev?.isTemplate),
+              }));
+              setIsLoading(false);
+              return;
+            }
             navigate("/not-found", { replace: true });
           }
         } else if (location.state && location.state.pageCount) {
@@ -1307,6 +1614,7 @@ const PageEditor = () => {
           }
           setCurrentBook((prev) => ({
             ...(prev || {}),
+            v_id: activeVId,
             flipbookName:
               prev?.flipbookName ||
               location.state?.flipbookName ||
@@ -1454,12 +1762,12 @@ const PageEditor = () => {
         />
       )}
       <AnimatePresence>
-        {isLoading && (
+        {isLoading && pages.length === 0 && (
           <Motion.div
             key="editor-loader"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-white h-full w-full gap-3"
           >
             <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -1471,9 +1779,9 @@ const PageEditor = () => {
       </AnimatePresence>
 
       <Motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isLoading ? 0 : 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        initial={{ opacity: pages.length > 0 ? 1 : 0 }}
+        animate={{ opacity: isLoading && pages.length === 0 ? 0 : 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="flex h-full w-full overflow-hidden relative"
       >
         <div
@@ -1557,7 +1865,7 @@ const PageEditor = () => {
             v_id={v_id || currentBook?.v_id}
             flipbookVId={v_id || currentBook?.v_id}
             folderName={resolvePhysicalFolder(
-              currentBook?.folderName || folder || location.state?.folderName,
+              currentBook?.folderName || location.state?.folderName,
             )}
             flipbookName={
               currentBook?.flipbookName || location.state?.flipbookName || ""
@@ -1568,7 +1876,6 @@ const PageEditor = () => {
                 ? popupEditContext.dimensions || { width: 800, height: 600 }
                 : getFlipbookDimensions()
             }
-            projectBaseUrl={projectBaseUrl}
           />
 
           {(activeTopTool === "interaction" ||
@@ -1707,14 +2014,13 @@ const PageEditor = () => {
           v_id={v_id || currentBook?.v_id}
           flipbookVId={v_id || currentBook?.v_id}
           folderName={resolvePhysicalFolder(
-            currentBook?.folderName || folder || location.state?.folderName,
+            currentBook?.folderName || location.state?.folderName,
           )}
           flipbookName={
             currentBook?.flipbookName ||
             location.state?.flipbookName ||
             "Untitled Flipbook"
           }
-          projectBaseUrl={projectBaseUrl}
         />
 
         {showTemplateModal && (

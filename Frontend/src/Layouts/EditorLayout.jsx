@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import EditorNavbar from '../components/NavBar/EditorNav';
 import AlertModal from '../components/AlertModal';
@@ -7,6 +7,7 @@ const PublishModal = React.lazy(() => import('../components/PublishModal'));
 import axios from 'axios';
 import { getFromDB, saveToDB } from '../utils/dbUtils';
 import { useAuth, useActiveBook, useUIModals } from '../store/hooks';
+import { queryClient } from '../queryClient';
 
 const STATE_KEY = 'threed_editor_state';
 
@@ -49,7 +50,7 @@ const EditorLayout = () => {
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const res = await axios.get(`${backendUrl}/api/usersetting/get-settings`, {
-            params: { emailId: user.emailId || user.email }
+            withCredentials: true
           });
           
           if (res.data) {
@@ -95,10 +96,23 @@ const EditorLayout = () => {
   };
 
   const navigate = useNavigate();
-  const [exportHandler, setExportHandler] = useState(null);
-  const [saveHandler, setSaveHandler] = useState(null);
-  const [previewHandler, setPreviewHandler] = useState(null);
-  const [clearHandler, setClearHandler] = useState(null);
+  const exportHandlerRef = useRef(null);
+  const saveHandlerRef = useRef(null);
+  const previewHandlerRef = useRef(null);
+  const clearHandlerRef = useRef(null);
+
+  const setExportHandler = useCallback((fn) => {
+    exportHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setSaveHandler = useCallback((fn) => {
+    saveHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setPreviewHandler = useCallback((fn) => {
+    previewHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
+  const setClearHandler = useCallback((fn) => {
+    clearHandlerRef.current = typeof fn === 'function' ? fn() : fn;
+  }, []);
   const [canSave, setCanSave] = useState(true);
 
   // Prevent closing the tab if there are unsaved changes
@@ -126,22 +140,22 @@ const EditorLayout = () => {
   const handleExport = () => {
     setModalOpen('isExportModalOpen', true);
     triggerExport();
-    if (exportHandler) {
-      exportHandler();
+    if (exportHandlerRef.current) {
+      exportHandlerRef.current();
     }
   };
 
   const handleSave = () => {
     triggerSave();
-    if (saveHandler) {
-      saveHandler();
+    if (saveHandlerRef.current) {
+      saveHandlerRef.current();
     }
   };
 
   const handlePreview = () => {
     triggerPreview();
-    if (previewHandler) {
-      previewHandler();
+    if (previewHandlerRef.current) {
+      previewHandlerRef.current();
     }
   };
 
@@ -167,7 +181,7 @@ const EditorLayout = () => {
   const confirmUnpublish = async () => {
     setIsUnpublishing(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const v_id = currentBook?.v_id || currentBook?.realName;
       const userEmail = user?.emailId || user?.email || currentBook?.userEmail;
 
@@ -204,8 +218,8 @@ const EditorLayout = () => {
   const confirmClear = async () => {
     setIsClearing(true);
     try {
-      if (clearHandler) {
-        clearHandler();
+      if (clearHandlerRef.current) {
+        clearHandlerRef.current();
       } else {
         window.dispatchEvent(new CustomEvent('trigger-clear-flipbook'));
       }
@@ -226,7 +240,7 @@ const EditorLayout = () => {
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const emailId = user?.emailId || user?.email || currentBook?.userEmail;
 
       const pathParts = window.location.pathname.split('/');
@@ -242,6 +256,8 @@ const EditorLayout = () => {
           }
         });
       }
+      queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
+      queryClient.invalidateQueries({ queryKey: ['flipbook-folders'] });
       navigate('/my-flipbooks');
     } catch (err) {
       console.error("Failed to delete flipbook:", err);
@@ -279,7 +295,8 @@ const EditorLayout = () => {
     materialList: [],
   });
 
-  // Restore State from IndexedDB on Mount
+  // Restore State from IndexedDB on Mount (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const loadState = async () => {
       try {
@@ -313,8 +330,10 @@ const EditorLayout = () => {
     
     loadState();
   }, []);
+  */
 
-  // Save State to IndexedDB on Change
+  // Save State to IndexedDB on Change (Commented out: focus only on page_editor and customized_editor)
+  /*
   useEffect(() => {
     const saveTimer = setTimeout(() => {
       const stateToSave = {
@@ -332,6 +351,7 @@ const EditorLayout = () => {
 
     return () => clearTimeout(saveTimer);
   }, [threedState]);
+  */
 
   // Cleanup 3D Model URL on unmount
   useEffect(() => {

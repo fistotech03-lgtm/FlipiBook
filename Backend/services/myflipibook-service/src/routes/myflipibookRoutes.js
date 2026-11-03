@@ -4,9 +4,10 @@ const { authenticateUser, optionalAuth } = require('../middlewares/authMiddlewar
 const folderController = require('../controllers/folderController');
 const bookController = require('../controllers/bookController');
 
-// Public / Optional-auth routes (accessible for preview, direct get, and gallery)
+// Public / Optional-auth routes (accessible for preview, direct get, share view, and gallery)
 router.get('/preview/:v_id', optionalAuth, bookController.previewBook);
 router.get('/get', optionalAuth, bookController.getBook);
+router.post('/publish', optionalAuth, bookController.publishBook);
 router.get('/get-gallery-assets', optionalAuth, bookController.getGalleryAssets);
 router.post('/use-gallery-asset', optionalAuth, bookController.useGalleryAsset);
 
@@ -19,7 +20,6 @@ router.post('/folder/create', folderController.createFolder);
 router.post('/folder/rename', folderController.renameFolder);
 router.post('/folder/reorder', folderController.reorderFolders);
 router.delete('/folder', folderController.deleteFolder);
-router.post('/folder/duplicate', folderController.duplicateFolder);
 
 // --- Flipbook CRUD & Actions ---
 router.get('/list', bookController.getBooks);
@@ -28,7 +28,6 @@ router.post('/trash', bookController.trashBook);
 router.post('/restore', bookController.restoreBook);
 router.post('/empty-trash', bookController.emptyTrash);
 router.post('/rename', bookController.renameBook);
-router.post('/duplicate', bookController.duplicateBook);
 router.delete('/delete/:v_id', bookController.deleteBookPermanently);
 router.delete('/delete', bookController.deleteBookPermanently);
 router.post('/remove-recent', bookController.removeRecent);

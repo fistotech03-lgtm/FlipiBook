@@ -121,20 +121,20 @@ const DeviceLayoutRenderer = ({
 
   const getScreenWrapperStyle = () => {
     if (customGetScreenWrapperStyle) return customGetScreenWrapperStyle();
-    if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 };
+    if (activeDevice === 'Desktop') return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' };
     if (activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) return {
       position: 'absolute',
-      top: '9.38%',
-      bottom: '7.7%',
-      left: '5.3%',
-      right: '6.6%',
-      borderRadius: '12px',
+      top: '7.4%',
+      bottom: '5.9%',
+      left: '3.14%',
+      right: '4.48%',
+      borderRadius: '14px',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
       transform: 'translateZ(0)'
     };
-    return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, transform: 'translateZ(0)' };
+    return { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', transform: 'translateZ(0)' };
   };
 
   return (
@@ -176,9 +176,9 @@ const DeviceLayoutRenderer = ({
                     );
                 })()
       ) : (
-                    <div style={{ ...((activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
+                    <div style={{ ...((activeDevice === 'Tablet' && !isPhysicalTablet) ? deviceStyles.Tablet : deviceStyles.Desktop), zIndex: 10 }} className="relative">
                         {/* Floor shadow effect for Tablet bottom (using the style of the SVG) */}
-                        {activeDevice === 'Tablet' && !isPublishedPreview && !isPhysicalTablet && (
+                        {activeDevice === 'Tablet' && !isPhysicalTablet && (
                             <svg
                                 viewBox="0 0 1000 100"
                                 preserveAspectRatio="none"
@@ -194,7 +194,7 @@ const DeviceLayoutRenderer = ({
                                 <ellipse cx="500" cy="50" rx="490" ry="45" fill="url(#tablet-floor-shadow)" />
                             </svg>
                         )}
-                        <div ref={screenRef} id="device-screen-container" style={getScreenWrapperStyle()} className="relative">
+                        <div ref={screenRef} id="device-screen-container" style={getScreenWrapperStyle()} className="relative overflow-hidden">
 
                             {backgroundLayers}
 

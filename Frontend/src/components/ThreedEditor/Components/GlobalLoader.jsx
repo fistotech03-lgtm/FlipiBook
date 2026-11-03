@@ -57,7 +57,10 @@ export const GlobalLoader = ({
   } else if (manualLoading) {
     target = Math.max(15, Math.min(95, Math.round(dreiProgress || 0)));
   }
-  targetProgressRef.current = target;
+
+  React.useEffect(() => {
+    targetProgressRef.current = target;
+  }, [target]);
 
   // Mount/unmount with smooth fade transition
   React.useEffect(() => {
@@ -156,8 +159,9 @@ export const GlobalLoader = ({
     .replace(/\s*\d+%/g, '')
     .trim();
 
+  const isSaveOrExportMsg = /saved|saving|created|copy|export|finaliz|baking|duplicat|clone/i.test(cleanPrefix);
   const loadingLabel = isComplete
-    ? "Model ready on base! 100%"
+    ? (isSaveOrExportMsg ? `${cleanPrefix} 100%` : "Model ready on base! 100%")
     : `${cleanPrefix} ${displayPct}%`;
 
   return (

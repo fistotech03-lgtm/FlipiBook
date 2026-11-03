@@ -607,24 +607,6 @@ export const FloatingToolbars = ({
                   </div>
                 )}
               </div>
-
-              {/* Grid Tool Row */}
-              <div className="flex items-center justify-start gap-[0.3vw] cursor-pointer relative group/tool">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveMainTool('grid');
-                    closeAllDropdowns();
-                  }}
-                  className={`w-[2.1vw] h-[2.1vw] flex items-center justify-center rounded-[0.4vw] transition-all cursor-pointer ${activeMainTool === 'grid' ? 'bg-[#FFFFFF] shadow-sm' : 'hover:bg-white/50'}`}
-                >
-                  <Icon icon="tabler:icons" width="1.2vw" height="1.2vw" className="text-[#111827]" />
-                </button>
-                <div className="w-[0.7vw]"></div> {/* Alignment spacer */}
-                <div className="absolute right-[calc(100%+0.6vw)] top-1/2 -translate-y-1/2 px-[0.6vw] py-[0.3vh] bg-gray-900/90 text-white text-[0.7vw] font-medium rounded-[0.4vw] shadow-md whitespace-nowrap opacity-0 group-hover/tool:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
-                  Elements & Icons
-                </div>
-              </div>
             </div>
           </div>
         )}

@@ -12,47 +12,83 @@ export const queryClient = new QueryClient({
   },
 });
 
-export const fetchFlipbookFolders = async (emailId) => {
-  if (!emailId) return [];
-  const folderRes = await flipbookApi.getFolders(emailId);
-  let fetchedFolders = (folderRes.data?.folders || []).filter((f) => {
-    const name = typeof f === 'string' ? f : f?.name;
-    const lower = String(name || '').toLowerCase().trim();
-    return (
-      lower !== 'public book' &&
-      lower !== 'recent book' &&
-      lower !== 'recent' &&
-      lower !== 'all flipbook' &&
-      lower !== 'all flipbooks' &&
-      lower !== 'favorites' &&
-      lower !== 'trash'
-    );
-  }).map((f) => {
-    if (typeof f === 'string') return { id: f, name: f };
-    return { id: f.id || f.name, name: f.name };
+export const fetchFlipbookFolders = async (userKey) => {
+  const folderRes = await flipbookApi.getFolders();
+  const rawFolders = folderRes.data?.folders || [];
+
+  let hasDefault = false;
+  const cleanedFolders = [];
+  const seenNames = new Set();
+
+  rawFolders.forEach((f) => {
+    const rawName = typeof f === 'string' ? f : f?.name;
+    if (!rawName) return;
+    const lower = String(rawName).trim().toLowerCase();
+    if (
+      lower === 'public book' ||
+      lower === 'recent book' ||
+      lower === 'recent' ||
+      lower === 'all flipbook' ||
+      lower === 'all flipbooks' ||
+      lower === 'favorites' ||
+      lower === 'trash'
+    ) {
+      return;
+    }
+
+    const isDefault = Boolean(typeof f === 'object' && f.isDefault) || (!hasDefault && (lower === 'default' || lower === 'my flipbooks'));
+
+    if (isDefault) {
+      if (!hasDefault) {
+        hasDefault = true;
+        const displayName = (lower === 'default') ? 'My Flipbooks' : String(rawName).trim();
+        cleanedFolders.unshift({
+          id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : 'default_folder',
+          name: displayName,
+          isDefault: true
+        });
+        seenNames.add(displayName.toLowerCase());
+      }
+      return;
+    }
+
+    if (!seenNames.has(lower)) {
+      seenNames.add(lower);
+      cleanedFolders.push({
+        id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : rawName,
+        name: String(rawName).trim(),
+        isDefault: false
+      });
+    }
   });
 
-  const hasDefaultFolder = fetchedFolders.some(
-    (f) => f.name.toLowerCase() === 'my_flipbooks'
-  );
-  if (!hasDefaultFolder) {
-    fetchedFolders.unshift({ id: 'default_my_flipbooks', name: 'My_Flipbooks' });
+  if (!hasDefault) {
+    cleanedFolders.unshift({ id: 'default_folder', name: 'My Flipbooks', isDefault: true });
   }
-  return fetchedFolders;
+
+  return cleanedFolders;
 };
 
-export const fetchFlipbookBooks = async (emailId) => {
-  if (!emailId) return [];
-  const booksRes = await flipbookApi.getBooks(emailId);
+export const fetchFlipbookBooks = async (userKey) => {
+  const booksRes = await flipbookApi.getBooks();
   const rawBooks = booksRes.data?.books || [];
   return rawBooks.map((b) => {
-    const f = b.folder || b.folderName;
+    let f = b.folder || b.folderName;
+    if (Array.isArray(f)) f = f[0];
+    const lower = String(f || '').trim().toLowerCase();
+    const resolvedFolder = (!lower || lower === 'default' || lower === 'my flipbooks' || lower === 'all flipbook' || lower === 'all flipbooks')
+      ? 'My Flipbooks'
+      : f;
+
     const pageCount = Array.isArray(b.pages)
       ? b.pages.length
       : (typeof b.pages === 'number' ? b.pages : (parseInt(b.pagesCount, 10) || 1));
     return {
       ...b,
-      folder: (!f || f === 'All Flipbook' || f === 'All Flipbooks') ? 'My_Flipbooks' : f,
+      folder: resolvedFolder,
+      folderName: resolvedFolder,
+      folder_v_id: b.folder_v_id || b.folder_id || 'fol_default',
+      folder_id: b.folder_v_id || b.folder_id || 'fol_default',
       pages: pageCount,
       pagesCount: pageCount,
       pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || []),
@@ -70,19 +106,19 @@ export const prefetchMyFlipbooks = (emailId) => {
   queryClient.prefetchQuery({
     queryKey: ['flipbook-folders', emailId],
     queryFn: () => fetchFlipbookFolders(emailId),
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
   });
 
   queryClient.prefetchQuery({
     queryKey: ['flipbook-books', emailId],
     queryFn: () => fetchFlipbookBooks(emailId),
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
   });
 
   queryClient.prefetchQuery({
     queryKey: ['user-storage', emailId],
     queryFn: async () => {
-      const res = await flipbookApi.getStorageSettings(emailId);
+      const res = await flipbookApi.getStorageSettings();
       return {
         used: typeof res.data?.usedStorage === 'number' ? res.data.usedStorage : 0,
         total: typeof res.data?.maxStorage === 'number' ? res.data.maxStorage : 300 * 1024 * 1024,

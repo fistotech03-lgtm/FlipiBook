@@ -6,7 +6,8 @@ import {
   Layout, ArrowUp, ArrowDown, ArrowUpToLine, ArrowDownToLine,
   Ban, Trash2, FilePlus, GripVertical,
   Folder, Type, Image as ImageIcon, Square, Circle, Triangle, Star, Minus,
-  Video, ImagePlay,
+  Video, ImagePlay, Music, QrCode, MousePointerClick,
+  MapPin, SlidersHorizontal, Table2, Sparkles,
   ChevronRight, ChevronDown, Eye, EyeOff, Lock, Unlock,
   Scissors, Clipboard, ArrowUpRight
 } from 'lucide-react';
@@ -17,7 +18,9 @@ import { Icon as FileReplaceIcon, Icon } from '@iconify/react';
 import pageCacheManager from '../utils/PageCacheManager';
 import { parseLayersFromSVG } from '../utils/editorUtils';
 import { useAuth } from '../../../context/AuthContext';
+import { useConfirm } from '../../../context/ConfirmationContext';
 import CustomScrollbar from '../../CustomScrollbar';
+import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 
 // Memoized isolated vector SVG preview container with CSS containment
 const MemoizedPagePreview = React.memo(({ pageId, pageHtml, isHidden }) => {
@@ -116,6 +119,8 @@ const LayerItem = ({
   setMultiSelectedIds,
   renameLayer,
   pageIndex,
+  activePageIndex,
+  setActivePageIndex,
   onLayerContextMenu,
   onReorderLayer,
   currentFrameId,
@@ -142,8 +147,41 @@ const LayerItem = ({
   }, [layer.id, layer.name]);
 
   // Determine if this item should be styled as "Selected"
-  // In spread mode, we treat both root folders as "selected" if they are both in the set
-  const isSelected = selectedLayerId === layer.id || (multiSelectedIds.size > 1 && multiSelectedIds.has(layer.id) && depth === 0);
+  // Handles primary selection, multi-selection, and compound element / child matching
+  const isSelected = (() => {
+    if (selectedLayerId === layer.id) return true;
+    if (multiSelectedIds && multiSelectedIds.has(layer.id)) return true;
+    if (layer.isVirtualImageChild && (selectedLayerId === layer.parentId || (multiSelectedIds && multiSelectedIds.has(layer.parentId)))) return true;
+
+    // Fallback: If no item is selected, keep root folder of the active page selected
+    if (!selectedLayerId || selectedLayerId === '') {
+      if (isBaseLayer && (activePageIndex === undefined || pageIndex === activePageIndex)) return true;
+      return false;
+    }
+
+    // Check compound parent in live DOM (e.g. clicking internal child of a compound shape/button)
+    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    if (selectedLayerId) {
+      const selEl = doc.getElementById(selectedLayerId);
+      if (selEl) {
+        const compound = selEl.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+        if (compound && compound.id === layer.id) return true;
+      }
+    }
+
+    // Check if any multi-selected ID is an internal child of this compound layer
+    if (multiSelectedIds && multiSelectedIds.size > 0) {
+      for (const id of multiSelectedIds) {
+        const el = doc.getElementById(id);
+        if (el) {
+          const comp = el.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+          if (comp && comp.id === layer.id) return true;
+        }
+      }
+    }
+
+    return false;
+  })();
 
   // Is it part of multi-selection but not the primary?
   const isMultiOnly = multiSelectedIds.has(layer.id) && !isSelected && multiSelectedIds.size > 1;
@@ -223,10 +261,68 @@ const LayerItem = ({
       return <ImagePlay size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
     }
 
-    // 3. Check Image
-    const isImageByName = typeLower === 'image' || nameLower.includes('image');
+    // 3. Check Image & Image Frame
+    const isImageByName = typeLower === 'image' || typeLower === 'image-frame' || nameLower.includes('image frame') || nameLower.includes('image-frame') || nameLower.includes('image');
     if (isImageByName) {
       return <ImageIcon size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 4. Check Audio
+    const isAudio = typeLower === 'audio-frame' || layer['data-interaction'] === 'audio' || nameLower.includes('audio');
+    if (isAudio) {
+      return <Music size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 5. Check QR Code
+    const isQRCode = typeLower === 'qrcode' || typeLower === 'qr-code' || layer['data-type'] === 'qrcode' || nameLower.includes('qr code') || nameLower.includes('qrcode');
+    if (isQRCode) {
+      return <QrCode size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 6. Check Button
+    const isButton = typeLower === 'button' || layer['data-type'] === 'button' || nameLower.includes('button');
+    if (isButton) {
+      return <MousePointerClick size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 7. Check Map
+    const isMap = typeLower === 'map' || layer['data-type'] === 'map' || nameLower === 'map' || nameLower.includes('map');
+    if (isMap) {
+      return <MapPin size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 8. Check Slideshow
+    const isSlideshow = typeLower === 'slideshow' || layer['data-type'] === 'slideshow' || nameLower.includes('slideshow');
+    if (isSlideshow) {
+      return <SlidersHorizontal size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 9. Check Table
+    const isTable = typeLower === 'table' || typeLower === 'table-frame' || layer['data-type'] === 'table' || layer['data-type'] === 'table-frame' || nameLower.includes('table');
+    if (isTable) {
+      return <Table2 size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 10. Check Decorator
+    const isDecorator = typeLower === 'decorator' || layer['data-type'] === 'decorator' || nameLower.includes('decorator');
+    if (isDecorator) {
+      return <Sparkles size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+    }
+
+    // 11. Check Shape
+    const isShape = typeLower === 'shape' || layer['data-type'] === 'shape' || nameLower === 'shape' || nameLower.includes('shape');
+    if (isShape) {
+      const shapeType = (layer['data-shape-type'] || layer['data-shape-title'] || '').toLowerCase();
+      if (nameLower.includes('circle') || nameLower.includes('ellipse') || shapeType.includes('circle') || shapeType.includes('ellipse')) {
+        return <Circle size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+      }
+      if (nameLower.includes('star') || shapeType.includes('star')) {
+        return <Star size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+      }
+      if (nameLower.includes('triangle') || shapeType.includes('triangle') || shapeType.includes('polygon')) {
+        return <Triangle size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
+      }
+      return <Square size="0.85vw" className="text-gray-400 group-hover/layer:text-[#6366F1]" />;
     }
 
     switch (typeLower) {
@@ -249,28 +345,61 @@ const LayerItem = ({
     e.stopPropagation();
     if (isPdfBackgroundLayer) return;
     
+    if (setActivePageIndex && pageIndex !== undefined) {
+      setActivePageIndex(pageIndex);
+    }
+
     const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
 
-    if (e.shiftKey) {
-      // ── Shift+Click: Multi-select block ───────────────────────────────────
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      if (isBaseLayer) {
+        // Base layer / Page root can NEVER be part of multi-selection!
+        return;
+      }
+      // ── Shift / Cmd / Ctrl + Click: Multi-select block ─────────────────────────────
       const newSet = new Set(multiSelectedIds);
+
+      // Clean out any base layer or page root that might have been in multiSelectedIds
+      for (const id of Array.from(newSet)) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement?.tagName?.toLowerCase() === 'svg' && el.getAttribute('data-type') === 'frame') {
+          newSet.delete(id);
+        }
+      }
+
+      const selEl = selectedLayerId ? document.getElementById(selectedLayerId) : null;
+      const isSelRoot = selEl && selEl.parentElement?.tagName?.toLowerCase() === 'svg' && selEl.getAttribute('data-type') === 'frame';
+      if (selectedLayerId && !isSelRoot && !newSet.has(selectedLayerId)) {
+        newSet.add(selectedLayerId);
+      }
       if (newSet.has(targetId)) newSet.delete(targetId);
       else newSet.add(targetId);
+
       if (setMultiSelectedIds) setMultiSelectedIds(newSet);
+      if (setSelectedLayerId) {
+        const remaining = Array.from(newSet);
+        setSelectedLayerId(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      }
     } else {
       // ── Plain click: single select, clear multi-selection ─────────────
       if (setSelectedLayerId) setSelectedLayerId(targetId);
-      if (setMultiSelectedIds) setMultiSelectedIds(new Set([targetId]));
-      if (isGroup) setIsOpen(!isOpen);
+      if (setMultiSelectedIds) setMultiSelectedIds(isBaseLayer ? new Set() : new Set([targetId]));
+      if (isGroup && layer.children && layer.children.length > 0) setIsOpen(!isOpen);
     }
+
+    window.dispatchEvent(new CustomEvent('force-update-selection-box'));
   };
 
-const handleContextMenu = (e) => {
+  const handleContextMenu = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (isPdfBackgroundLayer) return;
+    const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
+    if (!multiSelectedIds || !multiSelectedIds.has(targetId)) {
+      if (setSelectedLayerId) setSelectedLayerId(targetId);
+      if (setMultiSelectedIds) setMultiSelectedIds(new Set([targetId]));
+    }
     if (onLayerContextMenu) {
-      const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
       onLayerContextMenu(targetId, e.clientX, e.clientY);
     }
   };
@@ -337,17 +466,22 @@ const handleContextMenu = (e) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`flex items-center gap-[0.4vw] py-[0.5vh] pr-[0.5vw] rounded-[0.3vw] group/layer transition-all border-l-2 ${isDragOver ? 'border-l-[#6366F1] bg-[#EEF2FF]' : 'border-l-transparent'
-          } ${isSelected
-            ? 'bg-[#E0E7FF] ring-1 ring-[#6366F1]/30'   // primary selection — solid indigo tint
-            : layer.id === currentFrameId
-              ? 'bg-[#F5F3FF] border-l-[#A78BFA] ring-1 ring-dashed ring-[#A78BFA]/50' // Entered Frame style
-              : isMultiOnly
-                ? 'bg-[#EEF2FF]'                             // part of multi-set — lighter tint
-                : isPdfBackgroundLayer
-                  ? 'opacity-60 cursor-not-allowed bg-gray-50' // Unselectable styling for PDF Background
-                  : 'hover:bg-[#F3F4F6] cursor-pointer'
-          }`}
+        className={`flex items-center gap-[0.45vw] py-[0.55vh] pr-[0.5vw] rounded-[0.4vw] group/layer transition-all border-l-[3px] ${
+          isDragOver 
+            ? 'border-l-[#6366F1] bg-indigo-50/80 shadow-sm' 
+            : isSelected 
+              ? 'border-l-[#6366F1]' 
+              : 'border-l-transparent'
+        } ${isSelected
+          ? 'bg-indigo-50/90 text-indigo-900 ring-1 ring-indigo-200/70 shadow-[0_1px_2px_rgba(99,102,241,0.06)]'
+          : (!isBaseLayer && layer.id === currentFrameId)
+            ? 'bg-purple-50/80 border-l-purple-500 ring-1 ring-dashed ring-purple-300'
+            : isMultiOnly
+              ? 'bg-indigo-50/50 text-indigo-800'
+              : isPdfBackgroundLayer
+                ? 'opacity-60 cursor-not-allowed bg-gray-50'
+                : 'hover:bg-gray-100/70 text-gray-700 cursor-pointer'
+        }`}
         style={{ paddingLeft: `${depth * 0.8 + 0.5}vw` }}
         onClick={handleItemClick}
         onContextMenu={handleContextMenu}
@@ -355,12 +489,12 @@ const handleContextMenu = (e) => {
         {/* Expand/Collapse Chevron */}
         <div className="w-[1vw] flex items-center justify-center">
           {isGroup && (
-            isOpen ? <ChevronDown size="0.7vw" className="text-gray-400" /> : <ChevronRight size="0.7vw" className="text-gray-400" />
+            isOpen ? <ChevronDown size="0.7vw" className="text-gray-400 group-hover/layer:text-gray-600" /> : <ChevronRight size="0.7vw" className="text-gray-400 group-hover/layer:text-gray-600" />
           )}
         </div>
 
         {/* Layer Type Icon */}
-        <div className="w-[1.2vw] h-[1.2vw] flex items-center justify-center">
+        <div className={`w-[1.2vw] h-[1.2vw] flex items-center justify-center ${isSelected ? 'text-indigo-600' : 'text-gray-400'}`}>
           {getLayerIcon()}
         </div>
 
@@ -375,25 +509,28 @@ const handleContextMenu = (e) => {
               onBlur={handleRenameSubmit}
               onKeyDown={handleKeyDown}
               onClick={(e) => e.stopPropagation()}
-              className="block w-full bg-transparent p-0 m-0 border-b border-none outline-none focus:outline-none focus:ring-0 text-[0.7vw] font-medium text-gray-900"
+              className="block w-full bg-white px-[0.3vw] py-[0.1vh] rounded-[0.2vw] border border-indigo-400 outline-none focus:outline-none focus:ring-1 focus:ring-indigo-500 text-[0.7vw] font-medium text-gray-900 shadow-sm"
             />
           ) : (
-            <span className="block text-[0.7vw] font-medium text-gray-700 truncate group-hover/layer:text-[#111827]">
+            <span className={`block text-[0.7vw] truncate transition-colors ${
+              isSelected ? 'font-semibold text-indigo-950' : 'font-medium text-gray-700 group-hover/layer:text-gray-900'
+            }`}>
               {layer.name}
             </span>
           )}
         </div>
 
         {/* Selection indicator dot - only for primary selection */}
-        {selectedLayerId === layer.id && (
-          <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-[#6366F1] flex-shrink-0" title="Primary selection" />
+        {isSelected && (
+          <div className="w-[0.35vw] h-[0.35vw] rounded-full bg-[#6366F1] flex-shrink-0 shadow-[0_0_4px_rgba(99,102,241,0.5)]" title="Primary selection" />
         )}
 
         {/* Secondary Visibility/Lock Status (Small) */}
         {!isBaseLayer && (
-          <div className="flex items-center gap-[0.3vw]">
+          <div className="flex items-center gap-[0.2vw]">
           <button
-            className={`text-gray-400 hover:text-indigo-600 transition-opacity ${layer.visible === false ? 'opacity-100' : 'opacity-0 group-hover/layer:opacity-100'}`}
+            className={`p-[0.2vw] rounded-[0.2vw] hover:bg-white/80 transition-all ${layer.visible === false ? 'opacity-100 text-gray-500 hover:text-indigo-600' : 'opacity-0 group-hover/layer:opacity-100 text-gray-400 hover:text-indigo-600'}`}
+            title={layer.visible === false ? "Show layer" : "Hide layer"}
             onClick={(e) => {
               e.stopPropagation();
               const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
@@ -401,10 +538,11 @@ const handleContextMenu = (e) => {
               onToggleVisibility && onToggleVisibility(ids);
             }}
           >
-            {layer.visible === false ? <EyeOff size="0.7vw" /> : <Eye size="0.7vw" />}
+            {layer.visible === false ? <EyeOff size="0.72vw" /> : <Eye size="0.72vw" />}
           </button>
           <button
-            className={`text-gray-400 hover:text-indigo-600 transition-opacity ${layer.locked === true ? 'opacity-100' : 'opacity-0 group-hover/layer:opacity-100'}`}
+            className={`p-[0.2vw] rounded-[0.2vw] hover:bg-white/80 transition-all ${layer.locked === true ? 'opacity-100 text-amber-500 hover:text-amber-600' : 'opacity-0 group-hover/layer:opacity-100 text-gray-400 hover:text-indigo-600'}`}
+            title={layer.locked === true ? "Unlock layer" : "Lock layer"}
             onClick={(e) => {
               e.stopPropagation();
               const targetId = layer.isVirtualImageChild ? layer.parentId : layer.id;
@@ -412,7 +550,7 @@ const handleContextMenu = (e) => {
               onToggleLock && onToggleLock(ids);
             }}
           >
-            {layer.locked === true ? <Lock size="0.7vw" /> : <Unlock size="0.7vw" />}
+            {layer.locked === true ? <Lock size="0.72vw" /> : <Unlock size="0.72vw" />}
           </button>
         </div>
         )}
@@ -440,6 +578,8 @@ const handleContextMenu = (e) => {
                 setMultiSelectedIds={setMultiSelectedIds}
                 renameLayer={renameLayer}
                 pageIndex={pageIndex}
+                activePageIndex={activePageIndex}
+                setActivePageIndex={setActivePageIndex}
                 onLayerContextMenu={onLayerContextMenu}
                 onReorderLayer={onReorderLayer}
                 currentFrameId={currentFrameId}
@@ -548,16 +688,35 @@ const Layer = ({
     type: 'error'
   });
 
-  const handleGoToCustomize = () => {
+  const confirm = useConfirm();
+
+  const handleGoToCustomize = async () => {
     if (hasUnsavedChanges) {
-      if (!window.confirm("Leave site?\n\nChanges you made may not be saved.")) {
+      const ok = await confirm({
+        title: "Leave Site?",
+        message: "Changes you made may not be saved.",
+        confirmText: "Leave",
+        cancelText: "Stay",
+        type: "danger"
+      });
+      if (!ok) {
         return;
       }
     }
-    const path = folder
-      ? `/editor/customized_editor/${folder}/${v_id}`
+    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+    const path = folderVId
+      ? `/editor/customized_editor/${encodeURIComponent(folderVId)}/${v_id}`
       : `/editor/customized_editor/${v_id}`;
-    navigate(path);
+    navigate(path, {
+      state: {
+        pages,
+        pageCount: pages?.length || 1,
+        flipbookName: currentBook?.flipbookName,
+        folder_v_id: folderVId,
+        folderName: currentBook?.folderName || folder,
+        v_id
+      }
+    });
   };
 
   const nameInputRef = useRef(null);
@@ -607,17 +766,14 @@ const Layer = ({
   // Fetch all books for uniqueness validation
   useEffect(() => {
     const fetchBooks = async () => {
-      const emailId = user?.emailId || user?.email;
-      if (emailId) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-        try {
-          const res = await axios.get(`${backendUrl}/api/flipbook/list`, { params: { emailId } });
-          if (res.data && res.data.books) {
-            setAllBooks(res.data.books);
-          }
-        } catch (err) {
-          console.error("Error fetching books for validation:", err);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      try {
+        const res = await axios.get(`${backendUrl}/api/flipbook/list`, { withCredentials: true });
+        if (res.data && res.data.books) {
+          setAllBooks(res.data.books);
         }
+      } catch (err) {
+        console.error("Error fetching books for validation:", err);
       }
     };
     fetchBooks();
@@ -807,7 +963,7 @@ const Layer = ({
                 top: `${Math.min(activeLayerMenu.y, window.innerHeight - menuHeight)}px`
               };
             })()}
-            className="w-[10vw] bg-white rounded-[0.8vw] shadow-2xl border border-gray-100 p-[0.4vw] z-[9999] flex flex-col gap-[0.2vw]"
+            className="w-[10.5vw] bg-white rounded-[0.6vw] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-gray-100 p-[0.35vw] z-[9999] flex flex-col gap-[0.15vw]"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -993,6 +1149,44 @@ const Layer = ({
                     Ungroup
                   </button>
 
+                  {/* Mask Option */}
+                  {(() => {
+                    const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                    const el = doc.getElementById(activeLayerMenu?.layerId);
+                    const isMaskActive = el && (
+                      el.getAttribute('data-type') === 'mask-group' ||
+                      el.closest('[data-type="mask-group"]') !== null ||
+                      el.getAttribute('data-mask-enabled') === 'true' ||
+                      (el.getAttribute('fill') && el.getAttribute('fill').includes('url(#pattern-')) ||
+                      el.querySelector('[data-mask-enabled="true"]') !== null ||
+                      el.querySelector('[fill*="url(#pattern-"]') !== null
+                    );
+                    return (
+                      <button
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('trigger-mask', { detail: { layerId: activeLayerMenu?.layerId || selectedLayerId } }));
+                          setActiveLayerMenu(null);
+                        }}
+                        className="flex items-center gap-[0.6vw] px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer"
+                      >
+                        <MaskIcon size="0.9vw" />
+                        <span>{isMaskActive ? 'Unmask' : 'Use as Mask'}</span>
+                      </button>
+                    );
+                  })()}
+
+                  {/* Flatten Option */}
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('trigger-flatten', { detail: { layerId: activeLayerMenu?.layerId || selectedLayerId } }));
+                      setActiveLayerMenu(null);
+                    }}
+                    className="flex items-center gap-[0.6vw] px-[0.6vw] py-[0.4vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer"
+                  >
+                    <FlattenIcon size="0.9vw" />
+                    <span>Flatten</span>
+                  </button>
+
                   <div className="h-px bg-gray-100 my-[0.2vw]"></div>
 
                   <button
@@ -1162,39 +1356,39 @@ const Layer = ({
 
             {/* Tabs for Pages and Layers */}
             {!isPdfProject && (
-              <div className="flex bg-gray-100/50 p-[0.4vw] rounded-[0.8vw] mb-[2vh] gap-[0.4vw]">
+              <div className="flex bg-gray-100/80 p-[0.25vw] rounded-[0.6vw] mb-[1.5vh] gap-[0.25vw] border border-gray-200/50">
                 <button
                   onClick={() => {
                     setActiveTab('pages');
                     setSelectedLayerId(null);
                     setMultiSelectedIds(new Set());
                   }}
-                  className={`flex-1 py-[0.8vh] rounded-[0.6vw] text-[0.8vw] font-semibold transition-all ${activeTab === 'pages'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
+                  className={`flex-1 py-[0.7vh] rounded-[0.45vw] text-[0.75vw] font-semibold transition-all ${activeTab === 'pages'
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-200/60'
+                    : 'text-gray-500 hover:text-gray-800'
                     }`}
                 >
                   Pages
                 </button>
                 <button
                   onClick={() => setActiveTab('layers')}
-                  className={`flex-1 py-[0.8vh] rounded-[0.6vw] text-[0.8vw] font-semibold transition-all ${activeTab === 'layers'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
+                  className={`flex-1 py-[0.7vh] rounded-[0.45vw] text-[0.75vw] font-semibold transition-all ${activeTab === 'layers'
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-200/60'
+                    : 'text-gray-500 hover:text-gray-800'
                     }`}
                 >
                   Layers
                 </button>
               </div>
             )}
-            <div className="h-[1px] bg-[#EEEEEE] mx-[-0.8vw] mb-[2vh]"></div>
+            <div className="h-[1px] bg-gray-100 mx-[-0.8vw] mb-[1.5vh]"></div>
 
             {/* Scrollable Area for Pages and Layers */}
             <CustomScrollbar
               color="#d1d5db"
               hoverColor="#9ca3af"
               width="0.32vw"
-              className="flex-1 pr-[0.2vw] space-y-[1.2vh] pb-[2vh]"
+              className="flex-1 pr-[0.2vw] space-y-[1vh] pb-[2vh]"
               onClick={() => setActiveMenuPageId(null)}
             >
               {(!isPdfProject && activeTab === 'layers') ?
@@ -1219,12 +1413,12 @@ const Layer = ({
 
                       <motion.div
                         layout="position"
-                        className={`flex flex-col rounded-[0.6vw] transition-all duration-300 relative group 
-                          ${draggedPageIndex === index ? 'opacity-40 scale-[0.98]' : ''} 
-                          ${isExpanded
-                            ? 'bg-white border border-[#E5E7EB] shadow-sm'
-                            : 'bg-[#E5E7EB] hover:bg-[#DADADA]'
-                          }`}
+                        className={`flex flex-col rounded-[0.6vw] transition-all duration-200 relative group overflow-hidden ${
+                          draggedPageIndex === index ? 'opacity-40 scale-[0.98]' : ''
+                        } ${isExpanded
+                          ? 'bg-white border border-indigo-200/90 shadow-[0_2px_8px_rgba(99,102,241,0.06)]'
+                          : 'bg-white hover:bg-gray-50/80 border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+                        }`}
                       >
                         {/* Page Header (Collapsible) */}
                         <div
@@ -1257,11 +1451,13 @@ const Layer = ({
                             }
                           }}
                           onContextMenu={(e) => handleMenuClick(e, page.id)}
-                          className="flex items-center py-[1.2vh] px-[1vw] relative group/pageitem"
+                          className={`flex items-center py-[1vh] px-[0.8vw] relative group/pageitem cursor-pointer transition-colors ${
+                            isExpanded ? 'bg-indigo-50/40 border-b border-indigo-100/60' : 'hover:bg-gray-50'
+                          }`}
                         >
                           {!editingPageId && (
                             <div className="absolute left-[0.2vw] overflow-hidden transition-all duration-300 w-0 group-hover/pageitem:w-[1.2vw] opacity-0 group-hover/pageitem:opacity-100 flex items-center justify-center pointer-events-none">
-                              <GripVertical size="1vw" className="text-gray-400" />
+                              <GripVertical size="0.9vw" className="text-gray-400" />
                             </div>
                           )}
 
@@ -1280,24 +1476,28 @@ const Layer = ({
                                 onClick={(e) => e.stopPropagation()}
                                 onFocus={(e) => e.target.select()}
                                 autoFocus
-                                className="w-full text-left text-[0.85vw] font-semibold border-b border-indigo-600 py-[0.1vw] focus:outline-none bg-transparent"
+                                className="w-full text-left text-[0.8vw] font-semibold border-b border-indigo-600 py-[0.1vw] focus:outline-none bg-transparent"
                               />
                             ) : (
-                                <span className={`text-[0.85vw] font-semibold truncate tracking-tight transition-colors duration-300 ${page.isHidden ? 'text-gray-400' : (isExpanded ? 'text-[#111827]' : 'text-[#4B5563]')}`}>
+                                <span className={`text-[0.78vw] font-semibold truncate tracking-tight transition-colors duration-200 ${
+                                  page.isHidden ? 'text-gray-400' : (isExpanded ? 'text-indigo-900' : 'text-gray-700 group-hover/pageitem:text-gray-900')
+                                }`}>
                                   {page.name}
                                 </span>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-[0.4vw] flex-shrink-0">
-                            {page.isHidden && <EyeOff size="0.9vw" className="text-gray-400" />}
-                            <Layers size="1.1vw" className={isExpanded ? 'text-[#6366F1]' : 'text-[#6B7280]'} strokeWidth={isExpanded ? 2.5 : 2} />
+                          <div className="flex items-center gap-[0.35vw] flex-shrink-0">
+                            {page.isHidden && <EyeOff size="0.85vw" className="text-gray-400" />}
+                            <div className={`p-[0.2vw] rounded-[0.25vw] flex items-center justify-center ${isExpanded ? 'text-indigo-600' : 'text-gray-400 group-hover/pageitem:text-gray-600'}`}>
+                              <Layers size="0.95vw" strokeWidth={isExpanded ? 2.5 : 2} />
+                            </div>
                             {!editingPageId && (
                               <button
                                 onClick={(e) => handleMenuClick(e, page.id)}
-                                className="p-[0.2vw] rounded-full transition-colors hover:bg-gray-200 flex items-center justify-center cursor-pointer"
+                                className="p-[0.2vw] rounded-full transition-colors hover:bg-gray-200/80 text-gray-400 hover:text-gray-700 flex items-center justify-center cursor-pointer"
                               >
-                                <MoreVertical size="1.1vw" className="text-[#111827]" />
+                                <MoreVertical size="0.95vw" />
                               </button>
                             )}
                           </div>
@@ -1310,13 +1510,13 @@ const Layer = ({
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2, ease: 'easeInOut' }}
-                              className="overflow-hidden bg-white rounded-b-[0.6vw] border-t border-[#EEF2FF]"
+                              className="overflow-hidden bg-white"
                             >
                               <CustomScrollbar
                                 color="#c7d2fe"
                                 hoverColor="#818cf8"
                                 width="0.25vw"
-                                className="py-[1vh] px-[0.6vw] flex flex-col gap-[0.2vh] max-h-[45vh]"
+                                className="py-[0.8vh] px-[0.5vw] flex flex-col gap-[0.15vh] max-h-[45vh]"
                               >
                                 {page.isHidden ? (
                                   <div className="text-[0.75vw] text-gray-500 font-medium italic px-[0.8vw] py-[1vh] text-center bg-gray-50 rounded-[0.4vw]">
@@ -1361,6 +1561,8 @@ const Layer = ({
                                         setMultiSelectedIds={setMultiSelectedIds}
                                         renameLayer={renameLayer}
                                         pageIndex={index}
+                                        activePageIndex={activePageIndex}
+                                        setActivePageIndex={setActivePageIndex}
                                         onLayerContextMenu={handleLayerContextMenu}
                                         onReorderLayer={reorderLayer}
                                         currentFrameId={currentFrameId}
@@ -1396,6 +1598,7 @@ const Layer = ({
                         <div
                           key={pageKey}
                           className="flex flex-col relative"
+                          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragLeave={handleDragLeave}
                           onDragEnd={handleDragEnd}
@@ -1546,7 +1749,7 @@ const Layer = ({
 
                       node.style.top = `${topPos}px`;
                     }}
-                    className="w-[12vw] bg-white rounded-[0.8vw] shadow-2xl border border-gray-100 p-[0.4vw] z-[9999] flex flex-col gap-[0.2vw]"
+                    className="w-[12vw] bg-white rounded-[0.6vw] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-gray-100 p-[0.35vw] z-[9999] flex flex-col gap-[0.15vw]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {(() => {

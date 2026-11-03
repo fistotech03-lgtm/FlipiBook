@@ -4,16 +4,18 @@ export const CANVAS_HEIGHT = 842;
 
 // Font families
 export const fontFamilies = [
+  "Outfit",
+  "Inter",
+  "Poppins",
+  "Roboto",
+  "Montserrat",
+  "Open Sans",
+  "Lato",
   "Arial",
   "Times New Roman",
   "Courier New",
   "Georgia",
   "Verdana",
-  "Poppins",
-  "Montserrat",
-  "Roboto",
-  "Open Sans",
-  "Lato",
   "Raleway",
   "Ubuntu",
   "Allura",
@@ -23,13 +25,14 @@ export const fontFamilies = [
 
 // Font weights
 export const fontWeights = [
-  { label: "Thin", value: 100 },
-  { label: "Light", value: 300 },
-  { label: "Regular", value: 400 },
-  { label: "Medium", value: 500 },
-  { label: "Semi Bold", value: 600 },
-  { label: "Bold", value: 700 },
-  { label: "Extra Bold", value: 800 },
+  { label: "Thin", value: "thin" },
+  { label: "Light", value: "light" },
+  { label: "Regular", value: "normal" },
+  { label: "Medium", value: "medium" },
+  { label: "Semi Bold", value: "semibold" },
+  { label: "Bold", value: "bold" },
+  { label: "Extra Bold", value: "extrabold" },
+  { label: "Black", value: "black" },
 ];
 
 // Categories

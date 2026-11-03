@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { ToastProvider } from "./components/CustomToast";
 import { ModernToastProvider } from "./components/ModernToast";
+import { ConfirmationProvider } from "./context/ConfirmationContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthModal } from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -34,6 +35,15 @@ const Features = lazy(() => import("./pages/Features"));
 const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Forum = lazy(() => import("./pages/Forum"));
+const Overview = lazy(() => import("./pages/Overview"));
+const Guide = lazy(() => import("./pages/Guide"));
+
+// Preview & Share Pages
+const PreviewPage = lazy(() => import("./pages/PreviewPage"));
+const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
+const ARView = lazy(() => import("./pages/ARView"));
+const ComingSoonBanner = lazy(() => import("./pages/ComingSoonBanner"));
 
 // Editor Components
 const EditorLayout = lazy(() => import("./Layouts/EditorLayout"));
@@ -45,23 +55,23 @@ const ThreedEditor = lazy(
   () => import("./components/ThreedEditor/ThreedEditor"),
 );
 
+import "./utils/preloadUtils";
+
 // Settings Components
-const SettingsLayout = lazy(
-  () => import("./components/Settings/SettingsLayout"),
-);
-const Profile = lazy(() => import("./components/Settings/Profile"));
-const Account = lazy(() => import("./components/Settings/Account"));
+const SettingsLayout = lazy(() => import("./components/Settings/SettingsLayout"));
+const Profile = lazy(() => import("./components/Settings/Profile/Profile"));
+const Account = lazy(() => import("./components/Settings/Account/Account"));
 const Notifications = lazy(() => import("./components/Settings/Notifications"));
-const MyShelf = lazy(() => import("./components/MyFlipbooks/MyShelf"));
+const Billing = lazy(() => import("./components/Settings/Billing/Billing"));
+const Tickets = lazy(() => import("./components/Settings/Tickets/Tickets"));
+const TicketDetailsPage = lazy(() => import("./components/Settings/Tickets/TicketDetailsPage"));
 
 function SettingsIndexRedirect() {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return null;
   }
-
-  const email = user?.emailId || user?.email || "";
 
   return <Navigate to="profile" replace />;
 }
@@ -71,7 +81,8 @@ export default function App() {
     <ToastProvider>
       <AuthProvider>
         <ModernToastProvider>
-          <Router>
+          <ConfirmationProvider>
+            <Router>
             <AuthModal />
             <Routes>
               {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
@@ -90,6 +101,70 @@ export default function App() {
               <Route
                 path="/forgot-password"
                 element={<AuthRouteRedirect mode="forgot-password" />}
+              />
+
+              {/* Public Share & View Routes */}
+              <Route
+                path="/share=public/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=private/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=password/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share=invite/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/share/:shareId"
+                element={
+                  <Suspense fallback={null}>
+                    <ShareViewBook />
+                  </Suspense>
+                }
+              />
+
+              {/* Protected Owner Preview Route */}
+              <Route
+                path="/preview"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={null}>
+                      <PreviewPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Public Coming Soon / Under Construction Banner Route */}
+              <Route
+                path="/newbanner"
+                element={
+                  <Suspense fallback={null}>
+                    <ComingSoonBanner />
+                  </Suspense>
+                }
               />
 
               {/* Main Layout routes — accessible without login initially */}
@@ -125,6 +200,22 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <Templates />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/overview"
+                  element={
+                    <Suspense fallback={null}>
+                      <Overview />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/guide"
+                  element={
+                    <Suspense fallback={null}>
+                      <Guide />
                     </Suspense>
                   }
                 />
@@ -169,6 +260,14 @@ export default function App() {
                     </Suspense>
                   }
                 />
+                <Route
+                  path="/forum"
+                  element={
+                    <Suspense fallback={null}>
+                      <Forum />
+                    </Suspense>
+                  }
+                />
 
                 {/* Settings Nested Routes */}
                 <Route
@@ -201,6 +300,46 @@ export default function App() {
                     element={
                       <Suspense fallback={null}>
                         <Notifications />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="billing"
+                    element={
+                      <Suspense fallback={null}>
+                        <Billing />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="support"
+                    element={
+                      <Suspense fallback={null}>
+                        <Tickets />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="support/:ticketId"
+                    element={
+                      <Suspense fallback={null}>
+                        <TicketDetailsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="tickets"
+                    element={
+                      <Suspense fallback={null}>
+                        <Tickets />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="tickets/:ticketId"
+                    element={
+                      <Suspense fallback={null}>
+                        <TicketDetailsPage />
                       </Suspense>
                     }
                   />
@@ -310,10 +449,26 @@ export default function App() {
                 element={<Navigate to="/editor/threed_editor" replace />}
               />
 
+              {/* Augmented Reality (AR) View Route */}
+              <Route
+                path="/ar-view"
+                element={
+                  <Suspense fallback={null}>
+                    <ARView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/ar"
+                element={<Navigate to="/ar-view" replace />}
+              />
+
+
               {/* Catch-all fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
+          </ConfirmationProvider>
         </ModernToastProvider>
       </AuthProvider>
     </ToastProvider>

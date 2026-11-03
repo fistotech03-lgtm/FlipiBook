@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Icon } from '@iconify/react';
-import { X, Pipette, Trash2, Plus, ChevronDown, RefreshCw, RotateCcw } from 'lucide-react';
-import PremiumDropdown from './PremiumDropdown';
 
 // Helper Functions
 export const rgbToHex = (r, g, b) => {
@@ -131,7 +129,7 @@ export const generateGradientString = (type, stops, angle = 0, radius = 100) => 
     }
 };
 
-import ColorPicker from './ColorPallet';
+import ColorPicker from '../ColorPallet';
 
 export const CustomColorPicker = React.memo(({ color, onChange, onClose, position, opacity, onOpacityChange }) => {
   if (typeof document === 'undefined') return null;
@@ -356,13 +354,9 @@ export const ImageCropOverlay = ({ imageSrc, onSave, onCancel, element }) => {
     if (!isDragging || !displaySize.width) return;
     const dx = ((e.clientX - startPos.x) / displaySize.width) * 100;
     const dy = ((e.clientY - startPos.y) / displaySize.height) * 100;
-    
-    // Image aspect ratio (Width / Height)
-    const imgAspect = displaySize.width / displaySize.height;  
 
     setCrop(prev => {
       let next = { ...prev };
-      const MIN_SIZE = 5;
 
       if (dragType === 'move') {
         next.left = Math.max(0, Math.min(100 - prev.width, startPos.crop.left + dx));

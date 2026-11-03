@@ -47,11 +47,11 @@ export default function TrashScreen({
         if (!dateVal) return '';
         if (typeof dateVal === 'string' && dateVal.includes('-') && dateVal.includes(' ')) {
             const parts = dateVal.split(' ')[0].split('-');
-            if (parts.length === 3 && parts[2].length === 4) return dateVal;
+            if (parts.length === 3 && parts[2].length === 4) return dateVal.replace(/-/g, '/');
         }
 
         const d = new Date(dateVal);
-        if (isNaN(d.getTime())) return String(dateVal);
+        if (isNaN(d.getTime())) return String(dateVal).replace(/-/g, '/');
 
         const pad = (n) => n.toString().padStart(2, '0');
         const day = pad(d.getDate());
@@ -64,16 +64,25 @@ export default function TrashScreen({
         hours = hours % 12;
         hours = hours ? hours : 12;
 
-        return `${day}-${month}-${year} ${pad(hours)}:${minutes} ${ampm}`;
+        return `${day}/${month}/${year} ${pad(hours)}:${minutes} ${ampm}`;
     };
 
     const formatDisplaySize = (book) => {
         const bytes = book?.fileSize || book?.sizeBytes || 0;
-        if (bytes > 0) {
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        const num = Number(bytes);
+        if (!isNaN(num) && num > 0) {
+            if (num >= 1000000000) {
+                const gb = num / 1000000000;
+                return `${parseFloat(gb.toFixed(gb >= 10 ? 1 : 2))} GB`;
+            }
+            if (num >= 1000000) {
+                const mb = num / 1000000;
+                return `${parseFloat(mb.toFixed(mb >= 10 ? 1 : 2))} MB`;
+            }
+            if (num >= 1000) {
+                return `${Math.round(num / 1000)} KB`;
+            }
+            return `${num} B`;
         }
         if (book?.size) return book.size;
         return '0 B';
@@ -180,6 +189,38 @@ export default function TrashScreen({
         );
     };
 
+    // Clear selection when clicking outside cards and bulk controls
+    useEffect(() => {
+        if (!selectedIds || selectedIds.length === 0) return;
+
+        const handleOutsideClick = (e) => {
+            const target = e.target;
+            if (
+                target.closest('[data-card-item="true"]') ||
+                target.closest('[data-selection-keep="true"]') ||
+                target.closest('[role="dialog"]') ||
+                target.closest('.modal-content') ||
+                target.closest('[data-modal="true"]')
+            ) {
+                return;
+            }
+            setSelectedIds([]);
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setSelectedIds([]);
+            }
+        };
+
+        document.addEventListener('click', handleOutsideClick);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('click', handleOutsideClick);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedIds]);
+
     const handleMultipleSelectionToggle = (e) => {
         if (e) {
             e.preventDefault();
@@ -210,7 +251,7 @@ export default function TrashScreen({
             <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">Trash</h2>
 
             {/* Toolbar Row */}
-            <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
+            <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0" data-selection-keep="true">
                 <div className="flex items-center justify-between w-full">
                     {/* Left Controls: Search, Folder, Status, Sort */}
                     <div className="flex items-center gap-[0.55vw] flex-shrink-0">
@@ -360,7 +401,7 @@ export default function TrashScreen({
                             </div>
                         )}
 
-                        {/* Multiple Selection Checkbox */}
+                        {/* Select All Checkbox */}
                         <label
                             onClick={handleMultipleSelectionToggle}
                             className="flex items-center gap-[0.45vw] cursor-pointer select-none whitespace-nowrap flex-shrink-0"
@@ -375,7 +416,7 @@ export default function TrashScreen({
                                 {isAllSelected && <Check size="0.75vw" className="text-white" strokeWidth={3} />}
                                 {isSomeSelected && <Minus size="0.75vw" className="text-white" strokeWidth={3} />}
                             </div>
-                            <span className="text-[0.84vw] font-medium text-gray-600 whitespace-nowrap">Multiple Selection</span>
+                            <span className="text-[0.84vw] font-medium text-gray-600 whitespace-nowrap">Select All</span>
                         </label>
                     </div>
                 </div>

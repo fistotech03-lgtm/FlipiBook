@@ -256,7 +256,7 @@ const Model3DEditor = (props) => {
 
   useEffect(() => {
     if (vId) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       axios.get(`${backendUrl}/api/3d-models/get-model/${vId}`)
         .then(res => {
           if (res.data && Array.isArray(res.data.hotspots) && res.data.hotspots.length > 0) {
@@ -301,7 +301,7 @@ const Model3DEditor = (props) => {
       return "AR View unavailable for local/unsaved models.";
     }
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     let resolvedUrl = dataUrl;
     if (typeof dataUrl === 'string' && dataUrl.startsWith('/')) {
       resolvedUrl = `${backendUrl}${dataUrl}`;

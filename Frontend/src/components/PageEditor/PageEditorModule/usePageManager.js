@@ -8,7 +8,7 @@ import { useState, useCallback } from 'react';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import pageCacheManager from '../utils/PageCacheManager';
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 30;
 
 export const usePageManager = ({
   pages,
@@ -31,14 +31,16 @@ export const usePageManager = ({
   const [history, setHistory] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
-    const saveToHistory = (
+  const saveToHistory = (
     customPages = pages,
     customLayerId = selectedLayerId,
     customPageIndex = activePageIndex,
     customMultiIds = multiSelectedIds
   ) => {
+    // Fast shallow clone of page objects without re-serializing giant 10MB+ strings
+    const snapPages = customPages.map(p => ({ ...p }));
     const snap = {
-      pages: JSON.parse(JSON.stringify(customPages)),
+      pages: snapPages,
       selectedLayerId: customLayerId,
       activePageIndex: customPageIndex,
       multiSelectedIds: Array.from(customMultiIds || [])
@@ -52,10 +54,13 @@ export const usePageManager = ({
         const lastPageIndex = Array.isArray(last) ? null : last.activePageIndex;
         const lastMultiIds = Array.isArray(last) ? [] : (last.multiSelectedIds || []);
 
-        const isSamePages = JSON.stringify(lastPages) === JSON.stringify(snap.pages);
+        // Fast reference & string comparison avoiding slow JSON.stringify on 10MB+ templates
+        const isSamePages = lastPages && lastPages.length === snap.pages.length &&
+          lastPages.every((lp, idx) => lp.html === snap.pages[idx]?.html && lp.id === snap.pages[idx]?.id);
         const isSameLayerId = lastLayerId === snap.selectedLayerId;
         const isSamePageIndex = lastPageIndex === snap.activePageIndex;
-        const isSameMultiIds = JSON.stringify(lastMultiIds.sort()) === JSON.stringify(snap.multiSelectedIds.sort());
+        const isSameMultiIds = lastMultiIds.length === snap.multiSelectedIds.length &&
+          lastMultiIds.every((id, idx) => id === snap.multiSelectedIds[idx]);
 
         if (isSamePages && isSameLayerId && isSamePageIndex && isSameMultiIds) {
           return prev;
@@ -72,7 +77,7 @@ export const usePageManager = ({
     isUndoRedoActiveRef.current = true;
 
     const currentSnap = {
-      pages: JSON.parse(JSON.stringify(pages)),
+      pages: pages.map(p => ({ ...p })),
       selectedLayerId,
       activePageIndex,
       multiSelectedIds: Array.from(multiSelectedIds || [])
@@ -123,7 +128,7 @@ export const usePageManager = ({
     isUndoRedoActiveRef.current = true;
 
     const currentSnap = {
-      pages: JSON.parse(JSON.stringify(pages)),
+      pages: pages.map(p => ({ ...p })),
       selectedLayerId,
       activePageIndex,
       multiSelectedIds: Array.from(multiSelectedIds || [])
@@ -168,7 +173,7 @@ export const usePageManager = ({
     });
   };
 
-  const updatePageHtml = (pageIndex, html) => {
+  const updatePageHtml = (pageIndex, html, explicitLayers = null) => {
     let sanitizedHtml = html;
     if (typeof sanitizedHtml === 'string' && sanitizedHtml.includes('custom-video-overlay')) {
       const parser = new DOMParser();
@@ -178,21 +183,50 @@ export const usePageManager = ({
       if (svg) sanitizedHtml = svg.outerHTML;
     }
 
+    saveToHistory(pages, selectedLayerId, pageIndex);
+
     setPages(prev => {
-      saveToHistory(prev, selectedLayerId, pageIndex);
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
-      const svgEl = doc.querySelector('svg');
-      const newLayers = svgEl ? parseLayersFromSVG(svgEl) : [];
-
       const updated = [...prev];
       const page = updated[pageIndex];
       if (!page) return prev;
 
-      // Update layer cache and debounced thumbnail in PageCacheManager
-      pageCacheManager.setCachedLayers(page.id, sanitizedHtml, newLayers);
-      pageCacheManager.updateThumbnailDebounced(page.id, sanitizedHtml, 300);
+      let newLayers = explicitLayers;
+      if (!newLayers) {
+        const cached = pageCacheManager.getCachedLayers(page.id, sanitizedHtml);
+        if (cached && cached.length > 0) {
+          newLayers = cached;
+        } else {
+          try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
+            const svgEl = doc.querySelector('svg');
+            if (svgEl) {
+              const pageGroup = svgEl.querySelector('[data-type="frame"]') ||
+                                svgEl.querySelector('[data-name="Overlay"]')?.parentElement;
+              if (pageGroup) {
+                let movedAny = false;
+                Array.from(svgEl.children).forEach(child => {
+                  if (child === pageGroup) return;
+                  if (['defs', 'metadata', 'style', 'title', 'desc'].includes(child.tagName.toLowerCase())) return;
+                  if (child.getAttribute('data-name') === 'Document Shield' || child.getAttribute('data-type') === 'shield') return;
+                  pageGroup.appendChild(child);
+                  movedAny = true;
+                });
+                if (movedAny) {
+                  sanitizedHtml = svgEl.outerHTML;
+                }
+              }
+            }
+            newLayers = svgEl ? parseLayersFromSVG(svgEl) : (page.layers || []);
+            pageCacheManager.setCachedLayers(page.id, sanitizedHtml, newLayers);
+          } catch {
+            newLayers = page.layers || [];
+          }
+        }
+      }
+
+      // Debounce thumbnail generation so it never blocks smooth editing
+      pageCacheManager.updateThumbnailDebounced(page.id, sanitizedHtml, 500);
 
       updated[pageIndex] = {
         ...page,

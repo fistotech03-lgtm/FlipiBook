@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveUploadsPath, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { useAuth } from '../context/AuthContext';
 import p1 from '../assets/Explore/p1.png';
 import cover1 from '../assets/Explore/c-bg1.png';
 import cover2 from '../assets/Explore/c-bg2.png';
@@ -10,14 +11,6 @@ import cover3 from '../assets/Explore/c-bg3.png';
 import cover4 from '../assets/Explore/c-bg4.png';
 import cover5 from '../assets/Explore/c-bg5.png';
 import bookShelf1 from '../assets/Bookshelf/Book_shelf1.webp';
-import textureScreen2 from '../assets/Bookshelf/classicwood/classic woodtexture.webp';
-import bookShelf2 from '../assets/Bookshelf/classicwood/classicwoodshelf.webp';
-import darkOakTex1 from '../assets/Bookshelf/Darkoak/texture_screen1.webp';
-import darkOakTex2 from '../assets/Bookshelf/Darkoak/texture_screen2.webp';
-import darkOakTex3 from '../assets/Bookshelf/Darkoak/texture_screen3.webp';
-import darkOakShelf from '../assets/Bookshelf/Darkoak/darkoakshelf.webp';
-import mwWall1 from '../assets/Bookshelf/modernwhite/wall1.webp';
-
 const covers = [cover1, cover2, cover3, cover4, cover5];
 
 const defaultColors = [
@@ -65,7 +58,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                     observer.disconnect();
                     setFetching(true);
                     axios
-                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { params: { emailId } })
+                        .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
                         .then((res) => {
                             if (res.data?.html) {
                                 const fontsToLoad = new Set();
@@ -165,7 +158,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook }) => {
         if (onOpenBook) {
             onOpenBook(book);
         } else {
-            const targetShareId = book.shareId || book.v_id;
+            const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
             const rawAcc = String(book.access || 'public').toLowerCase();
             if (targetShareId) {
                 window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
@@ -323,21 +316,8 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     const [openMenuId, setOpenMenuId] = useState(null);
     const [hoveredInfoId, setHoveredInfoId] = useState(null);
 
-    const currentUserEmail = (() => {
-        try {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const u = JSON.parse(storedUser);
-                if (u?.emailId || u?.email) return (u.emailId || u.email).toLowerCase();
-            }
-            const storedProfile = localStorage.getItem('user_profile');
-            if (storedProfile) {
-                const p = JSON.parse(storedProfile);
-                if (p?.emailId || p?.email) return (p.emailId || p.email).toLowerCase();
-            }
-        } catch (e) { }
-        return '';
-    })();
+    const { user } = useAuth();
+    const currentUserEmail = (user?.emailId || user?.email || '').toLowerCase();
     const [scrollProgress, setScrollProgress] = useState(0);
     const [isScrolling, setIsScrolling] = useState(false);
     const scrollTimeout = useRef(null);
@@ -380,7 +360,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
         };
     }, [isOpen]);
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     const targetEmail = creator?.emailId || creator?.email || creator?.userEmail || '';
 
     useEffect(() => {
@@ -468,7 +448,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
                         return {
                             rawBook: b,
                             v_id: b.v_id,
-                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || b.v_id,
+                            shareId: b.Customized_Settings?.Visibility?.shareId || b.Visibility?.shareId || (b.share?.shareId && b.share.shareId !== b.v_id ? b.share.shareId : null) || (b.shareId && b.shareId !== b.v_id ? b.shareId : null) || '',
                             access: b.Customized_Settings?.Visibility?.access || b.Visibility?.access || 'public',
                             title: b.flipbookName || b.title || `Flipbook ${idx + 1}`,
                             cover: b.image || covers[idx % covers.length],
@@ -541,7 +521,7 @@ export default function CreatorProfileModal({ isOpen, onClose, creator, isPrevie
     };
 
     const handleOpenBook = (book) => {
-        const targetShareId = book.shareId || book.v_id;
+        const targetShareId = (book.shareId && book.shareId !== book.v_id ? book.shareId : null) || book.Customized_Settings?.Visibility?.shareId || book.Visibility?.shareId || book.shareId;
         const rawAcc = String(book.access || 'public').toLowerCase();
         if (targetShareId) {
             window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');

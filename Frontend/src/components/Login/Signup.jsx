@@ -8,6 +8,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useToast } from '../CustomToast';
 import { useAuth } from '../../context/AuthContext';
 import { getErrorMessage, setSessionToken } from '../../utils/authUtils';
+import { getClientDeviceInfo, getPublicClientIpAndLocation } from '../../utils/deviceUtils';
 import { prefetchMyFlipbooks } from '../../queryClient';
 
 export default function Signup({ onSwitchToSignin }) {
@@ -57,11 +58,16 @@ export default function Signup({ onSwitchToSignin }) {
         setIsLoading(true);
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+          const deviceInfo = getClientDeviceInfo();
+          const netInfo = await getPublicClientIpAndLocation();
           const res = await axios.post(
             `${backendUrl}/api/auth/google-login`,
             {
               accessToken: tokenResponse.access_token,
-              mode: 'signup'
+              mode: 'signup',
+              ...deviceInfo,
+              ...(netInfo?.ip ? { ipAddress: netInfo.ip } : {}),
+              ...(netInfo?.location ? { location: netInfo.location } : {}),
             },
             { withCredentials: true }
           );
@@ -181,12 +187,17 @@ export default function Signup({ onSwitchToSignin }) {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const cleanEmail = formData.email.trim().toLowerCase();
+      const deviceInfo = getClientDeviceInfo();
+      const netInfo = await getPublicClientIpAndLocation();
 
       const res = await axios.post(
         `${backendUrl}/api/auth/verify-signup-otp`,
         {
           emailId: cleanEmail,
-          otp: cleanOtp
+          otp: cleanOtp,
+          ...deviceInfo,
+          ...(netInfo?.ip ? { ipAddress: netInfo.ip } : {}),
+          ...(netInfo?.location ? { location: netInfo.location } : {}),
         },
         { withCredentials: true }
       );

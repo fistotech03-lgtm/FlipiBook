@@ -6,13 +6,36 @@ import { getVisualBBox } from './geometryUtils';
  */
 export const getTopLevelFrames = (svg) => {
   if (!svg || !svg.children) return [];
-  return Array.from(svg.children).filter(el =>
-    el.id &&
-    el.tagName.toLowerCase() !== 'style' &&
-    el.tagName.toLowerCase() !== 'defs' &&
-    el.getAttribute('data-hidden') !== 'true' &&
-    el.getAttribute('data-locked') !== 'true'
-  );
+  return Array.from(svg.children).filter(el => {
+    if (!el.id && el.getAttribute && (el.getAttribute('data-type') === 'embed-frame' || el.querySelector?.('[data-type="embed-frame"]'))) {
+      el.id = `embed-${Date.now()}`;
+    }
+    return (
+      el.id &&
+      el.tagName.toLowerCase() !== 'style' &&
+      el.tagName.toLowerCase() !== 'defs' &&
+      el.getAttribute('data-hidden') !== 'true' &&
+      el.getAttribute('data-locked') !== 'true'
+    );
+  });
+};
+
+/**
+ * Checks if an element is a root page frame (the page container <g> directly under <svg>).
+ */
+export const isPageRootElement = (el, svg) => {
+  if (!el) return false;
+  const tag = el.tagName?.toLowerCase();
+  if (tag === 'svg') return true;
+  const parent = el.parentElement;
+  if (!parent) return false;
+  const isDirectUnderSvg = (svg && parent === svg) || parent.tagName?.toLowerCase() === 'svg';
+  if (!isDirectUnderSvg) return false;
+  const dataType = el.getAttribute?.('data-type');
+  const name = el.getAttribute?.('data-name');
+  if (dataType === 'frame') return true;
+  if (name && /^Page\s*\d+$/i.test(name)) return true;
+  return false;
 };
 
 /**
@@ -25,19 +48,61 @@ export const getDirectChildFrames = (el) => {
     return [];
   }
 
-  // If this element is an image/video/gif group, it acts as a single layer
-  if (el.getAttribute('data-is-image-group') || el.getAttribute('data-is-video-group') || el.getAttribute('data-is-gif-group')) {
+  // If this element is an image/video/gif group or compound element (embed/map/audio/table/qr/slideshow/button/shape), it acts as a single layer
+  const dataType = el.getAttribute?.('data-type');
+  if (
+    el.getAttribute('data-is-image-group') ||
+    el.getAttribute('data-is-video-group') ||
+    el.getAttribute('data-is-gif-group') ||
+    el.getAttribute('data-is-element-button') === 'true' ||
+    dataType === 'button' ||
+    (el.id && el.id.startsWith('button-')) ||
+    el.getAttribute('data-is-element-shape') === 'true' ||
+    el.getAttribute('data-shape-type') ||
+    dataType === 'shape' ||
+    (el.id && el.id.startsWith('shape-')) ||
+    (typeof el.querySelector === 'function' && el.querySelector('[data-shape-type], [data-is-element-shape="true"]')) ||
+    dataType === 'embed-frame' ||
+    dataType === 'map' ||
+    dataType === 'audio-frame' ||
+    (el.id && el.id.startsWith('audio-')) ||
+    dataType === 'table-frame' ||
+    dataType === 'qrcode' ||
+    dataType === 'slideshow' ||
+    (el.id && el.id.startsWith('embed-')) ||
+    (el.id && el.id.startsWith('map-')) ||
+    (typeof el.querySelector === 'function' && el.querySelector('[data-type="embed-frame"]'))
+  ) {
     return [];
   }
 
-  return Array.from(el.children).filter(child =>
-    child.id &&
-    child.tagName.toLowerCase() !== 'style' &&
-    child.tagName.toLowerCase() !== 'defs' &&
-    child.getAttribute('data-hidden') !== 'true' &&
-    child.getAttribute('data-locked') !== 'true' &&
-    child.getAttribute('data-name') !== 'Overlay'
-  );
+  return Array.from(el.children).filter(child => {
+    if (!child.id && child.getAttribute && (child.getAttribute('data-type') === 'embed-frame' || child.querySelector?.('[data-type="embed-frame"]'))) {
+      child.id = `embed-${Date.now()}`;
+    }
+    return (
+      child.id &&
+      child.tagName.toLowerCase() !== 'style' &&
+      child.tagName.toLowerCase() !== 'defs' &&
+      child.getAttribute('data-hidden') !== 'true' &&
+      child.getAttribute('data-locked') !== 'true' &&
+      child.getAttribute('data-name') !== 'Overlay'
+    );
+  });
+};
+
+// Cached elementsFromPoint to avoid redundant layout recalculations across successive hitTest calls
+let lastHitCache = { x: null, y: null, elements: null, timestamp: 0 };
+const getCachedElementsFromPoint = (x, y) => {
+  const now = performance.now();
+  if (lastHitCache.elements && lastHitCache.x === x && lastHitCache.y === y && (now - lastHitCache.timestamp < 16)) {
+    return lastHitCache.elements;
+  }
+  const elements = (typeof document !== 'undefined' && typeof document.elementsFromPoint === 'function')
+    ? document.elementsFromPoint(x, y)
+    : [];
+  lastHitCache = { x, y, elements, timestamp: now };
+  return elements;
 };
 
 /**
@@ -58,8 +123,8 @@ export const hitTest = (el, clientX, clientY, buffer = 0, selectedLayerId = null
 
   const isCroppedEl = isElementCropped(el);
 
-  // 1. Native browser hit testing
-  const hitElements = document.elementsFromPoint(clientX, clientY);
+  // 1. Native browser hit testing (with coordinate-level caching)
+  const hitElements = getCachedElementsFromPoint(clientX, clientY);
   const isHit = hitElements.includes(el) || (typeof el.contains === 'function' && hitElements.some(he => el.contains(he)));
   if (isHit) {
     if (!isCroppedEl) return true;

@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const Flipbook = require('../models/Flipbook');
-const FlipbookAsset = require('../models/FlipbookAsset');
+const crypto = require('crypto');
+const Flipbook = require('../../../../shared/models/Flipbook');
+const FlipbookAsset = require('../../../../shared/models/FlipbookAsset');
+const InteractionThreedModel = require('../../../../shared/models/InteractionThreedModel');
 const { getAuthUser } = require('../utils/userHelper');
 const {
   generateId,
@@ -54,7 +56,7 @@ const savePage = async (req, res) => {
     }
 
     // Locate the flipbook document
-    const doc = await Flipbook.findOne({ v_id });
+    const doc = await Flipbook.findOne({ $or: [{ book_v_id: v_id }, { v_id }] });
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
@@ -94,8 +96,8 @@ const savePage = async (req, res) => {
     });
 
     if (!processedContent || processedContent.trim() === '') {
-      const pageWidth = doc.Customized_Settings?.width || 595;
-      const pageHeight = doc.Customized_Settings?.height || 842;
+      const pageWidth = 595;
+      const pageHeight = 842;
       processedContent = createBlankSvg(pageWidth, pageHeight, resolvedPageNumber);
     } else if (processedContent.includes('<svg') && !processedContent.includes('data-name="Page ') && !processedContent.includes(`data-name="Page ${resolvedPageNumber}"`)) {
       const gId = `g_page_${resolvedPageNumber}_${Date.now().toString(36)}`;
@@ -131,7 +133,40 @@ const savePage = async (req, res) => {
     // Save extracted assets to database
     if (newFlipbookAssets.length > 0) {
       try {
-        await FlipbookAsset.insertMany(newFlipbookAssets);
+        let assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (!assetDoc) {
+          assetDoc = new FlipbookAsset({
+            userObjectID: doc.userObjectID || doc.userId,
+            userID: doc.userID || 'default',
+            book_v_id: doc.book_v_id || doc.v_id,
+            flipbookName: doc.flipbookName,
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
+            assets: { images: [], video: [], gif: [] }
+          });
+        }
+        for (const item of newFlipbookAssets) {
+          let cat = 'images';
+          const t = (item.assetType || '').toLowerCase();
+          if (t.includes('video')) cat = 'video';
+          else if (t.includes('gif')) cat = 'gif';
+
+          if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+          const exists = assetDoc.assets[cat].some(a => a.convertedName === item.convertedName);
+          if (!exists) {
+            assetDoc.assets[cat].push({
+              originalName: item.originalName || '',
+              convertedName: item.convertedName || item.fileName,
+              page_v_id: item.page_v_id || 'global',
+              url: item.url,
+              size: item.size || 0,
+              timestamp: new Date()
+            });
+          }
+        }
+        assetDoc.markModified('assets');
+        await assetDoc.save();
       } catch (assetErr) {
         console.error('[Page Controller] Error inserting page assets:', assetErr.message);
       }
@@ -155,7 +190,7 @@ const savePage = async (req, res) => {
         pageNumber: resolvedPageNumber,
         name: pageName || `Page ${resolvedPageNumber}`,
         fileName: svgFileName,
-        v_id: newPageVId,
+        page_v_id: newPageVId,
         size: pageSize,
         hide: 0
       });
@@ -201,7 +236,7 @@ const savePagesBatch = async (req, res) => {
       });
     }
 
-    const doc = await Flipbook.findOne({ v_id });
+    const doc = await Flipbook.findOne({ $or: [{ book_v_id: v_id }, { v_id }] });
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
@@ -248,8 +283,8 @@ const savePagesBatch = async (req, res) => {
       });
 
       if (!processedContent || processedContent.trim() === '') {
-        const pageWidth = doc.Customized_Settings?.width || 595;
-        const pageHeight = doc.Customized_Settings?.height || 842;
+        const pageWidth = 595;
+        const pageHeight = 842;
         processedContent = createBlankSvg(pageWidth, pageHeight, resolvedPageNumber);
       } else if (processedContent.includes('<svg') && !processedContent.includes('data-name="Page ') && !processedContent.includes(`data-name="Page ${resolvedPageNumber}"`)) {
         const gId = `g_page_${resolvedPageNumber}_${Date.now().toString(36)}`;
@@ -301,7 +336,7 @@ const savePagesBatch = async (req, res) => {
           pageNumber: result.pageNumber,
           name: result.pageName,
           fileName: result.fileName,
-          v_id: result.pageVId || `page_${generateId(9)}`,
+          page_v_id: result.pageVId || `page_${generateId(9)}`,
           size: result.pageSize,
           hide: 0
         });
@@ -310,7 +345,40 @@ const savePagesBatch = async (req, res) => {
 
     if (newFlipbookAssets.length > 0) {
       try {
-        await FlipbookAsset.insertMany(newFlipbookAssets);
+        let assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (!assetDoc) {
+          assetDoc = new FlipbookAsset({
+            userObjectID: doc.userObjectID || doc.userId,
+            userID: doc.userID || 'default',
+            book_v_id: doc.book_v_id || doc.v_id,
+            flipbookName: doc.flipbookName,
+            folder_id: doc.folder_id || ('fol_' + crypto.randomBytes(6).toString('hex')),
+            assets: { images: [], video: [], gif: [] }
+          });
+        }
+        for (const item of newFlipbookAssets) {
+          let cat = 'images';
+          const t = (item.assetType || '').toLowerCase();
+          if (t.includes('video')) cat = 'video';
+          else if (t.includes('gif')) cat = 'gif';
+
+          if (!Array.isArray(assetDoc.assets[cat])) assetDoc.assets[cat] = [];
+          const exists = assetDoc.assets[cat].some(a => a.convertedName === item.convertedName);
+          if (!exists) {
+            assetDoc.assets[cat].push({
+              originalName: item.originalName || '',
+              convertedName: item.convertedName || item.fileName,
+              page_v_id: item.page_v_id || 'global',
+              url: item.url,
+              size: item.size || 0,
+              timestamp: new Date()
+            });
+          }
+        }
+        assetDoc.markModified('assets');
+        await assetDoc.save();
       } catch (assetErr) {
         console.error('[Page Controller] Error inserting batch assets:', assetErr.message);
       }
@@ -347,6 +415,90 @@ const savePagesBatch = async (req, res) => {
         }
       }
     } catch (cleanErr) {}
+
+    // Reconcile and clean up unreferenced FlipbookAsset & InteractionThreedModel
+    try {
+      if (fs.existsSync(pagesDir)) {
+        let allPageSvgs = '';
+        const pageFiles = fs.readdirSync(pagesDir);
+        for (const pf of pageFiles) {
+          if (pf.endsWith('.svg') || pf.endsWith('.html')) {
+            try {
+              allPageSvgs += ' ' + fs.readFileSync(path.join(pagesDir, pf), 'utf8').toLowerCase();
+            } catch (e) {}
+          }
+        }
+        for (const resItem of uploadResults) {
+          if (resItem.processedContent) {
+            allPageSvgs += ' ' + String(resItem.processedContent).toLowerCase();
+          }
+        }
+
+        // Clean up unreferenced InteractionThreedModel
+        const query3DOr = [{ flipbook_v_id: doc.v_id }];
+        if (flipbookName) {
+          query3DOr.push({
+            flipbookName: flipbookName,
+            userEmail: new RegExp(`^${doc.userEmail || emailId}$`, 'i')
+          });
+        }
+        const all3DModels = await InteractionThreedModel.find({ $or: query3DOr });
+        for (const model of all3DModels) {
+          const fNameLower = (model.fileName || '').toLowerCase();
+          const vIdLower = (model.v_id || '').toLowerCase();
+          const isReferenced =
+            (fNameLower && allPageSvgs.includes(fNameLower)) ||
+            (vIdLower && allPageSvgs.includes(vIdLower));
+
+          if (!isReferenced) {
+            const disk3DPath = path.join(bookDir, 'assets', '3D_Model', model.fileName);
+            if (fs.existsSync(disk3DPath)) {
+              try {
+                fs.unlinkSync(disk3DPath);
+              } catch (e) {}
+            }
+            await InteractionThreedModel.deleteOne({ _id: model._id });
+            await FlipbookAsset.deleteMany({
+              flipbook_v_id: doc.v_id,
+              $or: [{ fileName: model.fileName }, { file_v_id: model.v_id }]
+            }).catch(() => {});
+            console.log(`[Page Controller] Cleaned up unreferenced InteractionThreedModel: ${model.fileName} (${model.v_id})`);
+          }
+        }
+
+        // Clean up unreferenced FlipbookAssets
+        const assetDoc = await FlipbookAsset.findOne({
+          $or: [{ book_v_id: doc.book_v_id || doc.v_id }, { flipbook_v_id: doc.v_id }]
+        });
+        if (assetDoc && assetDoc.assets) {
+          for (const cat of ['images', 'video', 'gif']) {
+            if (!Array.isArray(assetDoc.assets[cat])) continue;
+            const kept = [];
+            for (const asset of assetDoc.assets[cat]) {
+              const fNameLower = (asset.convertedName || asset.fileName || '').toLowerCase();
+              const isReferenced = fNameLower && allPageSvgs.includes(fNameLower);
+              if (isReferenced) {
+                kept.push(asset);
+              } else {
+                const subFolder = cat === 'images' ? 'Image' : cat;
+                const diskAssetPath = path.join(bookDir, 'assets', subFolder, asset.convertedName || asset.fileName);
+                if (fs.existsSync(diskAssetPath)) {
+                  try {
+                    fs.unlinkSync(diskAssetPath);
+                  } catch (e) {}
+                }
+                console.log(`[Page Controller] Cleaned up unreferenced asset: ${asset.convertedName || asset.fileName}`);
+              }
+            }
+            assetDoc.assets[cat] = kept;
+          }
+          assetDoc.markModified('assets');
+          await assetDoc.save();
+        }
+      }
+    } catch (assetCleanErr) {
+      console.warn('[Page Controller] Warning cleaning up unused assets:', assetCleanErr.message);
+    }
 
     doc.lastUpdated = new Date();
     doc.markModified('pages');
@@ -579,8 +731,8 @@ const renamePage = async (req, res) => {
       }
     } else {
       if (!pageSvgContent || !pageSvgContent.trim()) {
-        const pageWidth = doc.Customized_Settings?.width || 595;
-        const pageHeight = doc.Customized_Settings?.height || 842;
+        const pageWidth = 595;
+        const pageHeight = 842;
         pageSvgContent = createBlankSvg(pageWidth, pageHeight, page.pageNumber);
       }
       fs.writeFileSync(newFilePath, pageSvgContent, 'utf8');

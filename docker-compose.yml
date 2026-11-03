@@ -7,6 +7,11 @@ services:
         - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     expose:
       - "80"
+    volumes:
+      - ./into.html:/usr/share/nginx/html/index.html:ro
+      - ./chair.glb:/usr/share/nginx/html/chair.glb:ro
+      - ./turbo_engine_animation.glb:/usr/share/nginx/html/turbo_engine_animation.glb:ro
+      - ./audio.mp3:/usr/share/nginx/html/audio.mp3:ro
     environment:
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://testing.flipibook.com}
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}

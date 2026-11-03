@@ -90,14 +90,14 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-12vw)] flex flex-col p-[1.5vw] font-sans">
+    <div className="w-full min-h-[calc(100vh-12vw)] flex flex-col font-sans">
       {/* Top Navigation: Back to Account Page */}
       <div className="mb-[1vw] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-[0.7vw]">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 px-[0.8vw] py-[0.45vw] rounded-[0.5vw] shadow-xs text-[0.78vw] font-medium transition-colors cursor-pointer group active:scale-[0.98]"
+            className="flex items-center gap-[0.4vw] text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 px-[0.9vw] py-[0.45vw] rounded-[0.5vw] shadow-xs text-[0.78vw] font-medium transition-colors cursor-pointer group active:scale-[0.98]"
           >
             <Icon
               icon="lucide:arrow-left"
@@ -106,7 +106,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
             <span>Back to Account</span>
           </button>
           <span className="text-gray-300">|</span>
-          <span className="text-[0.76vw] text-gray-500 font-medium">
+          <span className="text-[0.76vw] text-gray-400 font-normal">
             Sign-in & Security &gt; Add Password
           </span>
         </div>
@@ -114,13 +114,13 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
 
       {/* Main Container Card - Centered both horizontally and vertically (middle) */}
       <div className="w-full flex-1 flex items-center justify-center py-[2vw]">
-        <div className="w-full max-w-[40vw] bg-white border border-gray-200 rounded-[1vw] p-[2.2vw] shadow-sm">
+        <div className="w-full max-w-[38vw] bg-white border border-gray-200/80 rounded-[0.8vw] p-[2vw] shadow-xs">
           {/* Header */}
           <div className="pb-[1.4vw] border-b border-gray-100">
-            <h1 className="text-[1.25vw] font-semibold text-gray-900 leading-tight">
+            <h1 className="text-[1.25vw] font-bold text-gray-900 leading-tight">
               Add Account Password
             </h1>
-            <p className="text-[0.76vw] text-gray-500 mt-[0.25vw] font-normal leading-relaxed">
+            <p className="text-[0.76vw] text-gray-400 mt-[0.25vw] font-normal leading-relaxed">
               You registered using Google. Set up a secure password to enable direct email & password sign-in alongside Google.
             </p>
           </div>
@@ -137,21 +137,21 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
         {step === 1 && (
           <div className="mt-[1.5vw] flex flex-col gap-[1.3vw]">
             <div className="bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] flex flex-col gap-[0.5vw]">
-              <span className="text-[0.7vw] text-gray-400 font-semibold uppercase tracking-wider">
+              <span className="text-[0.68vw] text-gray-400 font-semibold uppercase tracking-wider">
                 Target Email Address
               </span>
               <div className="flex items-center gap-[0.6vw]">
                 <Icon icon="solar:letter-bold" className="w-[1.1vw] h-[1.1vw] text-gray-500" />
-                <span className="text-[0.88vw] font-medium text-gray-800">
+                <span className="text-[0.85vw] font-semibold text-gray-800">
                   {userEmail}
                 </span>
-                <span className="ml-auto inline-flex items-center gap-[0.25vw] bg-[#DCFCE7] text-[#16A34A] text-[0.66vw] font-medium px-[0.55vw] py-[0.15vw] rounded-full">
+                <span className="ml-auto inline-flex items-center gap-[0.25vw] bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full">
                   Verified Google Account
                 </span>
               </div>
             </div>
 
-            <p className="text-[0.76vw] text-gray-600 leading-relaxed">
+            <p className="text-[0.76vw] text-gray-500 leading-relaxed">
               We will send a 6-digit One-Time Password (OTP) to your email to verify account ownership before you set your new password.
             </p>
 
@@ -160,7 +160,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
                 type="button"
                 onClick={handleSendOtp}
                 disabled={isSubmitting}
-                className="flex items-center gap-[0.5vw] bg-[#4c5add] hover:bg-[#3f4bb8] disabled:bg-[#9fa6eb] text-white text-[0.82vw] font-medium px-[1.4vw] py-[0.6vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                className="flex items-center gap-[0.45vw] bg-[#EC5137] hover:bg-[#d94128] disabled:opacity-50 text-white text-[0.78vw] font-medium px-[1.4vw] py-[0.55vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -178,7 +178,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
               <button
                 type="button"
                 onClick={onBack}
-                className="px-[1.2vw] py-[0.6vw] rounded-[0.5vw] border border-gray-300 text-gray-700 hover:bg-gray-50 text-[0.82vw] font-medium transition-colors cursor-pointer"
+                className="px-[1.1vw] py-[0.55vw] rounded-[0.5vw] border border-gray-200 text-gray-700 hover:bg-gray-50 text-[0.78vw] font-medium transition-colors cursor-pointer shadow-xs"
               >
                 Cancel
               </button>
@@ -215,7 +215,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
 
             {/* OTP Input */}
             <div className="flex flex-col gap-[0.35vw]">
-              <label className="text-[0.78vw] font-medium text-gray-700">
+              <label className="text-[0.76vw] font-medium text-gray-700">
                 Enter 6-Digit OTP <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -225,7 +225,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
                   placeholder="• • • • • •"
                   value={otpValue}
                   onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-[1vw] py-[0.6vw] tracking-[0.4em] text-center text-[1.1vw] font-bold rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] bg-[#fafafa]"
+                  className="w-full px-[1vw] py-[0.55vw] tracking-[0.4em] text-center text-[1.1vw] font-bold rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] bg-[#fafafa] text-gray-800 shadow-xs"
                   autoFocus
                 />
               </div>
@@ -236,7 +236,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
 
             {/* New Password */}
             <div className="flex flex-col gap-[0.35vw]">
-              <label className="text-[0.78vw] font-medium text-gray-700">
+              <label className="text-[0.76vw] font-medium text-gray-700">
                 New Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -245,7 +245,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
                   placeholder="At least 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.8vw] rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add]"
+                  className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.78vw] rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] text-gray-800 placeholder:text-gray-400 shadow-xs"
                 />
                 <button
                   type="button"
@@ -259,7 +259,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
 
             {/* Confirm Password */}
             <div className="flex flex-col gap-[0.35vw]">
-              <label className="text-[0.78vw] font-medium text-gray-700">
+              <label className="text-[0.76vw] font-medium text-gray-700">
                 Confirm Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -268,7 +268,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.8vw] rounded-[0.5vw] border border-gray-300 focus:outline-hidden focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add]"
+                  className="w-full px-[0.9vw] py-[0.55vw] pr-[2.4vw] text-[0.78vw] rounded-[0.5vw] border border-gray-200 focus:outline-hidden focus:border-[#EC5137] focus:ring-1 focus:ring-[#EC5137] text-gray-800 placeholder:text-gray-400 shadow-xs"
                 />
                 <button
                   type="button"
@@ -285,7 +285,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center gap-[0.45vw] bg-[#4c5add] hover:bg-[#3f4bb8] disabled:bg-[#9fa6eb] text-white text-[0.82vw] font-medium px-[1.5vw] py-[0.6vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                className="flex items-center gap-[0.45vw] bg-[#EC5137] hover:bg-[#d94128] disabled:opacity-50 text-white text-[0.78vw] font-medium px-[1.4vw] py-[0.55vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -303,7 +303,7 @@ const AddPassword = ({ userEmail, onBack, onSuccess }) => {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-[1.2vw] py-[0.6vw] rounded-[0.5vw] border border-gray-300 text-gray-700 hover:bg-gray-50 text-[0.82vw] font-medium transition-colors cursor-pointer"
+                className="px-[1.1vw] py-[0.55vw] rounded-[0.5vw] border border-gray-200 text-gray-700 hover:bg-gray-50 text-[0.78vw] font-medium transition-colors cursor-pointer shadow-xs"
               >
                 Change Email / Resend
               </button>

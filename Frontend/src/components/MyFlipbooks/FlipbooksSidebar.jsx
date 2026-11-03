@@ -38,6 +38,11 @@ export default function FlipbooksSidebar({
     active3dFolder = 'All Models',
     setActive3dFolder,
     threeDCounts = { allCount: 0, recentCount: 0 },
+    shelfFolders = [],
+    selectedShelfFolder = '',
+    shelfCurrentView = 'overview',
+    onSelectShelfFolder,
+    onAddShelf,
     // Optional overrides for backwards compatibility
     navigate: navigateProp,
     FOLDER_COLORS = DEFAULT_FOLDER_COLORS,
@@ -817,7 +822,80 @@ export default function FlipbooksSidebar({
                 </CustomScrollbar>
                     </>
                 ) : (
-                    <div className="flex-1" />
+                    <>
+                        {/* Shelf Folders Header */}
+                        <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
+                            <span className="text-[0.95vw] font-bold text-white">
+                                Shelf Folders
+                            </span>
+                            <button
+                                type="button"
+                                onClick={onAddShelf}
+                                className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.2vw] rounded-[0.4vw] bg-[#222d3d] hover:bg-[#2b394d] text-gray-300 hover:text-white text-[0.75vw] font-medium border border-[#2f3d52] transition-colors cursor-pointer"
+                            >
+                                <Plus size="0.85vw" /> Add
+                            </button>
+                        </div>
+
+                        {/* Scrollable Shelf Folders List */}
+                        <CustomScrollbar
+                            color="#2c3749"
+                            hoverColor="#3e4e66"
+                            width="0.3vw"
+                            className="flex-1 pr-[0.25vw] pb-[1vw]"
+                        >
+                            <div className="space-y-[0.25vw]">
+                                {/* All Shelves (Overview) */}
+                                <div
+                                    onClick={() => onSelectShelfFolder?.('__overview__')}
+                                    className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                        shelfCurrentView === 'overview'
+                                            ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                            : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-[0.75vw]">
+                                        <Library size="1.1vw" className={`shrink-0 ${shelfCurrentView === 'overview' ? 'text-white' : 'text-gray-300'}`} />
+                                        <span>All Shelves</span>
+                                    </div>
+                                    <span className={`text-[0.8vw] ${shelfCurrentView === 'overview' ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                        {shelfFolders.length}
+                                    </span>
+                                </div>
+
+                                {/* Individual Shelf Folders */}
+                                {shelfFolders.map((folder, idx) => {
+                                    const isSelected = shelfCurrentView === 'shelf_detail' && selectedShelfFolder === folder.name;
+                                    const bookCount = folder.books?.length || 0;
+                                    return (
+                                        <div
+                                            key={folder.name || idx}
+                                            onClick={() => onSelectShelfFolder?.(folder.name)}
+                                            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+                                                isSelected
+                                                    ? 'bg-[#2c3749] text-white font-medium shadow-xs'
+                                                    : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-[0.75vw] min-w-0 flex-1 pr-2">
+                                                <Folder size="1.1vw" className="shrink-0 text-amber-500 fill-current" />
+                                                <span className="truncate">{folder.name}</span>
+                                            </div>
+                                            <span className={`text-[0.8vw] shrink-0 ${isSelected ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                                {bookCount}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+
+                                {shelfFolders.length === 0 && (
+                                    <div className="px-[0.85vw] py-[1.2vw] text-center text-gray-400 text-[0.75vw]">
+                                        No shelves created yet.
+                                    </div>
+                                )}
+                            </div>
+                        </CustomScrollbar>
+                    </>
                 )}
             </div>
 

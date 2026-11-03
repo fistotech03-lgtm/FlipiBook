@@ -431,7 +431,7 @@ export const parseLayersFromSVG = (element) => {
       const isTypography = !isPageRoot && (
                            child.getAttribute('data-typography-type') === 'motion-graphic' ||
                            child.getAttribute('data-typography-type') === 'kinetic' ||
-                           child.getAttribute('data-is-element-typography') === 'true' ||
+                           (child.getAttribute('data-subtopic') === 'Titles' && child.getAttribute('data-is-element-typography') !== 'true') ||
                            (lowerId.startsWith('typography-') && child.getAttribute('data-type') === 'text')
       );
 
@@ -449,14 +449,57 @@ export const parseLayersFromSVG = (element) => {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
-        // Strip IDs from all descendants of an Image Group so they can't be selected individually
-        const stripIds = (node) => {
-          Array.from(node.children).forEach(descendant => {
-            descendant.removeAttribute('id');
-            stripIds(descendant);
-          });
-        };
-        stripIds(child);
+        // Strip IDs from internal helper elements of a generic compound Group so they can't be selected individually,
+        // but never touch dedicated element containers (image-frame, qrcode, audio-frame, etc.) or SVG definition tags (defs, pattern, clipPath, mask, filter, grad)
+        const isElementPresetContainer =
+          isImageFrame || isQRCode || isAudioFrame || isEmbedGroup ||
+          isButton || isMap || isSlideshow || isTable || isTypography || isShape || isDecorator;
+
+        if (!isElementPresetContainer) {
+          const stripIds = (node) => {
+            Array.from(node.children).forEach(descendant => {
+              const tag = (descendant.tagName || '').toLowerCase();
+              if (['defs', 'clippath', 'pattern', 'mask', 'filter', 'lineargradient', 'radialgradient', 'symbol', 'marker', 'style'].includes(tag)) {
+                return;
+              }
+              if (descendant.closest && descendant.closest('defs, clipPath, pattern, mask, filter')) {
+                return;
+              }
+
+              const dId = (descendant.getAttribute('id') || '').toLowerCase();
+              if (
+                dId.startsWith('pattern') ||
+                dId.startsWith('clip') ||
+                dId.startsWith('filter') ||
+                dId.startsWith('mask') ||
+                dId.startsWith('grad') ||
+                dId.startsWith('image-frame') ||
+                dId.startsWith('imageframe')
+              ) {
+                return;
+              }
+
+              const isProtected =
+                descendant.getAttribute('data-is-element-typography') === 'true' ||
+                descendant.getAttribute('data-is-element-shape') === 'true' ||
+                descendant.getAttribute('data-is-element-button') === 'true' ||
+                descendant.getAttribute('data-is-image-frame') === 'true' ||
+                descendant.getAttribute('data-typography-type') ||
+                descendant.getAttribute('data-type') ||
+                dId.startsWith('typography-') ||
+                dId.startsWith('embed-') ||
+                dId.startsWith('audio-') ||
+                dId.startsWith('qrcode-') ||
+                dId.startsWith('shape-') ||
+                dId.startsWith('button-');
+              if (!isProtected) {
+                descendant.removeAttribute('id');
+                stripIds(descendant);
+              }
+            });
+          };
+          stripIds(child);
+        }
       }
 
       const isText = child.tagName.toLowerCase() === 'text' ||
@@ -536,12 +579,25 @@ export const parseLayersFromSVG = (element) => {
           coreType = 'decorator';
         } else if (isTypography) {
           const customName = child.getAttribute('data-name');
-          const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
-            'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
-            'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
-            'Paragraph Text', 'Bullet List', 'Numbered List'
-          ].includes(customName);
-          coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          const presetTitle = child.getAttribute('data-preset-title');
+          const isTitleSubtopic = child.getAttribute('data-subtopic') === 'Titles' || child.getAttribute('data-motion-template') || child.getAttribute('data-typography-type') === 'motion-graphic';
+          const templateName = child.getAttribute('data-motion-template');
+
+          if (isTitleSubtopic || presetTitle) {
+            let label = presetTitle || customName || '';
+            label = label.replace(/^Title\s*-\s*/i, '').replace(/^Typography\s*/i, '').replace(/\s*\([^)]*\)/g, '').trim();
+            if (!label && templateName) {
+              label = templateName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+            }
+            coreName = label ? `Title - ${label}` : 'Title';
+          } else {
+            const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
+              'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
+              'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
+              'Paragraph Text', 'Bullet List', 'Numbered List'
+            ].includes(customName);
+            coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          }
           coreType = 'text';
         } else if (isText) {
           const customName = child.getAttribute('data-name');

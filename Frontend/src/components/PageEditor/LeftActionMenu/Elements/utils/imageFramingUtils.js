@@ -148,7 +148,7 @@ const RAW_PRESETS = [
   },
   {
     "id": "frame-2-colums",
-    "name": "2 Colums",
+    "name": "2 Columns",
     "width": 83,
     "height": 69,
     "viewBox": "0 0 83 69",

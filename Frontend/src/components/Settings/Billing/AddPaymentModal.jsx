@@ -31,7 +31,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-[1vw]"
     >
       <div
-        className="w-full max-w-[34vw] bg-white rounded-[1vw] shadow-xl border border-gray-200 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-[34vw] bg-white rounded-[0.9vw] shadow-xl border border-gray-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -42,10 +42,10 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
                 <Icon icon="lucide:credit-card" className="w-[1.15vw] h-[1.15vw]" strokeWidth="2.2" />
               </div>
               <div className="flex flex-col">
-                <h2 className="text-[1.15vw] font-semibold text-gray-800 leading-tight">
+                <h2 className="text-[1.2vw] font-bold text-gray-900 leading-tight">
                   Add Payment Method
                 </h2>
-                <p className="text-[0.72vw] text-gray-500 mt-[0.2vw] font-normal">
+                <p className="text-[0.74vw] text-gray-500 mt-[0.2vw] font-normal">
                   Add a new payment method for future subscription payments.
                 </p>
               </div>
@@ -127,14 +127,14 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
           {/* Conditional Fields: Card vs UPI */}
           {paymentType === 'upi' ? (
             /* UPI ID Field */
-            <div className="flex flex-col gap-[0.3vw]">
+            <div className="flex flex-col gap-[0.25vw]">
               <label className="text-[0.74vw] font-medium text-gray-700">UPI ID</label>
               <input
                 type="text"
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="luffy@okaxis"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
               <p className="text-[0.66vw] text-gray-400 mt-[0.1vw] font-normal">
                 Enter your UPI ID to set up automatic subscription payments.
@@ -144,7 +144,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
             /* Card Fields */
             <>
               {/* Card Number Field */}
-              <div className="flex flex-col gap-[0.3vw]">
+              <div className="flex flex-col gap-[0.25vw]">
                 <label className="text-[0.74vw] font-medium text-gray-700">Card Number</label>
                 <div className="relative flex items-center">
                   <div className="absolute left-[0.75vw] text-gray-400 flex items-center pointer-events-none">
@@ -155,7 +155,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
                     placeholder="1234 5678 9012 3456"
-                    className="w-full pl-[2.2vw] pr-[7.2vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                    className="w-full h-[2.15vw] pl-[2.2vw] pr-[7.2vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                   />
                   {/* Card Brand Logos */}
                   <div className="absolute right-[0.75vw] flex items-center gap-[0.3vw] pointer-events-none">
@@ -169,7 +169,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
               {/* Expiry Date & CVV Row */}
               <div className="grid grid-cols-2 gap-[0.85vw]">
                 {/* Expiry Date */}
-                <div className="flex flex-col gap-[0.3vw]">
+                <div className="flex flex-col gap-[0.25vw]">
                   <label className="text-[0.74vw] font-medium text-gray-700">Expiry Date</label>
                   <div className="relative flex items-center">
                     <input
@@ -177,7 +177,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
                       value={expiryDate}
                       onChange={(e) => setExpiryDate(e.target.value)}
                       placeholder="MM / YY"
-                      className="w-full px-[0.85vw] pr-[2.2vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                      className="w-full h-[2.15vw] px-[0.85vw] pr-[2.2vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                     />
                     <div className="absolute right-[0.75vw] text-gray-400 flex items-center pointer-events-none">
                       <Icon icon="lucide:calendar" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2" />
@@ -186,7 +186,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
                 </div>
 
                 {/* CVV */}
-                <div className="flex flex-col gap-[0.3vw]">
+                <div className="flex flex-col gap-[0.25vw]">
                   <label className="text-[0.74vw] font-medium text-gray-700">CVV</label>
                   <div className="relative flex items-center">
                     <input
@@ -195,7 +195,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
                       value={cvv}
                       onChange={(e) => setCvv(e.target.value)}
                       placeholder="123"
-                      className="w-full px-[0.85vw] pr-[2.4vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                      className="w-full h-[2.15vw] px-[0.85vw] pr-[2.4vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                     />
                     <div className="absolute right-[0.75vw] flex items-center gap-[0.25vw]">
                       <Icon icon="lucide:lock" className="w-[0.8vw] h-[0.8vw] text-gray-400" strokeWidth="2" />
@@ -205,14 +205,14 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
               </div>
 
               {/* Cardholder Name Field */}
-              <div className="flex flex-col gap-[0.3vw]">
+              <div className="flex flex-col gap-[0.25vw]">
                 <label className="text-[0.74vw] font-medium text-gray-700">Cardholder Name</label>
                 <input
                   type="text"
                   value={cardholderName}
                   onChange={(e) => setCardholderName(e.target.value)}
                   placeholder="Luffy"
-                  className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                  className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                 />
               </div>
             </>
@@ -223,19 +223,19 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
             <button
               type="button"
               onClick={() => setSetAsDefaultPayment(!setAsDefaultPayment)}
-              className={`w-[0.95vw] h-[0.95vw] rounded-[0.25vw] flex items-center justify-center shrink-0 mt-[0.1vw] transition-colors cursor-pointer ${
+              className={`w-[1.15vw] h-[1.15vw] rounded-[0.25vw] flex items-center justify-center shrink-0 mt-[0.1vw] transition-colors cursor-pointer ${
                 setAsDefaultPayment
                   ? 'bg-[#EC5137] text-white'
                   : 'border border-gray-300 bg-white hover:border-gray-400'
               }`}
             >
-              {setAsDefaultPayment && <Icon icon="lucide:check" className="w-[0.7vw] h-[0.7vw] stroke-[3.5]" />}
+              {setAsDefaultPayment && <Icon icon="lucide:check" className="w-[0.75vw] h-[0.75vw] stroke-[3.5]" />}
             </button>
             <div className="flex flex-col">
-              <span className="text-[0.74vw] font-medium text-gray-800 leading-tight">
+              <span className="text-[0.78vw] font-medium text-gray-800 leading-tight">
                 Set as default payment method
               </span>
-              <span className="text-[0.66vw] text-gray-400 mt-[0.1vw] font-normal">
+              <span className="text-[0.68vw] text-gray-400 mt-[0.1vw] font-normal">
                 This method will be used for all future subscription payments
               </span>
             </div>
@@ -245,7 +245,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
           {paymentType === 'upi' && (
             <div className="flex items-center gap-[0.55vw] bg-[#EEF4FF] border border-[#D0E1FD] rounded-[0.55vw] px-[0.85vw] py-[0.6vw] mt-[0.2vw]">
               <Icon icon="solar:lock-keyhole-bold" className="w-[0.95vw] h-[0.95vw] text-[#3B82F6] shrink-0" />
-              <p className="text-[0.66vw] text-[#475569] leading-tight font-normal">
+              <p className="text-[0.68vw] text-[#475569] leading-tight font-normal">
                 Your payment method will be linked only after successful authorization.
               </p>
             </div>
@@ -256,7 +256,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-[0.35vw] px-[1.05vw] py-[0.48vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.76vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
+              className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.1vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.78vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
             >
               <Icon icon="lucide:x" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2.2" />
               <span>Cancel</span>
@@ -264,7 +264,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSave, userName = 'Luffy' }) => {
 
             <button
               type="submit"
-              className="flex items-center gap-[0.38vw] px-[1.2vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.76vw] font-medium shadow-xs transition-all cursor-pointer"
+              className="h-[2.15vw] flex items-center gap-[0.38vw] px-[1.2vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d9442b] active:scale-[0.98] text-white text-[0.78vw] font-semibold shadow-xs transition-all cursor-pointer"
             >
               <Icon icon="lucide:credit-card" className="w-[0.8vw] h-[0.8vw]" strokeWidth="2.2" />
               <span>Add Payment Method</span>

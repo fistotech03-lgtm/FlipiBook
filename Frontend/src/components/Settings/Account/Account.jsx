@@ -138,19 +138,13 @@ const Account = () => {
   };
 
   return (
-    <div className="w-full flex flex-col relative font-sans">
-      {/* Toast Notification */}
+    <div className="w-full h-full flex flex-col bg-white rounded-[1.2vw] p-[1.8vw] overflow-y-auto custom-scrollbar relative font-sans">
+      {/* Toast Notification matching Notifications.jsx */}
       {notification.show && (
-        <div
-          className={`fixed top-[2vw] right-[2vw] z-50 flex items-center gap-[0.6vw] px-[1.1vw] py-[0.75vw] rounded-[0.6vw] shadow-lg border text-[0.8vw] font-medium transition-all animate-in fade-in slide-in-from-top-4 ${
-            notification.type === 'error'
-              ? 'bg-[#FEF2F2] border-[#FCA5A5] text-[#DC2626]'
-              : 'bg-[#F0FDF4] border-[#86EFAC] text-[#15803D]'
-          }`}
-        >
+        <div className="fixed top-[1.5vw] right-[2vw] z-50 bg-gray-900 text-white text-[0.78vw] px-[1.2vw] py-[0.6vw] rounded-[0.5vw] shadow-lg flex items-center gap-[0.5vw] animate-in fade-in slide-in-from-top-2">
           <Icon
-            icon={notification.type === 'error' ? 'solar:danger-circle-bold' : 'solar:check-circle-bold'}
-            className="w-[1.1vw] h-[1.1vw] shrink-0"
+            icon={notification.type === 'error' ? 'solar:danger-circle-bold' : 'lucide:check-circle-2'}
+            className={`w-[1vw] h-[1vw] shrink-0 ${notification.type === 'error' ? 'text-red-400' : 'text-green-400'}`}
           />
           <span>{notification.message}</span>
         </div>

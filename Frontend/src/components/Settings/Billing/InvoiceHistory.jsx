@@ -10,15 +10,15 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
   ];
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+    <div className="w-full bg-white border border-gray-100 rounded-[0.9vw] p-[1.3vw] shadow-xs mb-[1.3vw]">
       {/* Header: Icon + Title, Subtitle, Filter Dropdown, and View All link */}
-      <div className="flex items-start justify-between gap-[1vw] mb-[1.3vw]">
+      <div className="flex items-start justify-between gap-[1vw] mb-[1.2vw]">
         <div>
           <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
-            <Icon icon="solar:document-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-            <h2 className="text-[0.98vw] font-medium text-gray-800">Invoice History</h2>
+            <Icon icon="solar:document-bold" className="w-[1.1vw] h-[1.1vw] text-[#EC5137]" />
+            <h2 className="text-[0.92vw] font-bold text-gray-900">Invoice History</h2>
           </div>
-          <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
+          <p className="text-[0.72vw] text-gray-400 pl-[1.65vw] font-normal">
             View and download your past invoices
           </p>
         </div>
@@ -28,7 +28,7 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
           <div className="relative">
             <button
               type="button"
-              className="flex items-center justify-between gap-[0.6vw] bg-white border border-gray-200 hover:border-gray-300 px-[0.85vw] py-[0.4vw] rounded-[0.5vw] text-[0.78vw] font-medium text-gray-700 transition-colors shadow-xs cursor-pointer"
+              className="h-[2.15vw] flex items-center justify-between gap-[0.6vw] bg-white border border-gray-200 hover:border-gray-300 px-[0.85vw] rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 transition-colors shadow-xs cursor-pointer"
             >
               <span>All Invoices</span>
               <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-500" strokeWidth="2" />
@@ -38,7 +38,7 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
           <button
             type="button"
             onClick={onViewAll}
-            className="flex items-center gap-[0.35vw] text-[#EC5137] hover:text-[#d63f2b] text-[0.78vw] font-medium transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center gap-[0.35vw] text-[#EC5137] hover:text-[#d9442b] text-[0.78vw] font-medium transition-colors cursor-pointer whitespace-nowrap"
           >
             <span>View All</span>
             <Icon icon="lucide:arrow-right" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2.2" />
@@ -47,9 +47,9 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
       </div>
 
       {/* Invoices Table Container */}
-      <div className="w-full border border-gray-200 rounded-[0.75vw] overflow-hidden">
+      <div className="w-full border border-gray-200 rounded-[0.65vw] overflow-hidden">
         {/* Table Header Row */}
-        <div className="w-full grid grid-cols-12 bg-[#f8f9fa] border-b border-gray-200 px-[1.2vw] py-[0.75vw] text-[0.76vw] font-medium text-gray-700 items-center">
+        <div className="w-full grid grid-cols-12 bg-[#f8f9fa] border-b border-gray-200 px-[1.2vw] py-[0.7vw] text-[0.74vw] font-semibold text-gray-700 items-center">
           <div className="col-span-3">Invoice</div>
           <div className="col-span-2">Date</div>
           <div className="col-span-2">Plan</div>
@@ -59,14 +59,14 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
         </div>
 
         {/* Table Body Rows */}
-        <div className="divide-y divide-gray-100 text-[0.75vw]">
+        <div className="divide-y divide-gray-100 text-[0.76vw]">
           {invoices.map((invoice, index) => (
             <div
               key={index}
-              className="w-full grid grid-cols-12 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors"
+              className="w-full grid grid-cols-12 items-center px-[1.2vw] py-[0.85vw] hover:bg-gray-50/50 transition-colors"
             >
               {/* Column 1: Invoice ID */}
-              <div className="col-span-3 font-medium text-gray-800">{invoice.id}</div>
+              <div className="col-span-3 font-semibold text-gray-800">{invoice.id}</div>
 
               {/* Column 2: Date */}
               <div className="col-span-2 text-gray-500 font-normal">{invoice.date}</div>
@@ -75,11 +75,11 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
               <div className="col-span-2 text-gray-500 font-normal">{invoice.plan}</div>
 
               {/* Column 4: Amount */}
-              <div className="col-span-2 font-medium text-gray-800">{invoice.amount}</div>
+              <div className="col-span-2 font-semibold text-gray-800">{invoice.amount}</div>
 
               {/* Column 5: Status Pill */}
               <div className="col-span-1 flex justify-center">
-                <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+                <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full inline-block">
                   Paid
                 </span>
               </div>
@@ -95,7 +95,7 @@ const InvoiceHistory = ({ onDownload, onViewAll }) => {
                 <button
                   type="button"
                   onClick={() => onDownload?.(invoice)}
-                  className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.75vw] py-[0.38vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer"
+                  className="h-[1.9vw] flex items-center gap-[0.3vw] bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-[0.72vw] font-medium px-[0.75vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer"
                 >
                   <span>Download</span>
                   <Icon icon="lucide:download" className="w-[0.8vw] h-[0.8vw]" strokeWidth="2" />

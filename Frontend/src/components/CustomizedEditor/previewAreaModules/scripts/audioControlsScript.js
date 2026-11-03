@@ -123,10 +123,31 @@ export const getAudioControlsScript = () => `  <script>
           // UI update helpers
           const updatePlayPauseIcon = (playing) => {
             const iconContainer = frame.querySelector('.play-pause-icon');
-            if (!iconContainer) return;
-            iconContainer.innerHTML = playing
-              ? getTemplatePauseIconSvg(tplId, iconColor, filterId)
-              : getTemplatePlayIconSvg(tplId, iconColor, filterId);
+            if (iconContainer) {
+              iconContainer.innerHTML = playing
+                ? getTemplatePauseIconSvg(tplId, iconColor, filterId)
+                : getTemplatePlayIconSvg(tplId, iconColor, filterId);
+            }
+
+            // Sync rotating disc animation
+            const diskGroup = frame.querySelector('.audio-disk');
+            if (diskGroup) {
+              if (playing) {
+                diskGroup.classList.add('audio-disk-spinning');
+              } else {
+                diskGroup.classList.remove('audio-disk-spinning');
+              }
+            }
+
+            // Sync wave equalizer animation
+            const waveGroup = frame.querySelector('.wave-equalizer');
+            if (waveGroup) {
+              if (playing) {
+                waveGroup.classList.add('audio-wave-animating');
+              } else {
+                waveGroup.classList.remove('audio-wave-animating');
+              }
+            }
           };
 
           const updateMuteIcon = (muted) => {

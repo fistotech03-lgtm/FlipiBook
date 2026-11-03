@@ -2156,9 +2156,12 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
-      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
-      if (typographyParent && typographyParent.id) {
-        resolvedId = typographyParent.id;
+      const isInternalTextOfTypography = el && ['text', 'tspan', 'foreignobject'].includes(el.tagName?.toLowerCase());
+      if (!isInternalTextOfTypography) {
+        const typographyParent = el?.closest?.('[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template]');
+        if (typographyParent && typographyParent.id) {
+          resolvedId = typographyParent.id;
+        }
       }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {

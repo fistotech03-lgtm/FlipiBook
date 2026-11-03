@@ -228,11 +228,11 @@ export const useCanvasAssetInsertion = ({
             const oldImg = svg.querySelector(`image[id="masked-img-${safeShapeId}"]`);
             if (oldImg) oldImg.remove();
 
-            // Set up SVG pattern inside shape's defs or root defs
-            let defs = shapeEl.querySelector('defs');
+            // Set up SVG pattern inside root defs
+            let defs = svg.querySelector('defs');
             if (!defs) {
               defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-              shapeEl.insertBefore(defs, shapeEl.firstChild);
+              svg.insertBefore(defs, svg.firstChild);
             }
 
             const patternId = `pattern-${targetShapeId}`;
@@ -243,19 +243,12 @@ export const useCanvasAssetInsertion = ({
               defs.appendChild(pattern);
             }
 
-            let bbox = { width: 100, height: 100, x: 0, y: 0 };
-            try {
-              bbox = targetNode.getBBox();
-            } catch(e) {}
-            if (bbox.width === 0 || bbox.height === 0) bbox = { width: 100, height: 100, x: 0, y: 0 };
-
-            const slotW = bbox.width;
-            const slotH = bbox.height;
-
             pattern.setAttribute('patternUnits', 'objectBoundingBox');
-            pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+            pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
             pattern.setAttribute('width', '1');
             pattern.setAttribute('height', '1');
+            pattern.removeAttribute('x');
+            pattern.removeAttribute('y');
             pattern.removeAttribute('patternTransform');
             pattern.removeAttribute('viewBox');
 
@@ -265,36 +258,27 @@ export const useCanvasAssetInsertion = ({
               pattern.appendChild(imageNode);
             }
 
-            imageNode.removeAttribute('preserveAspectRatio');
-            imageNode.removeAttribute('x');
-            imageNode.removeAttribute('y');
+            imageNode.setAttribute('width', '1');
+            imageNode.setAttribute('height', '1');
+            imageNode.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            imageNode.setAttribute('x', '0');
+            imageNode.setAttribute('y', '0');
+            imageNode.removeAttribute('transform');
             imageNode.setAttribute('href', dataUrl);
             imageNode.setAttribute('xlink:href', dataUrl);
             imageNode.setAttribute('opacity', '1');
 
-            const tempImg = new window.Image();
-            tempImg.onload = () => {
-              const imgW = tempImg.naturalWidth || tempImg.width || slotW;
-              const imgH = tempImg.naturalHeight || tempImg.height || slotH;
-              const scale = Math.max(slotW / imgW, slotH / imgH);
-              const finalW = imgW * scale;
-              const finalH = imgH * scale;
-              const tx = (slotW - finalW) / 2;
-              const ty = (slotH - finalH) / 2;
-              imageNode.setAttribute('width', imgW);
-              imageNode.setAttribute('height', imgH);
-              imageNode.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${tx} ${ty})`);
-              if (saveModifiedPageHtml) {
-                saveModifiedPageHtml(pageIdx, svg);
-              } else if (updatePageHtml) {
-                updatePageHtml(pageIdx, svg.outerHTML);
-              }
-            };
-            tempImg.src = dataUrl;
-
-            // Set pattern fill on both target node and group
+            // Set pattern fill on both target node and shapeEl
             targetNode.setAttribute('fill', `url(#${patternId})`);
-            shapeEl.setAttribute('fill', `url(#${patternId})`);
+            if (shapeEl !== targetNode) {
+              shapeEl.setAttribute('fill', `url(#${patternId})`);
+            }
+
+            if (saveModifiedPageHtml) {
+              saveModifiedPageHtml(pageIdx, svg);
+            } else if (updatePageHtml) {
+              updatePageHtml(pageIdx, svg.outerHTML);
+            }
 
             if (saveModifiedPageHtml) {
               saveModifiedPageHtml(pageIdx, svg);

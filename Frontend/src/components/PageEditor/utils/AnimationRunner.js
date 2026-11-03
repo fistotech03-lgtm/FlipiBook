@@ -42,6 +42,133 @@ export const initAnimationRunner = function(doc) {
 
   const LOOP_ANIMATIONS = ['pulse', 'tada', 'rubber-band', 'jello', 'heartbeat', 'glitch', 'neon-glow', 'swing', 'wobble', 'float'];
 
+  /* ===== EXTRA ELEMENT ANIMATIONS (added; existing animations untouched) ===== */
+  const EXTRA_WAAPI_ANIMATIONS = {
+    /* ---- Emphasis (new ones; heartbeat/swing/tada/wobble/jello/rubber-band already exist) ---- */
+    'flash': [
+      { opacity: 1 }, { opacity: 0, offset: 0.25 }, { opacity: 1, offset: 0.5 }, { opacity: 0, offset: 0.75 }, { opacity: 1 },
+    ],
+    'head-shake': [
+      { transform: 'perspective(400px) translateX(0px) rotateY(0deg)' },
+      { transform: 'perspective(400px) translateX(-6px) rotateY(-9deg)', offset: 0.065 },
+      { transform: 'perspective(400px) translateX(5px) rotateY(7deg)', offset: 0.185 },
+      { transform: 'perspective(400px) translateX(-3px) rotateY(-5deg)', offset: 0.315 },
+      { transform: 'perspective(400px) translateX(2px) rotateY(3deg)', offset: 0.435 },
+      { transform: 'perspective(400px) translateX(0px) rotateY(0deg)' },
+    ],
+    'shake-x': [
+      { transform: 'translateX(0px)' },
+      { transform: 'translateX(-10px)', offset: 0.1 }, { transform: 'translateX(10px)', offset: 0.2 },
+      { transform: 'translateX(-10px)', offset: 0.3 }, { transform: 'translateX(10px)', offset: 0.4 },
+      { transform: 'translateX(-10px)', offset: 0.5 }, { transform: 'translateX(10px)', offset: 0.6 },
+      { transform: 'translateX(-10px)', offset: 0.7 }, { transform: 'translateX(10px)', offset: 0.8 },
+      { transform: 'translateX(-10px)', offset: 0.9 }, { transform: 'translateX(0px)' },
+    ],
+    'shake-y': [
+      { transform: 'translateY(0px)' },
+      { transform: 'translateY(-10px)', offset: 0.1 }, { transform: 'translateY(10px)', offset: 0.2 },
+      { transform: 'translateY(-10px)', offset: 0.3 }, { transform: 'translateY(10px)', offset: 0.4 },
+      { transform: 'translateY(-10px)', offset: 0.5 }, { transform: 'translateY(10px)', offset: 0.6 },
+      { transform: 'translateY(-10px)', offset: 0.7 }, { transform: 'translateY(10px)', offset: 0.8 },
+      { transform: 'translateY(-10px)', offset: 0.9 }, { transform: 'translateY(0px)' },
+    ],
+    'jack-in-the-box': [
+      { transform: 'scale(0.1) rotate(30deg)', transformOrigin: 'center bottom', opacity: 0 },
+      { transform: 'scale(0.5) rotate(-10deg)', transformOrigin: 'center bottom', opacity: 1, offset: 0.5 },
+      { transform: 'scale(0.7) rotate(3deg)', transformOrigin: 'center bottom', opacity: 1, offset: 0.7 },
+      { transform: 'scale(1) rotate(0deg)', transformOrigin: 'center bottom', opacity: 1 },
+    ],
+    'hinge': [
+      { transform: 'translate(0px,0px) rotate(0deg)', transformOrigin: 'left top', opacity: 1 },
+      { transform: 'translate(0px,0px) rotate(80deg)', transformOrigin: 'left top', opacity: 1, offset: 0.2 },
+      { transform: 'translate(0px,0px) rotate(60deg)', transformOrigin: 'left top', opacity: 1, offset: 0.4 },
+      { transform: 'translate(0px,0px) rotate(80deg)', transformOrigin: 'left top', opacity: 1, offset: 0.6 },
+      { transform: 'translate(0px,0px) rotate(60deg)', transformOrigin: 'left top', opacity: 1, offset: 0.8 },
+      { transform: 'translate(0px,700px) rotate(60deg)', transformOrigin: 'left top', opacity: 0 },
+    ],
+
+    /* ---- Special ---- */
+    'swing-in': [
+      { transform: 'perspective(400px) rotateX(-100deg)', transformOrigin: 'center top', opacity: 0 },
+      { transform: 'perspective(400px) rotateX(60deg)', transformOrigin: 'center top', opacity: 1, offset: 0.4 },
+      { transform: 'perspective(400px) rotateX(-20deg)', transformOrigin: 'center top', opacity: 1, offset: 0.6 },
+      { transform: 'perspective(400px) rotateX(10deg)', transformOrigin: 'center top', opacity: 1, offset: 0.8 },
+      { transform: 'perspective(400px) rotateX(0deg)', transformOrigin: 'center top', opacity: 1 },
+    ],
+    'spiral-in': [
+      { transform: 'rotate(-720deg) scale(0)', opacity: 0 },
+      { transform: 'rotate(0deg) scale(1)', opacity: 1 },
+    ],
+    'spiral-out': [
+      { transform: 'rotate(0deg) scale(1)', opacity: 1 },
+      { transform: 'rotate(720deg) scale(0)', opacity: 0 },
+    ],
+    // Shape "morph" built from scale + skew + rotate (border-radius does not work on SVG nodes)
+    'morph': [
+      { transform: 'scale(0.3,1.6) skew(-20deg,0deg) rotate(-15deg)', opacity: 0 },
+      { transform: 'scale(1.3,0.8) skew(12deg,0deg) rotate(8deg)', opacity: 1, offset: 0.4 },
+      { transform: 'scale(0.92,1.06) skew(-5deg,0deg) rotate(-3deg)', opacity: 1, offset: 0.7 },
+      { transform: 'scale(1,1) skew(0deg,0deg) rotate(0deg)', opacity: 1 },
+    ],
+    'skew-in': [
+      { transform: 'translate(-100px,0px) skew(-30deg,0deg)', opacity: 0 },
+      { transform: 'translate(20px,0px) skew(15deg,0deg)', opacity: 1, offset: 0.6 },
+      { transform: 'translate(-5px,0px) skew(-5deg,0deg)', opacity: 1, offset: 0.8 },
+      { transform: 'translate(0px,0px) skew(0deg,0deg)', opacity: 1 },
+    ],
+    'skew-out': [
+      { transform: 'translate(0px,0px) skew(0deg,0deg)', opacity: 1 },
+      { transform: 'translate(-10px,0px) skew(-5deg,0deg)', opacity: 1, offset: 0.2 },
+      { transform: 'translate(100px,0px) skew(30deg,0deg)', opacity: 0 },
+    ],
+    'elastic-in': [
+      { transform: 'scale(0)', opacity: 0 },
+      { transform: 'scale(1.25)', opacity: 1, offset: 0.3 },
+      { transform: 'scale(0.9)', opacity: 1, offset: 0.5 },
+      { transform: 'scale(1.08)', opacity: 1, offset: 0.7 },
+      { transform: 'scale(0.97)', opacity: 1, offset: 0.85 },
+      { transform: 'scale(1)', opacity: 1 },
+    ],
+    'elastic-out': [
+      { transform: 'scale(1)', opacity: 1 },
+      { transform: 'scale(0.88)', opacity: 1, offset: 0.2 },
+      { transform: 'scale(1.18)', opacity: 1, offset: 0.4 },
+      { transform: 'scale(0)', opacity: 0 },
+    ],
+    // Expand = grows in sideways, Collapse = shrinks away vertically
+    'expand': [
+      { transform: 'scale(0.001,1)', opacity: 0 },
+      { transform: 'scale(1,1)', opacity: 1 },
+    ],
+    'collapse': [
+      { transform: 'scale(1,1)', opacity: 1 },
+      { transform: 'scale(1,0.001)', opacity: 0 },
+    ],
+    'blur-out': [
+      { filter: 'blur(0px)', opacity: 1 },
+      { filter: 'blur(20px)', opacity: 0 },
+    ],
+    'zoom-out-up': [
+      { transform: 'translate(0px,0px) scale(1)', opacity: 1 },
+      { transform: 'translate(0px,60px) scale(0.475)', opacity: 1, offset: 0.4 },
+      { transform: 'translate(0px,-300px) scale(0.1)', opacity: 0 },
+    ],
+    'zoom-out-down': [
+      { transform: 'translate(0px,0px) scale(1)', opacity: 1 },
+      { transform: 'translate(0px,-60px) scale(0.475)', opacity: 1, offset: 0.4 },
+      { transform: 'translate(0px,300px) scale(0.1)', opacity: 0 },
+    ],
+  };
+
+
+  const EXTRA_LOOP_ANIMATIONS = ['flash', 'head-shake', 'shake-x', 'shake-y'];
+
+
+  Object.assign(WAAPI_ANIMATIONS, EXTRA_WAAPI_ANIMATIONS);
+  LOOP_ANIMATIONS.push(...EXTRA_LOOP_ANIMATIONS);
+  /* ===== END EXTRA ELEMENT ANIMATIONS ===== */
+
+
   const getWaapiEase = (name) => {
     const map = {
       'Linear': 'linear',

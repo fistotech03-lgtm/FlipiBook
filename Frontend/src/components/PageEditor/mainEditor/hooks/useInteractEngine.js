@@ -38,6 +38,7 @@ export const useInteractEngine = ({
   saveModifiedPageHtml,
   getDraggableElement,
   getTopLevelFrames,
+  isPageRootElement,
   hitTest,
   selectedLayerIdRef,
   multiSelectedIdsRef,
@@ -290,7 +291,9 @@ export const useInteractEngine = ({
                           selEl.getAttribute('data-type') === 'map' ||
                           selEl.getAttribute('data-type') === 'embed-frame' ||
                           selEl.getAttribute('data-type') === 'slideshow' ||
-                          selEl.getAttribute('data-type') === 'audio-frame';
+                          selEl.getAttribute('data-type') === 'audio-frame' ||
+                          selEl.getAttribute('data-type') === 'table-frame' ||
+                          (selEl.id && selEl.id.startsWith('table-'));
 
                         const isChildOfSelected = !isCompoundGroup && target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
                         elementToDrag = isChildOfSelected ? target : selEl;
@@ -356,17 +359,17 @@ export const useInteractEngine = ({
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             ) || (elementToDrag?.tagName?.toLowerCase() === 'g' && elementToDrag?.matches?.(
               '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
               '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
               '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
-              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"], [data-type="table-frame"], g[id^="table-"]'
             ) ? elementToDrag : null) || elementToDrag?.closest?.(
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             );
             if (compoundParent) {
               elementToDrag = compoundParent;
@@ -411,13 +414,47 @@ export const useInteractEngine = ({
             }
 
             // 2. AUTO-SELECT if not already selected
+            const isMultiKey = Boolean(event.shiftKey || event.metaKey || (event.ctrlKey && !event.altKey));
             const isSelected = (selectedLayerIdRef.current === elementToDrag.id) ||
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
-            if (!isSelected) {
+            if (isMultiKey) {
+              if (isPageRootElement(elementToDrag, svgElement)) {
+                return;
+              }
+              const nextSet = new Set(multiSelectedIdsRef.current);
+              const primaryId = selectedLayerIdRef.current;
+              const primaryEl = primaryId ? svgElement.querySelector(`[id="${primaryId}"]`) : null;
+              if (primaryId && !isPageRootElement(primaryEl, svgElement)) {
+                nextSet.add(primaryId);
+              }
+              // Purge any root elements
+              for (const id of Array.from(nextSet)) {
+                const el = svgElement.querySelector(`[id="${id}"]`);
+                if (isPageRootElement(el, svgElement)) {
+                  nextSet.delete(id);
+                }
+              }
+              if (nextSet.has(elementToDrag.id)) {
+                nextSet.delete(elementToDrag.id);
+                const remaining = [...nextSet];
+                selectedLayerIdRef.current = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+              } else {
+                nextSet.add(elementToDrag.id);
+                selectedLayerIdRef.current = elementToDrag.id;
+              }
+              multiSelectedIdsRef.current = nextSet;
+              const idToSelect = selectedLayerIdRef.current;
+              queueMicrotask(() => {
+                if (setSelectedLayerId) setSelectedLayerId(idToSelect);
+                if (setMultiSelectedIds) setMultiSelectedIds(nextSet);
+              });
+            } else if (!isSelected) {
               // Force update refs immediately so drag logic sees the selection
+              const isRoot = isPageRootElement(elementToDrag, svgElement);
               selectedLayerIdRef.current = elementToDrag.id;
-              multiSelectedIdsRef.current = new Set([elementToDrag.id]);
+              const nextMulti = isRoot ? new Set() : new Set([elementToDrag.id]);
+              multiSelectedIdsRef.current = nextMulti;
 
               // Clear previous stale selection overlays immediately before drawing new one
               clearOverlayType('selected');
@@ -432,7 +469,7 @@ export const useInteractEngine = ({
               const idToSelect = elementToDrag.id;
               queueMicrotask(() => {
                 if (setSelectedLayerId) setSelectedLayerId(idToSelect);
-                if (setMultiSelectedIds) setMultiSelectedIds(new Set([idToSelect]));
+                if (setMultiSelectedIds) setMultiSelectedIds(nextMulti);
               });
             }
 
@@ -1383,8 +1420,9 @@ export const useInteractEngine = ({
               if (overlay) {
                 const attrsToSync = ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'transform', 'points'];
                 const svg = targetEl.ownerSVGElement;
-                const clip = svg?.querySelector(`clipPath[id="clip-shape-${targetEl.id}"]`);
-                const mask = svg?.querySelector(`mask[id="mask-shape-${targetEl.id}"]`);
+                const safeId = (targetEl.id || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+                const clip = svg?.querySelector(`clipPath[id="clip-shape-${safeId}"]`);
+                const mask = svg?.querySelector(`mask[id="mask-shape-${safeId}"]`);
                 const refShape = clip ? clip.firstChild : (mask ? mask.lastChild : null);
 
                 attrsToSync.forEach(attr => {

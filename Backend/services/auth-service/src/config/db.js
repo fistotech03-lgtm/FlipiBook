@@ -8,6 +8,7 @@ try {
 } catch (_) {
   mongoose = require('mongoose');
 }
+global.mongoose = mongoose;
 
 // Configure reliable DNS servers for Atlas SRV resolution
 try {

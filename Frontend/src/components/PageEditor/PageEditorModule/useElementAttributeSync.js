@@ -5,6 +5,7 @@
  */
 
 import { parseLayersFromSVG, syncGradient, syncFilters } from './svgFilterUtils';
+import { applySvgGradientOrSolid } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
 
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     const updateElementAttribute = (pageIndex, elementId, attribute, value) => {
@@ -98,6 +99,44 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
                     if (attr === 'paint-order') child.style.paintOrder = val;
                   }
                 });
+              }
+
+              if (attr === 'data-original-fill') {
+                const fillAttr = element.getAttribute('fill') || element.querySelector?.('path, polygon, rect, circle, ellipse')?.getAttribute('fill') || '';
+                const m = fillAttr.match(/url\(['"]?#([^)'"]+)['"]?\)/);
+                if (m && m[1]) {
+                  const pat = doc.querySelector(`pattern[id="${m[1]}"]`);
+                  let r = pat?.querySelector('rect.mask-bg-fill');
+                  if (!r && pat) {
+                    r = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    r.setAttribute('class', 'mask-bg-fill');
+                    pat.insertBefore(r, pat.firstChild);
+                  }
+                  if (r) {
+                    if (pat.getAttribute('patternUnits') === 'userSpaceOnUse') {
+                      const baseW = parseFloat(element.getAttribute('data-slot-base-w') || 100);
+                      const baseH = parseFloat(element.getAttribute('data-slot-base-h') || 100);
+                      const padX = Math.max(baseW * 2, 200);
+                      const padY = Math.max(baseH * 2, 200);
+                      r.setAttribute('x', String(padX));
+                      r.setAttribute('y', String(padY));
+                      r.setAttribute('width', String(baseW));
+                      r.setAttribute('height', String(baseH));
+                    } else {
+                      r.setAttribute('x', '0');
+                      r.setAttribute('y', '0');
+                      r.setAttribute('width', '1');
+                      r.setAttribute('height', '1');
+                    }
+                    applySvgGradientOrSolid({
+                      targetEl: r,
+                      fillVal: val,
+                      idPrefix: `grad-${m[1]}-bg`,
+                      doc,
+                      svgRoot: doc.querySelector('svg')
+                    });
+                  }
+                }
               }
 
               if ((attr === 'fill' || attr === 'stroke' || attr === 'stroke-width' || attr === 'stroke-dasharray') && element.getAttribute('data-type') === 'icon') {
@@ -303,7 +342,13 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
                 Array.from(targetShape.attributes).forEach(a => path.setAttribute(a.name, a.value));
                 path.setAttribute('d', d);
                 path.setAttribute('data-shape-type', 'rectangle');
-                targetShape.parentNode.replaceChild(path, targetShape);
+                if (targetShape.parentNode) {
+                  targetShape.parentNode.replaceChild(path, targetShape);
+                }
+                if (element === targetShape) {
+                  element = path;
+                }
+                targetShape = path;
               } else {
                 targetShape.setAttribute('d', d);
               }
@@ -416,15 +461,25 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
           if (element.tagName.toLowerCase() === 'g') {
             const children = element.querySelectorAll('path, rect, circle, ellipse, polyline, polygon');
             children.forEach(child => {
+              const childFill = child.getAttribute('fill') || '';
+              const isChildPatternMask = childFill.includes('url(#pattern-') ||
+                child.getAttribute('data-mask-enabled') === 'true' ||
+                element.getAttribute('data-mask-enabled') === 'true' ||
+                child.hasAttribute('data-masked-image-url') ||
+                element.hasAttribute('data-masked-image-url');
+
               updates.forEach(([attr]) => {
                 if (element.getAttribute('data-type') !== 'icon') {
+                  if (attr === 'fill' && isChildPatternMask) {
+                    return;
+                  }
                   if (attr === 'fill' || attr === 'stroke' || attr === 'stroke-width' || attr === 'stroke-dasharray' || attr === 'opacity') {
                     child.removeAttribute(attr);
                     if (child.style) child.style.removeProperty(attr);
                   }
                 }
               });
-              if (hasFillGrad) {
+              if (hasFillGrad && !isChildPatternMask) {
                 child.removeAttribute('fill');
                 if (child.style) child.style.removeProperty('fill');
               }

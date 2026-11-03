@@ -2,12 +2,12 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Golden Shelf Assets
-import goldenShelfBase from '../../../assets/Bookshelf/golden_shelf/base.png';
-import goldenShelfPlank from '../../../assets/Bookshelf/golden_shelf/shelf.png';
-import goldenShelfLight from '../../../assets/Bookshelf/golden_shelf/light.png';
-import goldenShelfDecor from '../../../assets/Bookshelf/golden_shelf/decor.png';
-import goldenShelfPlant from '../../../assets/Bookshelf/golden_shelf/plant.png';
-import goldenShelfSwitch from '../../../assets/Bookshelf/golden_shelf/switch.png';
+import goldenShelfBase from '../../../../assets/Bookshelf/golden_shelf/base.png';
+import goldenShelfPlank from '../../../../assets/Bookshelf/golden_shelf/shelf.png';
+import goldenShelfLight from '../../../../assets/Bookshelf/golden_shelf/light.png';
+import goldenShelfDecor from '../../../../assets/Bookshelf/golden_shelf/decor.png';
+import goldenShelfPlant from '../../../../assets/Bookshelf/golden_shelf/plant.png';
+import goldenShelfSwitch from '../../../../assets/Bookshelf/golden_shelf/switch.png';
 
 const GoldenShelf = ({
   filteredBooks,

@@ -2,12 +2,12 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Blue Rope Shelf Assets
-import blueFrameBase from '../../../assets/Bookshelf/blue_frame/base.png';
-import blueFrameLeftShelf from '../../../assets/Bookshelf/blue_frame/leftshelf.png';
-import blueFrameLight from '../../../assets/Bookshelf/blue_frame/light.png';
-import blueFrameDecor from '../../../assets/Bookshelf/blue_frame/decor.png';
-import blueFrameRopeShelf from '../../../assets/Bookshelf/blue_frame/rope_shelf.png';
-import blueFrameSwitch from '../../../assets/Bookshelf/blue_frame/switch.png';
+import blueFrameBase from '../../../../assets/Bookshelf/blue_frame/base.png';
+import blueFrameLeftShelf from '../../../../assets/Bookshelf/blue_frame/leftshelf.png';
+import blueFrameLight from '../../../../assets/Bookshelf/blue_frame/light.png';
+import blueFrameDecor from '../../../../assets/Bookshelf/blue_frame/decor.png';
+import blueFrameRopeShelf from '../../../../assets/Bookshelf/blue_frame/rope_shelf.png';
+import blueFrameSwitch from '../../../../assets/Bookshelf/blue_frame/switch.png';
 
 const BlueRopeShelf = ({
   filteredBooks,

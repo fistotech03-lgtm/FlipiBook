@@ -2,11 +2,11 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Blue Shelf Assets
-import blueshelfwood from '../../../assets/Bookshelf/blueshelf/blueshelfwood.webp';
-import bluedecor from '../../../assets/Bookshelf/blueshelf/bluedecor.webp';
-import blueLamp from '../../../assets/Bookshelf/blueshelf/Lamp.png';
-import blueBookWithPot from '../../../assets/Bookshelf/blueshelf/bookwithpot.png';
-import blueSwitch from '../../../assets/Bookshelf/blueshelf/switch.png';
+import blueshelfwood from '../../../../assets/Bookshelf/blueshelf/blueshelfwood.webp';
+import bluedecor from '../../../../assets/Bookshelf/blueshelf/bluedecor.webp';
+import blueLamp from '../../../../assets/Bookshelf/blueshelf/Lamp.png';
+import blueBookWithPot from '../../../../assets/Bookshelf/blueshelf/bookwithpot.png';
+import blueSwitch from '../../../../assets/Bookshelf/blueshelf/switch.png';
 
 const BlueShelf = ({
   filteredBooks = [],

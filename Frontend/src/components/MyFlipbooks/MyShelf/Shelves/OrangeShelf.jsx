@@ -2,17 +2,17 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Orange Shelf Assets
-import orangeShelfImg from '../../../assets/Bookshelf/orange_shelf/orange_shelf.png';
-import orangeSheet from '../../../assets/Bookshelf/orange_shelf/orangesheet.png';
-import orangeBase from '../../../assets/Bookshelf/orange_shelf/base.png';
-import orangeLeftWood from '../../../assets/Bookshelf/orange_shelf/leftwood.png';
-import orangeWaveShelf from '../../../assets/Bookshelf/orange_shelf/shelf.png';
-import orangeLamp from '../../../assets/Bookshelf/orange_shelf/lamp.png';
-import orangeGlobe from '../../../assets/Bookshelf/orange_shelf/globedecor.png';
-import orangeShelfPlant from '../../../assets/Bookshelf/orange_shelf/shelfplant.png';
-import orangeBookDecor from '../../../assets/Bookshelf/orange_shelf/bookdecor.png';
-import orangePlant from '../../../assets/Bookshelf/orange_shelf/plant.png';
-import orangeSwitch from '../../../assets/Bookshelf/orange_shelf/switch.png';
+import orangeShelfImg from '../../../../assets/Bookshelf/orange_shelf/orange_shelf.png';
+import orangeSheet from '../../../../assets/Bookshelf/orange_shelf/orangesheet.png';
+import orangeBase from '../../../../assets/Bookshelf/orange_shelf/base.png';
+import orangeLeftWood from '../../../../assets/Bookshelf/orange_shelf/leftwood.png';
+import orangeWaveShelf from '../../../../assets/Bookshelf/orange_shelf/shelf.png';
+import orangeLamp from '../../../../assets/Bookshelf/orange_shelf/lamp.png';
+import orangeGlobe from '../../../../assets/Bookshelf/orange_shelf/globedecor.png';
+import orangeShelfPlant from '../../../../assets/Bookshelf/orange_shelf/shelfplant.png';
+import orangeBookDecor from '../../../../assets/Bookshelf/orange_shelf/bookdecor.png';
+import orangePlant from '../../../../assets/Bookshelf/orange_shelf/plant.png';
+import orangeSwitch from '../../../../assets/Bookshelf/orange_shelf/switch.png';
 
 const OrangeShelf = ({
   filteredBooks,

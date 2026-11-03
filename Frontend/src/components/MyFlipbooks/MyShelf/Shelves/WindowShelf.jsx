@@ -2,12 +2,12 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Window Shelf Assets
-import windowShelfWindow from '../../../assets/Bookshelf/window_shelf/window.png';
-import windowShelfBase from '../../../assets/Bookshelf/window_shelf/base.png';
-import windowShelfPlank from '../../../assets/Bookshelf/window_shelf/shelf.png';
-import windowShelfPlant from '../../../assets/Bookshelf/window_shelf/plant.png';
-import windowShelfLight from '../../../assets/Bookshelf/window_shelf/light.png';
-import windowShelfSwitch from '../../../assets/Bookshelf/window_shelf/switch.png';
+import windowShelfWindow from '../../../../assets/Bookshelf/window_shelf/window.png';
+import windowShelfBase from '../../../../assets/Bookshelf/window_shelf/base.png';
+import windowShelfPlank from '../../../../assets/Bookshelf/window_shelf/shelf.png';
+import windowShelfPlant from '../../../../assets/Bookshelf/window_shelf/plant.png';
+import windowShelfLight from '../../../../assets/Bookshelf/window_shelf/light.png';
+import windowShelfSwitch from '../../../../assets/Bookshelf/window_shelf/switch.png';
 
 const WindowShelf = ({
   filteredBooks,

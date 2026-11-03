@@ -817,29 +817,29 @@ const Profile = () => {
                 <div className="flex flex-col gap-[0.7vw]">
                   <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
                     <Icon icon="solar:user-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
-                    <h3 className="text-[0.82vw] font-semibold text-gray-900 tracking-tight leading-none">Profile Details</h3>
+                    <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Profile Details</h3>
                   </div>
 
                   <div className="flex flex-col gap-[0.7vw] pl-[0.1vw]">
                     {/* Full Name */}
                     {displayUser.name || displayUser.displayName ? (
                       <div>
-                        <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Full Name</p>
-                        <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                        <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Full Name</p>
+                        <p className="text-[0.78vw] text-gray-800 font-medium leading-snug mt-[0.15vw]">
                           {displayUser.name || displayUser.displayName}
                         </p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-[0.35vw]">
-                        <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Full Name</p>
-                        <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                        <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Full Name</p>
+                        <span className="text-[0.74vw] text-gray-400 font-medium leading-none">-</span>
                       </div>
                     )}
 
                     {/* Profile Type */}
                     <div>
-                      <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Profile Type</p>
-                      <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                      <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Profile Type</p>
+                      <p className="text-[0.78vw] text-gray-800 font-medium leading-snug mt-[0.15vw]">
                         {displayUser.profileType || 'Individual'}
                       </p>
                     </div>
@@ -1069,7 +1069,7 @@ const Profile = () => {
                   <div className="flex flex-col gap-[0.7vw]">
                     <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
                       <Icon icon="solar:map-point-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
-                      <h3 className="text-[0.82vw] font-semibold text-gray-900 tracking-tight leading-none">Contact & Location</h3>
+                      <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Contact & Location</h3>
                     </div>
 
                     <div className="flex flex-col gap-[0.7vw] pl-[0.1vw]">
@@ -1167,8 +1167,8 @@ const Profile = () => {
                     return (
                       <div className="flex items-center gap-[0.35vw]">
                         <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
-                          <Icon icon="streamline-ultimate:corporate-social-media" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
-                          <h3 className="text-[0.82vw] font-semibold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
+                          <Icon icon="solar:share-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                          <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
                         </div>
                         <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
                       </div>
@@ -1178,8 +1178,8 @@ const Profile = () => {
                   return (
                     <div className="flex flex-col gap-[0.7vw]">
                       <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
-                        <Icon icon="streamline-ultimate:corporate-social-media" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
-                        <h3 className="text-[0.82vw] font-semibold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
+                        <Icon icon="solar:share-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                        <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
                       </div>
 
                       <div className="flex items-center gap-[0.55vw] mt-[0.1vw] flex-wrap">
@@ -1266,8 +1266,8 @@ const Profile = () => {
               {/* Header Area: Title on Left, Action Buttons on Right in the SAME LINE */}
               <div className="pt-[1.2vw] pl-[1.5vw] pr-[1.5vw] pb-[0.8vw] relative flex-shrink-0 z-[60] flex items-center justify-between border-b border-gray-100">
                 <div>
-                  <h2 className="text-[1.15vw] font-medium text-gray-800 tracking-tight leading-none">Edit Profile</h2>
-                  <p className="text-[0.72vw] text-gray-400 mt-[0.35vw]">Only your actions and activities will appear here.</p>
+                  <h2 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">Edit Profile</h2>
+                  <p className="text-[0.78vw] text-gray-500 mt-[0.35vw]">Only your actions and activities will appear here.</p>
                 </div>
 
                 {/* Action Buttons: Hidden until user types/makes changes */}
@@ -1278,20 +1278,20 @@ const Profile = () => {
                         type="button"
                         disabled={editProfileActions.isSaving}
                         onClick={editProfileActions.handleCancel}
-                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] border border-gray-300 rounded-[0.5vw] text-[0.85vw] font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.1vw] border border-gray-200 rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                       >
-                        <X className="w-[1vw] h-[1vw] text-gray-500" strokeWidth={1.8} /> Cancel
+                        <X className="w-[0.9vw] h-[0.9vw] text-gray-500" strokeWidth={2} /> Cancel
                       </button>
                       <button
                         type="button"
                         disabled={editProfileActions.isSaving}
                         onClick={editProfileActions.handleSave}
-                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] bg-[#43A047] hover:bg-[#388E3C] rounded-[0.5vw] text-[0.85vw] font-medium text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.2vw] bg-[#EC5137] hover:bg-[#d9442b] rounded-[0.55vw] text-[0.78vw] font-semibold text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                       >
                         {editProfileActions.isSaving ? (
-                          <Icon icon="line-md:loading-loop" className="w-[1vw] h-[1vw]" />
+                          <Icon icon="line-md:loading-loop" className="w-[0.9vw] h-[0.9vw]" />
                         ) : (
-                          <Check className="w-[1vw] h-[1vw] text-white" strokeWidth={2.5} />
+                          <Check className="w-[0.9vw] h-[0.9vw] text-white" strokeWidth={2.5} />
                         )}
                         {editProfileActions.isSaving
                           ? (editProfileActions.isAlreadySaved ? 'Updating...' : 'Saving...')

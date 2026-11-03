@@ -2,16 +2,16 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Plant-Light Shelf Assets
-import plantLightShadowSheet from '../../../assets/Bookshelf/plant-light/shadowsheet.png';
-import plantLightLeftDecor from '../../../assets/Bookshelf/plant-light/leftdecor.png';
-import plantLightBase from '../../../assets/Bookshelf/plant-light/base.png';
-import plantLightShelf1 from '../../../assets/Bookshelf/plant-light/shelf1.png';
-import plantLightShelf2 from '../../../assets/Bookshelf/plant-light/shelf2.png';
-import plantLightPlant from '../../../assets/Bookshelf/plant-light/plant.png';
-import plantLightDecor from '../../../assets/Bookshelf/plant-light/decor.png';
-import plantLightLeaf from '../../../assets/Bookshelf/plant-light/leaf.png';
-import plantLightLamp from '../../../assets/Bookshelf/plant-light/lamp.png';
-import plantLightSwitch from '../../../assets/Bookshelf/plant-light/switch.png';
+import plantLightShadowSheet from '../../../../assets/Bookshelf/plant-light/shadowsheet.png';
+import plantLightLeftDecor from '../../../../assets/Bookshelf/plant-light/leftdecor.png';
+import plantLightBase from '../../../../assets/Bookshelf/plant-light/base.png';
+import plantLightShelf1 from '../../../../assets/Bookshelf/plant-light/shelf1.png';
+import plantLightShelf2 from '../../../../assets/Bookshelf/plant-light/shelf2.png';
+import plantLightPlant from '../../../../assets/Bookshelf/plant-light/plant.png';
+import plantLightDecor from '../../../../assets/Bookshelf/plant-light/decor.png';
+import plantLightLeaf from '../../../../assets/Bookshelf/plant-light/leaf.png';
+import plantLightLamp from '../../../../assets/Bookshelf/plant-light/lamp.png';
+import plantLightSwitch from '../../../../assets/Bookshelf/plant-light/switch.png';
 
 const PlantLightShelf = ({
   filteredBooks,

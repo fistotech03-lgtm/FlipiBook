@@ -142,7 +142,7 @@ const ProfilePhoneField = ({ value, countryCode, onChange, onBlur, placeholder =
           height: 0 !important;
         }
       `}</style>
-      <div className="profile-phone-container w-full h-[2.5vw] relative">
+      <div className="profile-phone-container w-full h-[2.15vw] relative">
         <PhoneInput
           country={selectedCountry}
           preferredCountries={['in', 'us', 'gb']}
@@ -848,14 +848,14 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
             <Icon icon="solar:user-bold" className="w-[1.2vw] h-[1.2vw] text-gray-900" />
-            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Profile Details</h3>
+            <h3 className="text-[0.92vw] font-bold text-gray-900 tracking-tight">Profile Details</h3>
           </div>
 
           <div className="flex flex-col gap-[1.3vw]">
             {/* Row 1: Full Name & Display Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -867,13 +867,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     if (errors.name) validateField('name', e.target.value);
                   }}
                   onBlur={(e) => validateField('name', e.target.value)}
-                  className={`w-full h-[2.5vw] border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
+                  className={`w-full h-[2.15vw] border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400`}
                 />
                 {errors.name && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.name}</p>}
               </div>
 
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Display Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -885,7 +885,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     if (errors.displayName) validateField('displayName', e.target.value);
                   }}
                   onBlur={(e) => validateField('displayName', e.target.value)}
-                  className={`w-full h-[2.5vw] border ${errors.displayName ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
+                  className={`w-full h-[2.15vw] border ${errors.displayName ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400`}
                 />
                 {errors.displayName && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.displayName}</p>}
               </div>
@@ -893,19 +893,19 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
             {/* Row 2: Email ID */}
             <div>
-              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+              <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                 Email ID <span className="text-red-500">*</span>
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
-                  <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
+                  <Icon icon="logos:google-icon" className="w-[1vw] h-[1vw]" />
                 </div>
                 <input
                   type="email"
                   placeholder="luffyonepiece@gmail.com"
                   value={editedUser?.email || ''}
                   disabled
-                  className="w-full h-[2.5vw] border border-gray-200 bg-white cursor-default pointer-events-none rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none text-gray-700 font-normal"
+                  className="w-full h-[2.15vw] border border-gray-200 bg-white cursor-default pointer-events-none rounded-[0.55vw] pl-[2.6vw] pr-[0.85vw] text-[0.78vw] focus:outline-none text-gray-700 font-normal"
                 />
               </div>
               {errors.email && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.email}</p>}
@@ -914,7 +914,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             {/* Row 3: Profile Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div className="relative" ref={profileTypeRef}>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Profile Type <span className="text-red-500">*</span>
                 </label>
                 <div
@@ -923,9 +923,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     setIsIndustryOpen(false);
                     setIsExperienceOpen(false);
                   }}
-                  className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                  className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                 >
-                  <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                  <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                     <Icon icon={profileTypeOptions.find(p => p.label === (editedUser?.profileType || 'Individual'))?.icon || 'lucide:user'} className="w-[1vw] h-[1vw] text-gray-900" />
                     <span className="font-normal text-gray-800">{editedUser?.profileType || 'Individual'}</span>
                   </div>
@@ -959,7 +959,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
                   <div className="relative" ref={industryRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
                     <div
@@ -968,9 +968,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsCompanySizeOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
                       </div>
@@ -978,7 +978,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isIndustryOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {industryOptions.map((ind) => (
                           <div
                             key={ind.label}
@@ -986,7 +986,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ industryType: ind.label, industry: ind.label });
                               setIsIndustryOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
                             <span>{ind.label}</span>
@@ -998,7 +998,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Company / Organization Name */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Company / Organization Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1006,7 +1006,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       placeholder="Fist-o Tech Private Limited"
                       value={editedUser?.companyName || editedUser?.businessName || ''}
                       onChange={(e) => updateEditedUser({ companyName: e.target.value, businessName: e.target.value })}
-                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
@@ -1015,7 +1015,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Company Size */}
                   <div className="relative" ref={companySizeRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Company Size
                     </label>
                     <div
@@ -1024,9 +1024,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:building-2" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.companySize || '100 - 120 Peoples'}</span>
                       </div>
@@ -1034,7 +1034,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isCompanySizeOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {companySizeOptions.map((size) => (
                           <div
                             key={size}
@@ -1042,7 +1042,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ companySize: size });
                               setIsCompanySizeOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.companySize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.companySize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <span>{size}</span>
                           </div>
@@ -1053,19 +1053,19 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Business Gmail */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Business Gmail
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
-                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1vw] h-[1vw]" />
                       </div>
                       <input
                         type="email"
                         placeholder="fistotech@gmail.com"
                         value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
                         onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
-                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.6vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                       />
                     </div>
                   </div>
@@ -1077,7 +1077,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
                   <div className="relative" ref={industryRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
                     <div
@@ -1086,9 +1086,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsTeamSizeOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
                       </div>
@@ -1096,7 +1096,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isIndustryOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {industryOptions.map((ind) => (
                           <div
                             key={ind.label}
@@ -1104,7 +1104,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ industryType: ind.label, industry: ind.label });
                               setIsIndustryOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
                             <span>{ind.label}</span>
@@ -1116,7 +1116,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Agency Name */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Agency Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1124,7 +1124,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       placeholder="Fist-o Tech Private Limited"
                       value={editedUser?.agencyName || editedUser?.companyName || editedUser?.businessName || ''}
                       onChange={(e) => updateEditedUser({ agencyName: e.target.value, companyName: e.target.value, businessName: e.target.value })}
-                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
@@ -1133,7 +1133,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Team Size */}
                   <div className="relative" ref={teamSizeRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Team Size
                     </label>
                     <div
@@ -1142,9 +1142,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:users" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.teamSize || '40 - 50 Peoples'}</span>
                       </div>
@@ -1152,7 +1152,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isTeamSizeOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {teamSizeOptions.map((size) => (
                           <div
                             key={size}
@@ -1160,7 +1160,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ teamSize: size });
                               setIsTeamSizeOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.teamSize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.teamSize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <span>{size}</span>
                           </div>
@@ -1171,19 +1171,19 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Business Gmail */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Business Gmail
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
-                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1vw] h-[1vw]" />
                       </div>
                       <input
                         type="email"
                         placeholder="fistotech@gmail.com"
                         value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
                         onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
-                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.6vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                       />
                     </div>
                   </div>
@@ -1195,7 +1195,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
                   <div className="relative" ref={industryRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
                     <div
@@ -1204,9 +1204,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsExperienceOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
                       </div>
@@ -1214,7 +1214,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isIndustryOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {industryOptions.map((ind) => (
                           <div
                             key={ind.label}
@@ -1222,7 +1222,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ industryType: ind.label, industry: ind.label });
                               setIsIndustryOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
                             <span>{ind.label}</span>
@@ -1234,7 +1234,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Business / Brand Name */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Business / Brand Name
                     </label>
                     <input
@@ -1242,7 +1242,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       placeholder="Fist-o Tech Private Limited"
                       value={editedUser?.companyName || editedUser?.businessName || ''}
                       onChange={(e) => updateEditedUser({ companyName: e.target.value, businessName: e.target.value })}
-                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
@@ -1251,7 +1251,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Experience */}
                   <div className="relative" ref={experienceRef}>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Experience <span className="text-red-500">*</span>
                     </label>
                     <div
@@ -1260,9 +1260,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
                         <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
                         <span className="font-normal text-gray-800">{editedUser?.experience || '2 Years'}</span>
                       </div>
@@ -1270,7 +1270,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     </div>
 
                     {isExperienceOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {experienceOptions.map((exp) => (
                           <div
                             key={exp}
@@ -1278,7 +1278,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                               updateEditedUser({ experience: exp });
                               setIsExperienceOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.experience === exp ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.experience === exp ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <span>{exp}</span>
                           </div>
@@ -1289,19 +1289,19 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
                   {/* Business Gmail */}
                   <div>
-                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                       Business Gmail
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
-                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1vw] h-[1vw]" />
                       </div>
                       <input
                         type="email"
                         placeholder="fistotech@gmail.com"
                         value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
                         onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
-                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.6vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                       />
                     </div>
                   </div>
@@ -1311,7 +1311,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
               /* For Individual or other: Professional Title */
               <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                 <div>
-                  <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                     Professional Title
                   </label>
                   <input
@@ -1319,7 +1319,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     placeholder="Luffy"
                     value={editedUser?.professionalTitle || editedUser?.title || ''}
                     onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
-                    className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                    className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                   />
                 </div>
               </div>
@@ -1327,16 +1327,16 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
             {/* Skills / Expertise */}
             <div>
-              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+              <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                 {editedUser?.profileType === 'Freelancer' ? (
                   <>Skills / Expertise <span className="text-red-500">*</span></>
                 ) : (
                   'Skills / Expertise'
                 )}
               </label>
-              <div className="w-full border border-gray-200 rounded-[0.7vw] p-[0.7vw] bg-white flex flex-wrap items-center gap-[0.6vw] min-h-[3vw]">
+              <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
                 {isAddingService ? (
-                  <div ref={addingServiceRef} className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.5vw] px-[0.6vw] py-[0.35vw] bg-[#EC5137]/5">
+                  <div ref={addingServiceRef} className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.5vw] px-[0.6vw] py-[0.3vw] bg-[#EC5137]/5">
                     <input
                       type="text"
                       autoFocus
@@ -1352,12 +1352,12 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                           setNewServiceInput('');
                         }
                       }}
-                      className="text-[0.82vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
+                      className="text-[0.78vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
                     />
                     <button
                       type="button"
                       onClick={handleAddService}
-                      className="text-[#EC5137] hover:opacity-80 font-bold text-[0.82vw]"
+                      className="text-[#EC5137] hover:opacity-80 font-bold text-[0.78vw]"
                     >
                       ✓
                     </button>
@@ -1367,7 +1367,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsAddingService(false);
                         setNewServiceInput('');
                       }}
-                      className="text-gray-400 hover:text-gray-600 text-[0.82vw]"
+                      className="text-gray-400 hover:text-gray-600 text-[0.78vw]"
                     >
                       ✕
                     </button>
@@ -1376,16 +1376,16 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   <button
                     type="button"
                     onClick={() => setIsAddingService(true)}
-                    className="flex items-center gap-[0.35vw] px-[0.85vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.5vw] text-[0.82vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
+                    className="flex items-center gap-[0.35vw] h-[2.15vw] px-[0.85vw] border border-[#EC5137] text-[#EC5137] rounded-[0.55vw] text-[0.78vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
                   >
-                    <span className="text-[1vw] leading-none">+</span> Add Service
+                    <span className="text-[0.9vw] leading-none">+</span> Add Service
                   </button>
                 )}
 
                 {servicesList.map((item, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-[0.45vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.5vw] text-[0.82vw] font-normal"
+                    className="inline-flex items-center gap-[0.45vw] px-[0.7vw] py-[0.3vw] bg-[#F3F4F6] text-gray-700 rounded-[0.45vw] text-[0.75vw] font-normal"
                   >
                     {item}
                     <button
@@ -1393,7 +1393,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       onClick={() => handleRemoveService(item)}
                       className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
                     >
-                      <X className="w-[0.8vw] h-[0.8vw]" />
+                      <X className="w-[0.75vw] h-[0.75vw]" />
                     </button>
                   </span>
                 ))}
@@ -1402,7 +1402,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
             {/* Row 6: About / Bio */}
             <div>
-              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+              <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                 About / Bio
               </label>
               <textarea
@@ -1410,7 +1410,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 placeholder="Please enter your personal information in the About / Bio"
                 value={editedUser?.about || ''}
                 onChange={(e) => updateEditedUser({ about: e.target.value })}
-                className="w-full border border-gray-200 rounded-[0.7vw] px-[0.9vw] py-[0.8vw] text-[0.82vw] focus:outline-none focus:border-gray-300 resize-none text-gray-700 bg-white leading-relaxed custom-scrollbar placeholder:text-gray-400"
+                className="w-full border border-gray-200 rounded-[0.55vw] px-[0.85vw] py-[0.75vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] resize-none text-gray-700 bg-white leading-relaxed custom-scrollbar placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -1419,14 +1419,14 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         {/* Contact & Location */}
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="lucide:map-pin" className="w-[1.3vw] h-[1.3vw] text-gray-900 fill-gray-900" />
-            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Contact & Location</h3>
+            <Icon icon="lucide:map-pin" className="w-[1.2vw] h-[1.2vw] text-gray-900 fill-gray-900" />
+            <h3 className="text-[0.92vw] font-bold text-gray-900 tracking-tight">Contact & Location</h3>
           </div>
 
           <div className="flex flex-col gap-[1.2vw]">
             {/* Contact Number Group */}
             <div>
-              <h4 className="text-[0.82vw] font-semibold text-gray-900 mb-[0.6vw]">
+              <h4 className="text-[0.85vw] font-semibold text-gray-900 mb-[0.4vw]">
                 Contact Number
               </h4>
 
@@ -1638,9 +1638,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         updateEditedUser({ contactCount: currentCount + 1 });
                       }
                     }}
-                    className="inline-flex items-center gap-[0.35vw] px-[0.85vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.5vw] text-[0.82vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
+                    className="inline-flex items-center gap-[0.35vw] h-[2.15vw] px-[0.85vw] border border-[#EC5137] text-[#EC5137] rounded-[0.55vw] text-[0.78vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
                   >
-                    <span className="text-[1vw] leading-none">+</span> Add Contact
+                    <span className="text-[0.9vw] leading-none">+</span> Add Contact
                   </button>
                 </div>
               )}
@@ -1649,7 +1649,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             {/* Row: Address Line 1 & Address Line 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Address Line 1
                 </label>
                 <input
@@ -1657,12 +1657,12 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   placeholder="Fist-o Tech Private Limited"
                   value={editedUser?.address1 || ''}
                   onChange={(e) => updateEditedUser({ address1: e.target.value })}
-                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Address Line 2
                 </label>
                 <input
@@ -1670,7 +1670,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   placeholder="Fist-o Tech Private Limited"
                   value={editedUser?.address2 || ''}
                   onChange={(e) => updateEditedUser({ address2: e.target.value })}
-                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                 />
               </div>
             </div>
@@ -1678,7 +1678,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             {/* Row: City, State, Country */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   City
                 </label>
                 <input
@@ -1686,13 +1686,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   placeholder="Coimbatore"
                   value={editedUser?.city || ''}
                   onChange={(e) => updateEditedUser({ city: e.target.value })}
-                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
                 />
               </div>
 
               {/* State Dropdown */}
               <div className="relative" ref={stateRef}>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   State
                 </label>
                 <div className="relative">
@@ -1703,7 +1703,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       setIsCountryOpen(false);
                       setStateSearch('');
                     }}
-                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
+                    className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
                   >
                     <span className={`truncate ${editedUser?.state ? 'text-gray-800 font-normal' : 'text-gray-400'}`}>
                       {editedUser?.state || 'Tamil Nadu'}
@@ -1794,7 +1794,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
               {/* Country Dropdown */}
               <div className="relative" ref={countryRef}>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Country
                 </label>
                 <div className="relative">
@@ -1805,7 +1805,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       setIsStateOpen(false);
                       setCountrySearch('');
                     }}
-                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
+                    className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
                   >
                     <span className="truncate text-gray-800 font-normal">
                       {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'India'))}
@@ -1905,7 +1905,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             {/* Row: Pin Code */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
                   Pin Code
                 </label>
                 <input
@@ -1916,7 +1916,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     updateEditedUser({ pincode: e.target.value });
                     setErrors(prev => ({ ...prev, pincode: null }));
                   }}
-                  className={`w-full h-[2.5vw] border ${errors.pincode ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
+                  className={`w-full h-[2.15vw] border ${errors.pincode ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400`}
                 />
                 {errors.pincode && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.pincode}</p>}
               </div>
@@ -1928,7 +1928,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
             <Icon icon="lucide:link-2" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
-            <h3 className="text-[0.95vw] font-medium text-gray-800">Social Media</h3>
+            <h3 className="text-[0.92vw] font-bold text-gray-900 tracking-tight">Social Media</h3>
           </div>
 
           <div className="flex flex-col gap-[1vw]">
@@ -1984,7 +1984,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
               <button
                 type="button"
                 onClick={() => setIsAddingSocial(!isAddingSocial)}
-                className="flex items-center gap-[0.35vw] px-[0.9vw] py-[0.45vw] border border-[#EC5137] text-[#EC5137] rounded-[0.45vw] text-[0.75vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
+                className="flex items-center gap-[0.35vw] h-[2.15vw] px-[0.85vw] border border-[#EC5137] text-[#EC5137] rounded-[0.55vw] text-[0.78vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
               >
                 <span className="text-[0.9vw] leading-none">+</span> Add Social Links
               </button>
@@ -2026,8 +2026,8 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
           <div className="flex items-start gap-[0.7vw] mb-[1.6vw]">
             <Icon icon="lucide:eye" className="w-[1.4vw] h-[1.4vw] text-gray-900 mt-[0.1vw]" />
             <div>
-              <h3 className="text-[1.2vw] font-bold text-gray-900 leading-tight tracking-tight">Visibility</h3>
-              <p className="text-[0.82vw] text-gray-400 mt-[0.25vw]">Control what information is visible to others</p>
+              <h3 className="text-[0.92vw] font-bold text-gray-900 leading-tight tracking-tight">Visibility</h3>
+              <p className="text-[0.74vw] text-gray-500 mt-[0.25vw]">Control what information is visible to others</p>
             </div>
           </div>
 
@@ -2081,7 +2081,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 </button>
               </div>
 
-              <p className="text-[0.82vw] text-gray-400">
+              <p className="text-[0.74vw] text-gray-500">
                 Make your profile visible to others in Explore page
               </p>
             </div>
@@ -2106,17 +2106,17 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 className="flex items-center gap-[0.7vw] cursor-pointer select-none"
               >
                 <div
-                  className={`w-[1.25vw] h-[1.25vw] rounded-[0.3vw] flex items-center justify-center transition-colors shrink-0 ${
+                  className={`w-[1.15vw] h-[1.15vw] rounded-[0.25vw] flex items-center justify-center transition-colors shrink-0 ${
                     editedUser?.visibilitySettings?.showContact !== false
                       ? 'bg-[#EC5137] text-white'
                       : 'border border-gray-300 bg-white'
                   }`}
                 >
                   {editedUser?.visibilitySettings?.showContact !== false && (
-                    <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw] stroke-[3.5]" />
+                    <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw] stroke-[3.5]" />
                   )}
                 </div>
-                <span className="text-[0.84vw] text-gray-500 font-normal">
+                <span className="text-[0.78vw] text-gray-600 font-normal">
                   Show <strong className="font-semibold text-gray-900">contact & Location</strong> in your public profile
                 </span>
               </div>
@@ -2138,17 +2138,17 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 className="flex items-center gap-[0.7vw] cursor-pointer select-none"
               >
                 <div
-                  className={`w-[1.25vw] h-[1.25vw] rounded-[0.3vw] flex items-center justify-center transition-colors shrink-0 ${
+                  className={`w-[1.15vw] h-[1.15vw] rounded-[0.25vw] flex items-center justify-center transition-colors shrink-0 ${
                     editedUser?.visibilitySettings?.showSocial !== false
                       ? 'bg-[#EC5137] text-white'
                       : 'border border-gray-300 bg-white'
                   }`}
                 >
                   {editedUser?.visibilitySettings?.showSocial !== false && (
-                    <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw] stroke-[3.5]" />
+                    <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw] stroke-[3.5]" />
                   )}
                 </div>
-                <span className="text-[0.84vw] text-gray-500 font-normal">
+                <span className="text-[0.78vw] text-gray-600 font-normal">
                   Show <strong className="font-semibold text-gray-900">Social Media & Links</strong> Navigation Icons in your public profile
                 </span>
               </div>

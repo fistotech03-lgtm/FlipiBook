@@ -2,15 +2,15 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Light Shelf Assets
-import lightShelfSheet from '../../../assets/Bookshelf/light_shelf/lightsheet.png';
-import lightShelfLeftWood from '../../../assets/Bookshelf/light_shelf/leftwood.png';
-import lightShelfSpotlights from '../../../assets/Bookshelf/light_shelf/light.png';
-import lightShelfTopTier from '../../../assets/Bookshelf/light_shelf/lightwithshelf.png';
-import lightShelfBottomTier from '../../../assets/Bookshelf/light_shelf/shelf.png';
-import lightShelfLamp from '../../../assets/Bookshelf/light_shelf/lamp.png';
-import lightShelfPlant from '../../../assets/Bookshelf/light_shelf/plantpot.png';
-import lightShelfBase from '../../../assets/Bookshelf/light_shelf/base.png';
-import lightShelfSwitch from '../../../assets/Bookshelf/light_shelf/switch.png';
+import lightShelfSheet from '../../../../assets/Bookshelf/light_shelf/lightsheet.png';
+import lightShelfLeftWood from '../../../../assets/Bookshelf/light_shelf/leftwood.png';
+import lightShelfSpotlights from '../../../../assets/Bookshelf/light_shelf/light.png';
+import lightShelfTopTier from '../../../../assets/Bookshelf/light_shelf/lightwithshelf.png';
+import lightShelfBottomTier from '../../../../assets/Bookshelf/light_shelf/shelf.png';
+import lightShelfLamp from '../../../../assets/Bookshelf/light_shelf/lamp.png';
+import lightShelfPlant from '../../../../assets/Bookshelf/light_shelf/plantpot.png';
+import lightShelfBase from '../../../../assets/Bookshelf/light_shelf/base.png';
+import lightShelfSwitch from '../../../../assets/Bookshelf/light_shelf/switch.png';
 
 const LightShelf = ({
   filteredBooks,

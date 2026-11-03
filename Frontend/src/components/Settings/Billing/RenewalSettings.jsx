@@ -8,22 +8,22 @@ const RenewalSettings = ({
   currentPlan = 'Pro Plan (Yearly)',
 }) => {
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+    <div className="w-full bg-white border border-gray-100 rounded-[0.9vw] p-[1.3vw] shadow-xs mb-[1.3vw]">
       {/* Header: Icon + Title & Subtitle */}
-      <div className="flex items-start justify-between mb-[1.3vw]">
+      <div className="flex items-start justify-between mb-[1.2vw]">
         <div>
           <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
-            <Icon icon="solar:restart-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-            <h2 className="text-[0.98vw] font-medium text-gray-800">Renewal Settings</h2>
+            <Icon icon="solar:restart-bold" className="w-[1.1vw] h-[1.1vw] text-[#EC5137]" />
+            <h2 className="text-[0.92vw] font-bold text-gray-900">Renewal Settings</h2>
           </div>
-          <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
+          <p className="text-[0.72vw] text-gray-400 pl-[1.65vw] font-normal">
             Manage your subscription renewal preferences
           </p>
         </div>
       </div>
 
       {/* Inner Card / Details Container */}
-      <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] flex items-center justify-between shadow-xs">
+      <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.65vw] p-[1.1vw] flex items-center justify-between shadow-xs">
         {/* Left: Crown icon + Auto-Renewal title + toggle + description */}
         <div className="flex items-center gap-[0.9vw]">
           <div className="w-[2.8vw] h-[2.8vw] rounded-[0.6vw] bg-[#FFF8EC] border border-[#FFE8BF] flex items-center justify-center shrink-0 shadow-xs">
@@ -32,7 +32,7 @@ const RenewalSettings = ({
 
           <div className="flex flex-col">
             <div className="flex items-center gap-[0.75vw]">
-              <h4 className="text-[0.85vw] font-medium text-gray-800 leading-none">Auto-Renewal</h4>
+              <h4 className="text-[0.85vw] font-semibold text-gray-900 leading-none">Auto-Renewal</h4>
 
               {/* Switch Toggle */}
               <button
@@ -70,10 +70,10 @@ const RenewalSettings = ({
         <div className="flex items-center">
           {/* Next Renewal Date */}
           <div className="flex flex-col justify-center px-[1.8vw]">
-            <span className="text-[0.7vw] text-gray-400 font-normal">Next Renewal Date</span>
+            <span className="text-[0.70vw] text-gray-400 font-normal">Next Renewal Date</span>
             <div className="flex items-center gap-[0.4vw] text-gray-700 mt-[0.25vw]">
               <Icon icon="lucide:calendar-clock" className="w-[0.9vw] h-[0.9vw] text-[#4b5563] shrink-0" strokeWidth="2" />
-              <span className="text-[0.78vw] font-medium text-gray-800 whitespace-nowrap">
+              <span className="text-[0.80vw] font-semibold text-gray-800 whitespace-nowrap">
                 {nextRenewalDate}
               </span>
             </div>
@@ -84,10 +84,10 @@ const RenewalSettings = ({
 
           {/* Current Plan */}
           <div className="flex flex-col justify-center pl-[1.8vw]">
-            <span className="text-[0.7vw] text-gray-400 font-normal">Current Plan</span>
+            <span className="text-[0.70vw] text-gray-400 font-normal">Current Plan</span>
             <div className="flex items-center gap-[0.4vw] text-gray-700 mt-[0.25vw]">
               <Icon icon="solar:crown-bold" className="w-[0.9vw] h-[0.9vw] text-[#F59E0B] shrink-0" />
-              <span className="text-[0.78vw] font-medium text-gray-800 whitespace-nowrap">
+              <span className="text-[0.80vw] font-semibold text-gray-800 whitespace-nowrap">
                 {currentPlan}
               </span>
             </div>

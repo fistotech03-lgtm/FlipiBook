@@ -2,14 +2,14 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Green-Light Shelf Assets
-import greenLightSheet from '../../../assets/Bookshelf/greenlight/sheet.png';
-import greenLightLeftWood from '../../../assets/Bookshelf/greenlight/Leftwood.png';
-import greenLightShelfPlank from '../../../assets/Bookshelf/greenlight/greenshelf.png';
-import greenLightLamp from '../../../assets/Bookshelf/greenlight/lamp.png';
-import greenLightPlant from '../../../assets/Bookshelf/greenlight/plant.png';
-import greenLightBase from '../../../assets/Bookshelf/greenlight/base.png';
-import greenLightFixture from '../../../assets/Bookshelf/greenlight/light.png';
-import greenLightSwitch from '../../../assets/Bookshelf/greenlight/switch.png';
+import greenLightSheet from '../../../../assets/Bookshelf/greenlight/sheet.png';
+import greenLightLeftWood from '../../../../assets/Bookshelf/greenlight/Leftwood.png';
+import greenLightShelfPlank from '../../../../assets/Bookshelf/greenlight/greenshelf.png';
+import greenLightLamp from '../../../../assets/Bookshelf/greenlight/lamp.png';
+import greenLightPlant from '../../../../assets/Bookshelf/greenlight/plant.png';
+import greenLightBase from '../../../../assets/Bookshelf/greenlight/base.png';
+import greenLightFixture from '../../../../assets/Bookshelf/greenlight/light.png';
+import greenLightSwitch from '../../../../assets/Bookshelf/greenlight/switch.png';
 
 const GreenLightShelf = ({
   filteredBooks,

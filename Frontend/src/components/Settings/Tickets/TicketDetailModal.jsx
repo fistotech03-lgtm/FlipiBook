@@ -111,14 +111,14 @@ export default function TicketDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-[0.75vw] py-[0.45vw] rounded-[0.5vw] border border-gray-200 bg-white text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-[0.4vw] text-[0.78vw] font-medium shadow-xs"
+              className="h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-[0.4vw] text-[0.78vw] font-medium shadow-xs"
               title="Back to Tickets"
             >
               <ArrowLeft className="w-[0.9vw] h-[0.9vw]" />
               <span className="hidden sm:inline">Back</span>
             </button>
             <div className="flex flex-col">
-              <h1 className="text-[1.1vw] font-semibold text-gray-800 tracking-tight leading-snug">
+              <h1 className="text-[1.2vw] font-bold text-gray-900 tracking-tight leading-snug">
                 Ticket #{ticket.id} - Sub : {ticket.subject}
               </h1>
             </div>
@@ -139,7 +139,7 @@ export default function TicketDetailModal({
           <button 
             type="button"
             onClick={() => setShowReplyForm(!showReplyForm)}
-            className="inline-flex items-center gap-[0.35vw] px-[0.9vw] py-[0.4vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.76vw] transition-all cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-[0.35vw] h-[2.15vw] px-[1.1vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-semibold text-[0.78vw] transition-all cursor-pointer shadow-xs"
           >
             <Reply className="w-[0.8vw] h-[0.8vw]" />
             <span>Reply</span>
@@ -160,10 +160,10 @@ export default function TicketDetailModal({
           {/* Left Column (Ticket Info Sidebar) */}
           <div className="lg:col-span-4 space-y-[1vw]">
             {/* Box 1: Ticket Information */}
-            <div className="bg-white rounded-[1vw] border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-[0.9vw] border border-gray-100 overflow-hidden shadow-xs">
               <div 
                 onClick={() => setInfoOpen(!infoOpen)}
-                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-800 font-medium text-[0.8vw] tracking-wide"
+                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-900 font-bold text-[0.85vw] tracking-wide"
               >
                 <div className="flex items-center gap-[0.45vw]">
                   <FileText className="w-[0.85vw] h-[0.85vw] text-gray-500" />
@@ -176,9 +176,9 @@ export default function TicketDetailModal({
                 <div className="p-[1.1vw] space-y-[0.75vw] text-[0.76vw] text-gray-700">
                   <div>
                     <span className="text-[0.7vw] text-gray-400 font-normal">Requestor</span>
-                    <div className="mt-[0.1vw] flex items-center gap-[0.4vw] font-medium text-gray-800 text-[0.82vw]">
+                    <div className="mt-[0.1vw] flex items-center gap-[0.4vw] font-semibold text-gray-800 text-[0.82vw]">
                       <span>{ticket.requester?.name || 'Authorized User'}</span>
-                      <span className="text-[0.66vw] bg-gray-100 text-gray-600 px-[0.5vw] py-[0.1vw] rounded-full font-medium">
+                      <span className="text-[0.68vw] bg-gray-100 text-gray-600 px-[0.5vw] py-[0.1vw] rounded-full font-medium">
                         {ticket.requester?.badge || 'Authorized User'}
                       </span>
                     </div>
@@ -186,7 +186,7 @@ export default function TicketDetailModal({
 
                   <div>
                     <span className="text-[0.7vw] text-gray-400 font-normal">Department</span>
-                    <div className="mt-[0.1vw] font-medium text-gray-800 text-[0.82vw]">
+                    <div className="mt-[0.1vw] font-semibold text-gray-800 text-[0.82vw]">
                       {ticket.department || ticket.moduleName || 'IDC Support'}
                     </div>
                   </div>
@@ -221,7 +221,7 @@ export default function TicketDetailModal({
                     <button 
                       type="button"
                       onClick={() => setShowReplyForm(true)}
-                      className="flex-1 py-[0.45vw] px-[0.75vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.76vw] flex items-center justify-center gap-[0.35vw] transition-all cursor-pointer shadow-xs"
+                      className="flex-1 h-[2.15vw] px-[0.85vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-semibold text-[0.78vw] flex items-center justify-center gap-[0.35vw] transition-all cursor-pointer shadow-xs"
                     >
                       <Reply className="w-[0.8vw] h-[0.8vw]" />
                       <span>Reply</span>
@@ -230,7 +230,7 @@ export default function TicketDetailModal({
                     <button 
                       type="button"
                       onClick={() => onUpdateStatus?.(ticket.id, 'closed')}
-                      className="flex-1 py-[0.45vw] px-[0.75vw] rounded-[0.5vw] bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium text-[0.76vw] flex items-center justify-center gap-[0.35vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                      className="flex-1 h-[2.15vw] px-[0.85vw] rounded-[0.55vw] bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300 font-medium text-[0.78vw] flex items-center justify-center gap-[0.35vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
                     >
                       <X className="w-[0.8vw] h-[0.8vw]" />
                       <span>Close</span>
@@ -241,10 +241,10 @@ export default function TicketDetailModal({
             </div>
 
             {/* Box 2: CC Recipients */}
-            <div className="bg-white rounded-[1vw] border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-[0.9vw] border border-gray-100 overflow-hidden shadow-xs">
               <div 
                 onClick={() => setCcOpen(!ccOpen)}
-                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-800 font-medium text-[0.8vw] tracking-wide"
+                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-900 font-bold text-[0.85vw] tracking-wide"
               >
                 <div className="flex items-center gap-[0.45vw]">
                   <User className="w-[0.85vw] h-[0.85vw] text-gray-500" />
@@ -277,11 +277,11 @@ export default function TicketDetailModal({
                       value={newCcEmail}
                       onChange={(e) => setNewCcEmail(e.target.value)}
                       placeholder="Enter Email Address"
-                      className="flex-1 border border-gray-200 rounded-[0.5vw] px-[0.75vw] py-[0.4vw] text-[0.76vw] text-gray-800 focus:outline-none focus:border-[#4c5add]"
+                      className="flex-1 h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] text-gray-800 focus:outline-none focus:border-[#EC5137]"
                     />
                     <button 
                       type="submit"
-                      className="px-[0.85vw] py-[0.4vw] bg-white hover:bg-gray-50 border border-gray-300 rounded-[0.5vw] text-[0.76vw] font-medium text-gray-700 cursor-pointer shadow-xs active:scale-[0.98]"
+                      className="h-[2.15vw] px-[0.85vw] bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 cursor-pointer shadow-xs active:scale-[0.98]"
                     >
                       Add
                     </button>
@@ -291,10 +291,10 @@ export default function TicketDetailModal({
             </div>
 
             {/* Box 3: Support Navigation */}
-            <div className="bg-white rounded-[1vw] border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-[0.9vw] border border-gray-100 overflow-hidden shadow-xs">
               <div 
                 onClick={() => setSupportOpen(!supportOpen)}
-                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-800 font-medium text-[0.8vw] tracking-wide"
+                className="bg-[#f8f9fa] px-[1.1vw] py-[0.75vw] border-b border-gray-100 flex items-center justify-between cursor-pointer select-none text-gray-900 font-bold text-[0.85vw] tracking-wide"
               >
                 <div className="flex items-center gap-[0.45vw]">
                   <HelpCircle className="w-[0.85vw] h-[0.85vw] text-gray-500" />
@@ -317,7 +317,7 @@ export default function TicketDetailModal({
                     <span>Knowledgebase</span>
                     <HelpCircle className="w-[0.8vw] h-[0.8vw] text-gray-400" />
                   </div>
-                  <div className="px-[1.1vw] py-[0.6vw] flex items-center justify-between font-medium text-gray-900 border-l-2 border-[#EC5137] bg-gray-50/50">
+                  <div className="px-[1.1vw] py-[0.6vw] flex items-center justify-between font-semibold text-gray-900 border-l-2 border-[#EC5137] bg-gray-50/50">
                     <span>Downloads</span>
                     <Download className="w-[0.8vw] h-[0.8vw] text-gray-500" />
                   </div>
@@ -338,15 +338,15 @@ export default function TicketDetailModal({
           <div className="lg:col-span-8 space-y-[1.2vw]">
             {/* Conditional Inline Reply Box */}
             {showReplyForm && (
-              <form onSubmit={handleReplySubmit} className="bg-white rounded-[1vw] border border-gray-200 p-[1.5vw] shadow-sm space-y-[0.85vw] animate-in fade-in">
+              <form onSubmit={handleReplySubmit} className="bg-white rounded-[0.9vw] border border-gray-100 p-[1.5vw] shadow-xs space-y-[0.85vw] animate-in fade-in">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.85vw] font-medium text-gray-800">
+                  <span className="text-[0.92vw] font-bold text-gray-900">
                     Post Reply to Staff
                   </span>
                   <button 
                     type="button" 
                     onClick={() => setShowReplyForm(false)}
-                    className="text-gray-400 hover:text-gray-600 text-[0.74vw] font-medium"
+                    className="text-gray-400 hover:text-gray-600 text-[0.74vw] font-medium cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -357,17 +357,17 @@ export default function TicketDetailModal({
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Provide your feedback or further issue details..."
-                  className="w-full p-[0.85vw] text-[0.78vw] border border-gray-200 rounded-[0.5vw] focus:outline-none focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] text-gray-800 font-sans leading-relaxed"
+                  className="w-full p-[0.85vw] text-[0.78vw] border border-gray-200 rounded-[0.55vw] focus:outline-none focus:border-[#EC5137] text-gray-900 font-sans leading-relaxed"
                 />
 
                 <div className="flex items-center justify-between pt-[0.4vw]">
                   <div className="text-[0.74vw] text-gray-500 font-normal">
-                    Replying as: <strong className="text-gray-800 font-medium">{ticket.requester?.name || 'Authorized User'}</strong>
+                    Replying as: <strong className="text-gray-900 font-medium">{ticket.requester?.name || 'Authorized User'}</strong>
                   </div>
                   <button
                     type="submit"
                     disabled={!replyText.trim() || isSubmitting}
-                    className="px-[1.2vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                    className="h-[2.15vw] px-[1.2vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-semibold text-[0.78vw] transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                   >
                     {isSubmitting ? 'Submitting...' : 'Post Reply'}
                   </button>
@@ -383,7 +383,7 @@ export default function TicketDetailModal({
                 return (
                   <div 
                     key={msg.id}
-                    className="bg-white rounded-[1vw] border border-gray-200 overflow-hidden shadow-sm"
+                    className="bg-white rounded-[0.9vw] border border-gray-100 overflow-hidden shadow-xs"
                   >
                     {/* Header */}
                     <div className="bg-[#f8f9fa] px-[1.2vw] py-[0.8vw] border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-[0.55vw]">
@@ -396,11 +396,11 @@ export default function TicketDetailModal({
 
                         <div>
                           <div className="flex items-center gap-[0.45vw]">
-                            <span className="text-[0.85vw] font-medium text-gray-800">
+                            <span className="text-[0.85vw] font-semibold text-gray-900">
                               {msg.authorName}
                             </span>
                             {msg.badge && (
-                              <span className={`text-[0.66vw] px-[0.5vw] py-[0.1vw] rounded-full font-medium ${
+                              <span className={`text-[0.68vw] px-[0.5vw] py-[0.1vw] rounded-full font-medium ${
                                 isAgent ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600'
                               }`}>
                                 {msg.badge}

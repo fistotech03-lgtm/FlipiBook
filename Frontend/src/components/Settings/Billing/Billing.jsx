@@ -118,27 +118,27 @@ const Billing = () => {
       )}
 
       {/* Page Title & Subtitle + Need Help Banner */}
-      <div className="flex items-start justify-between gap-[2vw] mb-[1.8vw]">
+      <div className="flex items-start justify-between gap-[2vw] mb-[1.6vw]">
         <div>
-          <h1 className="text-[1.35vw] font-semibold text-gray-800 tracking-tight leading-tight">
+          <h1 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">
             Billing and Invoice
           </h1>
-          <p className="text-[0.74vw] text-gray-500 mt-[0.25vw] font-normal">
+          <p className="text-[0.78vw] text-gray-500 mt-[0.35vw] font-normal">
             Manage your subscription, payment methods, billing details and invoices.
           </p>
         </div>
 
         {/* Right: Need help with billing ? Box */}
-        <div className="flex items-center gap-[0.85vw] bg-[#FDF2F0] border border-[#FDE5E1] rounded-[0.75vw] px-[1vw] py-[0.6vw] shadow-xs shrink-0">
-          <div className="w-[2.2vw] h-[2.2vw] rounded-full bg-[#E54D38] flex items-center justify-center shrink-0 shadow-xs">
+        <div className="flex items-center gap-[0.85vw] bg-[#FDF2F0] border border-[#FDE5E1] rounded-[0.75vw] px-[1vw] py-[0.55vw] shadow-xs shrink-0">
+          <div className="w-[2.15vw] h-[2.15vw] rounded-full bg-[#EC5137] flex items-center justify-center shrink-0 shadow-xs">
             <Icon icon="lucide:headphones" className="w-[1.1vw] h-[1.1vw] text-white" strokeWidth="2.2" />
           </div>
 
           <div className="flex flex-col pr-[0.6vw]">
-            <h4 className="text-[0.82vw] font-medium text-gray-800 leading-tight">
+            <h4 className="text-[0.85vw] font-semibold text-gray-900 leading-tight">
               Need help with billing ?
             </h4>
-            <p className="text-[0.68vw] text-gray-500 mt-[0.15vw] leading-tight font-normal">
+            <p className="text-[0.70vw] text-gray-500 mt-[0.15vw] leading-tight font-normal">
               Get support for payment, invoices or subscription.
             </p>
           </div>
@@ -146,7 +146,7 @@ const Billing = () => {
           <button
             type="button"
             onClick={() => navigate('/settings/support')}
-            className="flex items-center gap-[0.35vw] bg-[#E54D38] hover:bg-[#d63f2b] active:scale-[0.98] text-white text-[0.78vw] font-medium px-[0.95vw] py-[0.45vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            className="h-[2.15vw] flex items-center gap-[0.35vw] bg-[#EC5137] hover:bg-[#d9442b] active:scale-[0.98] text-white text-[0.78vw] font-semibold px-[0.95vw] rounded-[0.55vw] shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
             <span>Contact Support</span>
             <Icon icon="lucide:arrow-right" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2.2" />

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart } from 'lucide-react';
@@ -137,6 +138,35 @@ export default function MyFlipbooks() {
 
     const [active3dFolder, setActive3dFolder] = useState('All Models');
     const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
+
+    // Shelf folders & selection states shared between FlipbooksSidebar and MyShelf
+    const [shelfFolders, setShelfFolders] = useState([]);
+    const [selectedShelfFolder, setSelectedShelfFolder] = useState('');
+    const [shelfCurrentView, setShelfCurrentView] = useState('overview'); // 'overview' | 'shelf_detail'
+    const [isShelfAddModalOpen, setIsShelfAddModalOpen] = useState(false);
+
+    // Initial background preview fetch for shelf folders so sidebar displays them immediately
+    useEffect(() => {
+        if (!emailId) return;
+        const fetchShelfFoldersPreview = async () => {
+            try {
+                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, {
+                    withCredentials: true,
+                    params: { t: Date.now() }
+                });
+                const actualMyShelf = res.data?.myShelf;
+                if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
+                    const previewFolders = actualMyShelf.folders.map(f => ({
+                        name: f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks'),
+                        books: f.books || [],
+                        shelf_design: f.shelf_design || 4
+                    }));
+                    setShelfFolders(prev => prev.length === 0 ? previewFolders : prev);
+                }
+            } catch (e) { }
+        };
+        fetchShelfFoldersPreview();
+    }, [emailId, backendUrl]);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Categories');
     const [statusFilter, setStatusFilter] = useState('All Status');
@@ -1835,6 +1865,19 @@ export default function MyFlipbooks() {
                     active3dFolder={active3dFolder}
                     setActive3dFolder={setActive3dFolder}
                     threeDCounts={threeDCounts}
+                    shelfFolders={shelfFolders}
+                    selectedShelfFolder={selectedShelfFolder}
+                    shelfCurrentView={shelfCurrentView}
+                    onSelectShelfFolder={(folderName) => {
+                        if (!folderName || folderName === '__overview__') {
+                            setShelfCurrentView('overview');
+                            setSelectedShelfFolder('');
+                        } else {
+                            setSelectedShelfFolder(folderName);
+                            setShelfCurrentView('shelf_detail');
+                        }
+                    }}
+                    onAddShelf={() => setIsShelfAddModalOpen(true)}
                 />
 
             {/* Main Content */}
@@ -1849,7 +1892,16 @@ export default function MyFlipbooks() {
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-hidden min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs flex flex-col">
-                        <MyShelf />
+                        <MyShelf
+                            shelfFolders={shelfFolders}
+                            setShelfFolders={setShelfFolders}
+                            selectedShelfFolder={selectedShelfFolder}
+                            setSelectedShelfFolder={setSelectedShelfFolder}
+                            currentView={shelfCurrentView}
+                            setCurrentView={setShelfCurrentView}
+                            isShelfAddModalOpen={isShelfAddModalOpen}
+                            setIsShelfAddModalOpen={setIsShelfAddModalOpen}
+                        />
                     </div>
                 ) : dashboardMode === 'gallery' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">

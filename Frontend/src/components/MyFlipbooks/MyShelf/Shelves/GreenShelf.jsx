@@ -2,11 +2,11 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Green Shelf Assets
-import greenLeftWood from '../../../assets/Bookshelf/greenshelf/Leftwood.png';
-import greenBase from '../../../assets/Bookshelf/greenshelf/base.png';
-import greenLamp from '../../../assets/Bookshelf/greenshelf/lamp.png';
-import greenDecor from '../../../assets/Bookshelf/greenshelf/decor.png';
-import greenSwitch from '../../../assets/Bookshelf/greenshelf/switch.png';
+import greenLeftWood from '../../../../assets/Bookshelf/greenshelf/Leftwood.png';
+import greenBase from '../../../../assets/Bookshelf/greenshelf/base.png';
+import greenLamp from '../../../../assets/Bookshelf/greenshelf/lamp.png';
+import greenDecor from '../../../../assets/Bookshelf/greenshelf/decor.png';
+import greenSwitch from '../../../../assets/Bookshelf/greenshelf/switch.png';
 
 const GreenShelf = ({
   filteredBooks,

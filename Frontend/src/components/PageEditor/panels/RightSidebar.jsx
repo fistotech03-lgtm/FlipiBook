@@ -708,11 +708,7 @@ const RightSidebar = ({
           el.querySelector?.('[data-motion-template], [data-typography-type="motion-graphic"]') !== null
         );
 
-        const isElementTypography = el.getAttribute('data-is-element-typography') === 'true' ||
-          el.getAttribute('data-typography-type') === 'kinetic' ||
-          el.getAttribute('data-typography-type') === 'motion-graphic' ||
-          el.getAttribute('data-motion-template') !== null ||
-          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"]') !== null;
+        const isElementTypography = false;
 
         const buttonParent = el?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
         const isElementButton = el.getAttribute('data-is-element-button') === 'true' ||
@@ -1336,16 +1332,7 @@ const RightSidebar = ({
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
                         />
-                      ) : selectedElementProps?.isElementTypography ? (
-                        <TextElementEditor
-                          selectedElement={(() => {
-                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            return editorDoc.getElementById(selectedLayerId);
-                          })()}
-                          selectedLayerId={selectedLayerId}
-                          activePageIndex={activePageIndex}
-                          updateElementAttribute={updateElementAttribute}
-                        />
+
                       ) : selectedElementProps?.isText ? (
                         <TextProperties
                           selectedElement={selectedTextElement}

@@ -32,20 +32,19 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
   const displayColor = isGradient
     ? 'GRADIENT'
     : isNone
-    ? 'NONE'
-    : color && color.startsWith('#')
-    ? color.toUpperCase()
-    : color || '#000000';
+      ? 'NONE'
+      : color && color.startsWith('#')
+        ? color.toUpperCase()
+        : color || '#000000';
 
   return (
     <div className="flex items-center gap-[0.4vw] w-full">
       <div
         onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive
+        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive
             ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs'
             : 'border-gray-200 hover:border-gray-300'
-        }`}
+          }`}
         style={{ background: isNone ? '#ffffff' : color || '#000000' }}
         title="Click to open color palette"
       >
@@ -148,9 +147,8 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontFamily: ff });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontFamily === ff ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontFamily === ff ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
                   style={{ fontFamily: ff }}
                 >
                   {ff}
@@ -179,9 +177,8 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontSize: sz });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
                 >
                   {sz}
                 </div>
@@ -212,9 +209,8 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontWeight: fw, isBold: fw.toLowerCase().includes('bold') });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontWeight === fw ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontWeight === fw ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
                 >
                   {fw}
                 </div>
@@ -289,9 +285,8 @@ const TextPropertyInlinePopup = ({
         <button
           type="button"
           onClick={() => onUpdate({ isBold: !isBold, fontWeight: !isBold ? 'Bold' : 'Regular' })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isBold ? 'bg-gray-200 text-black font-extrabold' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
+          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isBold ? 'bg-gray-200 text-black font-extrabold' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+            }`}
           title="Bold"
         >
           <span className="font-bold text-[0.9vw]">B</span>
@@ -301,9 +296,8 @@ const TextPropertyInlinePopup = ({
         <button
           type="button"
           onClick={() => onUpdate({ isStrikethrough: !isStrikethrough })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isStrikethrough ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
+          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isStrikethrough ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+            }`}
           title="Strikethrough"
         >
           <span className="font-bold text-[1vw] leading-none">—</span>
@@ -313,9 +307,8 @@ const TextPropertyInlinePopup = ({
         <button
           type="button"
           onClick={() => onUpdate({ isList: !isList })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isList ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
+          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isList ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+            }`}
           title="List"
         >
           <List size="0.95vw" strokeWidth={2.2} />
@@ -585,11 +578,10 @@ const ElementTitlesProperties = ({
             <button
               type="button"
               onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
-              className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${
-                isAnimationDropdownOpen
+              className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${isAnimationDropdownOpen
                   ? 'border-2 border-[#E05638] shadow-xs'
                   : 'border border-gray-200 hover:border-gray-300'
-              }`}
+                }`}
             >
               <span className="truncate text-gray-800 font-medium">
                 {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
@@ -613,11 +605,10 @@ const ElementTitlesProperties = ({
                         handleAnimationChange(opt.value);
                         setIsAnimationDropdownOpen(false);
                       }}
-                      className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${
-                        isSelected
+                      className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${isSelected
                           ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
                           : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -628,9 +619,8 @@ const ElementTitlesProperties = ({
 
                 {/* Custom Option with Input Box and "times" label */}
                 <div
-                  className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${
-                    animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
-                  }`}
+                  className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
+                    }`}
                   onClick={() => {
                     handleAnimationChange('Custom', customAnimationCount || '4');
                   }}
@@ -651,9 +641,8 @@ const ElementTitlesProperties = ({
                         handleAnimationChange('Custom', customAnimationCount || '4');
                       }
                     }}
-                    className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${
-                      animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
-                    }`}
+                    className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
+                      }`}
                   />
                   <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
                     times
@@ -704,11 +693,10 @@ const ElementTitlesProperties = ({
             {/* Color Swatch */}
             <div
               onClick={() => setActiveColorPicker((prev) => (prev === 'textColor1' ? null : 'textColor1'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
-                activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
+              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
                   ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
                   : 'border-gray-200 hover:border-gray-300'
-              }`}
+                }`}
               style={{ background: textColor1 }}
               title="Click to pick Text Color 1"
             />
@@ -716,11 +704,10 @@ const ElementTitlesProperties = ({
             <button
               type="button"
               onClick={() => setActiveTextSettings((prev) => (prev === 'primary' ? null : 'primary'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
-                activeTextSettings === 'primary'
+              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'primary'
                   ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
                   : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
               title="Text Property"
             >
               <Sliders className="w-[1vw] h-[1vw]" />
@@ -784,11 +771,10 @@ const ElementTitlesProperties = ({
               {/* Color Swatch */}
               <div
                 onClick={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
-                  activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
                     ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
                 style={{ background: textColor2 }}
                 title="Click to pick Text Color 2"
               />
@@ -796,11 +782,10 @@ const ElementTitlesProperties = ({
               <button
                 type="button"
                 onClick={() => setActiveTextSettings((prev) => (prev === 'secondary' ? null : 'secondary'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
-                  activeTextSettings === 'secondary'
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'secondary'
                     ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
                 title="Text Property"
               >
                 <Sliders className="w-[1vw] h-[1vw]" />
@@ -911,7 +896,7 @@ const ElementTitlesProperties = ({
                 }
               }}
               opacity={100}
-              onOpacityChange={() => {}}
+              onOpacityChange={() => { }}
               onClose={() => setActiveColorPicker(null)}
               disableGradient={true}
               colorsOnPage={[]}

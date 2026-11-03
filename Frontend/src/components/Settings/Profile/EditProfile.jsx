@@ -142,7 +142,7 @@ const ProfilePhoneField = ({ value, countryCode, onChange, onBlur, placeholder =
           height: 0 !important;
         }
       `}</style>
-      <div className="profile-phone-container w-full h-[2.15vw] relative">
+      <div className="profile-phone-container w-full h-[2.5vw] relative">
         <PhoneInput
           country={selectedCountry}
           preferredCountries={['in', 'us', 'gb']}
@@ -221,20 +221,38 @@ const ProfilePhoneField = ({ value, countryCode, onChange, onBlur, placeholder =
   );
 };
 
-const EditProfile = ({ user, setUser, onActionReady }) => {
+const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   const { setUser: setAuthUser } = useAuth();
-  const [editedUser, setEditedUser] = useState(() => ({
-    ...user,
-    visibilitySettings: {
-      showInExplore: true,
-      showContact: true,
-      showAddress: true,
-      showSocial: true,
-      ...(user?.visibilitySettings || {})
-    }
-  }));
+  const [editedUser, setEditedUser] = useState(() => {
+    const rawServices = Array.isArray(user?.services) && user.services.length > 0
+      ? user.services
+      : (Array.isArray(user?.skills) && user.skills.length > 0 ? user.skills : null);
+
+    const initialServices = rawServices !== null
+      ? rawServices
+      : ['Website', 'Mobile Application', 'IDC', '3D Models', '3D Animations', 'Immencive Website', 'Customized Designs'];
+
+    return {
+      ...user,
+      services: initialServices,
+      skills: initialServices,
+      visibilitySettings: {
+        showInExplore: true,
+        showContact: true,
+        showAddress: true,
+        showSocial: true,
+        ...(user?.visibilitySettings || {})
+      }
+    };
+  });
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (onPreviewChange) {
+      onPreviewChange(editedUser);
+    }
+  }, [editedUser, onPreviewChange]);
 
   // Update local editedUser state only (no live sync to parent until Save Changes is clicked)
   const updateEditedUser = (updater) => {
@@ -323,8 +341,19 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
       about: (u.about || '').trim(),
       mobile: (u.mobile || '').trim(),
       countryCode: (u.countryCode || '+91').trim(),
+      contact1: (u.contact1 || '').trim(),
+      contact1CountryCode: (u.contact1CountryCode || '').trim(),
+      contact1Label: (u.contact1Label || '').trim(),
+      contact2: (u.contact2 || '').trim(),
+      contact2CountryCode: (u.contact2CountryCode || '').trim(),
+      contact2Label: (u.contact2Label || '').trim(),
+      contact3: (u.contact3 || '').trim(),
+      contact3CountryCode: (u.contact3CountryCode || '').trim(),
+      contact3Label: (u.contact3Label || '').trim(),
+      contactCount: u.contactCount,
       companyName: (u.companyName || u.agencyName || u.businessName || '').trim(),
       profileType: (u.profileType || 'Individual').trim(),
+      professionalTitle: (u.professionalTitle || u.title || '').trim(),
       industryType: (u.industryType || u.industry || 'Software Development').trim(),
       experience: (u.experience || '').trim(),
       teamSize: (u.teamSize || '').trim(),
@@ -517,6 +546,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
       };
 
       setEditedUser(merged);
+      if (onPreviewChange) onPreviewChange(null);
       if (setUser) setUser(merged);
       if (setAuthUser) setAuthUser(merged);
       window.dispatchEvent(new CustomEvent('profileUpdate', { detail: merged }));
@@ -543,6 +573,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
         ...(user?.visibilitySettings || {})
       }
     });
+    if (onPreviewChange) onPreviewChange(null);
     setActiveSocialKeys(getFilledSocialKeys(user?.socials));
     setErrors({});
   };
@@ -759,146 +790,96 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
   return (
     <div className="flex flex-col flex-1 w-full relative h-full">
       <div className="flex flex-col gap-[2vw]">
-        {/* Personal Details */}
+        {/* Profile Details */}
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="solar:user-bold" className="w-[1.1vw] h-[1.1vw] text-gray-700" />
-            <h3 className="text-[0.95vw] font-medium text-gray-800">Personal Details</h3>
+            <Icon icon="solar:user-bold" className="w-[1.2vw] h-[1.2vw] text-gray-900" />
+            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Profile Details</h3>
           </div>
 
-          <div className="flex flex-col gap-[1.1vw]">
+          <div className="flex flex-col gap-[1.3vw]">
             {/* Row 1: Full Name & Display Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. John Doe"
+                  placeholder="Monkey D Luffy"
                   value={editedUser?.name || ''}
                   onChange={(e) => {
                     updateEditedUser({ name: e.target.value });
                     if (errors.name) validateField('name', e.target.value);
                   }}
                   onBlur={(e) => validateField('name', e.target.value)}
-                  className={`w-full h-[2.15vw] border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white`}
+                  className={`w-full h-[2.5vw] border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
                 />
                 {errors.name && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.name}</p>}
               </div>
 
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Display Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Johnny"
+                  placeholder="Luffy"
                   value={editedUser?.displayName || ''}
                   onChange={(e) => {
                     updateEditedUser({ displayName: e.target.value });
                     if (errors.displayName) validateField('displayName', e.target.value);
                   }}
                   onBlur={(e) => validateField('displayName', e.target.value)}
-                  className={`w-full h-[2.15vw] border ${errors.displayName ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white`}
+                  className={`w-full h-[2.5vw] border ${errors.displayName ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
                 />
                 {errors.displayName && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.displayName}</p>}
               </div>
             </div>
 
-            {/* Row 2: Email ID & Mobile Number */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-              <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                  Email ID <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
-                    <Icon icon="logos:google-icon" className="w-[1vw] h-[1vw]" />
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="e.g. john@example.com"
-                    value={editedUser?.email || ''}
-                    disabled
-                    className="w-full h-[2.15vw] border border-gray-200 bg-white cursor-default pointer-events-none rounded-[0.55vw] pl-[2.6vw] pr-[0.85vw] text-[0.78vw] focus:outline-none text-gray-700 font-normal"
-                  />
-                </div>
-                {errors.email && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.email}</p>}
-              </div>
-
-              <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                  Mobile Number
-                </label>
-                <div className="w-full min-h-[2.15vw]">
-                  <ProfilePhoneField
-                    value={editedUser?.mobile || ''}
-                    countryCode={editedUser?.countryCode || '+91'}
-                    onChange={(nationalNum, newDialCode) => {
-                      updateEditedUser({
-                        mobile: nationalNum,
-                        countryCode: newDialCode
-                      });
-                      setErrors(prev => ({ ...prev, mobile: null }));
-                    }}
-                    onBlur={(val) => validateField('mobile', val)}
-                    hasError={Boolean(errors.mobile)}
-                    placeholder="1234567890"
-                  />
-                </div>
-                {errors.mobile && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.mobile}</p>}
-              </div>
-            </div>
-
-            {/* Row 3: About */}
+            {/* Row 2: Email ID */}
             <div>
-              <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                About
+              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                Email ID <span className="text-red-500">*</span>
               </label>
-              <textarea
-                rows={4}
-                placeholder="Tell us a little about yourself..."
-                value={editedUser?.about || ''}
-                onChange={(e) => updateEditedUser({ about: e.target.value })}
-                className="w-full border border-gray-200 rounded-[0.55vw] px-[0.85vw] py-[0.7vw] text-[0.78vw] focus:outline-none focus:border-gray-300 resize-none text-gray-700 bg-white leading-relaxed custom-scrollbar"
-              />
+              <div className="relative flex items-center">
+                <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
+                  <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                </div>
+                <input
+                  type="email"
+                  placeholder="luffyonepiece@gmail.com"
+                  value={editedUser?.email || ''}
+                  disabled
+                  className="w-full h-[2.5vw] border border-gray-200 bg-white cursor-default pointer-events-none rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none text-gray-700 font-normal"
+                />
+              </div>
+              {errors.email && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.email}</p>}
             </div>
-          </div>
-        </section>
 
-        {/* Professional Details */}
-        <section>
-          <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="material-symbols-light:home-work-rounded" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
-            <h3 className="text-[0.95vw] font-medium text-gray-800">Professional Details</h3>
-          </div>
-
-          <div className="flex flex-col gap-[1.2vw]">
-            {/* 1. Profile Type */}
+            {/* Row 3: Profile Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div className="relative">
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Profile Type <span className="text-red-500">*</span>
                 </label>
                 <div
                   onClick={() => {
                     setIsProfileTypeOpen(!isProfileTypeOpen);
                     setIsIndustryOpen(false);
+                    setIsExperienceOpen(false);
                   }}
-                  className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
+                  className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                 >
-                  <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                    <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                      <Icon icon={profileTypeOptions.find(p => p.label === (editedUser?.profileType || 'Individual'))?.icon || 'lucide:user'} className="w-[0.8vw] h-[0.8vw]" />
-                    </div>
-                    <span className="font-normal">{editedUser?.profileType || 'Individual'}</span>
+                  <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                    <Icon icon={profileTypeOptions.find(p => p.label === (editedUser?.profileType || 'Individual'))?.icon || 'lucide:user'} className="w-[1vw] h-[1vw] text-gray-900" />
+                    <span className="font-normal text-gray-800">{editedUser?.profileType || 'Individual'}</span>
                   </div>
-                  <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                  <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                 </div>
 
                 {isProfileTypeOpen && (
-                  <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 animate-in fade-in zoom-in-95 duration-100">
                     {profileTypeOptions.map((opt) => (
                       <div
                         key={opt.label}
@@ -906,7 +887,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                           setEditedUser({ ...editedUser, profileType: opt.label });
                           setIsProfileTypeOpen(false);
                         }}
-                        className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.profileType === opt.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                        className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.profileType === opt.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                       >
                         <Icon icon={opt.icon} className="w-[0.9vw] h-[0.9vw]" />
                         <span>{opt.label}</span>
@@ -917,37 +898,33 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
               </div>
             </div>
 
-            {/* Conditional Rendering: Freelancer & Agency & Company vs Individual / other */}
-            {(editedUser?.profileType === 'Freelancer' || editedUser?.profileType === 'Agency' || editedUser?.profileType === 'Company') ? (
+            {/* Conditional Fields based on Profile Type */}
+            {editedUser?.profileType === 'Company' ? (
               <>
-                {/* Row: Industry Type & Business / Brand Name (or Agency Name * or Company / Organization Name *) */}
+                {/* Row: Industry Type & Company / Organization Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
                   {/* Industry Type */}
                   <div className="relative">
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Industry Type <span className="text-red-500">*</span>
                     </label>
                     <div
                       onClick={() => {
                         setIsIndustryOpen(!isIndustryOpen);
                         setIsProfileTypeOpen(false);
-                        setIsExperienceOpen(false);
-                        setIsTeamSizeOpen(false);
                         setIsCompanySizeOpen(false);
                       }}
-                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                        <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                          <Icon icon="lucide:trending-up" className="w-[0.8vw] h-[0.8vw]" />
-                        </div>
-                        <span className="font-normal">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
                       </div>
-                      <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
 
                     {isIndustryOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {industryOptions.map((ind) => (
                           <div
                             key={ind.label}
@@ -955,7 +932,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                               updateEditedUser({ industryType: ind.label, industry: ind.label });
                               setIsIndustryOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
                             <span>{ind.label}</span>
@@ -965,553 +942,115 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                     )}
                   </div>
 
-                  {/* Name field: Company / Organization Name * vs Agency Name * vs Business / Brand Name */}
+                  {/* Company / Organization Name */}
                   <div>
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                      {editedUser?.profileType === 'Company' ? (
-                        <>Company / Organization Name <span className="text-red-500">*</span></>
-                      ) : editedUser?.profileType === 'Agency' ? (
-                        <>Agency Name <span className="text-red-500">*</span></>
-                      ) : (
-                        'Business / Brand Name'
-                      )}
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Company / Organization Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       placeholder="Fist-o Tech Private Limited"
-                      value={editedUser?.companyName || editedUser?.agencyName || editedUser?.businessName || ''}
-                      onChange={(e) => updateEditedUser({
-                        companyName: e.target.value,
-                        agencyName: e.target.value,
-                        businessName: e.target.value
-                      })}
-                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
+                      value={editedUser?.companyName || editedUser?.businessName || ''}
+                      onChange={(e) => updateEditedUser({ companyName: e.target.value, businessName: e.target.value })}
+                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
 
-                {/* Row: Experience / Team Size / Company Size & Business Gmail */}
+                {/* Row: Company Size & Business Gmail */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-                  {/* Company Size OR Team Size OR Experience */}
-                  {editedUser?.profileType === 'Company' ? (
-                    <div className="relative">
-                      <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                        Company Size
-                      </label>
-                      <div
-                        onClick={() => {
-                          setIsCompanySizeOpen(!isCompanySizeOpen);
-                          setIsProfileTypeOpen(false);
-                          setIsIndustryOpen(false);
-                          setIsExperienceOpen(false);
-                          setIsTeamSizeOpen(false);
-                        }}
-                        className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
-                      >
-                        <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                          <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                            <Icon icon="lucide:building-2" className="w-[0.8vw] h-[0.8vw]" />
-                          </div>
-                          <span className="font-normal">{editedUser?.companySize || '100 - 120 Peoples'}</span>
-                        </div>
-                        <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                  {/* Company Size */}
+                  <div className="relative">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Company Size
+                    </label>
+                    <div
+                      onClick={() => {
+                        setIsCompanySizeOpen(!isCompanySizeOpen);
+                        setIsProfileTypeOpen(false);
+                        setIsIndustryOpen(false);
+                      }}
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:building-2" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.companySize || '100 - 120 Peoples'}</span>
                       </div>
-
-                      {isCompanySizeOpen && (
-                        <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
-                          {companySizeOptions.map((size) => (
-                            <div
-                              key={size}
-                              onClick={() => {
-                                updateEditedUser({ companySize: size });
-                                setIsCompanySizeOpen(false);
-                              }}
-                              className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.companySize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
-                            >
-                              <span>{size}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
-                  ) : editedUser?.profileType === 'Agency' ? (
-                    <div className="relative">
-                      <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                        Team Size
-                      </label>
-                      <div
-                        onClick={() => {
-                          setIsTeamSizeOpen(!isTeamSizeOpen);
-                          setIsProfileTypeOpen(false);
-                          setIsIndustryOpen(false);
-                          setIsExperienceOpen(false);
-                          setIsCompanySizeOpen(false);
-                        }}
-                        className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
-                      >
-                        <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                          <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                            <Icon icon="lucide:users" className="w-[0.8vw] h-[0.8vw]" />
+
+                    {isCompanySizeOpen && (
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                        {companySizeOptions.map((size) => (
+                          <div
+                            key={size}
+                            onClick={() => {
+                              updateEditedUser({ companySize: size });
+                              setIsCompanySizeOpen(false);
+                            }}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.companySize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                          >
+                            <span>{size}</span>
                           </div>
-                          <span className="font-normal">{editedUser?.teamSize || '40 - 50 Peoples'}</span>
-                        </div>
-                        <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                        ))}
                       </div>
-
-                      {isTeamSizeOpen && (
-                        <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
-                          {teamSizeOptions.map((size) => (
-                            <div
-                              key={size}
-                              onClick={() => {
-                                updateEditedUser({ teamSize: size });
-                                setIsTeamSizeOpen(false);
-                              }}
-                              className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.teamSize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
-                            >
-                              <span>{size}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                        Experience <span className="text-red-500">*</span>
-                      </label>
-                      <div
-                        onClick={() => {
-                          setIsExperienceOpen(!isExperienceOpen);
-                          setIsProfileTypeOpen(false);
-                          setIsIndustryOpen(false);
-                          setIsTeamSizeOpen(false);
-                          setIsCompanySizeOpen(false);
-                        }}
-                        className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
-                      >
-                        <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                          <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                            <Icon icon="lucide:briefcase" className="w-[0.8vw] h-[0.8vw]" />
-                          </div>
-                          <span className="font-normal">{editedUser?.experience || '2 Years'}</span>
-                        </div>
-                        <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
-                      </div>
-
-                      {isExperienceOpen && (
-                        <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
-                          {experienceOptions.map((exp) => (
-                            <div
-                              key={exp}
-                              onClick={() => {
-                                updateEditedUser({ experience: exp });
-                                setIsExperienceOpen(false);
-                              }}
-                              className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${editedUser?.experience === exp ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
-                            >
-                              <span>{exp}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Business Gmail */}
                   <div>
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                       Business Gmail
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none">
-                        <Icon icon="logos:google-icon" className="w-[0.9vw] h-[0.9vw]" />
+                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
                       </div>
                       <input
                         type="email"
                         placeholder="fistotech@gmail.com"
                         value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
                         onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
-                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.4vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
+                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* Company Description (Company only) */}
-                {editedUser?.profileType === 'Company' && (
-                  <div>
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                      Company Description
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="I'm going to be the King of the Pirates — that's my dream, and I'm never giving up on it. I love adventure, freedom, and good food (especially meat). I may not be the smartest, but I always trust my instincts and fight for what I believe in."
-                      value={editedUser?.companyDescription || editedUser?.aboutCompany || ''}
-                      onChange={(e) => updateEditedUser({
-                        companyDescription: e.target.value,
-                        aboutCompany: e.target.value
-                      })}
-                      className="w-full border border-gray-200 rounded-[0.55vw] p-[0.7vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white resize-none leading-[1.6]"
-                    />
-                  </div>
-                )}
-
-                {/* Services / Expertise */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Skills / Services / Expertise <span className="text-red-500">*</span>
-                  </label>
-                  <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
-                    {isAddingService ? (
-                      <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.4vw] px-[0.6vw] py-[0.3vw] bg-[#EC5137]/5">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Service name..."
-                          value={newServiceInput}
-                          onChange={(e) => setNewServiceInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddService();
-                            } else if (e.key === 'Escape') {
-                              setIsAddingService(false);
-                              setNewServiceInput('');
-                            }
-                          }}
-                          className="text-[0.78vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddService}
-                          className="text-[#EC5137] hover:opacity-80 font-bold text-[0.78vw]"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingService(false);
-                            setNewServiceInput('');
-                          }}
-                          className="text-gray-400 hover:text-gray-600 text-[0.78vw]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingService(true)}
-                        className="flex items-center gap-[0.3vw] px-[0.75vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.4vw] text-[0.74vw] font-semibold hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
-                      >
-                        <span>+</span> Add Service
-                      </button>
-                    )}
-
-                    {servicesList.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.4vw] text-[0.74vw] font-medium"
-                      >
-                        {item}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveService(item)}
-                          className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                        >
-                          <X className="w-[0.75vw] h-[0.75vw]" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Portfolio / Website (Freelancer) OR Company Website (Company) */}
-                {editedUser?.profileType !== 'Agency' && (
-                  <div>
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                      {editedUser?.profileType === 'Company'
-                        ? 'Company Website'
-                        : 'Portfolio / Website'}
-                    </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none text-gray-500">
-                        <Icon icon="lucide:globe" className="w-[0.9vw] h-[0.9vw]" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="https://fisto.com"
-                        value={editedUser?.website || ''}
-                        onChange={(e) => {
-                          updateEditedUser({ website: e.target.value });
-                          setErrors(prev => ({ ...prev, website: null }));
-                        }}
-                        onBlur={(e) => validateField('website', e.target.value)}
-                        className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.4vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
-                      />
-                    </div>
-                    {errors.website && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.website}</p>}
-                  </div>
-                )}
-
-                {/* Contact Number / Business Contact Number */}
-                <div className="flex flex-col gap-[0.6vw]">
-                  <h4 className="text-[0.85vw] font-semibold text-gray-800">
-                    {editedUser?.profileType === 'Company' ? 'Business Contact Number' : 'Contact Number'}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-                    {/* Contact 1 */}
-                    <div>
-                      <div className="flex items-center gap-[0.35vw] mb-[0.35vw]">
-                        {editingContactKey === 'contact1' ? (
-                          <div className="flex items-center gap-[0.3vw]">
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editedUser?.contact1Label !== undefined ? editedUser.contact1Label : 'Contact 1'}
-                              onChange={(e) => updateEditedUser({ contact1Label: e.target.value })}
-                              onBlur={() => setEditingContactKey(null)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') setEditingContactKey(null);
-                              }}
-                              className="text-[0.74vw] font-medium text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setEditingContactKey(null)}
-                              className="text-[#EC5137] hover:opacity-80 text-[0.75vw] font-bold"
-                            >
-                              ✓
-                            </button>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => setEditingContactKey('contact1')}
-                            className="flex items-center gap-[0.35vw] cursor-pointer group"
-                            title="Click to rename contact"
-                          >
-                            <span className="text-[0.74vw] font-medium text-gray-700 group-hover:text-[#EC5137] transition-colors">
-                              {editedUser?.contact1Label || 'Contact 1'}
-                            </span>
-                            <Icon icon="lucide:pencil" className="w-[0.75vw] h-[0.75vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="w-full min-h-[2.15vw]">
-                        <ProfilePhoneField
-                          value={editedUser?.contact1 || editedUser?.mobile || ''}
-                          countryCode={editedUser?.contact1CountryCode || editedUser?.countryCode || '+91'}
-                          onChange={(nationalNum, newDialCode) => {
-                            updateEditedUser({
-                              contact1: nationalNum,
-                              contact1CountryCode: newDialCode,
-                              mobile: nationalNum,
-                              countryCode: newDialCode
-                            });
-                          }}
-                          placeholder="1234567890"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Contact 2 */}
-                    {(editedUser?.contactCount >= 2 || editedUser?.contact2 || editedUser?.contactCount === undefined) && (
-                      <div>
-                        <div className="flex items-center justify-between mb-[0.35vw]">
-                          <div className="flex items-center gap-[0.35vw]">
-                            {editingContactKey === 'contact2' ? (
-                              <div className="flex items-center gap-[0.3vw]">
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editedUser?.contact2Label !== undefined ? editedUser.contact2Label : 'Contact 2'}
-                                  onChange={(e) => updateEditedUser({ contact2Label: e.target.value })}
-                                  onBlur={() => setEditingContactKey(null)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') setEditingContactKey(null);
-                                  }}
-                                  className="text-[0.74vw] font-medium text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingContactKey(null)}
-                                  className="text-[#EC5137] hover:opacity-80 text-[0.75vw] font-bold"
-                                >
-                                  ✓
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                onClick={() => setEditingContactKey('contact2')}
-                                className="flex items-center gap-[0.35vw] cursor-pointer group"
-                                title="Click to rename contact"
-                              >
-                                <span className="text-[0.74vw] font-medium text-gray-700 group-hover:text-[#EC5137] transition-colors">
-                                  {editedUser?.contact2Label || 'Contact 2'}
-                                </span>
-                                <Icon icon="lucide:pencil" className="w-[0.75vw] h-[0.75vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
-                              </div>
-                            )}
-                          </div>
-                          {editedUser?.contactCount === 2 && !editedUser?.contact3 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updateEditedUser({
-                                  contactCount: 1,
-                                  contact2: '',
-                                  contact2Label: 'Contact 2'
-                                });
-                              }}
-                              className="text-gray-400 hover:text-red-500 transition-colors text-[0.7vw] flex items-center gap-[0.2vw]"
-                              title="Remove Contact 2"
-                            >
-                              <X className="w-[0.75vw] h-[0.75vw]" />
-                            </button>
-                          )}
-                        </div>
-                        <div className="w-full min-h-[2.15vw]">
-                          <ProfilePhoneField
-                            value={editedUser?.contact2 || ''}
-                            countryCode={editedUser?.contact2CountryCode || '+91'}
-                            onChange={(nationalNum, newDialCode) => {
-                              updateEditedUser({
-                                contact2: nationalNum,
-                                contact2CountryCode: newDialCode
-                              });
-                            }}
-                            placeholder="1234567890"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Contact 3 */}
-                    {(editedUser?.contactCount >= 3 || editedUser?.contact3) && (
-                      <div>
-                        <div className="flex items-center justify-between mb-[0.35vw]">
-                          <div className="flex items-center gap-[0.35vw]">
-                            {editingContactKey === 'contact3' ? (
-                              <div className="flex items-center gap-[0.3vw]">
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editedUser?.contact3Label !== undefined ? editedUser.contact3Label : 'Contact 3'}
-                                  onChange={(e) => updateEditedUser({ contact3Label: e.target.value })}
-                                  onBlur={() => setEditingContactKey(null)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') setEditingContactKey(null);
-                                  }}
-                                  className="text-[0.74vw] font-medium text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingContactKey(null)}
-                                  className="text-[#EC5137] hover:opacity-80 text-[0.75vw] font-bold"
-                                >
-                                  ✓
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                onClick={() => setEditingContactKey('contact3')}
-                                className="flex items-center gap-[0.35vw] cursor-pointer group"
-                                title="Click to rename contact"
-                              >
-                                <span className="text-[0.74vw] font-medium text-gray-700 group-hover:text-[#EC5137] transition-colors">
-                                  {editedUser?.contact3Label || 'Contact 3'}
-                                </span>
-                                <Icon icon="lucide:pencil" className="w-[0.75vw] h-[0.75vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateEditedUser({
-                                contactCount: 2,
-                                contact3: '',
-                                contact3Label: 'Contact 3'
-                              });
-                            }}
-                            className="text-gray-400 hover:text-red-500 transition-colors text-[0.7vw] flex items-center gap-[0.2vw]"
-                            title="Remove Contact 3"
-                          >
-                            <X className="w-[0.75vw] h-[0.75vw]" />
-                          </button>
-                        </div>
-                        <div className="w-full min-h-[2.15vw]">
-                          <ProfilePhoneField
-                            value={editedUser?.contact3 || ''}
-                            countryCode={editedUser?.contact3CountryCode || '+91'}
-                            onChange={(nationalNum, newDialCode) => {
-                              updateEditedUser({
-                                contact3: nationalNum,
-                                contact3CountryCode: newDialCode
-                              });
-                            }}
-                            placeholder="1234567890"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Add Contact Number button (Max 3 contacts total) */}
-                  {((editedUser?.contactCount || (editedUser?.contact3 ? 3 : (editedUser?.contact2 !== undefined ? 2 : 2))) < 3) && (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const currentCount = editedUser?.contactCount || (editedUser?.contact2 !== undefined ? 2 : 1);
-                          if (currentCount < 3) {
-                            updateEditedUser({ contactCount: currentCount + 1 });
-                          }
-                        }}
-                        className="inline-flex items-center gap-[0.3vw] px-[0.9vw] py-[0.55vw] border border-[#EC5137] text-[#EC5137] rounded-[0.45vw] text-[0.78vw] font-semibold hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
-                      >
-                        <span className="text-[0.9vw] leading-none">+</span> Add Contact Number
-                      </button>
-                    </div>
-                  )}
                 </div>
               </>
-            ) : (
+            ) : editedUser?.profileType === 'Agency' ? (
               <>
-                {/* 2. Industry (for Individual / default) */}
+                {/* Row: Industry Type & Agency Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
+                  {/* Industry Type */}
                   <div className="relative">
-                    <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                      Industry
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Industry Type <span className="text-red-500">*</span>
                     </label>
                     <div
                       onClick={() => {
                         setIsIndustryOpen(!isIndustryOpen);
                         setIsProfileTypeOpen(false);
+                        setIsTeamSizeOpen(false);
                       }}
-                      className="w-full h-[2.15vw] flex items-center justify-between border border-gray-200 rounded-[0.55vw] px-[0.85vw] bg-white cursor-pointer hover:border-gray-300 transition-colors shadow-xs"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center gap-[0.7vw] text-[0.78vw] text-gray-800">
-                        <div className="w-[1.25vw] h-[1.25vw] rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                          <Icon icon="lucide:briefcase" className="w-[0.8vw] h-[0.8vw]" />
-                        </div>
-                        <span className="font-normal">{editedUser?.industryType || editedUser?.industry || 'Software Developer'}</span>
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
                       </div>
-                      <Icon icon="lucide:chevron-down" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
 
                     {isIndustryOpen && (
-                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.55vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                         {industryOptions.map((ind) => (
                           <div
                             key={ind.label}
                             onClick={() => {
-                              setEditedUser({ ...editedUser, industryType: ind.label, industry: ind.label });
+                              updateEditedUser({ industryType: ind.label, industry: ind.label });
                               setIsIndustryOpen(false);
                             }}
-                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.78vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
                           >
                             <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
                             <span>{ind.label}</span>
@@ -1520,162 +1059,586 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                       </div>
                     )}
                   </div>
-                </div>
 
-                {/* Skills / Expertise */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Skills / Expertise
-                  </label>
-                  <div className="w-full border border-gray-200 rounded-[0.55vw] p-[0.6vw] bg-white flex flex-wrap items-center gap-[0.5vw] min-h-[2.8vw]">
-                    {isAddingService ? (
-                      <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.4vw] px-[0.6vw] py-[0.3vw] bg-[#EC5137]/5">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Service name..."
-                          value={newServiceInput}
-                          onChange={(e) => setNewServiceInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddService();
-                            } else if (e.key === 'Escape') {
-                              setIsAddingService(false);
-                              setNewServiceInput('');
-                            }
-                          }}
-                          className="text-[0.78vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddService}
-                          className="text-[#EC5137] hover:opacity-80 font-bold text-[0.78vw]"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingService(false);
-                            setNewServiceInput('');
-                          }}
-                          className="text-gray-400 hover:text-gray-600 text-[0.78vw]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingService(true)}
-                        className="flex items-center gap-[0.3vw] px-[0.75vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.4vw] text-[0.74vw] font-semibold hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
-                      >
-                        <span>+</span> Add Service
-                      </button>
-                    )}
-
-                    {servicesList.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-[0.4vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.4vw] text-[0.74vw] font-medium"
-                      >
-                        {item}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveService(item)}
-                          className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-                        >
-                          <X className="w-[0.75vw] h-[0.75vw]" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 5. Portfolio / Website */}
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Portfolio / Website
-                  </label>
-                  <div className="relative flex items-center">
-                    <div className="absolute left-[0.85vw] flex items-center justify-center pointer-events-none text-gray-500">
-                      <Icon icon="lucide:globe" className="w-[0.9vw] h-[0.9vw]" />
-                    </div>
+                  {/* Agency Name */}
+                  <div>
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Agency Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      placeholder="https://fisto.com"
-                      value={editedUser?.website || ''}
-                      onChange={(e) => {
-                        setEditedUser({ ...editedUser, website: e.target.value });
-                        setErrors({ ...errors, website: null });
-                      }}
-                      onBlur={(e) => validateField('website', e.target.value)}
-                      className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] pl-[2.4vw] pr-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs"
+                      placeholder="Fist-o Tech Private Limited"
+                      value={editedUser?.agencyName || editedUser?.companyName || editedUser?.businessName || ''}
+                      onChange={(e) => updateEditedUser({ agencyName: e.target.value, companyName: e.target.value, businessName: e.target.value })}
+                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                     />
                   </div>
-                  {errors.website && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.website}</p>}
+                </div>
+
+                {/* Row: Team Size & Business Gmail */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
+                  {/* Team Size */}
+                  <div className="relative">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Team Size
+                    </label>
+                    <div
+                      onClick={() => {
+                        setIsTeamSizeOpen(!isTeamSizeOpen);
+                        setIsProfileTypeOpen(false);
+                        setIsIndustryOpen(false);
+                      }}
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:users" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.teamSize || '40 - 50 Peoples'}</span>
+                      </div>
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
+                    </div>
+
+                    {isTeamSizeOpen && (
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                        {teamSizeOptions.map((size) => (
+                          <div
+                            key={size}
+                            onClick={() => {
+                              updateEditedUser({ teamSize: size });
+                              setIsTeamSizeOpen(false);
+                            }}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.teamSize === size ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                          >
+                            <span>{size}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Business Gmail */}
+                  <div>
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Business Gmail
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="fistotech@gmail.com"
+                        value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
+                        onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
+                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
                 </div>
               </>
+            ) : editedUser?.profileType === 'Freelancer' ? (
+              <>
+                {/* Row: Industry Type & Business / Brand Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
+                  {/* Industry Type */}
+                  <div className="relative">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Industry Type <span className="text-red-500">*</span>
+                    </label>
+                    <div
+                      onClick={() => {
+                        setIsIndustryOpen(!isIndustryOpen);
+                        setIsProfileTypeOpen(false);
+                        setIsExperienceOpen(false);
+                      }}
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
+                      </div>
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
+                    </div>
+
+                    {isIndustryOpen && (
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                        {industryOptions.map((ind) => (
+                          <div
+                            key={ind.label}
+                            onClick={() => {
+                              updateEditedUser({ industryType: ind.label, industry: ind.label });
+                              setIsIndustryOpen(false);
+                            }}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${(editedUser?.industryType || editedUser?.industry) === ind.label ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                          >
+                            <Icon icon={ind.icon} className="w-[0.9vw] h-[0.9vw] text-gray-500" />
+                            <span>{ind.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Business / Brand Name */}
+                  <div>
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Business / Brand Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Fist-o Tech Private Limited"
+                      value={editedUser?.companyName || editedUser?.businessName || ''}
+                      onChange={(e) => updateEditedUser({ companyName: e.target.value, businessName: e.target.value })}
+                      className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Row: Experience & Business Gmail */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
+                  {/* Experience */}
+                  <div className="relative">
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Experience <span className="text-red-500">*</span>
+                    </label>
+                    <div
+                      onClick={() => {
+                        setIsExperienceOpen(!isExperienceOpen);
+                        setIsProfileTypeOpen(false);
+                        setIsIndustryOpen(false);
+                      }}
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
+                        <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
+                        <span className="font-normal text-gray-800">{editedUser?.experience || '2 Years'}</span>
+                      </div>
+                      <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
+                    </div>
+
+                    {isExperienceOpen && (
+                      <div className="absolute top-[calc(100%+0.3vw)] left-0 w-full bg-white border border-gray-200 rounded-[0.7vw] shadow-lg py-[0.4vw] z-50 max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                        {experienceOptions.map((exp) => (
+                          <div
+                            key={exp}
+                            onClick={() => {
+                              updateEditedUser({ experience: exp });
+                              setIsExperienceOpen(false);
+                            }}
+                            className={`flex items-center gap-[0.7vw] px-[1vw] py-[0.55vw] hover:bg-gray-50 cursor-pointer text-[0.82vw] ${editedUser?.experience === exp ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'}`}
+                          >
+                            <span>{exp}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Business Gmail */}
+                  <div>
+                    <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                      Business Gmail
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-[0.9vw] flex items-center justify-center pointer-events-none">
+                        <Icon icon="logos:google-icon" className="w-[1.1vw] h-[1.1vw]" />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="fistotech@gmail.com"
+                        value={editedUser?.businessEmail || editedUser?.companyEmail || ''}
+                        onChange={(e) => updateEditedUser({ businessEmail: e.target.value, companyEmail: e.target.value })}
+                        className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* For Individual or other: Professional Title */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
+                <div>
+                  <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                    Professional Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Luffy"
+                    value={editedUser?.professionalTitle || editedUser?.title || ''}
+                    onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
+                    className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
             )}
+
+            {/* Skills / Expertise */}
+            <div>
+              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                {editedUser?.profileType === 'Freelancer' ? (
+                  <>Skills / Expertise <span className="text-red-500">*</span></>
+                ) : (
+                  'Skills / Expertise'
+                )}
+              </label>
+              <div className="w-full border border-gray-200 rounded-[0.7vw] p-[0.7vw] bg-white flex flex-wrap items-center gap-[0.6vw] min-h-[3vw]">
+                {isAddingService ? (
+                  <div className="flex items-center gap-[0.3vw] border border-[#EC5137] rounded-[0.5vw] px-[0.6vw] py-[0.35vw] bg-[#EC5137]/5">
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Service name..."
+                      value={newServiceInput}
+                      onChange={(e) => setNewServiceInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddService();
+                        } else if (e.key === 'Escape') {
+                          setIsAddingService(false);
+                          setNewServiceInput('');
+                        }
+                      }}
+                      className="text-[0.82vw] bg-transparent focus:outline-none w-[7.5vw] text-gray-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddService}
+                      className="text-[#EC5137] hover:opacity-80 font-bold text-[0.82vw]"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingService(false);
+                        setNewServiceInput('');
+                      }}
+                      className="text-gray-400 hover:text-gray-600 text-[0.82vw]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingService(true)}
+                    className="flex items-center gap-[0.35vw] px-[0.85vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.5vw] text-[0.82vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
+                  >
+                    <span className="text-[1vw] leading-none">+</span> Add Service
+                  </button>
+                )}
+
+                {servicesList.map((item, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-[0.45vw] px-[0.75vw] py-[0.4vw] bg-[#F3F4F6] text-gray-700 rounded-[0.5vw] text-[0.82vw] font-normal"
+                  >
+                    {item}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveService(item)}
+                      className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                    >
+                      <X className="w-[0.8vw] h-[0.8vw]" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 6: About / Bio */}
+            <div>
+              <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
+                About / Bio
+              </label>
+              <textarea
+                rows={4}
+                placeholder="Please enter your personal information in the About / Bio"
+                value={editedUser?.about || ''}
+                onChange={(e) => updateEditedUser({ about: e.target.value })}
+                className="w-full border border-gray-200 rounded-[0.7vw] px-[0.9vw] py-[0.8vw] text-[0.82vw] focus:outline-none focus:border-gray-300 resize-none text-gray-700 bg-white leading-relaxed custom-scrollbar placeholder:text-gray-400"
+              />
+            </div>
           </div>
         </section>
 
-        {/* Address */}
+        {/* Contact & Location */}
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="carbon:location-company-filled" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
-            <h3 className="text-[0.95vw] font-medium text-gray-800">Address</h3>
+            <Icon icon="lucide:map-pin" className="w-[1.3vw] h-[1.3vw] text-gray-900 fill-gray-900" />
+            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Contact & Location</h3>
           </div>
 
           <div className="flex flex-col gap-[1.2vw]">
-            {/* Row 1: Address Line 1 & Address Line 2 */}
+            {/* Contact Number Group */}
+            <div>
+              <h4 className="text-[0.82vw] font-semibold text-gray-900 mb-[0.6vw]">
+                Contact Number
+              </h4>
+
+              {/* Contacts Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw] mb-[0.8vw]">
+                {/* Contact 1 */}
+                <div>
+                  <div className="flex items-center gap-[0.35vw] mb-[0.4vw]">
+                    {editingContactKey === 'contact1' ? (
+                      <div className="flex items-center gap-[0.3vw]">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editedUser?.contact1Label !== undefined ? editedUser.contact1Label : 'Contact 1'}
+                          onChange={(e) => updateEditedUser({ contact1Label: e.target.value })}
+                          onBlur={() => setEditingContactKey(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') setEditingContactKey(null);
+                          }}
+                          className="text-[0.82vw] font-normal text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditingContactKey(null)}
+                          className="text-[#EC5137] hover:opacity-80 text-[0.82vw] font-bold"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => setEditingContactKey('contact1')}
+                        className="flex items-center gap-[0.35vw] cursor-pointer group"
+                        title="Click to rename contact"
+                      >
+                        <span className="text-[0.82vw] font-normal text-gray-800 group-hover:text-[#EC5137] transition-colors">
+                          {editedUser?.contact1Label || 'Contact 1'}
+                        </span>
+                        <Icon icon="lucide:pencil" className="w-[0.8vw] h-[0.8vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-full">
+                    <ProfilePhoneField
+                      value={editedUser?.contact1 || editedUser?.mobile || ''}
+                      countryCode={editedUser?.contact1CountryCode || editedUser?.countryCode || '+91'}
+                      onChange={(nationalNum, newDialCode) => {
+                        updateEditedUser({
+                          contact1: nationalNum,
+                          contact1CountryCode: newDialCode,
+                          mobile: nationalNum,
+                          countryCode: newDialCode
+                        });
+                      }}
+                      placeholder="1234567890"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact 2 */}
+                {(editedUser?.contactCount || (editedUser?.contact2 !== undefined ? 2 : 2)) >= 2 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-[0.4vw]">
+                      <div className="flex items-center gap-[0.35vw]">
+                        {editingContactKey === 'contact2' ? (
+                          <div className="flex items-center gap-[0.3vw]">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editedUser?.contact2Label !== undefined ? editedUser.contact2Label : 'Contact 2'}
+                              onChange={(e) => updateEditedUser({ contact2Label: e.target.value })}
+                              onBlur={() => setEditingContactKey(null)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') setEditingContactKey(null);
+                              }}
+                              className="text-[0.82vw] font-normal text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditingContactKey(null)}
+                              className="text-[#EC5137] hover:opacity-80 text-[0.82vw] font-bold"
+                            >
+                              ✓
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setEditingContactKey('contact2')}
+                            className="flex items-center gap-[0.35vw] cursor-pointer group"
+                            title="Click to rename contact"
+                          >
+                            <span className="text-[0.82vw] font-normal text-gray-800 group-hover:text-[#EC5137] transition-colors">
+                              {editedUser?.contact2Label || 'Contact 2'}
+                            </span>
+                            <Icon icon="lucide:pencil" className="w-[0.8vw] h-[0.8vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
+                          </div>
+                        )}
+                      </div>
+                      {((editedUser?.contactCount || 2) > 1) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateEditedUser({
+                              contact2: '',
+                              contactCount: Math.max(1, (editedUser?.contactCount || 2) - 1)
+                            });
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-[0.1vw]"
+                          title="Remove contact"
+                        >
+                          <Icon icon="lucide:trash-2" className="w-[0.8vw] h-[0.8vw]" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="w-full">
+                      <ProfilePhoneField
+                        value={editedUser?.contact2 || ''}
+                        countryCode={editedUser?.contact2CountryCode || '+91'}
+                        onChange={(nationalNum, newDialCode) => {
+                          updateEditedUser({
+                            contact2: nationalNum,
+                            contact2CountryCode: newDialCode
+                          });
+                        }}
+                        placeholder="1234567890"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact 3 */}
+                {(editedUser?.contactCount || 2) >= 3 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-[0.4vw]">
+                      <div className="flex items-center gap-[0.35vw]">
+                        {editingContactKey === 'contact3' ? (
+                          <div className="flex items-center gap-[0.3vw]">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editedUser?.contact3Label !== undefined ? editedUser.contact3Label : 'Contact 3'}
+                              onChange={(e) => updateEditedUser({ contact3Label: e.target.value })}
+                              onBlur={() => setEditingContactKey(null)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') setEditingContactKey(null);
+                              }}
+                              className="text-[0.82vw] font-normal text-gray-700 border-b border-[#EC5137] bg-transparent outline-none px-[0.1vw] py-0 w-[6vw]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditingContactKey(null)}
+                              className="text-[#EC5137] hover:opacity-80 text-[0.82vw] font-bold"
+                            >
+                              ✓
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setEditingContactKey('contact3')}
+                            className="flex items-center gap-[0.35vw] cursor-pointer group"
+                            title="Click to rename contact"
+                          >
+                            <span className="text-[0.82vw] font-normal text-gray-800 group-hover:text-[#EC5137] transition-colors">
+                              {editedUser?.contact3Label || 'Contact 3'}
+                            </span>
+                            <Icon icon="lucide:pencil" className="w-[0.8vw] h-[0.8vw] text-gray-400 group-hover:text-[#EC5137] transition-colors" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateEditedUser({
+                            contact3: '',
+                            contactCount: 2
+                          });
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-[0.1vw]"
+                        title="Remove contact"
+                      >
+                        <Icon icon="lucide:trash-2" className="w-[0.8vw] h-[0.8vw]" />
+                      </button>
+                    </div>
+                    <div className="w-full">
+                      <ProfilePhoneField
+                        value={editedUser?.contact3 || ''}
+                        countryCode={editedUser?.contact3CountryCode || '+91'}
+                        onChange={(nationalNum, newDialCode) => {
+                          updateEditedUser({
+                            contact3: nationalNum,
+                            contact3CountryCode: newDialCode
+                          });
+                        }}
+                        placeholder="1234567890"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Contact Button */}
+              {((editedUser?.contactCount || 2) < 3) && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentCount = editedUser?.contactCount || 2;
+                      if (currentCount < 3) {
+                        updateEditedUser({ contactCount: currentCount + 1 });
+                      }
+                    }}
+                    className="inline-flex items-center gap-[0.35vw] px-[0.85vw] py-[0.4vw] border border-[#EC5137] text-[#EC5137] rounded-[0.5vw] text-[0.82vw] font-medium hover:bg-[#EC5137]/5 transition-colors cursor-pointer bg-white"
+                  >
+                    <span className="text-[1vw] leading-none">+</span> Add Contact
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Row: Address Line 1 & Address Line 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Address Line 1
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. 123 Main Street"
+                  placeholder="Fist-o Tech Private Limited"
                   value={editedUser?.address1 || ''}
                   onChange={(e) => updateEditedUser({ address1: e.target.value })}
-                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs placeholder-gray-400"
+                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Address Line 2
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Suite / Apartment"
+                  placeholder="Fist-o Tech Private Limited"
                   value={editedUser?.address2 || ''}
                   onChange={(e) => updateEditedUser({ address2: e.target.value })}
-                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs placeholder-gray-400"
+                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                 />
               </div>
             </div>
 
-            {/* Row 2: City, State, Country (3 columns) */}
+            {/* Row: City, State, Country */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   City
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Coimbatore"
+                  placeholder="Coimbatore"
                   value={editedUser?.city || ''}
                   onChange={(e) => updateEditedUser({ city: e.target.value })}
-                  className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs placeholder-gray-400"
+                  className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"
                 />
               </div>
 
-              {/* Custom State Dropdown */}
+              {/* State Dropdown */}
               <div className="relative" ref={stateRef}>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   State
                 </label>
                 <div className="relative">
@@ -1686,24 +1649,21 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                       setIsCountryOpen(false);
                       setStateSearch('');
                     }}
-                    className={`w-full h-[2.15vw] flex items-center justify-between border rounded-[0.55vw] px-[0.85vw] text-[0.78vw] bg-white transition-colors cursor-pointer shadow-xs ${
-                      isStateOpen ? 'border-gray-400 ring-1 ring-gray-300' : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
                   >
-                    <span className={`truncate ${editedUser?.state ? 'text-gray-700 font-normal' : 'text-gray-400'}`}>
-                      {editedUser?.state || 'Select State'}
+                    <span className={`truncate ${editedUser?.state ? 'text-gray-800 font-normal' : 'text-gray-400'}`}>
+                      {editedUser?.state || 'Tamil Nadu'}
                     </span>
                     <Icon
                       icon="lucide:chevron-down"
-                      className={`w-[0.85vw] h-[0.85vw] text-gray-400 transition-transform duration-200 shrink-0 ${
-                        isStateOpen ? 'rotate-180 text-gray-600' : ''
+                      className={`w-[1vw] h-[1vw] text-gray-500 transition-transform duration-200 shrink-0 ${
+                        isStateOpen ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {isStateOpen && (
-                    <div className="absolute left-0 top-[110%] w-full bg-white rounded-[0.55vw] shadow-xl border border-gray-100 z-50 overflow-hidden flex flex-col">
-                      {/* Search box if there are states */}
+                    <div className="absolute left-0 top-[110%] w-full bg-white rounded-[0.7vw] shadow-xl border border-gray-100 z-50 overflow-hidden flex flex-col">
                       <div className="p-[0.4vw] border-b border-gray-100 bg-gray-50/70">
                         <div className="flex items-center px-[0.6vw] py-[0.35vw] bg-white rounded-[0.4vw] border border-gray-200">
                           <Icon icon="lucide:search" className="w-[0.85vw] h-[0.85vw] text-gray-400 shrink-0 mr-[0.35vw]" />
@@ -1713,7 +1673,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                             onChange={(e) => setStateSearch(e.target.value)}
                             placeholder="Search state..."
                             autoFocus
-                            className="w-full text-[0.75vw] bg-transparent outline-none text-gray-800 placeholder-gray-400"
+                            className="w-full text-[0.8vw] bg-transparent outline-none text-gray-800 placeholder-gray-400"
                           />
                           {stateSearch && (
                             <button
@@ -1727,7 +1687,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                         </div>
                       </div>
 
-                      {/* State list */}
                       <div className="max-h-[14vw] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
                         {(!stateSearch.trim() || 'none'.includes(stateSearch.toLowerCase().trim())) && (
                           <button
@@ -1736,7 +1695,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                               updateEditedUser({ state: 'None' });
                               setIsStateOpen(false);
                             }}
-                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.82vw] transition-colors flex items-center justify-between cursor-pointer ${
                               (editedUser?.state === 'None' || !editedUser?.state) ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           >
@@ -1757,7 +1716,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                                   updateEditedUser({ state: st.name });
                                   setIsStateOpen(false);
                                 }}
-                                className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                                className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.82vw] transition-colors flex items-center justify-between cursor-pointer ${
                                   isSelected ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
                                 }`}
                               >
@@ -1779,9 +1738,9 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                 </div>
               </div>
 
-              {/* Custom Country Dropdown */}
+              {/* Country Dropdown */}
               <div className="relative" ref={countryRef}>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Country
                 </label>
                 <div className="relative">
@@ -1792,24 +1751,21 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                       setIsStateOpen(false);
                       setCountrySearch('');
                     }}
-                    className={`w-full h-[2.15vw] flex items-center justify-between border rounded-[0.55vw] px-[0.85vw] text-[0.78vw] bg-white transition-colors cursor-pointer shadow-xs ${
-                      isCountryOpen ? 'border-gray-400 ring-1 ring-gray-300' : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
                   >
-                    <span className="truncate text-gray-700 font-normal">
-                      {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'Select Country'))}
+                    <span className="truncate text-gray-800 font-normal">
+                      {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'India'))}
                     </span>
                     <Icon
                       icon="lucide:chevron-down"
-                      className={`w-[0.85vw] h-[0.85vw] text-gray-400 transition-transform duration-200 shrink-0 ${
-                        isCountryOpen ? 'rotate-180 text-gray-600' : ''
+                      className={`w-[1vw] h-[1vw] text-gray-500 transition-transform duration-200 shrink-0 ${
+                        isCountryOpen ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {isCountryOpen && (
-                    <div className="absolute left-0 top-[110%] w-full bg-white rounded-[0.55vw] shadow-xl border border-gray-100 z-50 overflow-hidden flex flex-col">
-                      {/* Search box */}
+                    <div className="absolute left-0 top-[110%] w-full bg-white rounded-[0.7vw] shadow-xl border border-gray-100 z-50 overflow-hidden flex flex-col">
                       <div className="p-[0.4vw] border-b border-gray-100 bg-gray-50/70">
                         <div className="flex items-center px-[0.6vw] py-[0.35vw] bg-white rounded-[0.4vw] border border-gray-200">
                           <Icon icon="lucide:search" className="w-[0.85vw] h-[0.85vw] text-gray-400 shrink-0 mr-[0.35vw]" />
@@ -1819,7 +1775,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                             onChange={(e) => setCountrySearch(e.target.value)}
                             placeholder="Search country..."
                             autoFocus
-                            className="w-full text-[0.75vw] bg-transparent outline-none text-gray-800 placeholder-gray-400"
+                            className="w-full text-[0.8vw] bg-transparent outline-none text-gray-800 placeholder-gray-400"
                           />
                           {countrySearch && (
                             <button
@@ -1833,7 +1789,6 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                         </div>
                       </div>
 
-                      {/* Country List */}
                       <div className="max-h-[14vw] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
                         {(!countrySearch.trim() || 'none'.includes(countrySearch.toLowerCase().trim())) && (
                           <button
@@ -1845,7 +1800,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                               });
                               setIsCountryOpen(false);
                             }}
-                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                            className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.82vw] transition-colors flex items-center justify-between cursor-pointer ${
                               editedUser?.country === 'None' ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           >
@@ -1870,7 +1825,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                                   });
                                   setIsCountryOpen(false);
                                 }}
-                                className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.78vw] transition-colors flex items-center justify-between cursor-pointer ${
+                                className={`w-full text-left px-[1vw] py-[0.55vw] text-[0.82vw] transition-colors flex items-center justify-between cursor-pointer ${
                                   isSelected ? 'bg-gray-100 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
                                 }`}
                               >
@@ -1893,21 +1848,21 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
               </div>
             </div>
 
-            {/* Row 3: Pin Code */}
+            {/* Row: Pin Code */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[1.5vw]">
               <div>
-                <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                <label className="block text-[0.82vw] font-semibold text-gray-900 mb-[0.4vw]">
                   Pin Code
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. 641001"
+                  placeholder="000-000"
                   value={editedUser?.pincode || ''}
                   onChange={(e) => {
                     updateEditedUser({ pincode: e.target.value });
                     setErrors(prev => ({ ...prev, pincode: null }));
                   }}
-                  className={`w-full h-[2.15vw] border ${errors.pincode ? 'border-red-500' : 'border-gray-200'} rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white shadow-xs placeholder-gray-400`}
+                  className={`w-full h-[2.5vw] border ${errors.pincode ? 'border-red-500' : 'border-gray-200'} rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400`}
                 />
                 {errors.pincode && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.pincode}</p>}
               </div>
@@ -2013,20 +1968,20 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
         </section>
 
         {/* Visibility Section */}
-        <section className="border border-gray-200/80 rounded-[0.8vw] p-[1.5vw] bg-white shadow-xs mb-[2.5vw]">
-          <div className="flex items-start gap-[0.7vw] mb-[1.4vw]">
-            <Icon icon="lucide:eye" className="w-[1.15vw] h-[1.15vw] text-gray-700 mt-[0.1vw]" />
+        <section className="border border-gray-100 rounded-[1.2vw] p-[1.8vw] bg-white shadow-sm mb-[2.5vw]">
+          <div className="flex items-start gap-[0.7vw] mb-[1.6vw]">
+            <Icon icon="lucide:eye" className="w-[1.4vw] h-[1.4vw] text-gray-900 mt-[0.1vw]" />
             <div>
-              <h3 className="text-[0.95vw] font-medium text-gray-800 leading-tight">Visibility</h3>
-              <p className="text-[0.72vw] text-gray-400 mt-[0.2vw]">Control what information is visible to others</p>
+              <h3 className="text-[1.2vw] font-bold text-gray-900 leading-tight tracking-tight">Visibility</h3>
+              <p className="text-[0.82vw] text-gray-400 mt-[0.25vw]">Control what information is visible to others</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-[1.2vw] pt-[0.2vw]">
+          <div className="flex flex-col gap-[1.4vw]">
             {/* Toggle Row */}
-            <div className="flex flex-col gap-[0.2vw] w-full">
+            <div className="flex flex-col gap-[0.3vw] w-full">
               <div className="flex items-center gap-[1.2vw] w-full">
-                <h4 className="text-[0.82vw] font-medium text-gray-800 shrink-0">
+                <h4 className="text-[0.95vw] font-semibold text-gray-900 shrink-0">
                   Show my profile in Explore Page
                 </h4>
 
@@ -2072,14 +2027,14 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                 </button>
               </div>
 
-              <p className="text-[0.75vw] text-gray-400">
+              <p className="text-[0.82vw] text-gray-400">
                 Make your profile visible to others in Explore page
               </p>
             </div>
 
             {/* Checkbox Items */}
-            <div className="flex flex-col gap-[0.9vw] pt-[0.4vw]">
-              {/* Option 1: Contact Information */}
+            <div className="flex flex-col gap-[1vw] pt-[0.2vw]">
+              {/* Option 1: contact & Location */}
               <div
                 onClick={() => {
                   setEditedUser(prev => {
@@ -2088,38 +2043,7 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                       ...prev,
                       visibilitySettings: {
                         ...(prev?.visibilitySettings || {}),
-                        showContact: !currentVal
-                      }
-                    };
-                  });
-                }}
-                className="flex items-center gap-[0.7vw] cursor-pointer select-none"
-              >
-                <div
-                  className={`w-[1.1vw] h-[1.1vw] rounded-[0.25vw] flex items-center justify-center transition-colors shrink-0 ${
-                    editedUser?.visibilitySettings?.showContact !== false
-                      ? 'bg-[#EC5137] text-white'
-                      : 'border border-gray-300 bg-white'
-                  }`}
-                >
-                  {editedUser?.visibilitySettings?.showContact !== false && (
-                    <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw] stroke-[3.5]" />
-                  )}
-                </div>
-                <span className="text-[0.8vw] text-gray-600">
-                  Show <strong className="font-semibold text-gray-900">contact information</strong> like email, phone and website in your public profile
-                </span>
-              </div>
-
-              {/* Option 2: Address */}
-              <div
-                onClick={() => {
-                  setEditedUser(prev => {
-                    const currentVal = prev?.visibilitySettings?.showAddress !== false;
-                    return {
-                      ...prev,
-                      visibilitySettings: {
-                        ...(prev?.visibilitySettings || {}),
+                        showContact: !currentVal,
                         showAddress: !currentVal
                       }
                     };
@@ -2128,22 +2052,22 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                 className="flex items-center gap-[0.7vw] cursor-pointer select-none"
               >
                 <div
-                  className={`w-[1.1vw] h-[1.1vw] rounded-[0.25vw] flex items-center justify-center transition-colors shrink-0 ${
-                    editedUser?.visibilitySettings?.showAddress !== false
+                  className={`w-[1.25vw] h-[1.25vw] rounded-[0.3vw] flex items-center justify-center transition-colors shrink-0 ${
+                    editedUser?.visibilitySettings?.showContact !== false
                       ? 'bg-[#EC5137] text-white'
                       : 'border border-gray-300 bg-white'
                   }`}
                 >
-                  {editedUser?.visibilitySettings?.showAddress !== false && (
-                    <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw] stroke-[3.5]" />
+                  {editedUser?.visibilitySettings?.showContact !== false && (
+                    <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw] stroke-[3.5]" />
                   )}
                 </div>
-                <span className="text-[0.8vw] text-gray-600">
-                  Show <strong className="font-semibold text-gray-900">Address</strong> in your public profile
+                <span className="text-[0.84vw] text-gray-500 font-normal">
+                  Show <strong className="font-semibold text-gray-900">contact & Location</strong> in your public profile
                 </span>
               </div>
 
-              {/* Option 3: Social Media Navigation Icons */}
+              {/* Option 2: Social Media & Links */}
               <div
                 onClick={() => {
                   setEditedUser(prev => {
@@ -2160,25 +2084,25 @@ const EditProfile = ({ user, setUser, onActionReady }) => {
                 className="flex items-center gap-[0.7vw] cursor-pointer select-none"
               >
                 <div
-                  className={`w-[1.1vw] h-[1.1vw] rounded-[0.25vw] flex items-center justify-center transition-colors shrink-0 ${
+                  className={`w-[1.25vw] h-[1.25vw] rounded-[0.3vw] flex items-center justify-center transition-colors shrink-0 ${
                     editedUser?.visibilitySettings?.showSocial !== false
                       ? 'bg-[#EC5137] text-white'
                       : 'border border-gray-300 bg-white'
                   }`}
                 >
                   {editedUser?.visibilitySettings?.showSocial !== false && (
-                    <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw] stroke-[3.5]" />
+                    <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw] stroke-[3.5]" />
                   )}
                 </div>
-                <span className="text-[0.8vw] text-gray-600">
-                  Show <strong className="font-semibold text-gray-900">Social Media</strong> Navigation Icons in your public profile
+                <span className="text-[0.84vw] text-gray-500 font-normal">
+                  Show <strong className="font-semibold text-gray-900">Social Media & Links</strong> Navigation Icons in your public profile
                 </span>
               </div>
             </div>
           </div>
         </section>
 
-      </div>
+        </div>
     </div>
   );
 };

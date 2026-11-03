@@ -114,9 +114,9 @@ const OrangeShelf = ({
         <div
           className="absolute pointer-events-none z-20"
           style={{
-            left: '19.8%',
-            top: '35.8%',
-            width: '7.4%'
+            left: '19.2%',
+            top: '32.6%',
+            width: '9.2%'
           }}
         >
           <img
@@ -132,9 +132,9 @@ const OrangeShelf = ({
         <div
           className="absolute pointer-events-none z-20"
           style={{
-            left: '63.0%',
-            top: '45.2%',
-            width: '8.4%'
+            left: '62.2%',
+            top: '43.2%',
+            width: '10.2%'
           }}
         >
           <img
@@ -252,7 +252,7 @@ const OrangeShelf = ({
         className="absolute z-20 flex items-end justify-center pointer-events-auto"
         style={{
           left: '28.3%',
-          top: '22.8%',
+          top: '21.5%',
           width: '9.8%',
           height: '24.8%'
         }}
@@ -379,7 +379,7 @@ const OrangeShelf = ({
         className="absolute z-20 flex items-end justify-center pointer-events-auto"
         style={{
           left: '52.1%',
-          top: '35.2%',
+          top: '37.3%',
           width: '9.8%',
           height: '24.8%'
         }}

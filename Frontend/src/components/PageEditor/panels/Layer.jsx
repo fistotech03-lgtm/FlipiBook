@@ -165,8 +165,18 @@ const LayerItem = ({
     if (selectedLayerId) {
       const selEl = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || doc.getElementById(selectedLayerId);
       if (selEl) {
-        const compound = selEl.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+        const isInternalText = ['text', 'tspan', 'foreignobject'].includes(selEl.tagName?.toLowerCase());
+        const compound = selEl.closest?.(
+          (isInternalText
+            ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+            : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
+          '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
+          '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], ' +
+          '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
+        );
         if (compound && compound.id === layer.id) return true;
+        const layerEl = doc.getElementById(layer.id);
+        if (layerEl && (layerEl.contains(selEl) || selEl.contains(layerEl))) return true;
       }
     }
 
@@ -1524,9 +1534,21 @@ const Layer = ({
                                     Page is hidden
                                   </div>
                                 ) : (() => {
-                                  let effectiveLayers = (page.layers && page.layers.length > 0)
-                                    ? page.layers
-                                    : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  let effectiveLayers = [];
+                                  if (index === activePageIndex && typeof document !== 'undefined') {
+                                    const liveSvg = document.querySelector(`.page-svg-container[data-page-index="${index}"] svg`);
+                                    if (liveSvg) {
+                                      try {
+                                        const parsed = parseLayersFromSVG(liveSvg);
+                                        if (parsed && parsed.length > 0) effectiveLayers = parsed;
+                                      } catch (e) {}
+                                    }
+                                  }
+                                  if (!effectiveLayers || effectiveLayers.length === 0) {
+                                    effectiveLayers = (page.layers && page.layers.length > 0)
+                                      ? page.layers
+                                      : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  }
                                   if ((!effectiveLayers || effectiveLayers.length === 0) && page.html) {
                                     try {
                                       const parser = new DOMParser();

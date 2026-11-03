@@ -431,7 +431,7 @@ export const parseLayersFromSVG = (element) => {
       const isTypography = !isPageRoot && (
                            child.getAttribute('data-typography-type') === 'motion-graphic' ||
                            child.getAttribute('data-typography-type') === 'kinetic' ||
-                           child.getAttribute('data-is-element-typography') === 'true' ||
+                           (child.getAttribute('data-subtopic') === 'Titles' && child.getAttribute('data-is-element-typography') !== 'true') ||
                            (lowerId.startsWith('typography-') && child.getAttribute('data-type') === 'text')
       );
 
@@ -579,12 +579,25 @@ export const parseLayersFromSVG = (element) => {
           coreType = 'decorator';
         } else if (isTypography) {
           const customName = child.getAttribute('data-name');
-          const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
-            'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
-            'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
-            'Paragraph Text', 'Bullet List', 'Numbered List'
-          ].includes(customName);
-          coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          const presetTitle = child.getAttribute('data-preset-title');
+          const isTitleSubtopic = child.getAttribute('data-subtopic') === 'Titles' || child.getAttribute('data-motion-template') || child.getAttribute('data-typography-type') === 'motion-graphic';
+          const templateName = child.getAttribute('data-motion-template');
+
+          if (isTitleSubtopic || presetTitle) {
+            let label = presetTitle || customName || '';
+            label = label.replace(/^Title\s*-\s*/i, '').replace(/^Typography\s*/i, '').replace(/\s*\([^)]*\)/g, '').trim();
+            if (!label && templateName) {
+              label = templateName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+            }
+            coreName = label ? `Title - ${label}` : 'Title';
+          } else {
+            const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
+              'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
+              'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
+              'Paragraph Text', 'Bullet List', 'Numbered List'
+            ].includes(customName);
+            coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          }
           coreType = 'text';
         } else if (isText) {
           const customName = child.getAttribute('data-name');

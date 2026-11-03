@@ -154,6 +154,22 @@ export function useElementInsertion({
         pageGroup.id = 'frame-' + Date.now();
       }
 
+      // If inserted element has nested <defs> (e.g. audio/button gradients or filters),
+      // ensure they are also mirrored in the top-level <svg><defs> so url(#...) always resolves reliably.
+      const nestedDefs = el.querySelectorAll('defs > *');
+      if (nestedDefs.length > 0) {
+        let svgDefs = svg.querySelector(':scope > defs') || svg.querySelector('defs');
+        if (!svgDefs) {
+          svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svg.insertBefore(svgDefs, svg.firstChild);
+        }
+        nestedDefs.forEach((defItem) => {
+          if (defItem.id && !svgDefs.querySelector(`[id="${defItem.id}"]`)) {
+            svgDefs.appendChild(defItem.cloneNode(true));
+          }
+        });
+      }
+
       pageGroup.appendChild(el);
 
       const immediateLayers = typeof parseLayersFromSVG === 'function' ? parseLayersFromSVG(svg) : null;

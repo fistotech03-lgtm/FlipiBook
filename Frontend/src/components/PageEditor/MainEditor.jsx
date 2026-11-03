@@ -1058,13 +1058,14 @@ const getDraggableElement = (target, canvasRoot) => {
       return audioGroup;
     }
 
-    // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
-    const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
-    if (typographyGroup) {
-      if (!typographyGroup.id) {
-        typographyGroup.id = `typography-${Date.now()}`;
+    // Titles (motion graphic) elements are single compound elements; if clicking anywhere inside, drag/select the whole title element!
+    // SVG Typography groups (group-typography-...) are user groups containing editable text elements!
+    const titleGroup = current && typeof current.closest === 'function' ? current.closest('[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template]') : null;
+    if (titleGroup) {
+      if (!titleGroup.id) {
+        titleGroup.id = `title-${Date.now()}`;
       }
-      return typographyGroup;
+      return titleGroup;
     }
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group

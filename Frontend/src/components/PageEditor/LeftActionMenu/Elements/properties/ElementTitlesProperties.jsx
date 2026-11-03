@@ -331,8 +331,19 @@ const ElementTitlesProperties = ({
   activePageIndex = 0,
   updateElementAttribute
 }) => {
+  const effectiveElement = selectedElement || (() => {
+    if (!selectedLayerId) return null;
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    return editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+  })();
+
   // Read initial properties from element
-  const initialProps = getMotionGraphicProperties(selectedElement);
+  const initialProps = getMotionGraphicProperties(effectiveElement || selectedElement);
+
+  const hasSecondaryText = Boolean(
+    effectiveElement?.getAttribute('data-subtext') ||
+    effectiveElement?.querySelector('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b')
+  );
 
   const [animation, setAnimation] = useState(
     initialProps.animation === 'Infinity' ? 'Infinite' : (initialProps.animation || 'Infinite')
@@ -342,10 +353,10 @@ const ElementTitlesProperties = ({
   const [primaryText, setPrimaryText] = useState(initialProps.primaryText || 'Animation');
   const [secondaryText, setSecondaryText] = useState(initialProps.secondaryText || 'Animation');
   // Color states
-  const [textColor1, setTextColor1] = useState(initialProps.textColor1 || initialProps.primaryTextColor || '#0f291e');
-  const [textColor2, setTextColor2] = useState(initialProps.textColor2 || initialProps.secondaryTextColor || '#0f291e');
-  const [strokeColor, setStrokeColor] = useState(initialProps.strokeColor || initialProps.object1Color || '#00E5FF');
-  const [backgroundColor, setBackgroundColor] = useState(initialProps.backgroundColor || initialProps.object3Color || 'rgba(8, 10, 16, 0.65)');
+  const [textColor1, setTextColor1] = useState(initialProps.primaryTextColor || '#0f291e');
+  const [textColor2, setTextColor2] = useState(initialProps.secondaryTextColor || '#0f291e');
+  const [strokeColor, setStrokeColor] = useState(initialProps.strokeColor || '#00E5FF');
+  const [backgroundColor, setBackgroundColor] = useState(initialProps.backgroundColor || 'transparent');
 
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [activeTextSettings, setActiveTextSettings] = useState(null); // 'primary' | 'secondary' | null
@@ -373,11 +384,6 @@ const ElementTitlesProperties = ({
 
   const loadedKeyRef = useRef(null);
   const currentKey = `${selectedLayerId}-${selectedElement?.id || ''}`;
-  const effectiveElement = selectedElement || (() => {
-    if (!selectedLayerId) return null;
-    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-    return editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
-  })();
 
   useEffect(() => {
     const targetEl = effectiveElement;
@@ -389,10 +395,10 @@ const ElementTitlesProperties = ({
       setSpeed(p.speed !== undefined ? p.speed : 80);
       setPrimaryText(p.primaryText || 'Animation');
       setSecondaryText(p.secondaryText || 'Animation');
-      setTextColor1(p.textColor1 || p.primaryTextColor || '#0f291e');
-      setTextColor2(p.textColor2 || p.secondaryTextColor || '#0f291e');
-      setStrokeColor(p.strokeColor || p.object1Color || '#00E5FF');
-      setBackgroundColor(p.backgroundColor || p.object3Color || 'rgba(8, 10, 16, 0.65)');
+      setTextColor1(p.primaryTextColor || '#0f291e');
+      setTextColor2(p.secondaryTextColor || '#0f291e');
+      setStrokeColor(p.strokeColor || '#00E5FF');
+      setBackgroundColor(p.backgroundColor || 'transparent');
 
       setPrimaryFontSize(p.primaryFontSize || 24);
       setPrimaryFontFamily(p.primaryFontFamily || 'Poppins');
@@ -763,121 +769,91 @@ const ElementTitlesProperties = ({
           )}
         </div>
 
-        {/* Secondary Text */}
-        <div className="flex flex-col gap-[0.4vw]">
-          <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
-          <div className="flex items-center gap-[0.5vw] w-full">
-            <input
-              type="text"
-              value={secondaryText}
-              onChange={(e) => handleSecondaryTextChange(e.target.value)}
-              placeholder="Animation"
-              className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
-            />
-            {/* Color Swatch */}
-            <div
-              onClick={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
-                activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
-                  ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              style={{ background: textColor2 }}
-              title="Click to pick Text Color 2"
-            />
-            {/* Sliders edit option button */}
-            <button
-              type="button"
-              onClick={() => setActiveTextSettings((prev) => (prev === 'secondary' ? null : 'secondary'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
-                activeTextSettings === 'secondary'
-                  ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
-              title="Text Property"
-            >
-              <Sliders className="w-[1vw] h-[1vw]" />
-            </button>
-          </div>
-
-          {/* Inline Text Property Card below Secondary Text input box */}
-          {activeTextSettings === 'secondary' && (
-            <div className="mt-[0.2vw]">
-              <TextPropertyInlinePopup
-                targetType="secondary"
-                fontFamily={secondaryFontFamily}
-                fontSize={secondaryFontSize}
-                fontWeight={secondaryFontWeight}
-                letterSpacing={secondaryLetterSpacing}
-                lineHeight={secondaryLineHeight}
-                textAlign={secondaryTextAlign}
-                isBold={secondaryIsBold}
-                isStrikethrough={secondaryIsStrikethrough}
-                isList={secondaryIsList}
-                onClose={() => setActiveTextSettings(null)}
-                onUpdate={(updates) => {
-                  if (updates.fontFamily !== undefined) setSecondaryFontFamily(updates.fontFamily);
-                  if (updates.fontSize !== undefined) setSecondaryFontSize(updates.fontSize);
-                  if (updates.fontWeight !== undefined) setSecondaryFontWeight(updates.fontWeight);
-                  if (updates.letterSpacing !== undefined) setSecondaryLetterSpacing(updates.letterSpacing);
-                  if (updates.lineHeight !== undefined) setSecondaryLineHeight(updates.lineHeight);
-                  if (updates.textAlign !== undefined) setSecondaryTextAlign(updates.textAlign);
-                  if (updates.isBold !== undefined) setSecondaryIsBold(updates.isBold);
-                  if (updates.isStrikethrough !== undefined) setSecondaryIsStrikethrough(updates.isStrikethrough);
-                  if (updates.isList !== undefined) setSecondaryIsList(updates.isList);
-
-                  syncUpdates({
-                    ...(updates.fontFamily !== undefined ? { secondaryFontFamily: updates.fontFamily } : {}),
-                    ...(updates.fontSize !== undefined ? { secondaryFontSize: updates.fontSize } : {}),
-                    ...(updates.fontWeight !== undefined ? { secondaryFontWeight: updates.fontWeight } : {}),
-                    ...(updates.letterSpacing !== undefined ? { secondaryLetterSpacing: updates.letterSpacing } : {}),
-                    ...(updates.lineHeight !== undefined ? { secondaryLineHeight: updates.lineHeight } : {}),
-                    ...(updates.textAlign !== undefined ? { secondaryTextAlign: updates.textAlign } : {}),
-                    ...(updates.isBold !== undefined ? { secondaryIsBold: updates.isBold } : {}),
-                    ...(updates.isStrikethrough !== undefined ? { secondaryIsStrikethrough: updates.isStrikethrough } : {})
-                  });
-                }}
+        {/* Secondary Text (only shown if title has secondary text) */}
+        {hasSecondaryText && (
+          <div className="flex flex-col gap-[0.4vw]">
+            <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+            <div className="flex items-center gap-[0.5vw] w-full">
+              <input
+                type="text"
+                value={secondaryText}
+                onChange={(e) => handleSecondaryTextChange(e.target.value)}
+                placeholder="Animation"
+                className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
               />
+              {/* Color Swatch */}
+              <div
+                onClick={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
+                  activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
+                    ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                style={{ background: textColor2 }}
+                title="Click to pick Text Color 2"
+              />
+              {/* Sliders edit option button */}
+              <button
+                type="button"
+                onClick={() => setActiveTextSettings((prev) => (prev === 'secondary' ? null : 'secondary'))}
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
+                  activeTextSettings === 'secondary'
+                    ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Text Property"
+              >
+                <Sliders className="w-[1vw] h-[1vw]" />
+              </button>
             </div>
-          )}
-        </div>
+
+            {/* Inline Text Property Card below Secondary Text input box */}
+            {activeTextSettings === 'secondary' && (
+              <div className="mt-[0.2vw]">
+                <TextPropertyInlinePopup
+                  targetType="secondary"
+                  fontFamily={secondaryFontFamily}
+                  fontSize={secondaryFontSize}
+                  fontWeight={secondaryFontWeight}
+                  letterSpacing={secondaryLetterSpacing}
+                  lineHeight={secondaryLineHeight}
+                  textAlign={secondaryTextAlign}
+                  isBold={secondaryIsBold}
+                  isStrikethrough={secondaryIsStrikethrough}
+                  isList={secondaryIsList}
+                  onClose={() => setActiveTextSettings(null)}
+                  onUpdate={(updates) => {
+                    if (updates.fontFamily !== undefined) setSecondaryFontFamily(updates.fontFamily);
+                    if (updates.fontSize !== undefined) setSecondaryFontSize(updates.fontSize);
+                    if (updates.fontWeight !== undefined) setSecondaryFontWeight(updates.fontWeight);
+                    if (updates.letterSpacing !== undefined) setSecondaryLetterSpacing(updates.letterSpacing);
+                    if (updates.lineHeight !== undefined) setSecondaryLineHeight(updates.lineHeight);
+                    if (updates.textAlign !== undefined) setSecondaryTextAlign(updates.textAlign);
+                    if (updates.isBold !== undefined) setSecondaryIsBold(updates.isBold);
+                    if (updates.isStrikethrough !== undefined) setSecondaryIsStrikethrough(updates.isStrikethrough);
+                    if (updates.isList !== undefined) setSecondaryIsList(updates.isList);
+
+                    syncUpdates({
+                      ...(updates.fontFamily !== undefined ? { secondaryFontFamily: updates.fontFamily } : {}),
+                      ...(updates.fontSize !== undefined ? { secondaryFontSize: updates.fontSize } : {}),
+                      ...(updates.fontWeight !== undefined ? { secondaryFontWeight: updates.fontWeight } : {}),
+                      ...(updates.letterSpacing !== undefined ? { secondaryLetterSpacing: updates.letterSpacing } : {}),
+                      ...(updates.lineHeight !== undefined ? { secondaryLineHeight: updates.lineHeight } : {}),
+                      ...(updates.textAlign !== undefined ? { secondaryTextAlign: updates.textAlign } : {}),
+                      ...(updates.isBold !== undefined ? { secondaryIsBold: updates.isBold } : {}),
+                      ...(updates.isStrikethrough !== undefined ? { secondaryIsStrikethrough: updates.isStrikethrough } : {})
+                    });
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Object Color Section ── */}
       <div className="flex flex-col gap-[0.6vw] mt-[0.3vw]">
         <SectionHeader title="Object Color" />
-
-        {/* Text Color 1 */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Text Color 1</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={textColor1}
-              onChange={handleTextColor1Change}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'textColor1' ? null : 'textColor1'))}
-              isActive={activeColorPicker === 'textColor1'}
-            />
-          </div>
-        </div>
-
-        {/* Text Color 2 */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Text Color 2</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={textColor2}
-              onChange={handleTextColor2Change}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
-              isActive={activeColorPicker === 'textColor2'}
-            />
-          </div>
-        </div>
 
         {/* Stroke Color */}
         <div className="flex items-center gap-[0.5vw]">

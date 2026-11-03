@@ -6,7 +6,6 @@ import {
   PageProperties,
   ShapeProperties,
   ElementTitlesProperties,
-  TextElementEditor,
   ElementButtonProperties,
   ImageFramingProperties,
   ElementTableProperties,
@@ -425,8 +424,13 @@ const RightSidebar = ({
 
       // If the selected element is an internal child of a compound shape/button/audio/media group,
       // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
+      // Note: text elements inside typography groups should be editable as individual text,
+      // and SVG typography groups (group-typography-...) are treated as groups/texts, not ElementTitles.
+      const isInternalTextOfTypography = el && ['text', 'tspan', 'foreignobject'].includes(el.tagName?.toLowerCase());
       const compoundGroup = el?.closest?.(
-        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], [data-motion-template], g[id^="typography-"], g[id^="group-typography-"], ' +
+        (isInternalTextOfTypography
+          ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+          : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
         '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
         '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
         '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -447,8 +451,11 @@ const RightSidebar = ({
         // --- IMPROVED DIMENSION LOGIC: Try actual DOM first for rendered accuracy ---
         const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
         let actualEl = editorDoc.getElementById(el.id || selectedLayerId);
+        const actualIsInternalText = actualEl && ['text', 'tspan', 'foreignobject'].includes(actualEl.tagName?.toLowerCase());
         const actualCompound = actualEl?.closest?.(
-          '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], [data-motion-template], g[id^="typography-"], g[id^="group-typography-"], ' +
+          (actualIsInternalText
+            ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+            : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
           '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
           '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
           '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -678,12 +685,12 @@ const RightSidebar = ({
             el.querySelector('[data-type="shape"]') !== null
           ));
 
-        const isElementTitle = el.getAttribute('data-subtopic') === 'Titles' ||
+        const isElementTitle = !['text', 'tspan', 'foreignobject'].includes(lowerTagName) && (
+          (el.getAttribute('data-subtopic') === 'Titles' && el.getAttribute('data-is-element-typography') !== 'true' && !el.getAttribute('id')?.startsWith('group-typography-')) ||
           el.getAttribute('data-typography-type') === 'motion-graphic' ||
           el.getAttribute('data-motion-template') !== null ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('typography-')) ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('group-typography-')) ||
-          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"], [data-typography-type="motion-graphic"]') !== null;
+          el.querySelector?.('[data-motion-template], [data-typography-type="motion-graphic"]') !== null
+        );
 
         const isElementTypography = false;
 

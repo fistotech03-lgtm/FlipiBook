@@ -1799,9 +1799,12 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
-      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
-      if (typographyParent && typographyParent.id) {
-        resolvedId = typographyParent.id;
+      const isInternalTextOfTypography = el && ['text', 'tspan', 'foreignobject'].includes(el.tagName?.toLowerCase());
+      if (!isInternalTextOfTypography) {
+        const typographyParent = el?.closest?.('[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template]');
+        if (typographyParent && typographyParent.id) {
+          resolvedId = typographyParent.id;
+        }
       }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
@@ -2557,8 +2560,13 @@ export const useCanvasPointerEvents = ({
     }
 
     // Check if double click targets a compound element (button, audio, shape, qr, map, embed, etc.)
+    // Note: Typography text elements can be double-clicked to directly enter text edit mode!
+    const isDirectText = directTextEl && ['text', 'tspan', 'foreignobject'].includes(directTextEl.tagName?.toLowerCase());
     const compoundParent = (directTextEl || e.target)?.closest?.(
-      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      (isDirectText
+        ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+        : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
+      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (compoundParent) {
       if (compoundParent.id) {
@@ -2594,8 +2602,12 @@ export const useCanvasPointerEvents = ({
       if (underlying) clickedEl = underlying;
     }
     let target = getDraggableElement(clickedEl, e.currentTarget) || (selectedLayerIdRef.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null);
+    const isTargetText = target && ['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase());
     const targetCompound = target?.closest?.(
-      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      (isTargetText
+        ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+        : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
+      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     );
     if (targetCompound) {
       if (targetCompound.id) {

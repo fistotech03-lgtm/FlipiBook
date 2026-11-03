@@ -10,7 +10,6 @@ export * from './helpers';
 export * from './hooks';
 export * from './components';
 export * from './utils/shapeElementUtils';
-export * from './utils/kineticTypographyUtils';
 export * from './utils/motionGraphicUtils';
 export * from './utils/buttonElementUtils';
 export * from './utils/imageFramingUtils';

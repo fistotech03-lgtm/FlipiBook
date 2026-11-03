@@ -263,9 +263,7 @@ const SPEED_OPTIONS = [
 
 const BEHAVIOUR_OPTIONS = [
   { value: 'Auto Play on Page Open', label: 'Auto Play on Page Open' },
-  { value: 'Play on Click', label: 'Play on Click' },
-  { value: 'Play on Hover', label: 'Play on Hover' },
-  { value: 'Loop on Page', label: 'Loop on Page' }
+  { value: 'Play on Click', label: 'Play on Click' }
 ];
 
 

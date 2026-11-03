@@ -166,7 +166,15 @@ const LayerItem = ({
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
     const selEl = doc.getElementById(selectedLayerId);
     if (selEl) {
-      const compound = selEl.closest('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+      const isInternalText = ['text', 'tspan', 'foreignobject'].includes(selEl.tagName?.toLowerCase());
+      const compound = selEl.closest(
+        (isInternalText
+          ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+          : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
+        '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
+        '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], ' +
+        '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
+      );
       if (compound && compound.id === layer.id) return true;
       const layerEl = doc.getElementById(layer.id);
       if (layerEl && (layerEl.contains(selEl) || selEl.contains(layerEl))) return true;

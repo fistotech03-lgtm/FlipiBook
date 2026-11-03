@@ -505,9 +505,10 @@ export const createYouTubeChannelSvg = ({
         #typography-${uniqueId} .yt-logo-box {
           animation: yt-logo-spring-${uniqueId} ${duration}ms infinite cubic-bezier(0.175, 0.885, 0.32, 1.275);
           animation-play-state: running;
-          transform-box: view-box;
-          transform-origin: 28px 27px;
+          transform-box: fill-box;
+          transform-origin: center center;
           pointer-events: none;
+          flex-shrink: 0;
         }
 
         #typography-${uniqueId} .yt-typewriter-container {
@@ -546,26 +547,24 @@ export const createYouTubeChannelSvg = ({
         pointer-events="all" 
       />
 
-      <!-- YouTube Red Curved Badge vertically centered at (10, 14) -->
-      <g class="yt-logo-box" transform="translate(10, 14)">
-        <rect 
-          x="0" 
-          y="0" 
-          width="36" 
-          height="26" 
-          rx="7" 
-          ry="7" 
-          fill="${primaryColor}" 
-        />
-        <polygon 
-          points="15,7 15,19 25,13" 
-          fill="#FFFFFF" 
-        />
-      </g>
-
-      <!-- Channel Name Typewriter Reveal -->
-      <foreignObject x="54" y="0" width="${width - 60}" height="${height}" style="overflow: visible; pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; pointer-events: none;">
+      <!-- Centered Flex Container with YouTube Badge + Text -->
+      <foreignObject x="0" y="0" width="${width}" height="${height}" style="overflow: visible; pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; pointer-events: none;">
+          <svg class="yt-logo-box" viewBox="0 0 36 26" width="36" height="26" style="overflow: visible;">
+            <rect 
+              x="0" 
+              y="0" 
+              width="36" 
+              height="26" 
+              rx="7" 
+              ry="7" 
+              fill="${primaryColor}" 
+            />
+            <polygon 
+              points="15,6 15,20 25,13" 
+              fill="#FFFFFF" 
+            />
+          </svg>
           <div class="yt-typewriter-container">
             <span class="motion-text-content yt-title-text">${text}</span>
           </div>
@@ -875,7 +874,7 @@ export const createSquareOpenSvg = ({
   duration = 6500,
   isTranslate = false
 }) => {
-  const width = 230, height = 150;
+  const width = 230, height = 96;
   const ease = 'cubic-bezier(0.17, 1, 0.333, 1)';
   const css = `
         @keyframes sq-box-${uniqueId} {
@@ -921,9 +920,9 @@ export const createSquareOpenSvg = ({
         }`;
   const body = `
       <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="4" ry="4" fill="none" pointer-events="all" />
-      <rect class="sq-box" x="12" y="12" width="${width - 24}" height="${height - 24}" rx="2" ry="2" />
-      <foreignObject x="16" y="16" width="${width - 32}" height="${height - 32}" style="pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; pointer-events: none;">
+      <rect class="sq-box" x="8" y="8" width="${width - 16}" height="${height - 16}" rx="2" ry="2" />
+      <foreignObject x="10" y="10" width="${width - 20}" height="${height - 20}" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none;">
           <div class="sq-win"><span class="motion-text-content sq-a">${text}</span></div>
           <div class="sq-win"><span class="motion-text-subcontent sq-b">${subText}</span></div>
         </div>
@@ -1135,7 +1134,7 @@ export const createMotionGraphicElementNode = (preset, cx, cy) => {
     'slide-split': [240, 78],
     'swap-bar': [420, 56],
     'bar-sweep': [250, 68],
-    'square-open': [230, 150],
+    'square-open': [230, 96],
     'social-badge': [250, 90]
   };
   const [estWidth, estHeight] = TEMPLATE_SIZES[preset.template] || [200, 56];
@@ -1226,20 +1225,12 @@ export const getMotionGraphicProperties = (el) => {
     '#0f291e';
 
   // Object Colors / Strokes / Backgrounds
-  const textColor1 =
-    el.getAttribute('data-text-color-1') ||
-    el.getAttribute('data-primary-text-color') ||
-    el.getAttribute('data-primary-color') ||
-    '#0f291e';
-
-  const textColor2 =
-    el.getAttribute('data-text-color-2') ||
-    el.getAttribute('data-secondary-text-color') ||
-    el.getAttribute('data-secondary-color') ||
-    '#0f291e';
+  const textColor1 = primaryTextColor;
+  const textColor2 = secondaryTextColor;
 
   const strokeColor =
     el.getAttribute('data-stroke-color') ||
+    el.getAttribute('data-secondary-color') ||
     el.getAttribute('data-object-1-color') ||
     el.getAttribute('data-primary-color') ||
     '#00E5FF';
@@ -1247,10 +1238,10 @@ export const getMotionGraphicProperties = (el) => {
   const backgroundColor =
     el.getAttribute('data-bg-color') ||
     el.getAttribute('data-object-3-color') ||
-    'rgba(8, 10, 16, 0.65)';
+    'transparent';
 
-  const object1Color = textColor1;
-  const object2Color = textColor2;
+  const object1Color = strokeColor;
+  const object2Color = strokeColor;
   const object3Color = strokeColor;
 
   // Font properties
@@ -1403,10 +1394,23 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.strokeColor !== undefined) {
     el.setAttribute('data-stroke-color', updates.strokeColor);
-    const strokeEls = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .cyber-inner-stroke, .flipi-slash-accent, .sq-box');
+    el.setAttribute('data-secondary-color', updates.strokeColor);
+    const strokeEls = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .cyber-inner-stroke, .flipi-slash-accent, .sq-box, .bs-bar, .sb-bar, .ss-bar, .sb-pill, .sb-badge, .yt-logo-box rect');
     strokeEls.forEach((node) => {
-      node.setAttribute('stroke', updates.strokeColor);
-      node.style.stroke = updates.strokeColor;
+      if (node.tagName.toLowerCase() === 'rect' && node.parentElement?.classList.contains('yt-logo-box')) {
+        node.setAttribute('fill', updates.strokeColor);
+      } else if (node.classList?.contains('ss-bar')) {
+        node.style.background = updates.strokeColor;
+      } else if (node.classList?.contains('bs-bar') || node.classList?.contains('sb-bar')) {
+        node.setAttribute('fill', updates.strokeColor);
+        node.style.fill = updates.strokeColor;
+      } else if (node.classList?.contains('sb-pill') || node.classList?.contains('sb-badge')) {
+        node.setAttribute('stroke', updates.strokeColor);
+        node.style.stroke = updates.strokeColor;
+      } else {
+        node.setAttribute('stroke', updates.strokeColor);
+        node.style.stroke = updates.strokeColor;
+      }
     });
   }
 

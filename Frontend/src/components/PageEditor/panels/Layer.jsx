@@ -175,8 +175,6 @@ const LayerItem = ({
           '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
         );
         if (compound && compound.id === layer.id) return true;
-        const layerEl = doc.getElementById(layer.id);
-        if (layerEl && (layerEl.contains(selEl) || selEl.contains(layerEl))) return true;
       }
     }
 

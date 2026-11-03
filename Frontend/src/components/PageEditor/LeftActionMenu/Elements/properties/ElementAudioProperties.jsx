@@ -850,7 +850,22 @@ const ElementAudioProperties = ({
     const rootEl = selectedElement.closest?.('[data-type="audio-frame"], g[id^="audio-"]') || selectedElement;
     const currentTpl = rootEl.getAttribute('data-audio-template') || 'glassmorphism';
     const wasCorrupted = currentTpl !== 'audio-icon' && rootEl.getAttribute('data-stroke-color') === '#900000' && rootEl.getAttribute('data-icon-color') === '#000000';
-    if (!rootEl.getAttribute('data-icon-color') || !rootEl.getAttribute('data-fill-color') || !rootEl.getAttribute('data-stroke-color') || wasCorrupted) {
+    
+    // Check if fill layer has an unresolved url(#...) gradient that needs to be materialized
+    const canvasFillLayer = rootEl.querySelector?.('.audio-fill-layer');
+    const layerFill = canvasFillLayer?.getAttribute('fill');
+    const isGradientFill = (extracted.bgColor && extracted.bgColor.includes('gradient')) || (layerFill && layerFill.startsWith('url(#'));
+    let gradDefExists = true;
+    if (layerFill && layerFill.startsWith('url(#')) {
+      const gId = layerFill.match(/url\(#([^)]+)\)/)?.[1];
+      if (gId) {
+        const ownerDoc = rootEl.ownerDocument || document;
+        const svgRoot = rootEl.closest('svg') || ownerDoc.querySelector('svg');
+        gradDefExists = !!(rootEl.querySelector(`#${gId}`) || svgRoot?.querySelector(`#${gId}`) || ownerDoc.getElementById(gId));
+      }
+    }
+
+    if (!rootEl.getAttribute('data-icon-color') || !rootEl.getAttribute('data-fill-color') || !rootEl.getAttribute('data-stroke-color') || wasCorrupted || (isGradientFill && !gradDefExists)) {
       applyColorsToCanvas(rootEl, {
         icon: extracted.iconColor,
         bg: extracted.bgColor,
@@ -1778,12 +1793,6 @@ const ElementAudioProperties = ({
       {/* ── 3. Audio Player Controls Sub-section ── */}
       <SectionHeader title="Audio Player Controls" />
 
-      {/* Play/Pause Button */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Play/Pause Button</span>
-        <Toggle checked={controlPlayPause} onChange={setControlPlayPause} />
-      </div>
-
       {/* Skip Forward/Backward */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
         <span className="text-[0.78vw] text-gray-700 font-semibold">Skip Forward/Backward</span>
@@ -1810,32 +1819,7 @@ const ElementAudioProperties = ({
               <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
             </button>
           </div>
-          <Toggle checked={controlSkip} onChange={setControlSkip} />
         </div>
-      </div>
-
-      {/* Duration */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Duration</span>
-        <Toggle checked={controlDuration} onChange={setControlDuration} />
-      </div>
-
-      {/* Volume Control */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Volume Control</span>
-        <Toggle checked={controlVolume} onChange={setControlVolume} />
-      </div>
-
-      {/* Loop Button */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Loop Button</span>
-        <Toggle checked={controlLoop} onChange={setControlLoop} />
-      </div>
-
-      {/* Mute */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold">Mute</span>
-        <Toggle checked={controlMute} onChange={setControlMute} />
       </div>
 
       {/* ── 4. Colors Section ── */}

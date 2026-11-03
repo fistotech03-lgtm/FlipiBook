@@ -1490,9 +1490,21 @@ const Layer = ({
                                     Page is hidden
                                   </div>
                                 ) : (() => {
-                                  let effectiveLayers = (page.layers && page.layers.length > 0)
-                                    ? page.layers
-                                    : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  let effectiveLayers = [];
+                                  if (index === activePageIndex && typeof document !== 'undefined') {
+                                    const liveSvg = document.querySelector(`.page-svg-container[data-page-index="${index}"] svg`);
+                                    if (liveSvg) {
+                                      try {
+                                        const parsed = parseLayersFromSVG(liveSvg);
+                                        if (parsed && parsed.length > 0) effectiveLayers = parsed;
+                                      } catch (e) {}
+                                    }
+                                  }
+                                  if (!effectiveLayers || effectiveLayers.length === 0) {
+                                    effectiveLayers = (page.layers && page.layers.length > 0)
+                                      ? page.layers
+                                      : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  }
                                   if ((!effectiveLayers || effectiveLayers.length === 0) && page.html) {
                                     try {
                                       const doc = new DOMParser().parseFromString(page.html, 'image/svg+xml');

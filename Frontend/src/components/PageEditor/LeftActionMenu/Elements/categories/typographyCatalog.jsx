@@ -21,7 +21,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     bg: '#08080c',
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
-    primaryColor: '#FFFFFF',
+    primaryColor: '#000000',
     secondaryColor: '#FF0040',
     fontSize: 24,
     fontFamily: '"Arial Black", Impact, sans-serif',
@@ -34,14 +34,14 @@ export const MOTION_GRAPHIC_PRESETS = [
     category: 'text',
     subtopic: 'Titles',
     tag: 'Motion AE',
-    bg: '#0a0a10',
+    bg: '#ffffff',
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
-    primaryColor: '#FFFFFF',
-    secondaryColor: '#00E5FF',
-    fontSize: 22,
-    fontFamily: '"Arial Black", Impact, sans-serif',
-    duration: 7000
+    primaryColor: '#E6007A',
+    secondaryColor: '#E6007A',
+    fontSize: 24,
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    duration: 4500
   },
   {
     id: 'lottie-title-3',
@@ -53,7 +53,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     bg: '#05070e',
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
-    primaryColor: '#FFFFFF',
+    primaryColor: '#000000',
     secondaryColor: '#FFC600',
     fontSize: 24,
     fontFamily: '"Arial Black", Impact, sans-serif',
@@ -69,9 +69,9 @@ export const MOTION_GRAPHIC_PRESETS = [
     bg: '#0d0d14',
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
-    primaryColor: '#FFFFFF',
-    secondaryColor: '#3BF4FF',
-    fontSize: 20,
+    primaryColor: '#000000',
+    secondaryColor: '#00E5FF',
+    fontSize: 24,
     fontFamily: '"Arial Black", Impact, sans-serif',
     duration: 6500
   },
@@ -85,10 +85,10 @@ export const MOTION_GRAPHIC_PRESETS = [
     bg: '#05070e',
     text: 'ANIMATION',
     subText: '',
-    primaryColor: '#FF0033',
-    secondaryColor: '#FFFFFF',
+    primaryColor: '#000000',
+    secondaryColor: '#FF0033',
     glowIntensity: 18,
-    fontSize: 28,
+    fontSize: 16,
     fontFamily: 'Roboto, sans-serif',
     duration: 4700
   },
@@ -102,7 +102,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     bg: '#0a0c14',
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
-    primaryColor: '#F3F2F3',
+    primaryColor: '#000000',
     secondaryColor: '#FFC600',
     glowIntensity: 0,
     fontSize: 24,
@@ -120,7 +120,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
     primaryColor: '#FF1E27',
-    secondaryColor: '#FFFFFF',
+    secondaryColor: '#000000',
     glowIntensity: 0,
     fontSize: 20,
     fontFamily: '"Arial Black", Impact, sans-serif',
@@ -137,7 +137,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     text: 'FLIPIBOOK',
     subText: '',
     primaryColor: '#FF0024',
-    secondaryColor: '#FFFFFF',
+    secondaryColor: '#000000',
     glowIntensity: 0,
     fontSize: 21,
     fontFamily: '"Arial Black", Impact, sans-serif',
@@ -173,8 +173,8 @@ const renderMotionGraphicPreview = (preset) => {
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
           <line x1="18" y1="42" x2="28" y2="8" stroke={preset.secondaryColor} strokeWidth="3" strokeLinecap="round" />
           <g transform="translate(34, 0)">
-            <text x="0" y="20" fill={preset.primaryColor} fontSize="11" fontFamily="Arial, sans-serif">{preset.text}</text>
-            <text x="0" y="38" fill={preset.primaryColor} fontSize="16" fontFamily="Impact, sans-serif">{preset.subText}</text>
+            <text x="6" y="20" fill={preset.primaryColor} fontSize="11" fontFamily="Arial, sans-serif">{preset.text}</text>
+            <text x="-3" y="38" fill={preset.primaryColor} fontSize="16" fontFamily="Impact, sans-serif">{preset.subText}</text>
           </g>
         </svg>
       ) : preset.template === 'box-reveal' ? (
@@ -197,9 +197,9 @@ const renderMotionGraphicPreview = (preset) => {
         </svg>
       ) : preset.template === 'swap-bar' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
-          <rect x="14" y="12" width="6" height="26" fill={preset.secondaryColor} />
-          <text x="26" y="24" fill={preset.primaryColor} fontSize="12" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
-          <text x="26" y="35" fill={preset.secondaryColor} fontSize="8" fontFamily="Arial, sans-serif">{preset.subText}</text>
+          <text x="74" y="30" textAnchor="end" fill={preset.primaryColor} fontSize="11" fontFamily="'Georgia', serif" letterSpacing="1">{preset.text}</text>
+          <rect x="78" y="16" width="3" height="18" fill={preset.secondaryColor} rx="0.5" />
+          <text x="85" y="30" textAnchor="start" fill="#000000" fontSize="11" fontFamily="'Georgia', serif" letterSpacing="1">{preset.subText}</text>
         </svg>
       ) : preset.template === 'bar-sweep' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
@@ -208,8 +208,9 @@ const renderMotionGraphicPreview = (preset) => {
         </svg>
       ) : preset.template === 'square-open' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
-          <rect x="25" y="8" width="110" height="34" rx="2" fill="none" stroke={preset.secondaryColor} strokeWidth="1.5" strokeDasharray="6 4" />
-          <text x="80" y="29" textAnchor="middle" fill={preset.primaryColor} fontSize="11" fontWeight="700" fontFamily="sans-serif">{preset.text}</text>
+          <rect x="25" y="6" width="110" height="38" rx="2" fill="none" stroke={preset.secondaryColor} strokeWidth="2" />
+          <text x="80" y="24" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="900" fontFamily="'Arial Black', sans-serif">{preset.text}</text>
+          <text x="80" y="36" textAnchor="middle" fill={preset.secondaryColor} fontSize="8" fontWeight="700" letterSpacing="1" fontFamily="sans-serif">{preset.subText}</text>
         </svg>
       ) : preset.template === 'social-badge' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
@@ -257,6 +258,8 @@ const parseSvgToGroupNode = (rawSvg, name, targetWidth, targetHeight, cx, cy) =>
   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   group.setAttribute('id', uniqueId);
   group.setAttribute('data-type', 'group');
+  group.setAttribute('data-is-element-typography', 'true');
+  group.setAttribute('data-subtopic', 'Titles');
   group.setAttribute('data-name', name || 'Typography Group');
   group.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
 
@@ -333,7 +336,7 @@ export const TYPOGRAPHY_SVG_PRESETS = [
         />
       </div>
     ),
-    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_1, 'Typeface Bortons', 260, 150, cx, cy)
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_1, 'Typeface Bortons', 95, 55, cx, cy)
   },
   {
     id: 'typography-svg-2',
@@ -352,7 +355,7 @@ export const TYPOGRAPHY_SVG_PRESETS = [
         />
       </div>
     ),
-    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_2, 'Masterpiece Mind', 260, 138, cx, cy)
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_2, 'Masterpiece Mind', 95, 50, cx, cy)
   },
   {
     id: 'typography-svg-3',
@@ -371,7 +374,7 @@ export const TYPOGRAPHY_SVG_PRESETS = [
         />
       </div>
     ),
-    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_3, 'MadMax Fury Road', 260, 108, cx, cy)
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_3, 'MadMax Fury Road', 95, 40, cx, cy)
   },
   {
     id: 'typography-svg-4',
@@ -396,9 +399,11 @@ export const TYPOGRAPHY_SVG_PRESETS = [
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       group.setAttribute('id', uniqueId);
       group.setAttribute('data-type', 'group');
+      group.setAttribute('data-is-element-typography', 'true');
+      group.setAttribute('data-subtopic', 'Titles');
       group.setAttribute('data-name', 'Typography Poster');
-      const scale = 180 / 672;
-      const posX = Math.round(cx - 180 / 2);
+      const scale = 80 / 672;
+      const posX = Math.round(cx - 80 / 2);
       const posY = Math.round(cy - (661 * scale) / 2);
       group.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
       
@@ -432,7 +437,7 @@ export const TYPOGRAPHY_SVG_PRESETS = [
         />
       </div>
     ),
-    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_5, 'Fresh Fonts 25', 130, 254, cx, cy)
+    insert: (cx, cy) => parseSvgToGroupNode(RAW_SVG_5, 'Fresh Fonts 25', 55, 108, cx, cy)
   }
 ];
 

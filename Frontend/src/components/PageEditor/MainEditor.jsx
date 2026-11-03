@@ -1018,8 +1018,8 @@ const getDraggableElement = (target, canvasRoot) => {
       return audioGroup;
     }
 
-    // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
-    const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
+    // Typography & Titles elements are single compound elements; if clicking anywhere inside, drag/select the whole typography element!
+    const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], [data-motion-template], g[id^="typography-"], g[id^="group-typography-"]') : null;
     if (typographyGroup) {
       if (!typographyGroup.id) {
         typographyGroup.id = `typography-${Date.now()}`;

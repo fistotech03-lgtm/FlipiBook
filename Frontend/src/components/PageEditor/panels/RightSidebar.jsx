@@ -414,10 +414,19 @@ const RightSidebar = ({
       const doc = parser.parseFromString(page.html, 'image/svg+xml');
       let el = doc.getElementById(selectedLayerId);
 
+      // Fallback: If not in doc yet, attempt to find in the active live editor DOM
+      if (!el) {
+        const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+        const liveEl = editorDoc.getElementById(selectedLayerId);
+        if (liveEl) {
+          el = liveEl;
+        }
+      }
+
       // If the selected element is an internal child of a compound shape/button/audio/media group,
       // resolve to the compound container group so properties (fill, stroke, etc.) are read accurately.
       const compoundGroup = el?.closest?.(
-        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], [data-motion-template], g[id^="typography-"], g[id^="group-typography-"], ' +
         '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
         '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
         '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -439,7 +448,7 @@ const RightSidebar = ({
         const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
         let actualEl = editorDoc.getElementById(el.id || selectedLayerId);
         const actualCompound = actualEl?.closest?.(
-          '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], ' +
+          '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], [data-motion-template], g[id^="typography-"], g[id^="group-typography-"], ' +
           '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
           '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
           '[data-type="audio-frame"], g[id^="audio-"], ' +
@@ -672,7 +681,9 @@ const RightSidebar = ({
         const isElementTitle = el.getAttribute('data-subtopic') === 'Titles' ||
           el.getAttribute('data-typography-type') === 'motion-graphic' ||
           el.getAttribute('data-motion-template') !== null ||
-          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"]') !== null;
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('typography-')) ||
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('group-typography-')) ||
+          el.querySelector?.('[data-motion-template], [data-subtopic="Titles"], [data-typography-type="motion-graphic"]') !== null;
 
         const isElementTypography = false;
 
@@ -1289,7 +1300,10 @@ const RightSidebar = ({
                         <ElementTitlesProperties
                           selectedElement={(() => {
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            return editorDoc.getElementById(selectedLayerId);
+                            const found = editorDoc.getElementById(selectedLayerId);
+                            if (found) return found;
+                            // Check in page SVGs if not in main-flipbook-editor iframe
+                            return document.getElementById(selectedLayerId);
                           })()}
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}

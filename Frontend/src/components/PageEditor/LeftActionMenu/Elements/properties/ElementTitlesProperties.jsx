@@ -373,11 +373,17 @@ const ElementTitlesProperties = ({
 
   const loadedKeyRef = useRef(null);
   const currentKey = `${selectedLayerId}-${selectedElement?.id || ''}`;
+  const effectiveElement = selectedElement || (() => {
+    if (!selectedLayerId) return null;
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    return editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
+  })();
 
   useEffect(() => {
-    if (selectedElement && loadedKeyRef.current !== currentKey) {
+    const targetEl = effectiveElement;
+    if (targetEl && loadedKeyRef.current !== currentKey) {
       loadedKeyRef.current = currentKey;
-      const p = getMotionGraphicProperties(selectedElement);
+      const p = getMotionGraphicProperties(targetEl);
       setAnimation(p.animation === 'Infinity' ? 'Infinite' : (p.animation || 'Infinite'));
       setCustomAnimationCount(p.customCount || '4');
       setSpeed(p.speed !== undefined ? p.speed : 80);
@@ -412,13 +418,14 @@ const ElementTitlesProperties = ({
 
   // Synchronize helper
   const syncUpdates = (newAttributes = {}) => {
-    if (!selectedElement) return;
-    updateMotionGraphicAttributes(selectedElement, newAttributes);
+    const targetEl = effectiveElement;
+    if (!targetEl) return;
+    updateMotionGraphicAttributes(targetEl, newAttributes);
 
     // Sync via DOM serializer
     const svgRoot = (() => {
       const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-      const el = editorDoc.getElementById(selectedLayerId) || selectedElement;
+      const el = editorDoc.getElementById(selectedLayerId) || targetEl;
       if (!el) return null;
       const container = el.closest('.page-svg-container');
       if (container) return container.querySelector('svg');

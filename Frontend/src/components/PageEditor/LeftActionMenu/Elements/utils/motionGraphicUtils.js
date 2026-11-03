@@ -9,8 +9,8 @@
 export const createCyberFrameSvg = ({
   uniqueId = Date.now(),
   text = 'ANIMATION',
-  primaryColor = '#FF0033',
-  secondaryColor = '#FFFFFF',
+  primaryColor = '#000000',
+  secondaryColor = '#FF0033',
   glowIntensity = 6,
   fontSize = 15,
   fontFamily = 'Roboto, sans-serif',
@@ -22,6 +22,20 @@ export const createCyberFrameSvg = ({
   const height = 56;
   const rx = 14;
   const perimeter = 480;
+
+  const letters = Array.from(text);
+  const letterCount = letters.length;
+  const letterStaggerMs = letterCount > 1 ? Math.min(60, 450 / letterCount) : 0;
+
+  const letterKeyframes = letters.map((_, i) => {
+    const delayMs = i * letterStaggerMs;
+    return `
+        #typography-${uniqueId} .cyber-char-${i} {
+          animation: cyber-text-${uniqueId} ${duration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
+          animation-delay: ${delayMs}ms;
+          animation-play-state: running;
+        }`;
+  }).join('');
 
   return `
     <g id="typography-${uniqueId}" 
@@ -79,8 +93,6 @@ export const createCyberFrameSvg = ({
         }
 
         #typography-${uniqueId} .cyber-text {
-          animation: cyber-text-${uniqueId} ${duration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
-          animation-play-state: running;
           font-family: '${fontFamily.replace(/"/g, '')}', sans-serif;
           font-size: ${fontSize}px;
           font-weight: 600;
@@ -92,11 +104,20 @@ export const createCyberFrameSvg = ({
           pointer-events: none;
           white-space: nowrap !important;
           line-height: 1;
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           margin: 0;
-          padding: 0;
+          padding: 0 10px;
+          box-sizing: border-box;
+          max-width: 100%;
+        }
+
+        #typography-${uniqueId} .cyber-char {
+          display: inline-block;
           will-change: transform, opacity;
         }
+        ${letterKeyframes}
       </style>
 
       <rect 
@@ -107,7 +128,7 @@ export const createCyberFrameSvg = ({
         height="${height}" 
         rx="${rx}" 
         ry="${rx}" 
-        fill="rgba(8, 10, 16, 0.65)" 
+        fill="none" 
         pointer-events="all" 
       />
 
@@ -120,7 +141,7 @@ export const createCyberFrameSvg = ({
         rx="${rx - 2}" 
         ry="${rx - 2}" 
         fill="transparent" 
-        stroke="${primaryColor}" 
+        stroke="${secondaryColor}" 
         stroke-width="3.5" 
         filter="url(#glow-${uniqueId})" 
       />
@@ -141,7 +162,7 @@ export const createCyberFrameSvg = ({
 
       <foreignObject x="0" y="0" width="${width}" height="${height}" style="overflow: visible; pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none; box-sizing: border-box;">
-          <span class="motion-text-content cyber-text">${text}</span>
+          <span class="motion-text-content cyber-text">${letters.map((char, i) => `<span class="cyber-char cyber-char-${i}">${char === ' ' ? '&nbsp;' : char}</span>`).join('')}</span>
         </div>
       </foreignObject>
     </g>
@@ -155,7 +176,7 @@ export const createFlipiSlashSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
-  primaryColor = '#F3F2F3',
+  primaryColor = '#000000',
   secondaryColor = '#FFC600',
   fontSize = 20,
   fontFamily = 'Impact, Arial, sans-serif',
@@ -257,7 +278,7 @@ export const createFlipiSlashSvg = ({
         height="${height}" 
         rx="8" 
         ry="8" 
-        fill="rgba(10, 12, 18, 0.7)" 
+        fill="none" 
         pointer-events="all" 
       />
 
@@ -273,14 +294,14 @@ export const createFlipiSlashSvg = ({
       />
 
       <!-- Text A: Top Half with HTML overflow:hidden -->
-      <foreignObject x="38" y="4" width="${width - 44}" height="28" style="pointer-events: none;">
+      <foreignObject x="40" y="4" width="${width - 44}" height="28" style="pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; pointer-events: none;">
           <span class="motion-text-content flipi-text-a">${text}</span>
         </div>
       </foreignObject>
 
       <!-- Text B: Bottom Half with HTML overflow:hidden -->
-      <foreignObject x="38" y="32" width="${width - 44}" height="32" style="pointer-events: none;">
+      <foreignObject x="35" y="32" width="${width - 39}" height="32" style="pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; pointer-events: none;">
           <span class="motion-text-subcontent flipi-text-b">${subText}</span>
         </div>
@@ -297,7 +318,7 @@ export const createBoxRevealSvg = ({
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
   primaryColor = '#FF1E27',
-  secondaryColor = '#FFFFFF',
+  secondaryColor = '#000000',
   fontSize = 17,
   fontFamily = '"Arial Black", Impact, sans-serif',
   duration = 4000,
@@ -400,7 +421,7 @@ export const createBoxRevealSvg = ({
         height="${height}" 
         rx="6" 
         ry="6" 
-        fill="rgba(12, 12, 16, 0.75)" 
+        fill="none" 
         pointer-events="all" 
       />
 
@@ -439,7 +460,7 @@ export const createYouTubeChannelSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   primaryColor = '#FF0024',
-  secondaryColor = '#FFFFFF',
+  secondaryColor = '#000000',
   fontSize = 21,
   fontFamily = '"Arial Black", Impact, sans-serif',
   duration = 3600,
@@ -484,8 +505,8 @@ export const createYouTubeChannelSvg = ({
         #typography-${uniqueId} .yt-logo-box {
           animation: yt-logo-spring-${uniqueId} ${duration}ms infinite cubic-bezier(0.175, 0.885, 0.32, 1.275);
           animation-play-state: running;
-          transform-box: fill-box;
-          transform-origin: center center;
+          transform-box: view-box;
+          transform-origin: 28px 27px;
           pointer-events: none;
         }
 
@@ -521,11 +542,11 @@ export const createYouTubeChannelSvg = ({
         height="${height}" 
         rx="27" 
         ry="27" 
-        fill="rgba(10, 10, 14, 0.7)" 
+        fill="none" 
         pointer-events="all" 
       />
 
-      <!-- YouTube Red Curved Badge centered at (10, 14) -->
+      <!-- YouTube Red Curved Badge vertically centered at (10, 14) -->
       <g class="yt-logo-box" transform="translate(10, 14)">
         <rect 
           x="0" 
@@ -537,8 +558,8 @@ export const createYouTubeChannelSvg = ({
           fill="${primaryColor}" 
         />
         <polygon 
-          points="14,7 14,19 24,13" 
-          fill="${secondaryColor}" 
+          points="15,7 15,19 25,13" 
+          fill="#FFFFFF" 
         />
       </g>
 
@@ -591,7 +612,7 @@ export const createSlideSplitSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
-  primaryColor = '#FFFFFF',
+  primaryColor = '#000000',
   secondaryColor = '#3BF4FF',
   fontSize = 26,
   fontFamily = '"Arial Black", Impact, sans-serif',
@@ -653,7 +674,7 @@ export const createSlideSplitSvg = ({
           animation: ss-sub-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }`;
   const body = `
-      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="rgba(10, 10, 14, 0.7)" pointer-events="all" />
+      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="none" pointer-events="all" />
       <foreignObject x="10" y="6" width="${width - 20}" height="40" style="overflow: visible; pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
           <span class="ss-half"><span class="motion-text-content ss-title ss-title-l">${left}</span></span><span class="ss-half"><span class="ss-title ss-title-r">${right}</span></span>
@@ -668,83 +689,97 @@ export const createSlideSplitSvg = ({
 };
 
 // --------------------------------------------------------------------------
-// 6. Swap Bar Title  (Title_7.json - 210f @ 29.97fps)
-//    Accent bars spin in (-158deg -> 0), two words slide toward the bar from
-//    opposite sides, underline trims on.
+// 6. Swap Bar Title
+//    Left and right text slide out from behind a center vertical accent bar.
 // --------------------------------------------------------------------------
 export const createSwapBarSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
-  primaryColor = '#FFFFFF',
-  secondaryColor = '#3BF4FF',
-  fontSize = 22,
-  fontFamily = '"Arial Black", Impact, sans-serif',
-  duration = 7000,
+  primaryColor = '#E6007A',
+  secondaryColor = '#E6007A',
+  fontSize = 24,
+  fontFamily = 'Georgia, "Times New Roman", serif',
+  duration = 4500,
   isTranslate = false
 }) => {
-  const width = 300, height = 60;
-  const ease = 'cubic-bezier(0.33, 0, 0.17, 1)';
+  const width = 420, height = 56;
+  const barWidth = 6;
+  const barHeight = Math.round(fontSize * 1.35);
+  const barX = Math.round((width - barWidth) / 2);
+  const barY = Math.round((height - barHeight) / 2);
+  const half = barX - 10;
+  const ease = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
   const css = `
-        @keyframes sb-bar-a-${uniqueId} {
-          0% { transform: rotate(-158deg) scaleY(0); }
-          17% { transform: rotate(0deg) scaleY(1); }
-          88% { transform: rotate(0deg) scaleY(1); }
-          98%, 100% { transform: rotate(158deg) scaleY(0); }
-        }
-        @keyframes sb-bar-b-${uniqueId} {
-          0%, 6% { transform: rotate(-158deg) scaleY(0); }
-          17% { transform: rotate(0deg) scaleY(1); }
-          88% { transform: rotate(0deg) scaleY(1); }
-          96%, 100% { transform: rotate(158deg) scaleY(0); }
+        @keyframes sb-bar-grow-${uniqueId} {
+          0%, 6% { transform: scaleY(0); opacity: 0; }
+          16% { transform: scaleY(1); opacity: 1; }
+          84% { transform: scaleY(1); opacity: 1; }
+          94%, 100% { transform: scaleY(0); opacity: 0; }
         }
         @keyframes sb-word-l-${uniqueId} {
-          0%, 15% { transform: translateX(110%); opacity: 0; }
-          17% { opacity: 1; }
-          33% { transform: translateX(0); opacity: 1; }
-          84% { transform: translateX(0); opacity: 1; }
-          96%, 100% { transform: translateX(110%); opacity: 0; }
+          0%, 14% { transform: translateX(102%) scale(0.3); opacity: 0; }
+          18% { opacity: 1; }
+          34% { transform: translateX(0) scale(1); opacity: 1; }
+          80% { transform: translateX(0) scale(1); opacity: 1; }
+          94%, 100% { transform: translateX(102%) scale(0.3); opacity: 0; }
         }
         @keyframes sb-word-r-${uniqueId} {
-          0%, 15% { transform: translateX(-110%); opacity: 0; }
-          17% { opacity: 1; }
-          33% { transform: translateX(0); opacity: 1; }
-          84% { transform: translateX(0); opacity: 1; }
-          96%, 100% { transform: translateX(-110%); opacity: 0; }
+          0%, 14% { transform: translateX(-102%) scale(0.3); opacity: 0; }
+          18% { opacity: 1; }
+          34% { transform: translateX(0) scale(1); opacity: 1; }
+          80% { transform: translateX(0) scale(1); opacity: 1; }
+          94%, 100% { transform: translateX(-102%) scale(0.3); opacity: 0; }
         }
-        @keyframes sb-line-${uniqueId} {
-          0%, 16% { stroke-dasharray: 0 100; stroke-dashoffset: 0; }
-          33% { stroke-dasharray: 100 0; stroke-dashoffset: 0; }
-          84% { stroke-dasharray: 100 0; stroke-dashoffset: 0; }
-          96%, 100% { stroke-dasharray: 0 100; stroke-dashoffset: -100; }
+        #typography-${uniqueId} .sb-bar {
+          fill: ${secondaryColor};
+          transform-box: fill-box;
+          transform-origin: center center;
+          pointer-events: none;
+          animation: sb-bar-grow-${uniqueId} ${duration}ms infinite ${ease};
+          animation-play-state: running;
         }
-        #typography-${uniqueId} .sb-bar { fill: ${secondaryColor}; transform-box: fill-box; transform-origin: center center; pointer-events: none; }
-        #typography-${uniqueId} .sb-bar-a { animation: sb-bar-a-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
-        #typography-${uniqueId} .sb-bar-b { animation: sb-bar-b-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; opacity: 0.55; }
-        #typography-${uniqueId} .sb-line { animation: sb-line-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; pointer-events: none; }
         #typography-${uniqueId} .sb-word {
-          display: inline-block; white-space: nowrap !important; line-height: 1;
-          font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: 900; letter-spacing: 0.01em;
-          color: ${primaryColor}; fill: ${primaryColor}; text-transform: uppercase; will-change: transform, opacity;
+          display: inline-block;
+          white-space: nowrap !important;
+          line-height: 1;
+          font-family: ${fontFamily};
+          font-size: ${fontSize}px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          will-change: transform, opacity;
         }
-        #typography-${uniqueId} .sb-word-l { animation: sb-word-l-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
-        #typography-${uniqueId} .sb-word-r { animation: sb-word-r-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }`;
-  const half = (width - 18) / 2;
+        #typography-${uniqueId} .sb-word-l {
+          color: ${primaryColor};
+          fill: ${primaryColor};
+          transform-origin: right center;
+          animation: sb-word-l-${uniqueId} ${duration}ms infinite ${ease};
+          animation-play-state: running;
+        }
+        #typography-${uniqueId} .sb-word-r {
+          color: #000000;
+          fill: #000000;
+          transform-origin: left center;
+          animation: sb-word-r-${uniqueId} ${duration}ms infinite ${ease};
+          animation-play-state: running;
+        }`;
+
   const body = `
-      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="rgba(10, 10, 14, 0.7)" pointer-events="all" />
-      <rect class="sb-bar sb-bar-b" x="${width / 2 - 1}" y="8" width="3" height="${height - 16}" />
-      <rect class="sb-bar sb-bar-a" x="${width / 2 - 4}" y="8" width="6" height="${height - 16}" />
-      <foreignObject x="6" y="6" width="${half}" height="${height - 18}" style="pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; pointer-events: none;">
+      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="4" ry="4" fill="none" pointer-events="all" />
+      <foreignObject x="8" y="0" width="${half}" height="${height}" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; pointer-events: none; padding-right: 14px; box-sizing: border-box;">
           <span class="motion-text-content sb-word sb-word-l">${text}</span>
         </div>
       </foreignObject>
-      <foreignObject x="${width / 2 + 8}" y="6" width="${half}" height="${height - 18}" style="pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; pointer-events: none;">
+      <rect class="sb-bar" x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="1" ry="1" />
+      <foreignObject x="${barX + barWidth}" y="0" width="${half}" height="${height}" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; pointer-events: none; padding-left: 14px; box-sizing: border-box;">
           <span class="motion-text-subcontent sb-word sb-word-r">${subText}</span>
         </div>
-      </foreignObject>
-      <line class="sb-line" x1="12" y1="${height - 8}" x2="${width - 12}" y2="${height - 8}" pathLength="100" stroke="${secondaryColor}" stroke-width="2" stroke-linecap="round" />`;
+      </foreignObject>`;
+
   return buildMotionGroup({ uniqueId, template: 'swap-bar', text, subText, primaryColor, secondaryColor, fontSize, fontFamily, isTranslate, css, body });
 };
 
@@ -757,7 +792,7 @@ export const createBarSweepSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
-  primaryColor = '#FFFFFF',
+  primaryColor = '#000000',
   secondaryColor = '#3BF4FF',
   fontSize = 24,
   fontFamily = '"Arial Black", Impact, sans-serif',
@@ -809,7 +844,7 @@ export const createBarSweepSvg = ({
     `<rect class="bs-bar bs-bar-${i}" x="${14 + i * 3}" y="${height / 2 - 20}" width="${i === 0 ? 3 : 2}" height="40" />`
   ).join('\n      ');
   const body = `
-      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="rgba(10, 10, 14, 0.7)" pointer-events="all" />
+      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="none" pointer-events="all" />
       ${barSvg}
       <foreignObject x="40" y="6" width="${width - 48}" height="32" style="pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; pointer-events: none;">
@@ -826,21 +861,21 @@ export const createBarSweepSvg = ({
 
 // --------------------------------------------------------------------------
 // 8. Square Open Title  (Title_25.json - 195f @ 29.97fps)
-//    A square spins open (width first, then height, -169deg -> 0) and the
+//    A square frame with filled pastel box spins open (-169deg -> 0) and the
 //    words rise up through it.
 // --------------------------------------------------------------------------
 export const createSquareOpenSvg = ({
   uniqueId = Date.now(),
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
-  primaryColor = '#FFFFFF',
+  primaryColor = '#000000',
   secondaryColor = '#3BF4FF',
-  fontSize = 20,
+  fontSize = 24,
   fontFamily = '"Arial Black", Impact, sans-serif',
   duration = 6500,
   isTranslate = false
 }) => {
-  const width = 150, height = 110;
+  const width = 230, height = 150;
   const ease = 'cubic-bezier(0.17, 1, 0.333, 1)';
   const css = `
         @keyframes sq-box-${uniqueId} {
@@ -865,22 +900,30 @@ export const createSquareOpenSvg = ({
           96%, 100% { transform: translateY(-120%); opacity: 0; }
         }
         #typography-${uniqueId} .sq-box {
-          fill: rgba(255, 0, 102, 0.18); stroke: ${secondaryColor}; stroke-width: 2.5;
+          fill: none; stroke: ${secondaryColor}; stroke-width: 3.5;
           transform-box: fill-box; transform-origin: center center; pointer-events: none;
           animation: sq-box-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }
         #typography-${uniqueId} .sq-win { overflow: hidden; }
         #typography-${uniqueId} .sq-a, #typography-${uniqueId} .sq-b {
           display: inline-block; white-space: nowrap !important; line-height: 1.1; text-transform: uppercase;
-          color: ${primaryColor}; fill: ${primaryColor}; will-change: transform, opacity;
+          will-change: transform, opacity;
         }
-        #typography-${uniqueId} .sq-a { font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: 900; letter-spacing: 0.02em; animation: sq-word-a-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
-        #typography-${uniqueId} .sq-b { font-family: Arial, Helvetica, sans-serif; font-size: ${Math.round(fontSize * 0.62)}px; font-weight: 400; letter-spacing: 0.14em; color: ${secondaryColor}; fill: ${secondaryColor}; animation: sq-word-b-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }`;
+        #typography-${uniqueId} .sq-a {
+          font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: 900; letter-spacing: 0.04em;
+          color: ${primaryColor}; fill: ${primaryColor};
+          animation: sq-word-a-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
+        }
+        #typography-${uniqueId} .sq-b {
+          font-family: Arial, Helvetica, sans-serif; font-size: ${Math.round(fontSize * 0.7)}px; font-weight: 700;
+          letter-spacing: 0.22em; color: ${secondaryColor}; fill: ${secondaryColor};
+          animation: sq-word-b-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
+        }`;
   const body = `
-      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="rgba(10, 10, 14, 0.7)" pointer-events="all" />
-      <rect class="sq-box" x="8" y="8" width="${width - 16}" height="${height - 16}" />
-      <foreignObject x="14" y="14" width="${width - 28}" height="${height - 28}" style="pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none;">
+      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="4" ry="4" fill="none" pointer-events="all" />
+      <rect class="sq-box" x="12" y="12" width="${width - 24}" height="${height - 24}" rx="2" ry="2" />
+      <foreignObject x="16" y="16" width="${width - 32}" height="${height - 32}" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; pointer-events: none;">
           <div class="sq-win"><span class="motion-text-content sq-a">${text}</span></div>
           <div class="sq-win"><span class="motion-text-subcontent sq-b">${subText}</span></div>
         </div>
@@ -939,7 +982,7 @@ export const createSocialBadgeSvg = ({
         #typography-${uniqueId} .sb-move { animation: sb-move-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pop  { animation: sb-pop-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pill {
-          fill: ${secondaryColor}; stroke: ${primaryColor}; stroke-width: 3;
+          fill: ${primaryColor}; stroke: ${secondaryColor}; stroke-width: 3;
           transform-box: fill-box; transform-origin: center center; pointer-events: none;
           animation: sb-pill-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }
@@ -948,11 +991,11 @@ export const createSocialBadgeSvg = ({
         #typography-${uniqueId} .sb-label {
           display: inline-block; white-space: nowrap !important; line-height: 1;
           font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: 500; letter-spacing: 0.02em;
-          color: ${primaryColor}; fill: ${primaryColor}; text-transform: uppercase; will-change: transform;
+          color: #FFFFFF; fill: #FFFFFF; text-transform: uppercase; will-change: transform;
           animation: sb-label-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }`;
   const body = `
-      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="12" ry="12" fill="rgba(8, 10, 16, 0.55)" pointer-events="all" />
+      <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="12" ry="12" fill="none" pointer-events="all" />
       <g transform="translate(${ox} ${oy}) scale(${S})">
         <!-- white pill (612x82, r18) grows from its centre, sits behind the badge -->
         <rect class="sb-pill" x="29" y="-31" width="612" height="82" rx="18" ry="18" />
@@ -979,8 +1022,8 @@ export const createMotionGraphicSvg = ({
   uniqueId = Date.now(),
   text = 'ANIMATION',
   subText = '',
-  primaryColor = '#FF0033',
-  secondaryColor = '#FFFFFF',
+  primaryColor = '#000000',
+  secondaryColor = '#FF0033',
   glowIntensity = 6,
   fontSize = 18,
   fontFamily = 'Roboto, sans-serif',
@@ -1090,17 +1133,28 @@ export const createMotionGraphicElementNode = (preset, cx, cy) => {
     'box-reveal': [200, 56],
     'youtube-channel': [220, 54],
     'slide-split': [240, 78],
-    'swap-bar': [300, 60],
+    'swap-bar': [420, 56],
     'bar-sweep': [250, 68],
-    'square-open': [150, 110],
+    'square-open': [230, 150],
     'social-badge': [250, 90]
   };
   const [estWidth, estHeight] = TEMPLATE_SIZES[preset.template] || [200, 56];
-  const posX = Math.round(cx - estWidth / 2);
-  const posY = Math.round(cy - estHeight / 2);
 
-  g.setAttribute('transform', `translate(${posX}, ${posY})`);
-  g.setAttribute('data-name', 'Typography');
+  // Scale down titles so they drop onto the canvas at a neat, balanced Canva-like proportion
+  let scale = 1;
+  const maxInitialWidth = 90;
+  if (estWidth > maxInitialWidth) {
+    scale = maxInitialWidth / estWidth;
+  }
+
+  const renderW = estWidth * scale;
+  const renderH = estHeight * scale;
+  const posX = Math.round(cx - renderW / 2);
+  const posY = Math.round(cy - renderH / 2);
+
+  const titleName = preset.name ? `Title - ${preset.name.replace(/\s*\([^)]*\)/g, '').trim()}` : 'Title';
+  g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
+  g.setAttribute('data-name', titleName);
   g.setAttribute('data-preset-title', preset.name || 'Motion Graphic');
   g.setAttribute('data-subtopic', 'Titles');
 
@@ -1303,10 +1357,18 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.primaryText !== undefined) {
     el.setAttribute('data-text', updates.primaryText);
-    const primarySpans = el.querySelectorAll('.motion-text-content, .flipi-text-a, .box-title-a, .yt-title-text, .cyber-text');
-    primarySpans.forEach((sp) => {
-      sp.textContent = updates.primaryText;
-    });
+    const cyberText = el.querySelector('.cyber-text');
+    if (cyberText) {
+      const letters = Array.from(updates.primaryText);
+      cyberText.innerHTML = letters
+        .map((char, i) => `<span class="cyber-char cyber-char-${i}">${char === ' ' ? '&nbsp;' : char}</span>`)
+        .join('');
+    } else {
+      const primarySpans = el.querySelectorAll('.motion-text-content, .flipi-text-a, .box-title-a, .yt-title-text');
+      primarySpans.forEach((sp) => {
+        sp.textContent = updates.primaryText;
+      });
+    }
   }
 
   if (updates.secondaryText !== undefined) {
@@ -1332,7 +1394,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
     const val = updates.textColor2 !== undefined ? updates.textColor2 : updates.secondaryTextColor;
     el.setAttribute('data-text-color-2', val);
     el.setAttribute('data-secondary-text-color', val);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.color = val;
       sp.style.fill = val;
@@ -1341,7 +1403,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.strokeColor !== undefined) {
     el.setAttribute('data-stroke-color', updates.strokeColor);
-    const strokeEls = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .cyber-inner-stroke, .flipi-slash-accent');
+    const strokeEls = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .cyber-inner-stroke, .flipi-slash-accent, .sq-box');
     strokeEls.forEach((node) => {
       node.setAttribute('stroke', updates.strokeColor);
       node.style.stroke = updates.strokeColor;
@@ -1360,7 +1422,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
   if (updates.object1Color !== undefined) {
     el.setAttribute('data-object-1-color', updates.object1Color);
     el.setAttribute('data-primary-color', updates.object1Color);
-    const obj1 = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .flipi-slash-accent, .yt-logo-box rect');
+    const obj1 = el.querySelectorAll('.box-accent-frame, .cyber-glow-stroke, .flipi-slash-accent, .yt-logo-box rect, .sq-box');
     obj1.forEach((node) => {
       if (node.tagName.toLowerCase() === 'rect' && node.parentElement?.classList.contains('yt-logo-box')) {
         node.setAttribute('fill', updates.object1Color);
@@ -1373,10 +1435,13 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
   if (updates.object2Color !== undefined) {
     el.setAttribute('data-object-2-color', updates.object2Color);
     el.setAttribute('data-secondary-color', updates.object2Color);
-    const obj2 = el.querySelectorAll('.cyber-inner-stroke, .yt-logo-box polygon');
+    const obj2 = el.querySelectorAll('.cyber-inner-stroke, .yt-logo-box polygon, .sq-b');
     obj2.forEach((node) => {
       if (node.tagName.toLowerCase() === 'polygon') {
         node.setAttribute('fill', updates.object2Color);
+      } else if (node.classList?.contains('sq-b')) {
+        node.style.color = updates.object2Color;
+        node.style.fill = updates.object2Color;
       } else {
         node.setAttribute('stroke', updates.object2Color);
       }
@@ -1385,9 +1450,14 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.object3Color !== undefined) {
     el.setAttribute('data-object-3-color', updates.object3Color);
-    const obj3 = el.querySelectorAll('.motion-click-boundary');
+    const obj3 = el.querySelectorAll('.motion-click-boundary, .sq-box');
     obj3.forEach((node) => {
-      node.setAttribute('fill', updates.object3Color);
+      if (node.classList?.contains('sq-box')) {
+        node.setAttribute('fill', updates.object3Color);
+        node.style.fill = updates.object3Color;
+      } else {
+        node.setAttribute('fill', updates.object3Color);
+      }
     });
   }
 
@@ -1457,7 +1527,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryFontSize !== undefined) {
     el.setAttribute('data-secondary-font-size', String(updates.secondaryFontSize));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.fontSize = `${updates.secondaryFontSize}px`;
     });
@@ -1465,7 +1535,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryFontFamily !== undefined) {
     el.setAttribute('data-secondary-font-family', updates.secondaryFontFamily);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.fontFamily = `'${updates.secondaryFontFamily}', sans-serif`;
     });
@@ -1473,7 +1543,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryFontWeight !== undefined) {
     el.setAttribute('data-secondary-font-weight', updates.secondaryFontWeight);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.fontWeight = updates.secondaryFontWeight.toLowerCase().includes('bold') ? '700' : '400';
     });
@@ -1481,7 +1551,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryTextAlign !== undefined) {
     el.setAttribute('data-secondary-text-align', updates.secondaryTextAlign);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.textAlign = updates.secondaryTextAlign;
     });
@@ -1489,7 +1559,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryLetterSpacing !== undefined) {
     el.setAttribute('data-secondary-letter-spacing', updates.secondaryLetterSpacing);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.letterSpacing = updates.secondaryLetterSpacing === 'Auto' ? 'normal' : updates.secondaryLetterSpacing;
     });
@@ -1497,7 +1567,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryLineHeight !== undefined) {
     el.setAttribute('data-secondary-line-height', updates.secondaryLineHeight);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.lineHeight = updates.secondaryLineHeight === 'Auto' ? 'normal' : updates.secondaryLineHeight;
     });
@@ -1505,7 +1575,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryIsBold !== undefined) {
     el.setAttribute('data-secondary-is-bold', String(updates.secondaryIsBold));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.fontWeight = updates.secondaryIsBold ? '700' : '400';
     });
@@ -1513,7 +1583,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryIsStrikethrough !== undefined) {
     el.setAttribute('data-secondary-is-strikethrough', String(updates.secondaryIsStrikethrough));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
       sp.style.textDecoration = updates.secondaryIsStrikethrough ? 'line-through' : 'none';
     });

@@ -291,7 +291,9 @@ export const useInteractEngine = ({
                           selEl.getAttribute('data-type') === 'map' ||
                           selEl.getAttribute('data-type') === 'embed-frame' ||
                           selEl.getAttribute('data-type') === 'slideshow' ||
-                          selEl.getAttribute('data-type') === 'audio-frame';
+                          selEl.getAttribute('data-type') === 'audio-frame' ||
+                          selEl.getAttribute('data-type') === 'table-frame' ||
+                          (selEl.id && selEl.id.startsWith('table-'));
 
                         const isChildOfSelected = !isCompoundGroup && target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
                         elementToDrag = isChildOfSelected ? target : selEl;
@@ -357,17 +359,17 @@ export const useInteractEngine = ({
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             ) || (elementToDrag?.tagName?.toLowerCase() === 'g' && elementToDrag?.matches?.(
               '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
               '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
               '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
-              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"], [data-type="table-frame"], g[id^="table-"]'
             ) ? elementToDrag : null) || elementToDrag?.closest?.(
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             );
             if (compoundParent) {
               elementToDrag = compoundParent;

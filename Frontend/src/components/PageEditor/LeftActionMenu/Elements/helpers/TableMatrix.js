@@ -202,7 +202,7 @@ export class TableMatrix {
 
       for (let c = 0; c < this.cols; c++) {
         const cellText = this.grid[r][c] || '';
-        tds += `<td contenteditable="true" data-row="${r}" data-col="${c}" style="width:${colWidthPercent}%;height:${rowHeightPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};outline:none;font-weight:${rowFontWeight};">${cellText}</td>`;
+        tds += `<td data-row="${r}" data-col="${c}" style="width:${colWidthPercent}%;height:${rowHeightPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};outline:none;font-weight:${rowFontWeight};cursor:default;user-select:none;">${cellText}</td>`;
       }
       trs += `<tr style="height:${rowHeightPercent}%;box-sizing:border-box;">${tds}</tr>`;
     }

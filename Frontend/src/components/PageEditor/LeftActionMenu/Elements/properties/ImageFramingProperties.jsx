@@ -521,7 +521,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             if (paths.length === 1) return;
             e.stopPropagation();
             e.preventDefault();
-            
+
             if (activeSlotRef.current === patternId) {
               // Deselect
               activeSlotRef.current = null;
@@ -610,7 +610,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       const firstPath = paths[0];
       setRadius(parseFloat(firstPath.getAttribute('rx')) || parseFloat(firstPath.getAttribute('data-rx')) || 0);
     }
-    
+
     // Load per-slot radii
     const initialRadii = {};
     const initialRotations = {};
@@ -717,8 +717,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
     const fileName = customName || file.name || 'Image Name .jpg';
     const fileSizeFormatted = file.size
       ? (file.size >= 1024 * 1024
-          ? `${(file.size / (1024 * 1024)).toFixed(0)}MB`
-          : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+        ? `${(file.size / (1024 * 1024)).toFixed(0)}MB`
+        : `${Math.max(1, Math.round(file.size / 1024))}KB`)
       : '24MB';
 
     const reader = new FileReader();
@@ -818,11 +818,11 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         mask.id = maskId;
         defs.appendChild(mask);
       }
-      
+
       if (newGap > 0) {
         mask.innerHTML = ''; // clear old mask shapes
         mask.setAttribute('maskUnits', 'userSpaceOnUse');
-        
+
         const whiteRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         // Cover everything so the image is visible
         whiteRect.setAttribute('x', '-5000');
@@ -834,7 +834,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
         const clone = path.cloneNode(true);
         clone.setAttribute('fill', 'none'); // MUST be none, otherwise it defaults to black and hides the whole shape!
-        clone.removeAttribute('mask'); 
+        clone.removeAttribute('mask');
         clone.removeAttribute('id');
         clone.removeAttribute('data-pattern-id');
         clone.removeAttribute('transform'); // Remove transform so it evaluates in path's local coordinate system
@@ -875,15 +875,15 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
     setGap(newGap);
     setRadius(newRadius);
-    
+
     // Also update all slot radii state to match the global one
     const newSlotRadii = {};
     paths.forEach(p => {
-       const pId = p.dataset.patternId;
-       if (pId) newSlotRadii[pId] = newRadius;
+      const pId = p.dataset.patternId;
+      if (pId) newSlotRadii[pId] = newRadius;
     });
     setSlotRadii(newSlotRadii);
-    
+
     const bgRect = selectedElement.querySelector('.frame-bg-rect');
     if (bgRect) {
       if (newRadius > 0) {
@@ -894,7 +894,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         bgRect.removeAttribute('ry');
       }
     }
-    
+
     if (!skipSync) {
       syncDomChanges();
     }
@@ -902,58 +902,58 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
   const updateSlotRadius = (patternId, newRadius, skipSync = false) => {
     if (!selectedElement) return;
-    
-    setSlotRadii(prev => ({...prev, [patternId]: newRadius}));
-    
+
+    setSlotRadii(prev => ({ ...prev, [patternId]: newRadius }));
+
     const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'));
     const path = paths.find(p => p.dataset.patternId === patternId);
     if (path) {
-        if (newRadius > 0) {
-          if (path.tagName.toLowerCase() === 'rect') {
-            path.setAttribute('rx', newRadius);
-            path.setAttribute('ry', newRadius);
-          } else {
-            path.setAttribute('stroke-linejoin', 'round');
-            path.setAttribute('data-rx', newRadius);
-          }
+      if (newRadius > 0) {
+        if (path.tagName.toLowerCase() === 'rect') {
+          path.setAttribute('rx', newRadius);
+          path.setAttribute('ry', newRadius);
         } else {
-          if (path.tagName.toLowerCase() === 'rect') {
-            path.removeAttribute('rx');
-            path.removeAttribute('ry');
-          } else {
-            path.removeAttribute('stroke-linejoin');
-            path.removeAttribute('data-rx');
-          }
+          path.setAttribute('stroke-linejoin', 'round');
+          path.setAttribute('data-rx', newRadius);
         }
-        
-        // Also update highlight clone if it exists
-        const highlightId = `highlight-${patternId}`;
-        const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-        if (highlight) {
-            if (newRadius > 0 && highlight.tagName.toLowerCase() === 'rect') {
-                highlight.setAttribute('rx', newRadius);
-                highlight.setAttribute('ry', newRadius);
-            } else if (highlight.tagName.toLowerCase() === 'rect') {
-                highlight.removeAttribute('rx');
-                highlight.removeAttribute('ry');
-            }
+      } else {
+        if (path.tagName.toLowerCase() === 'rect') {
+          path.removeAttribute('rx');
+          path.removeAttribute('ry');
+        } else {
+          path.removeAttribute('stroke-linejoin');
+          path.removeAttribute('data-rx');
         }
+      }
+
+      // Also update highlight clone if it exists
+      const highlightId = `highlight-${patternId}`;
+      const highlight = selectedElement.querySelector(`[data-highlight-id="${highlightId}"]`);
+      if (highlight) {
+        if (newRadius > 0 && highlight.tagName.toLowerCase() === 'rect') {
+          highlight.setAttribute('rx', newRadius);
+          highlight.setAttribute('ry', newRadius);
+        } else if (highlight.tagName.toLowerCase() === 'rect') {
+          highlight.removeAttribute('rx');
+          highlight.removeAttribute('ry');
+        }
+      }
     }
-    
+
     if (!skipSync) syncDomChanges();
   };
 
   const updateFramePadding = (newPadding, skipSync = false) => {
     if (!selectedElement) return;
-    
+
     setFramePadding(newPadding);
     selectedElement.setAttribute('data-frame-padding', newPadding);
-    
+
     const scaleVal = (100 - newPadding) / 100;
-    
+
     const paths = Array.from(selectedElement.querySelectorAll('path, polygon, rect, circle, ellipse'))
       .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
-      
+
     paths.forEach(p => {
       if (!p.hasAttribute('data-orig-tf')) {
         p.setAttribute('data-orig-tf', p.getAttribute('transform') || '');
@@ -969,16 +969,16 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         if (origTf) p.setAttribute('transform', origTf);
         else p.removeAttribute('transform');
       });
-      
+
       const bbox = selectedElement.getBBox();
       boundary = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       boundary.setAttribute('class', 'frame-bg-rect');
-      
+
       const fillVal = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
       boundary.setAttribute('fill', fillVal !== '#' ? fillVal : 'none');
       const bgOp = selectedElement.getAttribute('data-frame-bg-opacity');
       if (bgOp) boundary.setAttribute('fill-opacity', bgOp);
-      
+
       const strokeVal = selectedElement.getAttribute('data-frame-stroke') || 'none';
       boundary.setAttribute('stroke', strokeVal !== '#' ? strokeVal : 'none');
       const strOp = selectedElement.getAttribute('data-frame-stroke-opacity');
@@ -991,7 +991,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
         boundary.setAttribute('rx', radius);
         boundary.setAttribute('ry', radius);
       }
-      
+
       boundary.setAttribute('pointer-events', 'none');
       boundary.setAttribute('x', bbox.x);
       boundary.setAttribute('y', bbox.y);
@@ -1002,14 +1002,14 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
     const frameCx = parseFloat(boundary.getAttribute('x')) + parseFloat(boundary.getAttribute('width')) / 2;
     const frameCy = parseFloat(boundary.getAttribute('y')) + parseFloat(boundary.getAttribute('height')) / 2;
-    
+
     const paddingTransform = `translate(${frameCx}, ${frameCy}) scale(${scaleVal}) translate(${-frameCx}, ${-frameCy})`;
-    
+
     paths.forEach(path => {
       const origTf = path.getAttribute('data-orig-tf');
       const finalTransform = origTf ? `${paddingTransform} ${origTf}` : paddingTransform;
       path.setAttribute('transform', finalTransform);
-      
+
       const patternId = path.dataset.patternId;
       if (patternId) {
         const highlightId = `highlight-${patternId}`;
@@ -1032,7 +1032,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       .filter(p => p.hasAttribute('fill') && p.getAttribute('fill').startsWith('url(#pattern'));
 
     const slotsToUpdate = activeSlotId ? [activeSlotId] : paths.map(p => p.dataset.patternId).filter(Boolean);
-    
+
     setSlotRotations(prev => {
       const next = { ...prev };
       slotsToUpdate.forEach(id => { next[id] = angle; });
@@ -1119,7 +1119,7 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
 
       let imageNode = pattern.querySelector('image, img');
       const useNode = pattern.querySelector('use');
-      
+
       if (!imageNode && useNode) {
         imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         pattern.removeChild(useNode);
@@ -1327,8 +1327,8 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
             value={gap} 
             onChange={(val) => updateGapAndRadius(val, radius, true)} 
             onPointerUp={syncDomChanges}
-            min={0} 
-            max={50} 
+            min={0}
+            max={50}
           />
         )}
 
@@ -1342,10 +1342,10 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
               } else {
                 updateGapAndRadius(gap, val, true);
               }
-            }} 
+            }}
             onPointerUp={syncDomChanges}
-            min={0} 
-            max={100} 
+            min={0}
+            max={100}
           />
         )}
 

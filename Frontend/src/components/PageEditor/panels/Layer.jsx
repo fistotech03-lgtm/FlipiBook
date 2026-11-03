@@ -164,7 +164,7 @@ const LayerItem = ({
     if (selectedLayerId) {
       const selEl = doc.getElementById(selectedLayerId);
       if (selEl) {
-        const compound = selEl.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+        const compound = selEl.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
         if (compound && compound.id === layer.id) return true;
       }
     }
@@ -174,7 +174,7 @@ const LayerItem = ({
       for (const id of multiSelectedIds) {
         const el = doc.getElementById(id);
         if (el) {
-          const comp = el.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+          const comp = el.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
           if (comp && comp.id === layer.id) return true;
         }
       }

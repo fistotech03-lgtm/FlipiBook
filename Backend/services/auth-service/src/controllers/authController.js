@@ -295,125 +295,10 @@ const clearAuthCookies = (res, req = null) => {
 };
 
 /**
- * 1. User Signup
+ * 1. User Signup - Strictly requires email OTP verification
  */
 const signup = async (req, res) => {
-  try {
-    const { name, emailId, password } = req.body;
-
-    if (!emailId || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password are required" });
-    }
-
-    const cleanEmail = emailId.trim().toLowerCase();
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ emailId: cleanEmail });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User with this email already exists",
-        });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user (pre-save hook generates FLIPI0001 userID)
-    const user = new User({
-      name: name ? name.trim() : "",
-      emailId: cleanEmail,
-      password: hashedPassword,
-    });
-
-    await user.save();
-
-    // Create user storage workspace
-    try {
-      createUserWorkspace(user);
-    } catch (wsErr) {
-      console.warn("[Workspace Creation Warning]:", wsErr.message);
-    }
-
-    // Capture Device, IP & Create Login Log
-    const ipAddress = getClientIp(req);
-    const userAgent = req.headers["user-agent"] || "";
-    const parsed = parseUserAgent(userAgent);
-    const browser = req.body?.browser || parsed.browser;
-    const operatingSystem = req.body?.operatingSystem || parsed.operatingSystem;
-    const deviceType = req.body?.deviceType || parsed.deviceType;
-    const location = resolveLocation(req, ipAddress);
-    const clientDeviceId = req.body?.deviceId || req.headers["x-device-id"] || `dev_${crypto.randomBytes(12).toString("hex")}`;
-    const sessionObjectId = new mongoose.Types.ObjectId();
-    const sessionId = sessionObjectId.toString();
-
-    let loginLog = null;
-    try {
-      loginLog = await LoginLog.create({
-        _id: sessionObjectId,
-        userId: user.userID || `FLIPI${user._id.toString().slice(-4).toUpperCase()}`,
-        userObjectId: user._id,
-        emailId: user.emailId,
-        sessionId,
-        deviceId: clientDeviceId,
-        ipAddress,
-        userAgent,
-        browser,
-        operatingSystem,
-        deviceType,
-        location,
-        loginTime: new Date(),
-        lastActiveAt: new Date(),
-        status: "ACTIVE",
-        isRevoked: false,
-        eventType: "NEW_DEVICE_LOGIN",
-        loginMethod: "EMAIL_PASSWORD",
-      });
-    } catch (logErr) {
-      console.error("[Signup LoginLog Error]:", logErr.message);
-    }
-
-    const token = generateToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: sessionId,
-      deviceId: clientDeviceId,
-    });
-
-    const refreshToken = generateRefreshToken({
-      userId: user.userID,
-      emailId: user.emailId,
-      id: user._id,
-      sessionId: sessionId,
-      deviceId: clientDeviceId,
-    });
-
-    setAuthCookies(res, token, refreshToken, req, user);
-
-    return res.status(201).json({
-      success: true,
-      message: "Account created successfully",
-      token,
-      user: {
-        name: user.name,
-        picture: user.picture,
-      },
-    });
-  } catch (error) {
-    console.error("[Signup Error]:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Server error during signup",
-      });
-  }
+  return sendSignupOtp(req, res);
 };
 
 /**
@@ -717,7 +602,8 @@ const login = async (req, res) => {
     if (!user.password) {
       return res.status(400).json({
         success: false,
-        message: "Password not yet added. Please sign in with Google or use 'Forgot Password' to set one.",
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not have a password. Please sign in with Google.",
       });
     }
 
@@ -1102,6 +988,15 @@ const forgotPassword = async (req, res) => {
         .json({ success: false, message: "No account found with this email" });
     }
 
+    // Google-only / passwordless accounts cannot use Forgot Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -1274,6 +1169,15 @@ const resetPassword = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
+    }
+
+    // Google-only / passwordless accounts cannot use Reset Password
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        code: "GOOGLE_ACCOUNT",
+        message: "This account was registered with Google Sign-In and does not use a password. Please sign in with Google.",
+      });
     }
 
     if (!user.otp || !user.otp.code) {

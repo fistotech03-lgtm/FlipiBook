@@ -48,16 +48,8 @@ const loadKeys = () => {
     }
   }
 
-  // Fallback: Generate 2048-bit RSA key pair if none exist
   if (!priv || !pub) {
-    console.warn('[JWT Helper] Generating ephemeral RSA 2048-bit key pair...');
-    const { privateKey: genPriv, publicKey: genPub } = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-    });
-    priv = genPriv;
-    pub = genPub;
+    throw new Error('[JWT Helper] RSA keys are missing! Ensure RSA_PRIVATE_KEY and RSA_PUBLIC_KEY are set in environment variables or placed in the certs directory.');
   }
 
   return { privateKey: priv, publicKey: pub };

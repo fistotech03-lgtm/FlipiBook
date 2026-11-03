@@ -2156,6 +2156,10 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
+      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
+      if (typographyParent && typographyParent.id) {
+        resolvedId = typographyParent.id;
+      }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
         resolvedId = shapeParent.id;
@@ -3050,7 +3054,7 @@ export const useCanvasPointerEvents = ({
       }
 
       const compoundParent = effectiveTarget?.closest?.(
-        '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
       );
       if (compoundParent) {
         if (compoundParent.id) {
@@ -3135,7 +3139,7 @@ export const useCanvasPointerEvents = ({
     }
 
     const targetCompound = !isFlattenedTarget ? target?.closest?.(
-      '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+      '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     ) : null;
     if (targetCompound) {
       if (targetCompound.id) {

@@ -146,7 +146,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     showArrows: true,
     showDots: true,
     imageFitType: 'Fit',
-    transitionEffect: 'Linear',
     dragToSlide: false,
     dotColor: '#EC5137',
     dotOpacity: 100,
@@ -208,11 +207,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     }
   }, [selectedElement?.id, slideshowImages, flipbookVId]);
   const isHoveringRef = useRef(false);
-
-  const transitionEffectRef = useRef(slideshowSettings.transitionEffect || 'Linear');
-  useEffect(() => {
-    transitionEffectRef.current = slideshowSettings.transitionEffect || 'Linear';
-  }, [slideshowSettings.transitionEffect]);
 
   const [showGallery, setShowGallery] = useState(false);
   const [openContextMenu, setOpenContextMenu] = useState(null);
@@ -515,7 +509,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           showArrows: true,
           showDots: true,
           imageFitType: 'Fit',
-          transitionEffect: 'Linear',
           dragToSlide: false,
           dotColor: '#000000',
           dotOpacity: 100,
@@ -1570,36 +1563,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       // Let applyDesign handle the DOM update directly
       isUpdatingDOM.current = true;
       (applyDesignRef.current || applyDesign)(newIdx);
-
-      // Apply transition animation to 3-frame carousel frames based on selected effect
-      const effect = (transitionEffectRef.current || slideshowSettings.transitionEffect || 'Linear').toLowerCase();
-      const rects = targetElement.querySelectorAll('rect:not([fill="transparent"]):not(.bbox-anchor):not(.slideshow-container-bg)');
-      const centerRect = rects[2];
-      if (centerRect && effect !== 'linear') {
-        const duration = 380;
-        if (effect === 'fade') {
-          centerRect.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration, easing: 'ease-out' });
-        } else if (effect === 'flip') {
-          centerRect.style.transformBox = 'fill-box';
-          centerRect.style.transformOrigin = '50% 50%';
-          centerRect.animate([
-            { transform: 'perspective(400px) rotateY(90deg)', opacity: 0.3 },
-            { transform: 'perspective(400px) rotateY(0deg)', opacity: 1 }
-          ], { duration, easing: 'ease-out' });
-        } else if (effect === 'reveal') {
-          const startClip = dir === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-          centerRect.animate([
-            { clipPath: startClip },
-            { clipPath: 'inset(0 0 0 0)' }
-          ], { duration, easing: 'ease-in-out' });
-        } else if (effect === 'slide' || effect === 'push') {
-          const dx = dir === 'next' ? 40 : -40;
-          centerRect.animate([
-            { translate: `${dx}px 0px`, opacity: 0.4 },
-            { translate: '0px 0px', opacity: 1 }
-          ], { duration, easing: 'ease-out' });
-        }
-      }
       return;
     }
 
@@ -1607,9 +1570,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     const images = liveRunnerImagesRef.current;
     const nextUrl = images[newIdx]?.url;
     if (!nextUrl || !imgEl) return;
-
-    const effect = (transitionEffectRef.current || 'Linear').toLowerCase();
-    const duration = 400;
 
     isAnimatingRef.current = true;
     if (typeof setIsUpdatingDOM === 'function') setIsUpdatingDOM(true);
@@ -1706,119 +1666,9 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
     animEl.style.transformBox = 'fill-box';
     animEl.style.transformOrigin = 'center';
 
-    // Create a temporary clone for seamless simultaneous transitions
-    const clone = animEl.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.classList.add('slideshow-transition-clone');
-    clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-    clone.style.pointerEvents = 'none';
-
-    // Handle pattern duplication for simultaneous animation if the image is inside a pattern
-    let newPattern = null;
-    if (imgEl && imgEl.closest && imgEl.closest('pattern')) {
-      const originalPattern = imgEl.closest('pattern');
-      if (originalPattern && originalPattern.parentNode) {
-        newPattern = originalPattern.cloneNode(true);
-        const clonedPatternId = 'pattern-clone-' + Date.now() + Math.random().toString(36).substring(2, 7);
-        newPattern.setAttribute('id', clonedPatternId);
-        originalPattern.parentNode.appendChild(newPattern);
-
-        const origId = originalPattern.getAttribute('id');
-        const updateFillStroke = (el) => {
-          ['fill', 'stroke'].forEach(attr => {
-            const val = el.getAttribute(attr) || el.style?.[attr];
-            if (val && val.includes(`#${origId}`)) {
-              const newVal = val.replace(`#${origId}`, `#${clonedPatternId}`);
-              if (el.hasAttribute(attr)) el.setAttribute(attr, newVal);
-              if (el.style?.[attr]) el.style[attr] = newVal;
-            }
-          });
-        };
-        updateFillStroke(clone);
-        clone.querySelectorAll('*').forEach(updateFillStroke);
-      }
-    }
-
-    animEl.parentNode.insertBefore(clone, animEl);
-
-    // Swap src on the original element immediately (it will act as the incoming element)
+    // Swap src on the original element immediately
     setElSrc(nextUrl, images[newIdx]);
-
-    // Calculate dimensions for translations using visual width
-    let w = 100;
-    try {
-      const cropStr = animEl.getAttribute('data-crop-data');
-      if (cropStr && cropStr !== 'null') {
-        const origW = parseFloat(animEl.getAttribute('data-crop-orig-w') || animEl.getAttribute('width') || 100);
-        const crop = JSON.parse(cropStr);
-        w = origW * (parseFloat(crop.width) / 100);
-      } else {
-        w = animEl.getBBox().width;
-      }
-    } catch (e) {
-      w = animEl.clientWidth || 100;
-    }
-
-    let realAnim;
-
-    if (effect === 'fade') {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: 0 }, { opacity: baseOpacity }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'push') {
-      const dx = dir === 'next' ? -w : w;
-      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-      realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'linear') {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
-    } else if (effect === 'slide') {
-      const dx = dir === 'next' ? -w : w;
-      clone.animate([{ translate: '0px 0px' }, { translate: `${dx}px 0px` }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-      realAnim = animEl.animate([{ translate: `${-dx}px 0px` }, { translate: '0px 0px' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else if (effect === 'flip') {
-      animEl.style.transformBox = 'fill-box';
-      animEl.style.transformOrigin = 'center';
-      clone.animate([{ opacity: 0 }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([
-        { rotate: 'y 90deg', opacity: 0 },
-        { rotate: 'y 0deg', opacity: baseOpacity }
-      ], { duration, easing: 'ease-out', fill: 'forwards' });
-    } else if (effect === 'reveal') {
-      const startClip = dir === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration, fill: 'forwards' });
-      realAnim = animEl.animate([{ clipPath: startClip }, { clipPath: 'inset(0 0 0 0)' }], { duration, easing: 'ease-in-out', fill: 'forwards' });
-    } else {
-      clone.animate([{ opacity: baseOpacity }, { opacity: 0 }], { duration: 0, fill: 'forwards' });
-      realAnim = animEl.animate([{ opacity: baseOpacity }, { opacity: baseOpacity }], { duration: 0, fill: 'forwards' });
-    }
-
-    // Cleanup and finalize when animation finishes
-    const cleanupAnim = () => {
-      if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
-      if (newPattern && newPattern.parentNode) newPattern.parentNode.removeChild(newPattern);
-
-      // Additional failsafe for SVG filters in Safari
-      if (animEl.style.filter === 'none') {
-        animEl.style.removeProperty('filter');
-      }
-    };
-
-    realAnim.onfinish = () => {
-      cleanupAnim();
-      realAnim.cancel();
-      animEl.style.transformBox = '';
-      animEl.style.transformOrigin = '';
-      finalize();
-    };
-
-    // Fallback in case onfinish doesn't fire (especially for 0 duration)
-    setTimeout(() => {
-      cleanupAnim();
-      animEl.style.transformBox = '';
-      animEl.style.transformOrigin = '';
-      finalize();
-    }, duration + 20);
-
+    finalize();
   }, [activePageIndex, selectedElement, opacity, setIsUpdatingDOM]);
 
   const runnerSettingsStr = JSON.stringify({
@@ -2432,7 +2282,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         className="w-full border-2 border-dashed border-gray-300 rounded-[0.75vw] bg-gray-50/50 py-[1.1vw] flex items-center justify-center gap-[0.5vw] text-gray-500 hover:text-gray-700 hover:border-gray-400 hover:bg-gray-100/60 cursor-pointer transition-all shadow-2xs"
       >
         <Plus size="1vw" className="text-gray-500" />
-        <span className="text-[0.8vw] font-medium text-gray-500">Add Images</span>
+        <span className="text-[0.8vw] font-semibold text-gray-500">Add Images</span>
       </div>
 
       <input
@@ -2506,7 +2356,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                     {/* Replace Overlay Button over the image */}
                     <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-white transition-all duration-200">
                       <ArrowRightLeft size="0.85vw" strokeWidth={1.8} className="text-white mb-[0.1vw]" />
-                      <span className="text-[0.52vw] font-medium text-white tracking-wide">Replace</span>
+                      <span className="text-[0.52vw] font-semibold text-white tracking-wide">Replace</span>
                     </div>
                   </div>
 
@@ -2577,7 +2427,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                         value={img.heading !== undefined ? img.heading : ''}
                         onChange={(e) => updateImageAtIndex(i, 'heading', e.target.value)}
                         placeholder="Enter slide heading..."
-                        className="flex-1 h-[1.6vw] rounded-[0.3vw] border border-gray-200 px-[0.4vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-blue-500 bg-gray-50/50 focus:bg-white shadow-2xs transition-all"
+                        className="flex-1 h-[1.6vw] rounded-[0.3vw] border border-gray-200 px-[0.4vw] text-[0.7vw] font-semibold text-gray-800 outline-none focus:border-blue-500 bg-gray-50/50 focus:bg-white shadow-2xs transition-all"
                       />
                       <button
                         type="button"
@@ -2614,7 +2464,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
 
       {/* ── 3. Slideshow Properties Header ── */}
       <div className="flex items-center gap-[0.5vw] pt-[0.4vw]">
-        <span className="text-[0.85vw] font-bold text-gray-900 whitespace-nowrap">Slideshow Properties</span>
+        <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap">Slideshow Properties</span>
         <div className="h-[0.0925vw] bg-gray-200 flex-1"></div>
       </div>
 
@@ -2642,22 +2492,6 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         />
       </div>
 
-      {/* Slide Effect */}
-      <div className="flex items-center justify-between">
-        <span className="text-[0.75vw] font-semibold text-gray-800 whitespace-nowrap">Slide Effect</span>
-        <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
-        <div className="relative">
-          <PremiumDropdown
-            options={['Linear', 'Fade', 'Flip', 'Reveal', 'Slide']}
-            value={slideshowSettings.transitionEffect || 'Linear'}
-            onChange={(val) => updateSetting('transitionEffect', val)}
-            width="6.8vw"
-            align="right"
-            buttonClassName="!border-gray-200 !border !rounded-[0.4vw] !text-[0.75vw] !font-medium !h-[2vw] !bg-white shadow-2xs"
-          />
-        </div>
-      </div>
-
       {/* Manual Navigation Button */}
       <div className="space-y-[0.75vw]">
         <div className="flex items-center justify-between">
@@ -2677,8 +2511,8 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Left Column: Size & Color */}
             <div className="flex-1 flex flex-col gap-[0.55vw]">
               <div className="flex items-center gap-[0.5vw]">
-                <span className="text-[0.7vw] font-medium text-gray-700">Button Size :</span>
-                <span className="text-[0.65vw] px-[0.4vw] py-[0.05vw] bg-gray-100 rounded text-gray-600 font-medium">
+                <span className="text-[0.7vw] font-semibold text-gray-700">Button Size :</span>
+                <span className="text-[0.65vw] px-[0.4vw] py-[0.05vw] bg-gray-100 rounded text-gray-600 font-semibold">
                   {slideshowSettings.navButtonSize || 100}%
                 </span>
               </div>
@@ -2697,7 +2531,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   onClick={() => setShowNavColorPicker(true)}
                 />
                 <div className="flex-1 h-[2vw] border border-gray-200 rounded-[0.4vw] px-[0.6vw] flex items-center justify-between bg-white shadow-2xs">
-                  <span className="text-[0.75vw] text-gray-700 font-medium uppercase truncate">
+                  <span className="text-[0.75vw] text-gray-700 font-semibold uppercase truncate">
                     {slideshowSettings.navIconColor || '#EC5137'}
                   </span>
                   <span className="text-[0.7vw] text-gray-400">100%</span>
@@ -2748,8 +2582,8 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Left Column: Size & Color */}
             <div className="flex-1 flex flex-col gap-[0.55vw]">
               <div className="flex items-center gap-[0.5vw]">
-                <span className="text-[0.7vw] font-medium text-gray-700">Button Size :</span>
-                <span className="text-[0.65vw] px-[0.4vw] py-[0.05vw] bg-gray-100 rounded text-gray-600 font-medium">
+                <span className="text-[0.7vw] font-semibold text-gray-700">Button Size :</span>
+                <span className="text-[0.65vw] px-[0.4vw] py-[0.05vw] bg-gray-100 rounded text-gray-600 font-semibold">
                   {slideshowSettings.dotButtonSize || 100}%
                 </span>
               </div>
@@ -2768,7 +2602,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   onClick={() => setShowDotColorPicker(true)}
                 />
                 <div className="flex-1 h-[2vw] border border-gray-200 rounded-[0.4vw] px-[0.6vw] flex items-center justify-between bg-white shadow-2xs">
-                  <span className="text-[0.75vw] text-gray-700 font-medium uppercase truncate">
+                  <span className="text-[0.75vw] text-gray-700 font-semibold uppercase truncate">
                     {slideshowSettings.dotColor || '#EC5137'}
                   </span>
                   <span className="text-[0.7vw] text-gray-400">100%</span>
@@ -2807,7 +2641,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       {/* ── 4. Background Color ── */}
       <div className="space-y-[0.6vw] pt-[0.4vw]">
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-bold text-gray-900 whitespace-nowrap">Background Color</span>
+          <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap">Background Color</span>
           <div className="h-[0.0925vw] bg-gray-200 flex-1"></div>
         </div>
         <div className="flex items-center justify-between gap-[0.5vw]">
@@ -2821,10 +2655,10 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             onClick={() => setShowBgColorPicker(true)}
             className="flex-1 h-[2vw] border border-gray-200 rounded-[0.4vw] px-[0.75vw] flex items-center justify-between bg-white shadow-2xs cursor-pointer hover:border-gray-300 transition-colors"
           >
-            <span className="text-[0.75vw] text-gray-700 font-medium uppercase">
+            <span className="text-[0.75vw] text-gray-700 font-semibold uppercase">
               {slideshowSettings.bgColor || '#000000'}
             </span>
-            <span className="text-[0.7vw] text-gray-400 font-medium">
+            <span className="text-[0.7vw] text-gray-400 font-semibold">
               {slideshowSettings.bgOpacity ?? 100}%
             </span>
           </div>
@@ -2834,7 +2668,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
       {/* ── 5. Stroke Color ── */}
       <div className="space-y-[0.75vw] pt-[0.4vw]">
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.85vw] font-bold text-gray-900 whitespace-nowrap">Stroke Color</span>
+          <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap">Stroke Color</span>
           <div className="h-[0.0925vw] bg-gray-200 flex-1"></div>
         </div>
         {/* Swatch & Hex input row */}
@@ -2845,60 +2679,69 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             onClick={() => setShowStrokeColorPicker(true)}
           />
           <div className="flex-1 h-[2vw] border border-gray-200 rounded-[0.4vw] px-[0.75vw] flex items-center justify-between bg-white shadow-2xs">
-            <span className="text-[0.75vw] text-gray-700 font-medium uppercase">
+            <span className="text-[0.75vw] text-gray-700 font-semibold uppercase">
               {slideshowSettings.strokeColor || '#000000'}
             </span>
-            <span className="text-[0.7vw] text-gray-400 font-medium">
+            <span className="text-[0.7vw] text-gray-400 font-semibold">
               {slideshowSettings.strokeOpacity ?? 100}%
             </span>
           </div>
         </div>
 
         {/* Stroke Settings Grid */}
-        <div className="flex flex-col gap-[0.75vw] mt-[0.25vw]">
-          {/* Stroke Width & Line Corner */}
-          <div className="grid grid-cols-2 gap-[0.75vw]">
-            {/* Stroke Width */}
-            <div className="flex flex-col gap-[0.25vw]">
-              <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-              <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-                <button
-                  type="button"
-                  onClick={() => updateSetting('strokeWidth', Math.max(0, (slideshowSettings.strokeWidth || 1) - 1))}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-                >
-                  −
-                </button>
-                <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                  <input
-                    type="number"
-                    value={slideshowSettings.strokeWidth ?? 1}
-                    onChange={(e) => updateSetting('strokeWidth', Math.max(0, Number(e.target.value)))}
-                    className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
+        {(() => {
+          const isStrokeDisabled = !slideshowSettings.strokeColor || slideshowSettings.strokeColor === 'none' || slideshowSettings.strokeColor === 'transparent';
+          return (
+            <div className={`flex flex-col gap-[0.75vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              {/* Stroke Width & Line Corner */}
+              <div className="grid grid-cols-2 gap-[0.75vw]">
+                {/* Stroke Width */}
+                <div className="flex flex-col gap-[0.25vw]">
+                  <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
+                  <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+                    <button
+                      type="button"
+                      disabled={isStrokeDisabled}
+                      onClick={() => updateSetting('strokeWidth', Math.max(0, (slideshowSettings.strokeWidth || 1) - 1))}
+                      className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                    >
+                      −
+                    </button>
+                    <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                      <input
+                        type="number"
+                        disabled={isStrokeDisabled}
+                        value={slideshowSettings.strokeWidth ?? 1}
+                        onChange={(e) => updateSetting('strokeWidth', Math.max(0, Number(e.target.value)))}
+                        className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isStrokeDisabled}
+                      onClick={() => updateSetting('strokeWidth', (slideshowSettings.strokeWidth || 1) + 1)}
+                      className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Line Corner */}
+                <div className="flex flex-col gap-[0.25vw] relative">
+                  <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
+                  <ElementDropdown
+                    disabled={isStrokeDisabled}
+                    value={slideshowSettings.strokeLineCorner || 'Square'}
+                    onChange={(val) => updateSetting('strokeLineCorner', val)}
+                    options={['Square', 'Rounded']}
+                    buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => updateSetting('strokeWidth', (slideshowSettings.strokeWidth || 1) + 1)}
-                  className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-                >
-                  +
-                </button>
               </div>
             </div>
-
-            {/* Line Corner */}
-            <div className="flex flex-col gap-[0.25vw] relative">
-              <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-              <ElementDropdown
-                value={slideshowSettings.strokeLineCorner || 'Square'}
-                onChange={(val) => updateSetting('strokeLineCorner', val)}
-                options={['Square', 'Rounded']}
-                buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-              />
-            </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
 

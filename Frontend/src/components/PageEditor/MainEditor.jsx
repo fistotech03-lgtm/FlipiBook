@@ -1105,6 +1105,15 @@ const getDraggableElement = (target, canvasRoot) => {
       return embedGroup;
     }
 
+    // Table elements are single compound elements; always drag/select the whole table group
+    const tableGroup = current && typeof current.closest === 'function' ? current.closest('[data-type="table-frame"], [data-type="table"], g[id^="table-"]') : null;
+    if (tableGroup) {
+      if (!tableGroup.id) {
+        tableGroup.id = `table-${Date.now()}`;
+      }
+      return tableGroup;
+    }
+
     let deepestElementWithId = null;
 
     while (current && current !== canvasRoot && current.tagName) {

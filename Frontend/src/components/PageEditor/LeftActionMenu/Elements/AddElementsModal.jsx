@@ -336,7 +336,7 @@ export const AddElementsModal = ({
                           {items.length}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]">
+                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
                         {items.map((item) => (
                           <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                         ))}
@@ -354,13 +354,13 @@ export const AddElementsModal = ({
                       {displayedElements.length}
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]">
+                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
                     {displayedElements.map((item) => (
                       <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                     ))}
 
                     {displayedElements.length === 0 && (
-                      <div className="col-span-3 py-[4vh] text-center text-gray-400 text-[0.75vw]">
+                      <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
                         No elements found in {selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
                       </div>
                     )}

@@ -96,17 +96,18 @@ export const AUDIO_TEMPLATES = [
   <rect class="audio-fill-layer" width="440" height="124" rx="24" fill="#16291a" stroke="#23422a" stroke-width="1.5" />
   <g class="audio-content-group">
     <!-- Disc on Left -->
-    <g class="audio-disk" transform="translate(18, 18)">
-      <circle cx="44" cy="44" r="43" fill="#23422a" stroke="#c9e4b7" stroke-opacity="0.6" stroke-width="2" />
-      <circle cx="44" cy="44" r="33" fill="none" stroke="#c9e4b7" stroke-opacity="0.25" stroke-width="1" />
-      <circle cx="44" cy="44" r="25" fill="none" stroke="#c9e4b7" stroke-opacity="0.25" stroke-width="1" />
-      <circle cx="44" cy="44" r="15" fill="#c9e4b7" />
-      <circle cx="44" cy="44" r="3.5" fill="#16291a" />
+    <g class="audio-disk-wrapper" transform="translate(18, 18)">
+      <g class="audio-disk">
+        <circle cx="44" cy="44" r="43" fill="#23422a" stroke="#c9e4b7" stroke-opacity="0.6" stroke-width="2" />
+        <circle cx="44" cy="44" r="33" fill="none" stroke="#c9e4b7" stroke-opacity="0.25" stroke-width="1" />
+        <circle cx="44" cy="44" r="25" fill="none" stroke="#c9e4b7" stroke-opacity="0.25" stroke-width="1" />
+        <circle cx="44" cy="44" r="15" fill="#c9e4b7" />
+        <circle cx="44" cy="44" r="3.5" fill="#16291a" />
+      </g>
     </g>
 
     <!-- Header Title + Singer + Equalizer Bars -->
     <text class="audio-title" x="122" y="38" font-family="'Inter', sans-serif" font-size="14" font-weight="700" fill="#c9e4b7">Song title</text>
-    <text class="audio-artist" x="122" y="52" font-family="'Inter', sans-serif" font-size="11" font-weight="500" fill="#c9e4b7" fill-opacity="0.65">Singer name</text>
     
     <!-- Equalizer Visualizer Bars -->
     <g class="wave-equalizer" transform="translate(378, 28)">

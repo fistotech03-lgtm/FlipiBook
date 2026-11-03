@@ -458,6 +458,23 @@ export const applyColorsToCanvas = (el, { icon, bg, stroke }) => {
         fillLayer.setAttribute('fill', bg);
       }
     }
+    // Also sync disc center pin to background color for seamless integration
+    const diskCenterPin = root.querySelector('.audio-disk circle[r="3.5"]');
+    if (diskCenterPin && bg && !bg.includes('gradient') && !bg.startsWith('url(#')) {
+      diskCenterPin.setAttribute('fill', bg);
+    }
+    // Also update Clean Glassmorphism album icon container box fill
+    const albumBox = root.querySelector('.audio-header-group rect');
+    if (albumBox && bg) {
+      if (bg.startsWith('url(#') || bg.includes('gradient')) {
+        albumBox.setAttribute('fill', '#ffffff');
+      } else {
+        albumBox.setAttribute('fill', bg);
+      }
+      if (!albumBox.getAttribute('fill-opacity')) {
+        albumBox.setAttribute('fill-opacity', '0.5');
+      }
+    }
     root.setAttribute('data-fill-color', bg);
   }
 
@@ -469,32 +486,101 @@ export const applyColorsToCanvas = (el, { icon, bg, stroke }) => {
       fillLayer.setAttribute('stroke', stroke);
       fillLayer.setAttribute('stroke-width', stroke === 'none' ? '0' : '3');
     }
+
+    // Also update disk inner/outer accents that follow stroke color
+    const diskAccents = root.querySelectorAll('.audio-disk circle[stroke]');
+    diskAccents.forEach((circle, idx) => {
+      // First circle in audio-disk is the outer rim
+      if (idx === 0) {
+        circle.setAttribute('fill', stroke);
+      }
+    });
+
+    // Also update Clean Glassmorphism album icon container box border
+    const albumBox = root.querySelector('.audio-header-group rect');
+    if (albumBox) {
+      albumBox.setAttribute('stroke', stroke);
+    }
+
     root.setAttribute('data-stroke-color', stroke);
     root.setAttribute('data-stroke-position', 'Outside');
     root.setAttribute('data-stroke-alignment', 'Outside');
   }
 
   if (icon !== undefined) {
+    // 1. Text elements (Title, Singer, Current Time, Total Time, Separators)
+    const textElements = root.querySelectorAll(
+      '.audio-title, .audio-artist, .audio-current-time, .audio-total-time, .audio-duration-separator'
+    );
+    textElements.forEach((item) => {
+      item.setAttribute('fill', icon);
+    });
+
+    // 2. Wave equalizer bars
+    const equalizerBars = root.querySelectorAll('.wave-equalizer rect');
+    equalizerBars.forEach((item) => {
+      item.setAttribute('fill', icon);
+    });
+
+    // 3. Audio disk vinyl rings and center hub
+    const diskCircles = root.querySelectorAll('.audio-disk circle');
+    diskCircles.forEach((circle, idx) => {
+      if (circle.getAttribute('stroke')) {
+        circle.setAttribute('stroke', icon);
+      }
+      // If it's the 4th circle (the colored vinyl inner circle: r="15")
+      if (circle.getAttribute('r') === '15') {
+        circle.setAttribute('fill', icon);
+      }
+    });
+
+    // 4. Icons, slider knobs, progress fills, and buttons
     const iconElements = root.querySelectorAll(
-      '.prev-icon polygon, .next-icon polygon, .audio-current-time, .audio-total-time, .progress-fill, .progress-knob, .volume-icon polygon, .volume-fill, .volume-knob, .play-pause-bg'
+      '.prev-icon polygon, .next-icon polygon, .progress-fill, .progress-knob, .volume-icon polygon, .volume-fill, .volume-knob, .audio-header-group path, .loop-icon path'
     );
     iconElements.forEach((item) => {
       item.setAttribute('fill', icon);
     });
 
+    // 5. Track backgrounds (Progress bar and Volume bar tracks)
+    const trackBgs = root.querySelectorAll('.progress-bg, .volume-bg');
+    trackBgs.forEach((track) => {
+      track.setAttribute('fill', icon);
+      // Give track subtle tint with fill-opacity if none or high
+      if (!track.getAttribute('fill-opacity')) {
+        track.setAttribute('fill-opacity', '0.25');
+      }
+    });
+
+    // 6. Stroke elements and play-pause button circle border
     const strokeElements = root.querySelectorAll(
-      '.volume-icon path, .loop-icon path'
+      '.volume-icon path, .play-pause-bg'
     );
     strokeElements.forEach((item) => {
       item.setAttribute('stroke', icon);
+      // Ensure the play-pause border circle is not filled as a solid block unless designed so
+      if (item.classList.contains('play-pause-bg')) {
+        if (!item.getAttribute('fill') || item.getAttribute('fill') !== 'transparent') {
+          item.setAttribute('fill', 'none');
+        }
+      }
     });
 
-    const squareIconPolygon = root.querySelectorAll('.play-pause-icon polygon');
-    squareIconPolygon.forEach((item) => {
-      if (!root.querySelector('.play-pause-bg')) {
-        item.setAttribute('fill', icon);
+    // 7. Play-pause icon (polygon triangle / pause rects)
+    const playPauseIcons = root.querySelectorAll('.play-pause-icon polygon, .play-pause-icon rect, .play-pause-icon path');
+    playPauseIcons.forEach((item) => {
+      item.setAttribute('fill', icon);
+      if (item.getAttribute('stroke')) {
         item.setAttribute('stroke', icon);
       }
+    });
+
+    // 8. Glow and blur filters removal when styling custom colors or when shadow is not wanted
+    const glowFilters = root.querySelectorAll('filter[id*="glow"]');
+    glowFilters.forEach((gf) => gf.remove());
+    const filteredElements = root.querySelectorAll('[filter*="glow"]');
+    filteredElements.forEach((elWithFilter) => {
+      elWithFilter.removeAttribute('filter');
     });
 
     root.setAttribute('data-icon-color', icon);
@@ -686,16 +772,37 @@ const ElementAudioProperties = ({
   const updatePlayPauseIconOnCanvas = useCallback((playing) => {
     if (!selectedElement) return;
     const iconContainer = selectedElement.querySelector('.play-pause-icon');
-    if (!iconContainer) return;
-    const tplId = selectedElement.getAttribute('data-audio-template') || playerStyle || 'sunset-vibrant';
-    const filterEl = selectedElement.querySelector('defs filter');
-    const filterId = filterEl ? filterEl.id : '';
-    const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
+    if (iconContainer) {
+      const tplId = selectedElement.getAttribute('data-audio-template') || playerStyle || 'sunset-vibrant';
+      const filterEl = selectedElement.querySelector('defs filter');
+      const filterId = filterEl ? filterEl.id : '';
+      const color = selectedElement.getAttribute('data-icon-color') || iconColor || '#ffffff';
 
-    if (playing) {
-      iconContainer.innerHTML = getTemplatePauseIconSvg(tplId, color, filterId);
-    } else {
-      iconContainer.innerHTML = getTemplatePlayIconSvg(tplId, color, filterId);
+      if (playing) {
+        iconContainer.innerHTML = getTemplatePauseIconSvg(tplId, color, filterId);
+      } else {
+        iconContainer.innerHTML = getTemplatePlayIconSvg(tplId, color, filterId);
+      }
+    }
+
+    // Sync disk spin animation on canvas
+    const diskGroup = selectedElement.querySelector('.audio-disk');
+    if (diskGroup) {
+      if (playing) {
+        diskGroup.classList.add('audio-disk-spinning');
+      } else {
+        diskGroup.classList.remove('audio-disk-spinning');
+      }
+    }
+
+    // Sync wave equalizer animation on canvas
+    const waveGroup = selectedElement.querySelector('.wave-equalizer');
+    if (waveGroup) {
+      if (playing) {
+        waveGroup.classList.add('audio-wave-animating');
+      } else {
+        waveGroup.classList.remove('audio-wave-animating');
+      }
     }
   }, [selectedElement, playerStyle, iconColor]);
 

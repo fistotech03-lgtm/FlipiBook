@@ -464,12 +464,29 @@ export const createYouTubeChannelSvg = ({
   fontSize = 21,
   fontFamily = '"Arial Black", Impact, sans-serif',
   duration = 3600,
-  isTranslate = false
+  isTranslate = false,
+  iconName = 'Play',
+  iconHtml = '',
+  iconViewBox = '0 0 24 24',
+  iconColor = '#FFFFFF',
+  iconBgColor = ''
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
   const width = 220;
   const height = 54;
   const charSteps = Math.max(1, text.length);
+  const activeIconBg = iconBgColor || primaryColor;
+  const activeIconColor = iconColor || '#FFFFFF';
+
+  // SVG inner content for the icon
+  let innerIconSvgMarkup = `<polygon points="15,6 15,20 25,13" fill="${activeIconColor}" />`;
+  if (iconHtml) {
+    innerIconSvgMarkup = `
+      <svg class="yt-custom-icon" viewBox="${iconViewBox}" x="8" y="3" width="20" height="20" fill="none" stroke="${activeIconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">
+        ${iconHtml}
+      </svg>
+    `;
+  }
 
   return `
     <g id="typography-${uniqueId}" 
@@ -482,6 +499,11 @@ export const createYouTubeChannelSvg = ({
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
        data-font-family="${fontFamily}" 
+       data-icon-name="${iconName}"
+       data-icon-html="${encodeURIComponent(iconHtml)}"
+       data-icon-viewbox="${iconViewBox}"
+       data-icon-color="${activeIconColor}"
+       data-icon-bg-color="${activeIconBg}"
        cursor="pointer"${transformAttr} 
        style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
 
@@ -558,12 +580,9 @@ export const createYouTubeChannelSvg = ({
               height="26" 
               rx="7" 
               ry="7" 
-              fill="${primaryColor}" 
+              fill="${activeIconBg}" 
             />
-            <polygon 
-              points="15,6 15,20 25,13" 
-              fill="#FFFFFF" 
-            />
+            ${innerIconSvgMarkup}
           </svg>
           <div class="yt-typewriter-container">
             <span class="motion-text-content yt-title-text">${text}</span>
@@ -944,7 +963,12 @@ export const createSocialBadgeSvg = ({
   fontSize = 18,
   fontFamily = '"Expletus Sans", Arial, sans-serif',
   duration = 4200,
-  isTranslate = false
+  isTranslate = false,
+  iconName = 'Facebook',
+  iconHtml = '',
+  iconViewBox = '0 0 24 24',
+  iconColor = '#FFFFFF',
+  iconBgColor = ''
 }) => {
   const width = 250, height = 90;
   const S = 0.3;                 // comp px -> svg px
@@ -952,6 +976,20 @@ export const createSocialBadgeSvg = ({
   const inPct = Math.min(60, (1533 / duration) * 100);   // 46 frames @30fps
   const p = (f) => +((f / 46) * inPct).toFixed(2);       // frame -> keyframe %
   const ease = 'cubic-bezier(0.3, 0, 0.3, 1)';
+  const activeIconBg = iconBgColor || primaryColor;
+  const activeIconColor = iconColor || '#FFFFFF';
+
+  let innerIconMarkup = `<path class="sb-f" transform="translate(-60 -62) scale(5.2)" d="M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z" fill="${activeIconColor}" />`;
+  if (iconHtml) {
+    innerIconMarkup = `
+      <g class="sb-custom-icon" transform="translate(-55 -55)">
+        <svg viewBox="${iconViewBox}" width="110" height="110" fill="none" stroke="${activeIconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">
+          ${iconHtml}
+        </svg>
+      </g>
+    `;
+  }
+
   const css = `
         @keyframes sb-pop-${uniqueId} {
           0% { transform: rotate(630deg) scale(0); }
@@ -981,12 +1019,12 @@ export const createSocialBadgeSvg = ({
         #typography-${uniqueId} .sb-move { animation: sb-move-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pop  { animation: sb-pop-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pill {
-          fill: ${primaryColor}; stroke: ${secondaryColor}; stroke-width: 3;
+          fill: ${activeIconBg}; stroke: ${secondaryColor}; stroke-width: 3;
           transform-box: fill-box; transform-origin: center center; pointer-events: none;
           animation: sb-pill-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }
-        #typography-${uniqueId} .sb-badge { fill: ${primaryColor}; stroke: ${secondaryColor}; stroke-width: 4; pointer-events: none; }
-        #typography-${uniqueId} .sb-f { fill: ${secondaryColor}; pointer-events: none; }
+        #typography-${uniqueId} .sb-badge { fill: ${activeIconBg}; stroke: ${secondaryColor}; stroke-width: 4; pointer-events: none; }
+        #typography-${uniqueId} .sb-f { fill: ${activeIconColor}; pointer-events: none; }
         #typography-${uniqueId} .sb-label {
           display: inline-block; white-space: nowrap !important; line-height: 1;
           font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: 500; letter-spacing: 0.02em;
@@ -1001,7 +1039,7 @@ export const createSocialBadgeSvg = ({
         <!-- badge: 184px rounded square rotated 45deg, with the "f" kept upright -->
         <g class="sb-move"><g class="sb-pop">
           <rect class="sb-badge" x="-92" y="-92" width="184" height="184" rx="44" ry="44" transform="rotate(45)" />
-          <path class="sb-f" transform="translate(-60 -62) scale(5.2)" d="M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z" />
+          ${innerIconMarkup}
         </g></g>
       </g>
       <!-- label clipped to the pill window -->
@@ -1010,7 +1048,30 @@ export const createSocialBadgeSvg = ({
           <span class="motion-text-content sb-label">${text}</span>
         </div>
       </foreignObject>`;
-  return buildMotionGroup({ uniqueId, template: 'social-badge', text, primaryColor, secondaryColor, fontSize, fontFamily, isTranslate, css, body });
+
+  const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
+  return `
+    <g id="typography-${uniqueId}" 
+       data-type="text" 
+       data-typography-type="motion-graphic" 
+       data-is-element-typography="true"
+       data-motion-template="social-badge"
+       data-text="${text}"
+       data-primary-color="${primaryColor}" 
+       data-secondary-color="${secondaryColor}" 
+       data-font-size="${fontSize}" 
+       data-font-family="${fontFamily}"
+       data-icon-name="${iconName}"
+       data-icon-html="${encodeURIComponent(iconHtml)}"
+       data-icon-viewbox="${iconViewBox}"
+       data-icon-color="${activeIconColor}"
+       data-icon-bg-color="${activeIconBg}"
+       cursor="pointer"${transformAttr} 
+       style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
+      <style>${css}</style>
+      ${body}
+    </g>
+  `;
 };
 
 // --------------------------------------------------------------------------
@@ -1027,7 +1088,12 @@ export const createMotionGraphicSvg = ({
   fontSize = 18,
   fontFamily = 'Roboto, sans-serif',
   duration = 4700,
-  isTranslate = false
+  isTranslate = false,
+  iconName,
+  iconHtml,
+  iconViewBox,
+  iconColor,
+  iconBgColor
 }) => {
   switch (template) {
     case 'cyber-frame':
@@ -1075,7 +1141,12 @@ export const createMotionGraphicSvg = ({
         fontSize,
         fontFamily,
         duration,
-        isTranslate
+        isTranslate,
+        iconName: iconName || 'Play',
+        iconHtml,
+        iconViewBox,
+        iconColor,
+        iconBgColor
       });
     case 'slide-split':
       return createSlideSplitSvg({ uniqueId, text, subText: subText || 'ANIMATION', primaryColor, secondaryColor, fontSize, fontFamily, duration, isTranslate });
@@ -1086,7 +1157,21 @@ export const createMotionGraphicSvg = ({
     case 'square-open':
       return createSquareOpenSvg({ uniqueId, text, subText: subText || 'ANIMATION', primaryColor, secondaryColor, fontSize, fontFamily, duration, isTranslate });
     case 'social-badge':
-      return createSocialBadgeSvg({ uniqueId, text: text === 'ANIMATION' ? 'FACEBOOK' : text, primaryColor: primaryColor === '#FF0033' ? '#0E34A8' : primaryColor, secondaryColor, fontSize, fontFamily, duration, isTranslate });
+      return createSocialBadgeSvg({
+        uniqueId,
+        text: text === 'ANIMATION' ? 'FACEBOOK' : text,
+        primaryColor: primaryColor === '#FF0033' ? '#0E34A8' : primaryColor,
+        secondaryColor,
+        fontSize,
+        fontFamily,
+        duration,
+        isTranslate,
+        iconName: iconName || 'Facebook',
+        iconHtml,
+        iconViewBox,
+        iconColor,
+        iconBgColor
+      });
     default:
       return createCyberFrameSvg({
         uniqueId,
@@ -1265,6 +1350,24 @@ export const getMotionGraphicProperties = (el) => {
   const secondaryIsStrikethrough = el.getAttribute('data-secondary-is-strikethrough') === 'true';
   const secondaryIsList = el.getAttribute('data-secondary-is-list') === 'true';
 
+  const motionTemplate = el.getAttribute('data-motion-template') || '';
+
+  // Icon properties for templates with logo/icon support
+  let rawIconHtml = el.getAttribute('data-icon-html') || '';
+  let decodedIconHtml = '';
+  if (rawIconHtml) {
+    try {
+      decodedIconHtml = decodeURIComponent(rawIconHtml);
+    } catch {
+      decodedIconHtml = rawIconHtml;
+    }
+  }
+  const iconName = el.getAttribute('data-icon-name') || (motionTemplate === 'youtube-channel' ? 'Play' : (motionTemplate === 'social-badge' ? 'Facebook' : 'Heart'));
+  const iconHtml = decodedIconHtml;
+  const iconViewBox = el.getAttribute('data-icon-viewbox') || '0 0 24 24';
+  const iconColor = el.getAttribute('data-icon-color') || '#FFFFFF';
+  const iconBgColor = el.getAttribute('data-icon-bg-color') || (motionTemplate === 'youtube-channel' ? '#FF0024' : (motionTemplate === 'social-badge' ? '#0E34A8' : '#000000'));
+
   return {
     animation,
     customCount,
@@ -1280,6 +1383,11 @@ export const getMotionGraphicProperties = (el) => {
     object1Color,
     object2Color,
     object3Color,
+    iconName,
+    iconHtml,
+    iconViewBox,
+    iconColor,
+    iconBgColor,
     primaryFontSize,
     primaryFontFamily,
     primaryFontWeight,
@@ -1330,6 +1438,142 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
         st.textContent = st.textContent.replace(/animation-iteration-count:\s*[^;]+;/gi, `animation-iteration-count: ${countStr};`);
       }
     });
+  }
+
+  if (updates.iconName !== undefined) {
+    el.setAttribute('data-icon-name', updates.iconName);
+  }
+
+  if (updates.iconViewBox !== undefined) {
+    el.setAttribute('data-icon-viewbox', updates.iconViewBox);
+  }
+
+  if (updates.iconHtml !== undefined) {
+    el.setAttribute('data-icon-html', encodeURIComponent(updates.iconHtml || ''));
+    const template = el.getAttribute('data-motion-template');
+    const curIconColor = updates.iconColor || el.getAttribute('data-icon-color') || '#FFFFFF';
+    const curViewBox = updates.iconViewBox || el.getAttribute('data-icon-viewbox') || '0 0 24 24';
+
+    if (template === 'youtube-channel') {
+      const logoBox = el.querySelector('.yt-logo-box');
+      if (logoBox) {
+        // remove existing polygon or custom icon
+        const existingPoly = logoBox.querySelector('polygon');
+        const existingCustom = logoBox.querySelector('.yt-custom-icon');
+        if (existingPoly) existingPoly.remove();
+        if (existingCustom) existingCustom.remove();
+
+        if (updates.iconHtml) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(
+            `<svg xmlns="http://www.w3.org/2000/svg" class="yt-custom-icon" viewBox="${curViewBox}" x="8" y="3" width="20" height="20" fill="none" stroke="${curIconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">${updates.iconHtml}</svg>`,
+            'image/svg+xml'
+          );
+          const newSvg = doc.querySelector('.yt-custom-icon');
+          if (newSvg) {
+            // Adopt node into target ownerDocument
+            const adopted = el.ownerDocument ? el.ownerDocument.importNode(newSvg, true) : newSvg;
+            logoBox.appendChild(adopted);
+          }
+        } else {
+          // Restore default YouTube play polygon
+          const poly = (el.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          poly.setAttribute('points', '15,6 15,20 25,13');
+          poly.setAttribute('fill', curIconColor);
+          logoBox.appendChild(poly);
+        }
+      }
+    } else if (template === 'social-badge') {
+      const sbPop = el.querySelector('.sb-pop');
+      if (sbPop) {
+        const existingF = sbPop.querySelector('.sb-f');
+        const existingCustom = sbPop.querySelector('.sb-custom-icon');
+        if (existingF) existingF.remove();
+        if (existingCustom) existingCustom.remove();
+
+        if (updates.iconHtml) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(
+            `<g xmlns="http://www.w3.org/2000/svg" class="sb-custom-icon" transform="translate(-55 -55)"><svg viewBox="${curViewBox}" width="110" height="110" fill="none" stroke="${curIconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">${updates.iconHtml}</svg></g>`,
+            'image/svg+xml'
+          );
+          const newG = doc.querySelector('.sb-custom-icon');
+          if (newG) {
+            const adopted = el.ownerDocument ? el.ownerDocument.importNode(newG, true) : newG;
+            sbPop.appendChild(adopted);
+          }
+        } else {
+          // Restore default Facebook "f"
+          const p = (el.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('class', 'sb-f');
+          p.setAttribute('transform', 'translate(-60 -62) scale(5.2)');
+          p.setAttribute('d', 'M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z');
+          p.setAttribute('fill', curIconColor);
+          sbPop.appendChild(p);
+        }
+      }
+    }
+  }
+
+  if (updates.iconColor !== undefined) {
+    el.setAttribute('data-icon-color', updates.iconColor);
+    // YouTube play polygon or custom icon strokes/fills
+    const ytPoly = el.querySelector('.yt-logo-box polygon');
+    if (ytPoly) ytPoly.setAttribute('fill', updates.iconColor);
+
+    const ytCustom = el.querySelector('.yt-custom-icon');
+    if (ytCustom) {
+      ytCustom.setAttribute('stroke', updates.iconColor);
+      ytCustom.style.stroke = updates.iconColor;
+      ytCustom.querySelectorAll('path, circle, line, rect, polyline, polygon').forEach((shape) => {
+        const curFill = shape.getAttribute('fill');
+        if (curFill && curFill !== 'none') shape.setAttribute('fill', updates.iconColor);
+        shape.setAttribute('stroke', updates.iconColor);
+      });
+    }
+
+    // Social badge f or custom icon
+    const sbF = el.querySelector('.sb-f');
+    if (sbF) {
+      sbF.setAttribute('fill', updates.iconColor);
+      sbF.style.fill = updates.iconColor;
+    }
+
+    const sbCustom = el.querySelector('.sb-custom-icon');
+    if (sbCustom) {
+      const innerSvg = sbCustom.querySelector('svg');
+      if (innerSvg) {
+        innerSvg.setAttribute('stroke', updates.iconColor);
+        innerSvg.style.stroke = updates.iconColor;
+      }
+      sbCustom.querySelectorAll('path, circle, line, rect, polyline, polygon').forEach((shape) => {
+        const curFill = shape.getAttribute('fill');
+        if (curFill && curFill !== 'none') shape.setAttribute('fill', updates.iconColor);
+        shape.setAttribute('stroke', updates.iconColor);
+      });
+    }
+  }
+
+  if (updates.iconBgColor !== undefined) {
+    el.setAttribute('data-icon-bg-color', updates.iconBgColor);
+    // YouTube logo box rect
+    const ytRect = el.querySelector('.yt-logo-box rect');
+    if (ytRect) {
+      ytRect.setAttribute('fill', updates.iconBgColor);
+      ytRect.style.fill = updates.iconBgColor;
+    }
+
+    // Social badge diamond badge & pill
+    const sbBadge = el.querySelector('.sb-badge');
+    if (sbBadge) {
+      sbBadge.setAttribute('fill', updates.iconBgColor);
+      sbBadge.style.fill = updates.iconBgColor;
+    }
+    const sbPill = el.querySelector('.sb-pill');
+    if (sbPill) {
+      sbPill.setAttribute('fill', updates.iconBgColor);
+      sbPill.style.fill = updates.iconBgColor;
+    }
   }
 
   if (updates.speed !== undefined) {
@@ -1469,7 +1713,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
     el.setAttribute('data-font-size', String(updates.primaryFontSize));
     const primarySpans = el.querySelectorAll('.motion-text-content, .flipi-text-a, .box-title-a, .yt-title-text, .cyber-text');
     primarySpans.forEach((sp) => {
-      sp.style.fontSize = `${updates.primaryFontSize}px`;
+      sp.style.fontSize = `${updates.primaryFontSize}pt`;
     });
   }
 
@@ -1533,7 +1777,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
     el.setAttribute('data-secondary-font-size', String(updates.secondaryFontSize));
     const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
     secSpans.forEach((sp) => {
-      sp.style.fontSize = `${updates.secondaryFontSize}px`;
+      sp.style.fontSize = `${updates.secondaryFontSize}pt`;
     });
   }
 

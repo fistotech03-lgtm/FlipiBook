@@ -753,9 +753,15 @@ const RightSidebar = ({
           (el.getAttribute('id') && el.getAttribute('id').startsWith('embed-')) ||
           !!embedParent;
 
+        const slideshowParent = el?.closest?.('[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"]');
         const isSlideshow = el.getAttribute('data-type') === 'slideshow' ||
           el.getAttribute('data-is-slideshow') === 'true' ||
-          (el.getAttribute('id') && el.getAttribute('id').startsWith('slideshow-'));
+          (el.getAttribute('id') && el.getAttribute('id').startsWith('slideshow-')) ||
+          !!slideshowParent;
+        if (isSlideshow) {
+          props.slideshowId = slideshowParent ? slideshowParent.id : (el.id || selectedLayerId);
+          props.isSlideshow = true;
+        }
 
         const audioParent = el?.closest?.('[data-type="audio-frame"], g[id^="audio-"]');
         const isAudio = el.getAttribute('data-type') === 'audio-frame' ||
@@ -1045,6 +1051,9 @@ const RightSidebar = ({
                           selectedLayerId={selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
+                          flipbookDimensions={flipbookDimensions}
+                          updatePosition={updatePosition}
+                          updateDimensionWithScale={updateDimensionWithScale}
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
                             if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
@@ -1183,18 +1192,51 @@ const RightSidebar = ({
                       ) : selectedElementProps?.isSlideshow ? (
                         <ElementSlideshowProperties
                           selectedElement={(() => {
+                            const targetId = selectedElementProps?.slideshowId || selectedLayerId;
                             const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-                            const base = editorDoc.getElementById(selectedLayerId);
+                            const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+                            const base = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? pageContainer?.querySelector(`[id="${targetId}"]`) : null) || (targetId ? document.getElementById(targetId) : null);
                             return base?.closest?.('[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"]') || base;
                           })()}
                           selectedElementProps={selectedElementProps}
-                          selectedLayerId={selectedLayerId}
+                          selectedLayerId={selectedElementProps?.slideshowId || selectedLayerId}
                           activePageIndex={activePageIndex}
                           updateElementAttribute={updateElementAttribute}
                           effectiveFolder={effectiveFolder}
                           flipbookName={effectiveBook}
                           flipbookVId={effectiveVId}
-                          onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedLayerId)}
+                          onDeleteLayer={() => deleteLayer?.(activePageIndex, selectedElementProps?.slideshowId || selectedLayerId)}
+                          onUpdate={(newHtml) => {
+                            const targetId = selectedElementProps?.slideshowId || selectedLayerId;
+                            window.__skipCanvasUpdateForPage = activePageIndex;
+                            const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+                            const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+                            const el = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? pageContainer?.querySelector(`[id="${targetId}"]`) : null) || (targetId ? document.getElementById(targetId) : null);
+                            const svgRoot = (() => {
+                              if (!el) return null;
+                              const container = el.closest('.page-svg-container');
+                              if (container) {
+                                const canvasContent = container.querySelector('[id^="canvas-content-"]');
+                                return canvasContent ? canvasContent.querySelector('svg') : container.querySelector('svg');
+                              }
+                              let node = el;
+                              let lastSvg = null;
+                              while (node) {
+                                if (node.tagName?.toLowerCase() === 'svg') lastSvg = node;
+                                node = node.parentElement;
+                              }
+                              return lastSvg;
+                            })();
+                            if (svgRoot) {
+                              const cloneSvg = svgRoot.cloneNode(true);
+                              cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+                              const serializer = new XMLSerializer();
+                              const html = serializer.serializeToString(cloneSvg);
+                              updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
+                            } else if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
+                              updateElementAttribute(activePageIndex, targetId, '__dom_sync__', newHtml);
+                            }
+                          }}
                         />
                       ) : selectedElementProps?.isAudio ? (
                         <ElementAudioProperties

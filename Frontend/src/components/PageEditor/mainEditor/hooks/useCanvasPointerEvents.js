@@ -2976,15 +2976,20 @@ export const useCanvasPointerEvents = ({
     // ── INSTANT TEXT EDIT MODE (Vector-Studio Style) ─────────────────────────
     // Directly check what is under the cursor on double-click (pierces selection polygons, user groups, and frames)
     let directTextEl = null;
+    const isInsideButton = (node) => Boolean(
+      node?.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]')
+    );
+
     const clickTargetTag = e.target?.tagName?.toLowerCase();
-    if (['text', 'tspan', 'foreignobject'].includes(clickTargetTag)) {
+    if (['text', 'tspan', 'foreignobject'].includes(clickTargetTag) && !isInsideButton(e.target)) {
       directTextEl = clickTargetTag === 'tspan' ? (e.target.parentElement || e.target.parentNode) : e.target;
-    } else if (e.target?.closest && e.target.closest('foreignObject')) {
+    } else if (e.target?.closest && e.target.closest('foreignObject') && !isInsideButton(e.target)) {
       directTextEl = e.target.closest('foreignObject');
     } else if (typeof document.elementsFromPoint === 'function') {
       const elements = document.elementsFromPoint(e.clientX, e.clientY);
       for (const el of elements) {
         if (!svg.contains(el)) continue;
+        if (isInsideButton(el)) continue;
         const tag = el.tagName?.toLowerCase();
         if (tag === 'tspan') {
           directTextEl = el.parentElement || el.parentNode;
@@ -3001,10 +3006,10 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    // Fallback: check currently selected layer if it's text within hitTest range
+    // Fallback: check currently selected layer if it's text within hitTest range (exclude buttons)
     if (!directTextEl && selectedLayerIdRef.current) {
       const activeEl = svg.querySelector(`[id="${selectedLayerIdRef.current}"]`);
-      if (activeEl && ['text', 'tspan', 'foreignobject'].includes(activeEl.tagName?.toLowerCase())) {
+      if (activeEl && !isInsideButton(activeEl) && ['text', 'tspan', 'foreignobject'].includes(activeEl.tagName?.toLowerCase())) {
         if (hitTest(activeEl, e.clientX, e.clientY, 15)) {
           directTextEl = activeEl.tagName?.toLowerCase() === 'tspan' ? (activeEl.parentElement || activeEl.parentNode) : activeEl;
         }
@@ -3029,7 +3034,13 @@ export const useCanvasPointerEvents = ({
       effectiveTarget?.getAttribute?.('data-type') === 'vector-path'
     );
 
-    if (!isFlattenedClick) {
+    const isDirectTextTarget = Boolean(
+      directTextEl ||
+      ['text', 'tspan', 'foreignobject'].includes(effectiveTarget?.tagName?.toLowerCase()) ||
+      effectiveTarget?.closest?.('text, tspan, foreignObject')
+    );
+
+    if (!isFlattenedClick && !isDirectTextTarget) {
       // 1. Check if double-clicked inside an image frame (or its slots)
       const frameParent = effectiveTarget?.closest?.(
         '[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]'
@@ -3141,7 +3152,12 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    const targetCompound = !isFlattenedTarget ? target?.closest?.(
+    const isTargetText = Boolean(
+      ['text', 'tspan', 'foreignobject'].includes(target?.tagName?.toLowerCase()) ||
+      target?.closest?.('text, tspan, foreignObject')
+    );
+
+    const targetCompound = (!isFlattenedTarget && !isTargetText) ? target?.closest?.(
       '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     ) : null;
     if (targetCompound) {
@@ -3162,14 +3178,14 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    // 2. Proactively check if we are double-clicking while a text is selected
+    // 2. Proactively check if we are double-clicking while a text is selected (exclude buttons)
     const selIdContext = selectedLayerIdRef.current;
     if (selIdContext && (!target || !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase()))) {
       let activeSelEls = svg.querySelectorAll(`[id="${selIdContext}"]`);
       // If there are duplicates due to temporary template saving leaks, find the visible one
       const activeSelEl = Array.from(activeSelEls).find(el => el.getBoundingClientRect().width > 0) || activeSelEls[0];
 
-      if (activeSelEl && ['text', 'tspan', 'foreignobject'].includes(activeSelEl.tagName.toLowerCase()) && activeSelEl.getAttribute('data-locked') !== 'true') {
+      if (activeSelEl && !isInsideButton(activeSelEl) && ['text', 'tspan', 'foreignobject'].includes(activeSelEl.tagName.toLowerCase()) && activeSelEl.getAttribute('data-locked') !== 'true') {
         // Bypass strict hitTest if the target was the overlay polygon (meaning they clicked inside the blue box exactly)
         const clickedPolygon = e.target.tagName.toLowerCase() === 'polygon';
         if (clickedPolygon || hitTest(activeSelEl, e.clientX, e.clientY, 15)) {
@@ -3214,7 +3230,7 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    const isText = (['text', 'tspan'].includes(target.tagName.toLowerCase()) || target.tagName.toLowerCase() === 'foreignobject') && target.getAttribute('data-type') !== 'video' && !target.querySelector('video, iframe');
+    const isText = (['text', 'tspan'].includes(target.tagName.toLowerCase()) || target.tagName.toLowerCase() === 'foreignobject') && !isInsideButton(target) && target.getAttribute('data-type') !== 'video' && !target.querySelector('video, iframe');
     if (isText && target.id) {
       if (activeTopTool !== 'interaction' && activeTopTool !== 'animation') {
         enterTextEditMode(target, e.clientX, e.clientY);

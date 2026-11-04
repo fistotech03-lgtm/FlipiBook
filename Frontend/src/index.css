@@ -230,37 +230,49 @@ select:-webkit-autofill:focus {
 
 /* Universal Custom Scrollbar with dynamic CSS variables support */
 .custom-scrollbar,
-.custom-scrollbar-wrapper {
+.custom-scrollbar-wrapper,
+.table-card-wrapper,
+.table-container {
   scrollbar-width: thin;
   scrollbar-color: var(--custom-scrollbar-thumb, #cbd5e1) var(--custom-scrollbar-track, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar,
-.custom-scrollbar-wrapper::-webkit-scrollbar {
-  width: var(--custom-scrollbar-width, 0.4vw);
-  height: var(--custom-scrollbar-width, 0.4vw);
+.custom-scrollbar-wrapper::-webkit-scrollbar,
+.table-card-wrapper::-webkit-scrollbar,
+.table-container::-webkit-scrollbar {
+  width: var(--custom-scrollbar-width, 4px);
+  height: var(--custom-scrollbar-width, 4px);
 }
 
 .custom-scrollbar::-webkit-scrollbar-track,
-.custom-scrollbar-wrapper::-webkit-scrollbar-track {
+.custom-scrollbar-wrapper::-webkit-scrollbar-track,
+.table-card-wrapper::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track {
   background: var(--custom-scrollbar-track, transparent);
   border-radius: var(--custom-scrollbar-radius, 1vw);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb,
-.custom-scrollbar-wrapper::-webkit-scrollbar-thumb {
+.custom-scrollbar-wrapper::-webkit-scrollbar-thumb,
+.table-card-wrapper::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb {
   background: var(--custom-scrollbar-thumb, #cbd5e1);
   border-radius: var(--custom-scrollbar-radius, 1vw);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover,
-.custom-scrollbar-wrapper::-webkit-scrollbar-thumb:hover {
+.custom-scrollbar-wrapper::-webkit-scrollbar-thumb:hover,
+.table-card-wrapper::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover {
   background: var(--custom-scrollbar-thumb-hover, #94a3b8);
 }
 
 /* Hide OS default scrollbar stepper arrows everywhere */
 .custom-scrollbar::-webkit-scrollbar-button,
 .custom-scrollbar-wrapper::-webkit-scrollbar-button,
+.table-card-wrapper::-webkit-scrollbar-button,
+.table-container::-webkit-scrollbar-button,
 textarea::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;

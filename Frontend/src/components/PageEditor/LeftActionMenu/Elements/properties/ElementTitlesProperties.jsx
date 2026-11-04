@@ -8,10 +8,13 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  List
+  List,
+  ArrowLeftRight
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { ElementDropdown, ElementSlider } from './ElementUIControls';
 import ColorPicker from '../../../../ColorPicker';
+import { IconsModal } from '../../Icons';
 import {
   MOTION_GRAPHIC_TEMPLATES,
   getMotionGraphicProperties,
@@ -338,6 +341,9 @@ const ElementTitlesProperties = ({
     effectiveElement?.querySelector('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b')
   );
 
+  const currentTemplate = effectiveElement?.getAttribute('data-motion-template') || '';
+  const hasLogoFeature = currentTemplate === 'youtube-channel' || currentTemplate === 'social-badge';
+
   const [animation, setAnimation] = useState(
     initialProps.animation === 'Infinity' ? 'Infinite' : (initialProps.animation || 'Infinite')
   );
@@ -350,6 +356,14 @@ const ElementTitlesProperties = ({
   const [textColor2, setTextColor2] = useState(initialProps.secondaryTextColor || '#0f291e');
   const [strokeColor, setStrokeColor] = useState(initialProps.strokeColor || '#00E5FF');
   const [backgroundColor, setBackgroundColor] = useState(initialProps.backgroundColor || 'transparent');
+
+  // Icon / Logo states
+  const [iconName, setIconName] = useState(initialProps.iconName || 'Play');
+  const [iconHtml, setIconHtml] = useState(initialProps.iconHtml || '');
+  const [iconViewBox, setIconViewBox] = useState(initialProps.iconViewBox || '0 0 24 24');
+  const [iconColor, setIconColor] = useState(initialProps.iconColor || '#FFFFFF');
+  const [iconBgColor, setIconBgColor] = useState(initialProps.iconBgColor || '#FF0024');
+  const [isIconGalleryOpen, setIsIconGalleryOpen] = useState(false);
 
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [activeTextSettings, setActiveTextSettings] = useState(null); // 'primary' | 'secondary' | null
@@ -392,6 +406,12 @@ const ElementTitlesProperties = ({
       setTextColor2(p.secondaryTextColor || '#0f291e');
       setStrokeColor(p.strokeColor || '#00E5FF');
       setBackgroundColor(p.backgroundColor || 'transparent');
+
+      setIconName(p.iconName || (currentTemplate === 'youtube-channel' ? 'Play' : 'Facebook'));
+      setIconHtml(p.iconHtml || '');
+      setIconViewBox(p.iconViewBox || '0 0 24 24');
+      setIconColor(p.iconColor || '#FFFFFF');
+      setIconBgColor(p.iconBgColor || (currentTemplate === 'youtube-channel' ? '#FF0024' : '#0E34A8'));
 
       setPrimaryFontSize(p.primaryFontSize || 24);
       setPrimaryFontFamily(p.primaryFontFamily || 'Poppins');
@@ -492,6 +512,84 @@ const ElementTitlesProperties = ({
     syncUpdates({ backgroundColor: col, object3Color: col });
   };
 
+  const handleIconColorChange = (col) => {
+    setIconColor(col);
+    syncUpdates({ iconColor: col });
+  };
+
+  const handleIconBgColorChange = (col) => {
+    setIconBgColor(col);
+    syncUpdates({ iconBgColor: col });
+  };
+
+  // Helper to dynamically adjust icon markup colors to match color in preview
+  const cleanIconHtml = (html, color = '#ffffff') => {
+    if (!html) return '';
+    return html
+      .replace(/stroke="(?!(?:none))[^"]*"/gi, `stroke="${color}"`)
+      .replace(/fill="(?!(?:none|transparent))[^"]*"/gi, `fill="${color}"`);
+  };
+
+  const renderIconPreview = () => {
+    // If we have custom icon SVG HTML
+    if (iconHtml) {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg
+            viewBox={iconViewBox || "0 0 24 24"}
+            className="w-[1.8vw] h-[1.8vw]"
+            stroke="#ffffff"
+            fill="none"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              color: '#ffffff',
+              stroke: '#ffffff'
+            }}
+            dangerouslySetInnerHTML={{ __html: cleanIconHtml(iconHtml, '#ffffff') }}
+          />
+        </div>
+      );
+    }
+
+    // Default icon rendering for Facebook / YouTube templates
+    if (currentTemplate === 'social-badge' || iconName === 'Facebook') {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 24 24" className="w-[1.8vw] h-[1.8vw]" fill="#ffffff">
+            <path d="M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z" />
+          </svg>
+        </div>
+      );
+    }
+
+    if (currentTemplate === 'youtube-channel' || iconName === 'Play' || iconName === 'Youtube') {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 24 24" className="w-[1.8vw] h-[1.8vw]" fill="#ffffff">
+            <polygon points="7,4 20,12 7,20" />
+          </svg>
+        </div>
+      );
+    }
+
+    const IconCmp = LucideIcons[iconName] || LucideIcons.Heart;
+    return (
+      <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+        <IconCmp
+          size="1.8vw"
+          strokeWidth={2.5}
+          color="#ffffff"
+          style={{
+            color: '#ffffff',
+            stroke: '#ffffff'
+          }}
+        />
+      </div>
+    );
+  };
+
   const triggerPreviewAnimation = () => {
     if (!selectedElement) return;
     const styles = selectedElement.querySelectorAll('style');
@@ -550,6 +648,14 @@ const ElementTitlesProperties = ({
     backgroundColor: {
       value: backgroundColor,
       onChange: handleBackgroundColorChange
+    },
+    iconColor: {
+      value: iconColor,
+      onChange: handleIconColorChange
+    },
+    iconBgColor: {
+      value: iconBgColor,
+      onChange: handleIconBgColorChange
     }
   };
 
@@ -836,41 +942,118 @@ const ElementTitlesProperties = ({
         )}
       </div>
 
+      {/* ── Logo Section (Shown only for templates with icon/logo feature) ── */}
+      {hasLogoFeature && (
+        <div className="flex flex-col gap-[0.7vw] mt-[0.3vw]">
+          <SectionHeader title="Logo" />
+          <div className="flex items-center gap-[0.5vw]">
+            <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+              <span>Icon</span>
+              <span>:</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                onClick={() => setIsIconGalleryOpen(true)}
+                className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+                title="Click to change icon"
+              >
+                {/* Swap Icon button in top-right */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsIconGalleryOpen(true);
+                  }}
+                  className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50 cursor-pointer"
+                  title="Change icon"
+                >
+                  <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
+                </button>
+
+                {/* Centered preview of icon */}
+                <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
+                  {renderIconPreview()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Object Color Section ── */}
       <div className="flex flex-col gap-[0.6vw] mt-[0.3vw]">
         <SectionHeader title="Object Color" />
 
-        {/* Stroke Color */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Stroke Color</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={strokeColor}
-              onChange={handleStrokeColorChange}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
-              isActive={activeColorPicker === 'strokeColor'}
-            />
-          </div>
-        </div>
+        {/* If Title template has Logo/Icon, show Icon Color and Icon BG Color */}
+        {hasLogoFeature ? (
+          <>
+            {/* Icon Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Icon Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={iconColor}
+                  onChange={handleIconColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
+                  isActive={activeColorPicker === 'iconColor'}
+                />
+              </div>
+            </div>
 
-        {/* Background Color */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Background Color</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={backgroundColor}
-              onChange={handleBackgroundColorChange}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
-              isActive={activeColorPicker === 'backgroundColor'}
-            />
-          </div>
-        </div>
+            {/* Icon BG Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Icon BG Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={iconBgColor}
+                  onChange={handleIconBgColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconBgColor' ? null : 'iconBgColor'))}
+                  isActive={activeColorPicker === 'iconBgColor'}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Stroke Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Stroke Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={strokeColor}
+                  onChange={handleStrokeColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
+                  isActive={activeColorPicker === 'strokeColor'}
+                />
+              </div>
+            </div>
+
+            {/* Background Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Background Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={backgroundColor}
+                  onChange={handleBackgroundColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
+                  isActive={activeColorPicker === 'backgroundColor'}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── ColorPicker Portal Popup ── */}
@@ -903,6 +1086,28 @@ const ElementTitlesProperties = ({
             />
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* ── Icon Gallery Modal Portal ── */}
+      {isIconGalleryOpen && createPortal(
+        <IconsModal
+          isOpen={isIconGalleryOpen}
+          position="right"
+          onClose={() => setIsIconGalleryOpen(false)}
+          onSelect={(iconData) => {
+            setIconName(iconData.name);
+            setIconHtml(iconData.html || '');
+            setIconViewBox(iconData.viewBox || '0 0 24 24');
+            setIsIconGalleryOpen(false);
+
+            syncUpdates({
+              iconName: iconData.name,
+              iconHtml: iconData.html || '',
+              iconViewBox: iconData.viewBox || '0 0 24 24'
+            });
+          }}
+        />,
         document.body
       )}
     </div>

@@ -225,7 +225,7 @@ const renderMotionGraphicPreview = (preset) => {
           <text x="64" y="29" fill="#FFFFFF" fontSize="10" fontWeight="700" fontFamily="sans-serif" letterSpacing="0.5">{preset.text}</text>
           {/* Rotated diamond badge */}
           <g transform="translate(24, 25)">
-            <rect x="-14" y="-14" width="33" height="33" rx="7" fill={preset.primaryColor} stroke="#FFFFFF" strokeWidth="1" transform="rotate(45)" />
+            <rect x="-14" y="-14" width="30" height="30" rx="8" fill={preset.primaryColor} stroke="#FFFFFF" strokeWidth="1" transform="rotate(45)" />
             <path d="M1 8v-5.5h1.8l.3-2.1h-2.1V-.7c0-.6.2-1 1.1-1h1.1V-3.5c-.2 0-.9-.1-1.6-.1-1.6 0-2.7 1-2.7 2.8v1.6H-3v2.1h1.9V8H1z" fill="#FFFFFF" transform="scale(0.9)" />
           </g>
         </svg>

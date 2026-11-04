@@ -12,7 +12,7 @@ import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
-import { saveCustomizedEditorState, savePageEditorState } from '../utils/dbUtils';
+import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
 const ShareModal = React.lazy(() => import('../components/ShareModal'));
@@ -780,6 +780,7 @@ export default function MyFlipbooks() {
         setIsLoading(false);
         setProcessingProgress(null);
         if (createdFlipbookVIdRef.current) {
+            deleteBookEditorState(createdFlipbookVIdRef.current);
             flipbookApi.deleteBook(createdFlipbookVIdRef.current).catch(() => {});
             createdFlipbookVIdRef.current = null;
         }
@@ -1239,7 +1240,10 @@ export default function MyFlipbooks() {
             const trashedBooks = books.filter(b => b.trash || b.folder === 'Trash');
             const freedBytes = trashedBooks.reduce((sum, b) => sum + (b.sizeBytes || b.fileSize || 0), 0);
 
-            // Optimistically remove all trashed books
+            // Optimistically remove all trashed books and clear their local IndexedDB cache
+            trashedBooks.forEach(b => {
+                if (b.v_id) deleteBookEditorState(b.v_id);
+            });
             setBooks(prev => prev.filter(b => !b.trash && b.folder !== 'Trash'));
             setSelectedBooks([]);
             setDeleteBookConfirmation({ isOpen: false, bookId: null, bookTitle: '' });
@@ -1385,6 +1389,7 @@ export default function MyFlipbooks() {
                 if (isRecent) {
                     return flipbookApi.removeRecent({ emailId, bookName: book.realName, v_id: book.v_id });
                 } else {
+                    if (book.v_id) deleteBookEditorState(book.v_id);
                     return flipbookApi.deleteBookPermanently({
                         emailId,
                         folderName: book.originalFolder || book.folder,

@@ -921,12 +921,13 @@ const PageEditor = () => {
   useEffect(() => {
     const initializeEditor = async () => {
       const activeVId = v_id || location.state?.v_id;
+      const isFolderId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
       if (!activeVId) {
         const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-        const targetFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+        const targetFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+          : (folder && isFolderId(folder) ? folder : 'default');
         navigate(`/editor/${encodeURIComponent(targetFolderVId)}/${generatedVId}`, {
           replace: true,
           state: { ...(location.state || {}), v_id: generatedVId, folder_v_id: targetFolderVId }
@@ -935,10 +936,10 @@ const PageEditor = () => {
       }
 
       // Auto-heal: If folder in URL contains folder name (e.g. "My Flipbooks") instead of folder_v_id, normalize URL
-      if (activeVId && folder && !folder.startsWith('fol_')) {
-        const initialFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+      if (activeVId && folder && !isFolderId(folder)) {
+        const initialFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : 'fol_default';
+          : 'default';
         navigate(`/editor/${encodeURIComponent(initialFolderVId)}/${activeVId}`, {
           replace: true,
           state: { ...(location.state || {}), folder_v_id: initialFolderVId }
@@ -1075,12 +1076,12 @@ const PageEditor = () => {
                   folder ||
                   location.state?.folderName,
               );
-              const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+              const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
               const resolvedFolderVId =
                 (isFolId(res.data.meta?.folder_v_id) ? res.data.meta.folder_v_id : null) ||
                 (isFolId(res.data.meta?.folder_id) ? res.data.meta.folder_id : null) ||
                 (isFolId(location.state?.folder_v_id) ? location.state.folder_v_id : null) ||
-                (isFolId(folder) ? folder : 'fol_default');
+                (isFolId(folder) ? folder : 'default');
               const bookName =
                 res.data.meta?.flipbookName ||
                 location.state?.flipbookName ||
@@ -1138,7 +1139,7 @@ const PageEditor = () => {
               }));
 
               // Auto-normalize URL to show folder_v_id instead of folder name in address bar
-              if (!folder || !folder.startsWith('fol_') || folder !== resolvedFolderVId) {
+              if (!folder || !isFolId(folder) || folder !== resolvedFolderVId) {
                 navigate(`/editor/${encodeURIComponent(resolvedFolderVId)}/${activeVId}`, {
                   replace: true,
                   state: { ...(location.state || {}), folder_v_id: resolvedFolderVId }

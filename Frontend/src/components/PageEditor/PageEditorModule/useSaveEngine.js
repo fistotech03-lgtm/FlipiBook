@@ -22,6 +22,8 @@ const VIRTUAL_FOLDERS = new Set([
   "trash",
 ]);
 
+const isFolderIdVal = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+
 const resolvePhysicalFolder = (folderInput) => {
   if (Array.isArray(folderInput)) {
     const real = folderInput.find(
@@ -31,7 +33,7 @@ const resolvePhysicalFolder = (folderInput) => {
   }
   if (folderInput && typeof folderInput === "string") {
     const clean = folderInput.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase()) || clean.startsWith("fol_")) return "My_Flipbooks";
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase()) || isFolderIdVal(clean)) return "My_Flipbooks";
     return clean || "My_Flipbooks";
   }
   return "My_Flipbooks";
@@ -1229,7 +1231,7 @@ export const useSaveEngine = ({
           ? folder
           : (location?.pathname?.split('/editor/')[1]?.split('/')[0] || '');
 
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const folderVId =
           (isFolId(lastRes.data?.folder_v_id) ? lastRes.data.folder_v_id : null) ||
           (isFolId(lastRes.data?.folder_id) ? lastRes.data.folder_id : null) ||
@@ -1238,10 +1240,10 @@ export const useSaveEngine = ({
           (isFolId(currentBook?.folder_v_id) ? currentBook.folder_v_id : null) ||
           (isFolId(currentBook?.folder_id) ? currentBook.folder_id : null) ||
           (isFolId(location?.state?.folder_v_id) ? location.state.folder_v_id : null) ||
-          (isFolId(currentFolderParam) ? currentFolderParam : 'fol_default');
+          (isFolId(currentFolderParam) ? currentFolderParam : 'default');
 
         const activeBookVId = lastRes.data?.v_id || v_id;
-        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_')) || currentFolderParam !== folderVId) {
+        if (!v_id || (currentFolderParam && !isFolId(currentFolderParam)) || currentFolderParam !== folderVId) {
           const newUrl = `/editor/${encodeURIComponent(folderVId)}/${activeBookVId}`;
           navigate(newUrl, { replace: true, state: location?.state });
         }

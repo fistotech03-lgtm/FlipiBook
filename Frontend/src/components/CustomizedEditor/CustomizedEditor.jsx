@@ -200,11 +200,12 @@ const CustomizedEditor = () => {
 
   useEffect(() => {
     if (folder && v_id) {
+      const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       const activeFolderVId =
         currentBook?.folder_v_id ||
         currentBook?.folder_id ||
         location.state?.folder_v_id ||
-        (folder.startsWith('fol_') ? folder : null);
+        (isFolId(folder) ? folder : null);
 
       const targetFolderParam = activeFolderVId || folder;
       const targetPath = targetPage > 0

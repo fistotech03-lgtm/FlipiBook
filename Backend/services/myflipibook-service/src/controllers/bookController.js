@@ -44,6 +44,12 @@ const VIRTUAL_FOLDERS = new Set([
   "trash",
 ]);
 
+const isFolderId = (str) => {
+  if (!str || typeof str !== "string") return false;
+  const s = str.trim();
+  return s.startsWith("fol_") || /^[0-9a-fA-F]{12,24}$/.test(s);
+};
+
 const resolveFolder = (folderName, folderMap = null) => {
   if (Array.isArray(folderName)) {
     const flat = folderName.flat(Infinity);
@@ -61,7 +67,7 @@ const resolveFolder = (folderName, folderMap = null) => {
     if (VIRTUAL_FOLDERS.has(lower) || lower === "my flipbooks" || lower === "default" || lower === "fol_default") {
       return "default";
     }
-    if (clean.startsWith("fol_")) {
+    if (isFolderId(clean)) {
       if (folderMap && folderMap.has(clean)) {
         const mapped = folderMap.get(clean);
         return resolveFolder(mapped, folderMap);
@@ -93,7 +99,7 @@ const resolvePhysicalFolderForBook = async ({ book = null, folderName = null, fo
     return "default";
   }
 
-  if (str.startsWith("fol_")) {
+  if (isFolderId(str)) {
     try {
       const UserFolder = require("../models/userFolder");
       let ufDoc = userFolderDoc;
@@ -101,7 +107,7 @@ const resolvePhysicalFolderForBook = async ({ book = null, folderName = null, fo
         ufDoc = await UserFolder.findOne(userQuery).lean().catch(() => null);
       }
       if (ufDoc && Array.isArray(ufDoc.folders)) {
-        const item = ufDoc.folders.find(f => f && (f.fol_v_id === str || f.id === str));
+        const item = ufDoc.folders.find(f => f && (f.fol_v_id === str || (f._id && f._id.toString() === str) || f.id === str));
         if (item) {
           if (item.isDefault || item.name === "default" || item.name.toLowerCase() === "my flipbooks") {
             return "default";
@@ -163,7 +169,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
   }
 
   let folderVId = null;
-  if (doc.folder_id && String(doc.folder_id).startsWith('fol_')) {
+  if (doc.folder_id && isFolderId(String(doc.folder_id))) {
     folderVId = String(doc.folder_id);
   } else if (reverseFolderMap) {
     folderVId = reverseFolderMap.get(displayFolder.toLowerCase()) ||
@@ -171,9 +177,9 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
                 reverseFolderMap.get('__default__');
   }
   if (!folderVId) {
-    folderVId = (doc.folder_id && String(doc.folder_id).startsWith('fol_'))
+    folderVId = (doc.folder_id && isFolderId(String(doc.folder_id)))
       ? String(doc.folder_id)
-      : 'fol_default';
+      : (doc.folder_id || 'default');
   }
 
   const primaryFolder = folderVId;
@@ -940,8 +946,8 @@ exports.duplicateBook = async (req, res) => {
     if (customUserId) {
       cloneData.userID = customUserId;
     }
-    if (!cloneData.folder_id || cloneData.folder_id === 'fol_default') {
-      cloneData.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
+    if (!cloneData.folder_id || cloneData.folder_id === 'fol_default' || cloneData.folder_id === 'default') {
+      cloneData.folder_id = crypto.randomBytes(6).toString('hex');
     }
     delete cloneData.userId;
     delete cloneData.userEmail;
@@ -1439,10 +1445,10 @@ exports.saveBook = async (req, res) => {
         const UserFolder = require("../models/userFolder");
         let userFolderDoc = await UserFolder.findOne(userQuery);
         let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
-        if (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== "fol_default") {
+        if (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== "fol_default" && defaultItem.fol_v_id !== "default") {
           bookFolderId = defaultItem.fol_v_id;
         } else {
-          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+          bookFolderId = crypto.randomBytes(6).toString('hex');
           if (userFolderDoc) {
             if (defaultItem) {
               defaultItem.fol_v_id = bookFolderId;
@@ -1461,7 +1467,7 @@ exports.saveBook = async (req, res) => {
         }
       } catch (_) {
         if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
-          bookFolderId = 'fol_' + crypto.randomBytes(6).toString('hex');
+          bookFolderId = crypto.randomBytes(6).toString('hex');
         }
       }
     }

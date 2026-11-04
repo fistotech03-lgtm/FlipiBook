@@ -385,7 +385,8 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const folderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(folderVId)}/${identifier}`,
@@ -419,7 +420,8 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const folderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(folderVId)}/${identifier}`, {
             state: {

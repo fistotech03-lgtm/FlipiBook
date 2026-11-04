@@ -52,7 +52,7 @@ exports.getFolders = async (req, res) => {
         const low = trimmedName.toLowerCase();
         if (!seenNames.has(low)) {
           seenNames.add(low);
-          const fol_v_id = item.fol_v_id || ('fol_' + (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex')));
+          const fol_v_id = item.fol_v_id || (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex'));
           customItems.push({
             id: fol_v_id,
             fol_v_id,
@@ -64,9 +64,9 @@ exports.getFolders = async (req, res) => {
     }
 
     // Ensure default folder item exists with a generated unique fol_v_id
-    const defaultFolId = (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default')
+    const defaultFolId = (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default' && defaultItem.fol_v_id !== 'default')
       ? defaultItem.fol_v_id
-      : ('fol_' + crypto.randomBytes(6).toString('hex'));
+      : crypto.randomBytes(6).toString('hex');
     if (!defaultItem) {
       defaultItem = {
         fol_v_id: defaultFolId,
@@ -108,7 +108,7 @@ exports.getFolders = async (req, res) => {
             );
             if (!isSystem && !isDef && !seenNames.has(low)) {
               seenNames.add(low);
-              const fol_v_id = 'fol_' + crypto.randomBytes(6).toString('hex');
+              const fol_v_id = crypto.randomBytes(6).toString('hex');
               customItems.push({
                 id: fol_v_id,
                 fol_v_id,
@@ -194,7 +194,7 @@ exports.createFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This is a reserved folder name' });
     }
 
-    const newFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+    const newFolId = crypto.randomBytes(6).toString('hex');
     let userFolderDoc = await UserFolder.findOne(userQuery);
 
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
@@ -214,7 +214,7 @@ exports.createFolder = async (req, res) => {
       userFolderDoc.folders.push({ fol_v_id: newFolId, name: safeFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
-      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+      const defaultFolId = crypto.randomBytes(6).toString('hex');
       await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
@@ -407,7 +407,7 @@ exports.reorderFolders = async (req, res) => {
         const mongoId = (rawId && mongoose.Types.ObjectId.isValid(rawId) && /^[0-9a-fA-F]{24}$/.test(String(rawId)))
           ? new mongoose.Types.ObjectId(rawId)
           : (matched?._id || new mongoose.Types.ObjectId());
-        const fol_v_id = matched?.fol_v_id || (rawId && String(rawId).startsWith('fol_') ? String(rawId) : ('fol_' + crypto.randomBytes(6).toString('hex')));
+        const fol_v_id = matched?.fol_v_id || (rawId ? String(rawId) : crypto.randomBytes(6).toString('hex'));
         return {
           _id: mongoId,
           fol_v_id,
@@ -596,12 +596,12 @@ exports.duplicateFolder = async (req, res) => {
     const newId = new mongoose.Types.ObjectId();
 
     let userFolderDoc = await UserFolder.findOne(userQuery);
-    const newFolVId = 'fol_' + crypto.randomBytes(6).toString('hex');
+    const newFolVId = crypto.randomBytes(6).toString('hex');
     if (userFolderDoc) {
       userFolderDoc.folders.push({ fol_v_id: newFolVId, name: newFolderName, isDefault: false });
       await userFolderDoc.save();
     } else {
-      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+      const defaultFolId = crypto.randomBytes(6).toString('hex');
       userFolderDoc = await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),

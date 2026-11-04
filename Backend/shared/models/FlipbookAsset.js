@@ -63,7 +63,7 @@ const flipbookAssetSchema = new mongoose.Schema(
     },
     folder_id: {
       type: String,
-      default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
+      default: () => crypto.randomBytes(6).toString('hex'),
       trim: true
     },
     assets: {

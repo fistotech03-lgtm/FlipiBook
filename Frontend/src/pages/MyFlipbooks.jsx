@@ -522,7 +522,7 @@ export default function MyFlipbooks() {
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
             const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -825,10 +825,10 @@ export default function MyFlipbooks() {
         }
 
         const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const finalFolderVId = (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
             (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
-            'fol_default';
+            'default';
 
         const redirectUrl = `/editor/${encodeURIComponent(finalFolderVId)}/${generatedVId}`;
         console.log("Instantly opening editor with v_id:", redirectUrl);

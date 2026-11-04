@@ -258,10 +258,10 @@ export default function Home() {
           stage: 'done'
         });
 
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
           (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
-          'fol_default';
+          'default';
         navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
         return;
       }
@@ -318,10 +318,10 @@ export default function Home() {
         stage: 'done'
       });
 
-      const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+      const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
         (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
-        'fol_default';
+        'default';
       navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
 
     } catch (error) {

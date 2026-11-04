@@ -1211,7 +1211,7 @@ const MyShelf = () => {
               /* Left Shelf Column (Header + Shelf + Styles) */
               <div className="flex-1 flex flex-col justify-between min-w-0 h-full">
                 {/* Shelf View Header scoped to Shelf width (ends at shelf right edge) */}
-                <div className="flex flex-col mb-3 w-full -mt-1">
+                <div className="flex flex-col mb-1.5 w-full -mt-1.5">
                   {/* Back to My Shelf Link */}
                   <div className="flex items-center gap-2 mb-1">
                     <button
@@ -1257,7 +1257,7 @@ const MyShelf = () => {
                           </div>
                         ) : (
                           <>
-                            <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
+                            <h2 className="text-xl font-semibold text-gray-800 tracking-tight leading-none">
                               {selectedFolder || (activeShelfStyle === 'customize_golden' ? 'Golden Shelf' : activeShelfStyle === 'customize_orange' ? 'Orange Shelf' : activeShelfStyle === 'customize_windowshelf' ? 'Window Shelf' : activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : 'My Shelf')}
                             </h2>
                             <button
@@ -1762,15 +1762,17 @@ const MyShelf = () => {
                   </div>
                 ) : null}
 
-                <div
-                  className="w-full flex-1 min-h-[300px] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
-                  style={{
-                    backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
-                    backgroundSize: '100% 100%',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                  }}
-                >
+                {/* Shelf Stage Container (Responsive aspect ratio and centered without stretching) */}
+                <div className="w-full flex-1 flex items-center justify-center min-h-0 overflow-hidden">
+                  <div
+                    className="w-full h-full max-h-[58vh] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
+                    style={{
+                      backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                    }}
+                  >
                   {/* In-shelf Fullscreen Toggle Button (Always visible on shelf top-right) */}
                   <button
                     type="button"
@@ -2369,6 +2371,7 @@ const MyShelf = () => {
                   </div>
 
                 </div>
+              </div>
 
                 {/* Shelf Styles Carousel / Pagination */}
                 <div className="mt-2 mb-0 flex flex-col gap-1.5 shrink-0">
@@ -2399,9 +2402,9 @@ const MyShelf = () => {
                       <>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
+                            <h3 className="text-[13px] font-semibold text-gray-800 tracking-tight -translate-y-1">Shelf Styles</h3>
                             {/* Pill Tabs: All, 8 Books, 4 Books, 2 Books */}
-                            <div className="inline-flex items-center bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
+                            <div className="inline-flex items-center -translate-y-1 bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
                               {[
                                 { id: 'All', label: 'All' },
                                 { id: '8', label: '8 Books' },
@@ -2713,7 +2716,7 @@ const MyShelf = () => {
                       <path d="M9 3v18" />
                     </svg>
                   </div>
-                  <h3 className="text-[14px] font-bold text-gray-900 tracking-tight">
+                  <h3 className="text-[13px] font-semibold text-gray-800 tracking-tight">
                     Customize your shelf
                   </h3>
                 </div>
@@ -2721,8 +2724,8 @@ const MyShelf = () => {
                 <div className="flex-1 flex flex-col gap-5 p-5 overflow-y-auto">
                   {/* Add Logo Section */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3.5">
-                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Add Logo</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[12px] font-semibold text-gray-700 tracking-tight">Add Logo</span>
                       <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
 
@@ -2886,8 +2889,8 @@ const MyShelf = () => {
 
                   {/* Wall Themes Section */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3.5">
-                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Wall Themes</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[12px] font-semibold text-gray-700 tracking-tight">Wall Themes</span>
                       <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
                     <div className="grid grid-cols-4 gap-2.5">
@@ -2916,8 +2919,8 @@ const MyShelf = () => {
 
                   {/* Light Theme Section */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3.5">
-                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">Light Theme</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[12px] font-semibold text-gray-700 tracking-tight">Light Theme</span>
                       <div className="flex-1 h-px bg-gray-100"></div>
                     </div>
 
@@ -3041,8 +3044,8 @@ const MyShelf = () => {
 
                   {/* Decors (Optional) Section */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3.5">
-                      <span className="text-[13px] font-bold text-gray-900 tracking-tight">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[12px] font-semibold text-gray-700 tracking-tight">
                         Decors <span className="text-gray-400 font-normal text-[11px]">(Optional)</span>
                       </span>
                       <div className="flex-1 h-px bg-gray-100"></div>

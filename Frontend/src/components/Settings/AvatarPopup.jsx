@@ -43,7 +43,7 @@ const AvatarPopup = ({ isOpen, onClose, onSelectAvatar, onSelectColor, currentAv
   const handleUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg,image/png,image/webp';
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -184,13 +184,18 @@ const AvatarPopup = ({ isOpen, onClose, onSelectAvatar, onSelectColor, currentAv
              </div>
           </div>
         ) : (
-          <button 
-            onClick={handleUpload}
-            className="w-full py-[0.6vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-center gap-[0.5vw] text-[0.82vw] font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Icon icon="mdi:upload" className="w-[1vw] h-[1vw]" />
-            Upload Image
-          </button>
+          <div className="flex flex-col gap-[0.4vw]">
+            <button 
+              onClick={handleUpload}
+              className="w-full py-[0.6vw] border border-gray-200 rounded-[0.4vw] flex items-center justify-center gap-[0.5vw] text-[0.82vw] font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Icon icon="mdi:upload" className="w-[1vw] h-[1vw]" />
+              Upload Image
+            </button>
+            <p className="text-center text-[0.65vw] text-gray-400">
+              Recommended: 400 × 400 px (JPEG, PNG, WEBP)
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -640,7 +640,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
   const profileTypeOptions = [
     { label: 'Individual', icon: 'lucide:user' },
-    { label: 'Freelancer', icon: 'lucide:briefcase' },
+    { label: 'Freelancer', icon: 'f7:device-laptop' },
     { label: 'Agency', icon: 'lucide:building-2' },
     { label: 'Company', icon: 'lucide:building' }
   ];
@@ -847,8 +847,8 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         {/* Profile Details */}
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="solar:user-bold" className="w-[1.2vw] h-[1.2vw] text-gray-900" />
-            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Profile Details</h3>
+            <Icon icon="solar:user-bold" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
+            <h3 className="text-[1.05vw] font-medium text-gray-800">Profile Details</h3>
           </div>
 
           <div className="flex flex-col gap-[1.3vw]">
@@ -923,11 +923,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                     setIsIndustryOpen(false);
                     setIsExperienceOpen(false);
                   }}
-                  className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                  className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
-                    <Icon icon={profileTypeOptions.find(p => p.label === (editedUser?.profileType || 'Individual'))?.icon || 'lucide:user'} className="w-[1vw] h-[1vw] text-gray-900" />
-                    <span className="font-normal text-gray-800">{editedUser?.profileType || 'Individual'}</span>
+                    <Icon icon={profileTypeOptions.find(p => p.label === editedUser?.profileType)?.icon || 'lucide:user'} className="w-[1vw] h-[1vw] text-gray-500" />
+                    <span className={`font-normal ${editedUser?.profileType ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {editedUser?.profileType || 'Select Profile Type'}
+                    </span>
                   </div>
                   <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                 </div>
@@ -968,11 +970,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsCompanySizeOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                         <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
+                        <span className={`font-normal ${(editedUser?.industryType || editedUser?.industry) ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.industryType || editedUser?.industry || 'Select Industry Type'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1024,11 +1028,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                         <Icon icon="lucide:building-2" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.companySize || '100 - 120 Peoples'}</span>
+                        <span className={`font-normal ${editedUser?.companySize ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.companySize || 'Select Company Size'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1086,11 +1092,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsTeamSizeOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                         <Icon icon="lucide:trending-up" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
+                        <span className={`font-normal ${(editedUser?.industryType || editedUser?.industry) ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.industryType || editedUser?.industry || 'Select Industry Type'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1142,11 +1150,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                         <Icon icon="lucide:users" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.teamSize || '40 - 50 Peoples'}</span>
+                        <span className={`font-normal ${editedUser?.teamSize ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.teamSize || 'Select Team Size'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1204,11 +1214,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsExperienceOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
-                        <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.industryType || editedUser?.industry || 'Software Development'}</span>
+                        <Icon icon="la:industry" className="w-[1.1vw] h-[1.1vw] text-gray-900" />
+                        <span className={`font-normal ${(editedUser?.industryType || editedUser?.industry) ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.industryType || editedUser?.industry || 'Select Industry Type'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1260,11 +1272,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                         setIsProfileTypeOpen(false);
                         setIsIndustryOpen(false);
                       }}
-                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-white cursor-pointer hover:border-gray-300 transition-colors"
+                      className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] bg-[#f9fafb] cursor-pointer hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                         <Icon icon="lucide:briefcase" className="w-[1vw] h-[1vw] text-gray-900" />
-                        <span className="font-normal text-gray-800">{editedUser?.experience || '2 Years'}</span>
+                        <span className={`font-normal ${editedUser?.experience ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {editedUser?.experience || 'Select Experience'}
+                      </span>
                       </div>
                       <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
                     </div>
@@ -1419,8 +1433,8 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         {/* Contact & Location */}
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
-            <Icon icon="lucide:map-pin" className="w-[1.3vw] h-[1.3vw] text-gray-900 fill-gray-900" />
-            <h3 className="text-[1.1vw] font-bold text-gray-900 tracking-tight">Contact & Location</h3>
+            <Icon icon="lucide:map-pin" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
+            <h3 className="text-[1.05vw] font-medium text-gray-800">Contact & Location</h3>
           </div>
 
           <div className="flex flex-col gap-[1.2vw]">
@@ -1703,10 +1717,10 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       setIsCountryOpen(false);
                       setStateSearch('');
                     }}
-                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
+                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-[#f9fafb] transition-colors cursor-pointer hover:border-gray-300"
                   >
                     <span className={`truncate ${editedUser?.state ? 'text-gray-800 font-normal' : 'text-gray-400'}`}>
-                      {editedUser?.state || 'Tamil Nadu'}
+                      {editedUser?.state && editedUser?.state !== 'None' ? editedUser.state : (editedUser?.state === 'None' ? 'None' : 'Select State')}
                     </span>
                     <Icon
                       icon="lucide:chevron-down"
@@ -1805,10 +1819,10 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                       setIsStateOpen(false);
                       setCountrySearch('');
                     }}
-                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-white transition-colors cursor-pointer hover:border-gray-300"
+                    className="w-full h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] bg-[#f9fafb] transition-colors cursor-pointer hover:border-gray-300"
                   >
                     <span className="truncate text-gray-800 font-normal">
-                      {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'India'))}
+                      {editedUser?.country === 'None' ? 'None' : (currentCountryObj ? currentCountryObj.name : (editedUser?.country || 'Select Country'))}
                     </span>
                     <Icon
                       icon="lucide:chevron-down"
@@ -1928,7 +1942,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         <section>
           <div className="flex items-center gap-[0.5vw] mb-[1.2vw]">
             <Icon icon="lucide:link-2" className="w-[1.15vw] h-[1.15vw] text-gray-700" />
-            <h3 className="text-[0.95vw] font-medium text-gray-800">Social Media</h3>
+            <h3 className="text-[1.05vw] font-medium text-gray-800">Social Media</h3>
           </div>
 
           <div className="flex flex-col gap-[1vw]">
@@ -1980,7 +1994,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             })}
 
             {/* + Add Social Links Dropdown Button */}
-            <div className="relative mt-[0.4vw] mb-[2vw]" ref={socialDropdownRef}>
+            <div className="relative mt-[0.4vw]" ref={socialDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsAddingSocial(!isAddingSocial)}
@@ -2024,9 +2038,9 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         {/* Visibility Section */}
         <section className="border border-gray-100 rounded-[1.2vw] p-[1.8vw] bg-white shadow-sm mb-[2.5vw]">
           <div className="flex items-start gap-[0.7vw] mb-[1.6vw]">
-            <Icon icon="lucide:eye" className="w-[1.4vw] h-[1.4vw] text-gray-900 mt-[0.1vw]" />
+            <Icon icon="lucide:eye" className="w-[1.2vw] h-[1.2vw] text-gray-700 mt-[0.1vw]" />
             <div>
-              <h3 className="text-[1.2vw] font-bold text-gray-900 leading-tight tracking-tight">Visibility</h3>
+              <h3 className="text-[1.05vw] font-medium text-gray-800 leading-tight">Visibility</h3>
               <p className="text-[0.82vw] text-gray-400 mt-[0.25vw]">Control what information is visible to others</p>
             </div>
           </div>
@@ -2035,7 +2049,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
             {/* Toggle Row */}
             <div className="flex flex-col gap-[0.3vw] w-full">
               <div className="flex items-center gap-[1.2vw] w-full">
-                <h4 className="text-[0.95vw] font-semibold text-gray-900 shrink-0">
+                <h4 className="text-[0.92vw] font-medium text-gray-800 shrink-0">
                   Show my profile in Explore Page
                 </h4>
 

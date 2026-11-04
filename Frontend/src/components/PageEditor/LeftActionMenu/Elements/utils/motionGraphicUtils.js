@@ -4,6 +4,68 @@
  */
 
 // --------------------------------------------------------------------------
+// Title Text Measurement & Hybrid Auto-Expand / Auto-Scale Utilities (Option 3)
+// --------------------------------------------------------------------------
+export const measureTitleTextWidth = (text, fontSize = 16, fontFamily = 'sans-serif', fontWeight = '600', letterSpacing = 'normal') => {
+  if (!text) return 0;
+  if (typeof document !== 'undefined') {
+    try {
+      const canvas = measureTitleTextWidth._canvas || (measureTitleTextWidth._canvas = document.createElement('canvas'));
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily.replace(/"/g, '')}, sans-serif`;
+        let w = ctx.measureText(text).width;
+        if (letterSpacing && letterSpacing !== 'normal' && letterSpacing !== 'Auto') {
+          const lsVal = parseFloat(letterSpacing);
+          if (!isNaN(lsVal)) {
+            const lsPx = letterSpacing.includes('em') ? lsVal * fontSize : lsVal;
+            w += Math.max(0, text.length - 1) * lsPx;
+          }
+        }
+        return Math.round(w);
+      }
+    } catch {
+      // Fallback below
+    }
+  }
+  const charWidthRatio = fontWeight === '900' || fontWeight.toLowerCase().includes('bold') ? 0.75 : 0.68;
+  return Math.round(text.length * fontSize * charWidthRatio);
+};
+
+export const calculateCyberFrameMetrics = (text, fontSize = 15, fontFamily = 'Roboto, sans-serif') => {
+  const minWidth = 188;
+  const maxWidth = 420;
+  const height = 56;
+  const rx = 14;
+  const paddingX = 40;
+
+  const textWidth = measureTitleTextWidth(text || 'ANIMATION', fontSize, fontFamily, '600', '0.094em');
+  const desiredWidth = textWidth + paddingX;
+  const width = Math.min(maxWidth, Math.max(minWidth, desiredWidth));
+
+  const availableWidth = width - paddingX;
+  let effectiveFontSize = fontSize;
+  if (textWidth > availableWidth && availableWidth > 0) {
+    const scale = Math.max(0.45, availableWidth / textWidth);
+    effectiveFontSize = Math.max(9, Math.round(fontSize * scale * 10) / 10);
+  }
+
+  const innerW = width - 8;
+  const innerH = height - 8;
+  const innerRx = rx - 2;
+  const perimeter = Math.round(2 * (innerW + innerH) - 1.717 * innerRx);
+
+  return {
+    width,
+    height,
+    rx,
+    perimeter,
+    effectiveFontSize,
+    textWidth
+  };
+};
+
+// --------------------------------------------------------------------------
 // 1. Cyber Trim Frame
 // --------------------------------------------------------------------------
 export const createCyberFrameSvg = ({
@@ -18,10 +80,7 @@ export const createCyberFrameSvg = ({
   isTranslate = false
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
-  const width = 188;
-  const height = 56;
-  const rx = 14;
-  const perimeter = 480;
+  const { width, height, rx, perimeter, effectiveFontSize } = calculateCyberFrameMetrics(text, fontSize, fontFamily);
 
   const letters = Array.from(text);
   const letterCount = letters.length;
@@ -94,7 +153,7 @@ export const createCyberFrameSvg = ({
 
         #typography-${uniqueId} .cyber-text {
           font-family: '${fontFamily.replace(/"/g, '')}', sans-serif;
-          font-size: ${fontSize}px;
+          font-size: ${effectiveFontSize}px;
           font-weight: 600;
           letter-spacing: 0.094em;
           text-transform: uppercase;
@@ -108,7 +167,7 @@ export const createCyberFrameSvg = ({
           align-items: center;
           justify-content: center;
           margin: 0;
-          padding: 0 10px;
+          padding: 0 6px;
           box-sizing: border-box;
           max-width: 100%;
         }
@@ -161,7 +220,7 @@ export const createCyberFrameSvg = ({
       />
 
       <foreignObject x="0" y="0" width="${width}" height="${height}" style="overflow: visible; pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none; box-sizing: border-box;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none; box-sizing: border-box; padding: 0 16px;">
           <span class="motion-text-content cyber-text">${letters.map((char, i) => `<span class="cyber-char cyber-char-${i}">${char === ' ' ? '&nbsp;' : char}</span>`).join('')}</span>
         </div>
       </foreignObject>
@@ -184,8 +243,15 @@ export const createFlipiSlashSvg = ({
   isTranslate = false
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
-  const width = 230;
-  const height = 66;
+  const minWidth = 230, maxWidth = 420, height = 66;
+  const extraLeft = 58;
+  const wA = measureTitleTextWidth(text, Math.round(fontSize * 0.72), 'Arial, Helvetica, sans-serif', '400', '0em');
+  const wB = measureTitleTextWidth(subText, fontSize, fontFamily, '400', '0em');
+  const maxW = Math.max(wA, wB) + extraLeft;
+  const width = Math.min(maxWidth, Math.max(minWidth, maxW));
+  const availW = width - extraLeft;
+  const scale = Math.max(wA, wB) > availW && availW > 0 ? Math.max(0.45, availW / Math.max(wA, wB)) : 1;
+  const effectiveFontSize = Math.max(10, Math.round(fontSize * scale * 10) / 10);
 
   return `
     <g id="typography-${uniqueId}" 
@@ -242,7 +308,7 @@ export const createFlipiSlashSvg = ({
           animation: flipi-text-top-${uniqueId} ${duration}ms infinite cubic-bezier(0.16, 1, 0.3, 1);
           animation-play-state: running;
           font-family: Arial, Helvetica, sans-serif;
-          font-size: ${Math.round(fontSize * 0.72)}px;
+          font-size: ${Math.round(effectiveFontSize * 0.72)}px;
           font-weight: 400;
           letter-spacing: 0em;
           color: ${primaryColor};
@@ -258,7 +324,7 @@ export const createFlipiSlashSvg = ({
           animation: flipi-text-bottom-${uniqueId} ${duration}ms infinite cubic-bezier(0.16, 1, 0.3, 1);
           animation-play-state: running;
           font-family: Impact, "Arial Black", sans-serif;
-          font-size: ${fontSize}px;
+          font-size: ${effectiveFontSize}px;
           font-weight: 400;
           letter-spacing: 0em;
           color: ${primaryColor};
@@ -325,9 +391,16 @@ export const createBoxRevealSvg = ({
   isTranslate = false
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
-  const width = 210;
-  const height = 62;
+  const minWidth = 210, maxWidth = 420, height = 62;
+  const paddingX = 30;
+  const wA = measureTitleTextWidth(text, fontSize, fontFamily, '900', '0em');
+  const wB = measureTitleTextWidth(subText, Math.round(fontSize * 0.72), 'Arial, Helvetica, sans-serif', '700', '0.08em');
+  const maxTextW = Math.max(wA, wB);
+  const width = Math.min(maxWidth, Math.max(minWidth, maxTextW + paddingX));
   const perimeter = (width + height) * 2;
+  const availableW = width - paddingX;
+  const scale = maxTextW > availableW && availableW > 0 ? Math.max(0.45, availableW / maxTextW) : 1;
+  const effectiveFontSize = Math.max(10, Math.round(fontSize * scale * 10) / 10);
 
   return `
     <g id="typography-${uniqueId}" 
@@ -385,7 +458,7 @@ export const createBoxRevealSvg = ({
           animation: box-slide-down-${uniqueId} ${duration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
           animation-play-state: running;
           font-family: Impact, "Arial Black", sans-serif;
-          font-size: ${fontSize}px;
+          font-size: ${effectiveFontSize}px;
           font-weight: 900;
           letter-spacing: 0em;
           color: ${secondaryColor};
@@ -401,7 +474,7 @@ export const createBoxRevealSvg = ({
           animation: box-slide-up-${uniqueId} ${duration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
           animation-play-state: running;
           font-family: Arial, Helvetica, sans-serif;
-          font-size: ${Math.round(fontSize * 0.72)}px;
+          font-size: ${Math.round(effectiveFontSize * 0.72)}px;
           font-weight: 700;
           letter-spacing: 0.08em;
           color: ${primaryColor};
@@ -472,8 +545,13 @@ export const createYouTubeChannelSvg = ({
   iconBgColor = ''
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
-  const width = 220;
-  const height = 54;
+  const minWidth = 220, maxWidth = 420, height = 54;
+  const fixedExtraWidth = 80;
+  const textWidth = measureTitleTextWidth(text, fontSize, fontFamily, '900', '0.04em');
+  const width = Math.min(maxWidth, Math.max(minWidth, textWidth + fixedExtraWidth));
+  const availableTextWidth = width - fixedExtraWidth;
+  const scale = textWidth > availableTextWidth && availableTextWidth > 0 ? Math.max(0.45, availableTextWidth / textWidth) : 1;
+  const effectiveFontSize = Math.max(10, Math.round(fontSize * scale * 10) / 10);
   const charSteps = Math.max(1, text.length);
   const activeIconBg = iconBgColor || primaryColor;
   const activeIconColor = iconColor || '#FFFFFF';
@@ -545,7 +623,7 @@ export const createYouTubeChannelSvg = ({
         #typography-${uniqueId} .yt-title-text {
           display: inline-block;
           font-family: "Arial Black", Arial, Impact, sans-serif;
-          font-size: ${fontSize}px;
+          font-size: ${effectiveFontSize}px;
           font-weight: 900;
           letter-spacing: 0.04em;
           color: ${secondaryColor};
@@ -1222,7 +1300,12 @@ export const createMotionGraphicElementNode = (preset, cx, cy) => {
     'square-open': [230, 96],
     'social-badge': [250, 90]
   };
-  const [estWidth, estHeight] = TEMPLATE_SIZES[preset.template] || [200, 56];
+  const motionBoundary = g.querySelector('.motion-click-boundary');
+  const boundaryW = motionBoundary ? parseFloat(motionBoundary.getAttribute('width')) : 0;
+  const boundaryH = motionBoundary ? parseFloat(motionBoundary.getAttribute('height')) : 0;
+  const [defaultW, defaultH] = TEMPLATE_SIZES[preset.template] || [200, 56];
+  const estWidth = boundaryW > 0 ? boundaryW : defaultW;
+  const estHeight = boundaryH > 0 ? boundaryH : defaultH;
 
   // Scale down titles so they drop onto the canvas at a neat, balanced Canva-like proportion
   let scale = 1;
@@ -1409,8 +1492,214 @@ export const getMotionGraphicProperties = (el) => {
   };
 };
 
+export const applyHybridContainerSizing = (el, updates = {}) => {
+  if (!el) return;
+  const target = (el.getAttribute && el.getAttribute('data-motion-template'))
+    ? el
+    : (el.querySelector?.('[data-motion-template]') || el.closest?.('[data-motion-template]') || el);
+  const template = target.getAttribute ? target.getAttribute('data-motion-template') : '';
+
+  if (template === 'cyber-frame') {
+    const curText = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || updates.fontSize || target.getAttribute('data-font-size') || 15);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || 'Roboto, sans-serif';
+
+    const { width, height, rx, perimeter, effectiveFontSize } = calculateCyberFrameMetrics(curText, rawFontSize, curFontFamily);
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const glowStroke = target.querySelector('.cyber-glow-stroke');
+    if (glowStroke) glowStroke.setAttribute('width', String(width - 8));
+
+    const innerStroke = target.querySelector('.cyber-inner-stroke');
+    if (innerStroke) innerStroke.setAttribute('width', String(width - 8));
+
+    const fo = target.querySelector('foreignObject');
+    if (fo) fo.setAttribute('width', String(width));
+
+    const cyberText = target.querySelector('.cyber-text');
+    if (cyberText) {
+      cyberText.style.fontSize = `${effectiveFontSize}px`;
+    }
+
+    const styleEl = target.querySelector('style');
+    if (styleEl) {
+      const letters = Array.from(curText);
+      const letterCount = letters.length;
+      const curSpeed = parseFloat(target.getAttribute('data-speed')) || 80;
+      const curDuration = Math.round(4700 / Math.max(0.1, curSpeed / 100));
+      const letterStaggerMs = letterCount > 1 ? Math.min(60, 450 / letterCount) : 0;
+      const uniqueId = target.id ? target.id.replace('typography-', '') : '';
+
+      const letterKeyframes = letters.map((_, i) => {
+        const delayMs = i * letterStaggerMs;
+        return `
+        #${target.id} .cyber-char-${i} {
+          animation: cyber-text-${uniqueId} ${curDuration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
+          animation-delay: ${delayMs}ms;
+          animation-play-state: running;
+        }`;
+      }).join('');
+
+      let css = styleEl.textContent;
+      css = css.replace(/@keyframes cyber-trim-([^{]+)\s*\{[\s\S]*?100%[^{]*\{[^}]*\}\s*\}/g, (match, id) => {
+        return `@keyframes cyber-trim-${id} {
+          0% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: 0; opacity: 0; }
+          12% { opacity: 1; }
+          26% { stroke-dasharray: ${perimeter} 0; stroke-dashoffset: 0; }
+          62% { stroke-dasharray: ${perimeter} 0; stroke-dashoffset: 0; opacity: 1; }
+          75% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: -${perimeter}; opacity: 0; }
+          100% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: -${perimeter}; opacity: 0; }
+        }`;
+      });
+
+      css = css.replace(/#[^\s]+\s+\.cyber-char-\d+\s*\{[^}]*\}/g, '');
+      css = css.trim() + '\n' + letterKeyframes;
+      styleEl.textContent = css;
+    }
+  } else if (template === 'youtube-channel') {
+    const newText = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const rawFontSize = parseFloat(updates.primaryFontSize || updates.fontSize || target.getAttribute('data-font-size') || 21);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || '"Arial Black", Impact, sans-serif';
+
+    const minWidth = 220;
+    const maxWidth = 420;
+    const fixedExtraWidth = 80;
+
+    const textWidth = measureTitleTextWidth(newText, rawFontSize, curFontFamily, '900', '0.04em');
+    const desiredWidth = textWidth + fixedExtraWidth;
+    const width = Math.min(maxWidth, Math.max(minWidth, desiredWidth));
+
+    const availableTextWidth = width - fixedExtraWidth;
+    let effectiveFontSize = rawFontSize;
+    if (textWidth > availableTextWidth && availableTextWidth > 0) {
+      const scale = Math.max(0.45, availableTextWidth / textWidth);
+      effectiveFontSize = Math.max(10, Math.round(rawFontSize * scale * 10) / 10);
+    }
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const fo = target.querySelector('foreignObject');
+    if (fo) fo.setAttribute('width', String(width));
+
+    const ytTitle = target.querySelector('.yt-title-text');
+    if (ytTitle) {
+      ytTitle.style.fontSize = `${effectiveFontSize}px`;
+    }
+
+    const charSteps = Math.max(1, newText.length);
+    const ytTypewriter = target.querySelector('.yt-typewriter-container');
+    if (ytTypewriter) {
+      const curSpeed = parseFloat(target.getAttribute('data-speed')) || 80;
+      const curDuration = Math.round(3600 / Math.max(0.1, curSpeed / 100));
+      const uniqueId = target.id ? target.id.replace('typography-', '') : '';
+      ytTypewriter.style.animation = `yt-typing-${uniqueId} ${curDuration}ms steps(${charSteps}, end) infinite`;
+    }
+  } else if (template === 'box-reveal') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 17);
+
+    const minWidth = 210;
+    const maxWidth = 420;
+    const paddingX = 30;
+
+    const wA = measureTitleTextWidth(textA, rawFontSize, 'Impact, "Arial Black", sans-serif', '900', '0em');
+    const wB = measureTitleTextWidth(textB, Math.round(rawFontSize * 0.72), 'Arial, sans-serif', '700', '0.08em');
+    const maxTextW = Math.max(wA, wB);
+
+    const desiredWidth = maxTextW + paddingX;
+    const width = Math.min(maxWidth, Math.max(minWidth, desiredWidth));
+    const height = 62;
+    const perimeter = (width + height) * 2;
+
+    const availableW = width - paddingX;
+    let effectiveFontSize = rawFontSize;
+    if (maxTextW > availableW && availableW > 0) {
+      const scale = Math.max(0.45, availableW / maxTextW);
+      effectiveFontSize = Math.max(10, Math.round(rawFontSize * scale * 10) / 10);
+    }
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const frame = target.querySelector('.box-accent-frame');
+    if (frame) frame.setAttribute('width', String(width - 6));
+
+    const fos = target.querySelectorAll('foreignObject');
+    fos.forEach((fo) => fo.setAttribute('width', String(width)));
+
+    const titleA = target.querySelector('.box-title-a');
+    if (titleA) {
+      titleA.style.fontSize = `${effectiveFontSize}px`;
+    }
+    const titleB = target.querySelector('.box-title-b');
+    if (titleB) {
+      titleB.style.fontSize = `${Math.round(effectiveFontSize * 0.72)}px`;
+    }
+
+    const styleEl = target.querySelector('style');
+    if (styleEl) {
+      styleEl.textContent = styleEl.textContent.replace(/@keyframes box-trim-([^{]+)\s*\{[\s\S]*?100%[^{]*\{[^}]*\}\s*\}/g, (match, id) => {
+        return `@keyframes box-trim-${id} {
+          0% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: 0; opacity: 0; }
+          12% { opacity: 1; }
+          28% { stroke-dasharray: ${perimeter} 0; stroke-dashoffset: 0; }
+          72% { stroke-dasharray: ${perimeter} 0; stroke-dashoffset: 0; opacity: 1; }
+          86% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: -${perimeter}; opacity: 0; }
+          100% { stroke-dasharray: 0 ${perimeter}; stroke-dashoffset: -${perimeter}; opacity: 0; }
+        }`;
+      });
+    }
+  } else if (template === 'flipi-split') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 20);
+
+    const minWidth = 230;
+    const maxWidth = 420;
+    const extraLeft = 58;
+
+    const wA = measureTitleTextWidth(textA, Math.round(rawFontSize * 0.72), 'Arial, sans-serif', '400', '0em');
+    const wB = measureTitleTextWidth(textB, rawFontSize, 'Impact, "Arial Black", sans-serif', '400', '0em');
+    const maxTextW = Math.max(wA, wB);
+
+    const desiredWidth = maxTextW + extraLeft;
+    const width = Math.min(maxWidth, Math.max(minWidth, desiredWidth));
+
+    const availableW = width - extraLeft;
+    let effectiveFontSize = rawFontSize;
+    if (maxTextW > availableW && availableW > 0) {
+      const scale = Math.max(0.45, availableW / maxTextW);
+      effectiveFontSize = Math.max(10, Math.round(rawFontSize * scale * 10) / 10);
+    }
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const fos = target.querySelectorAll('foreignObject');
+    if (fos[0]) fos[0].setAttribute('width', String(width - 44));
+    if (fos[1]) fos[1].setAttribute('width', String(width - 39));
+
+    const titleA = target.querySelector('.flipi-text-a');
+    if (titleA) {
+      titleA.style.fontSize = `${Math.round(effectiveFontSize * 0.72)}px`;
+    }
+    const titleB = target.querySelector('.flipi-text-b');
+    if (titleB) {
+      titleB.style.fontSize = `${effectiveFontSize}px`;
+    }
+  }
+};
+
 export const updateMotionGraphicAttributes = (el, updates = {}) => {
   if (!el) return;
+  const target = (el.getAttribute && el.getAttribute('data-motion-template'))
+    ? el
+    : (el.querySelector?.('[data-motion-template]') || el.closest?.('[data-motion-template]') || el);
+  el = target;
 
   if (updates.animation !== undefined || updates.customCount !== undefined) {
     const anim = updates.animation !== undefined ? updates.animation : (el.getAttribute('data-animation-mode') || 'Infinite');
@@ -1836,4 +2125,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
       sp.style.textDecoration = updates.secondaryIsStrikethrough ? 'line-through' : 'none';
     });
   }
+
+  // Apply Option 3 hybrid auto-expand + auto-scale sizing for template containers
+  applyHybridContainerSizing(el, updates);
 };

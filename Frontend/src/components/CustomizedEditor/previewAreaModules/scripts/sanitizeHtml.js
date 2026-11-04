@@ -22,10 +22,15 @@ export const sanitizeHtmlForPreview = (rawHtml) => {
 
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
+            const isMap = (fo && fo.getAttribute('data-type') === 'map') || iframe.closest('g[data-type="map"]') || iframe.closest('.map-root-container');
             const hideControls = (fo && fo.getAttribute('data-show-controls') === 'false') || iframe.getAttribute('data-show-controls') === 'false';
 
             const currentStyle = iframe.getAttribute('style') || '';
-            if (currentStyle) {
+            if (isMap) {
+                // Keep map iframe non-interactive so scroll/drag flips book pages without triggering "Use ctrl + scroll to zoom the map" overlay
+                const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*(?:auto|none)\s*(?:!important)?\s*;?/gi, '');
+                iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: none !important;');
+            } else if (currentStyle) {
                 const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*none\s*(?:!important)?\s*;?/gi, '');
                 iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: auto !important;');
             }

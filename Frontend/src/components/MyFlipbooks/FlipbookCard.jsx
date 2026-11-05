@@ -231,15 +231,15 @@ function FlipbookCard({
     const isBookEditing = editingBookId === book.id || editingBookId === bookKey;
 
     // Resolve Physical Folder for Recent books
-    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
-    let actualFolder = book.folder || activeFolder;
+    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'all flipbook', 'favorites', 'trash', 'default']);
+    let actualFolder = book.actualFolder || book.folder || activeFolder;
     if (!actualFolder || VIRTUAL_FOLDERS.has(String(actualFolder).trim().toLowerCase())) {
         const physical = books?.find(
             (b) => b.realName === book.realName && b.folder && !VIRTUAL_FOLDERS.has(String(b.folder).trim().toLowerCase())
         );
         actualFolder = (physical && physical.folder && !VIRTUAL_FOLDERS.has(String(physical.folder).trim().toLowerCase()))
             ? physical.folder
-            : 'My_Flipbooks';
+            : (book.folderName || 'default');
     }
 
     // Check if entered rename title already exists in the current folder

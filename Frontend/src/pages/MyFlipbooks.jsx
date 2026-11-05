@@ -2013,17 +2013,19 @@ export default function MyFlipbooks() {
                         onScroll={() => setActiveBookMenu(null)}
                     >
                         {filteredBooks.map((book) => {
-                            let actualFolder = book.folder;
-                            if (actualFolder === 'Recent Book' || actualFolder === 'Recent book') {
-                                const physicalBook = books.find(b => b.realName === book.realName && b.folder !== 'Recent Book' && b.folder !== 'Recent book');
+                            const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'all flipbook', 'favorites', 'trash']);
+                            let actualFolder = book.actualFolder || book.folder;
+                            if (!actualFolder || VIRTUAL_FOLDERS.has(String(actualFolder).trim().toLowerCase())) {
+                                const physicalBook = books.find(b => b.realName === book.realName && b.folder && !VIRTUAL_FOLDERS.has(String(b.folder).trim().toLowerCase()));
                                 if (physicalBook) actualFolder = physicalBook.folder;
                             }
+                            if (!actualFolder) actualFolder = book.folderName || 'default';
 
                             const userFolder = book.userID || book.userId || emailId?.replace(/[@.]/g, "_");
                             const iframeBaseUrl = getAssetBaseUrl(
                                 userFolder,
                                 actualFolder,
-                                book.realName
+                                book.realName || book.title || book.flipbookName
                             );
 
                             return (

@@ -2979,6 +2979,30 @@ exports.previewBook = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Flipbook not found" });
     }
+
+    const bookUserQuery = book.userObjectID
+      ? { userObjectID: book.userObjectID }
+      : (book.userID ? { userID: book.userID } : (req.user ? getFlipbookUserQuery(req) : null));
+
+    let folderMap = new Map();
+    let reverseFolderMap = new Map();
+    if (bookUserQuery) {
+      try {
+        const UserFolder = require("../models/userFolder");
+        const ufDoc = await UserFolder.findOne(bookUserQuery).lean();
+        if (ufDoc && Array.isArray(ufDoc.folders)) {
+          for (const f of ufDoc.folders) {
+            if (!f) continue;
+            const fid = f.fol_v_id || (f._id ? f._id.toString() : f.id);
+            if (fid && f.name) {
+              folderMap.set(fid, f.name);
+              reverseFolderMap.set(f.name.toLowerCase(), fid);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     const firstPage =
       book.pages && book.pages.length > 0 ? book.pages[0] : null;
     let firstPageHtml = firstPage?.html || firstPage?.content || "";
@@ -2997,8 +3021,8 @@ exports.previewBook = async (req, res) => {
         ),
       );
 
-      const resolvedPhysical = await resolvePhysicalFolderForBook({ book });
-      const primaryFolder = resolvedPhysical || resolveFolder(book.folderName);
+      const resolvedPhysical = await resolvePhysicalFolderForBook({ book, userQuery: bookUserQuery });
+      const primaryFolder = resolvedPhysical || resolveFolder(book.folderName, folderMap);
       const rawFolders = Array.isArray(book.folderName)
         ? book.folderName.flat(Infinity)
         : [book.folderName];
@@ -3043,37 +3067,31 @@ exports.previewBook = async (req, res) => {
         }
       }
 
-      // 2. Fallback scan for matching book directory
+      // 2. Scan inside each user's books/ subfolders
       for (const uf of userFolders) {
-        const searchBases = [
-          path.join(storageRoot, uf, "books"),
-          path.join(storageRoot, uf, "books", "default"),
-          path.join(storageRoot, uf),
-        ];
-        for (const sb of searchBases) {
-          if (fs.existsSync(sb)) {
-            try {
-              const subdirs = fs.readdirSync(sb);
-              for (const sd of subdirs) {
-                const fullSd = path.join(sb, sd);
-                try {
-                  if (fs.statSync(fullSd).isDirectory()) {
-                    const sdLower = sd.toLowerCase();
-                    if (
-                      (book.flipbookName &&
-                        (sdLower === book.flipbookName.toLowerCase() ||
-                          sdLower.includes(book.flipbookName.toLowerCase()))) ||
-                      (book.v_id &&
-                        (sdLower === book.v_id.toLowerCase() ||
-                          sdLower.includes(book.v_id.toLowerCase())))
-                    ) {
-                      candidateDirs.push(fullSd);
+        if (!uf || typeof uf !== "string") continue;
+        const booksBase = path.join(storageRoot, uf, "books");
+        if (fs.existsSync(booksBase)) {
+          try {
+            const folderDirs = fs.readdirSync(booksBase);
+            for (const fd of folderDirs) {
+              const fullFolder = path.join(booksBase, fd);
+              try {
+                if (fs.statSync(fullFolder).isDirectory()) {
+                  for (const bn of bookNames) {
+                    const nested = path.join(fullFolder, bn);
+                    if (fs.existsSync(nested)) {
+                      candidateDirs.unshift(nested);
                     }
                   }
-                } catch (e) {}
-              }
-            } catch (e) {}
-          }
+                  const fdLower = fd.toLowerCase();
+                  if (bookNames.some(bn => fdLower === bn.toLowerCase() || fdLower.includes(bn.toLowerCase()))) {
+                    candidateDirs.unshift(fullFolder);
+                  }
+                }
+              } catch (_) {}
+            }
+          } catch (_) {}
         }
       }
 
@@ -3191,7 +3209,7 @@ exports.previewBook = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      book: formatBook(book),
+      book: formatBook(book, null, null, folderMap, reverseFolderMap),
       pages: book.pages || [],
       html: firstPageHtml,
     });

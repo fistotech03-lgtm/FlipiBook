@@ -28,16 +28,6 @@ const authenticateUser = async (req, res, next) => {
     return next();
   }
 
-  // Fallback if client sends emailId or user query for backward-compatible frontend requests
-  const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
-  if (fallbackEmail) {
-    req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    try {
-      await resolveAuthUser(req);
-    } catch (_) {}
-    return next();
-  }
-
   return res.status(401).json({
     success: false,
     message: 'Authentication required. Please sign in to edit pages.'
@@ -53,21 +43,18 @@ const optionalAuth = async (req, res, next) => {
     (req.headers.authorization?.startsWith('Bearer ')
       ? req.headers.authorization.split(' ')[1]
       : null);
+  const refreshToken = req.cookies?.refreshToken;
 
-  const decoded = verifyToken(token);
+  let decoded = verifyToken(token);
+  if ((!decoded || (!decoded.userId && !decoded.id && !decoded.emailId)) && refreshToken) {
+    decoded = verifyToken(refreshToken);
+  }
+
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
     try {
       await resolveAuthUser(req);
     } catch (_) {}
-  } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.query?.userEmail || req.body?.userEmail || '').trim().toLowerCase();
-    if (fallbackEmail) {
-      req.user = { emailId: fallbackEmail, email: fallbackEmail };
-      try {
-        await resolveAuthUser(req);
-      } catch (_) {}
-    }
   }
   next();
 };

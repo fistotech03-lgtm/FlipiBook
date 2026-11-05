@@ -13,6 +13,7 @@ import {
   convertCmykJpegsInSvg,
   formatMuPdfSvgForFlipbook,
   generatePdfPageSvg,
+  generateSkeletonPageSvg,
   hashFnv1a,
   compressBytes,
   decompressBytes
@@ -25,6 +26,7 @@ export {
   convertCmykJpegsInSvg,
   formatMuPdfSvgForFlipbook,
   generatePdfPageSvg,
+  generateSkeletonPageSvg,
   hashFnv1a,
   compressBytes,
   decompressBytes
@@ -365,9 +367,9 @@ const renderPageOnWorker = (worker, pageIndex, pageNum, timeoutMs = 25000) => {
 };
 
 /**
- * Initializes a worker with the PDF ArrayBuffer with a strict 4-second timeout.
+ * Initializes a worker with the PDF ArrayBuffer with a generous 25-second timeout for WASM compilation.
  */
-const initWorkerInstance = (worker, pdfBuffer, timeoutMs = 4000) => {
+const initWorkerInstance = (worker, pdfBuffer, timeoutMs = 25000) => {
   return new Promise((resolve, reject) => {
     const id = `init_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     let timer = null;
@@ -414,9 +416,10 @@ const initWorkerInstance = (worker, pdfBuffer, timeoutMs = 4000) => {
  * Converts a PDF file into flipbook vector SVG pages using parallel Web Workers
  * and a Work-Stealing Priority Queue (DSA).
  */
-const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) => {
-  // Use 2 dedicated workers to balance multi-threading speed and memory safety
-  const workerCount = Math.min(2, Math.max(1, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2) - 1));
+const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, totalDocPages = null) => {
+  // Use up to 4 dedicated workers depending on hardware concurrency
+  const hardwareConcurrency = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4;
+  const workerCount = Math.min(4, Math.max(2, Math.floor(hardwareConcurrency / 2)));
 
   const workers = [];
   try {
@@ -425,9 +428,9 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
       workers.push({ id: i, worker: w, busy: false });
     }
 
-    // Initialize all workers in parallel with a strict 4s timeout
+    // Initialize all workers in parallel with a generous 25s timeout
     await Promise.all(
-      workers.map(w => initWorkerInstance(w.worker, arrayBuffer.slice(0), 4000))
+      workers.map(w => initWorkerInstance(w.worker, arrayBuffer.slice(0), 25000))
     );
 
     const queue = new PriorityTaskQueue();
@@ -442,6 +445,7 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
 
     const results = new Array(numPages);
     let completedCount = 0;
+    const progressTotal = totalDocPages || numPages;
 
     // Work-stealing loop: idle workers continuously pop tasks from the priority queue
     const runWorker = async (wObj) => {
@@ -454,7 +458,7 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
         wObj.busy = false;
 
         completedCount++;
-        const percent = Math.round((completedCount / numPages) * 100);
+        const percent = Math.round((completedCount / progressTotal) * 100);
 
         const blob = new Blob([res.svgString], { type: 'image/svg+xml' });
 
@@ -473,10 +477,10 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
           try {
             onProgress(
               completedCount,
-              numPages,
+              progressTotal,
               percent,
               'converting',
-              `Extracting page ${completedCount} of ${numPages} (${percent}%)...`,
+              `Extracting page ${completedCount} of ${progressTotal} (${percent}%)...`,
               pageItem
             );
           } catch (_) {}
@@ -659,17 +663,25 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
 
   if (numPages <= 0) return [];
 
+  let results = [];
   // Parallel Multi-Worker with Work-Stealing Priority Queue (when >1 page and Web Worker supported)
   if (typeof Worker !== 'undefined' && numPages > 1) {
     try {
-      return await convertPdfWithWorkers(arrayBuffer, numPages, onProgress);
+      results = await convertPdfWithWorkers(arrayBuffer, numPages, onProgress, totalPages);
     } catch (workerErr) {
       console.warn('[PDF Worker Pool] Worker pool execution warning, falling back to main-thread processing:', workerErr);
     }
   }
 
   // Fallback: asynchronous main-thread MuPDF processing
-  return await convertPdfToImagesMainThread(uint8Array, numPages, onProgress);
+  if (!results || results.length === 0) {
+    results = await convertPdfToImagesMainThread(uint8Array, numPages, onProgress, totalPages);
+  }
+
+  results.totalPages = totalPages;
+  results.isPartial = numPages < totalPages;
+  results.arrayBuffer = arrayBuffer;
+  return results;
 };
 
 /**
@@ -1179,7 +1191,7 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
   // Preserves 100% vector SVG bezier paths (<path d="...">) for infinite zoom (500%+) clarity
   try {
     const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress);
-    return images.map((img, idx) => ({
+    const mapped = images.map((img, idx) => ({
       pageNumber: idx + 1,
       pageName: `Page ${idx + 1}`,
       content: img.content || img.svgString || generatePdfPageSvg(img.dataUrl, `Page ${idx + 1}`, img.width, img.height, true),
@@ -1190,6 +1202,10 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       height: img.height,
       isVector: !!img.isVector
     }));
+    mapped.totalPages = images.totalPages || mapped.length;
+    mapped.isPartial = !!images.isPartial;
+    mapped.arrayBuffer = images.arrayBuffer;
+    return mapped;
   } catch (rasterErr) {
     console.error('[MuPDF] Page extraction error, checking fallback pages:', rasterErr);
     // Fallback: If MuPDF cannot process the generated PDF, flatten extractor pages into non-editable PDF background SVGs

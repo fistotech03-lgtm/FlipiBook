@@ -176,6 +176,40 @@ const CustomizedEditor = () => {
     }
   }, [v_id]);
 
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager
+  useEffect(() => {
+    const handlePageExtracted = (e) => {
+      const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
+      if (!eventVId || (v_id && eventVId !== v_id)) return;
+      const rawHtml = html || content || '';
+      if (!rawHtml) return;
+      const resolvedHtml = normalizeSvgMarkup(rawHtml);
+      setPages(prevPages => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        const targetIdx = prevPages.findIndex((p, i) => (
+          p.pageNumber === pageNumber || 
+          p.name === `Page ${pageNumber}` || 
+          (p.id !== undefined && p.id === pageNumber - 1) || 
+          i === pageNumber - 1
+        ));
+        if (targetIdx === -1) return prevPages;
+        const current = prevPages[targetIdx];
+        if (current.html === resolvedHtml && !current.isPlaceholder) return prevPages;
+        const next = [...prevPages];
+        next[targetIdx] = {
+          ...current,
+          html: resolvedHtml,
+          content: resolvedHtml,
+          isPlaceholder: false
+        };
+        return next;
+      });
+    };
+
+    window.addEventListener('flipbook-page-extracted', handlePageExtracted);
+    return () => window.removeEventListener('flipbook-page-extracted', handlePageExtracted);
+  }, [v_id]);
+
   const profilePreviewForcedRef = useRef(false);
   const hasFetchedRef = useRef(null);
 

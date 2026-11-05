@@ -258,6 +258,43 @@ const PageEditor = () => {
     }
   }, [selectedLayerId]);
 
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager
+  useEffect(() => {
+    const handlePageExtracted = (e) => {
+      const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
+      const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+      if (!eventVId || (activeVId && eventVId !== activeVId)) return;
+      const rawHtml = html || content || '';
+      if (!rawHtml) return;
+
+      setPages((prevPages) => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        const targetIdx = prevPages.findIndex(
+          (p, i) =>
+            p.pageNumber === pageNumber ||
+            p.name === `Page ${pageNumber}` ||
+            (p.id !== undefined && p.id === `page_${pageNumber}`) ||
+            i === pageNumber - 1,
+        );
+        if (targetIdx === -1) return prevPages;
+        const current = prevPages[targetIdx];
+        if (current.html === rawHtml && !current.isPlaceholder) return prevPages;
+
+        const next = [...prevPages];
+        next[targetIdx] = {
+          ...current,
+          html: rawHtml,
+          content: rawHtml,
+          isPlaceholder: false,
+        };
+        return next;
+      });
+    };
+
+    window.addEventListener("flipbook-page-extracted", handlePageExtracted);
+    return () => window.removeEventListener("flipbook-page-extracted", handlePageExtracted);
+  }, [v_id, currentBook?.v_id, location.state?.v_id]);
+
   // ── Dimensions & Default Page Data ─────────────────────────────────────────
   const getFlipbookDimensions = useCallback(() => {
     for (const p of pages) {

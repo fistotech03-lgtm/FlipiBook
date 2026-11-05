@@ -318,6 +318,50 @@ export const generatePdfPageSvg = (
 };
 
 /**
+ * Generates an SVG skeleton placeholder page for progressive streaming extraction.
+ * Matches exact aspect ratio and dimensions of extracted pages, rendering immediately
+ * in flipbook engines and sidebars while background workers finish rendering vector SVGs.
+ *
+ * @param {number} pageNum
+ * @param {number} [baseWidth=210]
+ * @param {number} [baseHeight=297]
+ * @returns {string} SVG markup string
+ */
+export const generateSkeletonPageSvg = (pageNum, baseWidth = 210, baseHeight = 297) => {
+  const rootId = `g-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
+  const overlayId = `rect-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
+  const shieldId = `shield-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
+
+  const titleFontSize = Math.max(8, Math.min(16, baseWidth * 0.04));
+  const subFontSize = Math.max(6, Math.min(12, baseWidth * 0.026));
+  const numFontSize = Math.max(7, Math.min(13, baseWidth * 0.03));
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
+  <defs>
+    <linearGradient id="skel_shimmer_${pageNum}" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="50%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+  </defs>
+  <g id="${rootId}" data-name="Page ${pageNum}" data-type="frame" data-skeleton="true">
+    <rect id="${overlayId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
+    <g data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true">
+      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.10}" width="${baseWidth * 0.38}" height="${baseHeight * 0.035}" rx="3" fill="url(#skel_shimmer_${pageNum})" />
+      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.17}" width="${baseWidth * 0.84}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
+      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.20}" width="${baseWidth * 0.76}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
+      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.23}" width="${baseWidth * 0.80}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
+      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.29}" width="${baseWidth * 0.84}" height="${baseHeight * 0.48}" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2" />
+      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.52}" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" fill="#6366f1" text-anchor="middle" font-weight="600">Extracting Page ${pageNum}...</text>
+      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.57}" font-family="system-ui, -apple-system, sans-serif" font-size="${subFontSize}" fill="#94a3b8" text-anchor="middle">Loading high-fidelity vector graphics</text>
+      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.94}" font-family="system-ui, -apple-system, sans-serif" font-size="${numFontSize}" fill="#cbd5e1" text-anchor="middle" font-weight="500">${pageNum}</text>
+    </g>
+    <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
+  </g>
+</svg>`;
+};
+
+/**
  * 32-bit FNV-1a non-cryptographic fast binary/string hash.
  * Provides O(N) content-addressable signature in <0.1ms for asset deduplication.
  * @param {string | Uint8Array} input

@@ -250,18 +250,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             >
                 {/* Ambient Decorative Background Glows with breathing animation */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                    <style>{`
-                        @keyframes infiniteStepSpin {
-                            0% { transform: rotate(0deg); }
-                            100% { transform: rotate(360deg); }
-                        }
-                        .infinite-step-spinner {
-                            animation: infiniteStepSpin 0.75s linear infinite !important;
-                            will-change: transform;
-                            transform: translateZ(0);
-                            transform-origin: center center;
-                        }
-                    `}</style>
+
                     {/* Top-Right Soft Lavender Glow */}
                     <motion.div 
                         className="absolute -top-[10vw] -right-[10vw] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-indigo-100/60 to-purple-100/40 blur-[7vw]"
@@ -470,35 +459,19 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                             isCompleted
                                                 ? 'bg-[#3B82F6] text-white shadow-blue-200'
                                                 : isActive
-                                                ? 'bg-white border-[0.15vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50 shadow-indigo-100'
+                                                ? 'bg-white border-[0.16vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50 shadow-indigo-100'
                                                 : 'bg-[#F1F5F9] border border-[#E2E8F0] text-[#94A3B8]'
                                         }`}
                                     >
-                                        <AnimatePresence>
-                                            {isCompleted ? (
-                                                <motion.div
-                                                    key="completed"
-                                                    initial={{ scale: 0, rotate: -40, opacity: 0 }}
-                                                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-                                                >
-                                                    <Check className="w-[1vw] h-[1vw] stroke-[3]" />
-                                                </motion.div>
-                                            ) : isActive ? (
-                                                <Loader2
-                                                    key="active"
-                                                    className="w-[1.2vw] h-[1.2vw] text-[#4F46E5] animate-spin"
-                                                />
-                                            ) : (
-                                                <span
-                                                    key="pending"
-                                                    className="text-[0.78vw] font-semibold"
-                                                >
-                                                    {step.id}
-                                                </span>
-                                            )}
-                                        </AnimatePresence>
+                                        {isCompleted ? (
+                                            <Check className="w-[1.05vw] h-[1.05vw] text-white stroke-[3]" />
+                                        ) : isActive ? (
+                                            <Loader2 className="w-[1.15vw] h-[1.15vw] text-[#4F46E5] animate-spin" />
+                                        ) : (
+                                            <span className="text-[0.78vw] font-bold text-[#64748B] select-none">
+                                                {step.id}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Step Title with Extract Count beside Point 2 */}

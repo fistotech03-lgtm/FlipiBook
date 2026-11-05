@@ -7,13 +7,14 @@ import { Icon } from '@iconify/react';
 
 import AlertModal from '../components/AlertModal';
 import CreateBookLayout from '../Layouts/CreateBookLayout';
-import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
+import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, generateSkeletonPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
 import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
+import { backgroundExtractionManager } from '../utils/backgroundExtractionManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
 const ShareModal = React.lazy(() => import('../components/ShareModal'));
 const ExportModal = React.lazy(() => import('../components/ExportModal'));
@@ -464,7 +465,12 @@ export default function MyFlipbooks() {
                     fileName: file.name,
                     stage: 'converting'
                 });
-                const images = await convertPdfWithInkscape(file, Infinity, backendUrl, (currOrObj, total, pct, stage, msg) => {
+                // 50% Fast-Launch: For large documents (>6 pages), extract first 50% for instant editor launch,
+                // and stream remaining balance pages in background Web Workers with zero UI latency.
+                const isSingleLargeDoc = files.length === 1 && detectedCount > 6;
+                const earlyExtractLimit = isSingleLargeDoc ? Math.max(4, Math.ceil(detectedCount * 0.5)) : Infinity;
+
+                const images = await convertPdfWithInkscape(file, earlyExtractLimit, backendUrl, (currOrObj, total, pct, stage, msg) => {
                     let current, pageCount, percent, message, currentStage;
                     if (typeof currOrObj === 'object' && currOrObj !== null) {
                         percent = currOrObj.percent ?? currOrObj.pct;
@@ -498,6 +504,9 @@ export default function MyFlipbooks() {
                 });
                 if (isUploadCancelledRef.current) return;
                 allImages = [...allImages, ...images];
+                allImages.totalPages = images.totalPages || detectedCount;
+                allImages.isPartial = !!images.isPartial;
+                allImages.arrayBuffer = images.arrayBuffer;
             }
 
             if (isUploadCancelledRef.current) return;
@@ -563,7 +572,11 @@ export default function MyFlipbooks() {
             // Yield to event loop so Step 3 spinner runs with 0 stutter
             await new Promise(r => setTimeout(r, 0));
 
-            const allPages = await Promise.all(allImages.map(async (img, idx) => {
+            const isProgressive = !!allImages.isPartial && (allImages.totalPages > allImages.length);
+            const totalDocPages = isProgressive ? allImages.totalPages : allImages.length;
+            const extractedCount = allImages.length;
+
+            const extractedPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
                 const base64Url = img.dataUrl || (img.content ? svgToDataUrl(img.content) : "") || (img.blob ? await blobToBase64(img.blob) : "");
                 let html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
@@ -577,9 +590,27 @@ export default function MyFlipbooks() {
                 return {
                     pageName: `Page ${pageIndex}`,
                     content: html,
-                    pageNumber: pageIndex
+                    html: html,
+                    pageNumber: pageIndex,
+                    isPlaceholder: false
                 };
             }));
+
+            let allPages = extractedPages;
+            if (isProgressive && totalDocPages > extractedCount) {
+                const placeholderPages = [];
+                for (let pIdx = extractedCount + 1; pIdx <= totalDocPages; pIdx++) {
+                    const skeletonSvg = generateSkeletonPageSvg(pIdx, maxWidth, maxHeight);
+                    placeholderPages.push({
+                        pageName: `Page ${pIdx}`,
+                        content: skeletonSvg,
+                        html: skeletonSvg,
+                        pageNumber: pIdx,
+                        isPlaceholder: true
+                    });
+                }
+                allPages = [...extractedPages, ...placeholderPages];
+            }
 
             if (isUploadCancelledRef.current) return;
 
@@ -593,7 +624,7 @@ export default function MyFlipbooks() {
             // Save initial 2 pages to create the book record on server in <200ms
             const initialBatchSize = Math.min(allPages.length, 2);
             const initialBatch = allPages.slice(0, initialBatchSize);
-            const remainingPages = allPages.slice(initialBatchSize);
+            const readyRemainingPages = allPages.slice(initialBatchSize).filter(p => !p.isPlaceholder);
 
             setProcessingProgress({
                 current: allPages.length,
@@ -601,7 +632,7 @@ export default function MyFlipbooks() {
                 totalFiles: files.length,
                 pageCount: allPages.length,
                 percent: 94,
-                message: 'Preparing flipbook...',
+                message: isProgressive ? 'Fast-launching editor...' : 'Preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
             });
@@ -699,9 +730,26 @@ export default function MyFlipbooks() {
                 ]).catch(() => {});
             }
 
-            // Queue remaining pages for non-blocking asynchronous cloud sync
-            if (remainingPages.length > 0) {
-                backgroundSyncManager.enqueue(v_id, emailId, remainingPages, extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize);
+            // Queue remaining already-extracted pages for non-blocking asynchronous cloud sync
+            if (readyRemainingPages.length > 0) {
+                backgroundSyncManager.enqueue(v_id, emailId, readyRemainingPages, extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize);
+            }
+
+            // Launch background vector extraction for balance placeholder pages (e.g. pages 51..100)
+            if (isProgressive && allImages.arrayBuffer) {
+                backgroundExtractionManager.start({
+                    arrayBuffer: allImages.arrayBuffer,
+                    v_id,
+                    emailId,
+                    startIndex: extractedCount,
+                    totalPages: totalDocPages,
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation,
+                    totalPdfSize,
+                    bookName: uniqueName,
+                    folderName: targetFolder
+                });
             }
 
             setProcessingProgress({
@@ -709,7 +757,7 @@ export default function MyFlipbooks() {
                 total: allPages.length,
                 totalFiles: files.length,
                 percent: 100,
-                message: 'Opening flipbook...',
+                message: isProgressive ? 'Editor ready! Streaming balance pages in background...' : 'Opening flipbook...',
                 fileName: uniqueName,
                 stage: 'done'
             });

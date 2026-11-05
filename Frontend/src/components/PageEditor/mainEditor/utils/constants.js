@@ -135,6 +135,16 @@ export const svgGlobalStyles = `
     pointer-events: auto !important;
   }
 
+  /* Ensure button elements and their background catch pointer events for hover and selection */
+  .page-svg-container svg g[data-is-element-button="true"],
+  .page-svg-container svg g[data-type="button"],
+  .page-svg-container svg g[id^="button-"],
+  .page-svg-container svg g[data-is-element-button="true"] > *,
+  .page-svg-container svg g[data-type="button"] > *,
+  .page-svg-container svg g[id^="button-"] > * {
+    pointer-events: auto !important;
+  }
+
   .page-svg-container svg * {
     cursor: default;
   }

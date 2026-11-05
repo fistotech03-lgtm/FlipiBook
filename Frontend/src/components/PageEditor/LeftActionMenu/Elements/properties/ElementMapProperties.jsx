@@ -139,14 +139,14 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const placeMatch = trimmed.match(/\/maps\/place\/([^/@?]+)/i);
     if (placeMatch && placeMatch[1]) {
       const place = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=near&output=embed`;
     }
 
     // Google Maps search URL: /maps/search/Query/...
     const searchMatch = trimmed.match(/\/maps\/search\/([^/@?]+)/i);
     if (searchMatch && searchMatch[1]) {
       const query = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
-      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=near&output=embed`;
     }
 
     // Google Maps query param: ?q=...
@@ -154,7 +154,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       const urlObj = new URL(trimmed);
       const q = urlObj.searchParams.get('q');
       if (q) {
-        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
+        return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=near&output=embed`;
       }
     } catch (e) {}
 
@@ -168,7 +168,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     }
 
     // Fallback: search query
-    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&t=&z=${zoomLevel}&ie=UTF8&iwloc=near&output=embed`;
   };
 
   // Helper: extract iframe src from embed code
@@ -252,6 +252,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         const isDark = String(nextTheme).toLowerCase().includes('dark');
         const filterStyle = isDark ? 'filter: invert(90%) hue-rotate(180deg) contrast(95%);' : '';
 
+        fo.setAttribute('data-type', 'map');
         fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
@@ -331,7 +332,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     } else if (data.embedUrl && !data.embedUrl.includes('q=https') && !data.embedUrl.includes('q=http')) {
       finalEmbedUrl = data.embedUrl;
     } else if (type === 'Location' && newName) {
-      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+      finalEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(newName)}&t=&z=${zoom}&ie=UTF8&iwloc=near&output=embed`;
     }
 
     setIframeUrl(finalEmbedUrl);
@@ -380,7 +381,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
   // Sync state with selected element on canvas
   useEffect(() => {
-    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=&output=embed`;
+    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
 
     if (selectedElement) {
       const url = selectedElement.getAttribute('data-url') || defaultUrl;
@@ -482,6 +483,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         const innerW = baseW;
         const innerH = Math.round(foH / scale);
 
+        fo.setAttribute('data-type', 'map');
         fo.setAttribute('style', 'overflow: hidden; border-radius: 0px;');
 
         const effectiveStyle = savedStyle || layoutStyle || 'none';
@@ -601,7 +603,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     setShowSuggestions(false);
     setErrorMessage('');
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mainTitle)}&t=&z=${zoom}&ie=UTF8&iwloc=near&output=embed`;
     setIframeUrl(newUrl);
     updateMapData({
       url: newUrl,
@@ -621,7 +623,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
     const query = locationInput.trim();
     if (!query) return;
 
-    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+    const newUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=${zoom}&ie=UTF8&iwloc=near&output=embed`;
     setBusinessName(query);
     setLocation(query);
     setBusinessAddress(query);
@@ -959,6 +961,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
                 width: '100%',
                 height: '100%',
                 border: 0,
+                pointerEvents: 'none',
                 filter: isDarkTheme ? 'invert(90%) hue-rotate(180deg) contrast(95%)' : 'none'
               }}
               allowFullScreen=""

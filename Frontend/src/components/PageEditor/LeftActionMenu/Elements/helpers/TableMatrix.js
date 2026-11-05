@@ -150,11 +150,38 @@ export class TableMatrix {
    * @param {number} totalWidth
    * @returns {number[]} Prefix sums where P[i] is the starting offset of column i
    */
+  /**
+   * Calculates content-weighted column widths based on maximum character count per column
+   * Mimics Canva auto-fitting: short data columns get less width,
+   * while text-heavy columns get more width to prevent awkward wrapping.
+   */
+  computeContentWeightedWidths() {
+    if (this.cols <= 0) return [];
+    const maxLens = new Array(this.cols).fill(0);
+    for (let c = 0; c < this.cols; c++) {
+      let maxLen = 0;
+      for (let r = 0; r < this.rows; r++) {
+        const val = this.grid[r] && this.grid[r][c] !== undefined ? String(this.grid[r][c]).trim() : '';
+        if (val.length > maxLen) maxLen = val.length;
+      }
+      maxLens[c] = Math.max(6, Math.min(60, maxLen));
+    }
+
+    const totalWeight = maxLens.reduce((a, b) => a + b, 0);
+    return maxLens.map(len => Number(((len / totalWeight) * 100).toFixed(2)));
+  }
+
+  /**
+   * Prefix sums where P[i] is the starting offset of column i
+   * @param {number} totalWidth
+   * @returns {number[]} Prefix sums where P[i] is the starting offset of column i
+   */
   getPrefixSumWidths(totalWidth = 260) {
-    const colWidth = totalWidth / this.cols;
+    const colPercentages = this.computeContentWeightedWidths();
     const prefixSums = [0];
     let sum = 0;
     for (let c = 0; c < this.cols; c++) {
+      const colWidth = ((colPercentages[c] || (100 / this.cols)) / 100) * totalWidth;
       sum += colWidth;
       prefixSums.push(sum);
     }
@@ -190,7 +217,7 @@ export class TableMatrix {
     } = options;
 
     const rowHeightPercent = (100 / this.rows).toFixed(3);
-    const colWidthPercent = (100 / this.cols).toFixed(3);
+    const colPercentages = this.computeContentWeightedWidths();
 
     let trs = '';
     for (let r = 0; r < this.rows; r++) {
@@ -202,7 +229,8 @@ export class TableMatrix {
 
       for (let c = 0; c < this.cols; c++) {
         const cellText = this.grid[r][c] || '';
-        tds += `<td data-row="${r}" data-col="${c}" style="width:${colWidthPercent}%;height:${rowHeightPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};outline:none;font-weight:${rowFontWeight};cursor:default;user-select:none;">${cellText}</td>`;
+        const colWidthPercent = colPercentages[c] || (100 / this.cols).toFixed(3);
+        tds += `<td data-row="${r}" data-col="${c}" style="width:${colWidthPercent}%;height:${rowHeightPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};overflow-wrap:break-word;outline:none;font-weight:${rowFontWeight};cursor:default;user-select:none;">${cellText}</td>`;
       }
       trs += `<tr style="height:${rowHeightPercent}%;box-sizing:border-box;">${tds}</tr>`;
     }

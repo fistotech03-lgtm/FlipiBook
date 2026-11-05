@@ -275,3 +275,4 @@ class BackgroundExtractionManager {
 
 export const backgroundExtractionManager = new BackgroundExtractionManager();
 export default backgroundExtractionManager;
+

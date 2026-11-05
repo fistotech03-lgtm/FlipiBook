@@ -5,7 +5,7 @@ import HomeNav from '../components/NavBar/HomeNav';
 
 export default function MainLayout({ children }) {
   const location = useLocation();
-  const isDashboard = location.pathname.startsWith('/my-flipbooks');
+  const isDashboard = location.pathname.startsWith('/my-flipbooks') || location.pathname.startsWith('/guide');
 
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col font-sans">

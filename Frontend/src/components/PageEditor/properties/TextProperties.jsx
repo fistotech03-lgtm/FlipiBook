@@ -57,6 +57,9 @@ export const fontFamilies = [
   'Parisienne',
   'Satisfy',
   'Bangers',
+  'Bebas Neue',
+  'Mr Dafoe',
+  'Kaushan Script',
   'Designer_Signature'
 ];
 

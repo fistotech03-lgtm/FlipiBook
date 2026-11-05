@@ -27,7 +27,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     primaryColor: '#000000',
     secondaryColor: '#FF0040',
     fontSize: 24,
-    fontFamily: '"Arial Black", Impact, sans-serif',
+    fontFamily: "Arial Black, Impact, sans-serif",
     duration: 5300
   },
   {
@@ -41,9 +41,9 @@ export const MOTION_GRAPHIC_PRESETS = [
     text: 'FLIPIBOOK',
     subText: 'ANIMATION',
     primaryColor: '#E6007A',
-    secondaryColor: '#E6007A',
+    secondaryColor: '#000000',
     fontSize: 24,
-    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontFamily: "Georgia, 'Times New Roman', serif",
     duration: 4500
   },
   {
@@ -59,7 +59,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     primaryColor: '#000000',
     secondaryColor: '#FFC600',
     fontSize: 24,
-    fontFamily: '"Arial Black", Impact, sans-serif',
+    fontFamily: "Arial Black, Impact, sans-serif",
     duration: 8000
   },
   {
@@ -75,7 +75,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     primaryColor: '#000000',
     secondaryColor: '#00E5FF',
     fontSize: 24,
-    fontFamily: '"Arial Black", Impact, sans-serif',
+    fontFamily: "Arial Black, Impact, sans-serif",
     duration: 6500
   },
   {
@@ -90,7 +90,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     subText: '',
     primaryColor: '#000000',
     secondaryColor: '#FF0033',
-    glowIntensity: 18,
+    glowIntensity: 0,
     fontSize: 16,
     fontFamily: 'Roboto, sans-serif',
     duration: 4700
@@ -126,7 +126,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     secondaryColor: '#000000',
     glowIntensity: 0,
     fontSize: 20,
-    fontFamily: '"Arial Black", Impact, sans-serif',
+    fontFamily: "Arial Black, Impact, sans-serif",
     duration: 4000
   },
   {
@@ -143,7 +143,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     secondaryColor: '#000000',
     glowIntensity: 0,
     fontSize: 21,
-    fontFamily: '"Arial Black", Impact, sans-serif',
+    fontFamily: "Arial Black, Impact, sans-serif",
     duration: 3600
   },
   {
@@ -160,7 +160,7 @@ export const MOTION_GRAPHIC_PRESETS = [
     secondaryColor: '#FFFFFF',
     glowIntensity: 0,
     fontSize: 18,
-    fontFamily: '"Expletus Sans", Arial, sans-serif',
+    fontFamily: "Expletus Sans, Arial, sans-serif",
     duration: 4200
   }
 ];
@@ -203,8 +203,8 @@ const renderMotionGraphicPreview = (preset) => {
       ) : preset.template === 'swap-bar' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
           <text x="74" y="30" textAnchor="end" fill={preset.primaryColor} fontSize="11" fontFamily="'Georgia', serif" letterSpacing="1">{preset.text}</text>
-          <rect x="78" y="16" width="3" height="18" fill={preset.secondaryColor} rx="0.5" />
-          <text x="85" y="30" textAnchor="start" fill="#000000" fontSize="11" fontFamily="'Georgia', serif" letterSpacing="1">{preset.subText}</text>
+          <rect x="78" y="16" width="3" height="18" fill={preset.primaryColor} rx="0.5" />
+          <text x="85" y="30" textAnchor="start" fill={preset.secondaryColor || '#000000'} fontSize="11" fontFamily="'Georgia', serif" letterSpacing="1">{preset.subText}</text>
         </svg>
       ) : preset.template === 'bar-sweep' ? (
         <svg viewBox="0 0 160 50" className="w-[90%] h-[90%]" preserveAspectRatio="xMidYMid meet">
@@ -225,7 +225,7 @@ const renderMotionGraphicPreview = (preset) => {
           <text x="64" y="29" fill="#FFFFFF" fontSize="10" fontWeight="700" fontFamily="sans-serif" letterSpacing="0.5">{preset.text}</text>
           {/* Rotated diamond badge */}
           <g transform="translate(24, 25)">
-            <rect x="-14" y="-14" width="33" height="33" rx="7" fill={preset.primaryColor} stroke="#FFFFFF" strokeWidth="1" transform="rotate(45)" />
+            <rect x="-14" y="-14" width="30" height="30" rx="8" fill={preset.primaryColor} stroke="#FFFFFF" strokeWidth="1" transform="rotate(45)" />
             <path d="M1 8v-5.5h1.8l.3-2.1h-2.1V-.7c0-.6.2-1 1.1-1h1.1V-3.5c-.2 0-.9-.1-1.6-.1-1.6 0-2.7 1-2.7 2.8v1.6H-3v2.1h1.9V8H1z" fill="#FFFFFF" transform="scale(0.9)" />
           </g>
         </svg>

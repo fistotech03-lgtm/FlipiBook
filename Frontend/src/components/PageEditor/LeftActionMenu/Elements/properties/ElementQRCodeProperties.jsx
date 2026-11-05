@@ -964,7 +964,8 @@ const ElementQRCodeProperties = ({
       const defaultFontFamily = currentFrame === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
 
       setFrame(currentFrame);
-      setText(targetEl.getAttribute('data-qr-text') ?? (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME')));
+      const rawText = targetEl.getAttribute('data-qr-text');
+      setText((rawText !== null ? rawText : (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME'))).slice(0, 30));
       setFontFamily(targetEl.getAttribute('data-qr-font-family') || defaultFontFamily);
       setFontSize(parseInt(targetEl.getAttribute('data-qr-font-size')) || 24);
       setFontWeight(targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold');
@@ -1148,6 +1149,9 @@ const ElementQRCodeProperties = ({
     if (key === 'url' && typeof value === 'string') {
       // Clean up accidental duplicate protocols like https://https:// or http://https://
       sanitizedValue = value.replace(/^(?:https?:\/\/)+(https?:\/\/)/i, '$1');
+    }
+    if (key === 'text' && typeof value === 'string') {
+      sanitizedValue = value.slice(0, 30);
     }
 
     const overrides = { [key]: sanitizedValue };
@@ -1753,9 +1757,14 @@ const ElementQRCodeProperties = ({
       {/* 7. Frames Section */}
       {frame && frame !== 'frame-none' && (
         <div className="flex flex-col gap-[0.9vw]">
-          <div className="flex items-center gap-[0.8vw]">
-            <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Frame Text & Style</span>
-            <div className="flex-1 h-[1px] bg-gray-200" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-[0.8vw] flex-1">
+              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Frame Text & Style</span>
+              <div className="flex-1 h-[1px] bg-gray-200" />
+            </div>
+            <span className="text-[0.68vw] text-gray-400 font-medium ml-[0.5vw]">
+              {(text || '').length}/30
+            </span>
           </div>
 
           {/* Frame Text (matching TextProperties.jsx input) */}
@@ -1763,7 +1772,8 @@ const ElementQRCodeProperties = ({
             <input
               type="text"
               value={text}
-              onChange={(e) => handleChange('text', e.target.value)}
+              maxLength={30}
+              onChange={(e) => handleChange('text', e.target.value.slice(0, 30))}
               placeholder="Scan Me"
               className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#4D47FF] shadow-2xs font-medium"
             />

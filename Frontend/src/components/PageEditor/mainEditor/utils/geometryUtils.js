@@ -21,6 +21,26 @@ export const formatSmoothPathD = (pts) => {
 export const getVisualBBox = (el) => {
   if (!el || typeof el.getBBox !== 'function') return { x: 0, y: 0, width: 0, height: 0 };
 
+  // ── TABLE ELEMENT BOUNDING BOX ──
+  const isTableElement = el.getAttribute?.('data-type') === 'table-frame' ||
+                         el.getAttribute?.('data-type') === 'table' ||
+                         (el.id && el.id.startsWith('table-')) ||
+                         !!el.querySelector?.('[data-type="table-frame"], .table-card-wrapper, table');
+  if (isTableElement) {
+    const fo = el.querySelector?.('foreignObject');
+    const overlay = el.querySelector?.('.svg-table-overlay, .svg-image-stroke-overlay');
+    const targetEl = fo || overlay;
+    if (targetEl) {
+      const tw = parseFloat(targetEl.getAttribute('width')) || 0;
+      const th = parseFloat(targetEl.getAttribute('height')) || 0;
+      const tx = parseFloat(targetEl.getAttribute('x') || '0');
+      const ty = parseFloat(targetEl.getAttribute('y') || '0');
+      if (tw > 0 && th > 0) {
+        return { x: tx, y: ty, width: tw, height: th };
+      }
+    }
+  }
+
   // ── TYPOGRAPHY BOUNDING BOX (Kinetic & Motion Graphic) ──
   const isTypography = el.getAttribute?.('data-is-element-typography') === 'true' ||
                        el.getAttribute?.('data-typography-type') === 'kinetic' ||

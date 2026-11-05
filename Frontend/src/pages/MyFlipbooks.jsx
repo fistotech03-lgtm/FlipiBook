@@ -1948,12 +1948,11 @@ export default function MyFlipbooks() {
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-hidden min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs flex flex-col">
                         <MyShelf
-                            shelfFolders={shelfFolders}
-                            setShelfFolders={setShelfFolders}
-                            selectedShelfFolder={selectedShelfFolder}
-                            setSelectedShelfFolder={setSelectedShelfFolder}
+                            onFoldersChange={setShelfFolders}
+                            selectedFolder={selectedShelfFolder}
+                            onSelectFolder={setSelectedShelfFolder}
                             currentView={shelfCurrentView}
-                            setCurrentView={setShelfCurrentView}
+                            onViewChange={setShelfCurrentView}
                             isShelfAddModalOpen={isShelfAddModalOpen}
                             setIsShelfAddModalOpen={setIsShelfAddModalOpen}
                         />

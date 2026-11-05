@@ -1255,6 +1255,7 @@ const getDraggableElement = (target, canvasRoot) => {
     saveModifiedPageHtml,
     getDraggableElement,
     getTopLevelFrames,
+    isPageRootElement,
     hitTest,
     selectedLayerIdRef,
     multiSelectedIdsRef,

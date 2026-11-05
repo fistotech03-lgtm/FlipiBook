@@ -384,6 +384,16 @@ export const useSlideshowManager = () => {
       }
     };
 
+    const handleNavDblClick = (e) => {
+      const isNavOrPag = e.target.closest?.(
+        '.swiper-button-prev, .swiper-button-next, [data-action="prev"], [data-action="next"], .swiper-pagination, .swiper-pagination-bullet, [data-slideshow-nav]'
+      );
+      if (isNavOrPag) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
     const handleReinit = (e) => {
       const id = e?.detail?.id;
       if (id) {
@@ -437,6 +447,7 @@ export const useSlideshowManager = () => {
     document.addEventListener('pointerup', handleNavPointerUp, true);
     document.addEventListener('mouseup', handleNavPointerUp, true);
     document.addEventListener('click', handleNavigationClick, true);
+    document.addEventListener('dblclick', handleNavDblClick, true);
     window.addEventListener('slideshow-reinit-needed', handleReinit);
 
     return () => {
@@ -446,6 +457,7 @@ export const useSlideshowManager = () => {
       document.removeEventListener('pointerup', handleNavPointerUp, true);
       document.removeEventListener('mouseup', handleNavPointerUp, true);
       document.removeEventListener('click', handleNavigationClick, true);
+      document.removeEventListener('dblclick', handleNavDblClick, true);
       window.removeEventListener('slideshow-reinit-needed', handleReinit);
       activeSwipers.forEach(swiper => {
         if (swiper && !swiper.destroyed) {

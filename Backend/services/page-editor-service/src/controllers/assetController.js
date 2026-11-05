@@ -178,13 +178,44 @@ const uploadAsset = async (req, res) => {
 
     if (dbDoc) {
       flipbookName = dbDoc.flipbookName || flipbookName;
-      folderName = resolveFolder(dbDoc.folderName);
       if (emailId && dbDoc.userEmail && dbDoc.userEmail.toLowerCase() !== emailId.toLowerCase()) {
         if (file && fs.existsSync(file.path)) {
           try { fs.unlinkSync(file.path); } catch (e) {}
         }
         return res.status(403).json({ success: false, message: 'Unauthorized' });
       }
+
+      // Resolve physical folder: check folder_id in UserFolders, or folderName
+      let resolvedF = null;
+      const targetId = dbDoc.folder_id || req.body.folder_id;
+      if (targetId && typeof targetId === 'string' && targetId !== 'default' && targetId !== 'fol_default') {
+        try {
+          const ufDoc = await mongoose.connection.collection('UserFolders').findOne({
+            $or: [
+              dbDoc.userObjectID ? { userObjectID: dbDoc.userObjectID } : null,
+              dbDoc.userID ? { userID: dbDoc.userID } : null,
+            ].filter(Boolean)
+          });
+          if (ufDoc && Array.isArray(ufDoc.folders)) {
+            const item = ufDoc.folders.find(f => f && (f.fol_v_id === targetId || String(f._id) === targetId || f.id === targetId));
+            if (item && item.name && item.name.toLowerCase() !== 'my flipbooks') {
+              resolvedF = item.name.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!resolvedF && dbDoc.folderName) {
+        const rf = resolveFolder(dbDoc.folderName);
+        if (rf && rf !== 'default') resolvedF = rf;
+      }
+
+      if (!resolvedF && folderName) {
+        const rf = resolveFolder(folderName);
+        if (rf && rf !== 'default') resolvedF = rf;
+      }
+
+      folderName = resolvedF || 'default';
     } else {
       folderName = resolveFolder(folderName);
     }

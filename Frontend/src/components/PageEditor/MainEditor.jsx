@@ -23,7 +23,7 @@ import {
   clearOverlayType
 } from './mainEditor/utils/geometryUtils';
 import { isElementHidden, purgeElementOverlays } from './mainEditor/selectionOverlays/overlayDomUtils';
-import { useSlideshowManager } from './mainEditor/hooks/useSlideshowManager';
+import { useSlideshowManager } from './LeftActionMenu/Elements/hooks/useSlideshowManager';
 import { useVideoControls } from './mainEditor/hooks/useVideoControls';
 import { useSelectionOverlays } from './mainEditor/hooks/useSelectionOverlays';
 import { useInteractEngine } from './mainEditor/hooks/useInteractEngine';

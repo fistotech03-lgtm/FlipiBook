@@ -98,7 +98,7 @@ export const useInteractEngine = ({
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
-        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"]',
+        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"], .swiper-button-prev, .swiper-button-prev *, .swiper-button-next, .swiper-button-next *, .swiper-pagination, .swiper-pagination *, .swiper-pagination-bullet, [data-slideshow-nav], [data-slideshow-nav] *',
         cursorChecker: () => null, // Second layer of prevention just in case
         inertia: false, // Disable inertia for perfect cursor sync
         autoScroll: true,

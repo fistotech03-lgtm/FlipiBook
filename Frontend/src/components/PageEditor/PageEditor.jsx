@@ -658,6 +658,35 @@ const PageEditor = () => {
     };
   }, [setClearHandler, handleClearEditorWithDB]);
 
+  const handleOpenInlinePreview = useCallback(() => {
+    // Synchronize the active canvas SVG DOM into page state so Preview receives current element states and active slides
+    setPages(currentPages => {
+      const updated = [...currentPages];
+      const pageSvg = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`);
+      if (pageSvg && updated[activePageIndex]) {
+        const clone = pageSvg.cloneNode(true);
+        clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+        const serializer = new XMLSerializer();
+        const liveHtml = serializer.serializeToString(clone);
+        updated[activePageIndex] = { ...updated[activePageIndex], html: liveHtml };
+      }
+      return updated;
+    });
+    setShowPreview(true);
+  }, [activePageIndex]);
+
+  const handleCloseInlinePreview = useCallback(() => {
+    setShowPreview(false);
+    // Auto-heal slideshow and canvas components upon returning to Editor
+    window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 120);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 350);
+  }, []);
+
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
@@ -1955,7 +1984,7 @@ const PageEditor = () => {
           setMultiSelectedIds={setMultiSelectedIds}
           updateElementAttribute={updateElementAttribute}
           deleteLayer={deleteLayer}
-          onPreview={() => setShowPreview(true)}
+          onPreview={handleOpenInlinePreview}
           flipbookDimensions={getFlipbookDimensions()}
           isPopupEditor={!!popupEditContext}
           onCustomizePopup={onCustomizePopup}
@@ -2051,7 +2080,7 @@ const PageEditor = () => {
                 .filter((p) => !p.isHidden)
                 .map((p) => ({ ...p, content: p.html || "" }))}
               pageName={currentBook?.flipbookName || "Preview"}
-              onClose={() => setShowPreview(false)}
+              onClose={handleCloseInlinePreview}
               isMobile={false}
               isDoublePage={isDoublePage}
               targetPage={0}

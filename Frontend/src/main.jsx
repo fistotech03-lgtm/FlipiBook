@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { store } from './store';
 import { queryClient } from './queryClient';
 import axios from 'axios';
+import 'swiper/swiper-bundle.css';
 import './index.css';
 import App from './App.jsx';
 

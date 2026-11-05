@@ -34,12 +34,11 @@ import ShelfDetailView from './components/ShelfDetailView';
 import ShelfCustomizerSidebar from './components/ShelfCustomizerSidebar';
 
 const MyShelf = ({
-  shelfFolders: propShelfFolders,
-  setShelfFolders: propSetShelfFolders,
-  selectedShelfFolder: propSelectedFolder,
-  setSelectedShelfFolder: propSetSelectedFolder,
+  onFoldersChange,
+  selectedFolder: propSelectedFolder,
+  onSelectFolder,
   currentView: propCurrentView,
-  setCurrentView: propSetCurrentView,
+  onViewChange,
   isShelfAddModalOpen,
   setIsShelfAddModalOpen,
 }) => {
@@ -48,7 +47,7 @@ const MyShelf = ({
   const currentView = propCurrentView !== undefined ? propCurrentView : internalCurrentView;
   const setCurrentView = (v) => {
     setInternalCurrentView(v);
-    propSetCurrentView?.(v);
+    onViewChange?.(v);
   };
 
   const [view, setView] = useState('shelf');
@@ -57,39 +56,21 @@ const MyShelf = ({
   const [openMenuId, setOpenMenuId] = useState(null);
   const [hoveredInfoId, setHoveredInfoId] = useState(null);
 
-  const [folders, setFoldersState] = useState(propShelfFolders && propShelfFolders.length > 0 ? propShelfFolders : []);
-  const setFolders = (updater) => {
-    setFoldersState(prev => {
-      const updated = typeof updater === 'function' ? updater(prev) : updater;
-      propSetShelfFolders?.(updated);
-      return updated;
-    });
-  };
+  const [folders, setFolders] = useState([]);
 
+  // Notify parent after render whenever folders change
   useEffect(() => {
-    if (propShelfFolders && propShelfFolders.length > 0 && propShelfFolders !== folders) {
-      setFoldersState(propShelfFolders);
+    if (folders.length > 0) {
+      onFoldersChange?.(folders);
     }
-  }, [propShelfFolders]);
+  }, [folders, onFoldersChange]);
 
   const [internalSelectedFolder, setInternalSelectedFolder] = useState('');
   const selectedFolder = (propSelectedFolder !== undefined && propSelectedFolder !== '') ? propSelectedFolder : internalSelectedFolder;
   const setSelectedFolder = (f) => {
     setInternalSelectedFolder(f);
-    propSetSelectedFolder?.(f);
+    onSelectFolder?.(f);
   };
-
-  useEffect(() => {
-    if (propSelectedFolder && propSelectedFolder !== internalSelectedFolder) {
-      setInternalSelectedFolder(propSelectedFolder);
-    }
-  }, [propSelectedFolder]);
-
-  useEffect(() => {
-    if (propCurrentView && propCurrentView !== internalCurrentView) {
-      setInternalCurrentView(propCurrentView);
-    }
-  }, [propCurrentView]);
 
   const [isEditingShelfName, setIsEditingShelfName] = useState(false);
   const [editingShelfNameValue, setEditingShelfNameValue] = useState('');

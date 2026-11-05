@@ -247,6 +247,11 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
+    // Allow native button/navigation clicks on slideshow navigation arrows and pagination
+    if (e.target.closest('.swiper-button-prev, .swiper-button-next, .swiper-pagination, .swiper-pagination-bullet, [data-slideshow-nav]')) {
+      return;
+    }
+
     const canvasContent = document.getElementById(`canvas-content-${pageIndex}`) ||
       document.querySelector(`[data-page-index="${pageIndex}"] [id^="canvas-content-"]`) ||
       document.querySelector('[id^="canvas-content-"]');
@@ -2262,6 +2267,11 @@ export const useCanvasPointerEvents = ({
     // Allow native text selection/interaction inside actively edited text boxes
     if (e.target.closest('[contenteditable="true"]')) {
       e.stopPropagation();
+      return;
+    }
+
+    // Allow native button/navigation clicks on slideshow navigation arrows and pagination
+    if (e.target.closest('.swiper-button-prev, .swiper-button-next, .swiper-pagination, .swiper-pagination-bullet, [data-slideshow-nav]')) {
       return;
     }
 

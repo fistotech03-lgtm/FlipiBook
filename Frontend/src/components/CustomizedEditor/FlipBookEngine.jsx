@@ -826,6 +826,21 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     else if (corner === 'br') { hs.style.bottom = '0'; hs.style.right = '0'; }
                     else if (corner === 'tl') { hs.style.top = '0'; hs.style.left = '0'; }
                     else if (corner === 'bl') { hs.style.bottom = '0'; hs.style.left = '0'; }
+
+                    // Auto-unpeel corner when cursor departs hotspot without active dragging
+                    hs.addEventListener('mouseleave', () => {
+                        if (bookEl.current && !bookEl.current.classList.contains('fbe-is-dragging')) {
+                            if (window.jQuery && bookEl.current) {
+                                const $ = window.jQuery;
+                                const $book = $(bookEl.current);
+                                $book.find('.turn-page').each(function() {
+                                    if ($(this).data('f')) {
+                                        try { $(this).flip('hideFoldedPage', true); } catch (err) {}
+                                    }
+                                });
+                            }
+                        }
+                    });
                     return hs;
                 };
 
@@ -1123,13 +1138,28 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     $(bookEl.current).trigger(createJqEvent('touchstart', { originalClientX: cx, originalClientY: cy }));
                 }
             } else if (e.data.type === 'IFRAME_MOUSEMOVE') {
+                let cx = e.data.originalClientX || 0;
+                let cy = e.data.originalClientY || 0;
+                if (e.data.pageNumber && bookEl.current) {
+                    const iframe = bookEl.current.querySelector(`.p${e.data.pageNumber} iframe`);
+                    if (iframe) {
+                        const rect = iframe.getBoundingClientRect();
+                        cx += rect.left;
+                        cy += rect.top;
+                    }
+                }
+
                 if (bookEl.current && bookEl.current.classList.contains('fbe-is-dragging')) {
                     const offset = window._fbeDragOffset || { x: 0, y: 0 };
-                    const cx = (e.data.screenX || 0) - offset.x;
-                    const cy = (e.data.screenY || 0) - offset.y;
+                    const dragX = (e.data.screenX !== undefined ? (e.data.screenX - offset.x) : cx);
+                    const dragY = (e.data.screenY !== undefined ? (e.data.screenY - offset.y) : cy);
                     
+                    $(document).trigger(createJqEvent('mousemove', { originalClientX: dragX, originalClientY: dragY }));
+                    $(document).trigger(createJqEvent('touchmove', { originalClientX: dragX, originalClientY: dragY }));
+                } else if (bookEl.current) {
+                    // Forward iframe cursor movement to Turn.js document listener so it tracks corner departure
+                    // and triggers automatic hideFoldedPage (unpeel)
                     $(document).trigger(createJqEvent('mousemove', { originalClientX: cx, originalClientY: cy }));
-                    $(document).trigger(createJqEvent('touchmove', { originalClientX: cx, originalClientY: cy }));
                 }
             } else if (e.data.type === 'IFRAME_MOUSEUP') {
                 if (bookEl.current && bookEl.current.classList.contains('fbe-is-dragging')) {
@@ -1149,6 +1179,20 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
 
     const bookTransition = `transform ${flipTime}ms ease`;
 
+    const handleContainerMouseLeave = () => {
+        if (bookEl.current && !bookEl.current.classList.contains('fbe-is-dragging')) {
+            if (window.jQuery && bookEl.current) {
+                const $ = window.jQuery;
+                const $book = $(bookEl.current);
+                $book.find('.turn-page').each(function() {
+                    if ($(this).data('f')) {
+                        try { $(this).flip('hideFoldedPage', true); } catch (err) {}
+                    }
+                });
+            }
+        }
+    };
+
     /* ── Render ── */
     return (
         <div
@@ -1156,6 +1200,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
             className={`fbe-wrapper ${className}`}
             data-single-page={singlePage}
             data-mobile-shadow={mobileShadowSide}
+            onMouseLeave={handleContainerMouseLeave}
             style={{
                 width: singlePage ? width : width * 2, height, position: 'relative',
                 background: 'transparent',

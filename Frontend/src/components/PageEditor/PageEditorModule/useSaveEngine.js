@@ -118,6 +118,7 @@ export const useSaveEngine = ({
       const userEmail = user?.emailId || user?.email;
       const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
       const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      let currentVId = v_id || currentBook?.v_id || location.state?.v_id;
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
       const fNameFor3D = resolvePhysicalFolder(
@@ -1003,7 +1004,7 @@ export const useSaveEngine = ({
         }
       });
 
-      let currentVId = v_id || currentBook?.v_id || location.state?.v_id;
+      currentVId = currentVId || v_id || currentBook?.v_id || location.state?.v_id;
       let lastRes = null;
 
       if (modifiedPagesIndices.length === 0) {

@@ -28,6 +28,7 @@ router.post('/trash', bookController.trashBook);
 router.post('/restore', bookController.restoreBook);
 router.post('/empty-trash', bookController.emptyTrash);
 router.post('/rename', bookController.renameBook);
+router.post('/move', bookController.moveBook);
 router.delete('/delete/:v_id', bookController.deleteBookPermanently);
 router.delete('/delete', bookController.deleteBookPermanently);
 router.post('/remove-recent', bookController.removeRecent);

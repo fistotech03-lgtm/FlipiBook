@@ -521,7 +521,7 @@ export default function MyFlipbooks() {
             const maxHeight = firstH;
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
-            const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const matchedFolder = folders.find(f => (f.name || '').trim().toLowerCase() === targetFolder.trim().toLowerCase() || (targetFolder === 'My Flipbooks' && f.isDefault));
             const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
 
             const now = new Date();
@@ -646,6 +646,8 @@ export default function MyFlipbooks() {
                 pages: initialBatch,
                 overwrite: false,
                 folderName: targetFolder,
+                folder_id: targetFolderVId,
+                fol_v_id: targetFolderVId,
                 keepBase64: true,
                 v_id: cryptoVId,
                 bookType: resolvedBookType,
@@ -874,12 +876,12 @@ export default function MyFlipbooks() {
         setCreatingFolderName(trimmed);
         try {
             const res = await flipbookApi.createFolder(emailId, trimmed);
-            const createdId = res.data?.id || trimmed;
+            const createdId = res.data?.id || res.data?.fol_v_id || trimmed;
             
             // Instantly update folder list locally without heavy fetchData() flipbook reloads
             setFolders(prev => {
                 const existing = prev.filter(f => f.name.toLowerCase() !== trimmed.toLowerCase());
-                const updated = [...existing, { id: createdId, name: trimmed }];
+                const updated = [...existing, { id: createdId, fol_v_id: createdId, name: trimmed, isDefault: false }];
                 saveFolderOrder(updated);
                 return updated;
             });
@@ -1596,7 +1598,7 @@ export default function MyFlipbooks() {
         const name = newMoveFolderName.trim();
         setFolders(prev => {
             const existing = prev.filter(f => f.name.toLowerCase() !== name.toLowerCase());
-            const updated = [...existing, { id: name, name }];
+            const updated = [...existing, { id: name, fol_v_id: name, name, isDefault: false }];
             return updated.sort((a, b) => a.name.localeCompare(b.name));
         });
         try {

@@ -157,8 +157,11 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
   let displayFolder = null;
   if (folderMap && doc.folder_id && folderMap.has(doc.folder_id)) {
     displayFolder = folderMap.get(doc.folder_id);
+  } else if (reverseFolderMap && doc.folder_id && reverseFolderMap.has(String(doc.folder_id).toLowerCase())) {
+    const matchedFolId = reverseFolderMap.get(String(doc.folder_id).toLowerCase());
+    displayFolder = folderMap ? folderMap.get(matchedFolId) : String(doc.folder_id);
   } else if (doc.folderName) {
-    const resolved = resolveFolder(doc.folderName);
+    const resolved = resolveFolder(doc.folderName, folderMap);
     if (resolved && resolved !== "default" && resolved !== "fol_default") {
       displayFolder = resolved;
     }
@@ -1283,6 +1286,130 @@ exports.saveChunk = async (req, res) => {
 };
 
 /**
+ * POST /api/flipbook/move
+ * Move a flipbook to a target folder
+ */
+exports.moveBook = async (req, res) => {
+  try {
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
+    const userQuery = getFlipbookUserQuery(req);
+    const { bookName, v_id, currentFolder, targetFolder } = req.body;
+
+    if (!userQuery || (!bookName && !v_id) || !targetFolder) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const bookQuery = v_id
+      ? { ...userQuery, v_id }
+      : { ...userQuery, flipbookName: bookName };
+
+    const book = await Flipbook.findOne(bookQuery);
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Flipbook not found" });
+    }
+
+    const UserFolder = require("../models/userFolder");
+    const userFolderDoc = await UserFolder.findOne(userQuery);
+
+    let targetFolderId = null;
+    let targetFolderName = String(targetFolder).trim();
+
+    const isDefaultTarget =
+      targetFolderName.toLowerCase() === "my flipbooks" ||
+      targetFolderName.toLowerCase() === "default" ||
+      targetFolderName === "fol_default";
+
+    if (isDefaultTarget) {
+      let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
+      targetFolderId = defaultItem?.fol_v_id || "default";
+      targetFolderName = "My Flipbooks";
+    } else {
+      // Find matching folder by ID or name
+      const matched = userFolderDoc?.folders?.find(
+        (f) =>
+          f &&
+          (f.fol_v_id === targetFolder ||
+            (f._id && f._id.toString() === targetFolder) ||
+            f.id === targetFolder ||
+            (f.name && f.name.toLowerCase() === targetFolderName.toLowerCase()))
+      );
+      if (matched) {
+        targetFolderId = matched.fol_v_id;
+        targetFolderName = matched.name;
+      } else {
+        // If folder doesn't exist yet, create it
+        targetFolderId = crypto.randomBytes(6).toString("hex");
+        if (userFolderDoc) {
+          userFolderDoc.folders.push({
+            fol_v_id: targetFolderId,
+            name: targetFolderName,
+            isDefault: false,
+          });
+          await userFolderDoc.save().catch(() => {});
+        }
+      }
+    }
+
+    // Check conflict: does another book with same name exist in target folder?
+    const conflict = await Flipbook.findOne({
+      ...userQuery,
+      _id: { $ne: book._id },
+      folder_id: targetFolderId,
+      flipbookName: book.flipbookName,
+      trash: { $ne: true },
+    });
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: `A flipbook named "${book.flipbookName}" already exists in the target folder.`,
+      });
+    }
+
+    // Move physical storage on disk
+    try {
+      const storageRoot = getStorageRoot();
+      const userFolder =
+        book.userID ||
+        (objectId
+          ? String(objectId)
+          : emailId
+            ? emailId.replace(/[@.]/g, "_")
+            : "default");
+
+      const srcSubfolder = await resolvePhysicalFolderForBook({ book, userQuery, userFolderDoc });
+      const destSubfolder = isDefaultTarget ? "default" : targetFolderName;
+
+      const srcDir = path.join(storageRoot, userFolder, "books", srcSubfolder, book.flipbookName);
+      const destDir = path.join(storageRoot, userFolder, "books", destSubfolder, book.flipbookName);
+
+      if (fs.existsSync(srcDir) && srcDir !== destDir) {
+        fs.mkdirSync(path.dirname(destDir), { recursive: true });
+        if (fs.existsSync(destDir)) {
+          fs.rmSync(destDir, { recursive: true, force: true });
+        }
+        fs.renameSync(srcDir, destDir);
+        console.log(`[Book Controller] Moved book storage: ${srcDir} -> ${destDir}`);
+      }
+    } catch (fsErr) {
+      console.warn("[Book Controller] Error moving book storage on disk:", fsErr.message);
+    }
+
+    book.folder_id = targetFolderId;
+    await book.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Flipbook moved successfully",
+      folder_id: targetFolderId,
+      folder: targetFolderName,
+    });
+  } catch (err) {
+    console.error("[Book Controller] Error in moveBook:", err);
+    res.status(500).json({ success: false, message: "Error moving flipbook" });
+  }
+};
+
+/**
  * POST /api/flipbook/save
  * Save or create a new flipbook with full page content & storage persistence
  */
@@ -1294,6 +1421,8 @@ exports.saveBook = async (req, res) => {
       flipbookName,
       pages,
       folderName,
+      folder_id,
+      fol_v_id,
       fileSize,
       overwrite,
       v_id: providedVId,
@@ -1317,9 +1446,10 @@ exports.saveBook = async (req, res) => {
       }
     } catch (_) {}
 
+    const incomingFolderId = folder_id || fol_v_id || req.body.folderVId;
     const resolvedPhysical = await resolvePhysicalFolderForBook({
       folderName,
-      folder_id: req.body.folder_id,
+      folder_id: incomingFolderId,
       userQuery,
       userFolderDoc,
     });
@@ -1439,12 +1569,69 @@ exports.saveBook = async (req, res) => {
     }));
 
     const physicalFolder = targetFolder || "default";
-    let bookFolderId = req.body.folder_id;
-    if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
+    let bookFolderId = incomingFolderId;
+    const isExplicitDefaultId = !bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default";
+    const isCustomName = targetFolder && targetFolder !== "default" && targetFolder !== "fol_default" && targetFolder !== "My Flipbooks";
+
+    // If updating an existing book and no folder was explicitly passed, preserve current folder
+    if (!incomingFolderId && !folderName && book?.folder_id) {
+      bookFolderId = book.folder_id;
+    } else {
+      let UserFolder = null;
       try {
-        const UserFolder = require("../models/userFolder");
-        let userFolderDoc = await UserFolder.findOne(userQuery);
-        let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
+        UserFolder = require("../models/userFolder");
+        if (!userFolderDoc && userQuery) {
+          userFolderDoc = await UserFolder.findOne(userQuery);
+        }
+      } catch (_) {}
+
+      let defaultItem = userFolderDoc?.folders?.find((f) => f && f.isDefault === true);
+      if (!defaultItem && userFolderDoc?.folders) {
+        defaultItem = userFolderDoc.folders.find((f) => {
+          const l = String(f?.name || '').toLowerCase().trim();
+          return l === 'default' || l === 'my flipbooks';
+        });
+      }
+
+      // Case A: Custom folder_id provided — verify it or check if it matches a folder name
+      if (bookFolderId && !isExplicitDefaultId) {
+        const matchedById = userFolderDoc?.folders?.find((f) =>
+          f && (f.fol_v_id === String(bookFolderId) || (f._id && f._id.toString() === String(bookFolderId)) || String(f.id) === String(bookFolderId))
+        );
+        if (matchedById) {
+          bookFolderId = matchedById.fol_v_id || bookFolderId;
+        } else {
+          const matchedByName = userFolderDoc?.folders?.find((f) =>
+            f && f.name && f.name.trim().toLowerCase() === String(bookFolderId).trim().toLowerCase()
+          );
+          if (matchedByName) {
+            bookFolderId = matchedByName.fol_v_id;
+          }
+        }
+      }
+
+      // Case B: No custom folder_id provided, but a custom folderName / targetFolder was provided
+      if ((!bookFolderId || isExplicitDefaultId) && isCustomName) {
+        const matchedByName = userFolderDoc?.folders?.find((f) =>
+          f && f.name && f.name.trim().toLowerCase() === targetFolder.trim().toLowerCase()
+        );
+        if (matchedByName && matchedByName.fol_v_id) {
+          bookFolderId = matchedByName.fol_v_id;
+        } else if (userFolderDoc) {
+          // Auto-register custom folder in UserFolder so it has a valid fol_v_id
+          const newFolId = crypto.randomBytes(6).toString('hex');
+          userFolderDoc.folders.push({
+            fol_v_id: newFolId,
+            name: targetFolder.trim(),
+            isDefault: false
+          });
+          await userFolderDoc.save().catch(() => {});
+          bookFolderId = newFolId;
+        }
+      }
+
+      // Case C: Explicitly default or no custom folder matched -> fallback to default folder's fol_v_id
+      if (!bookFolderId || isExplicitDefaultId) {
         if (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== "fol_default" && defaultItem.fol_v_id !== "default") {
           bookFolderId = defaultItem.fol_v_id;
         } else {
@@ -1457,17 +1644,13 @@ exports.saveBook = async (req, res) => {
               userFolderDoc.folders.unshift({ fol_v_id: bookFolderId, name: 'default', isDefault: true });
             }
             await userFolderDoc.save().catch(() => {});
-          } else if (objectId || customUserId) {
+          } else if (UserFolder && (objectId || customUserId)) {
             await UserFolder.create({
               ...(objectId ? { userObjectID: objectId } : {}),
               ...(customUserId ? { userID: customUserId } : {}),
               folders: [{ fol_v_id: bookFolderId, name: 'default', isDefault: true }]
             }).catch(() => {});
           }
-        }
-      } catch (_) {
-        if (!bookFolderId || bookFolderId === "fol_default" || bookFolderId === "default") {
-          bookFolderId = crypto.randomBytes(6).toString('hex');
         }
       }
     }

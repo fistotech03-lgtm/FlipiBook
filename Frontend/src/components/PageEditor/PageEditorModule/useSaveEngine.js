@@ -1047,6 +1047,8 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          folder_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
+          fol_v_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
           bookType: resolvedType,
           overwrite: true,
           keepBase64: false,
@@ -1156,6 +1158,8 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          folder_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
+          fol_v_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
           bookType: resolvedType,
           overwrite: true,
           keepBase64: false,

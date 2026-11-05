@@ -50,6 +50,7 @@ const userFolderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
     strict: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }

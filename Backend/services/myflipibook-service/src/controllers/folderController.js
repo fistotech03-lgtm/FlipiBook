@@ -147,17 +147,30 @@ exports.getFolders = async (req, res) => {
       }))
     ];
 
-    if (userFolderDoc) {
-      if (objectId) userFolderDoc.userObjectID = objectId;
-      if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
-      userFolderDoc.folders = formattedSubdocs;
-      await userFolderDoc.save().catch(() => {});
-    } else {
-      await UserFolder.create({
-        ...(objectId ? { userObjectID: objectId } : {}),
-        ...(customUserId ? { userID: customUserId } : {}),
-        folders: formattedSubdocs
-      }).catch(() => {});
+    const needsSync = !userFolderDoc ||
+      !Array.isArray(userFolderDoc.folders) ||
+      userFolderDoc.folders.length !== formattedSubdocs.length ||
+      userFolderDoc.folders.some((f, idx) => !f.fol_v_id || f.name !== formattedSubdocs[idx]?.name || Boolean(f.isDefault) !== Boolean(formattedSubdocs[idx]?.isDefault));
+
+    if (needsSync) {
+      if (userFolderDoc) {
+        await UserFolder.updateOne(
+          { _id: userFolderDoc._id },
+          {
+            $set: {
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId && !userFolderDoc.userID ? { userID: customUserId } : {}),
+              folders: formattedSubdocs
+            }
+          }
+        ).catch(() => {});
+      } else {
+        await UserFolder.create({
+          ...(objectId ? { userObjectID: objectId } : {}),
+          ...(customUserId ? { userID: customUserId } : {}),
+          folders: formattedSubdocs
+        }).catch(() => {});
+      }
     }
 
     res.status(200).json({ success: true, folders: orderedFolders });
@@ -212,7 +225,23 @@ exports.createFolder = async (req, res) => {
       if (objectId) userFolderDoc.userObjectID = objectId;
       if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
       userFolderDoc.folders.push({ fol_v_id: newFolId, name: safeFolderName, isDefault: false });
-      await userFolderDoc.save();
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in createFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            {
+              $push: { folders: { fol_v_id: newFolId, name: safeFolderName, isDefault: false } },
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId && !userFolderDoc.userID ? { userID: customUserId } : {})
+            }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
       const defaultFolId = crypto.randomBytes(6).toString('hex');
       await UserFolder.create({
@@ -323,7 +352,19 @@ exports.renameFolder = async (req, res) => {
     if (isDefault) {
       targetFolder.isDefault = true;
     }
-    await userFolderDoc.save();
+    try {
+      await userFolderDoc.save();
+    } catch (saveErr) {
+      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+        console.warn(`[Folder Controller] Version conflict in renameFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+        await UserFolder.updateOne(
+          { _id: userFolderDoc._id },
+          { $set: { folders: userFolderDoc.folders } }
+        );
+      } else {
+        throw saveErr;
+      }
+    }
 
     // 2. Cascade rename across user's flipbooks
     if (flipQuery) {
@@ -424,7 +465,25 @@ exports.reorderFolders = async (req, res) => {
       if (customUserId && !currentDoc.userID) currentDoc.userID = customUserId;
       if (emailId && !currentDoc.emailId) currentDoc.emailId = emailId;
       currentDoc.folders = safeFolders;
-      await currentDoc.save();
+      try {
+        await currentDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in reorderFolders for doc ${currentDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: currentDoc._id },
+            {
+              $set: {
+                folders: safeFolders,
+                ...(objectId && !currentDoc.userObjectID ? { userObjectID: objectId } : {}),
+                ...(customUserId && !currentDoc.userID ? { userID: customUserId } : {})
+              }
+            }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
       currentDoc = await UserFolder.create({
         ...(objectId ? { userId: objectId, userObjectID: objectId } : {}),
@@ -495,14 +554,27 @@ exports.deleteFolder = async (req, res) => {
 
     const resolvedName = targetFolder ? targetFolder.name : folderName;
 
-    // 1. Remove from UserFolder document
+    // 1. Remove from UserFolder document atomically
     if (userFolderDoc) {
-      userFolderDoc.folders = userFolderDoc.folders.filter((f) => {
-        if (folderId && ((f.fol_v_id === String(folderId)) || (f._id ? f._id.toString() : String(f.id)) === String(folderId))) return false;
+      const remainingFolders = userFolderDoc.folders.filter((f) => {
+        if (folderId && (f.fol_v_id === String(folderId) || (f._id && f._id.toString() === String(folderId)) || String(f.id) === String(folderId))) return false;
         if (resolvedName && f.name.toLowerCase() === resolvedName.toLowerCase()) return false;
         return true;
       });
-      await userFolderDoc.save();
+
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in deleteFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            { $set: { folders: remainingFolders } }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     }
 
     // Record folder deletion in backup DB
@@ -599,7 +671,19 @@ exports.duplicateFolder = async (req, res) => {
     const newFolVId = crypto.randomBytes(6).toString('hex');
     if (userFolderDoc) {
       userFolderDoc.folders.push({ fol_v_id: newFolVId, name: newFolderName, isDefault: false });
-      await userFolderDoc.save();
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in duplicateFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            { $push: { folders: { fol_v_id: newFolVId, name: newFolderName, isDefault: false } } }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
       const defaultFolId = crypto.randomBytes(6).toString('hex');
       userFolderDoc = await UserFolder.create({

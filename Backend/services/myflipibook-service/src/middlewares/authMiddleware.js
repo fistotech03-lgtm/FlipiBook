@@ -38,16 +38,6 @@ const authenticateUser = async (req, res, next) => {
     return next();
   }
 
-  // Graceful fallback if client browser sends emailId param
-  const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
-  if (fallbackEmail) {
-    req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    try {
-      await resolveAuthUser(req);
-    } catch (_) {}
-    return next();
-  }
-
   return res.status(401).json({
     success: false,
     message: 'Authentication required. Please sign in to access MyFlipibook.'
@@ -58,26 +48,12 @@ const authenticateUser = async (req, res, next) => {
  * Optional authentication: attaches req.user if valid token present, otherwise proceeds
  */
 const optionalAuth = async (req, res, next) => {
-  const token =
-    req.cookies?.token ||
-    (req.headers.authorization?.startsWith('Bearer ')
-      ? req.headers.authorization.split(' ')[1]
-      : null);
-
-  const decoded = verifyToken(token);
+  const decoded = parseAuthToken(req);
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
     try {
       await resolveAuthUser(req);
     } catch (_) {}
-  } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
-    if (fallbackEmail) {
-      req.user = { emailId: fallbackEmail, email: fallbackEmail };
-      try {
-        await resolveAuthUser(req);
-      } catch (_) {}
-    }
   }
   next();
 };

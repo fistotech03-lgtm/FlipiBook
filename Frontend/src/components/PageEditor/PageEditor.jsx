@@ -258,6 +258,43 @@ const PageEditor = () => {
     }
   }, [selectedLayerId]);
 
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager
+  useEffect(() => {
+    const handlePageExtracted = (e) => {
+      const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
+      const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+      if (!eventVId || (activeVId && eventVId !== activeVId)) return;
+      const rawHtml = html || content || '';
+      if (!rawHtml) return;
+
+      setPages((prevPages) => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        const targetIdx = prevPages.findIndex(
+          (p, i) =>
+            p.pageNumber === pageNumber ||
+            p.name === `Page ${pageNumber}` ||
+            (p.id !== undefined && p.id === `page_${pageNumber}`) ||
+            i === pageNumber - 1,
+        );
+        if (targetIdx === -1) return prevPages;
+        const current = prevPages[targetIdx];
+        if (current.html === rawHtml && !current.isPlaceholder) return prevPages;
+
+        const next = [...prevPages];
+        next[targetIdx] = {
+          ...current,
+          html: rawHtml,
+          content: rawHtml,
+          isPlaceholder: false,
+        };
+        return next;
+      });
+    };
+
+    window.addEventListener("flipbook-page-extracted", handlePageExtracted);
+    return () => window.removeEventListener("flipbook-page-extracted", handlePageExtracted);
+  }, [v_id, currentBook?.v_id, location.state?.v_id]);
+
   // ── Dimensions & Default Page Data ─────────────────────────────────────────
   const getFlipbookDimensions = useCallback(() => {
     for (const p of pages) {
@@ -658,6 +695,35 @@ const PageEditor = () => {
     };
   }, [setClearHandler, handleClearEditorWithDB]);
 
+  const handleOpenInlinePreview = useCallback(() => {
+    // Synchronize the active canvas SVG DOM into page state so Preview receives current element states and active slides
+    setPages(currentPages => {
+      const updated = [...currentPages];
+      const pageSvg = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`);
+      if (pageSvg && updated[activePageIndex]) {
+        const clone = pageSvg.cloneNode(true);
+        clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+        const serializer = new XMLSerializer();
+        const liveHtml = serializer.serializeToString(clone);
+        updated[activePageIndex] = { ...updated[activePageIndex], html: liveHtml };
+      }
+      return updated;
+    });
+    setShowPreview(true);
+  }, [activePageIndex]);
+
+  const handleCloseInlinePreview = useCallback(() => {
+    setShowPreview(false);
+    // Auto-heal slideshow and canvas components upon returning to Editor
+    window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 120);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 350);
+  }, []);
+
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
@@ -771,22 +837,38 @@ const PageEditor = () => {
   ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
+  const latestPagesRef = useRef(pages);
+  const latestActiveIndexRef = useRef(activePageIndex);
+  useEffect(() => {
+    latestPagesRef.current = popupEditContext ? popupEditContext.backup.pages : pages;
+    latestActiveIndexRef.current = popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex;
+  }, [pages, popupEditContext, activePageIndex]);
+
+  const flushPageEditorToDB = useCallback(() => {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    const pagesToSave = latestPagesRef.current;
+    if (!activeVId || !pagesToSave || pagesToSave.length === 0) return;
+    try {
+      savePageEditorState({
+        v_id: activeVId,
+        pages: pagesToSave,
+        activePageIndex: latestActiveIndexRef.current || 0,
+        pageName:
+          currentBook?.flipbookName ||
+          location.state?.flipbookName ||
+          "Untitled Flipbook",
+        timestamp: Date.now(),
+      });
+    } catch (err) {
+      console.warn("[PageEditor] DB flush error:", err);
+    }
+  }, [v_id, currentBook, location.state]);
+
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
       const timer = setTimeout(() => {
-        savePageEditorState({
-          v_id: activeVId,
-          pages: popupEditContext ? popupEditContext.backup.pages : pages,
-          activePageIndex: popupEditContext
-            ? popupEditContext.backup.activePageIndex
-            : activePageIndex,
-          pageName:
-            currentBook?.flipbookName ||
-            location.state?.flipbookName ||
-            "Untitled Flipbook",
-          timestamp: Date.now(),
-        });
+        flushPageEditorToDB();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -798,7 +880,58 @@ const PageEditor = () => {
     location.state,
     isLoading,
     popupEditContext,
+    flushPageEditorToDB,
   ]);
+
+  // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      flushPageEditorToDB();
+    };
+
+    const handlePageHide = () => {
+      flushPageEditorToDB();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPageEditorToDB();
+      }
+    };
+
+    const handlePopState = () => {
+      flushPageEditorToDB();
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+    };
+
+    const handleOnline = () => {
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      // Synchronously flush on component unmount
+      flushPageEditorToDB();
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [flushPageEditorToDB, hasUnsavedChanges, saveFlipbook]);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {
@@ -921,12 +1054,13 @@ const PageEditor = () => {
   useEffect(() => {
     const initializeEditor = async () => {
       const activeVId = v_id || location.state?.v_id;
+      const isFolderId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
       if (!activeVId) {
         const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-        const targetFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+        const targetFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+          : (folder && isFolderId(folder) ? folder : 'default');
         navigate(`/editor/${encodeURIComponent(targetFolderVId)}/${generatedVId}`, {
           replace: true,
           state: { ...(location.state || {}), v_id: generatedVId, folder_v_id: targetFolderVId }
@@ -935,10 +1069,10 @@ const PageEditor = () => {
       }
 
       // Auto-heal: If folder in URL contains folder name (e.g. "My Flipbooks") instead of folder_v_id, normalize URL
-      if (activeVId && folder && !folder.startsWith('fol_')) {
-        const initialFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+      if (activeVId && folder && !isFolderId(folder)) {
+        const initialFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : 'fol_default';
+          : 'default';
         navigate(`/editor/${encodeURIComponent(initialFolderVId)}/${activeVId}`, {
           replace: true,
           state: { ...(location.state || {}), folder_v_id: initialFolderVId }
@@ -1075,12 +1209,12 @@ const PageEditor = () => {
                   folder ||
                   location.state?.folderName,
               );
-              const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+              const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
               const resolvedFolderVId =
                 (isFolId(res.data.meta?.folder_v_id) ? res.data.meta.folder_v_id : null) ||
                 (isFolId(res.data.meta?.folder_id) ? res.data.meta.folder_id : null) ||
                 (isFolId(location.state?.folder_v_id) ? location.state.folder_v_id : null) ||
-                (isFolId(folder) ? folder : 'fol_default');
+                (isFolId(folder) ? folder : 'default');
               const bookName =
                 res.data.meta?.flipbookName ||
                 location.state?.flipbookName ||
@@ -1138,7 +1272,7 @@ const PageEditor = () => {
               }));
 
               // Auto-normalize URL to show folder_v_id instead of folder name in address bar
-              if (!folder || !folder.startsWith('fol_') || folder !== resolvedFolderVId) {
+              if (!folder || !isFolId(folder) || folder !== resolvedFolderVId) {
                 navigate(`/editor/${encodeURIComponent(resolvedFolderVId)}/${activeVId}`, {
                   replace: true,
                   state: { ...(location.state || {}), folder_v_id: resolvedFolderVId }
@@ -1955,7 +2089,7 @@ const PageEditor = () => {
           setMultiSelectedIds={setMultiSelectedIds}
           updateElementAttribute={updateElementAttribute}
           deleteLayer={deleteLayer}
-          onPreview={() => setShowPreview(true)}
+          onPreview={handleOpenInlinePreview}
           flipbookDimensions={getFlipbookDimensions()}
           isPopupEditor={!!popupEditContext}
           onCustomizePopup={onCustomizePopup}
@@ -2051,7 +2185,7 @@ const PageEditor = () => {
                 .filter((p) => !p.isHidden)
                 .map((p) => ({ ...p, content: p.html || "" }))}
               pageName={currentBook?.flipbookName || "Preview"}
-              onClose={() => setShowPreview(false)}
+              onClose={handleCloseInlinePreview}
               isMobile={false}
               isDoublePage={isDoublePage}
               targetPage={0}

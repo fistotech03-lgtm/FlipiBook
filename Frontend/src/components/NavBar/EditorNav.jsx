@@ -15,6 +15,7 @@ import {
   Tablet,
   Smartphone,
   Settings,
+  CloudOff,
 } from "lucide-react";
 import { Icon } from "@iconify/react";
 import ProfileModal from "../Settings/ProfileModal";
@@ -159,10 +160,23 @@ const EditorNavbar = ({
 
   // When save completes or no unsaved changes exist, reset seconds counter to 0
   useEffect(() => {
-    if (saveSuccessInfo || !hasUnsavedChanges) {
+    if (saveSuccessInfo || (!hasUnsavedChanges && !isSaving)) {
       setSecondsSinceSave(0);
     }
-  }, [saveSuccessInfo, hasUnsavedChanges]);
+  }, [saveSuccessInfo, hasUnsavedChanges, isSaving]);
+
+  // Online / Offline Detection
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const formatTime = (totalSeconds) => {
     if (totalSeconds < 5) return "Just now";
@@ -181,14 +195,13 @@ const EditorNavbar = ({
     queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
-      const ok = await confirm({
-        title: "Leave Site?",
-        message: "Changes you made may not be saved.",
-        confirmText: "Leave",
-        cancelText: "Stay",
-        type: "danger"
-      });
-      if (!ok) return;
+      try {
+        if (onSave) {
+          await onSave();
+        }
+      } catch (err) {
+        console.warn("[EditorNav] Auto-save before navigation error:", err);
+      }
     }
     navigate(to);
   };
@@ -356,93 +369,37 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Save / Sync Status Area: When auto-save is enabled, ONLY show last sync time instead of Save button */}
-          {isAutoSaveEnabled ? (
-            <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 border border-gray-200 rounded-[2vw] text-gray-700 select-none ml-[0.2vw]">
-              {isSaving ? (
-                <>
-                  <Loader2 size="1.1vw" className="animate-spin text-[#ea543a]" />
-                  <span className="font-medium text-[0.8vw] text-gray-700">Syncing...</span>
-                </>
+          {/* Customized Editor: Do not show any save button */}
+          {isCustomizedEditor ? null : (
+            /* Page Editor / 3D Editor: Don't show save button, instead show real-time sync / last updated time status */
+            <div className="relative flex items-center ml-[0.2vw]">
+              {!isOnline ? (
+                <div 
+                  className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-amber-50 border border-amber-200 rounded-[2vw] text-amber-800 select-none"
+                  title="Working offline. Changes are saved locally in your browser and will automatically sync to cloud when you reconnect."
+                >
+                  <CloudOff className="w-[1.1vw] h-[1.1vw] text-amber-600" />
+                  <span className="font-medium text-[0.8vw]">Saved locally (Offline)</span>
+                </div>
+              ) : isSaving ? (
+                <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-blue-50/80 border border-blue-200 rounded-[2vw] text-blue-700 select-none">
+                  <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-blue-600" />
+                  <span className="font-medium text-[0.8vw] text-blue-800">Saving...</span>
+                </div>
               ) : (
-                <>
+                <button
+                  onClick={onSave}
+                  title="All changes saved. Click to force sync now."
+                  className="group/sync flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 hover:bg-gray-100/90 border border-gray-200 hover:border-gray-300 rounded-[2vw] text-gray-700 select-none transition-colors cursor-pointer"
+                >
                   <Icon
                     icon="reicon:tick-circle-filled"
                     className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
                   />
-                  <span className="font-medium text-[0.8vw] text-gray-600">
+                  <span className="font-medium text-[0.8vw] text-gray-600 group-hover/sync:text-gray-900 transition-colors">
                     Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
                   </span>
-                </>
-              )}
-            </div>
-          ) : (
-            /* When AutoSave is DISABLED: Show the manual Save button */
-            <div className="relative group/tooltip flex items-center ml-[0.2vw]">
-              <button
-                onClick={onSave}
-                disabled={!hasUnsavedChanges || isSaving}
-                className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 flex-shrink-0 ${
-                  hasUnsavedChanges && !isSaving
-                    ? "cursor-pointer hover:bg-gray-50 border-[#ea543a]/50 text-gray-900 shadow-sm"
-                    : "cursor-default text-gray-500"
-                }`}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2
-                      size="1.2vw"
-                      className="animate-spin text-yellow-500"
-                    />
-                    <span className="font-medium text-[0.85vw]">Saving</span>
-                  </>
-                ) : hasUnsavedChanges ? (
-                  <>
-                    <Save size="1.2vw" className="text-yellow-500" />
-                    <span className="font-medium text-[0.85vw]">Save</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      icon="reicon:tick-circle-filled"
-                      className="w-[1.2vw] h-[1.2vw] text-[#22c55e]"
-                    />
-                    <span className="font-medium text-[0.85vw]">Saved</span>
-                  </>
-                )}
-              </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
-                <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
-                <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
-                  {hasUnsavedChanges
-                    ? "You have unsaved changes - Click to Save"
-                    : "All changes saved"}
-                </div>
-              </div>
-
-              {/* Success Toast Popup */}
-              {saveSuccessInfo && (
-                <div className="absolute top-full right-0 mt-[0.5vw] w-[12vw] z-[99999] animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="bg-[#5CBC49] rounded-[0.5vw] shadow-2xl p-[0.6vw] text-white relative">
-                    <div className="absolute -top-[0.2vw] right-[1vw] w-[0.6vw] h-[0.6vw] bg-[#5CBC49] rotate-45 transform"></div>
-                    <div className="flex items-center gap-[0.4vw]">
-                      <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <Icon
-                          icon="lucide:check"
-                          className="w-[0.8vw] h-[0.8vw] text-white"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.75vw] font-semibold truncate">
-                          {saveSuccessInfo.name || "Flipbook"}
-                        </p>
-                        <p className="text-[0.65vw] text-white/90">
-                          Saved successfully
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </button>
               )}
             </div>
           )}

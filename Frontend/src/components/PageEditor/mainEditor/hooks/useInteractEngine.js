@@ -20,6 +20,7 @@ import {
   clearSmartGuides
 } from '../utils/smartGuides';
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
+import { isPageRootElement as fallbackIsPageRootElement } from '../utils/frameHierarchyUtils';
 
 /**
  * Custom hook encapsulating the Interact.js pointer drag and resize engine
@@ -57,6 +58,8 @@ export const useInteractEngine = ({
   useEffect(() => {
     localTrimViewRef.current = localTrimView;
   }, [localTrimView]);
+
+  const isPageRoot = typeof isPageRootElement === 'function' ? isPageRootElement : fallbackIsPageRootElement;
 
   const safeRectChecker = (element) => {
     if (element && typeof element.getBoundingClientRect === 'function') {
@@ -98,7 +101,7 @@ export const useInteractEngine = ({
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
-        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"]',
+        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"], .swiper-button-prev, .swiper-button-prev *, .swiper-button-next, .swiper-button-next *, .swiper-pagination, .swiper-pagination *, .swiper-pagination-bullet, [data-slideshow-nav], [data-slideshow-nav] *',
         cursorChecker: () => null, // Second layer of prevention just in case
         inertia: false, // Disable inertia for perfect cursor sync
         autoScroll: true,
@@ -419,19 +422,19 @@ export const useInteractEngine = ({
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
             if (isMultiKey) {
-              if (isPageRootElement(elementToDrag, svgElement)) {
+              if (isPageRoot(elementToDrag, svgElement)) {
                 return;
               }
               const nextSet = new Set(multiSelectedIdsRef.current);
               const primaryId = selectedLayerIdRef.current;
               const primaryEl = primaryId ? svgElement.querySelector(`[id="${primaryId}"]`) : null;
-              if (primaryId && !isPageRootElement(primaryEl, svgElement)) {
+              if (primaryId && !isPageRoot(primaryEl, svgElement)) {
                 nextSet.add(primaryId);
               }
               // Purge any root elements
               for (const id of Array.from(nextSet)) {
                 const el = svgElement.querySelector(`[id="${id}"]`);
-                if (isPageRootElement(el, svgElement)) {
+                if (isPageRoot(el, svgElement)) {
                   nextSet.delete(id);
                 }
               }
@@ -451,7 +454,7 @@ export const useInteractEngine = ({
               });
             } else if (!isSelected) {
               // Force update refs immediately so drag logic sees the selection
-              const isRoot = isPageRootElement(elementToDrag, svgElement);
+              const isRoot = isPageRoot(elementToDrag, svgElement);
               selectedLayerIdRef.current = elementToDrag.id;
               const nextMulti = isRoot ? new Set() : new Set([elementToDrag.id]);
               multiSelectedIdsRef.current = nextMulti;

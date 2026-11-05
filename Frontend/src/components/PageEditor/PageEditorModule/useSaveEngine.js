@@ -22,6 +22,8 @@ const VIRTUAL_FOLDERS = new Set([
   "trash",
 ]);
 
+const isFolderIdVal = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+
 const resolvePhysicalFolder = (folderInput) => {
   if (Array.isArray(folderInput)) {
     const real = folderInput.find(
@@ -31,7 +33,7 @@ const resolvePhysicalFolder = (folderInput) => {
   }
   if (folderInput && typeof folderInput === "string") {
     const clean = folderInput.trim();
-    if (VIRTUAL_FOLDERS.has(clean.toLowerCase()) || clean.startsWith("fol_")) return "My_Flipbooks";
+    if (VIRTUAL_FOLDERS.has(clean.toLowerCase()) || isFolderIdVal(clean)) return "My_Flipbooks";
     return clean || "My_Flipbooks";
   }
   return "My_Flipbooks";
@@ -116,11 +118,11 @@ export const useSaveEngine = ({
       const userEmail = user?.emailId || user?.email;
       const sanitizedEmail = userEmail?.replace(/[@.]/g, "_");
       const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      let currentVId = v_id || currentBook?.v_id || location.state?.v_id;
 
       // Extract and upload assets (3D models, slideshows, blob URLs, inline raster images) before saving
-      const fNameFor3D = resolvePhysicalFolder(
-        currentBook?.folderName || location.state?.folderName,
-      );
+      const rawFolder = folder || currentBook?.folder || currentBook?.folderName || currentBook?.actualFolder || location.state?.folder || location.state?.folderName;
+      const fNameFor3D = resolvePhysicalFolder(rawFolder);
       const bNameFor3D =
         currentBook?.flipbookName ||
         location.state?.flipbookName ||
@@ -135,9 +137,11 @@ export const useSaveEngine = ({
 
       const normalizePageAssetUrls = (htmlStr) => {
         if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
+        // Clean up any dangling base64 attached to asset filenames
+        let cleaned = htmlStr.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
         const assetRegex =
           /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
-        let res = htmlStr.replace(assetRegex, "../assets/$1/$2");
+        let res = cleaned.replace(assetRegex, "../assets/$1/$2");
         const escapedAssetRegex =
           /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
         res = res.replace(escapedAssetRegex, "../assets/$1/$2");
@@ -781,50 +785,58 @@ export const useSaveEngine = ({
 
             if (foundIdx === -1) break;
 
-            // Find nearest delimiter character
-            const endChars = [
-              '"',
-              "'",
-              "&quot;",
-              "&apos;",
-              ")",
-              ">",
-              " ",
-              "\n",
-              "\r",
-            ];
-            let endIdx = -1;
-            for (const ch of endChars) {
-              const idx = newHtml.indexOf(ch, foundIdx);
-              if (idx !== -1 && (endIdx === -1 || idx < endIdx)) {
-                endIdx = idx;
+            // Determine what delimiter opened this data URI (e.g. href="...", href='...', url(...))
+            let openChar = null;
+            for (let i = foundIdx - 1; i >= Math.max(0, foundIdx - 30); i--) {
+              const c = newHtml[i];
+              if (c === '"' || c === "'" || c === '(' || c === '>') {
+                openChar = c;
+                break;
               }
             }
 
-            if (endIdx !== -1) {
+            let endIdx = -1;
+            if (openChar === '"') {
+              endIdx = newHtml.indexOf('"', foundIdx);
+            } else if (openChar === "'") {
+              endIdx = newHtml.indexOf("'", foundIdx);
+            } else if (openChar === '(') {
+              endIdx = newHtml.indexOf(')', foundIdx);
+            } else {
+              const delimiters = ['"', "'", "&quot;", "&apos;", ")", ">"];
+              for (const ch of delimiters) {
+                const idx = newHtml.indexOf(ch, foundIdx);
+                if (idx !== -1 && (endIdx === -1 || idx < endIdx)) {
+                  endIdx = idx;
+                }
+              }
+            }
+
+            if (endIdx !== -1 && endIdx > foundIdx) {
               const dataUri = newHtml.substring(foundIdx, endIdx);
-              if (dataUri.includes(";base64,")) {
+              if (dataUri.includes(";base64")) {
                 uniqueDataUris.add(dataUri);
               }
               searchIndex = endIdx;
             } else {
-              break;
+              searchIndex = foundIdx + 11;
             }
           }
 
           for (const actualDataUri of uniqueDataUris) {
             try {
-              // Browsers (like Chrome) limit fetch() URLs to ~2MB.
-              // To handle 3MB+ data URIs, we manually convert base64 to Blob.
-              const parts = actualDataUri.split(",");
-              const mimeString = parts[0].split(":")[1].split(";")[0];
+              const commaIdx = actualDataUri.indexOf(",");
+              if (commaIdx === -1) continue;
+              const header = actualDataUri.substring(0, commaIdx);
+              const mimeString = header.split(";")[0].replace(/^data:/i, "").trim() || "image/png";
 
-              // Handle URL encoded data URIs (e.g. svg+xml) or pure base64
               let byteString;
-              if (parts[0].indexOf("base64") >= 0) {
-                byteString = atob(parts[1]);
+              if (header.includes(";base64")) {
+                // Strip all whitespace/linebreaks from base64 payload to prevent atob DOMException
+                const cleanBase64 = actualDataUri.substring(commaIdx + 1).replace(/\s+/g, "");
+                byteString = atob(cleanBase64);
               } else {
-                byteString = decodeURI(parts[1]);
+                byteString = decodeURIComponent(actualDataUri.substring(commaIdx + 1));
               }
 
               const ab = new ArrayBuffer(byteString.length);
@@ -874,6 +886,10 @@ export const useSaveEngine = ({
               if (currentVId || v_id) {
                 formData.append("v_id", currentVId || v_id);
               }
+              formData.append(
+                "folder_id",
+                currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || ""
+              );
               formData.append("file", blob, `asset_${Date.now()}${fileExt}`);
 
               const uploadRes = await axios.post(
@@ -952,6 +968,9 @@ export const useSaveEngine = ({
             }
           }
 
+          // Clean up any previously corrupted attribute values (e.g. "../assets/Image/xxx.jpg /9j/...")
+          newHtml = newHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
+
           if (newHtml && !newHtml.includes('id="global-fonts-style"')) {
             const fontsStyle = `<style id="global-fonts-style">
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700;900&amp;family=Roboto:wght@300;400;500;700;900&amp;family=Outfit:wght@300;400;500;600;700;900&amp;family=Montserrat:wght@300;400;500;600;700;900&amp;family=Playfair+Display:ital,wght@0,400..900;1,400..900&amp;family=Nunito+Sans:wght@300;400;500;600;700;900&amp;display=swap');
@@ -1001,7 +1020,7 @@ export const useSaveEngine = ({
         }
       });
 
-      let currentVId = v_id || currentBook?.v_id || location.state?.v_id;
+      currentVId = currentVId || v_id || currentBook?.v_id || location.state?.v_id;
       let lastRes = null;
 
       if (modifiedPagesIndices.length === 0) {
@@ -1045,6 +1064,8 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          folder_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
+          fol_v_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
           bookType: resolvedType,
           overwrite: true,
           keepBase64: false,
@@ -1154,6 +1175,8 @@ export const useSaveEngine = ({
           folderName: resolvePhysicalFolder(
             currentBook?.folderName || location.state?.folderName,
           ),
+          folder_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
+          fol_v_id: currentBook?.folder_v_id || currentBook?.folder_id || location.state?.folder_v_id || undefined,
           bookType: resolvedType,
           overwrite: true,
           keepBase64: false,
@@ -1229,7 +1252,7 @@ export const useSaveEngine = ({
           ? folder
           : (location?.pathname?.split('/editor/')[1]?.split('/')[0] || '');
 
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const folderVId =
           (isFolId(lastRes.data?.folder_v_id) ? lastRes.data.folder_v_id : null) ||
           (isFolId(lastRes.data?.folder_id) ? lastRes.data.folder_id : null) ||
@@ -1238,10 +1261,10 @@ export const useSaveEngine = ({
           (isFolId(currentBook?.folder_v_id) ? currentBook.folder_v_id : null) ||
           (isFolId(currentBook?.folder_id) ? currentBook.folder_id : null) ||
           (isFolId(location?.state?.folder_v_id) ? location.state.folder_v_id : null) ||
-          (isFolId(currentFolderParam) ? currentFolderParam : 'fol_default');
+          (isFolId(currentFolderParam) ? currentFolderParam : 'default');
 
         const activeBookVId = lastRes.data?.v_id || v_id;
-        if (!v_id || (currentFolderParam && !currentFolderParam.startsWith('fol_')) || currentFolderParam !== folderVId) {
+        if (!v_id || (currentFolderParam && !isFolId(currentFolderParam)) || currentFolderParam !== folderVId) {
           const newUrl = `/editor/${encodeURIComponent(folderVId)}/${activeBookVId}`;
           navigate(newUrl, { replace: true, state: location?.state });
         }

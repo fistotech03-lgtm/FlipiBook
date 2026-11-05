@@ -38,7 +38,7 @@ const flipbookSchema = new mongoose.Schema(
     folder_id: {
       type: String, // fol_v_id of single folder
       required: true,
-      default: () => 'fol_' + crypto.randomBytes(6).toString('hex'),
+      default: () => crypto.randomBytes(6).toString('hex'),
       trim: true,
       index: true
     },
@@ -160,8 +160,8 @@ flipbookSchema.pre('validate', async function () {
   if (!this.book_v_id && this.v_id) {
     this.book_v_id = this.v_id;
   }
-  if (!this.folder_id || this.folder_id === 'fol_default') {
-    this.folder_id = 'fol_' + crypto.randomBytes(6).toString('hex');
+  if (!this.folder_id || this.folder_id === 'fol_default' || this.folder_id === 'default') {
+    this.folder_id = crypto.randomBytes(6).toString('hex');
   }
 });
 

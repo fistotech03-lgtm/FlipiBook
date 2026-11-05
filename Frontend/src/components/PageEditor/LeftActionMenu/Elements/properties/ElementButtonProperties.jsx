@@ -450,7 +450,7 @@ export const ButtonEditor = ({
         parsedFs = 12;
         textWasHidden = true;
         textEl.setAttribute('font-size', '12');
-        if (textEl.style) textEl.style.fontSize = '12px';
+        if (textEl.style) textEl.style.fontSize = '12pt';
       }
       setFontSize(parsedFs);
 
@@ -1388,14 +1388,15 @@ export const ButtonEditor = ({
 
   // Text Handlers
   const handleTextChange = (newVal) => {
-    setButtonText(newVal);
+    const limitedVal = (newVal || '').slice(0, 20);
+    setButtonText(limitedVal);
     const el = resolveTargetElement();
     if (!el) return;
 
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
-      textEl.textContent = newVal;
-      updateButtonDimensions(newVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+      textEl.textContent = limitedVal;
+      updateButtonDimensions(limitedVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1421,8 +1422,8 @@ export const ButtonEditor = ({
 
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
-      textEl.setAttribute('font-size', val.toString());
-      textEl.style.fontSize = `${val}px`;
+      textEl.setAttribute('font-size', `${val}pt`);
+      textEl.style.fontSize = `${val}pt`;
       updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
@@ -2053,6 +2054,7 @@ export const ButtonEditor = ({
         <div className="relative w-full">
           <input
             type="text"
+            maxLength={20}
             value={buttonText}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Button"

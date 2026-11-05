@@ -78,10 +78,15 @@ const sanitizePageHtmlForPreview = (html) => {
 
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
+            const isMap = (fo && fo.getAttribute('data-type') === 'map') || iframe.closest('g[data-type="map"]') || iframe.closest('.map-root-container');
             const hideControls = (fo && fo.getAttribute('data-show-controls') === 'false') || iframe.getAttribute('data-show-controls') === 'false';
 
             const currentStyle = iframe.getAttribute('style') || '';
-            if (currentStyle) {
+            if (isMap) {
+                // Keep map iframe non-interactive so scroll/drag flips book pages without triggering "Use ctrl + scroll to zoom the map" overlay
+                const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*(?:auto|none)\s*(?:!important)?\s*;?/gi, '');
+                iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: none !important;');
+            } else if (currentStyle) {
                 const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*none\s*(?:!important)?\s*;?/gi, '');
                 iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: auto !important;');
             }
@@ -166,6 +171,17 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     overflow: hidden !important;
   }
 
+  .map-root-container,
+  .embed-root-container,
+  .table-card-wrapper,
+  .table-container {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+
   .map-stage {
     position: absolute !important;
     top: 0 !important;
@@ -184,6 +200,15 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     margin: 0 !important;
     padding: 0 !important;
     display: block !important;
+    pointer-events: none !important;
+  }
+
+  .map-open-maps-btn,
+  .map-action-btn-circle,
+  .map-card-overlay,
+  .map-sheet-btn,
+  .map-sheet-link-btn {
+    pointer-events: auto !important;
   }
 
   foreignObject video {
@@ -254,7 +279,7 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     background: #1F2937 !important;
   }
 
-  foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div {
+  foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div:not(.map-root-container):not(.embed-root-container):not(.table-card-wrapper):not(.table-container) {
     width: 100% !important;
     height: auto !important;
   }
@@ -826,6 +851,21 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     else if (corner === 'br') { hs.style.bottom = '0'; hs.style.right = '0'; }
                     else if (corner === 'tl') { hs.style.top = '0'; hs.style.left = '0'; }
                     else if (corner === 'bl') { hs.style.bottom = '0'; hs.style.left = '0'; }
+
+                    // Auto-unpeel corner when cursor departs hotspot without active dragging
+                    hs.addEventListener('mouseleave', () => {
+                        if (bookEl.current && !bookEl.current.classList.contains('fbe-is-dragging')) {
+                            if (window.jQuery && bookEl.current) {
+                                const $ = window.jQuery;
+                                const $book = $(bookEl.current);
+                                $book.find('.turn-page').each(function() {
+                                    if ($(this).data('f')) {
+                                        try { $(this).flip('hideFoldedPage', true); } catch (err) {}
+                                    }
+                                });
+                            }
+                        }
+                    });
                     return hs;
                 };
 
@@ -1123,13 +1163,28 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     $(bookEl.current).trigger(createJqEvent('touchstart', { originalClientX: cx, originalClientY: cy }));
                 }
             } else if (e.data.type === 'IFRAME_MOUSEMOVE') {
+                let cx = e.data.originalClientX || 0;
+                let cy = e.data.originalClientY || 0;
+                if (e.data.pageNumber && bookEl.current) {
+                    const iframe = bookEl.current.querySelector(`.p${e.data.pageNumber} iframe`);
+                    if (iframe) {
+                        const rect = iframe.getBoundingClientRect();
+                        cx += rect.left;
+                        cy += rect.top;
+                    }
+                }
+
                 if (bookEl.current && bookEl.current.classList.contains('fbe-is-dragging')) {
                     const offset = window._fbeDragOffset || { x: 0, y: 0 };
-                    const cx = (e.data.screenX || 0) - offset.x;
-                    const cy = (e.data.screenY || 0) - offset.y;
+                    const dragX = (e.data.screenX !== undefined ? (e.data.screenX - offset.x) : cx);
+                    const dragY = (e.data.screenY !== undefined ? (e.data.screenY - offset.y) : cy);
                     
+                    $(document).trigger(createJqEvent('mousemove', { originalClientX: dragX, originalClientY: dragY }));
+                    $(document).trigger(createJqEvent('touchmove', { originalClientX: dragX, originalClientY: dragY }));
+                } else if (bookEl.current) {
+                    // Forward iframe cursor movement to Turn.js document listener so it tracks corner departure
+                    // and triggers automatic hideFoldedPage (unpeel)
                     $(document).trigger(createJqEvent('mousemove', { originalClientX: cx, originalClientY: cy }));
-                    $(document).trigger(createJqEvent('touchmove', { originalClientX: cx, originalClientY: cy }));
                 }
             } else if (e.data.type === 'IFRAME_MOUSEUP') {
                 if (bookEl.current && bookEl.current.classList.contains('fbe-is-dragging')) {
@@ -1149,6 +1204,20 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
 
     const bookTransition = `transform ${flipTime}ms ease`;
 
+    const handleContainerMouseLeave = () => {
+        if (bookEl.current && !bookEl.current.classList.contains('fbe-is-dragging')) {
+            if (window.jQuery && bookEl.current) {
+                const $ = window.jQuery;
+                const $book = $(bookEl.current);
+                $book.find('.turn-page').each(function() {
+                    if ($(this).data('f')) {
+                        try { $(this).flip('hideFoldedPage', true); } catch (err) {}
+                    }
+                });
+            }
+        }
+    };
+
     /* ── Render ── */
     return (
         <div
@@ -1156,6 +1225,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
             className={`fbe-wrapper ${className}`}
             data-single-page={singlePage}
             data-mobile-shadow={mobileShadowSide}
+            onMouseLeave={handleContainerMouseLeave}
             style={{
                 width: singlePage ? width : width * 2, height, position: 'relative',
                 background: 'transparent',

@@ -47,7 +47,8 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   const handleGoToPageEditor = () => {
-    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+    const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && isFolId(folder) ? folder : 'default');
     const path = folderVId ? `/editor/${encodeURIComponent(folderVId)}/${v_id}` : `/editor/${v_id}`;
     navigate(path);
   };

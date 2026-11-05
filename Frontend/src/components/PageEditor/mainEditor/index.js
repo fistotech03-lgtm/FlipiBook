@@ -15,7 +15,7 @@ export * from './hooks/useCanvasZoomPan';
 export * from './hooks/useInlineTextEditor';
 export * from './hooks/useInteractEngine';
 export * from './hooks/useSelectionOverlays';
-export * from './hooks/useSlideshowManager';
+export { useSlideshowManager } from '../LeftActionMenu/Elements/hooks/useSlideshowManager';
 export * from './hooks/useVideoControls';
 
 // Utils

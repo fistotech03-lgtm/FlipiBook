@@ -224,7 +224,7 @@ const SlideTextPopup = ({
               <div className="flex items-center justify-between">
                 <span className="text-[0.72vw] font-semibold text-gray-700">Font Size</span>
                 <span className="text-[0.7vw] font-semibold text-gray-600 bg-gray-100 px-[0.4vw] py-[0.1vw] rounded-[0.25vw]">
-                  {fontSize}px
+                  {fontSize}pt
                 </span>
               </div>
               <ElementSlider

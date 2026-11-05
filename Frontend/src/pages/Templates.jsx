@@ -731,15 +731,15 @@ export default function Templates() {
       });
       setIsCreating(false);
       const finalVId = res.data?.v_id || generatedVId;
-      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'fol_default';
+      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'default';
       navigate(`/editor/${encodeURIComponent(folderVId)}/${finalVId}`, {
         state: { ...navState, v_id: finalVId, folder_v_id: folderVId }
       });
     } catch (err) {
       console.error('Failed to create flipbook from template in backend:', err);
       setIsCreating(false);
-      navigate(`/editor/fol_default/${generatedVId}`, {
-        state: { ...navState, v_id: generatedVId, folder_v_id: 'fol_default' }
+      navigate(`/editor/default/${generatedVId}`, {
+        state: { ...navState, v_id: generatedVId, folder_v_id: 'default' }
       });
     }
   };
@@ -836,15 +836,15 @@ export default function Templates() {
       });
       setIsCreating(false);
       const finalVId = res.data?.v_id || generatedVId;
-      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'fol_default';
+      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'default';
       navigate(`/editor/${encodeURIComponent(folderVId)}/${finalVId}`, {
         state: { ...navState, v_id: finalVId, folder_v_id: folderVId }
       });
     } catch (err) {
       console.error('Failed to create flipbook from template in backend:', err);
       setIsCreating(false);
-      navigate(`/editor/fol_default/${generatedVId}`, {
-        state: { ...navState, v_id: generatedVId, folder_v_id: 'fol_default' }
+      navigate(`/editor/default/${generatedVId}`, {
+        state: { ...navState, v_id: generatedVId, folder_v_id: 'default' }
       });
     }
   };
@@ -969,15 +969,15 @@ export default function Templates() {
       });
       setIsCreating(false);
       const finalVId = res.data?.v_id || generatedVId;
-      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'fol_default';
+      const folderVId = res.data?.folder_v_id || res.data?.folder_id || res.data?.book?.folder_v_id || 'default';
       navigate(`/editor/${encodeURIComponent(folderVId)}/${finalVId}`, {
         state: { ...navState, v_id: finalVId, folder_v_id: folderVId }
       });
     } catch (err) {
       console.error('Failed to create flipbook from template in backend:', err);
       setIsCreating(false);
-      navigate(`/editor/fol_default/${generatedVId}`, {
-        state: { ...navState, v_id: generatedVId, folder_v_id: 'fol_default' }
+      navigate(`/editor/default/${generatedVId}`, {
+        state: { ...navState, v_id: generatedVId, folder_v_id: 'default' }
       });
     }
   };

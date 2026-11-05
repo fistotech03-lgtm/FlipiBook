@@ -28,6 +28,16 @@ function LazyPreviewComponent({
     const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
+        if (firstPageContent && typeof firstPageContent === 'string' && firstPageContent.includes('<svg')) {
+            setHtml({ content: firstPageContent, fontImports: '' });
+            setLoaded(true);
+        } else {
+            setHtml(null);
+            setLoaded(false);
+        }
+    }, [v_id, firstPageContent]);
+
+    useEffect(() => {
         if (!v_id || loaded || html) return;
 
         let isMounted = true;
@@ -173,7 +183,7 @@ function LazyPreviewComponent({
                     <iframe
                         title={`Preview of ${title}`}
                         className="w-full h-full border-none pointer-events-none select-none"
-                        sandbox="allow-same-origin"
+                        sandbox="allow-same-origin allow-scripts"
                         srcDoc={`<!DOCTYPE html><html><head>${html.fontImports || ''}<base href="${effectiveBaseHref}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f4f6;}svg{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12));}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${processedContent}</body></html>`}
                     />
                 );

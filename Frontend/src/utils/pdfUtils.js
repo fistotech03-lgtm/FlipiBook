@@ -7,6 +7,32 @@ const getMuPdf = async () => {
 };
 import JSZip from 'jszip';
 import {
+  uint8ArrayToBase64,
+  svgToDataUrl,
+  hasCmykJpeg,
+  convertCmykJpegsInSvg,
+  formatMuPdfSvgForFlipbook,
+  generatePdfPageSvg,
+  generateSkeletonPageSvg,
+  hashFnv1a,
+  compressBytes,
+  decompressBytes
+} from './pdfShared.js';
+
+export {
+  uint8ArrayToBase64,
+  svgToDataUrl,
+  hasCmykJpeg,
+  convertCmykJpegsInSvg,
+  formatMuPdfSvgForFlipbook,
+  generatePdfPageSvg,
+  generateSkeletonPageSvg,
+  hashFnv1a,
+  compressBytes,
+  decompressBytes
+};
+
+import {
   extractOfficeDocumentToPdf as extractOfficeDocClient,
   checkIsLegacyOfficeDocument,
   getLegacyConverterUrl
@@ -274,302 +300,215 @@ export const getPdfDetails = async (file, backendUrl = null) => {
 };
 
 /**
- * Converts a Uint8Array to base64 string efficiently in chunks.
- * @param {Uint8Array} bytes
- * @returns {string}
+ * Priority Task Queue for Work-Stealing Parallel Worker Pool (DSA).
+ * Tasks are prioritized by priority rank ASC (0 = Cover / Page 1, 1 = remaining pages),
+ * then by pageIndex ASC.
  */
-const uint8ArrayToBase64 = (bytes) => {
-  let binary = '';
-  const len = bytes.byteLength;
-  const chunkSize = 16384;
-  for (let i = 0; i < len; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, len)));
+class PriorityTaskQueue {
+  constructor() {
+    this.tasks = [];
   }
-  return btoa(binary);
+  push(task) {
+    this.tasks.push(task);
+    this.tasks.sort((a, b) => a.priority - b.priority || a.pageIndex - b.pageIndex);
+  }
+  pop() {
+    return this.tasks.shift() || null;
+  }
+  get length() {
+    return this.tasks.length;
+  }
+}
+
+/**
+ * Executes a single page render on a given worker and returns a Promise with timeout.
+ */
+const renderPageOnWorker = (worker, pageIndex, pageNum, timeoutMs = 25000) => {
+  return new Promise((resolve, reject) => {
+    const id = `render_${pageIndex}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+    };
+
+    const onMessage = (e) => {
+      const data = e.data || {};
+      if (data.id === id || data.type === 'WORKER_CRASH') {
+        cleanup();
+        if (data.type === 'PAGE_OK') {
+          resolve(data);
+        } else {
+          reject(new Error(data.error || 'Worker render error'));
+        }
+      }
+    };
+
+    const onError = (err) => {
+      cleanup();
+      reject(err);
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Worker render page ${pageNum} timeout (exceeded ${timeoutMs}ms)`));
+    }, timeoutMs);
+
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onError);
+    worker.postMessage({
+      type: 'RENDER_PAGE',
+      id,
+      payload: { pageIndex, pageNum }
+    });
+  });
 };
 
 /**
- * Fast helper to convert an SVG string to a data URL without FileReader overhead.
- * Uses native TextEncoder and chunked base64 conversion for 10x faster execution and zero URI malformation.
- * @param {string} svgString 
- * @returns {string}
+ * Initializes a worker with the PDF ArrayBuffer with a generous 25-second timeout for WASM compilation.
  */
-export const svgToDataUrl = (svgString) => {
-  if (!svgString) return '';
+const initWorkerInstance = (worker, pdfBuffer, timeoutMs = 25000) => {
+  return new Promise((resolve, reject) => {
+    const id = `init_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+    };
+
+    const onMessage = (e) => {
+      const data = e.data || {};
+      if (data.id === id || data.type === 'WORKER_CRASH') {
+        cleanup();
+        if (data.type === 'INIT_OK') {
+          resolve(data.totalPages);
+        } else {
+          reject(new Error(data.error || 'Worker init error'));
+        }
+      }
+    };
+
+    const onError = (err) => {
+      cleanup();
+      reject(err);
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Worker init timeout (exceeded ${timeoutMs}ms)`));
+    }, timeoutMs);
+
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onError);
+    worker.postMessage({
+      type: 'INIT',
+      id,
+      payload: { pdfBuffer }
+    });
+  });
+};
+
+/**
+ * Converts a PDF file into flipbook vector SVG pages using parallel Web Workers
+ * and a Work-Stealing Priority Queue (DSA).
+ */
+const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, totalDocPages = null) => {
+  // Use up to 4 dedicated workers depending on hardware concurrency
+  const hardwareConcurrency = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4;
+  const workerCount = Math.min(4, Math.max(2, Math.floor(hardwareConcurrency / 2)));
+
+  const workers = [];
   try {
-    const bytes = new TextEncoder().encode(svgString);
-    return `data:image/svg+xml;base64,${uint8ArrayToBase64(bytes)}`;
-  } catch (e) {
-    try {
-      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
-    } catch (fallbackErr) {
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+    for (let i = 0; i < workerCount; i++) {
+      const w = new Worker(new URL('./pdfWorker.js', import.meta.url), { type: 'module' });
+      workers.push({ id: i, worker: w, busy: false });
     }
-  }
-};
 
-/**
- * Detects whether an SVG string contains embedded JPEG images with a 4-channel CMYK / YCCK color space.
- * Web browsers (Chrome, Safari, Firefox) do not support CMYK JPEGs inside SVG <image> tags,
- * causing them to render with inverted colors and black overlays.
- *
- * @param {string} svgString
- * @returns {boolean} True if any embedded JPEG has 4 color components.
- */
-export const hasCmykJpeg = (svgString) => {
-  if (!svgString || typeof svgString !== 'string' || !svgString.includes('data:image/jp')) {
-    return false;
-  }
-  const imgRegex = /href=["']data:image\/jpe?g;base64,([^"']+)["']/gi;
-  let match;
-  while ((match = imgRegex.exec(svgString)) !== null) {
-    try {
-      // Sample first 1024 base64 characters of the JPEG stream (header containing SOF marker)
-      const b64 = match[1].replace(/\s+/g, '').slice(0, 1024);
-      let bytes;
-      if (typeof atob === 'function') {
-        const binStr = atob(b64);
-        bytes = new Uint8Array(binStr.length);
-        for (let i = 0; i < binStr.length; i++) {
-          bytes[i] = binStr.charCodeAt(i);
-        }
-      } else if (typeof Buffer !== 'undefined') {
-        bytes = Buffer.from(b64, 'base64');
-      } else {
-        return false;
-      }
+    // Initialize all workers in parallel with a generous 25s timeout
+    await Promise.all(
+      workers.map(w => initWorkerInstance(w.worker, arrayBuffer.slice(0), 25000))
+    );
 
-      // Parse JPEG markers looking for SOF (Start of Frame: 0xFFC0 to 0xFFCF excluding DHT/DAC)
-      for (let i = 0; i < bytes.length - 9; i++) {
-        if (
-          bytes[i] === 0xFF &&
-          bytes[i + 1] >= 0xC0 &&
-          bytes[i + 1] <= 0xCF &&
-          bytes[i + 1] !== 0xC4 &&
-          bytes[i + 1] !== 0xC8 &&
-          bytes[i + 1] !== 0xCC
-        ) {
-          const components = bytes[i + 9];
-          // 4 components = CMYK or YCCK (incompatible with browser image rendering)
-          if (components === 4) {
-            return true;
-          }
-          break;
-        }
-      }
-    } catch (e) {
-      console.warn('[PDF] CMYK detection warning:', e);
+    const queue = new PriorityTaskQueue();
+    for (let i = 0; i < numPages; i++) {
+      // Page 0 (Page 1) is given Priority 0 (instant cover fast-track)
+      queue.push({
+        pageIndex: i,
+        pageNum: i + 1,
+        priority: i === 0 ? 0 : 1
+      });
     }
-  }
-  return false;
-};
 
-/**
- * Converts 4-component CMYK / YCCK embedded JPEGs inside an SVG into standard sRGB JPEGs.
- * Web browsers cannot display 4-channel CMYK JPEGs inside SVG <image> elements (rendering them with black overlays or inverted colors).
- * By decoding the CMYK JPEG via MuPDF WASM, inverting Adobe CMYK ink levels (0=100% ink -> 255=white),
- * and converting to DeviceRGB, we preserve 100% true mathematical vector text and graphics in the SVG
- * while guaranteeing color-accurate, non-inverted background images.
- *
- * @param {string} svgString - The raw SVG string from MuPDF.
- * @param {object} mupdf - The MuPDF WASM instance.
- * @returns {string} The SVG string with embedded CMYK JPEGs converted to sRGB JPEGs.
- */
-export const convertCmykJpegsInSvg = (svgString, mupdf) => {
-  if (!svgString || typeof svgString !== 'string' || !svgString.includes('data:image/jp')) {
-    return svgString;
-  }
-  const imgRegex = /((?:xlink:)?href=["'])(data:image\/jpe?g;base64,([^"']+))(["'])/gi;
-  return svgString.replace(imgRegex, (match, prefix, dataUrl, b64Data, suffix) => {
-    let pix = null;
-    let convertedPix = null;
-    let img = null;
-    let mupdfBuf = null;
-    try {
-      const cleanB64 = b64Data.replace(/\s+/g, '');
-      let headerBytes;
-      if (typeof atob === 'function') {
-        const binStr = atob(cleanB64.slice(0, 4096));
-        headerBytes = new Uint8Array(binStr.length);
-        for (let i = 0; i < binStr.length; i++) {
-          headerBytes[i] = binStr.charCodeAt(i);
-        }
-      } else if (typeof Buffer !== 'undefined') {
-        headerBytes = Buffer.from(cleanB64.slice(0, 4096), 'base64');
-      } else {
-        return match;
-      }
+    const results = new Array(numPages);
+    let completedCount = 0;
+    const progressTotal = totalDocPages || numPages;
 
-      // Check SOF marker for 4 color components (CMYK / YCCK)
-      let is4Component = false;
-      for (let i = 0; i < Math.min(headerBytes.length - 9, 2048); i++) {
-        if (
-          headerBytes[i] === 0xFF &&
-          headerBytes[i + 1] >= 0xC0 &&
-          headerBytes[i + 1] <= 0xCF &&
-          headerBytes[i + 1] !== 0xC4 &&
-          headerBytes[i + 1] !== 0xC8 &&
-          headerBytes[i + 1] !== 0xCC
-        ) {
-          if (headerBytes[i + 9] === 4) {
-            is4Component = true;
-          }
-          break;
+    // Work-stealing loop: idle workers continuously pop tasks from the priority queue
+    const runWorker = async (wObj) => {
+      while (queue.length > 0) {
+        const task = queue.pop();
+        if (!task) break;
+
+        wObj.busy = true;
+        const res = await renderPageOnWorker(wObj.worker, task.pageIndex, task.pageNum);
+        wObj.busy = false;
+
+        completedCount++;
+        const percent = Math.round((completedCount / progressTotal) * 100);
+
+        const blob = new Blob([res.svgString], { type: 'image/svg+xml' });
+
+        const pageItem = {
+          blob,
+          dataUrl: res.dataUrl,
+          svgString: res.svgString,
+          content: res.svgString,
+          width: res.width,
+          height: res.height,
+          isVector: res.isVector
+        };
+        results[task.pageIndex] = pageItem;
+
+        if (typeof onProgress === 'function') {
+          try {
+            onProgress(
+              completedCount,
+              progressTotal,
+              percent,
+              'converting',
+              `Extracting page ${completedCount} of ${progressTotal} (${percent}%)...`,
+              pageItem
+            );
+          } catch (_) {}
         }
       }
+    };
 
-      if (!is4Component) {
-        return match;
-      }
+    // Run all worker loops concurrently
+    await Promise.all(workers.map(w => runWorker(w)));
 
-      // Full base64 decode for the CMYK JPEG
-      let fullBytes;
-      if (typeof atob === 'function') {
-        const binStr = atob(cleanB64);
-        fullBytes = new Uint8Array(binStr.length);
-        for (let i = 0; i < binStr.length; i++) {
-          fullBytes[i] = binStr.charCodeAt(i);
-        }
-      } else {
-        fullBytes = new Uint8Array(Buffer.from(cleanB64, 'base64'));
-      }
-
-      mupdfBuf = new mupdf.Buffer(fullBytes);
-      img = new mupdf.Image(mupdfBuf);
-      pix = img.toPixmap();
-
-      convertedPix = pix;
-      if (pix.getNumberOfComponents() === 4) {
-        // True Adobe CMYK ink density inversion:
-        // In Adobe DCTDecode/CMYK JPEGs, ink levels are inverted (0 = 100% ink, 255 = 0% ink).
-        // MuPDF's pix.invert() performs a non-linear complementary/gamma shift that caused colors to appear faded.
-        // Direct linear byte inversion (255 - byte) produces 100% authentic, vibrant colors identical to the original PDF.
-        const px = pix.getPixels();
-        for (let i = 0; i < px.length; i++) {
-          px[i] = 255 - px[i];
-        }
-        convertedPix = pix.convertToColorSpace(mupdf.ColorSpace.DeviceRGB);
-      }
-
-      let rgbBytes = null;
-      let mime = 'image/jpeg';
+    return results;
+  } finally {
+    // Terminate workers and release WASM memory
+    workers.forEach(w => {
       try {
-        if (typeof convertedPix.asJPEG === 'function') {
-          rgbBytes = convertedPix.asJPEG(92, false);
-          mime = 'image/jpeg';
-        }
-      } catch (e) {}
-
-      if (!rgbBytes) {
-        rgbBytes = convertedPix.asPNG();
-        mime = 'image/png';
-      }
-
-      const newB64 = uint8ArrayToBase64(rgbBytes);
-      return `${prefix}data:${mime};base64,${newB64}${suffix}`;
-    } catch (err) {
-      console.warn('[PDF CMYK] Failed to convert CMYK JPEG in SVG, preserving original:', err);
-      return match;
-    } finally {
-      try { if (pix) pix.destroy(); } catch (e) {}
-      if (convertedPix && convertedPix !== pix) {
-        try { convertedPix.destroy(); } catch (e) {}
-      }
-      try { if (img) img.destroy(); } catch (e) {}
-      try { if (mupdfBuf) mupdfBuf.destroy(); } catch (e) {}
-    }
-  });
-};
-
-/**
- * Formats raw vector SVG generated by MuPDF into a standard FlipiBook page SVG.
- * Extracts font glyph outlines into <defs>, scopes all IDs to p${pageNumber}_ to prevent cross-page collisions,
- * normalizes coordinates and mm dimensions, and wraps inside:
- * <g data-type="frame">
- *   <rect data-name="Overlay" data-type="background" />
- *   <g data-name="PDF Background" data-type="pdf-vector-layer">
- *   <rect data-name="Document Shield" data-type="shield" />
- * </g>
- * Every letter is a mathematical vector bezier curve (<path d="...">) that never pixelates under any zoom.
- */
-export const formatMuPdfSvgForFlipbook = (rawSvg, pageNumber = 1, widthMm = 210, heightMm = 297, widthPt = 595.28, heightPt = 841.89) => {
-  const prefix = `p${pageNumber}_`;
-  const resolvedPageName = `Page ${pageNumber}`;
-
-  // Extract <defs>...</defs>
-  let extractedDefs = '';
-  const defsMatch = rawSvg.match(/<defs\b[^>]*>([\s\S]*?)<\/defs>/i);
-  if (defsMatch) {
-    extractedDefs = defsMatch[1];
+        w.worker.postMessage({ type: 'DESTROY', id: 'term' });
+        w.worker.terminate();
+      } catch (_) {}
+    });
   }
-
-  // Extract inner SVG content (strip outer <svg ...> and </svg> and metadata)
-  let innerBody = rawSvg
-    .replace(/<\?xml[^>]*\?>/gi, '')
-    .replace(/<!DOCTYPE[^>]*>/gi, '')
-    .replace(/<sodipodi:namedview[\s\S]*?<\/sodipodi:namedview>/gi, '')
-    .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
-    .replace(/<defs\b[^>]*>[\s\S]*?<\/defs>/gi, '')
-    .replace(/<svg\b[^>]*>/i, '')
-    .replace(/<\/svg\s*>/i, '')
-    .trim();
-
-  // Scope IDs to prevent cross-page collisions in multi-page flipbooks
-  extractedDefs = extractedDefs.replace(/\bid=(["'])([^"']+)\1/g, `id=$1${prefix}$2$1`);
-  innerBody = innerBody.replace(/\bid=(["'])([^"']+)\1/g, `id=$1${prefix}$2$1`);
-  innerBody = innerBody.replace(/\b(?:xlink:)?href=(["'])#([^"']+)\1/g, `xlink:href=$1#${prefix}$2$1 href=$1#${prefix}$2$1`);
-  innerBody = innerBody.replace(/url\(\s*(['"]|&quot;|&#39;)?\s*#([^'")&\s]+)\s*\1?\s*\)/gi, (m, quote, refId) => {
-    const q = quote || '';
-    return `url(${q}#${prefix}${refId}${q})`;
-  });
-
-  const scaleX = widthMm / widthPt;
-  const scaleY = heightMm / heightPt;
-
-  const rootId = `g-frame-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
-  const bgLayerId = `g-bg-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
-  const rectId = `rect-bg-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
-  const shieldId = `shield-p${pageNumber}-${Math.random().toString(36).substring(2, 9)}`;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${widthMm} ${heightMm}" width="100%" height="100%" style="overflow: visible" shape-rendering="geometricPrecision">
-  <defs>
-    ${extractedDefs}
-  </defs>
-  <g id="${rootId}" data-name="${resolvedPageName}" data-type="frame">
-    <rect id="${rectId}" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
-    <g id="${bgLayerId}" data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true">
-      <g transform="scale(${scaleX.toFixed(6)}, ${scaleY.toFixed(6)})">
-        ${innerBody}
-      </g>
-    </g>
-    <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
-  </g>
-</svg>`;
 };
 
 /**
- * Converts a PDF file into an array of pure vector SVG pages or high-resolution images.
- * - PRIMARY: Uses MuPDF WebAssembly SVG Device with "text=path" to extract each character and shape
- *   into pure vector bezier curves (<path d="...">). 100% vector, zero pixelation even at 1000% zoom.
- * - IN-PLACE CMYK FIX: Automatically converts embedded 4-channel CMYK print images into sRGB JPEGs
- *   so browsers render background art with accurate colors (no black overlays) while preserving 100% vector text outlines.
- * - FALLBACK: Color-managed DeviceRGB high-res pixmap (~2160px).
- *
- * @param {File} file - The PDF file to convert.
- * @param {number} scale - Optional base scale factor.
- * @param {number} maxPages - Max pages to convert.
- * @param {Function} onProgress - Optional progress callback.
- * @returns {Promise<Array<{blob: Blob, dataUrl: string, svgString: string, content: string, width: number, height: number, isVector: boolean}>>}
+ * Main-thread fallback for single-page PDFs or environments where Web Workers are restricted.
  */
-export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity, onProgress = null) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  
+const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = null) => {
   const mupdf = await getMuPdf();
   const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
-  const totalPages = doc.countPages();
-  const numPages = Math.min(totalPages, maxPages);
-
   const images = [];
   const ptToMm = 25.4 / 72;
 
@@ -577,26 +516,24 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
     const pageNum = i + 1;
     const percent = Math.round((pageNum / numPages) * 100);
 
-    // Yield to browser event loop before processing each page so UI spinner and progress bar stay 60fps responsive
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // Yield to browser compositor with requestAnimationFrame so the step dot spinner spins with 0 lag/stutter
+    await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 16)));
 
     let page = null;
     let highResPix = null;
     let svgBuf = null;
     try {
       page = doc.loadPage(i);
-      const bounds = page.getBounds(); // [x0, y0, x1, y1]
-      
+      const bounds = page.getBounds();
+
       const widthPt = bounds[2] - bounds[0];
       const heightPt = bounds[3] - bounds[1];
-      
+
       const widthMm = Math.round(widthPt * ptToMm * 100) / 100;
       const heightMm = Math.round(heightPt * ptToMm * 100) / 100;
 
       let vectorSvgString = null;
 
-      // 1. PRIMARY VECTOR PIPELINE: True vector SVG conversion via MuPDF WASM DocumentWriter
-      // Outlines each letter into vector bezier curves (<path d="...">), preserving infinite zoom sharpness (up to 500%+) without pixelation
       try {
         svgBuf = new mupdf.Buffer();
         const writer = new mupdf.DocumentWriter(svgBuf, 'svg', 'text=path');
@@ -609,9 +546,6 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
         let rawSvg = new TextDecoder().decode(svgBuf.asUint8Array());
         if (rawSvg && rawSvg.includes('<svg')) {
           if (hasCmykJpeg(rawSvg)) {
-            // Convert embedded CMYK print JPEGs into sRGB inside the SVG.
-            // This preserves 100% of the vector text outlines (<path d="..."> and <use>)
-            // while ensuring embedded background images render with accurate RGB colors and no black overlays!
             rawSvg = convertCmykJpegsInSvg(rawSvg, mupdf);
           }
           vectorSvgString = formatMuPdfSvgForFlipbook(rawSvg, pageNum, widthMm, heightMm, widthPt, heightPt);
@@ -620,11 +554,10 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
         console.warn(`[MuPDF Vector] Vector extraction for page ${pageNum} encountered warning, using raster fallback:`, vecErr);
       } finally {
         if (svgBuf && typeof svgBuf.destroy === 'function') {
-          try { svgBuf.destroy(); } catch (e) {}
+          try { svgBuf.destroy(); } catch (_) {}
         }
       }
 
-      // If vector conversion succeeded, emit vector page!
       let pageItem = null;
       if (vectorSvgString) {
         const isVectorPage = (vectorSvgString.match(/<path\b/g) || []).length > 0 || (vectorSvgString.match(/<use\b/g) || []).length > 0;
@@ -638,10 +571,9 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
           content: vectorSvgString,
           width: widthMm,
           height: heightMm,
-          isVector: isVectorPage,
+          isVector: isVectorPage
         };
       } else {
-        // Fallback: high-res raster pixmap
         const maxPt = Math.max(widthPt, heightPt);
         let renderScale = 2.5;
         if (maxPt > 0) {
@@ -663,7 +595,7 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
             imageBytes = highResPix.asJPEG(90, false);
             mimeType = 'image/jpeg';
           }
-        } catch (e) {}
+        } catch (_) {}
 
         if (!imageBytes) {
           imageBytes = highResPix.asPNG();
@@ -682,17 +614,16 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
           content: svgString,
           width: widthMm,
           height: heightMm,
-          isVector: false,
+          isVector: false
         };
       }
 
       if (pageItem) {
         images.push(pageItem);
-        // Progressive progress update: emit pageNum, total, percent, and extracted page
         if (typeof onProgress === 'function') {
           try {
             onProgress(pageNum, numPages, percent, 'converting', `Extracting page ${pageNum} of ${numPages} (${percent}%)...`, pageItem);
-          } catch (e) {}
+          } catch (_) {}
         }
       }
     } catch (err) {
@@ -708,47 +639,49 @@ export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity,
 };
 
 /**
- * Generates the SVG HTML for a PDF page.
- * Wraps the high-resolution, color-accurate image inside a responsive SVG frame.
+ * Converts a PDF file into an array of pure vector SVG pages or high-resolution images.
+ * - PRIMARY: Multi-threaded Web Worker Pool with Work-Stealing Priority Queue.
+ *   Dispatches Page 1 (cover) instantly with Priority 0, and distributes subsequent pages
+ *   in parallel across CPU cores.
+ * - FALLBACK: Main-thread asynchronous MuPDF engine for single-page files or restricted runtimes.
  *
- * @param {string} fullImageUrl - The absolute URL or data URL of the high-res page image.
- * @param {string} pageName - The name of the page.
- * @param {number} baseWidth - The base width of the canvas in mm (default 210).
- * @param {number} baseHeight - The base height of the canvas in mm (default 297).
- * @param {boolean} isPdfBg - Whether to mark as PDF Background.
- * @param {string} [_vectorSvgString] - Legacy argument kept for backwards compatibility.
- * @returns {string} SVG HTML string.
+ * @param {File} file - The PDF file to convert.
+ * @param {number} scale - Optional base scale factor.
+ * @param {number} maxPages - Max pages to convert.
+ * @param {Function} onProgress - Optional progress callback.
+ * @returns {Promise<Array<{blob: Blob, dataUrl: string, svgString: string, content: string, width: number, height: number, isVector: boolean}>>}
  */
-export const generatePdfPageSvg = (
-  fullImageUrl, 
-  pageName = "PDF Background", 
-  baseWidth, 
-  baseHeight, 
-  isPdfBg = true,
-  _vectorSvgString = null
-) => {
-  if (!baseWidth || !baseHeight) {
-    console.warn("generatePdfPageSvg called without dimensions, falling back to A4");
-    baseWidth = 210;
-    baseHeight = 297;
+export const convertPdfToImages = async (file, scale = 2.5, maxPages = Infinity, onProgress = null) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  const mupdf = await getMuPdf();
+  const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
+  const totalPages = doc.countPages();
+  const numPages = Math.min(totalPages, maxPages);
+  doc.destroy();
+
+  if (numPages <= 0) return [];
+
+  let results = [];
+  // Parallel Multi-Worker with Work-Stealing Priority Queue (when >1 page and Web Worker supported)
+  if (typeof Worker !== 'undefined' && numPages > 1) {
+    try {
+      results = await convertPdfWithWorkers(arrayBuffer, numPages, onProgress, totalPages);
+    } catch (workerErr) {
+      console.warn('[PDF Worker Pool] Worker pool execution warning, falling back to main-thread processing:', workerErr);
+    }
   }
-  const rootId = `g-${Math.random().toString(36).substr(2, 9)}`;
-  const overlayId = `rect-${Math.random().toString(36).substr(2, 9)}`;
-  const bgGroupId = `g-bg-${Math.random().toString(36).substr(2, 9)}`;
-  const imageId = `img-${Math.random().toString(36).substr(2, 9)}`;
-  const shieldId = `shield-${Math.random().toString(36).substr(2, 9)}`;
 
-  const bgGroupName = isPdfBg ? "PDF Background" : `${pageName}-pdf`;
+  // Fallback: asynchronous main-thread MuPDF processing
+  if (!results || results.length === 0) {
+    results = await convertPdfToImagesMainThread(uint8Array, numPages, onProgress, totalPages);
+  }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
-  <g id="${rootId}" data-name="${pageName}" data-type="frame">
-    <rect id="${overlayId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
-    <g id="${bgGroupId}" data-name="${bgGroupName}" data-type="pdf-vector-layer" data-locked="true">
-      <image id="${imageId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" href="${fullImageUrl}" xlink:href="${fullImageUrl}" preserveAspectRatio="none" style="image-rendering: -webkit-optimize-contrast; image-rendering: high-quality;" />
-    </g>
-    <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
-  </g>
-</svg>`;
+  results.totalPages = totalPages;
+  results.isPartial = numPages < totalPages;
+  results.arrayBuffer = arrayBuffer;
+  return results;
 };
 
 /**
@@ -1258,7 +1191,7 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
   // Preserves 100% vector SVG bezier paths (<path d="...">) for infinite zoom (500%+) clarity
   try {
     const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress);
-    return images.map((img, idx) => ({
+    const mapped = images.map((img, idx) => ({
       pageNumber: idx + 1,
       pageName: `Page ${idx + 1}`,
       content: img.content || img.svgString || generatePdfPageSvg(img.dataUrl, `Page ${idx + 1}`, img.width, img.height, true),
@@ -1269,6 +1202,10 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       height: img.height,
       isVector: !!img.isVector
     }));
+    mapped.totalPages = images.totalPages || mapped.length;
+    mapped.isPartial = !!images.isPartial;
+    mapped.arrayBuffer = images.arrayBuffer;
+    return mapped;
   } catch (rasterErr) {
     console.error('[MuPDF] Page extraction error, checking fallback pages:', rasterErr);
     // Fallback: If MuPDF cannot process the generated PDF, flatten extractor pages into non-editable PDF background SVGs

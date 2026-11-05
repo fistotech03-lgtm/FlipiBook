@@ -771,22 +771,38 @@ const PageEditor = () => {
   ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
+  const latestPagesRef = useRef(pages);
+  const latestActiveIndexRef = useRef(activePageIndex);
+  useEffect(() => {
+    latestPagesRef.current = popupEditContext ? popupEditContext.backup.pages : pages;
+    latestActiveIndexRef.current = popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex;
+  }, [pages, popupEditContext, activePageIndex]);
+
+  const flushPageEditorToDB = useCallback(() => {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    const pagesToSave = latestPagesRef.current;
+    if (!activeVId || !pagesToSave || pagesToSave.length === 0) return;
+    try {
+      savePageEditorState({
+        v_id: activeVId,
+        pages: pagesToSave,
+        activePageIndex: latestActiveIndexRef.current || 0,
+        pageName:
+          currentBook?.flipbookName ||
+          location.state?.flipbookName ||
+          "Untitled Flipbook",
+        timestamp: Date.now(),
+      });
+    } catch (err) {
+      console.warn("[PageEditor] DB flush error:", err);
+    }
+  }, [v_id, currentBook, location.state]);
+
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
       const timer = setTimeout(() => {
-        savePageEditorState({
-          v_id: activeVId,
-          pages: popupEditContext ? popupEditContext.backup.pages : pages,
-          activePageIndex: popupEditContext
-            ? popupEditContext.backup.activePageIndex
-            : activePageIndex,
-          pageName:
-            currentBook?.flipbookName ||
-            location.state?.flipbookName ||
-            "Untitled Flipbook",
-          timestamp: Date.now(),
-        });
+        flushPageEditorToDB();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -798,7 +814,58 @@ const PageEditor = () => {
     location.state,
     isLoading,
     popupEditContext,
+    flushPageEditorToDB,
   ]);
+
+  // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      flushPageEditorToDB();
+    };
+
+    const handlePageHide = () => {
+      flushPageEditorToDB();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPageEditorToDB();
+      }
+    };
+
+    const handlePopState = () => {
+      flushPageEditorToDB();
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+    };
+
+    const handleOnline = () => {
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      // Synchronously flush on component unmount
+      flushPageEditorToDB();
+      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
+        saveFlipbook(false, latestPagesRef.current);
+      }
+
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [flushPageEditorToDB, hasUnsavedChanges, saveFlipbook]);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {

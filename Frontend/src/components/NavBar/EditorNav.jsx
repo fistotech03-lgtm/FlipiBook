@@ -15,6 +15,7 @@ import {
   Tablet,
   Smartphone,
   Settings,
+  CloudOff,
 } from "lucide-react";
 import { Icon } from "@iconify/react";
 import ProfileModal from "../Settings/ProfileModal";
@@ -159,10 +160,23 @@ const EditorNavbar = ({
 
   // When save completes or no unsaved changes exist, reset seconds counter to 0
   useEffect(() => {
-    if (saveSuccessInfo || !hasUnsavedChanges) {
+    if (saveSuccessInfo || (!hasUnsavedChanges && !isSaving)) {
       setSecondsSinceSave(0);
     }
-  }, [saveSuccessInfo, hasUnsavedChanges]);
+  }, [saveSuccessInfo, hasUnsavedChanges, isSaving]);
+
+  // Online / Offline Detection
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const formatTime = (totalSeconds) => {
     if (totalSeconds < 5) return "Just now";
@@ -181,14 +195,13 @@ const EditorNavbar = ({
     queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
-      const ok = await confirm({
-        title: "Leave Site?",
-        message: "Changes you made may not be saved.",
-        confirmText: "Leave",
-        cancelText: "Stay",
-        type: "danger"
-      });
-      if (!ok) return;
+      try {
+        if (onSave) {
+          await onSave();
+        }
+      } catch (err) {
+        console.warn("[EditorNav] Auto-save before navigation error:", err);
+      }
     }
     navigate(to);
   };
@@ -356,26 +369,36 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Save / Sync Status Area: When auto-save is enabled, ONLY show last sync time instead of Save button */}
+          {/* Save / Sync Status Area: When auto-save is enabled, show real-time cloud sync status */}
           {isAutoSaveEnabled ? (
-            <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 border border-gray-200 rounded-[2vw] text-gray-700 select-none ml-[0.2vw]">
-              {isSaving ? (
-                <>
-                  <Loader2 size="1.1vw" className="animate-spin text-[#ea543a]" />
-                  <span className="font-medium text-[0.8vw] text-gray-700">Syncing...</span>
-                </>
-              ) : (
-                <>
-                  <Icon
-                    icon="reicon:tick-circle-filled"
-                    className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
-                  />
-                  <span className="font-medium text-[0.8vw] text-gray-600">
-                    Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
-                  </span>
-                </>
-              )}
-            </div>
+            !isOnline ? (
+              <div 
+                className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-amber-50 border border-amber-200 rounded-[2vw] text-amber-800 select-none ml-[0.2vw]"
+                title="Working offline. Changes are saved locally in your browser and will automatically sync to cloud when you reconnect."
+              >
+                <CloudOff className="w-[1.1vw] h-[1.1vw] text-amber-600" />
+                <span className="font-medium text-[0.8vw]">Saved locally (Offline)</span>
+              </div>
+            ) : isSaving ? (
+              <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-blue-50/80 border border-blue-200 rounded-[2vw] text-blue-700 select-none ml-[0.2vw]">
+                <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-blue-600" />
+                <span className="font-medium text-[0.8vw] text-blue-800">Saving...</span>
+              </div>
+            ) : (
+              <button
+                onClick={onSave}
+                title="All changes saved to cloud. Click to force sync now."
+                className="group/sync flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 hover:bg-gray-100/90 border border-gray-200 hover:border-gray-300 rounded-[2vw] text-gray-700 select-none ml-[0.2vw] transition-colors cursor-pointer"
+              >
+                <Icon
+                  icon="reicon:tick-circle-filled"
+                  className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
+                />
+                <span className="font-medium text-[0.8vw] text-gray-600 group-hover/sync:text-gray-900 transition-colors">
+                  Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
+                </span>
+              </button>
+            )
           ) : (
             /* When AutoSave is DISABLED: Show the manual Save button */
             <div className="relative group/tooltip flex items-center ml-[0.2vw]">

@@ -78,6 +78,8 @@ const CustomizedEditor = () => {
     hasUnsavedChanges,
     triggerSaveSuccess,
     isAutoSaveEnabled,
+    isSaving,
+    setIsSaving,
     currentBook,
     setCurrentBook,
     activeDevice
@@ -359,7 +361,9 @@ const CustomizedEditor = () => {
     isAutoSaveEnabled,
     isLoading,
     initialLoadRef,
-    handleSaveRef
+    handleSaveRef,
+    setIsSaving,
+    triggerSaveSuccess
   });
 
   // Real-time synchronization of current book to Navbar and ShareModal

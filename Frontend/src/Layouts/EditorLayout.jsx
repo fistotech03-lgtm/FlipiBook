@@ -145,10 +145,10 @@ const EditorLayout = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     triggerSave();
     if (saveHandlerRef.current) {
-      saveHandlerRef.current();
+      return await saveHandlerRef.current();
     }
   };
 

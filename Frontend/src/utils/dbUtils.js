@@ -41,11 +41,8 @@ export const compressData = async (value) => {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
     const compressedBuffer = await new Response(stream).arrayBuffer();
-    return {
-      __compressed: true,
-      format: 'gzip',
-      data: new Uint8Array(compressedBuffer)
-    };
+    // Return pure raw Uint8Array directly - zero wrapper object or metadata
+    return new Uint8Array(compressedBuffer);
   } catch (err) {
     console.warn('[dbUtils] Compression fallback, saving raw:', err);
     return value;
@@ -58,6 +55,29 @@ export const compressData = async (value) => {
  */
 export const decompressData = async (value) => {
   if (!value) return value;
+
+  // 1. Raw binary Uint8Array or ArrayBuffer directly stored
+  if (
+    (value instanceof Uint8Array || value instanceof ArrayBuffer) &&
+    typeof DecompressionStream !== 'undefined' &&
+    typeof Response !== 'undefined' &&
+    typeof Blob !== 'undefined'
+  ) {
+    const uint8 = value instanceof ArrayBuffer ? new Uint8Array(value) : value;
+    // Verify standard Gzip magic bytes: 0x1F (31), 0x8B (139)
+    if (uint8.length >= 2 && uint8[0] === 0x1f && uint8[1] === 0x8b) {
+      try {
+        const stream = new Blob([uint8]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(stream).text();
+        return JSON.parse(text);
+      } catch (err) {
+        console.warn('[dbUtils] Binary decompress error, returning raw:', err);
+        return value;
+      }
+    }
+  }
+
+  // 2. Backward compatibility: if previously stored with { __compressed, data } wrapper
   if (
     value &&
     typeof value === 'object' &&
@@ -76,6 +96,8 @@ export const decompressData = async (value) => {
       return value;
     }
   }
+
+  // 3. Plain uncompressed object
   return value;
 };
 

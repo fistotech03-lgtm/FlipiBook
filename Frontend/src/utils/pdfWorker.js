@@ -5,7 +5,6 @@
  * while extracting mathematical vector SVGs at maximum hardware concurrency.
  */
 
-import * as mupdf from 'mupdf';
 import {
   hasCmykJpeg,
   convertCmykJpegsInSvg,
@@ -15,8 +14,29 @@ import {
   svgToDataUrl
 } from './pdfShared.js';
 
+let mupdfModule = null;
+const getMuPdf = async () => {
+  if (!mupdfModule) {
+    mupdfModule = await import('mupdf');
+  }
+  return mupdfModule;
+};
+
 let doc = null;
 const ptToMm = 25.4 / 72;
+
+// Listen for uncaught errors to prevent hanging promises on main thread
+self.addEventListener('error', (e) => {
+  try {
+    self.postMessage({ type: 'WORKER_CRASH', error: e?.message || 'Worker startup error' });
+  } catch (_) {}
+});
+
+self.addEventListener('unhandledrejection', (e) => {
+  try {
+    self.postMessage({ type: 'WORKER_CRASH', error: e?.reason?.message || String(e?.reason) });
+  } catch (_) {}
+});
 
 self.onmessage = async (e) => {
   const { type, id, payload } = e.data || {};
@@ -24,7 +44,7 @@ self.onmessage = async (e) => {
   try {
     switch (type) {
       case 'INIT': {
-        const { pdfBuffer } = payload;
+        const { pdfBuffer } = payload || {};
         if (!pdfBuffer) {
           throw new Error('INIT called without pdfBuffer');
         }
@@ -32,9 +52,12 @@ self.onmessage = async (e) => {
           try { doc.destroy(); } catch (_) {}
           doc = null;
         }
+
+        const mupdf = await getMuPdf();
         const uint8Array = new Uint8Array(pdfBuffer);
         doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
         const totalPages = doc.countPages();
+
         self.postMessage({
           type: 'INIT_OK',
           id,
@@ -47,7 +70,9 @@ self.onmessage = async (e) => {
         if (!doc) {
           throw new Error('Worker document not initialized before RENDER_PAGE');
         }
-        const { pageIndex, pageNum } = payload;
+        const { pageIndex, pageNum } = payload || {};
+        const mupdf = await getMuPdf();
+
         let page = null;
         let svgBuf = null;
         let highResPix = null;
@@ -62,7 +87,7 @@ self.onmessage = async (e) => {
 
           let vectorSvgString = null;
 
-          // 1. Vector extraction pipeline
+          // 1. Primary Vector Extraction Pipeline
           try {
             svgBuf = new mupdf.Buffer();
             const writer = new mupdf.DocumentWriter(svgBuf, 'svg', 'text=path');

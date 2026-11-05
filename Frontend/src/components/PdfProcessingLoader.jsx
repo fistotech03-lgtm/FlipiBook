@@ -486,23 +486,10 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                                     <Check className="w-[1vw] h-[1vw] stroke-[3]" />
                                                 </motion.div>
                                             ) : isActive ? (
-                                                <svg
+                                                <Loader2
                                                     key="active"
-                                                    className="w-[1.15vw] h-[1.15vw] text-[#4F46E5] infinite-step-spinner"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="8.5"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.8"
-                                                        strokeLinecap="round"
-                                                        strokeDasharray="53.4"
-                                                        strokeDashoffset="34"
-                                                    />
-                                                </svg>
+                                                    className="w-[1.2vw] h-[1.2vw] text-[#4F46E5] animate-spin"
+                                                />
                                             ) : (
                                                 <span
                                                     key="pending"

@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     optimizeDeps: {
       include: ["gifuct-js", "ogl", "@tanstack/react-query"],
+      exclude: ["mupdf"],
     },
     worker: {
       format: "es",

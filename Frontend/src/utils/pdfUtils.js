@@ -319,30 +319,40 @@ class PriorityTaskQueue {
 }
 
 /**
- * Executes a single page render on a given worker and returns a Promise.
+ * Executes a single page render on a given worker and returns a Promise with timeout.
  */
-const renderPageOnWorker = (worker, pageIndex, pageNum) => {
+const renderPageOnWorker = (worker, pageIndex, pageNum, timeoutMs = 25000) => {
   return new Promise((resolve, reject) => {
     const id = `render_${pageIndex}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+    };
 
     const onMessage = (e) => {
       const data = e.data || {};
-      if (data.id === id) {
-        worker.removeEventListener('message', onMessage);
-        worker.removeEventListener('error', onError);
+      if (data.id === id || data.type === 'WORKER_CRASH') {
+        cleanup();
         if (data.type === 'PAGE_OK') {
           resolve(data);
-        } else if (data.type === 'ERROR') {
+        } else {
           reject(new Error(data.error || 'Worker render error'));
         }
       }
     };
 
     const onError = (err) => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
+      cleanup();
       reject(err);
     };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Worker render page ${pageNum} timeout (exceeded ${timeoutMs}ms)`));
+    }, timeoutMs);
 
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
@@ -355,30 +365,40 @@ const renderPageOnWorker = (worker, pageIndex, pageNum) => {
 };
 
 /**
- * Initializes a worker with the PDF ArrayBuffer.
+ * Initializes a worker with the PDF ArrayBuffer with a strict 4-second timeout.
  */
-const initWorkerInstance = (worker, pdfBuffer) => {
+const initWorkerInstance = (worker, pdfBuffer, timeoutMs = 4000) => {
   return new Promise((resolve, reject) => {
     const id = `init_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+    };
 
     const onMessage = (e) => {
       const data = e.data || {};
-      if (data.id === id) {
-        worker.removeEventListener('message', onMessage);
-        worker.removeEventListener('error', onError);
+      if (data.id === id || data.type === 'WORKER_CRASH') {
+        cleanup();
         if (data.type === 'INIT_OK') {
           resolve(data.totalPages);
-        } else if (data.type === 'ERROR') {
+        } else {
           reject(new Error(data.error || 'Worker init error'));
         }
       }
     };
 
     const onError = (err) => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
+      cleanup();
       reject(err);
     };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Worker init timeout (exceeded ${timeoutMs}ms)`));
+    }, timeoutMs);
 
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
@@ -395,9 +415,8 @@ const initWorkerInstance = (worker, pdfBuffer) => {
  * and a Work-Stealing Priority Queue (DSA).
  */
 const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) => {
-  const concurrency = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4;
-  const maxWorkers = Math.min(Math.max(2, concurrency - 1), 4);
-  const workerCount = Math.min(maxWorkers, numPages);
+  // Use 2 dedicated workers to balance multi-threading speed and memory safety
+  const workerCount = Math.min(2, Math.max(1, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2) - 1));
 
   const workers = [];
   try {
@@ -406,9 +425,9 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
       workers.push({ id: i, worker: w, busy: false });
     }
 
-    // Initialize all workers in parallel with an isolated buffer slice
+    // Initialize all workers in parallel with a strict 4s timeout
     await Promise.all(
-      workers.map(w => initWorkerInstance(w.worker, arrayBuffer.slice(0)))
+      workers.map(w => initWorkerInstance(w.worker, arrayBuffer.slice(0), 4000))
     );
 
     const queue = new PriorityTaskQueue();
@@ -453,11 +472,11 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null) =
         if (typeof onProgress === 'function') {
           try {
             onProgress(
-              task.pageNum,
+              completedCount,
               numPages,
               percent,
               'converting',
-              `Extracting page ${task.pageNum} of ${numPages} (${percent}%)...`,
+              `Extracting page ${completedCount} of ${numPages} (${percent}%)...`,
               pageItem
             );
           } catch (_) {}
@@ -493,8 +512,8 @@ const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = n
     const pageNum = i + 1;
     const percent = Math.round((pageNum / numPages) * 100);
 
-    // Yield to browser event loop before processing each page so UI spinner stays 60fps responsive
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // Yield to browser compositor with requestAnimationFrame so the step dot spinner spins with 0 lag/stutter
+    await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 16)));
 
     let page = null;
     let highResPix = null;

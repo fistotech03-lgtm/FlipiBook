@@ -4,12 +4,7 @@ import {
   Sliders,
   X,
   ChevronDown,
-  ChevronUp,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  List,
-  ArrowLeftRight
+  ChevronUp
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { ElementDropdown, ElementSlider } from './ElementUIControls';
@@ -127,8 +122,8 @@ const TextPropertyInlinePopup = ({
         </button>
       </div>
 
-      {/* Row 1: Font Family + Font Size */}
-      <div className="grid grid-cols-[1.6fr_1fr] gap-[0.5vw]">
+      {/* Row 1: Font Family (Full Width) */}
+      <div className="w-full">
         {/* Font Family Dropdown */}
         <div className="relative">
           <button
@@ -160,40 +155,11 @@ const TextPropertyInlinePopup = ({
             </div>
           )}
         </div>
-
-        {/* Font Size Dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenDropdown(openDropdown === 'size' ? null : 'size')}
-            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
-          >
-            <span className="text-[0.78vw] font-medium">{fontSize}</span>
-            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
-          </button>
-          {openDropdown === 'size' && (
-            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
-              {FONT_SIZES.map((sz) => (
-                <div
-                  key={sz}
-                  onClick={() => {
-                    onUpdate({ fontSize: sz });
-                    setOpenDropdown(null);
-                  }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                    }`}
-                >
-                  {sz}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Row 2: Font Weight + Auto (letter spacing) + Auto (line height) */}
-      <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-[0.5vw]">
-        {/* Font Weight */}
+      {/* Row 2: Font Weight + Font Size */}
+      <div className="grid grid-cols-[1.5fr_1fr] gap-[0.5vw]">
+        {/* Font Weight Dropdown */}
         <div className="relative">
           <button
             type="button"
@@ -222,100 +188,34 @@ const TextPropertyInlinePopup = ({
           )}
         </div>
 
-        {/* Auto Letter Spacing button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = letterSpacing === 'Auto' ? '2px' : letterSpacing === '2px' ? '4px' : 'Auto';
-            onUpdate({ letterSpacing: next });
-          }}
-          className="h-[2.3vw] flex items-center justify-center gap-[0.3vw] border border-gray-200 rounded-[0.5vw] px-[0.4vw] bg-white hover:border-gray-300 transition-all text-gray-700 shadow-2xs"
-          title="Letter Spacing"
-        >
-          <span className="text-[0.72vw] font-medium">{letterSpacing}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-            <path d="M4 12h16" />
-            <polyline points="7 9 4 12 7 15" />
-            <polyline points="17 9 20 12 17 15" />
-            <line x1="3" y1="4" x2="3" y2="20" />
-            <line x1="21" y1="4" x2="21" y2="20" />
-          </svg>
-        </button>
-
-        {/* Auto Line Height button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = lineHeight === 'Auto' ? '1.2' : lineHeight === '1.2' ? '1.5' : 'Auto';
-            onUpdate({ lineHeight: next });
-          }}
-          className="h-[2.3vw] flex items-center justify-center gap-[0.3vw] border border-gray-200 rounded-[0.5vw] px-[0.4vw] bg-white hover:border-gray-300 transition-all text-gray-700 shadow-2xs"
-          title="Line Height"
-        >
-          <span className="text-[0.72vw] font-medium">{lineHeight}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-            <path d="M12 4v16" />
-            <polyline points="9 7 12 4 15 7" />
-            <polyline points="9 17 12 20 15 17" />
-            <line x1="4" y1="3" x2="20" y2="3" />
-            <line x1="4" y1="21" x2="20" y2="21" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Row 3: Format Bar [Align] [Bold] [Strikethrough / Dash] [List] */}
-      <div className="flex items-center gap-[0.5vw]">
-        {/* Align Button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = textAlign === 'center' ? 'left' : textAlign === 'left' ? 'right' : 'center';
-            onUpdate({ textAlign: next });
-          }}
-          className="w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors shadow-2xs"
-          title="Text Alignment"
-        >
-          {textAlign === 'left' ? (
-            <AlignLeft size="0.95vw" strokeWidth={2.2} />
-          ) : textAlign === 'right' ? (
-            <AlignRight size="0.95vw" strokeWidth={2.2} />
-          ) : (
-            <AlignCenter size="0.95vw" strokeWidth={2.2} />
+        {/* Font Size Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpenDropdown(openDropdown === 'size' ? null : 'size')}
+            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
+          >
+            <span className="text-[0.78vw] font-medium">{fontSize} pt</span>
+            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
+          </button>
+          {openDropdown === 'size' && (
+            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
+              {FONT_SIZES.map((sz) => (
+                <div
+                  key={sz}
+                  onClick={() => {
+                    onUpdate({ fontSize: sz });
+                    setOpenDropdown(null);
+                  }}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
+                >
+                  {sz} pt
+                </div>
+              ))}
+            </div>
           )}
-        </button>
-
-        {/* Bold Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isBold: !isBold, fontWeight: !isBold ? 'Bold' : 'Regular' })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isBold ? 'bg-gray-200 text-black font-extrabold' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-            }`}
-          title="Bold"
-        >
-          <span className="font-bold text-[0.9vw]">B</span>
-        </button>
-
-        {/* Dash / Strikethrough Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isStrikethrough: !isStrikethrough })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isStrikethrough ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-            }`}
-          title="Strikethrough"
-        >
-          <span className="font-bold text-[1vw] leading-none">—</span>
-        </button>
-
-        {/* List Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isList: !isList })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${isList ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-            }`}
-          title="List"
-        >
-          <List size="0.95vw" strokeWidth={2.2} />
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -435,16 +335,27 @@ const ElementTitlesProperties = ({
     }
   }, [selectedElement, selectedLayerId, currentKey]);
 
+  // Helper to dynamically resolve target title element from DOM if stale
+  const resolveTargetElement = () => {
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const targetId = selectedLayerId || selectedElement?.id;
+    const found = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null) || selectedElement;
+    if (found && typeof found.closest === 'function') {
+      return found.closest('[data-typography-type="motion-graphic"], [data-motion-template]') || found;
+    }
+    return found;
+  };
+
   // Synchronize helper
   const syncUpdates = (newAttributes = {}) => {
-    const targetEl = effectiveElement;
+    const targetEl = resolveTargetElement() || effectiveElement;
     if (!targetEl) return;
     updateMotionGraphicAttributes(targetEl, newAttributes);
 
     // Sync via DOM serializer
     const svgRoot = (() => {
       const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-      const el = editorDoc.getElementById(selectedLayerId) || targetEl;
+      const el = (selectedLayerId ? editorDoc.getElementById(selectedLayerId) : null) || (selectedLayerId ? document.getElementById(selectedLayerId) : null) || targetEl;
       if (!el) return null;
       const container = el.closest('.page-svg-container');
       if (container) return container.querySelector('svg');
@@ -460,10 +371,13 @@ const ElementTitlesProperties = ({
     if (svgRoot && typeof updateElementAttribute === 'function') {
       const serializer = new XMLSerializer();
       const html = serializer.serializeToString(svgRoot);
-      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+      updateElementAttribute(activePageIndex, targetEl.id || selectedLayerId, '__dom_sync__', html);
     } else if (typeof updateElementAttribute === 'function') {
-      updateElementAttribute(activePageIndex, selectedLayerId, newAttributes);
+      updateElementAttribute(activePageIndex, targetEl.id || selectedLayerId, newAttributes);
     }
+
+    // Immediately notify selection engine to recalculate handles and bounding box
+    window.dispatchEvent(new CustomEvent('force-update-selection-box'));
   };
 
   const handleAnimationChange = (newAnim, customCountVal) => {
@@ -590,16 +504,71 @@ const ElementTitlesProperties = ({
     );
   };
 
+  const previewTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const triggerPreviewAnimation = () => {
-    if (!selectedElement) return;
-    const styles = selectedElement.querySelectorAll('style');
+    const targetEl = effectiveElement || selectedElement;
+    if (!targetEl) return;
+
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
+
+    const styles = targetEl.querySelectorAll('style');
+    if (!styles.length) return;
+
+    // Save the original css content of each style tag
+    const originalStyles = Array.from(styles).map((st) => ({
+      el: st,
+      originalText: st.textContent
+    }));
+
+    // Calculate maximum duration to know when to restore the configured loop count
+    let maxDurationMs = 2500;
+    originalStyles.forEach(({ originalText }) => {
+      const match = originalText.match(/animation:\s*([a-zA-Z0-9_-]+)\s+([0-9.]+)ms/);
+      if (match && match[2]) {
+        const dur = parseFloat(match[2]);
+        if (!isNaN(dur) && dur > maxDurationMs) {
+          maxDurationMs = dur;
+        }
+      }
+    });
+
+    // Temporarily replace animation count to run only 1 time for the preview
     styles.forEach((st) => {
-      const content = st.textContent;
+      let previewText = st.textContent.replace(
+        /(animation:\s*[^;]+?)(\s+(?:infinite|[0-9]+))(\s+cubic-bezier|\s+ease|\s+linear|\s*;)/gi,
+        '$1 1$3'
+      );
+      if (previewText.includes('animation-iteration-count:')) {
+        previewText = previewText.replace(/animation-iteration-count:\s*[^;]+;/gi, 'animation-iteration-count: 1;');
+      }
+      // Force animation restart
       st.textContent = '';
       void st.offsetHeight;
-      st.textContent = content;
+      st.textContent = previewText;
     });
+
     window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+
+    // After running once (+ buffer), restore the original animation setting (e.g. Infinite / Twice) without disrupting editor state
+    previewTimeoutRef.current = setTimeout(() => {
+      originalStyles.forEach(({ el, originalText }) => {
+        if (el && el.isConnected) {
+          el.textContent = originalText;
+        }
+      });
+      window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+    }, maxDurationMs + 200);
   };
 
   const [isAnimationDropdownOpen, setIsAnimationDropdownOpen] = useState(false);
@@ -661,122 +630,127 @@ const ElementTitlesProperties = ({
 
   return (
     <div className="flex flex-col gap-[1vw] w-full text-left select-none pb-[2vw]">
-      {/* ── Top Preview Banner ── */}
-      <button
-        type="button"
-        onClick={triggerPreviewAnimation}
-        className="w-full flex items-center gap-[0.8vw] bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 rounded-[0.7vw] px-[1vw] py-[0.8vw] shadow-xs cursor-pointer transition-all active:scale-[0.99] group text-left"
-      >
-        <span className="text-[1.3vw] leading-none select-none filter drop-shadow-xs">⭐</span>
-        <span className="text-[0.82vw] font-semibold text-gray-800 tracking-tight">
-          Click to preview Animations
-        </span>
-      </button>
+      {/* ── Titles Property Section ── */}
+      <div className="flex flex-col gap-[0.7vw]">
+        <SectionHeader title="Titles Property" />
 
-      {/* ── Animation Row ── */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-          <span>Animation</span>
-          <span>:</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
-            <button
-              type="button"
-              onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
-              className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${isAnimationDropdownOpen
-                  ? 'border-2 border-[#E05638] shadow-xs'
-                  : 'border border-gray-200 hover:border-gray-300'
-                }`}
-            >
-              <span className="truncate text-gray-800 font-medium">
-                {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
-              </span>
-              {isAnimationDropdownOpen ? (
-                <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-              ) : (
-                <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-              )}
-            </button>
+        {/* Top Preview Banner */}
+        <button
+          type="button"
+          onClick={triggerPreviewAnimation}
+          className="w-full flex items-center gap-[0.8vw] bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 rounded-[0.7vw] px-[1vw] py-[0.8vw] shadow-xs cursor-pointer transition-all active:scale-[0.99] group text-left"
+        >
+          <span className="text-[1.3vw] leading-none select-none filter drop-shadow-xs">⭐</span>
+          <span className="text-[0.82vw] font-semibold text-gray-800 tracking-tight">
+            Click to preview Animations
+          </span>
+        </button>
 
-            {isAnimationDropdownOpen && (
-              <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
-                {animationOptions.map((opt) => {
-                  const isSelected = animation === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        handleAnimationChange(opt.value);
-                        setIsAnimationDropdownOpen(false);
-                      }}
-                      className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${isSelected
-                          ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
+        {/* Animation Row */}
+        <div className="flex items-center gap-[0.5vw]">
+          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+            <span>Animation</span>
+            <span>:</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
+              <button
+                type="button"
+                onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
+                className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${isAnimationDropdownOpen
+                    ? 'border-2 border-[#E05638] shadow-xs'
+                    : 'border border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <span className="truncate text-gray-800 font-medium">
+                  {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
+                </span>
+                {isAnimationDropdownOpen ? (
+                  <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
+                )}
+              </button>
 
-                <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
+              {isAnimationDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
+                  {animationOptions.map((opt) => {
+                    const isSelected = animation === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          handleAnimationChange(opt.value);
+                          setIsAnimationDropdownOpen(false);
+                        }}
+                        className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${isSelected
+                            ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
 
-                {/* Custom Option with Input Box and "times" label */}
-                <div
-                  className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
-                    }`}
-                  onClick={() => {
-                    handleAnimationChange('Custom', customAnimationCount || '4');
-                  }}
-                >
-                  <input
-                    type="number"
-                    min="1"
-                    max="999"
-                    value={customAnimationCount}
-                    placeholder="Custom"
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      handleCustomCountChange(val);
-                    }}
-                    onFocus={() => {
-                      if (animation !== 'Custom') {
-                        handleAnimationChange('Custom', customAnimationCount || '4');
-                      }
-                    }}
-                    className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
+                  <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
+
+                  {/* Custom Option with Input Box and "times" label */}
+                  <div
+                    className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
                       }`}
-                  />
-                  <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
-                    times
-                  </span>
+                    onClick={() => {
+                      handleAnimationChange('Custom', customAnimationCount || '4');
+                    }}
+                  >
+                    <input
+                      type="number"
+                      min="1"
+                      max="999"
+                      value={customAnimationCount}
+                      placeholder="Custom"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleCustomCountChange(val);
+                      }}
+                      onFocus={() => {
+                        if (animation !== 'Custom') {
+                          handleAnimationChange('Custom', customAnimationCount || '4');
+                        }
+                      }}
+                      className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
+                        }`}
+                    />
+                    <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
+                      times
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Speed Row ── */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-          <span>Speed</span>
-          <span>:</span>
-        </div>
-        <div className="flex-1 min-w-0 flex items-center gap-[0.7vw]">
-          <ElementSlider
-            min={10}
-            max={200}
-            step={1}
-            value={speed}
-            onChange={handleSpeedChange}
-            className="flex-1"
-          />
-          <div className="w-[3.4vw] h-[2vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.45vw] shadow-2xs shrink-0">
-            <span className="text-[0.78vw] font-bold text-gray-800">{speed} %</span>
+        {/* Speed Row */}
+        <div className="flex items-center gap-[0.5vw]">
+          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+            <span>Speed</span>
+            <span>:</span>
+          </div>
+          <div className="flex-1 min-w-0 flex items-center gap-[0.7vw]">
+            <ElementSlider
+              min={10}
+              max={200}
+              step={1}
+              value={speed}
+              onChange={handleSpeedChange}
+              className="flex-1"
+            />
+            <div className="w-[3.4vw] h-[2vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.45vw] shadow-2xs shrink-0">
+              <span className="text-[0.78vw] font-bold text-gray-800">{speed} %</span>
+            </div>
           </div>
         </div>
       </div>
@@ -787,12 +761,18 @@ const ElementTitlesProperties = ({
 
         {/* Primary Text */}
         <div className="flex flex-col gap-[0.4vw]">
-          <label className="text-[0.8vw] font-semibold text-gray-900">Primary Text</label>
+          <div className="flex items-center justify-between">
+            <label className="text-[0.8vw] font-semibold text-gray-900">Primary Text</label>
+            <span className="text-[0.68vw] text-gray-400 font-medium">
+              {(primaryText || '').length}/30
+            </span>
+          </div>
           <div className="flex items-center gap-[0.5vw] w-full">
             <input
               type="text"
+              maxLength={30}
               value={primaryText}
-              onChange={(e) => handlePrimaryTextChange(e.target.value)}
+              onChange={(e) => handlePrimaryTextChange(e.target.value.slice(0, 30))}
               placeholder="Animation"
               className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
             />
@@ -865,12 +845,18 @@ const ElementTitlesProperties = ({
         {/* Secondary Text (only shown if title has secondary text) */}
         {hasSecondaryText && (
           <div className="flex flex-col gap-[0.4vw]">
-            <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+              <span className="text-[0.68vw] text-gray-400 font-medium">
+                {(secondaryText || '').length}/30
+              </span>
+            </div>
             <div className="flex items-center gap-[0.5vw] w-full">
               <input
                 type="text"
+                maxLength={30}
                 value={secondaryText}
-                onChange={(e) => handleSecondaryTextChange(e.target.value)}
+                onChange={(e) => handleSecondaryTextChange(e.target.value.slice(0, 30))}
                 placeholder="Animation"
                 className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
               />

@@ -8,18 +8,20 @@
 // --------------------------------------------------------------------------
 export const measureTitleTextWidth = (text, fontSize = 16, fontFamily = 'sans-serif', fontWeight = '600', letterSpacing = 'normal') => {
   if (!text) return 0;
+  // Always measure in uppercase because titles use CSS text-transform: uppercase
+  const upperText = String(text).toUpperCase();
   if (typeof document !== 'undefined') {
     try {
       const canvas = measureTitleTextWidth._canvas || (measureTitleTextWidth._canvas = document.createElement('canvas'));
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily.replace(/"/g, '')}, sans-serif`;
-        let w = ctx.measureText(text).width;
+        let w = ctx.measureText(upperText).width;
         if (letterSpacing && letterSpacing !== 'normal' && letterSpacing !== 'Auto') {
           const lsVal = parseFloat(letterSpacing);
           if (!isNaN(lsVal)) {
             const lsPx = letterSpacing.includes('em') ? lsVal * fontSize : lsVal;
-            w += Math.max(0, text.length - 1) * lsPx;
+            w += Math.max(0, upperText.length - 1) * lsPx;
           }
         }
         return Math.round(w);
@@ -29,7 +31,7 @@ export const measureTitleTextWidth = (text, fontSize = 16, fontFamily = 'sans-se
     }
   }
   const charWidthRatio = fontWeight === '900' || fontWeight.toLowerCase().includes('bold') ? 0.75 : 0.68;
-  return Math.round(text.length * fontSize * charWidthRatio);
+  return Math.round(upperText.length * fontSize * charWidthRatio);
 };
 
 export const calculateCyberFrameMetrics = (text, fontSize = 15, fontFamily = 'Roboto, sans-serif') => {
@@ -68,12 +70,22 @@ export const calculateCyberFrameMetrics = (text, fontSize = 15, fontFamily = 'Ro
 // --------------------------------------------------------------------------
 // 1. Cyber Trim Frame
 // --------------------------------------------------------------------------
+const escapeXmlAttr = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+};
+
 export const createCyberFrameSvg = ({
   uniqueId = Date.now(),
   text = 'ANIMATION',
   primaryColor = '#000000',
   secondaryColor = '#FF0033',
-  glowIntensity = 6,
+  glowIntensity = 0,
   fontSize = 15,
   fontFamily = 'Roboto, sans-serif',
   duration = 4700,
@@ -90,7 +102,7 @@ export const createCyberFrameSvg = ({
     const delayMs = i * letterStaggerMs;
     return `
         #typography-${uniqueId} .cyber-char-${i} {
-          animation: cyber-text-${uniqueId} ${duration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
+          animation: cyber-text-${uniqueId} ${duration}ms infinite cubic-bezier(0.2, 0.8, 0.2, 1);
           animation-delay: ${delayMs}ms;
           animation-play-state: running;
         }`;
@@ -106,10 +118,11 @@ export const createCyberFrameSvg = ({
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}" 
+       data-font-family="${escapeXmlAttr(fontFamily)}" 
        cursor="pointer"${transformAttr} 
        style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
       
+      ${glowIntensity > 0 ? `
       <defs>
         <filter id="glow-${uniqueId}" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="${glowIntensity}" result="blur" />
@@ -118,7 +131,7 @@ export const createCyberFrameSvg = ({
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-      </defs>
+      </defs>` : ''}
 
       <style>
         @keyframes cyber-trim-${uniqueId} {
@@ -131,12 +144,12 @@ export const createCyberFrameSvg = ({
         }
 
         @keyframes cyber-text-${uniqueId} {
-          0% { transform: translateY(8px); opacity: 0; }
-          6% { opacity: 1; }
-          22% { transform: translateY(0px); opacity: 1; }
-          68% { transform: translateY(0px); opacity: 1; }
-          82% { transform: translateY(8px); opacity: 0; }
-          100% { transform: translateY(8px); opacity: 0; }
+          0% { transform: translateY(14px); opacity: 0; filter: blur(2px); }
+          8% { opacity: 1; filter: blur(0px); }
+          20% { transform: translateY(0px); opacity: 1; filter: blur(0px); }
+          68% { transform: translateY(0px); opacity: 1; filter: blur(0px); }
+          80% { transform: translateY(-10px); opacity: 0; filter: blur(1px); }
+          100% { transform: translateY(-10px); opacity: 0; filter: blur(1px); }
         }
 
         #typography-${uniqueId} .cyber-glow-stroke {
@@ -191,6 +204,7 @@ export const createCyberFrameSvg = ({
         pointer-events="all" 
       />
 
+      ${glowIntensity > 0 ? `
       <rect 
         class="cyber-glow-stroke" 
         x="4" 
@@ -203,7 +217,7 @@ export const createCyberFrameSvg = ({
         stroke="${secondaryColor}" 
         stroke-width="3.5" 
         filter="url(#glow-${uniqueId})" 
-      />
+      />` : ''}
 
       <rect 
         class="cyber-inner-stroke" 
@@ -264,7 +278,7 @@ export const createFlipiSlashSvg = ({
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}" 
+       data-font-family="${escapeXmlAttr(fontFamily)}" 
        cursor="pointer"${transformAttr} 
        style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
 
@@ -413,7 +427,7 @@ export const createBoxRevealSvg = ({
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}" 
+       data-font-family="${escapeXmlAttr(fontFamily)}" 
        cursor="pointer"${transformAttr} 
        style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
 
@@ -576,7 +590,7 @@ export const createYouTubeChannelSvg = ({
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}" 
+       data-font-family="${escapeXmlAttr(fontFamily)}" 
        data-icon-name="${iconName}"
        data-icon-html="${encodeURIComponent(iconHtml)}"
        data-icon-viewbox="${iconViewBox}"
@@ -680,6 +694,7 @@ const buildMotionGroup = ({
 }) => {
   const transformAttr = isTranslate ? ' transform="translate(50, 50)"' : '';
   const subAttr = subText !== '' ? `\n       data-subtext="${subText}"` : '';
+  const initialStrokeColor = template === 'swap-bar' ? primaryColor : secondaryColor;
   return `
     <g id="typography-${uniqueId}" 
        data-type="text" 
@@ -689,8 +704,11 @@ const buildMotionGroup = ({
        data-text="${text}"${subAttr}
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
+       data-primary-text-color="${primaryColor}"
+       data-secondary-text-color="${secondaryColor}"
+       data-stroke-color="${initialStrokeColor}"
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}" 
+       data-font-family="${escapeXmlAttr(fontFamily)}" 
        cursor="pointer"${transformAttr} 
        style="--stroke-width: 0px; --shadow-x: 0px; --shadow-y: 0px; --skew-angle: 0deg;">
       <style>${css}</style>
@@ -715,7 +733,12 @@ export const createSlideSplitSvg = ({
   duration = 5300,
   isTranslate = false
 }) => {
-  const width = 240, height = 78;
+  const minWidth = 240, height = 78;
+  const paddingX = 40;
+  const wA = measureTitleTextWidth(text, fontSize, fontFamily, '900', '0.01em');
+  const wB = measureTitleTextWidth(subText, Math.round(fontSize * 0.5), 'Arial, Helvetica, sans-serif', '400', '0.12em');
+  const maxContentW = Math.max(wA, wB);
+  const width = Math.max(minWidth, maxContentW + paddingX);
   const mid = Math.ceil(text.length / 2);
   const left = text.slice(0, mid), right = text.slice(mid);
   const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -793,15 +816,19 @@ export const createSwapBarSvg = ({
   text = 'FLIPIBOOK',
   subText = 'ANIMATION',
   primaryColor = '#E6007A',
-  secondaryColor = '#E6007A',
+  secondaryColor = '#000000',
   fontSize = 24,
-  fontFamily = 'Georgia, "Times New Roman", serif',
+  fontFamily = 'Georgia, Times New Roman, serif',
   duration = 4500,
   isTranslate = false
 }) => {
-  const width = 420, height = 56;
+  const minWidth = 420, height = 56;
   const barWidth = 6;
   const barHeight = Math.round(fontSize * 1.35);
+  const wA = measureTitleTextWidth(text, fontSize, fontFamily, '500', '0.08em');
+  const wB = measureTitleTextWidth(subText, fontSize, fontFamily, '500', '0.08em');
+  const maxSideW = Math.max(wA, wB) + 30;
+  const width = Math.max(minWidth, maxSideW * 2 + barWidth + 20);
   const barX = Math.round((width - barWidth) / 2);
   const barY = Math.round((height - barHeight) / 2);
   const half = barX - 10;
@@ -829,7 +856,7 @@ export const createSwapBarSvg = ({
           94%, 100% { transform: translateX(-102%) scale(0.3); opacity: 0; }
         }
         #typography-${uniqueId} .sb-bar {
-          fill: ${secondaryColor};
+          fill: ${primaryColor};
           transform-box: fill-box;
           transform-origin: center center;
           pointer-events: none;
@@ -855,8 +882,8 @@ export const createSwapBarSvg = ({
           animation-play-state: running;
         }
         #typography-${uniqueId} .sb-word-r {
-          color: #000000;
-          fill: #000000;
+          color: ${secondaryColor};
+          fill: ${secondaryColor};
           transform-origin: left center;
           animation: sb-word-r-${uniqueId} ${duration}ms infinite ${ease};
           animation-play-state: running;
@@ -895,7 +922,11 @@ export const createBarSweepSvg = ({
   duration = 8000,
   isTranslate = false
 }) => {
-  const width = 250, height = 68;
+  const minWidth = 250, height = 68;
+  const wA = measureTitleTextWidth(text, fontSize, fontFamily, '900', '0.02em');
+  const wB = measureTitleTextWidth(subText, Math.round(fontSize * 0.8), 'Arial, Helvetica, sans-serif', '400', '0.1em');
+  const maxW = Math.max(wA, wB) + 56;
+  const width = Math.max(minWidth, maxW);
   const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
   // 5 staggered bars (3-frame stagger in the AE file ~ 1.25% of the loop)
   const bars = [0, 1, 2, 3, 4];
@@ -971,7 +1002,11 @@ export const createSquareOpenSvg = ({
   duration = 6500,
   isTranslate = false
 }) => {
-  const width = 230, height = 96;
+  const minWidth = 230, height = 96;
+  const wA = measureTitleTextWidth(text, fontSize, fontFamily, '900', '0.04em');
+  const wB = measureTitleTextWidth(subText, Math.round(fontSize * 0.7), 'Arial, Helvetica, sans-serif', '700', '0.22em');
+  const maxW = Math.max(wA, wB) + 36;
+  const width = Math.max(minWidth, maxW);
   const ease = 'cubic-bezier(0.17, 1, 0.333, 1)';
   const css = `
         @keyframes sq-box-${uniqueId} {
@@ -1048,14 +1083,30 @@ export const createSocialBadgeSvg = ({
   iconColor = '#FFFFFF',
   iconBgColor = ''
 }) => {
-  const width = 250, height = 90;
-  const S = 0.3;                 // comp px -> svg px
-  const ox = 49, oy = 45;        // badge centre in svg px
-  const inPct = Math.min(60, (1533 / duration) * 100);   // 46 frames @30fps
-  const p = (f) => +((f / 46) * inPct).toFixed(2);       // frame -> keyframe %
+  const S = 0.3; // scale factor
+  const ox = 49, oy = 45;
+  const inPct = Math.min(60, (1533 / duration) * 100);
+  const p = (f) => +((f / 46) * inPct).toFixed(2);
   const ease = 'cubic-bezier(0.3, 0, 0.3, 1)';
   const activeIconBg = iconBgColor || primaryColor;
   const activeIconColor = iconColor || '#FFFFFF';
+
+  // Measure text to dynamically calculate pill width and total svg boundary width
+  // startPadding: 38px (generous clearance from the diamond icon so text never collides)
+  // endPadding: 32px (right buffer to comfortably clear rounded corner)
+  const measuredTextW = measureTitleTextWidth(text, fontSize, fontFamily, '500', '0.02em');
+  const startPadding = 38;
+  const endPadding = 32;
+  const desiredPillWidthSvg = Math.max(180, measuredTextW + startPadding + endPadding);
+  const pillW = Math.round(desiredPillWidthSvg / S); // in local unscaled units
+  const width = Math.round(ox + (29 + pillW) * S + 16); // total SVG width
+  const height = 90;
+
+  // Keyframe calculations:
+  // sb-move: starts at right end of the pill and moves to 0
+  const moveStartX = Math.round(pillW * 0.55);
+  // sb-label: slides in from the left under the pill
+  const labelSlideX = Math.round(measuredTextW / S + 100);
 
   let innerIconMarkup = `<path class="sb-f" transform="translate(-60 -62) scale(5.2)" d="M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z" fill="${activeIconColor}" />`;
   if (iconHtml) {
@@ -1080,9 +1131,9 @@ export const createSocialBadgeSvg = ({
           98%, 100% { transform: rotate(360deg) scale(0); }
         }
         @keyframes sb-move-${uniqueId} {
-          0%, ${p(14)}% { transform: translateX(334px); }
+          0%, ${p(14)}% { transform: translateX(${moveStartX}px); }
           ${p(23)}%, 88% { transform: translateX(0); }
-          98%, 100% { transform: translateX(334px); }
+          98%, 100% { transform: translateX(${moveStartX}px); }
         }
         @keyframes sb-pill-${uniqueId} {
           0%, ${p(14)}% { transform: scaleX(0); }
@@ -1090,15 +1141,15 @@ export const createSocialBadgeSvg = ({
           96%, 100% { transform: scaleX(0); }
         }
         @keyframes sb-label-${uniqueId} {
-          0%, ${p(29)}% { transform: translateX(-180px); }
+          0%, ${p(29)}% { transform: translateX(-${labelSlideX}px); }
           ${p(40)}%, 82% { transform: translateX(0); }
-          94%, 100% { transform: translateX(-180px); }
+          94%, 100% { transform: translateX(-${labelSlideX}px); }
         }
         #typography-${uniqueId} .sb-move { animation: sb-move-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pop  { animation: sb-pop-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running; }
         #typography-${uniqueId} .sb-pill {
           fill: ${activeIconBg}; stroke: ${secondaryColor}; stroke-width: 3;
-          transform-box: fill-box; transform-origin: center center; pointer-events: none;
+          transform-box: fill-box; transform-origin: left center; pointer-events: none;
           animation: sb-pill-${uniqueId} ${duration}ms infinite ${ease}; animation-play-state: running;
         }
         #typography-${uniqueId} .sb-badge { fill: ${activeIconBg}; stroke: ${secondaryColor}; stroke-width: 4; pointer-events: none; }
@@ -1112,8 +1163,8 @@ export const createSocialBadgeSvg = ({
   const body = `
       <rect class="motion-click-boundary" x="0" y="0" width="${width}" height="${height}" rx="12" ry="12" fill="none" pointer-events="all" />
       <g transform="translate(${ox} ${oy}) scale(${S})">
-        <!-- white pill (612x82, r18) grows from its centre, sits behind the badge -->
-        <rect class="sb-pill" x="29" y="-31" width="612" height="82" rx="18" ry="18" />
+        <!-- pill grows horizontally to fit entire label -->
+        <rect class="sb-pill" x="29" y="-31" width="${pillW}" height="82" rx="18" ry="18" />
         <!-- badge: 184px rounded square rotated 45deg, with the "f" kept upright -->
         <g class="sb-move"><g class="sb-pop">
           <rect class="sb-badge" x="-92" y="-92" width="184" height="184" rx="44" ry="44" transform="rotate(45)" />
@@ -1121,8 +1172,8 @@ export const createSocialBadgeSvg = ({
         </g></g>
       </g>
       <!-- label clipped to the pill window -->
-      <foreignObject x="${ox + 29 * S}" y="${oy - 31 * S}" width="${612 * S}" height="${82 * S}" style="pointer-events: none;">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; padding-left: 44px; box-sizing: border-box; overflow: hidden; pointer-events: none;">
+      <foreignObject x="${ox + 29 * S}" y="${oy - 31 * S}" width="${pillW * S}" height="${82 * S}" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; padding-left: ${startPadding}px; padding-right: ${endPadding}px; box-sizing: border-box; overflow: hidden; pointer-events: none;">
           <span class="motion-text-content sb-label">${text}</span>
         </div>
       </foreignObject>`;
@@ -1138,7 +1189,7 @@ export const createSocialBadgeSvg = ({
        data-primary-color="${primaryColor}" 
        data-secondary-color="${secondaryColor}" 
        data-font-size="${fontSize}" 
-       data-font-family="${fontFamily}"
+       data-font-family="${escapeXmlAttr(fontFamily)}"
        data-icon-name="${iconName}"
        data-icon-html="${encodeURIComponent(iconHtml)}"
        data-icon-viewbox="${iconViewBox}"
@@ -1162,7 +1213,7 @@ export const createMotionGraphicSvg = ({
   subText = '',
   primaryColor = '#000000',
   secondaryColor = '#FF0033',
-  glowIntensity = 6,
+  glowIntensity = 0,
   fontSize = 18,
   fontFamily = 'Roboto, sans-serif',
   duration = 4700,
@@ -1392,16 +1443,15 @@ export const getMotionGraphicProperties = (el) => {
     el.getAttribute('data-secondary-color') ||
     '#0f291e';
 
+  const motionTemplate = el.getAttribute('data-motion-template') || '';
+
   // Object Colors / Strokes / Backgrounds
   const textColor1 = primaryTextColor;
   const textColor2 = secondaryTextColor;
 
   const strokeColor =
     el.getAttribute('data-stroke-color') ||
-    el.getAttribute('data-secondary-color') ||
-    el.getAttribute('data-object-1-color') ||
-    el.getAttribute('data-primary-color') ||
-    '#00E5FF';
+    (motionTemplate === 'swap-bar' ? primaryTextColor : (el.getAttribute('data-secondary-color') || el.getAttribute('data-object-1-color') || el.getAttribute('data-primary-color') || '#00E5FF'));
 
   const backgroundColor =
     el.getAttribute('data-bg-color') ||
@@ -1413,7 +1463,8 @@ export const getMotionGraphicProperties = (el) => {
   const object3Color = strokeColor;
 
   // Font properties
-  const primaryFontSize = parseInt(el.getAttribute('data-font-size') || '24', 10);
+  const rawFs = el.getAttribute('data-font-size');
+  const primaryFontSize = rawFs !== null && rawFs !== '' ? parseInt(rawFs, 10) : (motionTemplate === 'social-badge' ? 14 : 24);
   const primaryFontFamily = el.getAttribute('data-font-family') || 'Poppins';
   const primaryFontWeight = el.getAttribute('data-font-weight') || 'Semi Bold';
   const primaryLetterSpacing = el.getAttribute('data-letter-spacing') || 'Auto';
@@ -1432,8 +1483,6 @@ export const getMotionGraphicProperties = (el) => {
   const secondaryIsBold = el.getAttribute('data-secondary-is-bold') === 'true' || secondaryFontWeight.toLowerCase().includes('bold');
   const secondaryIsStrikethrough = el.getAttribute('data-secondary-is-strikethrough') === 'true';
   const secondaryIsList = el.getAttribute('data-secondary-is-list') === 'true';
-
-  const motionTemplate = el.getAttribute('data-motion-template') || '';
 
   // Icon properties for templates with logo/icon support
   let rawIconHtml = el.getAttribute('data-icon-html') || '';
@@ -1510,7 +1559,7 @@ export const applyHybridContainerSizing = (el, updates = {}) => {
     if (clickBoundary) clickBoundary.setAttribute('width', String(width));
 
     const glowStroke = target.querySelector('.cyber-glow-stroke');
-    if (glowStroke) glowStroke.setAttribute('width', String(width - 8));
+    if (glowStroke) glowStroke.remove();
 
     const innerStroke = target.querySelector('.cyber-inner-stroke');
     if (innerStroke) innerStroke.setAttribute('width', String(width - 8));
@@ -1536,7 +1585,7 @@ export const applyHybridContainerSizing = (el, updates = {}) => {
         const delayMs = i * letterStaggerMs;
         return `
         #${target.id} .cyber-char-${i} {
-          animation: cyber-text-${uniqueId} ${curDuration}ms infinite cubic-bezier(0.833, 0.833, 0.167, 0.167);
+          animation: cyber-text-${uniqueId} ${curDuration}ms infinite cubic-bezier(0.2, 0.8, 0.2, 1);
           animation-delay: ${delayMs}ms;
           animation-play-state: running;
         }`;
@@ -1691,6 +1740,159 @@ export const applyHybridContainerSizing = (el, updates = {}) => {
     if (titleB) {
       titleB.style.fontSize = `${effectiveFontSize}px`;
     }
+  } else if (template === 'slide-split') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 26);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || '"Arial Black", Impact, sans-serif';
+
+    const minWidth = 240;
+    const paddingX = 40;
+    const wA = measureTitleTextWidth(textA, rawFontSize, curFontFamily, '900', '0.01em');
+    const wB = measureTitleTextWidth(textB, Math.round(rawFontSize * 0.5), 'Arial, Helvetica, sans-serif', '400', '0.12em');
+    const width = Math.max(minWidth, Math.max(wA, wB) + paddingX);
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const fos = target.querySelectorAll('foreignObject');
+    if (fos[0]) fos[0].setAttribute('width', String(width - 20));
+    if (fos[1]) fos[1].setAttribute('width', String(width - 24));
+
+    // Update split text
+    const mid = Math.ceil(textA.length / 2);
+    const left = textA.slice(0, mid);
+    const right = textA.slice(mid);
+    const leftEl = target.querySelector('.ss-title-l');
+    const rightEl = target.querySelector('.ss-title-r');
+    if (leftEl) leftEl.textContent = left;
+    if (rightEl) rightEl.textContent = right;
+    const subEl = target.querySelector('.ss-sub');
+    if (subEl) subEl.textContent = textB;
+  } else if (template === 'swap-bar') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 24);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || 'Georgia, Times New Roman, serif';
+
+    const minWidth = 420;
+    const barWidth = 6;
+    const wA = measureTitleTextWidth(textA, rawFontSize, curFontFamily, '500', '0.08em');
+    const wB = measureTitleTextWidth(textB, rawFontSize, curFontFamily, '500', '0.08em');
+    const maxSideW = Math.max(wA, wB) + 30;
+    const width = Math.max(minWidth, maxSideW * 2 + barWidth + 20);
+    const barX = Math.round((width - barWidth) / 2);
+    const half = barX - 10;
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const bar = target.querySelector('.sb-bar');
+    if (bar) bar.setAttribute('x', String(barX));
+
+    const fos = target.querySelectorAll('foreignObject');
+    if (fos[0]) {
+      fos[0].setAttribute('width', String(half));
+    }
+    if (fos[1]) {
+      fos[1].setAttribute('x', String(barX + barWidth));
+      fos[1].setAttribute('width', String(half));
+    }
+  } else if (template === 'bar-sweep') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 24);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || '"Arial Black", Impact, sans-serif';
+
+    const minWidth = 250;
+    const wA = measureTitleTextWidth(textA, rawFontSize, curFontFamily, '900', '0.02em');
+    const wB = measureTitleTextWidth(textB, Math.round(rawFontSize * 0.8), 'Arial, Helvetica, sans-serif', '400', '0.1em');
+    const width = Math.max(minWidth, Math.max(wA, wB) + 56);
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const fos = target.querySelectorAll('foreignObject');
+    fos.forEach((fo) => fo.setAttribute('width', String(width - 48)));
+  } else if (template === 'square-open') {
+    const textA = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FLIPIBOOK');
+    const textB = updates.secondaryText !== undefined ? updates.secondaryText : (target.getAttribute('data-subtext') || 'ANIMATION');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 24);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || '"Arial Black", Impact, sans-serif';
+
+    const minWidth = 230;
+    const wA = measureTitleTextWidth(textA, rawFontSize, curFontFamily, '900', '0.04em');
+    const wB = measureTitleTextWidth(textB, Math.round(rawFontSize * 0.7), 'Arial, Helvetica, sans-serif', '700', '0.22em');
+    const width = Math.max(minWidth, Math.max(wA, wB) + 36);
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const box = target.querySelector('.sq-box');
+    if (box) box.setAttribute('width', String(width - 16));
+
+    const fo = target.querySelector('foreignObject');
+    if (fo) fo.setAttribute('width', String(width - 20));
+  } else if (template === 'social-badge') {
+    const curText = updates.primaryText !== undefined ? updates.primaryText : (target.getAttribute('data-text') || 'FACEBOOK');
+    const rawFontSize = parseFloat(updates.primaryFontSize || target.getAttribute('data-font-size') || 14);
+    const curFontFamily = updates.primaryFontFamily || target.getAttribute('data-font-family') || 'Poppins, "Expletus Sans", Arial, sans-serif';
+
+    const S = 0.3;
+    const ox = 49;
+    const startPadding = 38;
+    const endPadding = 32;
+    // Measure uppercase since CSS text-transform: uppercase renders uppercase glyphs
+    const measuredTextW = measureTitleTextWidth(curText, rawFontSize, curFontFamily, '500', '0.02em');
+    const desiredPillWidthSvg = Math.max(180, measuredTextW + startPadding + endPadding);
+    const pillW = Math.round(desiredPillWidthSvg / S);
+    const width = Math.round(ox + 29 * S + desiredPillWidthSvg);
+
+    const clickBoundary = target.querySelector('.motion-click-boundary');
+    if (clickBoundary) clickBoundary.setAttribute('width', String(width));
+
+    const pill = target.querySelector('.sb-pill');
+    if (pill) pill.setAttribute('width', String(pillW));
+
+    const fo = target.querySelector('foreignObject');
+    if (fo) {
+      fo.setAttribute('width', String(pillW * S));
+      const div = fo.querySelector('div');
+      if (div) {
+        div.style.paddingLeft = `${startPadding}px`;
+        div.style.paddingRight = `${endPadding}px`;
+      }
+    }
+
+    const sbLabel = target.querySelector('.sb-label');
+    if (sbLabel) {
+      sbLabel.style.fontSize = `${rawFontSize}px`;
+    }
+
+    // Update style keyframes dynamically for the new pill size
+    const styleEl = target.querySelector('style');
+    if (styleEl) {
+      const moveStartX = Math.round(pillW * 0.55);
+      const labelSlideX = Math.round(measuredTextW / S + 100);
+      let css = styleEl.textContent;
+      // Replace sb-move and sb-label keyframe translations
+      css = css.replace(/@keyframes sb-move-([^{]+)\s*\{[\s\S]*?100%[^{]*\{[^}]*\}\s*\}/g, (m, id) => {
+        return `@keyframes sb-move-${id} {
+          0%, 14% { transform: translateX(${moveStartX}px); }
+          23%, 88% { transform: translateX(0); }
+          98%, 100% { transform: translateX(${moveStartX}px); }
+        }`;
+      });
+      css = css.replace(/@keyframes sb-label-([^{]+)\s*\{[\s\S]*?100%[^{]*\{[^}]*\}\s*\}/g, (m, id) => {
+        return `@keyframes sb-label-${id} {
+          0%, 29% { transform: translateX(-${labelSlideX}px); }
+          40%, 82% { transform: translateX(0); }
+          94%, 100% { transform: translateX(-${labelSlideX}px); }
+        }`;
+      });
+      styleEl.textContent = css;
+    }
+    return;
   }
 };
 
@@ -1918,7 +2120,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
     const val = updates.textColor2 !== undefined ? updates.textColor2 : updates.secondaryTextColor;
     el.setAttribute('data-text-color-2', val);
     el.setAttribute('data-secondary-text-color', val);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.color = val;
       sp.style.fill = val;
@@ -2000,9 +2202,9 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.primaryFontSize !== undefined) {
     el.setAttribute('data-font-size', String(updates.primaryFontSize));
-    const primarySpans = el.querySelectorAll('.motion-text-content, .flipi-text-a, .box-title-a, .yt-title-text, .cyber-text');
+    const primarySpans = el.querySelectorAll('.motion-text-content, .flipi-text-a, .box-title-a, .yt-title-text, .cyber-text, .ss-title, .sb-word-l, .bs-a, .sq-a, .sb-label');
     primarySpans.forEach((sp) => {
-      sp.style.fontSize = `${updates.primaryFontSize}pt`;
+      sp.style.setProperty('font-size', `${updates.primaryFontSize}pt`, 'important');
     });
   }
 
@@ -2064,15 +2266,15 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryFontSize !== undefined) {
     el.setAttribute('data-secondary-font-size', String(updates.secondaryFontSize));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r, .ss-sub, .bs-b');
     secSpans.forEach((sp) => {
-      sp.style.fontSize = `${updates.secondaryFontSize}pt`;
+      sp.style.setProperty('font-size', `${updates.secondaryFontSize}pt`, 'important');
     });
   }
 
   if (updates.secondaryFontFamily !== undefined) {
     el.setAttribute('data-secondary-font-family', updates.secondaryFontFamily);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.fontFamily = `'${updates.secondaryFontFamily}', sans-serif`;
     });
@@ -2080,7 +2282,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryFontWeight !== undefined) {
     el.setAttribute('data-secondary-font-weight', updates.secondaryFontWeight);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.fontWeight = updates.secondaryFontWeight.toLowerCase().includes('bold') ? '700' : '400';
     });
@@ -2088,7 +2290,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryTextAlign !== undefined) {
     el.setAttribute('data-secondary-text-align', updates.secondaryTextAlign);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.textAlign = updates.secondaryTextAlign;
     });
@@ -2096,7 +2298,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryLetterSpacing !== undefined) {
     el.setAttribute('data-secondary-letter-spacing', updates.secondaryLetterSpacing);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.letterSpacing = updates.secondaryLetterSpacing === 'Auto' ? 'normal' : updates.secondaryLetterSpacing;
     });
@@ -2104,7 +2306,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryLineHeight !== undefined) {
     el.setAttribute('data-secondary-line-height', updates.secondaryLineHeight);
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.lineHeight = updates.secondaryLineHeight === 'Auto' ? 'normal' : updates.secondaryLineHeight;
     });
@@ -2112,7 +2314,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryIsBold !== undefined) {
     el.setAttribute('data-secondary-is-bold', String(updates.secondaryIsBold));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.fontWeight = updates.secondaryIsBold ? '700' : '400';
     });
@@ -2120,7 +2322,7 @@ export const updateMotionGraphicAttributes = (el, updates = {}) => {
 
   if (updates.secondaryIsStrikethrough !== undefined) {
     el.setAttribute('data-secondary-is-strikethrough', String(updates.secondaryIsStrikethrough));
-    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b');
+    const secSpans = el.querySelectorAll('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b, .sb-word-r');
     secSpans.forEach((sp) => {
       sp.style.textDecoration = updates.secondaryIsStrikethrough ? 'line-through' : 'none';
     });

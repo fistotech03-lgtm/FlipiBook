@@ -37,7 +37,7 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
   const resolvedTextColor = textColor || (isLightBg ? '#000000' : '#FFFFFF');
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
-  const resolvedText = text !== undefined && text !== null ? text : frameObj.defaultText;
+  const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
   const cached = getCachedFrame(frameId, url);
   const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;
@@ -126,7 +126,7 @@ export function getQRCodeSvgString(options = {}, isDrag = false) {
   const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
   const resolvedTextColor = textColor || (isLightBg ? '#000000' : '#FFFFFF');
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
-  const resolvedText = text !== undefined && text !== null ? text : frameObj.defaultText;
+  const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
   const cached = getCachedFrame(frameId, url);
   const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;

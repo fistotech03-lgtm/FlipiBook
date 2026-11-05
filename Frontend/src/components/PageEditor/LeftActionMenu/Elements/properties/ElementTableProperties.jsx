@@ -17,6 +17,7 @@ import {
   MousePointer
 } from 'lucide-react';
 import ExcelJS from 'exceljs';
+import { TableMatrix } from '../helpers/TableMatrix';
 import ColorPicker from '../../../properties/ColorPicker';
 
 const FONT_FAMILIES = [
@@ -501,6 +502,7 @@ const ElementTableProperties = ({
       });
     }
 
+    initColumnResizer(table);
     const trs = table.querySelectorAll('tr');
     for (let r = top; r <= bottom; r++) {
       if (!trs[r]) continue;
@@ -649,6 +651,125 @@ const ElementTableProperties = ({
     }
   };
 
+
+  // --- Canva-Style Interactive Column Divider Dragging ---
+  const [colDragState, setColDragState] = useState(null);
+
+  const initColumnResizer = (tableEl) => {
+    if (!tableEl || tableEl.__hasColResizer) return;
+    tableEl.__hasColResizer = true;
+
+    tableEl.addEventListener('mousemove', (e) => {
+      const targetCell = e.target.closest('td, th');
+      if (!targetCell) {
+        tableEl.style.cursor = 'default';
+        return;
+      }
+      const rect = targetCell.getBoundingClientRect();
+      const colIdx = parseInt(targetCell.getAttribute('data-col') || '-1', 10);
+      const isRightEdge = (rect.right - e.clientX) <= 6 && (rect.right - e.clientX) >= -3;
+      const isLeftEdge = (e.clientX - rect.left) <= 6 && (e.clientX - rect.left) >= -3;
+
+      if (isRightEdge && colIdx >= 0) {
+        tableEl.style.cursor = 'col-resize';
+      } else if (isLeftEdge && colIdx > 0) {
+        tableEl.style.cursor = 'col-resize';
+      } else {
+        tableEl.style.cursor = 'default';
+      }
+    });
+
+    tableEl.addEventListener('mousedown', (e) => {
+      const targetCell = e.target.closest('td, th');
+      if (!targetCell) return;
+      const rect = targetCell.getBoundingClientRect();
+      let colIdx = parseInt(targetCell.getAttribute('data-col') || '-1', 10);
+      const isRightEdge = (rect.right - e.clientX) <= 6 && (rect.right - e.clientX) >= -3;
+      const isLeftEdge = (e.clientX - rect.left) <= 6 && (e.clientX - rect.left) >= -3;
+
+      let dividerCol = -1;
+      if (isRightEdge && colIdx >= 0) {
+        dividerCol = colIdx;
+      } else if (isLeftEdge && colIdx > 0) {
+        dividerCol = colIdx - 1;
+      }
+
+      const tr = tableEl.querySelector('tr');
+      if (dividerCol < 0 || !tr || dividerCol >= tr.children.length - 1) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const tableRect = tableEl.getBoundingClientRect();
+      const cells = Array.from(tr.children);
+      const colWidthsPx = cells.map(c => c.getBoundingClientRect().width);
+      const startX = e.clientX;
+      const initialDividerX = cells[dividerCol].getBoundingClientRect().right - tableRect.left;
+
+      setColDragState({
+        tableEl,
+        colIdx: dividerCol,
+        startX,
+        startColWidthsPx: colWidthsPx,
+        tableWidthPx: tableRect.width,
+        tableRect,
+        dividerX: initialDividerX,
+        currentColWidth: Math.round(colWidthsPx[dividerCol])
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (!colDragState) return;
+
+    const handleMouseMove = (e) => {
+      const { startX, colIdx, startColWidthsPx, tableWidthPx, tableRect, tableEl } = colDragState;
+      const deltaX = e.clientX - startX;
+
+      const minColPx = 25;
+      const leftStart = startColWidthsPx[colIdx];
+      const rightStart = startColWidthsPx[colIdx + 1];
+
+      let appliedDelta = deltaX;
+      if (leftStart + appliedDelta < minColPx) appliedDelta = minColPx - leftStart;
+      if (rightStart - appliedDelta < minColPx) appliedDelta = rightStart - minColPx;
+
+      const newLeftPx = leftStart + appliedDelta;
+      const newRightPx = rightStart - appliedDelta;
+
+      const trs = tableEl.querySelectorAll('tr');
+      const leftPct = (newLeftPx / tableWidthPx) * 100;
+      const rightPct = (newRightPx / tableWidthPx) * 100;
+
+      trs.forEach(row => {
+        if (row.children[colIdx]) row.children[colIdx].style.width = `${leftPct.toFixed(2)}%`;
+        if (row.children[colIdx + 1]) row.children[colIdx + 1].style.width = `${rightPct.toFixed(2)}%`;
+      });
+
+      const currentDividerPos = e.clientX - tableRect.left;
+      setColDragState(prev => prev ? {
+        ...prev,
+        dividerX: currentDividerPos,
+        currentColWidth: Math.round(newLeftPx)
+      } : null);
+    };
+
+    const handleMouseUp = () => {
+      if (colDragState && colDragState.tableEl) {
+        const el = getTargetElement();
+        if (el) syncChanges(el);
+      }
+      setColDragState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [colDragState]);
+
   const attachCellListeners = (el) => {
     if (!el) return;
     const table = el.querySelector('table');
@@ -712,7 +833,10 @@ const ElementTableProperties = ({
     })();
 
     let pw = 210, ph = 297;
-    if (svgRoot) {
+    if (flipbookDimensions && flipbookDimensions.width && flipbookDimensions.height) {
+      pw = parseFloat(flipbookDimensions.width);
+      ph = parseFloat(flipbookDimensions.height);
+    } else if (svgRoot) {
       const vbStr = svgRoot.getAttribute('viewBox');
       if (vbStr) {
         const parts = vbStr.trim().split(/[\s,]+/).map(parseFloat);
@@ -727,14 +851,20 @@ const ElementTableProperties = ({
     const overlay = el.querySelector('.svg-table-overlay, .svg-image-stroke-overlay');
     if (!fo) return;
 
-    const rows = el.querySelectorAll('tr').length || parseInt(el.getAttribute('data-rows') || '3', 10);
-    const marginX = pw <= 400 ? (pw > 150 ? 20 : 10) : Math.round(pw * 0.08);
-    const targetW = Math.round(Math.min(pw - marginX * 2, pw * 0.82));
-    const maxH = Math.round(ph * 0.55);
-    const targetH = Math.round(Math.min(maxH, Math.max(rows * 22, Math.round(targetW * 0.41))));
+    const trs = el.querySelectorAll('tr');
+    const rows = trs.length || parseInt(el.getAttribute('data-rows') || '3', 10);
+    
+    // Margins around canvas
+    const marginX = Math.max(10, Math.round(pw * 0.05));
+    const marginY = Math.max(12, Math.round(ph * 0.05));
+    const targetW = Math.round(pw - marginX * 2);
+    const maxAllowedH = Math.round(ph - marginY * 2);
 
-    const posX = Math.round(Math.max(marginX, (pw - targetW) / 2));
-    const posY = Math.round(Math.max(15, Math.min(ph - targetH - 15, (ph - targetH) / 2)));
+    // Height proportional to row count but strictly bounded to page
+    const targetH = Math.min(maxAllowedH, Math.max(rows * 16, Math.round(targetW * 0.5)));
+
+    const posX = Math.round((pw - targetW) / 2);
+    const posY = Math.round((ph - targetH) / 2);
 
     fo.setAttribute('width', targetW.toString());
     fo.setAttribute('height', targetH.toString());
@@ -742,9 +872,14 @@ const ElementTableProperties = ({
       overlay.setAttribute('width', targetW.toString());
       overlay.setAttribute('height', targetH.toString());
     }
-    el.setAttribute('transform', `translate(${posX}, ${posY})`);
 
-    // Clean any empty whitespace text nodes inside foreignObject
+    // Set clean translate transform and reset any scaling matrix to 1:1
+    const newTransform = `matrix(1, 0, 0, 1, ${posX}, ${posY})`;
+    el.setAttribute('transform', newTransform);
+    el.setAttribute('data-x', posX.toString());
+    el.setAttribute('data-y', posY.toString());
+
+    // Clean whitespace
     Array.from(fo.childNodes).forEach(n => {
       if (n.nodeType === 3 && !n.textContent.trim()) n.remove();
     });
@@ -752,14 +887,31 @@ const ElementTableProperties = ({
     if (wr) {
       wr.style.whiteSpace = 'normal';
       wr.style.lineHeight = 'normal';
-      wr.style.display = 'flex';
-      wr.style.flexDirection = 'column';
+      wr.style.display = 'block';
+      wr.style.overflow = 'hidden';
       Array.from(wr.childNodes).forEach(n => {
         if (n.nodeType === 3 && !n.textContent.trim()) n.remove();
       });
     }
 
-    fitTableHeightToContent(el);
+    // Auto-scale font and padding if table content is taller than targetH
+    if (rows > 8) {
+      const scaledSize = rows > 15 ? 7 : (rows > 10 ? 8 : 9);
+      const scaledPadY = 3;
+      setFontSize(scaledSize);
+      setPaddingY(scaledPadY);
+      applyTableStyles({ fontSize: scaledSize, paddingY: scaledPadY, isScrollable: false });
+    }
+
+    // Sync to store & canvas
+    if (typeof updateElementAttribute === 'function') {
+      updateElementAttribute(activePageIndex, selectedLayerId || el.id, {
+        transform: newTransform,
+        'data-x': posX.toString(),
+        'data-y': posY.toString()
+      });
+    }
+
     syncChanges(el);
     if (typeof window.drawOverlayHighlight === 'function') {
       window.drawOverlayHighlight(el, 'selected');
@@ -948,7 +1100,7 @@ const ElementTableProperties = ({
       rowsHtml += '</tr>';
     }
 
-    fo.innerHTML = `<div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${bRadius}px;overflow:hidden;display:block;margin:0;padding:0;white-space:normal;line-height:normal;pointer-events:auto;"><table style="width:100%;height:100%;border-collapse:collapse;border:${bWidth}px solid ${bColor};background-color:${tColor};font-family:'Poppins',sans-serif;font-size:13px;table-layout:fixed;margin:0;padding:0;white-space:normal;box-sizing:border-box;"><tbody>${rowsHtml}</tbody></table></div>`;
+    fo.innerHTML = `<div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${bRadius}px;overflow:hidden;display:block;margin:0;padding:0;white-space:normal;line-height:normal;pointer-events:auto;"><table style="width:100%;height:100%;border-collapse:collapse;border:${bWidth}px solid ${bColor};background-color:${tColor};font-family:'Poppins',sans-serif;font-size:13pt;table-layout:fixed;margin:0;padding:0;white-space:normal;box-sizing:border-box;"><tbody>${rowsHtml}</tbody></table></div>`;
 
     el.appendChild(fo);
 
@@ -1150,7 +1302,7 @@ const ElementTableProperties = ({
         if (overrides.verticalAlign !== undefined) cell.style.verticalAlign = vAlign;
         if (overrides.cellColor !== undefined || overrides.cellOpacity !== undefined) cell.style.color = cColorRgba;
         if (overrides.fontFamily !== undefined) cell.style.fontFamily = `'${fFam}', sans-serif`;
-        if (overrides.fontSize !== undefined) cell.style.fontSize = `${fSize}px`;
+        if (overrides.fontSize !== undefined) cell.style.fontSize = `${fSize}pt`;
         if (overrides.fontWeight !== undefined || overrides.isBold !== undefined) {
           cell.style.fontWeight = boldVal ? '700' : (fWeight === 'Semi Bold' ? '600' : (fWeight === 'Bold' ? '700' : '400'));
         }
@@ -1231,7 +1383,7 @@ const ElementTableProperties = ({
         table.style.borderRadius = `${bRadius}px`;
         table.style.backgroundColor = tColorRgba;
         table.style.fontFamily = `'${fFam}', sans-serif`;
-        table.style.fontSize = `${fSize}px`;
+        table.style.fontSize = `${fSize}pt`;
         table.style.fontWeight = boldVal ? '700' : (fWeight === 'Semi Bold' ? '600' : (fWeight === 'Bold' ? '700' : '400'));
         table.style.color = cColorRgba;
         table.style.margin = '0';
@@ -1274,7 +1426,7 @@ const ElementTableProperties = ({
         if (!hasOverrides || overrides.fontWeight !== undefined || overrides.isBold !== undefined) {
           cell.style.fontWeight = boldVal ? '700' : (fWeight === 'Semi Bold' ? '600' : (fWeight === 'Bold' ? '700' : '400'));
         }
-        if (!hasOverrides || overrides.fontSize !== undefined) cell.style.fontSize = `${fSize}px`;
+        if (!hasOverrides || overrides.fontSize !== undefined) cell.style.fontSize = `${fSize}pt`;
         if (!hasOverrides || overrides.fontFamily !== undefined) cell.style.fontFamily = `'${fFam}', sans-serif`;
         if (!hasOverrides || overrides.themeColor !== undefined || overrides.themeOpacity !== undefined) cell.style.backgroundColor = tColorRgba;
       });
@@ -1469,7 +1621,7 @@ const ElementTableProperties = ({
           if (cell.font) {
             if (cell.font.bold) td.style.fontWeight = '700';
             if (cell.font.italic) td.style.fontStyle = 'italic';
-            if (cell.font.size) td.style.fontSize = `${cell.font.size}px`;
+            if (cell.font.size) td.style.fontSize = `${cell.font.size}pt`;
           }
 
           // Extract fill
@@ -1495,8 +1647,35 @@ const ElementTableProperties = ({
       el.setAttribute('data-rows', totalNewRows.toString());
       el.setAttribute('data-cols', totalNewCols.toString());
 
-      setIsScrollable(true);
-      applyTableStyles({ isScrollable: true });
+      // Canva model: Table fits cleanly without forced scrollbars
+      setIsScrollable(false);
+      applyTableStyles({ isScrollable: false });
+
+      // Calculate content-weighted column widths (short cols shrink, text cols grow)
+      try {
+        const matrix = TableMatrix.fromDOM(table);
+        const colPcts = matrix.computeContentWeightedWidths();
+        const trsList = table.querySelectorAll('tr');
+        trsList.forEach(tr => {
+          Array.from(tr.children).forEach((td, cIdx) => {
+            if (colPcts[cIdx]) {
+              td.style.width = `${colPcts[cIdx]}%`;
+            }
+          });
+        });
+      } catch (err) {
+        console.warn('Weighted columns calculation failed:', err);
+      }
+
+      // Auto-tune font and padding for larger row counts so all rows fit on page
+      if (totalNewRows > 8) {
+        const scaledSize = totalNewRows > 14 ? 8 : (totalNewRows > 10 ? 9 : 10);
+        const scaledPadY = 4;
+        setFontSize(scaledSize);
+        setPaddingY(scaledPadY);
+        applyTableStyles({ fontSize: scaledSize, paddingY: scaledPadY, isScrollable: false });
+      }
+
       fitTableToPage(el);
       // Clean up any legacy active contenteditable on existing cells
     el.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
@@ -1680,7 +1859,21 @@ const ElementTableProperties = ({
       td.style.userSelect = 'none';
     });
     attachCellListeners(el);
-    checkAndFitTable(el);
+    try {
+      const matrix = TableMatrix.fromDOM(table);
+      const colPcts = matrix.computeContentWeightedWidths();
+      const trsList = table.querySelectorAll('tr');
+      trsList.forEach(tr => {
+        Array.from(tr.children).forEach((td, cIdx) => {
+          if (colPcts[cIdx]) {
+            td.style.width = `${colPcts[cIdx]}%`;
+          }
+        });
+      });
+    } catch (err) {
+      console.warn('Paste col weighting failed:', err);
+    }
+    fitTableToPage(el);
     syncChanges(el);
   };
 
@@ -2969,6 +3162,47 @@ const ElementTableProperties = ({
           />
         </div>
       </div>
+
+            {/* Canva-Style Purple Divider Guide & Floating Width Badge */}
+      {colDragState && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: `${colDragState.tableRect.left + colDragState.dividerX}px`,
+            top: `${colDragState.tableRect.top}px`,
+            height: `${colDragState.tableRect.height}px`,
+            width: '2px',
+            backgroundColor: '#8b5cf6',
+            zIndex: 999999,
+            pointerEvents: 'none',
+            boxShadow: '0 0 6px rgba(139, 92, 246, 0.6)'
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: '#1e293b',
+              color: '#ffffff',
+              padding: '3px 8px',
+              borderRadius: '9999px',
+              fontSize: '11px',
+              fontWeight: '600',
+              fontFamily: 'sans-serif',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <span>w: {colDragState.currentColWidth}</span>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Color Picker Portal */}
       {activeColorPicker && createPortal(

@@ -335,7 +335,7 @@ export const getMapSvgCode = (templateId = 'none', isClick = false, customData =
   const data = { ...DEFAULT_MAP_DATA, ...customData };
   const loc = data.location || 'Coimbatore, Tamil Nadu';
   const zoom = customData.zoom !== undefined ? customData.zoom : (data.zoom !== undefined ? data.zoom : 11);
-  const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+  const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=${zoom}&ie=UTF8&iwloc=near&output=embed`;
   const theme = data.theme || 'Light Theme';
   const buttonColor = data.buttonColor || '#000000';
   const isDark = String(theme).toLowerCase().includes('dark');
@@ -375,7 +375,7 @@ export const getMapSvgCode = (templateId = 'none', isClick = false, customData =
        data-source-type="Location"
        data-url="${defaultUrl.replace(/&/g, '&amp;')}"
        cursor="pointer"${transformAttr}>
-      <foreignObject x="0" y="0" width="${targetW}" height="${targetH}" style="overflow: hidden; border-radius: 0px;">
+      <foreignObject data-type="map" x="0" y="0" width="${targetW}" height="${targetH}" style="overflow: hidden; border-radius: 0px;">
         <div xmlns="http://www.w3.org/1999/xhtml" class="map-root-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; border-radius: 0px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);">
           <div class="map-stage" style="position: absolute; top: 0; left: 0; width: ${innerW}px; height: ${innerH}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden;">
             <iframe src="${defaultUrl.replace(/&/g, '&amp;')}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; pointer-events: none; margin: 0; padding: 0; display: block; ${filterStyle}" allowfullscreen="" loading="lazy"></iframe>

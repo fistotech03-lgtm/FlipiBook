@@ -4,14 +4,12 @@ import {
   Sliders,
   X,
   ChevronDown,
-  ChevronUp,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  List
+  ChevronUp
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { ElementDropdown, ElementSlider } from './ElementUIControls';
 import ColorPicker from '../../../../ColorPicker';
+import { IconsModal } from '../../Icons';
 import {
   MOTION_GRAPHIC_TEMPLATES,
   getMotionGraphicProperties,
@@ -32,20 +30,19 @@ const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = f
   const displayColor = isGradient
     ? 'GRADIENT'
     : isNone
-    ? 'NONE'
-    : color && color.startsWith('#')
-    ? color.toUpperCase()
-    : color || '#000000';
+      ? 'NONE'
+      : color && color.startsWith('#')
+        ? color.toUpperCase()
+        : color || '#000000';
 
   return (
     <div className="flex items-center gap-[0.4vw] w-full">
       <div
         onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive
+        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive
             ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs'
             : 'border-gray-200 hover:border-gray-300'
-        }`}
+          }`}
         style={{ background: isNone ? '#ffffff' : color || '#000000' }}
         title="Click to open color palette"
       >
@@ -125,8 +122,8 @@ const TextPropertyInlinePopup = ({
         </button>
       </div>
 
-      {/* Row 1: Font Family + Font Size */}
-      <div className="grid grid-cols-[1.6fr_1fr] gap-[0.5vw]">
+      {/* Row 1: Font Family (Full Width) */}
+      <div className="w-full">
         {/* Font Family Dropdown */}
         <div className="relative">
           <button
@@ -148,9 +145,8 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontFamily: ff });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontFamily === ff ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontFamily === ff ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
                   style={{ fontFamily: ff }}
                 >
                   {ff}
@@ -159,41 +155,11 @@ const TextPropertyInlinePopup = ({
             </div>
           )}
         </div>
-
-        {/* Font Size Dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenDropdown(openDropdown === 'size' ? null : 'size')}
-            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
-          >
-            <span className="text-[0.78vw] font-medium">{fontSize}</span>
-            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
-          </button>
-          {openDropdown === 'size' && (
-            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
-              {FONT_SIZES.map((sz) => (
-                <div
-                  key={sz}
-                  onClick={() => {
-                    onUpdate({ fontSize: sz });
-                    setOpenDropdown(null);
-                  }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
-                >
-                  {sz}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Row 2: Font Weight + Auto (letter spacing) + Auto (line height) */}
-      <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-[0.5vw]">
-        {/* Font Weight */}
+      {/* Row 2: Font Weight + Font Size */}
+      <div className="grid grid-cols-[1.5fr_1fr] gap-[0.5vw]">
+        {/* Font Weight Dropdown */}
         <div className="relative">
           <button
             type="button"
@@ -212,9 +178,8 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontWeight: fw, isBold: fw.toLowerCase().includes('bold') });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${
-                    fontWeight === fw ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
-                  }`}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontWeight === fw ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
                 >
                   {fw}
                 </div>
@@ -223,103 +188,34 @@ const TextPropertyInlinePopup = ({
           )}
         </div>
 
-        {/* Auto Letter Spacing button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = letterSpacing === 'Auto' ? '2px' : letterSpacing === '2px' ? '4px' : 'Auto';
-            onUpdate({ letterSpacing: next });
-          }}
-          className="h-[2.3vw] flex items-center justify-center gap-[0.3vw] border border-gray-200 rounded-[0.5vw] px-[0.4vw] bg-white hover:border-gray-300 transition-all text-gray-700 shadow-2xs"
-          title="Letter Spacing"
-        >
-          <span className="text-[0.72vw] font-medium">{letterSpacing}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-            <path d="M4 12h16" />
-            <polyline points="7 9 4 12 7 15" />
-            <polyline points="17 9 20 12 17 15" />
-            <line x1="3" y1="4" x2="3" y2="20" />
-            <line x1="21" y1="4" x2="21" y2="20" />
-          </svg>
-        </button>
-
-        {/* Auto Line Height button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = lineHeight === 'Auto' ? '1.2' : lineHeight === '1.2' ? '1.5' : 'Auto';
-            onUpdate({ lineHeight: next });
-          }}
-          className="h-[2.3vw] flex items-center justify-center gap-[0.3vw] border border-gray-200 rounded-[0.5vw] px-[0.4vw] bg-white hover:border-gray-300 transition-all text-gray-700 shadow-2xs"
-          title="Line Height"
-        >
-          <span className="text-[0.72vw] font-medium">{lineHeight}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-            <path d="M12 4v16" />
-            <polyline points="9 7 12 4 15 7" />
-            <polyline points="9 17 12 20 15 17" />
-            <line x1="4" y1="3" x2="20" y2="3" />
-            <line x1="4" y1="21" x2="20" y2="21" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Row 3: Format Bar [Align] [Bold] [Strikethrough / Dash] [List] */}
-      <div className="flex items-center gap-[0.5vw]">
-        {/* Align Button */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = textAlign === 'center' ? 'left' : textAlign === 'left' ? 'right' : 'center';
-            onUpdate({ textAlign: next });
-          }}
-          className="w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors shadow-2xs"
-          title="Text Alignment"
-        >
-          {textAlign === 'left' ? (
-            <AlignLeft size="0.95vw" strokeWidth={2.2} />
-          ) : textAlign === 'right' ? (
-            <AlignRight size="0.95vw" strokeWidth={2.2} />
-          ) : (
-            <AlignCenter size="0.95vw" strokeWidth={2.2} />
+        {/* Font Size Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpenDropdown(openDropdown === 'size' ? null : 'size')}
+            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
+          >
+            <span className="text-[0.78vw] font-medium">{fontSize} pt</span>
+            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
+          </button>
+          {openDropdown === 'size' && (
+            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
+              {FONT_SIZES.map((sz) => (
+                <div
+                  key={sz}
+                  onClick={() => {
+                    onUpdate({ fontSize: sz });
+                    setOpenDropdown(null);
+                  }}
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                    }`}
+                >
+                  {sz} pt
+                </div>
+              ))}
+            </div>
           )}
-        </button>
-
-        {/* Bold Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isBold: !isBold, fontWeight: !isBold ? 'Bold' : 'Regular' })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isBold ? 'bg-gray-200 text-black font-extrabold' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
-          title="Bold"
-        >
-          <span className="font-bold text-[0.9vw]">B</span>
-        </button>
-
-        {/* Dash / Strikethrough Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isStrikethrough: !isStrikethrough })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isStrikethrough ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
-          title="Strikethrough"
-        >
-          <span className="font-bold text-[1vw] leading-none">—</span>
-        </button>
-
-        {/* List Button */}
-        <button
-          type="button"
-          onClick={() => onUpdate({ isList: !isList })}
-          className={`w-[2.3vw] h-[2.3vw] flex items-center justify-center rounded-[0.45vw] transition-colors shadow-2xs ${
-            isList ? 'bg-gray-200 text-black' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-          }`}
-          title="List"
-        >
-          <List size="0.95vw" strokeWidth={2.2} />
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -345,6 +241,9 @@ const ElementTitlesProperties = ({
     effectiveElement?.querySelector('.motion-text-subcontent, .flipi-text-b, .box-title-b, .sq-b')
   );
 
+  const currentTemplate = effectiveElement?.getAttribute('data-motion-template') || '';
+  const hasLogoFeature = currentTemplate === 'youtube-channel' || currentTemplate === 'social-badge';
+
   const [animation, setAnimation] = useState(
     initialProps.animation === 'Infinity' ? 'Infinite' : (initialProps.animation || 'Infinite')
   );
@@ -357,6 +256,14 @@ const ElementTitlesProperties = ({
   const [textColor2, setTextColor2] = useState(initialProps.secondaryTextColor || '#0f291e');
   const [strokeColor, setStrokeColor] = useState(initialProps.strokeColor || '#00E5FF');
   const [backgroundColor, setBackgroundColor] = useState(initialProps.backgroundColor || 'transparent');
+
+  // Icon / Logo states
+  const [iconName, setIconName] = useState(initialProps.iconName || 'Play');
+  const [iconHtml, setIconHtml] = useState(initialProps.iconHtml || '');
+  const [iconViewBox, setIconViewBox] = useState(initialProps.iconViewBox || '0 0 24 24');
+  const [iconColor, setIconColor] = useState(initialProps.iconColor || '#FFFFFF');
+  const [iconBgColor, setIconBgColor] = useState(initialProps.iconBgColor || '#FF0024');
+  const [isIconGalleryOpen, setIsIconGalleryOpen] = useState(false);
 
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [activeTextSettings, setActiveTextSettings] = useState(null); // 'primary' | 'secondary' | null
@@ -400,6 +307,12 @@ const ElementTitlesProperties = ({
       setStrokeColor(p.strokeColor || '#00E5FF');
       setBackgroundColor(p.backgroundColor || 'transparent');
 
+      setIconName(p.iconName || (currentTemplate === 'youtube-channel' ? 'Play' : 'Facebook'));
+      setIconHtml(p.iconHtml || '');
+      setIconViewBox(p.iconViewBox || '0 0 24 24');
+      setIconColor(p.iconColor || '#FFFFFF');
+      setIconBgColor(p.iconBgColor || (currentTemplate === 'youtube-channel' ? '#FF0024' : '#0E34A8'));
+
       setPrimaryFontSize(p.primaryFontSize || 24);
       setPrimaryFontFamily(p.primaryFontFamily || 'Poppins');
       setPrimaryFontWeight(p.primaryFontWeight || 'Semi Bold');
@@ -422,16 +335,27 @@ const ElementTitlesProperties = ({
     }
   }, [selectedElement, selectedLayerId, currentKey]);
 
+  // Helper to dynamically resolve target title element from DOM if stale
+  const resolveTargetElement = () => {
+    const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const targetId = selectedLayerId || selectedElement?.id;
+    const found = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null) || selectedElement;
+    if (found && typeof found.closest === 'function') {
+      return found.closest('[data-typography-type="motion-graphic"], [data-motion-template]') || found;
+    }
+    return found;
+  };
+
   // Synchronize helper
   const syncUpdates = (newAttributes = {}) => {
-    const targetEl = effectiveElement;
+    const targetEl = resolveTargetElement() || effectiveElement;
     if (!targetEl) return;
     updateMotionGraphicAttributes(targetEl, newAttributes);
 
     // Sync via DOM serializer
     const svgRoot = (() => {
       const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
-      const el = editorDoc.getElementById(selectedLayerId) || targetEl;
+      const el = (selectedLayerId ? editorDoc.getElementById(selectedLayerId) : null) || (selectedLayerId ? document.getElementById(selectedLayerId) : null) || targetEl;
       if (!el) return null;
       const container = el.closest('.page-svg-container');
       if (container) return container.querySelector('svg');
@@ -447,10 +371,13 @@ const ElementTitlesProperties = ({
     if (svgRoot && typeof updateElementAttribute === 'function') {
       const serializer = new XMLSerializer();
       const html = serializer.serializeToString(svgRoot);
-      updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', html);
+      updateElementAttribute(activePageIndex, targetEl.id || selectedLayerId, '__dom_sync__', html);
     } else if (typeof updateElementAttribute === 'function') {
-      updateElementAttribute(activePageIndex, selectedLayerId, newAttributes);
+      updateElementAttribute(activePageIndex, targetEl.id || selectedLayerId, newAttributes);
     }
+
+    // Immediately notify selection engine to recalculate handles and bounding box
+    window.dispatchEvent(new CustomEvent('force-update-selection-box'));
   };
 
   const handleAnimationChange = (newAnim, customCountVal) => {
@@ -499,16 +426,149 @@ const ElementTitlesProperties = ({
     syncUpdates({ backgroundColor: col, object3Color: col });
   };
 
+  const handleIconColorChange = (col) => {
+    setIconColor(col);
+    syncUpdates({ iconColor: col });
+  };
+
+  const handleIconBgColorChange = (col) => {
+    setIconBgColor(col);
+    syncUpdates({ iconBgColor: col });
+  };
+
+  // Helper to dynamically adjust icon markup colors to match color in preview
+  const cleanIconHtml = (html, color = '#ffffff') => {
+    if (!html) return '';
+    return html
+      .replace(/stroke="(?!(?:none))[^"]*"/gi, `stroke="${color}"`)
+      .replace(/fill="(?!(?:none|transparent))[^"]*"/gi, `fill="${color}"`);
+  };
+
+  const renderIconPreview = () => {
+    // If we have custom icon SVG HTML
+    if (iconHtml) {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg
+            viewBox={iconViewBox || "0 0 24 24"}
+            className="w-[1.8vw] h-[1.8vw]"
+            stroke="#ffffff"
+            fill="none"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              color: '#ffffff',
+              stroke: '#ffffff'
+            }}
+            dangerouslySetInnerHTML={{ __html: cleanIconHtml(iconHtml, '#ffffff') }}
+          />
+        </div>
+      );
+    }
+
+    // Default icon rendering for Facebook / YouTube templates
+    if (currentTemplate === 'social-badge' || iconName === 'Facebook') {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 24 24" className="w-[1.8vw] h-[1.8vw]" fill="#ffffff">
+            <path d="M13.4 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.5 1.6-1.5h1.7V3.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2v2.4H7.4v3.2h2.8V21h3.2z" />
+          </svg>
+        </div>
+      );
+    }
+
+    if (currentTemplate === 'youtube-channel' || iconName === 'Play' || iconName === 'Youtube') {
+      return (
+        <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 24 24" className="w-[1.8vw] h-[1.8vw]" fill="#ffffff">
+            <polygon points="7,4 20,12 7,20" />
+          </svg>
+        </div>
+      );
+    }
+
+    const IconCmp = LucideIcons[iconName] || LucideIcons.Heart;
+    return (
+      <div className="w-[3.4vw] h-[3.4vw] rounded-full bg-[#000000] flex items-center justify-center shadow-sm">
+        <IconCmp
+          size="1.8vw"
+          strokeWidth={2.5}
+          color="#ffffff"
+          style={{
+            color: '#ffffff',
+            stroke: '#ffffff'
+          }}
+        />
+      </div>
+    );
+  };
+
+  const previewTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const triggerPreviewAnimation = () => {
-    if (!selectedElement) return;
-    const styles = selectedElement.querySelectorAll('style');
+    const targetEl = effectiveElement || selectedElement;
+    if (!targetEl) return;
+
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
+
+    const styles = targetEl.querySelectorAll('style');
+    if (!styles.length) return;
+
+    // Save the original css content of each style tag
+    const originalStyles = Array.from(styles).map((st) => ({
+      el: st,
+      originalText: st.textContent
+    }));
+
+    // Calculate maximum duration to know when to restore the configured loop count
+    let maxDurationMs = 2500;
+    originalStyles.forEach(({ originalText }) => {
+      const match = originalText.match(/animation:\s*([a-zA-Z0-9_-]+)\s+([0-9.]+)ms/);
+      if (match && match[2]) {
+        const dur = parseFloat(match[2]);
+        if (!isNaN(dur) && dur > maxDurationMs) {
+          maxDurationMs = dur;
+        }
+      }
+    });
+
+    // Temporarily replace animation count to run only 1 time for the preview
     styles.forEach((st) => {
-      const content = st.textContent;
+      let previewText = st.textContent.replace(
+        /(animation:\s*[^;]+?)(\s+(?:infinite|[0-9]+))(\s+cubic-bezier|\s+ease|\s+linear|\s*;)/gi,
+        '$1 1$3'
+      );
+      if (previewText.includes('animation-iteration-count:')) {
+        previewText = previewText.replace(/animation-iteration-count:\s*[^;]+;/gi, 'animation-iteration-count: 1;');
+      }
+      // Force animation restart
       st.textContent = '';
       void st.offsetHeight;
-      st.textContent = content;
+      st.textContent = previewText;
     });
+
     window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+
+    // After running once (+ buffer), restore the original animation setting (e.g. Infinite / Twice) without disrupting editor state
+    previewTimeoutRef.current = setTimeout(() => {
+      originalStyles.forEach(({ el, originalText }) => {
+        if (el && el.isConnected) {
+          el.textContent = originalText;
+        }
+      });
+      window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+    }, maxDurationMs + 200);
   };
 
   const [isAnimationDropdownOpen, setIsAnimationDropdownOpen] = useState(false);
@@ -557,131 +617,140 @@ const ElementTitlesProperties = ({
     backgroundColor: {
       value: backgroundColor,
       onChange: handleBackgroundColorChange
+    },
+    iconColor: {
+      value: iconColor,
+      onChange: handleIconColorChange
+    },
+    iconBgColor: {
+      value: iconBgColor,
+      onChange: handleIconBgColorChange
     }
   };
 
   return (
     <div className="flex flex-col gap-[1vw] w-full text-left select-none pb-[2vw]">
-      {/* ── Top Preview Banner ── */}
-      <button
-        type="button"
-        onClick={triggerPreviewAnimation}
-        className="w-full flex items-center gap-[0.8vw] bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 rounded-[0.7vw] px-[1vw] py-[0.8vw] shadow-xs cursor-pointer transition-all active:scale-[0.99] group text-left"
-      >
-        <span className="text-[1.3vw] leading-none select-none filter drop-shadow-xs">⭐</span>
-        <span className="text-[0.82vw] font-semibold text-gray-800 tracking-tight">
-          Click to preview Animations
-        </span>
-      </button>
+      {/* ── Titles Property Section ── */}
+      <div className="flex flex-col gap-[0.7vw]">
+        <SectionHeader title="Titles Property" />
 
-      {/* ── Animation Row ── */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-          <span>Animation</span>
-          <span>:</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
-            <button
-              type="button"
-              onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
-              className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${
-                isAnimationDropdownOpen
-                  ? 'border-2 border-[#E05638] shadow-xs'
-                  : 'border border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <span className="truncate text-gray-800 font-medium">
-                {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
-              </span>
-              {isAnimationDropdownOpen ? (
-                <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-              ) : (
-                <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-              )}
-            </button>
+        {/* Top Preview Banner */}
+        <button
+          type="button"
+          onClick={triggerPreviewAnimation}
+          className="w-full flex items-center gap-[0.8vw] bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 rounded-[0.7vw] px-[1vw] py-[0.8vw] shadow-xs cursor-pointer transition-all active:scale-[0.99] group text-left"
+        >
+          <span className="text-[1.3vw] leading-none select-none filter drop-shadow-xs">⭐</span>
+          <span className="text-[0.82vw] font-semibold text-gray-800 tracking-tight">
+            Click to preview Animations
+          </span>
+        </button>
 
-            {isAnimationDropdownOpen && (
-              <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
-                {animationOptions.map((opt) => {
-                  const isSelected = animation === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        handleAnimationChange(opt.value);
-                        setIsAnimationDropdownOpen(false);
-                      }}
-                      className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${
-                        isSelected
-                          ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-
-                <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
-
-                {/* Custom Option with Input Box and "times" label */}
-                <div
-                  className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${
-                    animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
+        {/* Animation Row */}
+        <div className="flex items-center gap-[0.5vw]">
+          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+            <span>Animation</span>
+            <span>:</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
+              <button
+                type="button"
+                onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
+                className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${isAnimationDropdownOpen
+                    ? 'border-2 border-[#E05638] shadow-xs'
+                    : 'border border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => {
-                    handleAnimationChange('Custom', customAnimationCount || '4');
-                  }}
-                >
-                  <input
-                    type="number"
-                    min="1"
-                    max="999"
-                    value={customAnimationCount}
-                    placeholder="Custom"
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      handleCustomCountChange(val);
+              >
+                <span className="truncate text-gray-800 font-medium">
+                  {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
+                </span>
+                {isAnimationDropdownOpen ? (
+                  <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
+                )}
+              </button>
+
+              {isAnimationDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
+                  {animationOptions.map((opt) => {
+                    const isSelected = animation === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          handleAnimationChange(opt.value);
+                          setIsAnimationDropdownOpen(false);
+                        }}
+                        className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${isSelected
+                            ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+
+                  <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
+
+                  {/* Custom Option with Input Box and "times" label */}
+                  <div
+                    className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
+                      }`}
+                    onClick={() => {
+                      handleAnimationChange('Custom', customAnimationCount || '4');
                     }}
-                    onFocus={() => {
-                      if (animation !== 'Custom') {
-                        handleAnimationChange('Custom', customAnimationCount || '4');
-                      }
-                    }}
-                    className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${
-                      animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
-                    }`}
-                  />
-                  <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
-                    times
-                  </span>
+                  >
+                    <input
+                      type="number"
+                      min="1"
+                      max="999"
+                      value={customAnimationCount}
+                      placeholder="Custom"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleCustomCountChange(val);
+                      }}
+                      onFocus={() => {
+                        if (animation !== 'Custom') {
+                          handleAnimationChange('Custom', customAnimationCount || '4');
+                        }
+                      }}
+                      className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
+                        }`}
+                    />
+                    <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
+                      times
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Speed Row ── */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-          <span>Speed</span>
-          <span>:</span>
-        </div>
-        <div className="flex-1 min-w-0 flex items-center gap-[0.7vw]">
-          <ElementSlider
-            min={10}
-            max={200}
-            step={1}
-            value={speed}
-            onChange={handleSpeedChange}
-            className="flex-1"
-          />
-          <div className="w-[3.4vw] h-[2vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.45vw] shadow-2xs shrink-0">
-            <span className="text-[0.78vw] font-bold text-gray-800">{speed} %</span>
+        {/* Speed Row */}
+        <div className="flex items-center gap-[0.5vw]">
+          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+            <span>Speed</span>
+            <span>:</span>
+          </div>
+          <div className="flex-1 min-w-0 flex items-center gap-[0.7vw]">
+            <ElementSlider
+              min={10}
+              max={200}
+              step={1}
+              value={speed}
+              onChange={handleSpeedChange}
+              className="flex-1"
+            />
+            <div className="w-[3.4vw] h-[2vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.45vw] shadow-2xs shrink-0">
+              <span className="text-[0.78vw] font-bold text-gray-800">{speed} %</span>
+            </div>
           </div>
         </div>
       </div>
@@ -692,23 +761,28 @@ const ElementTitlesProperties = ({
 
         {/* Primary Text */}
         <div className="flex flex-col gap-[0.4vw]">
-          <label className="text-[0.8vw] font-semibold text-gray-900">Primary Text</label>
+          <div className="flex items-center justify-between">
+            <label className="text-[0.8vw] font-semibold text-gray-900">Primary Text</label>
+            <span className="text-[0.68vw] text-gray-400 font-medium">
+              {(primaryText || '').length}/30
+            </span>
+          </div>
           <div className="flex items-center gap-[0.5vw] w-full">
             <input
               type="text"
+              maxLength={30}
               value={primaryText}
-              onChange={(e) => handlePrimaryTextChange(e.target.value)}
+              onChange={(e) => handlePrimaryTextChange(e.target.value.slice(0, 30))}
               placeholder="Animation"
               className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
             />
             {/* Color Swatch */}
             <div
               onClick={() => setActiveColorPicker((prev) => (prev === 'textColor1' ? null : 'textColor1'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
-                activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
+              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
                   ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
                   : 'border-gray-200 hover:border-gray-300'
-              }`}
+                }`}
               style={{ background: textColor1 }}
               title="Click to pick Text Color 1"
             />
@@ -716,11 +790,10 @@ const ElementTitlesProperties = ({
             <button
               type="button"
               onClick={() => setActiveTextSettings((prev) => (prev === 'primary' ? null : 'primary'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
-                activeTextSettings === 'primary'
+              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'primary'
                   ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
                   : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
               title="Text Property"
             >
               <Sliders className="w-[1vw] h-[1vw]" />
@@ -772,23 +845,28 @@ const ElementTitlesProperties = ({
         {/* Secondary Text (only shown if title has secondary text) */}
         {hasSecondaryText && (
           <div className="flex flex-col gap-[0.4vw]">
-            <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+              <span className="text-[0.68vw] text-gray-400 font-medium">
+                {(secondaryText || '').length}/30
+              </span>
+            </div>
             <div className="flex items-center gap-[0.5vw] w-full">
               <input
                 type="text"
+                maxLength={30}
                 value={secondaryText}
-                onChange={(e) => handleSecondaryTextChange(e.target.value)}
+                onChange={(e) => handleSecondaryTextChange(e.target.value.slice(0, 30))}
                 placeholder="Animation"
                 className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
               />
               {/* Color Swatch */}
               <div
                 onClick={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
-                  activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
                     ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
                 style={{ background: textColor2 }}
                 title="Click to pick Text Color 2"
               />
@@ -796,11 +874,10 @@ const ElementTitlesProperties = ({
               <button
                 type="button"
                 onClick={() => setActiveTextSettings((prev) => (prev === 'secondary' ? null : 'secondary'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
-                  activeTextSettings === 'secondary'
+                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'secondary'
                     ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
                 title="Text Property"
               >
                 <Sliders className="w-[1vw] h-[1vw]" />
@@ -851,41 +928,118 @@ const ElementTitlesProperties = ({
         )}
       </div>
 
+      {/* ── Logo Section (Shown only for templates with icon/logo feature) ── */}
+      {hasLogoFeature && (
+        <div className="flex flex-col gap-[0.7vw] mt-[0.3vw]">
+          <SectionHeader title="Logo" />
+          <div className="flex items-center gap-[0.5vw]">
+            <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+              <span>Icon</span>
+              <span>:</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                onClick={() => setIsIconGalleryOpen(true)}
+                className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+                title="Click to change icon"
+              >
+                {/* Swap Icon button in top-right */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsIconGalleryOpen(true);
+                  }}
+                  className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50 cursor-pointer"
+                  title="Change icon"
+                >
+                  <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
+                </button>
+
+                {/* Centered preview of icon */}
+                <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
+                  {renderIconPreview()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Object Color Section ── */}
       <div className="flex flex-col gap-[0.6vw] mt-[0.3vw]">
         <SectionHeader title="Object Color" />
 
-        {/* Stroke Color */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Stroke Color</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={strokeColor}
-              onChange={handleStrokeColorChange}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
-              isActive={activeColorPicker === 'strokeColor'}
-            />
-          </div>
-        </div>
+        {/* If Title template has Logo/Icon, show Icon Color and Icon BG Color */}
+        {hasLogoFeature ? (
+          <>
+            {/* Icon Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Icon Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={iconColor}
+                  onChange={handleIconColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
+                  isActive={activeColorPicker === 'iconColor'}
+                />
+              </div>
+            </div>
 
-        {/* Background Color */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Background Color</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <ColorInput
-              color={backgroundColor}
-              onChange={handleBackgroundColorChange}
-              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
-              isActive={activeColorPicker === 'backgroundColor'}
-            />
-          </div>
-        </div>
+            {/* Icon BG Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Icon BG Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={iconBgColor}
+                  onChange={handleIconBgColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconBgColor' ? null : 'iconBgColor'))}
+                  isActive={activeColorPicker === 'iconBgColor'}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Stroke Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Stroke Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={strokeColor}
+                  onChange={handleStrokeColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
+                  isActive={activeColorPicker === 'strokeColor'}
+                />
+              </div>
+            </div>
+
+            {/* Background Color */}
+            <div className="flex items-center gap-[0.5vw]">
+              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
+                <span>Background Color</span>
+                <span>:</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <ColorInput
+                  color={backgroundColor}
+                  onChange={handleBackgroundColorChange}
+                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
+                  isActive={activeColorPicker === 'backgroundColor'}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── ColorPicker Portal Popup ── */}
@@ -911,13 +1065,35 @@ const ElementTitlesProperties = ({
                 }
               }}
               opacity={100}
-              onOpacityChange={() => {}}
+              onOpacityChange={() => { }}
               onClose={() => setActiveColorPicker(null)}
               disableGradient={true}
               colorsOnPage={[]}
             />
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* ── Icon Gallery Modal Portal ── */}
+      {isIconGalleryOpen && createPortal(
+        <IconsModal
+          isOpen={isIconGalleryOpen}
+          position="right"
+          onClose={() => setIsIconGalleryOpen(false)}
+          onSelect={(iconData) => {
+            setIconName(iconData.name);
+            setIconHtml(iconData.html || '');
+            setIconViewBox(iconData.viewBox || '0 0 24 24');
+            setIsIconGalleryOpen(false);
+
+            syncUpdates({
+              iconName: iconData.name,
+              iconHtml: iconData.html || '',
+              iconViewBox: iconData.viewBox || '0 0 24 24'
+            });
+          }}
+        />,
         document.body
       )}
     </div>

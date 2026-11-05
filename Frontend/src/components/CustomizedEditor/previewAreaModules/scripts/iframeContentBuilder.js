@@ -268,12 +268,10 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         margin: 0 !important;
                         padding: 0 !important;
                         display: block !important;
+                        pointer-events: none !important;
                     }
 
-                    /* Enable pointer events on map controls & embeds in preview */
-                    .map-root-container,
-                    .map-root-container iframe,
-                    .map-overlay-wrapper,
+                    /* Enable pointer events only on interactive action buttons and overlay cards */
                     .map-open-maps-btn,
                     .map-action-btn-circle,
                     .map-card-overlay,

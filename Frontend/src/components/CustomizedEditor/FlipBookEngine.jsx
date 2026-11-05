@@ -78,10 +78,15 @@ const sanitizePageHtmlForPreview = (html) => {
 
         doc.querySelectorAll('iframe').forEach(iframe => {
             const fo = iframe.closest('foreignObject');
+            const isMap = (fo && fo.getAttribute('data-type') === 'map') || iframe.closest('g[data-type="map"]') || iframe.closest('.map-root-container');
             const hideControls = (fo && fo.getAttribute('data-show-controls') === 'false') || iframe.getAttribute('data-show-controls') === 'false';
 
             const currentStyle = iframe.getAttribute('style') || '';
-            if (currentStyle) {
+            if (isMap) {
+                // Keep map iframe non-interactive so scroll/drag flips book pages without triggering "Use ctrl + scroll to zoom the map" overlay
+                const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*(?:auto|none)\s*(?:!important)?\s*;?/gi, '');
+                iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: none !important;');
+            } else if (currentStyle) {
                 const cleanedStyle = currentStyle.replace(/pointer-events\s*:\s*none\s*(?:!important)?\s*;?/gi, '');
                 iframe.setAttribute('style', cleanedStyle + (cleanedStyle.endsWith(';') || !cleanedStyle ? '' : ';') + ' pointer-events: auto !important;');
             }
@@ -166,6 +171,17 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     overflow: hidden !important;
   }
 
+  .map-root-container,
+  .embed-root-container,
+  .table-card-wrapper,
+  .table-container {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+
   .map-stage {
     position: absolute !important;
     top: 0 !important;
@@ -184,6 +200,15 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     margin: 0 !important;
     padding: 0 !important;
     display: block !important;
+    pointer-events: none !important;
+  }
+
+  .map-open-maps-btn,
+  .map-action-btn-circle,
+  .map-card-overlay,
+  .map-sheet-btn,
+  .map-sheet-link-btn {
+    pointer-events: auto !important;
   }
 
   foreignObject video {
@@ -254,7 +279,7 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     background: #1F2937 !important;
   }
 
-  foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div {
+  foreignObject:not([data-scrollable="true"]):not([data-editing="true"])>div:not(.map-root-container):not(.embed-root-container):not(.table-card-wrapper):not(.table-container) {
     width: 100% !important;
     height: auto !important;
   }

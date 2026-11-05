@@ -558,23 +558,24 @@ export default function MyFlipbooks() {
             }
             uniqueName = candidateBookName;
 
-            // Step 2 — Encode pages and save flipbook in a single high-speed request
-            setProcessingProgress({
-                current: allImages.length,
-                total: allImages.length,
+            const isProgressive = !!allImages.isPartial && (allImages.totalPages > allImages.length);
+            const totalDocPages = isProgressive ? allImages.totalPages : allImages.length;
+            const extractedCount = allImages.length;
+
+            // Step 3 — Processing & saving flipbook
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
-                pageCount: allImages.length,
+                pageCount: totalDocPages,
                 percent: 92,
                 message: 'Saving pages & preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
-            });
+            }));
             // Yield to event loop so Step 3 spinner runs with 0 stutter
             await new Promise(r => setTimeout(r, 0));
-
-            const isProgressive = !!allImages.isPartial && (allImages.totalPages > allImages.length);
-            const totalDocPages = isProgressive ? allImages.totalPages : allImages.length;
-            const extractedCount = allImages.length;
 
             const extractedPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
@@ -626,16 +627,17 @@ export default function MyFlipbooks() {
             const initialBatch = allPages.slice(0, initialBatchSize);
             const readyRemainingPages = allPages.slice(initialBatchSize).filter(p => !p.isPlaceholder);
 
-            setProcessingProgress({
-                current: allPages.length,
-                total: allPages.length,
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
-                pageCount: allPages.length,
+                pageCount: totalDocPages,
                 percent: 94,
                 message: isProgressive ? 'Fast-launching editor...' : 'Preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
-            });
+            }));
 
             // Pre-cache ALL pages in IndexedDB for BOTH CustomizedEditor and PageEditor immediately
             await Promise.all([
@@ -752,15 +754,17 @@ export default function MyFlipbooks() {
                 });
             }
 
-            setProcessingProgress({
-                current: allPages.length,
-                total: allPages.length,
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
+                pageCount: totalDocPages,
                 percent: 100,
                 message: isProgressive ? 'Editor ready! Streaming balance pages in background...' : 'Opening flipbook...',
                 fileName: uniqueName,
                 stage: 'done'
-            });
+            }));
 
             // Invalidate React Query cache so newly created book appears immediately
             queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });

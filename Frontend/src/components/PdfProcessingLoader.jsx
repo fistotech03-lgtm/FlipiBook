@@ -131,13 +131,13 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
     const highestPercentRef = useRef(0);
     const prevFileRef = useRef(fileName);
 
-    // Reset watermark only when a completely new file begins
+    // Reset watermark only when a completely new upload begins in uploading stage
     useEffect(() => {
-        if (fileName && fileName !== prevFileRef.current) {
+        if (stage === 'uploading' && fileName && fileName !== prevFileRef.current) {
             prevFileRef.current = fileName;
             highestPercentRef.current = 0;
         }
-    }, [fileName]);
+    }, [fileName, stage]);
 
     // Fluid continuous percentage state
     const [fluidPercent, setFluidPercent] = useState(() => {
@@ -192,7 +192,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
     // Smooth physics-based spring interpolation for percentage & circle stroke (responsive & silky smooth)
     const progressMotion = useMotionValue(displayPercent);
-    const smoothProgress = useSpring(progressMotion, { stiffness: 65, damping: 16, mass: 0.5 });
+    const smoothProgress = useSpring(progressMotion, { stiffness: 95, damping: 18, mass: 0.3 });
     const strokeDashoffset = useTransform(smoothProgress, [0, 100], [276.46, 0]);
 
     const [animatedDisplayPercent, setAnimatedDisplayPercent] = useState(displayPercent);

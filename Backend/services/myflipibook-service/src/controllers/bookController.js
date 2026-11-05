@@ -1458,6 +1458,12 @@ exports.saveBook = async (req, res) => {
     let book = null;
     if (providedVId) {
       book = await Flipbook.findOne({ ...userQuery, v_id: providedVId });
+      if (!book) {
+        // Fallback: check by v_id or book_v_id alone to avoid duplicate key collision
+        book = await Flipbook.findOne({
+          $or: [{ v_id: providedVId }, { book_v_id: providedVId }]
+        });
+      }
     }
 
     let finalFlipbookName = safeName;
@@ -1750,17 +1756,40 @@ exports.saveBook = async (req, res) => {
         });
       }
 
-      book = await Flipbook.create({
-        userObjectID: objectId,
-        userID: customUserId || undefined,
-        v_id: resolvedVId,
-        book_v_id: resolvedVId,
-        flipbookName: finalFlipbookName,
-        folder_id: bookFolderId,
-        bookType: resolvedBookType || 'plain',
-        pages: mongoPages,
-        fileSize: resolvedFileSize,
-      });
+      try {
+        book = await Flipbook.create({
+          userObjectID: objectId,
+          userID: customUserId || undefined,
+          v_id: resolvedVId,
+          book_v_id: resolvedVId,
+          flipbookName: finalFlipbookName,
+          folder_id: bookFolderId,
+          bookType: resolvedBookType || 'plain',
+          pages: mongoPages,
+          fileSize: resolvedFileSize,
+        });
+      } catch (createErr) {
+        if (createErr.code === 11000 || createErr.message?.includes("E11000 duplicate key")) {
+          console.warn(`[Book Controller] Duplicate key error on v_id ${resolvedVId}. Resolving with update...`);
+          book = await Flipbook.findOne({
+            $or: [{ v_id: resolvedVId }, { book_v_id: resolvedVId }]
+          });
+          if (book) {
+            book.flipbookName = finalFlipbookName;
+            if (bookFolderId) book.folder_id = bookFolderId;
+            if (resolvedBookType) book.bookType = resolvedBookType;
+            if (mongoPages.length > 0) book.pages = mongoPages;
+            if (resolvedFileSize > 0 || fileSize !== undefined) book.fileSize = resolvedFileSize;
+            if (objectId) book.userObjectID = objectId;
+            if (customUserId) book.userID = customUserId;
+            await book.save();
+          } else {
+            throw createErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
     }
 
     if (meta && Object.keys(meta).length > 0) {

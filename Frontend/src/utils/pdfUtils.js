@@ -458,7 +458,12 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
         wObj.busy = false;
 
         completedCount++;
-        const percent = Math.round((completedCount / progressTotal) * 100);
+        const targetDocTotal = totalDocPages || numPages;
+        const taskRatio = Math.min(1, Math.max(0, completedCount / numPages));
+        // Scale current page count smoothly across full document so it reaches totalDocPages within the batch extraction time
+        const scaledCurrent = Math.min(targetDocTotal, Math.max(1, Math.round(taskRatio * targetDocTotal)));
+        // Scale percentage smoothly from 15% to 90% across the batch extraction time
+        const percent = Math.min(90, Math.max(15, Math.round(15 + taskRatio * 75)));
 
         const blob = new Blob([res.svgString], { type: 'image/svg+xml' });
 
@@ -476,11 +481,11 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
         if (typeof onProgress === 'function') {
           try {
             onProgress(
-              completedCount,
-              progressTotal,
+              scaledCurrent,
+              targetDocTotal,
               percent,
               'converting',
-              `Extracting page ${completedCount} of ${progressTotal} (${percent}%)...`,
+              `Extracting page ${scaledCurrent} of ${targetDocTotal} (${percent}%)...`,
               pageItem
             );
           } catch (_) {}
@@ -506,15 +511,18 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
 /**
  * Main-thread fallback for single-page PDFs or environments where Web Workers are restricted.
  */
-const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = null) => {
+const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = null, totalDocPages = null) => {
   const mupdf = await getMuPdf();
   const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
   const images = [];
   const ptToMm = 25.4 / 72;
+  const targetDocTotal = totalDocPages || numPages;
 
   for (let i = 0; i < numPages; i++) {
     const pageNum = i + 1;
-    const percent = Math.round((pageNum / numPages) * 100);
+    const taskRatio = Math.min(1, Math.max(0, pageNum / numPages));
+    const scaledCurrent = Math.min(targetDocTotal, Math.max(1, Math.round(taskRatio * targetDocTotal)));
+    const percent = Math.min(90, Math.max(15, Math.round(15 + taskRatio * 75)));
 
     // Yield to browser compositor with requestAnimationFrame so the step dot spinner spins with 0 lag/stutter
     await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 16)));
@@ -622,7 +630,7 @@ const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = n
         images.push(pageItem);
         if (typeof onProgress === 'function') {
           try {
-            onProgress(pageNum, numPages, percent, 'converting', `Extracting page ${pageNum} of ${numPages} (${percent}%)...`, pageItem);
+            onProgress(scaledCurrent, targetDocTotal, percent, 'converting', `Extracting page ${scaledCurrent} of ${targetDocTotal} (${percent}%)...`, pageItem);
           } catch (_) {}
         }
       }

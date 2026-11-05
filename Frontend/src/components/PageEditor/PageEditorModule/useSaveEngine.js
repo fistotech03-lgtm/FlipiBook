@@ -137,24 +137,24 @@ export const useSaveEngine = ({
 
       const normalizePageAssetUrls = (htmlStr) => {
         if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
-        // Clean up any dangling base64 attached to asset filenames
-        let cleaned = htmlStr.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
+        // Clean up any dangling base64 or corrupted asset URLs (e.g. "../assets/Image/xxx.jpg /9j/..." or "../assets/Image/xxx/.../75FA...")
+        let cleaned = htmlStr.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
         const assetRegex =
-          /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
+          /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi;
         let res = cleaned.replace(assetRegex, "../assets/$1/$2");
         const escapedAssetRegex =
-          /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
+          /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([A-Za-z0-9_.-]+)/gi;
         res = res.replace(escapedAssetRegex, "../assets/$1/$2");
         res = res.replace(
-          /(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(
-          /(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(
-          /(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, "../assets/");
@@ -765,7 +765,47 @@ export const useSaveEngine = ({
             }
           }
 
-          // --- 3. DIRECT STRING SEARCH base64 extraction and upload ---
+          // Protect PDF Background vector layer and its embedded images from being torn out and re-uploaded
+          const pdfBgPlaceholders = new Map();
+          newHtml = newHtml.replace(/<!--\s*FLIPBOOK_PDF_BG_START\s*-->[\s\S]*?<!--\s*FLIPBOOK_PDF_BG_END\s*-->/gi, (match) => {
+            const ph = `__PDF_BG_PH_${Math.random().toString(36).slice(2)}__`;
+            pdfBgPlaceholders.set(ph, match);
+            return ph;
+          });
+          const bgLayerRegex = /<g\b[^>]*data-(?:name=["'](?:PDF Background|pdf background)["']|type=["']pdf-vector-layer["'])[^>]*>/gi;
+          let bgLayerMatch;
+          while ((bgLayerMatch = bgLayerRegex.exec(newHtml)) !== null) {
+            const startIdx = bgLayerMatch.index;
+            let depth = 1;
+            let i = startIdx + bgLayerMatch[0].length;
+            let endIdx = -1;
+            while (i < newHtml.length) {
+              if (newHtml.startsWith('<g', i) && (newHtml[i + 2] === ' ' || newHtml[i + 2] === '>')) {
+                depth++;
+                i += 2;
+              } else if (newHtml.startsWith('</g>', i)) {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 4;
+                  break;
+                }
+                i += 4;
+              } else {
+                i++;
+              }
+            }
+            if (endIdx !== -1) {
+              const fullBg = newHtml.substring(startIdx, endIdx);
+              const ph = `__PDF_BG_PH_${Math.random().toString(36).slice(2)}__`;
+              pdfBgPlaceholders.set(ph, fullBg);
+              newHtml = newHtml.substring(0, startIdx) + ph + newHtml.substring(endIdx);
+              bgLayerRegex.lastIndex = startIdx + ph.length;
+            } else {
+              break;
+            }
+          }
+
+          // --- 3. DIRECT STRING SEARCH base64 extraction and upload for user-added assets ---
           // Regex engines often fail silently or hit length limits on 3MB+ contiguous strings.
           // We use a pure indexOf search to safely extract huge data URIs.
           const uniqueDataUris = new Set();
@@ -902,7 +942,7 @@ export const useSaveEngine = ({
 
               if (uploadRes.data && uploadRes.data.url) {
                 const finalUrl = uploadRes.data.url;
-                const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
+                const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[A-Za-z0-9_.-]+$/);
                 const relativeUrl = assetPathMatch
                   ? `../${assetPathMatch[0]}`
                   : uploadRes.data.flipbookPath ||
@@ -938,18 +978,20 @@ export const useSaveEngine = ({
                         );
                       }
                     });
-                    const liveImgs = editorDoc.querySelectorAll(
-                      `image[href*="${actualDataUri}"], image[*|href*="${actualDataUri}"]`,
-                    );
+                    const liveImgs = editorDoc.querySelectorAll("image");
+                    const dataPrefix = actualDataUri.slice(0, 100);
                     liveImgs.forEach((img) => {
-                      img.setAttribute("href", absoluteUrl);
-                      try {
-                        img.setAttributeNS(
-                          "http://www.w3.org/1999/xlink",
-                          "xlink:href",
-                          absoluteUrl,
-                        );
-                      } catch {}
+                      const h = img.getAttribute("href") || img.getAttribute("xlink:href") || "";
+                      if (h && (h === actualDataUri || h.startsWith(dataPrefix))) {
+                        img.setAttribute("href", absoluteUrl);
+                        try {
+                          img.setAttributeNS(
+                            "http://www.w3.org/1999/xlink",
+                            "xlink:href",
+                            absoluteUrl,
+                          );
+                        } catch {}
+                      }
                     });
                   }
                 } catch {
@@ -968,8 +1010,15 @@ export const useSaveEngine = ({
             }
           }
 
-          // Clean up any previously corrupted attribute values (e.g. "../assets/Image/xxx.jpg /9j/...")
-          newHtml = newHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
+          // Restore protected PDF Background
+          if (pdfBgPlaceholders.size > 0) {
+            pdfBgPlaceholders.forEach((origContent, ph) => {
+              newHtml = newHtml.split(ph).join(origContent);
+            });
+          }
+
+          // Clean up any previously corrupted attribute values (e.g. "../assets/Image/xxx.jpg /9j/..." or "../assets/Image/xxx/.../75FA...")
+          newHtml = newHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
 
           if (newHtml && !newHtml.includes('id="global-fonts-style"')) {
             const fontsStyle = `<style id="global-fonts-style">

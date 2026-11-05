@@ -1339,6 +1339,10 @@ const PageEditor = () => {
                 }
 
                 let updatedHtml = pageHtml;
+                // Auto-heal any previously corrupted asset URLs (strip dangling base64 tails)
+                if (updatedHtml) {
+                  updatedHtml = updatedHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
+                }
                 if (updatedHtml.includes("My_Flipbooks/")) {
                   updatedHtml = updatedHtml.split("My_Flipbooks/").join("books/");
                 }

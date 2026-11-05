@@ -560,11 +560,11 @@ export default function MyFlipbooks() {
 
             // Step 2 — Encode pages and save flipbook in a single high-speed request
             setProcessingProgress({
-                current: 0,
+                current: allImages.length,
                 total: allImages.length,
                 totalFiles: files.length,
                 pageCount: allImages.length,
-                percent: 88,
+                percent: 92,
                 message: 'Saving pages & preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
@@ -768,8 +768,8 @@ export default function MyFlipbooks() {
             fetchLiveStorageSettings();
             window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
 
-            // Smooth transition: small delay to let progress hit 100% cleanly
-            await new Promise(res => setTimeout(res, 80));
+            // Smooth transition: brief delay to let spring physics smoothly glide to 100%
+            await new Promise(res => setTimeout(res, 220));
 
             // Navigate to the customized editor IMMEDIATELY with all in-memory pages
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolderVId)}/${v_id}`, {

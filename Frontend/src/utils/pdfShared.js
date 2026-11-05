@@ -230,15 +230,20 @@ export const formatMuPdfSvgForFlipbook = (rawSvg, pageNumber = 1, widthMm = 210,
   const prefix = `p${pageNumber}_`;
   const resolvedPageName = `Page ${pageNumber}`;
 
+  // Clean any line breaks or whitespace inside embedded base64 data URIs so they remain contiguous
+  let sanitizedSvg = (rawSvg || '').replace(/data:image\/[a-zA-Z0-9.+_-]+;base64,[A-Za-z0-9+/=\s]+/g, (match) => {
+    return match.replace(/\s+/g, '');
+  });
+
   // Extract <defs>...</defs>
   let extractedDefs = '';
-  const defsMatch = rawSvg.match(/<defs\b[^>]*>([\s\S]*?)<\/defs>/i);
+  const defsMatch = sanitizedSvg.match(/<defs\b[^>]*>([\s\S]*?)<\/defs>/i);
   if (defsMatch) {
     extractedDefs = defsMatch[1];
   }
 
   // Extract inner SVG content (strip outer <svg ...> and </svg> and metadata)
-  let innerBody = rawSvg
+  let innerBody = sanitizedSvg
     .replace(/<\?xml[^>]*\?>/gi, '')
     .replace(/<!DOCTYPE[^>]*>/gi, '')
     .replace(/<sodipodi:namedview[\s\S]*?<\/sodipodi:namedview>/gi, '')
@@ -271,11 +276,13 @@ export const formatMuPdfSvgForFlipbook = (rawSvg, pageNumber = 1, widthMm = 210,
   </defs>
   <g id="${rootId}" data-name="${resolvedPageName}" data-type="frame">
     <rect id="${rectId}" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
+    <!-- FLIPBOOK_PDF_BG_START -->
     <g id="${bgLayerId}" data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true">
       <g transform="scale(${scaleX.toFixed(6)}, ${scaleY.toFixed(6)})">
         ${innerBody}
       </g>
     </g>
+    <!-- FLIPBOOK_PDF_BG_END -->
     <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
   </g>
 </svg>`;

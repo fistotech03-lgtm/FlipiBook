@@ -215,7 +215,6 @@ const processAndSaveBase64Assets = ({
   let processedHtml = contentToProcess.replace(base64Regex, (match, mimeType, rawBase64) => {
     const base64Data = rawBase64.replace(/\s+/g, '');
     if (savedBase64Map.has(base64Data)) {
-    if (savedBase64Map.has(base64Data)) {
       return savedBase64Map.get(base64Data);
     }
 

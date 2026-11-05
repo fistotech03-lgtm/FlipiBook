@@ -55,7 +55,7 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
                     left: 0,
                     background: 'white'
                 }}
-                sandbox="allow-same-origin"
+                sandbox="allow-same-origin allow-scripts"
                 scrolling="no"
                 loading="lazy"
             />

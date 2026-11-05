@@ -230,10 +230,15 @@ export const useCustomizedEditorData = ({
                 let rawHTML = p.html || p.content || '';
 
                 if (!rawHTML || typeof rawHTML !== 'string' || rawHTML.trim() === '') {
-                  const metaW = res.data.meta?.width || res.data.settings?.width || location.state?.width || currentBook?.width || 210;
-                  const metaH = res.data.meta?.height || res.data.settings?.height || location.state?.height || currentBook?.height || 297;
-                  const defaultData = createDefaultPageData(p.name || `Page ${i + 1}`, metaW, metaH);
-                  rawHTML = defaultData;
+                  const cachedPage = cached?.pages?.[i] || location?.state?.pages?.[i];
+                  if (cachedPage && (cachedPage.html || cachedPage.content)) {
+                    rawHTML = cachedPage.html || cachedPage.content;
+                  } else {
+                    const metaW = res.data.meta?.width || res.data.settings?.width || location.state?.width || currentBook?.width || 210;
+                    const metaH = res.data.meta?.height || res.data.settings?.height || location.state?.height || currentBook?.height || 297;
+                    const defaultData = createDefaultPageData(p.name || `Page ${i + 1}`, metaW, metaH);
+                    rawHTML = defaultData;
+                  }
                 }
 
                 if (pBaseUrl) {
@@ -260,8 +265,19 @@ export const useCustomizedEditorData = ({
                 };
               }));
               setPages(prevPages => {
-                if (prevPages && prevPages.length > mappedPages.length) {
-                  return prevPages;
+                if (prevPages && Array.isArray(prevPages) && prevPages.length > 0) {
+                  return mappedPages.map((mp, idx) => {
+                    const prevP = prevPages[idx];
+                    const isBlank = !mp.html || !mp.content || mp.html.includes('createDefaultPageData') || mp.html.includes('rect width="100%" height="100%" fill="#fff"');
+                    if (isBlank && prevP && (prevP.html || prevP.content) && !prevP.html?.includes('createDefaultPageData')) {
+                      return {
+                        ...mp,
+                        html: prevP.html || prevP.content,
+                        content: prevP.content || prevP.html
+                      };
+                    }
+                    return mp;
+                  });
                 }
                 return mappedPages;
               });

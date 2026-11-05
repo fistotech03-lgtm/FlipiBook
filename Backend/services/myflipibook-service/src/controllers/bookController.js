@@ -2565,9 +2565,9 @@ exports.savePagesBatch = async (req, res) => {
  */
 exports.getBook = async (req, res) => {
   try {
-    await resolveAuthUser(req);
+    const { objectId, customUserId, emailId } = await resolveAuthUser(req);
     const userQuery = getFlipbookUserQuery(req);
-    const { v_id, bookName, folderName } = req.query;
+    const { v_id, bookName, folderName, folder } = req.query;
 
     let filter;
     if (v_id) {
@@ -2614,14 +2614,34 @@ exports.getBook = async (req, res) => {
 
     // Disk storage root
     const storageRoot = getStorageRoot();
-    const userFolders = [
-      book.userID,
-      book.userId ? String(book.userId) : null,
-      book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
-    ].filter(Boolean);
+    const userFolders = Array.from(
+      new Set(
+        [
+          book.userID,
+          book.userId ? String(book.userId) : null,
+          book.userObjectID ? String(book.userObjectID) : null,
+          customUserId,
+          objectId ? String(objectId) : null,
+          emailId ? emailId.replace(/[@.]/g, "_") : null,
+          book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
+        ].filter(Boolean)
+      )
+    );
+
+    // Resolve physical folder
+    const resolvedPhysical = await resolvePhysicalFolderForBook({
+      book,
+      folderName: folderName || folder,
+      folder_id: book.folder_id,
+      userQuery,
+    });
+
     const folders = Array.from(
       new Set(
         [
+          resolvedPhysical,
+          folderName,
+          folder,
           resolveFolder(book.folderName),
           ...(Array.isArray(book.folderName) ? book.folderName.flat(Infinity) : [book.folderName]),
           "default",
@@ -2631,19 +2651,49 @@ exports.getBook = async (req, res) => {
 
     // Build all possible candidate directories on disk
     const candidateDirs = [];
+    const bookNames = Array.from(
+      new Set([book.flipbookName, book.v_id, `${book.flipbookName}_${book.v_id}`].filter(Boolean))
+    );
+
     for (const uf of userFolders) {
       for (const f of folders) {
-        candidateDirs.push(
-          path.join(storageRoot, uf, "books", f, book.flipbookName),
-          path.join(storageRoot, uf, "books", f, book.v_id),
-          path.join(storageRoot, uf, "books", f, `${book.flipbookName}_${book.v_id}`),
-          path.join(storageRoot, uf, "books", book.flipbookName),
-          path.join(storageRoot, uf, "books", book.v_id),
-          path.join(storageRoot, uf, f, book.flipbookName),
-          path.join(storageRoot, uf, f, book.v_id),
-          path.join(storageRoot, "flipbooks", uf, f, book.flipbookName),
-          path.join(storageRoot, "flipbooks", uf, f, book.v_id),
-        );
+        for (const bn of bookNames) {
+          candidateDirs.push(
+            path.join(storageRoot, uf, "books", f, bn),
+            path.join(storageRoot, uf, "books", bn),
+            path.join(storageRoot, uf, f, bn),
+            path.join(storageRoot, uf, bn),
+            path.join(storageRoot, "flipbooks", uf, f, bn),
+            path.join(storageRoot, "flipbooks", uf, bn),
+          );
+        }
+      }
+    }
+
+    // Fallback: scan subdirectories inside booksBase to find where book actually lives
+    for (const uf of userFolders) {
+      const booksBase = path.join(storageRoot, uf, "books");
+      if (fs.existsSync(booksBase)) {
+        try {
+          const subdirs = fs.readdirSync(booksBase);
+          for (const sd of subdirs) {
+            const fullSd = path.join(booksBase, sd);
+            try {
+              if (fs.statSync(fullSd).isDirectory()) {
+                for (const bn of bookNames) {
+                  const nestedBook = path.join(fullSd, bn);
+                  if (fs.existsSync(nestedBook)) {
+                    candidateDirs.unshift(nestedBook);
+                  }
+                }
+                const sdLower = sd.toLowerCase();
+                if (bookNames.some(bn => sdLower === bn.toLowerCase() || sdLower.includes(bn.toLowerCase()))) {
+                  candidateDirs.unshift(fullSd);
+                }
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
       }
     }
 
@@ -2940,13 +2990,15 @@ exports.previewBook = async (req, res) => {
           [
             book.userID,
             book.userId ? String(book.userId) : null,
+            book.userObjectID ? String(book.userObjectID) : null,
             book.userEmail ? book.userEmail.replace(/[@.]/g, "_") : null,
             reqEmail ? String(reqEmail).replace(/[@.]/g, "_") : null,
           ].filter(Boolean),
         ),
       );
 
-      const primaryFolder = resolveFolder(book.folderName);
+      const resolvedPhysical = await resolvePhysicalFolderForBook({ book });
+      const primaryFolder = resolvedPhysical || resolveFolder(book.folderName);
       const rawFolders = Array.isArray(book.folderName)
         ? book.folderName.flat(Infinity)
         : [book.folderName];

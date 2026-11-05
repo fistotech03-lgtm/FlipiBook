@@ -147,8 +147,7 @@ export async function extractPresentationToPdf(fileInput, fileName = 'presentati
       });
     }
 
-    const pageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    const flattenedSvg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${widthMm} ${heightMm}" width="100%" height="100%"><g data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true" style="pointer-events: none;"><image href="${pageDataUrl}" width="${widthMm}" height="${heightMm}" preserveAspectRatio="none"/></g><rect data-name="Document Shield" data-type="shield" data-locked="true" x="0" y="0" width="${widthMm}" height="${heightMm}" fill="transparent" pointer-events="all" style="cursor: default;"/></svg>`;
+    const vectorDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(normalizedSvg)}`;
 
     previewPages.push({
       index: i + 1,
@@ -156,11 +155,11 @@ export async function extractPresentationToPdf(fileInput, fileName = 'presentati
       pageName: `Page ${i + 1}`,
       width: widthMm,
       height: heightMm,
-      svgString: flattenedSvg,
-      content: flattenedSvg,
-      dataUrl: pageDataUrl,
+      svgString: normalizedSvg,
+      content: normalizedSvg,
+      dataUrl: vectorDataUrl,
       canvas,
-      isVector: false,
+      isVector: true,
     });
   }
 

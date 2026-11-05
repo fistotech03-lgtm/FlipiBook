@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: ["gifuct-js", "ogl", "@tanstack/react-query"],
     },
+    worker: {
+      format: "es",
+    },
     build: {
       chunkSizeWarningLimit: 1200,
       rollupOptions: {

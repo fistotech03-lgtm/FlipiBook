@@ -24,18 +24,75 @@ export const initDB = () => {
 };
 
 /**
- * Saves a value to IndexedDB
+ * Compresses an object/string into binary gzip Uint8Array.
+ * If data is smaller than 128 bytes or CompressionStream is not available, leaves as-is.
+ */
+export const compressData = async (value) => {
+  if (value === undefined || value === null) return value;
+  if (typeof CompressionStream === 'undefined' || typeof Response === 'undefined' || typeof Blob === 'undefined') {
+    return value;
+  }
+
+  try {
+    const jsonString = JSON.stringify(value);
+    if (jsonString.length < 128) {
+      return value;
+    }
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+    const compressedBuffer = await new Response(stream).arrayBuffer();
+    return {
+      __compressed: true,
+      format: 'gzip',
+      data: new Uint8Array(compressedBuffer)
+    };
+  } catch (err) {
+    console.warn('[dbUtils] Compression fallback, saving raw:', err);
+    return value;
+  }
+};
+
+/**
+ * Decompresses binary gzip payload back into the original JavaScript object.
+ * Transparently falls back if data was stored uncompressed (backward compatibility).
+ */
+export const decompressData = async (value) => {
+  if (!value) return value;
+  if (
+    value &&
+    typeof value === 'object' &&
+    value.__compressed &&
+    value.data &&
+    typeof DecompressionStream !== 'undefined' &&
+    typeof Response !== 'undefined' &&
+    typeof Blob !== 'undefined'
+  ) {
+    try {
+      const stream = new Blob([value.data]).stream().pipeThrough(new DecompressionStream(value.format || 'gzip'));
+      const text = await new Response(stream).text();
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn('[dbUtils] Decompression error, returning raw:', err);
+      return value;
+    }
+  }
+  return value;
+};
+
+/**
+ * Saves a value to IndexedDB (with transparent binary compression)
  * @param {string} key 
  * @param {any} value 
  * @returns {Promise<void>}
  */
 export const saveToDB = async (key, value) => {
   try {
+    const payloadToSave = await compressData(value);
     const db = await initDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      store.put(value, key);
+      store.put(payloadToSave, key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -45,20 +102,21 @@ export const saveToDB = async (key, value) => {
 };
 
 /**
- * Retrieves a value from IndexedDB
+ * Retrieves a value from IndexedDB (with transparent binary decompression)
  * @param {string} key 
  * @returns {Promise<any>}
  */
 export const getFromDB = async (key) => {
   try {
     const db = await initDB();
-    return new Promise((resolve, reject) => {
+    const rawResult = await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const req = store.get(key);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+    return await decompressData(rawResult);
   } catch (err) {
     console.error("IndexedDB Load Error:", err);
     return null;

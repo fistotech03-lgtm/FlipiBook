@@ -401,31 +401,6 @@ const EditorNavbar = ({
                   </span>
                 </button>
               )}
-
-              {/* Success Toast Popup */}
-              {saveSuccessInfo && (
-                <div className="absolute top-full right-0 mt-[0.5vw] w-[12vw] z-[99999] animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="bg-[#5CBC49] rounded-[0.5vw] shadow-2xl p-[0.6vw] text-white relative">
-                    <div className="absolute -top-[0.2vw] right-[1vw] w-[0.6vw] h-[0.6vw] bg-[#5CBC49] rotate-45 transform"></div>
-                    <div className="flex items-center gap-[0.4vw]">
-                      <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <Icon
-                          icon="lucide:check"
-                          className="w-[0.8vw] h-[0.8vw] text-white"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.75vw] font-semibold truncate">
-                          {saveSuccessInfo.name || "Flipbook"}
-                        </p>
-                        <p className="text-[0.65vw] text-white/90">
-                          Saved successfully
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

@@ -68,7 +68,7 @@ export const useSaveEngine = ({
   const saveFlipbook = async (isManual = false, overridePages = null) => {
     // 0. Ensure any active pen or node drawing session commits clean path before saving
     try {
-      window.dispatchEvent(new CustomEvent("editor-commit-active-tools"));
+      window.dispatchEvent(new CustomEvent("editor-commit-active-tools", { detail: { isManual } }));
     } catch (_) {}
 
     let pagesToSave = overridePages ? [...overridePages] : [...pages];
@@ -83,7 +83,9 @@ export const useSaveEngine = ({
         const container = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
         const liveSvg = container?.querySelector('[id^="canvas-content-"] svg') || container?.querySelector('svg:not([id^="highlight-overlay-"]):not(#marquee-selection-overlay)');
         if (liveSvg) {
-          const serialized = safeSerializeSvg(liveSvg);
+          const clone = liveSvg.cloneNode(true);
+          clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, #vectra-overlay-group, #node-edit-overlay-group, [id="multi-selection-bounds"], .video-damage-rect, [class*="damage-rect"], [data-is-dummy="true"]').forEach(e => e.remove());
+          const serialized = safeSerializeSvg(clone);
           if (serialized && serialized.length > 50 && serialized.includes('<svg')) {
             pagesToSave[activePageIndex] = {
               ...pagesToSave[activePageIndex],
@@ -1183,10 +1185,7 @@ export const useSaveEngine = ({
               pid &&
               lastSavedHtmlsRef.current[pid] &&
               lastSavedHtmlsRef.current[pid] === p.html;
-            let content =
-              isModified || !isKnownSaved
-                ? sanitizeSvgXml(normalizePageAssetUrls(p.html))
-                : undefined;
+            let content = sanitizeSvgXml(normalizePageAssetUrls(p.html));
             let contentChunkId = undefined;
 
             // CHUNKED UPLOAD LOGIC: If content is too large (> 2MB), upload in chunks
@@ -1300,21 +1299,23 @@ export const useSaveEngine = ({
 
         setHasUnsavedChanges(false);
         justSavedRef.current = true;
-        // Merge backend v_id properties without overwriting live page HTML edited during async save window
+        // Merge backend v_id properties and keep React pages state in sync with saved HTML without wiping live canvas
+        if (typeof activePageIndex === "number") {
+          window.__skipCanvasUpdateForPage = activePageIndex;
+        }
         setPages((prevPages) => {
           if (!prevPages || prevPages.length === 0) return pagesToSave;
           const backendPages = lastRes?.data?.pages || [];
           return prevPages.map((page, idx) => {
             const bPage = backendPages[idx];
-            if (
-              bPage &&
-              bPage.v_id &&
-              bPage.v_id !== currentVId &&
-              !page.v_id
-            ) {
-              return { ...page, v_id: bPage.v_id };
-            }
-            return page;
+            const savedHtml = pagesToSave[idx]?.html;
+            return {
+              ...page,
+              ...(savedHtml ? { html: savedHtml } : {}),
+              ...(bPage && bPage.v_id && bPage.v_id !== currentVId && !page.v_id
+                ? { v_id: bPage.v_id }
+                : {}),
+            };
           });
         });
         window.dispatchEvent(new CustomEvent("flipbook-saved"));

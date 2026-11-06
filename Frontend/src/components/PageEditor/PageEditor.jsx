@@ -812,6 +812,37 @@ const PageEditor = () => {
     }
   }, [pages, currentBook, isLoading, setHasUnsavedChanges, justSavedRef]);
 
+  // Listen for direct canvas edits (e.g. pen drawing points, element drops, shape draws)
+  useEffect(() => {
+    const handleContentChanged = () => {
+      setHasUnsavedChanges(true);
+    };
+    window.addEventListener('editor-content-changed', handleContentChanged);
+    return () => window.removeEventListener('editor-content-changed', handleContentChanged);
+  }, [setHasUnsavedChanges]);
+
+  // Global mouse/pointer tracking for canvas interactions to avoid interrupting drawing strokes
+  useEffect(() => {
+    const handleDown = (e) => {
+      if (e.target?.closest?.('.page-svg-container, #main-zoom-container, #node-edit-overlay-group, [id^="highlight-overlay"]')) {
+        window.__isCanvasPointerDown = true;
+      }
+    };
+    const handleUp = () => {
+      window.__isCanvasPointerDown = false;
+    };
+    window.addEventListener('pointerdown', handleDown, true);
+    window.addEventListener('mousedown', handleDown, true);
+    window.addEventListener('pointerup', handleUp, true);
+    window.addEventListener('mouseup', handleUp, true);
+    return () => {
+      window.removeEventListener('pointerdown', handleDown, true);
+      window.removeEventListener('mousedown', handleDown, true);
+      window.removeEventListener('pointerup', handleUp, true);
+      window.removeEventListener('mouseup', handleUp, true);
+    };
+  }, []);
+
   // Refs for zero-data-loss handlers
   const isAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
   useEffect(() => {
@@ -842,20 +873,17 @@ const PageEditor = () => {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      // 1. Never save while user is actively drawing, dragging, resizing, or editing nodes
-      const isDrawingOrInteracting =
-        activeMainTool === "pen" ||
-        activeMainTool === "shapes" ||
-        !!document.querySelector('[data-dragging="true"]') ||
-        !!document.querySelector("#node-edit-overlay-group") ||
-        !!document.querySelector(".node-handle-active") ||
-        !!document.querySelector('#vectra-overlay-group:not(:empty)') ||
-        !!document.querySelector('[data-drawing="true"]') ||
+      // 1. Never save while user is actively pressing mouse down or dragging/resizing elements
+      const isActivelyInteracting =
+        window.__isCanvasPointerDown === true ||
         document.body.classList.contains("resizing-active") ||
-        document.body.classList.contains("drawing-active");
+        document.body.classList.contains("drawing-active") ||
+        !!document.querySelector('[data-dragging="true"]') ||
+        !!document.querySelector('[data-drawing="true"]') ||
+        !!document.querySelector('.node-handle-active');
 
-      if (isDrawingOrInteracting) {
-        // Defer auto-save until drawing/interaction completes
+      if (isActivelyInteracting) {
+        // Defer auto-save until active mouse gesture completes
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(() => {
           if (
@@ -868,7 +896,7 @@ const PageEditor = () => {
               popupEditContext ? popupEditContext.backup.pages : pages,
             );
           }
-        }, 3000);
+        }, 1500);
         return;
       }
 
@@ -895,7 +923,7 @@ const PageEditor = () => {
               popupEditContext ? popupEditContext.backup.pages : pages,
             );
           }
-        }, 3000);
+        }, 2000);
         return;
       }
 

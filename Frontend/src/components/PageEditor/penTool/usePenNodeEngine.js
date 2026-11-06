@@ -365,7 +365,7 @@ export const usePenNodeEngine = ({
         const comboD = pathToDCombo(vSession.paths);
         if (comboD) {
           pathEl.setAttribute('d', comboD);
-        } else if (!vSession.paths || vSession.paths.size === 0) {
+        } else if ((!vSession.paths || vSession.paths.size === 0) && (!pathEl.getAttribute('d') || pathEl.getAttribute('d').trim() === '')) {
           if (pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
         }
       }
@@ -777,12 +777,25 @@ export const usePenNodeEngine = ({
 
   // Listen for global commit signal before saves, refreshes, or page transitions
   useEffect(() => {
-    const handleCommit = () => {
+    const handleCommit = (e) => {
+      const isManual = e?.detail?.isManual;
+      // In automated background saves, if user is in pen mode, ensure live DOM path has latest d
+      // without destroying the active pen drawing session or resetting nodes!
+      if (!isManual && activeMainTool === 'pen') {
+        const vSession = vectraPenSessionRef.current;
+        if (vSession && drawingPathRef.current) {
+          const comboD = pathToDCombo(vSession.paths);
+          if (comboD) {
+            drawingPathRef.current.setAttribute('d', comboD);
+          }
+        }
+        return;
+      }
       commitAndExitPenDrawing();
     };
     window.addEventListener('editor-commit-active-tools', handleCommit);
     return () => window.removeEventListener('editor-commit-active-tools', handleCommit);
-  }, [commitAndExitPenDrawing]);
+  }, [commitAndExitPenDrawing, activeMainTool]);
 
   return {
     paperScopeRef,

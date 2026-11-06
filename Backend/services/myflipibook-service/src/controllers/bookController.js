@@ -53,14 +53,16 @@ const isFolderId = (str) => {
 const cleanSvgMarkup = (str) => {
   if (!str || typeof str !== "string") return str;
   let cleaned = str.trim();
-  if (cleaned.includes("<parsererror") || cleaned.includes("<html") || cleaned.includes("<!DOCTYPE")) {
-    cleaned = cleaned.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, "");
+  cleaned = cleaned.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, "");
+  if (cleaned.includes("<html") || cleaned.includes("<!DOCTYPE")) {
     const svgStart = cleaned.search(/<svg\b/i);
     const svgEnd = cleaned.lastIndexOf("</svg>");
     if (svgStart !== -1 && svgEnd !== -1 && svgEnd > svgStart) {
       cleaned = cleaned.substring(svgStart, svgEnd + 6);
     }
   }
+  cleaned = cleaned.replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, "<br/>");
+  cleaned = cleaned.replace(/<\/\s*br\s*>/gi, "");
   cleaned = cleaned.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, "<br/>");
   cleaned = cleaned.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, "<$1$2/>");
   cleaned = cleaned.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");

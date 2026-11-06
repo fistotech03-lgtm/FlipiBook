@@ -1382,7 +1382,12 @@ export const sanitizeSvgXml = (rawContent) => {
     // Fallback safe string cleanup
   }
 
-  // 6. Ensure xmlns is present on root <svg
+  // 6. Guarantee self-closing of all void HTML tags in XML
+  str = str.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, '<br/>');
+  str = str.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, '<$1$2/>');
+  str = str.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, '');
+
+  // 7. Ensure xmlns is present on root <svg
   if (!str.includes('xmlns=')) {
     str = str.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
   }

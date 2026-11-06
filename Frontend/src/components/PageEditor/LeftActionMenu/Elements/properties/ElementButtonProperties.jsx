@@ -399,7 +399,7 @@ export const ButtonEditor = ({
   });
 
   // ─── 6. Effects States ──────────────────────────────────────────
-  const [activeEffects, setActiveEffects] = useState(['Drop Shadow']);
+  const [activeEffects, setActiveEffects] = useState([]);
   const [effectSettings, setEffectSettings] = useState({
     'Drop Shadow': {
       x: 2,
@@ -699,8 +699,11 @@ export const ButtonEditor = ({
 
     // 6. Effects
     const effects = [];
-    if (el.getAttribute('data-effect-drop-shadow') === 'true' || el.getAttribute('data-effect-drop-shadow') === null) {
+    const hasDs = el.getAttribute('data-effect-drop-shadow') === 'true';
+    if (hasDs) {
       effects.push('Drop Shadow');
+    } else if (el.getAttribute('filter')) {
+      el.removeAttribute('filter');
     }
     setActiveEffects(effects);
 

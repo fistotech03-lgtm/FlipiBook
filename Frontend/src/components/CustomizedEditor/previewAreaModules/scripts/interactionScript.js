@@ -1,6 +1,10 @@
 export const getInteractionScript = (pageNumber) => `  <style>
     [data-type="qrcode"],
+    [data-type="qrcode"] *,
     [data-qr-url],
+    [data-qr-url] * {
+      cursor: default !important;
+    }
     [data-interaction="link"],
     [data-interaction="open-link"],
     [data-interaction="navigate-to"],
@@ -55,16 +59,10 @@ export const getInteractionScript = (pageNumber) => `  <style>
                     }
                 }
 
-                // QR Code direct link support
+                // QR Code elements are scan-only: do not redirect on click or hover
                 const qrEl = e.target.closest ? e.target.closest('[data-type="qrcode"], [data-qr-url]') : null;
                 if (qrEl && !findInteractionEl(qrEl)) {
-                    const qrUrl = qrEl.getAttribute('data-qr-url') || qrEl.dataset?.qrUrl;
-                    if (qrUrl) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(qrUrl.startsWith('http') ? qrUrl : 'https://' + qrUrl, '_blank');
-                        return;
-                    }
+                    return;
                 }
 
                const el = findInteractionEl(e.target);

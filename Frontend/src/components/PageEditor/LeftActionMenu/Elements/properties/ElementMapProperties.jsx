@@ -8,7 +8,7 @@ import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIContro
 
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.2vw]">
+  <div className="flex items-center gap-[0.4vw]">
     <span className="text-[0.88vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
@@ -64,8 +64,8 @@ const THEME_OPTIONS = [
 const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribute, activePageIndex, selectedLayerId }) => {
   // --- 1. Map Source Settings ---
   const [sourceType, setSourceType] = useState('Location'); // 'Location' | 'URL' | 'Embed Code'
-  const [location, setLocation] = useState('Coimbatore, Tamil Nadu');
-  const [locationInput, setLocationInput] = useState('Coimbatore, Tamil Nadu');
+  const [location, setLocation] = useState('Gandhipuram, Coimbatore, Tamil Nadu');
+  const [locationInput, setLocationInput] = useState('Gandhipuram, Coimbatore, Tamil Nadu');
   const [urlInput, setUrlInput] = useState('');
   const [embedCode, setEmbedCode] = useState('');
   const [iframeUrl, setIframeUrl] = useState('');
@@ -381,7 +381,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
   // Sync state with selected element on canvas
   useEffect(() => {
-    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Coimbatore, Tamil Nadu')}&t=&z=11&ie=UTF8&iwloc=near&output=embed`;
+    const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Gandhipuram, Coimbatore, Tamil Nadu')}&t=&z=14&ie=UTF8&iwloc=near&output=embed`;
 
     if (selectedElement) {
       const url = selectedElement.getAttribute('data-url') || defaultUrl;
@@ -419,12 +419,12 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       if (savedName && !savedName.toLowerCase().includes('fisto')) {
         setBusinessName(savedName);
       } else {
-        setBusinessName('Coimbatore');
+        setBusinessName('Gandhipuram');
       }
       if (savedAddress && !savedAddress.toLowerCase().includes('fisto')) {
         setBusinessAddress(savedAddress);
       } else {
-        setBusinessAddress('Tamil Nadu, India');
+        setBusinessAddress('Coimbatore, Tamil Nadu, India');
       }
       if (savedRating) setBusinessRating(savedRating);
       if (savedReviews) setBusinessReviews(savedReviews);
@@ -445,8 +445,8 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         setLocation(savedName);
         setLocationInput(savedName);
       } else {
-        setLocation('Coimbatore, Tamil Nadu');
-        setLocationInput('Coimbatore, Tamil Nadu');
+        setLocation('Gandhipuram, Coimbatore, Tamil Nadu');
+        setLocationInput('Gandhipuram, Coimbatore, Tamil Nadu');
       }
 
       if (!savedLocation && !savedName && url.includes('maps.google.com') && url.includes('q=')) {
@@ -463,7 +463,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
       if (savedRawUrl) {
         setUrlInput(savedRawUrl);
-      } else if (url && !url.includes('Coimbatore')) {
+      } else if (url && !url.includes('Gandhipuram') && !url.includes('Coimbatore')) {
         setUrlInput(url);
       }
 
@@ -488,8 +488,8 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
         const effectiveStyle = savedStyle || layoutStyle || 'none';
         const freshOverlayHtml = generateOverlayHtml(effectiveStyle, {
-          name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Coimbatore',
-          address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Tamil Nadu, India',
+          name: (savedName && !savedName.toLowerCase().includes('fisto')) ? savedName : 'Gandhipuram',
+          address: (savedAddress && !savedAddress.toLowerCase().includes('fisto')) ? savedAddress : 'Coimbatore, Tamil Nadu, India',
           rating: savedRating || businessRating || DEFAULT_MAP_DATA.rating,
           reviews: savedReviews || businessReviews || DEFAULT_MAP_DATA.reviews,
           category: savedCategory || businessCategory || DEFAULT_MAP_DATA.category,
@@ -568,9 +568,26 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
 
     if (value.length > 1) {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=5`);
-        const data = await res.json();
-        const results = Array.isArray(data) ? [...data] : [];
+        // First prioritize Indian locations, then append global results if needed
+        const [indiaRes, globalRes] = await Promise.all([
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&countrycodes=in&limit=5`).then(r => r.json()).catch(() => []),
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=5`).then(r => r.json()).catch(() => [])
+        ]);
+
+        const inResults = Array.isArray(indiaRes) ? indiaRes : [];
+        const globResults = Array.isArray(globalRes) ? globalRes : [];
+
+        // Deduplicate: Indian locations first, followed by others
+        const seenIds = new Set(inResults.map(item => item.place_id));
+        const combined = [...inResults];
+        for (const item of globResults) {
+          if (!seenIds.has(item.place_id)) {
+            seenIds.add(item.place_id);
+            combined.push(item);
+          }
+        }
+
+        const results = combined.slice(0, 7);
         results.push({
           display_name: value.trim(),
           isCustomQuery: true
@@ -754,9 +771,9 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.8vw] font-sans text-gray-800 p-[0.75vw]">
+    <div className="w-full flex flex-col gap-[0.8vw] font-sans text-gray-800">
       {/* ─── 1. MAP SOURCE ─── */}
-      <SectionHeader title="Map Source" />
+      <SectionHeader title="Map Property" />
 
       {/* Radio Buttons for Source Type */}
       <div className="flex items-center justify-between w-full px-[0.1vw] py-[0.1vw]">
@@ -948,7 +965,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       </div>
 
       {/* ─── 3. LIVE MAP & OVERLAY PREVIEW CARD ─── */}
-      <div className="relative w-full aspect-[4/3.5] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
+      <div className="relative w-full aspect-[4/3] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
         {iframeUrl ? (
           <div className="relative w-full h-full overflow-hidden">
             <iframe
@@ -996,53 +1013,59 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
         )}
       </div>
 
-      {/* ─── 4. BUTTON COLOR ─── */}
-      <SectionHeader title="Button Color" />
+      {/* ─── 4. BUTTON COLOR (Only for templates with action buttons/cards) ─── */}
+      {layoutStyle && layoutStyle !== 'none' && layoutStyle !== 'plain' && (
+        <>
+          <SectionHeader title="Button Color" />
 
-      <div className="flex items-center gap-[0.4vw] w-full">
-        {/* Color box trigger */}
-        <div
-          onClick={() => setActiveColorPicker(activeColorPicker === 'buttonColor' ? null : 'buttonColor')}
-          className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-            activeColorPicker === 'buttonColor' ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-          }`}
-          style={{ backgroundColor: buttonColor === 'none' || buttonColor === 'transparent' ? '#ffffff' : buttonColor }}
-          title="Click to open color palette"
-        >
-          {(buttonColor === 'none' || buttonColor === 'transparent') && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-          )}
-        </div>
+          <div className="flex items-center gap-[0.4vw] w-full">
+            {/* Color box trigger */}
+            <div
+              onClick={() => setActiveColorPicker(activeColorPicker === 'buttonColor' ? null : 'buttonColor')}
+              className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
+                activeColorPicker === 'buttonColor' ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              style={{ backgroundColor: buttonColor === 'none' || buttonColor === 'transparent' ? '#ffffff' : buttonColor }}
+              title="Click to open color palette"
+            >
+              {(buttonColor === 'none' || buttonColor === 'transparent') && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+              )}
+            </div>
 
-        {/* Input for hex and opacity */}
-        <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-          <input
-            type="text"
-            value={buttonColor && buttonColor.includes('gradient') ? 'GRADIENT' : (buttonColor?.toUpperCase() || '#000000')}
-            onChange={(e) => {
-              let val = e.target.value;
-              if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-              handleButtonColorChange(val);
-            }}
-            className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
-            maxLength={7}
-          />
-          <span className="text-gray-400 text-[0.75vw] font-semibold">{buttonOpacity}%</span>
-        </div>
-      </div>
+            {/* Input for hex and opacity */}
+            <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
+              <input
+                type="text"
+                value={buttonColor && buttonColor.includes('gradient') ? 'GRADIENT' : (buttonColor?.toUpperCase() || '#000000')}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
+                  handleButtonColorChange(val);
+                }}
+                className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
+                maxLength={7}
+              />
+              <span className="text-gray-400 text-[0.75vw] font-semibold">{buttonOpacity}%</span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ─── 5. THEME ─── */}
       <SectionHeader title="Theme" />
 
-      <CustomSelect
-        value={theme}
-        onChange={handleThemeChange}
-        options={THEME_OPTIONS}
-      />
+      <div className="pb-[4vw]">
+        <CustomSelect
+          value={theme}
+          onChange={handleThemeChange}
+          options={THEME_OPTIONS}
+        />
+      </div>
 
       {/* ─── PORTALS ─── */}
       {/* Official ColorPicker Portal Popup */}
-      {activeColorPicker === 'buttonColor' && createPortal(
+      {activeColorPicker === 'buttonColor' && layoutStyle && layoutStyle !== 'none' && layoutStyle !== 'plain' && createPortal(
         <div
           className="fixed z-[5000]"
           style={{

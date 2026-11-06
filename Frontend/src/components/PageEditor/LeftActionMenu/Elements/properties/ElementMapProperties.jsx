@@ -8,7 +8,7 @@ import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIContro
 
 // Section header matching editor design standards
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.2vw]">
+  <div className="flex items-center gap-[0.4vw]">
     <span className="text-[0.88vw] font-semibold text-black whitespace-nowrap">{title}</span>
     <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
   </div>
@@ -754,9 +754,9 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.8vw] font-sans text-gray-800 p-[0.75vw]">
+    <div className="w-full flex flex-col gap-[0.8vw] font-sans text-gray-800">
       {/* ─── 1. MAP SOURCE ─── */}
-      <SectionHeader title="Map Source" />
+      <SectionHeader title="Map Property" />
 
       {/* Radio Buttons for Source Type */}
       <div className="flex items-center justify-between w-full px-[0.1vw] py-[0.1vw]">
@@ -948,7 +948,7 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       </div>
 
       {/* ─── 3. LIVE MAP & OVERLAY PREVIEW CARD ─── */}
-      <div className="relative w-full aspect-[4/3.5] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
+      <div className="relative w-full aspect-[4/3] rounded-[0.8vw] border border-gray-200 overflow-hidden shadow-2xs bg-slate-100 select-none group">
         {iframeUrl ? (
           <div className="relative w-full h-full overflow-hidden">
             <iframe
@@ -1034,11 +1034,13 @@ const ElementMapProperties = ({ selectedElement, onUpdate, updateElementAttribut
       {/* ─── 5. THEME ─── */}
       <SectionHeader title="Theme" />
 
-      <CustomSelect
-        value={theme}
-        onChange={handleThemeChange}
-        options={THEME_OPTIONS}
-      />
+      <div className="pb-[4vw]">
+        <CustomSelect
+          value={theme}
+          onChange={handleThemeChange}
+          options={THEME_OPTIONS}
+        />
+      </div>
 
       {/* ─── PORTALS ─── */}
       {/* Official ColorPicker Portal Popup */}

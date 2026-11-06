@@ -10,7 +10,8 @@ import {
   Image as ImageIcon,
   ArrowRightLeft,
   Trash2,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { renderQRWithFrame, generateStyledQRImage, drawRoundRect, loadImg, FONT_WEIGHT_MAP } from '../utils/qrFrameRenderer';
 import Color, { handleScrubHelper } from '../../../properties/Color';
@@ -592,7 +593,9 @@ const ElementQRCodeProperties = ({
 }) => {
   // Content state
   const [url, setUrl] = useState('');
+  const [urlError, setUrlError] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const urlInputRef = useRef(null);
 
   // Preview & QR matrix styling
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
@@ -611,9 +614,10 @@ const ElementQRCodeProperties = ({
   const [logoSrc, setLogoSrc] = useState(null);
   const [logoName, setLogoName] = useState('Logo.png');
   const [logoMeta, setLogoMeta] = useState(null);
-  const [logoSize, setLogoSize] = useState(80);
-  const [logoRadius, setLogoRadius] = useState(12);
+  const [logoSize, setLogoSize] = useState(60);
+  const [logoRadius, setLogoRadius] = useState(0);
   const [logoBgColor, setLogoBgColor] = useState('#FFFFFF');
+  const [logoAspect, setLogoAspect] = useState(null);
   const fileInputRef = useRef(null);
   const galleryBtnRef = useRef(null);
 
@@ -656,6 +660,13 @@ const ElementQRCodeProperties = ({
   // Handler to export / download the QR Code
   const handleDownloadQR = async (format) => {
     setIsDownloadOpen(false);
+
+    if (!url || !url.trim()) {
+      setUrlError(true);
+      urlInputRef.current?.focus();
+      return;
+    }
+
     setIsDownloading(true);
 
     try {
@@ -710,6 +721,7 @@ const ElementQRCodeProperties = ({
           logoRadius,
           logoBg: true,
           logoBgColor,
+          logoAspect,
           qrColor,
           backdrop,
           patternStyle,
@@ -739,6 +751,7 @@ const ElementQRCodeProperties = ({
           logoRadius,
           logoBg: true,
           logoBgColor,
+          logoAspect,
           qrColor,
           backdrop,
           patternStyle,
@@ -938,7 +951,13 @@ const ElementQRCodeProperties = ({
 
     if (targetEl) {
       const storedUrl = targetEl.getAttribute('data-qr-url');
-      setUrl(storedUrl !== null ? storedUrl : '');
+      const resolvedUrl = storedUrl !== null ? storedUrl : '';
+      setUrl(resolvedUrl);
+      if (!resolvedUrl || !resolvedUrl.trim()) {
+        setUrlError(true);
+      } else {
+        setUrlError(false);
+      }
 
       setQrColor(targetEl.getAttribute('data-qr-color') || '#000000');
       setBackdrop(targetEl.getAttribute('data-qr-backdrop') || '#FFFFFF');
@@ -953,10 +972,29 @@ const ElementQRCodeProperties = ({
       setHasLogo(hasLogoAttr !== null ? hasLogoAttr === 'true' : !!existingLogo);
       setLogoSrc(existingLogo || null);
       setLogoName(targetEl.getAttribute('data-qr-logo-name') || 'Logo.png');
-      setLogoMeta(targetEl.getAttribute('data-qr-logo-meta') || null);
-      setLogoSize(parseInt(targetEl.getAttribute('data-qr-logo-size')) || 80);
-      setLogoRadius(targetEl.getAttribute('data-qr-logo-radius') !== null ? parseInt(targetEl.getAttribute('data-qr-logo-radius')) : 12);
+      const meta = targetEl.getAttribute('data-qr-logo-meta') || null;
+      setLogoMeta(meta);
+      setLogoSize(parseInt(targetEl.getAttribute('data-qr-logo-size')) || 60);
+      setLogoRadius(targetEl.getAttribute('data-qr-logo-radius') !== null ? parseInt(targetEl.getAttribute('data-qr-logo-radius')) : 0);
       setLogoBgColor(targetEl.getAttribute('data-qr-logo-bg-color') || '#FFFFFF');
+
+      const rawAspect = targetEl.getAttribute('data-qr-logo-aspect');
+      let initAspect = rawAspect ? parseFloat(rawAspect) : null;
+      if (!initAspect && meta) {
+        const m = meta.match(/(\d+)\s*[xX]\s*(\d+)/);
+        if (m && parseFloat(m[2]) > 0) initAspect = parseFloat(m[1]) / parseFloat(m[2]);
+      }
+      setLogoAspect(initAspect);
+
+      if (existingLogo) {
+        loadImg(existingLogo).then((img) => {
+          if (img && img.naturalWidth && img.naturalHeight) {
+            const asp = img.naturalWidth / img.naturalHeight;
+            setLogoAspect(asp);
+            updateQR({ logoAspect: asp });
+          }
+        });
+      }
 
       const currentFrame = targetEl.getAttribute('data-qr-frame') || 'frame-none';
       const isLightBg = currentFrame === 'frame-curved-arrow' || currentFrame === 'frame-simple-text';
@@ -987,13 +1025,63 @@ const ElementQRCodeProperties = ({
         }
       });
 
-      // Initialize preview from existing image href
-      const imgNode = targetEl.querySelector('image');
-      if (imgNode && (imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href'))) {
-        setPreviewDataUrl(imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href'));
-      }
+      // Initialize preview and self-heal any corrupted image on canvas
+      const seq = ++renderSeqRef.current;
+      const rawTextVal = targetEl.getAttribute('data-qr-text');
+      const textToRender = (rawTextVal !== null ? rawTextVal : (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME'))).slice(0, 30);
+
+      renderQRWithFrame({
+        url: resolvedUrl || 'https://example.com',
+        frame: currentFrame,
+        text: textToRender,
+        textColor: targetEl.getAttribute('data-qr-text-color') || defaultTextColor,
+        fontFamily: targetEl.getAttribute('data-qr-font-family') || defaultFontFamily,
+        fontSize: parseInt(targetEl.getAttribute('data-qr-font-size')) || 24,
+        fontWeight: targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold',
+        frameBgColor: targetEl.getAttribute('data-qr-frame-bg') || '#FFFFFF',
+        arrowColor: targetEl.getAttribute('data-qr-arrow-color') || '#000000',
+        qrColor: targetEl.getAttribute('data-qr-color') || '#000000',
+        backdrop: targetEl.getAttribute('data-qr-backdrop') || '#FFFFFF',
+        patternStyle: targetEl.getAttribute('data-qr-pattern') || 'classic-square',
+        eyeFrame: targetEl.getAttribute('data-qr-eye-frame') || 'classic-square',
+        eyeBall: targetEl.getAttribute('data-qr-eye-ball') || 'square',
+        logoSrc: existingLogo || null,
+        logoSize: Math.round(((parseInt(targetEl.getAttribute('data-qr-logo-size')) || 60) / 100) * 28),
+        logoRadius: parseInt(targetEl.getAttribute('data-qr-logo-radius')) || 0,
+        logoBgColor: targetEl.getAttribute('data-qr-logo-bg-color') || '#FFFFFF',
+        logoAspect: initAspect
+      }).then(({ dataUrl }) => {
+        if (seq !== renderSeqRef.current) return;
+        setPreviewDataUrl(dataUrl);
+        const imgNode = targetEl.querySelector('image');
+        if (imgNode) {
+          const currentHref = imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href') || '';
+          if (!currentHref.startsWith('data:image/svg+xml')) {
+            imgNode.setAttribute('href', dataUrl);
+            imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+          }
+        }
+      }).catch((err) => {
+        console.warn('Initial QR preview render fallback:', err);
+      });
     }
   }, [selectedElement, selectedLayerId, selectedElementProps]);
+
+  // Handle focus event dispatched during save validation
+  useEffect(() => {
+    const handleFocusQrUrl = (e) => {
+      const targetId = selectedElementProps?.qrcodeId || selectedLayerId;
+      if (!e.detail?.elementId || e.detail.elementId === targetId) {
+        setUrlError(true);
+        if (urlInputRef.current) {
+          urlInputRef.current.focus();
+          urlInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    };
+    window.addEventListener('focus-qr-url', handleFocusQrUrl);
+    return () => window.removeEventListener('focus-qr-url', handleFocusQrUrl);
+  }, [selectedElementProps, selectedLayerId]);
 
   // Update canvas element and refresh preview
   const updateQR = async (overrides = {}) => {
@@ -1014,6 +1102,7 @@ const ElementQRCodeProperties = ({
     const currentLogoSize = overrides.logoSize !== undefined ? overrides.logoSize : logoSize;
     const currentLogoRadius = overrides.logoRadius !== undefined ? overrides.logoRadius : logoRadius;
     const currentLogoBgColor = overrides.logoBgColor !== undefined ? overrides.logoBgColor : logoBgColor;
+    const currentLogoAspect = overrides.logoAspect !== undefined ? overrides.logoAspect : logoAspect;
 
     const currentFrame = overrides.frame !== undefined ? overrides.frame : frame;
     const currentText = overrides.text !== undefined ? overrides.text : text;
@@ -1041,6 +1130,11 @@ const ElementQRCodeProperties = ({
     targetEl.setAttribute('data-qr-logo-size', currentLogoSize.toString());
     targetEl.setAttribute('data-qr-logo-radius', currentLogoRadius.toString());
     targetEl.setAttribute('data-qr-logo-bg-color', currentLogoBgColor);
+    if (currentLogoAspect) {
+      targetEl.setAttribute('data-qr-logo-aspect', currentLogoAspect.toString());
+    } else if (overrides.logoAspect === null) {
+      targetEl.removeAttribute('data-qr-logo-aspect');
+    }
 
     targetEl.setAttribute('data-qr-frame', currentFrame);
     targetEl.setAttribute('data-qr-text', currentText !== undefined && currentText !== null ? currentText : '');
@@ -1062,6 +1156,7 @@ const ElementQRCodeProperties = ({
         logoRadius: currentLogoRadius,
         logoBg: true,
         logoBgColor: currentLogoBgColor,
+        logoAspect: currentLogoAspect,
         qrColor: currentQrColor,
         backdrop: currentBackdrop,
         patternStyle: currentPattern,
@@ -1156,7 +1251,14 @@ const ElementQRCodeProperties = ({
 
     const overrides = { [key]: sanitizedValue };
 
-    if (key === 'url') setUrl(sanitizedValue);
+    if (key === 'url') {
+      setUrl(sanitizedValue);
+      if (sanitizedValue && sanitizedValue.trim()) {
+        setUrlError(false);
+      } else {
+        setUrlError(true);
+      }
+    }
     if (key === 'qrColor') setQrColor(value);
     if (key === 'backdrop') setBackdrop(value);
     if (key === 'patternStyle') setPatternStyle(value);
@@ -1164,7 +1266,21 @@ const ElementQRCodeProperties = ({
     if (key === 'eyeBall') setEyeBall(value);
 
     if (key === 'hasLogo') setHasLogo(value);
-    if (key === 'logoSrc') setLogoSrc(value);
+    if (key === 'logoSrc') {
+      setLogoSrc(value);
+      if (value) {
+        loadImg(value).then((img) => {
+          if (img && img.naturalWidth && img.naturalHeight) {
+            const asp = img.naturalWidth / img.naturalHeight;
+            setLogoAspect(asp);
+            updateQR({ logoSrc: value, logoAspect: asp });
+          }
+        });
+      } else {
+        setLogoAspect(null);
+        overrides.logoAspect = null;
+      }
+    }
     if (key === 'logoName') setLogoName(value);
     if (key === 'logoMeta') setLogoMeta(value);
     if (key === 'logoSize') setLogoSize(value);
@@ -1214,9 +1330,28 @@ const ElementQRCodeProperties = ({
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const fileName = file.name || 'Logo.png';
+    const fileSizeFormatted = file.size
+      ? (file.size >= 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+        : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+      : '';
     const reader = new FileReader();
     reader.onload = (event) => {
-      handleChange('logoSrc', event.target.result);
+      const dataUrl = event.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const nw = img.naturalWidth || img.width;
+        const nh = img.naturalHeight || img.height;
+        const aspect = nh > 0 ? nw / nh : 1;
+        const metaStr = `${nw} X ${nh}${fileSizeFormatted ? ' • ' + fileSizeFormatted : ''}`;
+        setLogoName(fileName);
+        setLogoMeta(metaStr);
+        setLogoAspect(aspect);
+        setLogoSrc(dataUrl);
+        updateQR({ logoSrc: dataUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -1271,35 +1406,70 @@ const ElementQRCodeProperties = ({
       </div>
 
       {/* 2. URL */}
-      <PropertyRow label="URL">
-        <div className="flex border border-gray-300 rounded-[0.4vw] overflow-hidden focus-within:border-[#4D47FF] focus-within:ring-1 focus-within:ring-[#4D47FF] transition-all bg-white shadow-2xs">
-          <input
-            type="text"
-            placeholder="e.g. https://..."
-            value={url}
-            onChange={(e) => handleChange('url', e.target.value)}
-            className="flex-1 px-[0.6vw] py-[0.45vw] text-[0.8vw] font-medium outline-none text-gray-800 placeholder-gray-400 bg-transparent"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (url) {
-                navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
-                setCopiedUrl(true);
-                setTimeout(() => setCopiedUrl(false), 1500);
-              }
-            }}
-            className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#4D47FF] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
-            title={copiedUrl ? 'Copied!' : 'Copy Link'}
-          >
-            {copiedUrl ? (
-              <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
-            ) : (
-              <Copy className="w-[0.85vw] h-[0.85vw]" />
-            )}
-          </button>
-        </div>
-      </PropertyRow>
+      <div className="flex flex-col gap-[0.2vw]">
+        <PropertyRow label="URL">
+          <div className={`flex border rounded-[0.4vw] overflow-hidden transition-all bg-white shadow-2xs ${
+            urlError
+              ? 'border-red-500 ring-1 ring-red-500/40 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500'
+              : 'border-gray-300 focus-within:border-[#4D47FF] focus-within:ring-1 focus-within:ring-[#4D47FF]'
+          }`}>
+            <input
+              ref={urlInputRef}
+              type="text"
+              placeholder="e.g. https://..."
+              value={url}
+              onChange={(e) => handleChange('url', e.target.value)}
+              onBlur={() => {
+                if (!url || !url.trim()) {
+                  setUrlError(true);
+                }
+              }}
+              className="flex-1 px-[0.6vw] py-[0.45vw] text-[0.8vw] font-medium outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+            />
+            <div className="flex items-center bg-gray-50 border-l border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  if (url) {
+                    navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                    setCopiedUrl(true);
+                    setTimeout(() => setCopiedUrl(false), 1500);
+                  }
+                }}
+                className="px-[0.6vw] py-[0.45vw] flex items-center justify-center text-gray-500 hover:text-[#4D47FF] transition-colors cursor-pointer"
+                title={copiedUrl ? 'Copied!' : 'Copy Link'}
+              >
+                {copiedUrl ? (
+                  <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+                ) : (
+                  <Copy className="w-[0.85vw] h-[0.85vw]" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (url) {
+                    const targetUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : 'https://' + url;
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                disabled={!url}
+                className={`px-[0.6vw] py-[0.45vw] flex items-center justify-center border-l border-gray-200 transition-colors ${
+                  url ? 'text-gray-500 hover:text-[#4D47FF] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
+                }`}
+                title="Test Link (Open in New Tab)"
+              >
+                <ExternalLink className="w-[0.85vw] h-[0.85vw]" />
+              </button>
+            </div>
+          </div>
+        </PropertyRow>
+        {urlError && (
+          <div className="flex items-center gap-[0.3vw] pl-[5.8vw] text-red-500 animate-in fade-in duration-200">
+            <span className="text-[0.72vw] font-medium">Please fill the URL</span>
+          </div>
+        )}
+      </div>
 
       {/* 3. QR Code Preview with Dimension & Download */}
       <div className="flex items-center justify-between gap-[0.8vw] my-[0.2vw] p-[0.6vw] bg-white rounded-[0.5vw] border border-gray-200 shadow-2xs">
@@ -1307,7 +1477,14 @@ const ElementQRCodeProperties = ({
         <div className="flex flex-col items-center">
           <div className="w-[6.5vw] h-[6.5vw] max-w-[130px] max-h-[130px] min-w-[85px] min-h-[85px] bg-white rounded-[0.4vw] p-[0.3vw] border border-gray-200 shadow-2xs flex items-center justify-center overflow-hidden">
             {previewDataUrl ? (
-              <img src={previewDataUrl} alt="QR Code Preview" className="w-full h-full object-contain" />
+              <img
+                src={previewDataUrl}
+                alt="QR Code Preview"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400 text-[0.65vw]">Generating...</div>
             )}
@@ -1712,7 +1889,7 @@ const ElementQRCodeProperties = ({
                     min="20"
                     max="95"
                     value={logoSize}
-                    onChange={(e) => handleChange('logoSize', parseInt(e.target.value) || 22)}
+                    onChange={(e) => handleChange('logoSize', parseInt(e.target.value) || 60)}
                     className="w-full cursor-pointer custom-range-slider"
                     style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${((logoSize - 20) / 75) * 100}%, #E2E8F0 ${((logoSize - 20) / 75) * 100}%, #E2E8F0 100%)` }}
                   />
@@ -1897,11 +2074,15 @@ const ElementQRCodeProperties = ({
             const fileName = file.name || (typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : 'image.png');
             const img = new Image();
             img.onload = () => {
-              const metaStr = `${img.naturalWidth || img.width} X ${img.naturalHeight || img.height}`;
+              const nw = img.naturalWidth || img.width;
+              const nh = img.naturalHeight || img.height;
+              const aspect = nh > 0 ? nw / nh : 1;
+              const metaStr = `${nw} X ${nh}`;
               setLogoName(fileName);
               setLogoMeta(metaStr);
-              updateQR({ logoSrc: rawUrl, logoName: fileName, logoMeta: metaStr });
+              setLogoAspect(aspect);
               setLogoSrc(rawUrl);
+              updateQR({ logoSrc: rawUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
             };
             img.src = rawUrl;
           } else {
@@ -1916,11 +2097,15 @@ const ElementQRCodeProperties = ({
               const dataUrl = event.target.result;
               const img = new Image();
               img.onload = () => {
-                const metaStr = `${img.naturalWidth || img.width} X ${img.naturalHeight || img.height}${fileSizeFormatted ? ' • ' + fileSizeFormatted : ''}`;
+                const nw = img.naturalWidth || img.width;
+                const nh = img.naturalHeight || img.height;
+                const aspect = nh > 0 ? nw / nh : 1;
+                const metaStr = `${nw} X ${nh}${fileSizeFormatted ? ' • ' + fileSizeFormatted : ''}`;
                 setLogoName(fileName);
                 setLogoMeta(metaStr);
-                updateQR({ logoSrc: dataUrl, logoName: fileName, logoMeta: metaStr });
+                setLogoAspect(aspect);
                 setLogoSrc(dataUrl);
+                updateQR({ logoSrc: dataUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
               };
               img.src = dataUrl;
             };

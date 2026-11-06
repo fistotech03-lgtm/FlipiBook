@@ -209,15 +209,32 @@ export const getVisualBBox = (el) => {
                   (el.id && el.id.startsWith('embed-')) ||
                   !!el.querySelector?.('[data-type="embed-frame"]');
   if (isEmbed) {
-    const bgRect = el.querySelector?.('rect.embed-fill-layer, foreignObject, rect:not(.svg-image-stroke-overlay)');
-    if (bgRect) {
-      const rw = parseFloat(bgRect.getAttribute('width')) || 0;
-      const rh = parseFloat(bgRect.getAttribute('height')) || 0;
-      const rx = parseFloat(bgRect.getAttribute('x') || '0');
-      const ry = parseFloat(bgRect.getAttribute('y') || '0');
-      if (rw > 0 && rh > 0) {
-        return { x: rx, y: ry, width: rw, height: rh };
+    const fo = el.querySelector?.('foreignObject');
+    const fillLayer = el.querySelector?.('rect.embed-fill-layer');
+    const strokeOverlay = el.querySelector?.('.svg-image-stroke-overlay');
+    const baseEl = fo || fillLayer || strokeOverlay || el.querySelector?.('rect');
+
+    let rw = baseEl ? (parseFloat(baseEl.getAttribute('width')) || 650) : 650;
+    let rh = baseEl ? (parseFloat(baseEl.getAttribute('height')) || 400) : 400;
+    let rx = baseEl ? (parseFloat(baseEl.getAttribute('x') || '0')) : 0;
+    let ry = baseEl ? (parseFloat(baseEl.getAttribute('y') || '0')) : 0;
+
+    // Check if stroke overlay defines outer visual bounds
+    if (strokeOverlay) {
+      const sw = parseFloat(strokeOverlay.getAttribute('width')) || 0;
+      const sh = parseFloat(strokeOverlay.getAttribute('height')) || 0;
+      const sx = parseFloat(strokeOverlay.getAttribute('x') || '0');
+      const sy = parseFloat(strokeOverlay.getAttribute('y') || '0');
+      if (sw > rw || sx < rx) {
+        rx = sx;
+        ry = sy;
+        rw = sw;
+        rh = sh;
       }
+    }
+
+    if (rw > 0 && rh > 0) {
+      return { x: rx, y: ry, width: rw, height: rh };
     }
     return { x: 0, y: 0, width: 650, height: 400 };
   }

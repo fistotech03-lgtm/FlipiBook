@@ -108,7 +108,7 @@ export const useSaveEngine = ({
       document.activeElement.blur();
     }
 
-    const validation = validateInteractions(pagesToSave);
+    const validation = validateInteractions(pagesToSave, activePageIndex);
     if (!validation.isValid) {
       if (isManual) {
         toast.error(validation.message);
@@ -119,7 +119,11 @@ export const useSaveEngine = ({
           setActivePageIndex(validation.pageIndex);
         }
         if (validation.elementId) {
-          setActiveTopTool("interaction");
+          if (validation.isQRCode) {
+            setActiveTopTool("editor");
+          } else {
+            setActiveTopTool("interaction");
+          }
           setSelectedLayerId(validation.elementId);
           window.dispatchEvent(
             new CustomEvent("select-layer", {
@@ -127,21 +131,35 @@ export const useSaveEngine = ({
             }),
           );
 
-          const dispatchOpen = () => {
-            window.dispatchEvent(
-              new CustomEvent("open-interaction-accordion", {
-                detail: {
-                  elementId: validation.elementId,
-                  pageIndex: validation.pageIndex,
-                  field: validation.field,
-                },
-              }),
-            );
-          };
-          dispatchOpen();
-          setTimeout(dispatchOpen, 100);
-          setTimeout(dispatchOpen, 250);
-          setTimeout(dispatchOpen, 400);
+          if (validation.isQRCode) {
+            const dispatchFocus = () => {
+              window.dispatchEvent(
+                new CustomEvent("focus-qr-url", {
+                  detail: { elementId: validation.elementId },
+                }),
+              );
+            };
+            dispatchFocus();
+            setTimeout(dispatchFocus, 100);
+            setTimeout(dispatchFocus, 250);
+            setTimeout(dispatchFocus, 400);
+          } else {
+            const dispatchOpen = () => {
+              window.dispatchEvent(
+                new CustomEvent("open-interaction-accordion", {
+                  detail: {
+                    elementId: validation.elementId,
+                    pageIndex: validation.pageIndex,
+                    field: validation.field,
+                  },
+                }),
+              );
+            };
+            dispatchOpen();
+            setTimeout(dispatchOpen, 100);
+            setTimeout(dispatchOpen, 250);
+            setTimeout(dispatchOpen, 400);
+          }
         }
       }
       return;
@@ -840,6 +858,41 @@ export const useSaveEngine = ({
             }
           }
 
+          // Protect QR Code elements from having their vector SVG data URIs stripped and converted to broken raster jpg files
+          const qrCodePlaceholders = new Map();
+          const qrGroupRegex = /<g\b[^>]*data-type=["']qrcode["'][^>]*>|<g\b[^>]*id=["']qrcode-[^"']*["'][^>]*>/gi;
+          let qrMatch;
+          while ((qrMatch = qrGroupRegex.exec(newHtml)) !== null) {
+            const startIdx = qrMatch.index;
+            let depth = 1;
+            let i = startIdx + qrMatch[0].length;
+            let endIdx = -1;
+            while (i < newHtml.length) {
+              if (newHtml.startsWith('<g', i) && (newHtml[i + 2] === ' ' || newHtml[i + 2] === '>')) {
+                depth++;
+                i += 2;
+              } else if (newHtml.startsWith('</g>', i)) {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 4;
+                  break;
+                }
+                i += 4;
+              } else {
+                i++;
+              }
+            }
+            if (endIdx !== -1) {
+              const fullQr = newHtml.substring(startIdx, endIdx);
+              const ph = `__QR_CODE_PH_${Math.random().toString(36).slice(2)}__`;
+              qrCodePlaceholders.set(ph, fullQr);
+              newHtml = newHtml.substring(0, startIdx) + ph + newHtml.substring(endIdx);
+              qrGroupRegex.lastIndex = startIdx + ph.length;
+            } else {
+              break;
+            }
+          }
+
           // --- 3. DIRECT STRING SEARCH base64 extraction and upload for user-added assets ---
           // Regex engines often fail silently or hit length limits on 3MB+ contiguous strings.
           // We use a pure indexOf search to safely extract huge data URIs.
@@ -941,11 +994,13 @@ export const useSaveEngine = ({
               } else if (isVideo) {
                 fileExt = mimeString.includes("webm") ? ".webm" : ".mp4";
               } else {
-                fileExt = mimeString.includes("png")
-                  ? ".png"
-                  : mimeString.includes("webp")
-                    ? ".webp"
-                    : ".jpg";
+                fileExt = mimeString.includes("svg")
+                  ? ".svg"
+                  : mimeString.includes("png")
+                    ? ".png"
+                    : mimeString.includes("webp")
+                      ? ".webp"
+                      : ".jpg";
               }
 
               const formData = new FormData();
@@ -1016,6 +1071,9 @@ export const useSaveEngine = ({
                     const liveImgs = editorDoc.querySelectorAll("image");
                     const dataPrefix = actualDataUri.slice(0, 100);
                     liveImgs.forEach((img) => {
+                      if (img.closest && img.closest('[data-type="qrcode"], g[id^="qrcode-"]')) {
+                        return; // NEVER overwrite QR Code vector image in live DOM
+                      }
                       const h = img.getAttribute("href") || img.getAttribute("xlink:href") || "";
                       if (h && (h === actualDataUri || h.startsWith(dataPrefix))) {
                         img.setAttribute("href", absoluteUrl);
@@ -1048,6 +1106,13 @@ export const useSaveEngine = ({
           // Restore protected PDF Background
           if (pdfBgPlaceholders.size > 0) {
             pdfBgPlaceholders.forEach((origContent, ph) => {
+              newHtml = newHtml.split(ph).join(origContent);
+            });
+          }
+
+          // Restore protected QR Code elements
+          if (qrCodePlaceholders.size > 0) {
+            qrCodePlaceholders.forEach((origContent, ph) => {
               newHtml = newHtml.split(ph).join(origContent);
             });
           }

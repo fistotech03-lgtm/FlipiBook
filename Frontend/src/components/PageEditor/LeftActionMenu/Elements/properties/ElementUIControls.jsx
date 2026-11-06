@@ -134,6 +134,15 @@ export const ElementDropdown = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      // Allow the dropdown menu to render in the DOM before scrolling to center, matching Animation & Interaction panels
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [isOpen]);
+
   // Normalize options into { label, value }
   const normalizedOptions = options.map((opt) => {
     if (typeof opt === 'object' && opt !== null) {

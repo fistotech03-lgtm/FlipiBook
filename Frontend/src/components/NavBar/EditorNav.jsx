@@ -380,42 +380,8 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Save & Sync Status Area */}
-          {isAutoSaveEnabled ? (
-            /* When AutoSave is ENABLED: In Page Editor & 3D Editor, show real-time sync / last updated status */
-            !isCustomizedEditor && (
-              <div className="relative flex items-center ml-[0.2vw]">
-                {!isOnline ? (
-                  <div 
-                    className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-amber-50 border border-amber-200 rounded-[2vw] text-amber-800 select-none"
-                    title="Working offline. Changes are saved locally in your browser and will automatically sync to cloud when you reconnect."
-                  >
-                    <CloudOff className="w-[1.1vw] h-[1.1vw] text-amber-600" />
-                    <span className="font-medium text-[0.8vw]">Saved locally (Offline)</span>
-                  </div>
-                ) : isSaving ? (
-                  <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-blue-50/80 border border-blue-200 rounded-[2vw] text-blue-700 select-none">
-                    <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-blue-600" />
-                    <span className="font-medium text-[0.8vw] text-blue-800">Saving...</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => onSave && onSave(false)}
-                    title="All changes saved. Click to force sync now."
-                    className="group/sync flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 hover:bg-gray-100/90 border border-gray-200 hover:border-gray-300 rounded-[2vw] text-gray-700 select-none transition-colors cursor-pointer"
-                  >
-                    <Icon
-                      icon="reicon:tick-circle-filled"
-                      className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
-                    />
-                    <span className="font-medium text-[0.8vw] text-gray-600 group-hover/sync:text-gray-900 transition-colors">
-                      Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
-                    </span>
-                  </button>
-                )}
-              </div>
-            )
-          ) : (
+          {/* Save & Sync Status Area: Hidden when AutoSave is enabled per user request */}
+          {!isAutoSaveEnabled && (
             /* When AutoSave is DISABLED: Show the manual Save button */
             <div className="relative group/tooltip flex items-center ml-[0.2vw]">
               <button

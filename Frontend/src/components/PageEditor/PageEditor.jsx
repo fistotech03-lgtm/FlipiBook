@@ -868,7 +868,7 @@ const PageEditor = () => {
               popupEditContext ? popupEditContext.backup.pages : pages,
             );
           }
-        }, 3000);
+        }, 1200);
         return;
       }
 
@@ -876,7 +876,7 @@ const PageEditor = () => {
         false,
         popupEditContext ? popupEditContext.backup.pages : pages,
       );
-    }, 2500);
+    }, 1000);
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -904,6 +904,7 @@ const PageEditor = () => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     const pagesToSave = latestPagesRef.current;
     if (!activeVId || !pagesToSave || pagesToSave.length === 0) return;
+    const now = Date.now();
     try {
       savePageEditorState({
         v_id: activeVId,
@@ -913,11 +914,38 @@ const PageEditor = () => {
           currentBook?.flipbookName ||
           location.state?.flipbookName ||
           "Untitled Flipbook",
-        timestamp: Date.now(),
+        timestamp: now,
       });
     } catch (err) {
       console.warn("[PageEditor] DB flush error:", err);
     }
+
+    // Synchronous emergency backup to localStorage (instant persistence against hard browser crashes/refreshes)
+    try {
+      const emergencyData = {
+        v_id: activeVId,
+        pages: pagesToSave.map((p, idx) => ({
+          id: p.id !== undefined ? p.id : idx,
+          v_id: p.v_id !== undefined ? p.v_id : idx,
+          name: p.name || `Page ${idx + 1}`,
+          fileName: p.fileName || `${idx + 1}.svg`,
+          pageNumber: p.pageNumber || idx + 1,
+          isHidden: Boolean(p.isHidden || p.hide === 1),
+          html: p.html || p.content || "",
+          content: p.content || p.html || "",
+        })),
+        activePageIndex: latestActiveIndexRef.current || 0,
+        pageName:
+          currentBook?.flipbookName ||
+          location.state?.flipbookName ||
+          "Untitled Flipbook",
+        timestamp: now,
+      };
+      const serialized = JSON.stringify(emergencyData);
+      if (serialized.length < 4.5 * 1024 * 1024) {
+        localStorage.setItem(`emergency_editor_${activeVId}`, serialized);
+      }
+    } catch (_) {}
   }, [v_id, currentBook, location.state]);
 
   const flushPageEditorToDBRef = useRef(flushPageEditorToDB);
@@ -933,10 +961,8 @@ const PageEditor = () => {
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
-      const timer = setTimeout(() => {
-        flushPageEditorToDB();
-      }, 300);
-      return () => clearTimeout(timer);
+      // Immediate synchronous flush to local caches on any change
+      flushPageEditorToDB();
     }
   }, [
     pages,
@@ -967,6 +993,9 @@ const PageEditor = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         flushPageEditorToDBRef.current?.();
+        if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+          saveFlipbookRef.current?.(false, latestPagesRef.current);
+        }
       }
     };
 
@@ -1242,22 +1271,40 @@ const PageEditor = () => {
 
       let hasLocalCachedPages = false;
       let loadedCachedPages = null;
+      let loadedCachedState = null;
       try {
         if (activeVId) {
-          // 1. Quick-load cached state from IndexedDB for instant UI render & refresh persistence
+          // 1. Quick-load cached state from IndexedDB & emergency snapshot for instant UI render & refresh persistence
           try {
             await ensureCleanBook(activeVId);
-            const cachedState = await getPageEditorState(activeVId);
+            let cachedState = await getPageEditorState(activeVId);
+            try {
+              const emergencyRaw = localStorage.getItem(`emergency_editor_${activeVId}`);
+              if (emergencyRaw) {
+                const emergencyParsed = JSON.parse(emergencyRaw);
+                if (
+                  emergencyParsed &&
+                  emergencyParsed.v_id === activeVId &&
+                  Array.isArray(emergencyParsed.pages) &&
+                  emergencyParsed.pages.length > 0 &&
+                  (!cachedState || (emergencyParsed.timestamp || 0) > (cachedState.timestamp || 0))
+                ) {
+                  cachedState = emergencyParsed;
+                }
+              }
+            } catch (_) {}
+
             if (
               cachedState &&
               cachedState.v_id === activeVId &&
               Array.isArray(cachedState.pages) &&
               cachedState.pages.length > 0
             ) {
-              console.log("[PageEditor] Quick-load cache hit from IndexedDB for", activeVId);
+              console.log("[PageEditor] Quick-load cache hit for", activeVId);
               setPages(cachedState.pages);
               hasLocalCachedPages = true;
               loadedCachedPages = cachedState.pages;
+              loadedCachedState = cachedState;
               if (
                 typeof cachedState.activePageIndex === "number" &&
                 cachedState.activePageIndex >= 0
@@ -1278,7 +1325,7 @@ const PageEditor = () => {
               setIsLoading(false);
             }
           } catch (cacheErr) {
-            console.warn("[PageEditor] IndexedDB quick-load warning:", cacheErr);
+            console.warn("[PageEditor] Cache quick-load warning:", cacheErr);
           }
 
           try {
@@ -1673,20 +1720,62 @@ const PageEditor = () => {
                 processPageItem(p, idx),
               );
 
-              setPages(mappedPages);
+              // ── ZERO DATA LOSS PROTECTION ─────────────────────────────────────
+              // Determine if local cache has newer unsaved edits than the backend database
+              const serverUpdatedAt = new Date(
+                res.data.meta?.updatedAt ||
+                res.data.meta?.lastUpdated ||
+                res.data.meta?.createdAt ||
+                0
+              ).getTime();
+
+              const hasNewerLocalEdits = Boolean(
+                hasLocalCachedPages &&
+                loadedCachedPages &&
+                loadedCachedPages.length > 0 &&
+                loadedCachedState?.timestamp &&
+                (loadedCachedState.timestamp > serverUpdatedAt ||
+                  loadedCachedPages.some((cp, idx) => {
+                    const sp = mappedPages[idx];
+                    return sp && (cp.html !== sp.html || cp.name !== sp.name);
+                  }))
+              );
+
+              let effectivePages = mappedPages;
+              if (hasNewerLocalEdits) {
+                console.log(
+                  "[PageEditor] Preserving newer local edits from cache over older backend data",
+                  activeVId
+                );
+                // Keep the locally cached pages so user never loses their work!
+                effectivePages = loadedCachedPages;
+                setPages(loadedCachedPages);
+
+                // Auto-sync the newer local edits to backend immediately if auto-save is enabled
+                if (isAutoSaveEnabledRef.current) {
+                  setTimeout(() => {
+                    saveFlipbookRef.current?.(false, loadedCachedPages);
+                  }, 500);
+                } else {
+                  setHasUnsavedChanges(true);
+                }
+              } else {
+                setPages(mappedPages);
+                mappedPages.forEach((p) => {
+                  const pid = p.v_id || p.id;
+                  lastSavedHtmlsRef.current[pid] = p.html;
+                });
+                setHasUnsavedChanges(false);
+              }
+
               setIsLoading(false);
 
-              const firstRootId = mappedPages[0]?.layers?.[0]?.id;
+              const firstRootId = effectivePages[0]?.layers?.[0]?.id;
               if (firstRootId) {
                 setSelectedLayerIdRaw(firstRootId);
                 setMultiSelectedIds(new Set([firstRootId]));
                 setCurrentFrameId(firstRootId);
               }
-
-              mappedPages.forEach((p) => {
-                const pid = p.v_id || p.id;
-                lastSavedHtmlsRef.current[pid] = p.html;
-              });
 
               let shareData = res.data.share;
               if (!shareData || !shareData.shareId) {

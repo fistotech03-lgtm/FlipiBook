@@ -31,6 +31,7 @@ import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmationContext";
 import { queryClient } from "../../queryClient";
+import { sanitizeSvgXml, safeSerializeSvg } from "./utils/editorUtils";
 
 import {
   parseLayersFromSVG,
@@ -592,6 +593,7 @@ const PageEditor = () => {
       setIsSaving,
       triggerSaveSuccess,
       getFlipbookDimensions,
+      activePageIndex,
       setActivePageIndex,
       toast,
       location,
@@ -716,7 +718,7 @@ const PageEditor = () => {
         const clone = pageSvg.cloneNode(true);
         clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
         const serializer = new XMLSerializer();
-        const liveHtml = serializer.serializeToString(clone);
+        const liveHtml = safeSerializeSvg(clone) || serializer.serializeToString(clone);
         updated[activePageIndex] = { ...updated[activePageIndex], html: liveHtml };
       }
       return updated;
@@ -840,11 +842,33 @@ const PageEditor = () => {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      // 1. Never save while user is actively dragging or resizing
-      const isUserInteracting =
+      // 1. Never save while user is actively drawing, dragging, resizing, or editing nodes
+      const isDrawingOrInteracting =
+        activeMainTool === "pen" ||
+        activeMainTool === "shapes" ||
         !!document.querySelector('[data-dragging="true"]') ||
-        document.body.classList.contains("resizing-active");
-      if (isUserInteracting) {
+        !!document.querySelector("#node-edit-overlay-group") ||
+        !!document.querySelector(".node-handle-active") ||
+        !!document.querySelector('#vectra-overlay-group:not(:empty)') ||
+        !!document.querySelector('[data-drawing="true"]') ||
+        document.body.classList.contains("resizing-active") ||
+        document.body.classList.contains("drawing-active");
+
+      if (isDrawingOrInteracting) {
+        // Defer auto-save until drawing/interaction completes
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 3000);
         return;
       }
 
@@ -893,6 +917,7 @@ const PageEditor = () => {
     popupEditContext,
     saveFlipbook,
     autoSaveTimerRef,
+    activeMainTool,
   ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
@@ -1454,23 +1479,7 @@ const PageEditor = () => {
                     .join(`${projectBaseUrl}assets/`);
                 }
 
-                if (
-                  updatedHtml.includes("parsererror") ||
-                  updatedHtml.includes('id="custom-ctrl-')
-                ) {
-                  updatedHtml = updatedHtml.replace(
-                    /<parsererror[\s\S]*?<\/parsererror>/gi,
-                    "",
-                  );
-                  updatedHtml = updatedHtml.replace(
-                    /<[^>]*id="custom-ctrl-[^>]*>.*?<\/[^>]*>/gi,
-                    "",
-                  );
-                }
-                updatedHtml = updatedHtml.replace(
-                  /&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,
-                  "&amp;",
-                );
+                updatedHtml = sanitizeSvgXml(updatedHtml);
 
                 const cachedLayers = pageCacheManager.getCachedLayers(
                   pageUniqueId,
@@ -1626,7 +1635,7 @@ const PageEditor = () => {
                   }
                 });
 
-                updatedHtml = new XMLSerializer().serializeToString(doc);
+                updatedHtml = safeSerializeSvg(doc) || updatedHtml;
 
                 const svgEl = doc.querySelector("svg");
                 const filterLayers = (layers) => {

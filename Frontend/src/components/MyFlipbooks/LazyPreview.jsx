@@ -3,6 +3,7 @@ import axios from 'axios';
 import { BookOpen } from 'lucide-react';
 import { flipbookApi } from '../../api/flipbookApi';
 import { resolveUploadsPath } from '../../utils/assetUtils';
+import { sanitizeSvgXml } from '../../utils/editorUtils';
 
 // Global font cache across all preview cards to prevent duplicate Google Fonts requests
 const globallyRequestedFonts = new Set();
@@ -156,7 +157,7 @@ function LazyPreviewComponent({
 
             {/* Actual preview — rendered on top once ready */}
             {html ? (() => {
-                let processedContent = html.content || '';
+                let processedContent = sanitizeSvgXml(html.content || '');
                 const cleanBaseUrl = (iframeBaseUrl || '').trim();
                 let effectiveBaseHref = cleanBaseUrl;
                 if (cleanBaseUrl) {

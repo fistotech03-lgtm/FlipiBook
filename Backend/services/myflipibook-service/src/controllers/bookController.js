@@ -50,6 +50,23 @@ const isFolderId = (str) => {
   return s.startsWith("fol_") || /^[0-9a-fA-F]{12,24}$/.test(s);
 };
 
+const cleanSvgMarkup = (str) => {
+  if (!str || typeof str !== "string") return str;
+  let cleaned = str.trim();
+  if (cleaned.includes("<parsererror") || cleaned.includes("<html") || cleaned.includes("<!DOCTYPE")) {
+    cleaned = cleaned.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, "");
+    const svgStart = cleaned.search(/<svg\b/i);
+    const svgEnd = cleaned.lastIndexOf("</svg>");
+    if (svgStart !== -1 && svgEnd !== -1 && svgEnd > svgStart) {
+      cleaned = cleaned.substring(svgStart, svgEnd + 6);
+    }
+  }
+  cleaned = cleaned.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, "<br/>");
+  cleaned = cleaned.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, "<$1$2/>");
+  cleaned = cleaned.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  return cleaned;
+};
+
 const resolveFolder = (folderName, folderMap = null) => {
   if (Array.isArray(folderName)) {
     const flat = folderName.flat(Infinity);
@@ -1934,6 +1951,8 @@ exports.saveBook = async (req, res) => {
           skipBase64Extraction: keepBase64,
         });
 
+        svgContent = cleanSvgMarkup(svgContent);
+
         await fs.promises.writeFile(
           path.join(pagesDir, targetFileName),
           svgContent,
@@ -2394,6 +2413,7 @@ exports.savePagesBatch = async (req, res) => {
           });
 
           svgContent = normalizeToRelativeAssetPaths(svgContent);
+          svgContent = cleanSvgMarkup(svgContent);
           fs.writeFileSync(
             path.join(pagesDir, targetFileName),
             svgContent,
@@ -3235,6 +3255,8 @@ exports.previewBook = async (req, res) => {
       const pageHeight = 842;
       firstPageHtml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%"><rect width="${pageWidth}" height="${pageHeight}" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/><text x="50%" y="50%" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#64748b" text-anchor="middle" dominant-baseline="middle">${book.flipbookName || 'Page 1'}</text></svg>`;
     }
+
+    firstPageHtml = cleanSvgMarkup(firstPageHtml);
 
     res.status(200).json({
       success: true,

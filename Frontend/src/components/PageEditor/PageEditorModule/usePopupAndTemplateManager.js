@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { TEMPLATES as popupTemplates } from '../modals/PopupTemplateSelection';
-import { formatTemplateSvgToPageSvg } from '../utils/editorUtils';
+import { formatTemplateSvgToPageSvg, safeSerializeSvg } from '../utils/editorUtils';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import { consolidateTransforms } from '../mainEditor/utils/geometryUtils';
 
@@ -99,10 +99,10 @@ export const usePopupAndTemplateManager = ({
             targetEl.setAttribute('data-interaction', 'popup');
             targetEl.setAttribute('data-interaction-value', templateId);
             targetEl.setAttribute('data-interaction-popup-custom-html', svgText);
-            const serializer = new XMLSerializer();
+            const newHtml = safeSerializeSvg(pageDoc) || newBackupPages[pageIndex].html;
             newBackupPages[pageIndex] = {
               ...newBackupPages[pageIndex],
-              html: serializer.serializeToString(pageDoc.documentElement)
+              html: newHtml
             };
             backupContext.backup.pages = newBackupPages;
           }
@@ -241,9 +241,10 @@ export const usePopupAndTemplateManager = ({
           targetEl.setAttribute('data-interaction', 'popup');
           targetEl.setAttribute('data-interaction-value', templateId);
           targetEl.setAttribute('data-interaction-popup-custom-html', customHtml);
+          const newHtml = safeSerializeSvg(doc) || updatedPages[pageIndex].html;
           updatedPages[pageIndex] = {
             ...updatedPages[pageIndex],
-            html: serializer.serializeToString(doc.documentElement)
+            html: newHtml
           };
         }
       } catch (err) {

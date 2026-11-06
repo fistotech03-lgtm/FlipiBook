@@ -27,6 +27,7 @@ import {
 } from './penOverlayEngine';
 import { getLocalPoint } from '../mainEditor/utils/geometryUtils';
 import { updateShapeMaskTransform } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 /**
  * Hook for managing Pen Tool drawing (Vectra session, bezier curves, pencil)
@@ -384,7 +385,8 @@ export const usePenNodeEngine = ({
       });
 
       if (pathEl && svgEl && updatePageHtml) {
-        updatePageHtml(pageIdx, svgEl.outerHTML);
+        const cleanHtml = safeSerializeSvg(svgEl) || svgEl.outerHTML;
+        updatePageHtml(pageIdx, cleanHtml);
         if (targetId) {
           skipClearSelectionRef.current = true;
           window.dispatchEvent(new CustomEvent('expand-layer-parent', { detail: { id: targetId } }));
@@ -772,6 +774,15 @@ export const usePenNodeEngine = ({
       commitAndExitPenDrawing();
     }
   }, [activeMainTool, commitAndExitPenDrawing, clearPenToolNodes]);
+
+  // Listen for global commit signal before saves, refreshes, or page transitions
+  useEffect(() => {
+    const handleCommit = () => {
+      commitAndExitPenDrawing();
+    };
+    window.addEventListener('editor-commit-active-tools', handleCommit);
+    return () => window.removeEventListener('editor-commit-active-tools', handleCommit);
+  }, [commitAndExitPenDrawing]);
 
   return {
     paperScopeRef,

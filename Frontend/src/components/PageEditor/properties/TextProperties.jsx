@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Color from './Color';
 import Effect from './Effect';
-import { applyStyleToActiveTextSelection } from '../utils/editorUtils';
+import { applyStyleToActiveTextSelection, safeSerializeSvg } from '../utils/editorUtils';
 
 import { Icon } from '@iconify/react';
 import {
@@ -2226,7 +2226,7 @@ const TextProperties = ({
           element.setAttribute('y', liveEl.getAttribute('y'));
         }
 
-        const newHtml = new XMLSerializer().serializeToString(doc.documentElement);
+        const newHtml = safeSerializeSvg(doc) || page.html;
         page.html = newHtml;
         newPages[pageIdx] = page;
 
@@ -2321,7 +2321,7 @@ const TextProperties = ({
                   docTspans.forEach((ts, i) => {
                     if (i > 0) ts.setAttribute('dy', `${numVal.toFixed(2)}em`);
                   });
-                  page.html = new XMLSerializer().serializeToString(doc.documentElement);
+                  page.html = safeSerializeSvg(doc) || page.html;
                   next[pageIdx2] = page;
                   onUpdate(page.html);
                 }

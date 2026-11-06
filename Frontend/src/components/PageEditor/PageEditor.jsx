@@ -29,7 +29,9 @@ import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
 import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmationContext";
 import { queryClient } from "../../queryClient";
+import { sanitizeSvgXml, safeSerializeSvg } from "./utils/editorUtils";
 
 import {
   parseLayersFromSVG,
@@ -126,10 +128,20 @@ const PageEditor = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedLayerId, setSelectedLayerIdRaw] = useState(null);
 
+  const confirm = useConfirm();
+  const currentUrlRef = useRef(window.location.href);
+  useEffect(() => {
+    currentUrlRef.current = window.location.href;
+  }, [location.pathname, location.search]);
+  const isConfirmingBackRef = useRef(false);
+
   // Clear previous book from IndexedDB when opening a new book
   useEffect(() => {
     if (v_id) {
       ensureCleanBook(v_id);
+      try {
+        localStorage.removeItem(`emergency_editor_${v_id}`);
+      } catch (_) {}
     }
   }, [v_id]);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
@@ -581,12 +593,14 @@ const PageEditor = () => {
       setIsSaving,
       triggerSaveSuccess,
       getFlipbookDimensions,
+      activePageIndex,
       setActivePageIndex,
       toast,
       location,
       navigate,
       setActiveTopTool,
       setSelectedLayerId,
+      isAutoSaveEnabled,
     });
 
   // ── Hook 7: 3D Preview Manager ─────────────────────────────────────────────
@@ -669,9 +683,9 @@ const PageEditor = () => {
   useEffect(() => {
     if (setSaveHandler) {
       setSaveHandler(
-        () => () =>
+        () => (isManual = true) =>
           saveFlipbook(
-            true,
+            isManual,
             popupEditContext ? popupEditContext.backup.pages : pages,
           ),
       );
@@ -704,7 +718,7 @@ const PageEditor = () => {
         const clone = pageSvg.cloneNode(true);
         clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
         const serializer = new XMLSerializer();
-        const liveHtml = serializer.serializeToString(clone);
+        const liveHtml = safeSerializeSvg(clone) || serializer.serializeToString(clone);
         updated[activePageIndex] = { ...updated[activePageIndex], html: liveHtml };
       }
       return updated;
@@ -798,30 +812,127 @@ const PageEditor = () => {
     }
   }, [pages, currentBook, isLoading, setHasUnsavedChanges, justSavedRef]);
 
-  // Auto-Save Mechanism
+  // Listen for direct canvas edits (e.g. pen drawing points, element drops, shape draws)
+  useEffect(() => {
+    const handleContentChanged = () => {
+      setHasUnsavedChanges(true);
+    };
+    window.addEventListener('editor-content-changed', handleContentChanged);
+    return () => window.removeEventListener('editor-content-changed', handleContentChanged);
+  }, [setHasUnsavedChanges]);
+
+  // Global mouse/pointer tracking for canvas interactions to avoid interrupting drawing strokes
+  useEffect(() => {
+    const handleDown = (e) => {
+      if (e.target?.closest?.('.page-svg-container, #main-zoom-container, #node-edit-overlay-group, [id^="highlight-overlay"]')) {
+        window.__isCanvasPointerDown = true;
+      }
+    };
+    const handleUp = () => {
+      window.__isCanvasPointerDown = false;
+    };
+    window.addEventListener('pointerdown', handleDown, true);
+    window.addEventListener('mousedown', handleDown, true);
+    window.addEventListener('pointerup', handleUp, true);
+    window.addEventListener('mouseup', handleUp, true);
+    return () => {
+      window.removeEventListener('pointerdown', handleDown, true);
+      window.removeEventListener('mousedown', handleDown, true);
+      window.removeEventListener('pointerup', handleUp, true);
+      window.removeEventListener('mouseup', handleUp, true);
+    };
+  }, []);
+
+  // Refs for zero-data-loss handlers
+  const isAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
+  useEffect(() => {
+    isAutoSaveEnabledRef.current = isAutoSaveEnabled;
+  }, [isAutoSaveEnabled]);
+
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Auto-Save Mechanism (Strictly respects isAutoSaveEnabled; never interrupts active typing or interactions)
   useEffect(() => {
     if (
-      isAutoSaveEnabled &&
-      hasUnsavedChanges &&
-      pages.length > 0 &&
-      !isLoading &&
-      !isSaving &&
-      !isFirstLoadRef.current
+      !isAutoSaveEnabled ||
+      !hasUnsavedChanges ||
+      pages.length === 0 ||
+      isLoading ||
+      isSaving ||
+      isFirstLoadRef.current
     ) {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = setTimeout(() => {
-        const isUserInteracting =
-          !!document.querySelector('[data-dragging="true"]') ||
-          document.body.classList.contains("resizing-active");
-        if (isUserInteracting) {
-          return;
-        }
-        saveFlipbook(
-          false,
-          popupEditContext ? popupEditContext.backup.pages : pages,
-        );
-      }, 2500);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      return;
     }
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      // 1. Never save while user is actively pressing mouse down or dragging/resizing elements
+      const isActivelyInteracting =
+        window.__isCanvasPointerDown === true ||
+        document.body.classList.contains("resizing-active") ||
+        document.body.classList.contains("drawing-active") ||
+        !!document.querySelector('[data-dragging="true"]') ||
+        !!document.querySelector('[data-drawing="true"]') ||
+        !!document.querySelector('.node-handle-active');
+
+      if (isActivelyInteracting) {
+        // Defer auto-save until active mouse gesture completes
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 1500);
+        return;
+      }
+
+      // 2. Never interrupt the user while typing in an input, textarea, or contentEditable element
+      const activeEl = document.activeElement;
+      const isTyping =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable ||
+          activeEl.getAttribute("contenteditable") === "true");
+
+      if (isTyping) {
+        // Defer auto-save until typing has ceased
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 2000);
+        return;
+      }
+
+      saveFlipbook(
+        false,
+        popupEditContext ? popupEditContext.backup.pages : pages,
+      );
+    }, 2500);
+
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
@@ -834,6 +945,7 @@ const PageEditor = () => {
     popupEditContext,
     saveFlipbook,
     autoSaveTimerRef,
+    activeMainTool,
   ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
@@ -864,6 +976,16 @@ const PageEditor = () => {
     }
   }, [v_id, currentBook, location.state]);
 
+  const flushPageEditorToDBRef = useRef(flushPageEditorToDB);
+  useEffect(() => {
+    flushPageEditorToDBRef.current = flushPageEditorToDB;
+  }, [flushPageEditorToDB]);
+
+  const saveFlipbookRef = useRef(saveFlipbook);
+  useEffect(() => {
+    saveFlipbookRef.current = saveFlipbook;
+  }, [saveFlipbook]);
+
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
@@ -885,30 +1007,61 @@ const PageEditor = () => {
 
   // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      flushPageEditorToDB();
+    const handleBeforeUnload = (e) => {
+      flushPageEditorToDBRef.current?.();
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
     };
 
     const handlePageHide = () => {
-      flushPageEditorToDB();
+      flushPageEditorToDBRef.current?.();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        flushPageEditorToDB();
+        flushPageEditorToDBRef.current?.();
       }
     };
 
-    const handlePopState = () => {
-      flushPageEditorToDB();
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
+    const handlePopState = async () => {
+      flushPageEditorToDBRef.current?.();
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
+        return;
+      }
+
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        if (isConfirmingBackRef.current) return;
+        isConfirmingBackRef.current = true;
+
+        // Restore URL so the user stays on the editor while the confirm modal is open
+        window.history.pushState(null, '', currentUrlRef.current);
+
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger",
+        });
+
+        if (ok) {
+          hasUnsavedChangesRef.current = false;
+          setHasUnsavedChanges(false);
+          isConfirmingBackRef.current = false;
+          window.history.back();
+        } else {
+          isConfirmingBackRef.current = false;
+        }
       }
     };
 
     const handleOnline = () => {
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
       }
     };
 
@@ -919,11 +1072,8 @@ const PageEditor = () => {
     window.addEventListener('online', handleOnline);
 
     return () => {
-      // Synchronously flush on component unmount
-      flushPageEditorToDB();
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
-      }
+      // Synchronously flush to local IndexedDB on component unmount only
+      flushPageEditorToDBRef.current?.();
 
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
@@ -931,7 +1081,7 @@ const PageEditor = () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('online', handleOnline);
     };
-  }, [flushPageEditorToDB, hasUnsavedChanges, saveFlipbook]);
+  }, []);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {
@@ -1357,23 +1507,7 @@ const PageEditor = () => {
                     .join(`${projectBaseUrl}assets/`);
                 }
 
-                if (
-                  updatedHtml.includes("parsererror") ||
-                  updatedHtml.includes('id="custom-ctrl-')
-                ) {
-                  updatedHtml = updatedHtml.replace(
-                    /<parsererror[\s\S]*?<\/parsererror>/gi,
-                    "",
-                  );
-                  updatedHtml = updatedHtml.replace(
-                    /<[^>]*id="custom-ctrl-[^>]*>.*?<\/[^>]*>/gi,
-                    "",
-                  );
-                }
-                updatedHtml = updatedHtml.replace(
-                  /&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,
-                  "&amp;",
-                );
+                updatedHtml = sanitizeSvgXml(updatedHtml);
 
                 const cachedLayers = pageCacheManager.getCachedLayers(
                   pageUniqueId,
@@ -1529,7 +1663,7 @@ const PageEditor = () => {
                   }
                 });
 
-                updatedHtml = new XMLSerializer().serializeToString(doc);
+                updatedHtml = safeSerializeSvg(doc) || updatedHtml;
 
                 const svgEl = doc.querySelector("svg");
                 const filterLayers = (layers) => {

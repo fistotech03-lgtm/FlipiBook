@@ -238,6 +238,7 @@ export const useCanvasPointerEvents = ({
   };
 
   const handleSvgMouseDown = (pageIndex, e) => {
+    window.__isCanvasPointerDown = true;
     if (e._handledMarquee) return;
     if (e.button !== 0 || e.target.closest('.resize-handle')) return;
 
@@ -1792,6 +1793,7 @@ export const useCanvasPointerEvents = ({
   // ── FIGMA-STYLE GLOBAL MOUSE UP (Handles end of marquee or tool drawing) ────────────────
   useEffect(() => {
     const handleGlobalMouseUp = (e) => {
+      window.__isCanvasPointerDown = false;
       // ── Node Edit Mode: Finalize node drag ──
       if (nodeEditDragRef.current) {
         const { pathEl, pageIndex: nePageIndex } = nodeEditDragRef.current;
@@ -1830,6 +1832,7 @@ export const useCanvasPointerEvents = ({
               : activePageIndex;
             renderVectraOverlay(targetPageIndex, drawingPathRef.current.parentElement, vSession);
           }
+          window.dispatchEvent(new CustomEvent('editor-content-changed'));
         }
       }
 

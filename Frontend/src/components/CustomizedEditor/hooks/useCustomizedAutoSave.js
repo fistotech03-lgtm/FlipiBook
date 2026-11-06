@@ -233,6 +233,11 @@ export const useCustomizedAutoSave = ({
       idbTimerRef.current = null;
     }
 
+    // If auto-save is disabled, do NOT send network requests (only manual save writes to backend)
+    if (!isAutoSaveEnabled) {
+      return;
+    }
+
     // 3. Immediate Exit Network Flush (Keepalive ensures the browser sends the POST even if window/tab terminates)
     if (isExit) {
       if (navigator.onLine && payload) {
@@ -340,29 +345,39 @@ export const useCustomizedAutoSave = ({
     initialLoadRef, setHasUnsavedChanges, flushSettings
   ]);
 
+  const flushSettingsRef = useRef(flushSettings);
+  useEffect(() => {
+    flushSettingsRef.current = flushSettings;
+  }, [flushSettings]);
+
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
   // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
   useEffect(() => {
     const handleBeforeUnload = () => {
-      flushSettings(true);
+      flushSettingsRef.current?.(true);
     };
 
     const handlePageHide = () => {
-      flushSettings(true);
+      flushSettingsRef.current?.(true);
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        flushSettings(true);
+        flushSettingsRef.current?.(true);
       }
     };
 
     const handlePopState = () => {
-      flushSettings(false);
+      flushSettingsRef.current?.(false);
     };
 
     const handleOnline = () => {
-      if (isDirtyRef.current || hasUnsavedChanges) {
-        flushSettings(false);
+      if (isDirtyRef.current || hasUnsavedChangesRef.current) {
+        flushSettingsRef.current?.(false);
       }
     };
 
@@ -373,8 +388,8 @@ export const useCustomizedAutoSave = ({
     window.addEventListener('online', handleOnline);
 
     return () => {
-      // Component unmount (route change, in-app navigation, etc.)
-      flushSettings(true);
+      // Component unmount only (route change, in-app navigation, etc.)
+      flushSettingsRef.current?.(true);
 
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
@@ -382,7 +397,7 @@ export const useCustomizedAutoSave = ({
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('online', handleOnline);
     };
-  }, [flushSettings, hasUnsavedChanges]);
+  }, []);
 
   return { notifiedUnsavedRef, flushSettings };
 };

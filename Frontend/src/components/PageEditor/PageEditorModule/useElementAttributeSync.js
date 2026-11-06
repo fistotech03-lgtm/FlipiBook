@@ -6,6 +6,7 @@
 
 import { parseLayersFromSVG, syncGradient, syncFilters } from './svgFilterUtils';
 import { applySvgGradientOrSolid } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     const updateElementAttribute = (pageIndex, elementId, attribute, value) => {
@@ -507,8 +508,8 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
           syncFilters(doc, element);
         }
 
-        const serializer = new XMLSerializer();
-        updated[pageIndex] = { ...page, html: serializer.serializeToString(doc.documentElement) };
+        const newHtml = safeSerializeSvg(doc) || page.html;
+        updated[pageIndex] = { ...page, html: newHtml };
       }
       return updated;
     });
@@ -525,7 +526,7 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
         const overlay = doc.querySelector('[data-name="Overlay"]');
         if (overlay) {
           overlay.setAttribute('fill', color);
-          page.html = new XMLSerializer().serializeToString(doc);
+          page.html = safeSerializeSvg(doc) || page.html;
         }
         updated[pageIndex] = { ...page };
       }

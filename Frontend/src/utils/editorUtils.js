@@ -513,4 +513,6 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
     console.error('Error formatting template SVG to page SVG:', err);
     return '';
   }
-}
+};
+
+export { sanitizeSvgXml, safeSerializeSvg } from '../components/PageEditor/utils/editorUtils';

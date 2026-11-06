@@ -12,6 +12,7 @@ import {
 } from "../../../utils/assetUtils";
 import { validateInteractions } from "./interactionValidation";
 import { useAuth } from "../../../context/AuthContext";
+import { sanitizeSvgXml, safeSerializeSvg } from "../utils/editorUtils";
 
 const VIRTUAL_FOLDERS = new Set([
   "recent book",
@@ -50,12 +51,14 @@ export const useSaveEngine = ({
   setIsSaving,
   triggerSaveSuccess,
   getFlipbookDimensions,
+  activePageIndex,
   setActivePageIndex,
   toast,
   location,
   navigate,
   setActiveTopTool,
   setSelectedLayerId,
+  isAutoSaveEnabled = true,
 }) => {
   const { user } = useAuth();
   const autoSaveTimerRef = useRef(null);
@@ -63,10 +66,42 @@ export const useSaveEngine = ({
   const lastSavedHtmlsRef = useRef({});
 
   const saveFlipbook = async (isManual = false, overridePages = null) => {
-    let pagesToSave = overridePages || pages;
+    // 0. Ensure any active pen or node drawing session commits clean path before saving
+    try {
+      window.dispatchEvent(new CustomEvent("editor-commit-active-tools", { detail: { isManual } }));
+    } catch (_) {}
+
+    let pagesToSave = overridePages ? [...overridePages] : [...pages];
     if (isSaving || !pagesToSave || pagesToSave.length === 0) return;
 
+    // If auto-save is turned OFF, refuse automated saves - only manual save button writes to DB
+    if (!isManual && !isAutoSaveEnabled) return;
+
+    // Sync live canvas DOM for the active page if available so no uncommitted canvas edits are lost
+    if (typeof activePageIndex === "number" && pagesToSave[activePageIndex]) {
+      try {
+        const container = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+        const liveSvg = container?.querySelector('[id^="canvas-content-"] svg') || container?.querySelector('svg:not([id^="highlight-overlay-"]):not(#marquee-selection-overlay)');
+        if (liveSvg) {
+          const clone = liveSvg.cloneNode(true);
+          clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, #vectra-overlay-group, #node-edit-overlay-group, [id="multi-selection-bounds"], .video-damage-rect, [class*="damage-rect"], [data-is-dummy="true"]').forEach(e => e.remove());
+          const serialized = safeSerializeSvg(clone);
+          if (serialized && serialized.length > 50 && serialized.includes('<svg')) {
+            pagesToSave[activePageIndex] = {
+              ...pagesToSave[activePageIndex],
+              html: serialized
+            };
+          }
+        }
+      } catch (err) {
+        console.warn("[SaveEngine] Live canvas sync fallback:", err);
+      }
+    }
+
+    // Only blur active element on explicit manual save (e.g. clicking the navbar Save button)
+    // NEVER blur during automatic background saves, so typing is never interrupted!
     if (
+      isManual &&
       document.activeElement &&
       typeof document.activeElement.blur === "function"
     ) {
@@ -1053,6 +1088,7 @@ export const useSaveEngine = ({
           }
 
           newHtml = normalizePageAssetUrls(newHtml);
+          newHtml = sanitizeSvgXml(newHtml);
           return { ...p, html: newHtml };
         }),
       );
@@ -1084,7 +1120,7 @@ export const useSaveEngine = ({
                 ? p.name
                 : `${p.name}.svg`
               : `${index + 1}.svg`),
-          content: normalizePageAssetUrls(p.html),
+          content: sanitizeSvgXml(normalizePageAssetUrls(p.html)),
           hide: p.isHidden ? 1 : 0,
           v_id:
             p.v_id ||
@@ -1149,10 +1185,7 @@ export const useSaveEngine = ({
               pid &&
               lastSavedHtmlsRef.current[pid] &&
               lastSavedHtmlsRef.current[pid] === p.html;
-            let content =
-              isModified || !isKnownSaved
-                ? normalizePageAssetUrls(p.html)
-                : undefined;
+            let content = sanitizeSvgXml(normalizePageAssetUrls(p.html));
             let contentChunkId = undefined;
 
             // CHUNKED UPLOAD LOGIC: If content is too large (> 2MB), upload in chunks
@@ -1266,21 +1299,23 @@ export const useSaveEngine = ({
 
         setHasUnsavedChanges(false);
         justSavedRef.current = true;
-        // Merge backend v_id properties without overwriting live page HTML edited during async save window
+        // Merge backend v_id properties and keep React pages state in sync with saved HTML without wiping live canvas
+        if (typeof activePageIndex === "number") {
+          window.__skipCanvasUpdateForPage = activePageIndex;
+        }
         setPages((prevPages) => {
           if (!prevPages || prevPages.length === 0) return pagesToSave;
           const backendPages = lastRes?.data?.pages || [];
           return prevPages.map((page, idx) => {
             const bPage = backendPages[idx];
-            if (
-              bPage &&
-              bPage.v_id &&
-              bPage.v_id !== currentVId &&
-              !page.v_id
-            ) {
-              return { ...page, v_id: bPage.v_id };
-            }
-            return page;
+            const savedHtml = pagesToSave[idx]?.html;
+            return {
+              ...page,
+              ...(savedHtml ? { html: savedHtml } : {}),
+              ...(bPage && bPage.v_id && bPage.v_id !== currentVId && !page.v_id
+                ? { v_id: bPage.v_id }
+                : {}),
+            };
           });
         });
         window.dispatchEvent(new CustomEvent("flipbook-saved"));

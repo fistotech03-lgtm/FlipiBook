@@ -195,12 +195,23 @@ const EditorNavbar = ({
     queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
-      try {
-        if (onSave) {
-          await onSave();
+      if (!isAutoSaveEnabled) {
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger",
+        });
+        if (!ok) return;
+      } else {
+        try {
+          if (onSave) {
+            await onSave();
+          }
+        } catch (err) {
+          console.warn("[EditorNav] Auto-save before navigation error:", err);
         }
-      } catch (err) {
-        console.warn("[EditorNav] Auto-save before navigation error:", err);
       }
     }
     navigate(to);
@@ -369,38 +380,85 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Customized Editor: Do not show any save button */}
-          {isCustomizedEditor ? null : (
-            /* Page Editor / 3D Editor: Don't show save button, instead show real-time sync / last updated time status */
-            <div className="relative flex items-center ml-[0.2vw]">
-              {!isOnline ? (
-                <div 
-                  className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-amber-50 border border-amber-200 rounded-[2vw] text-amber-800 select-none"
-                  title="Working offline. Changes are saved locally in your browser and will automatically sync to cloud when you reconnect."
-                >
-                  <CloudOff className="w-[1.1vw] h-[1.1vw] text-amber-600" />
-                  <span className="font-medium text-[0.8vw]">Saved locally (Offline)</span>
+          {/* Save & Sync Status Area */}
+          {isAutoSaveEnabled ? (
+            /* When AutoSave is ENABLED: In Page Editor & 3D Editor, show real-time sync / last updated status */
+            !isCustomizedEditor && (
+              <div className="relative flex items-center ml-[0.2vw]">
+                {!isOnline ? (
+                  <div 
+                    className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-amber-50 border border-amber-200 rounded-[2vw] text-amber-800 select-none"
+                    title="Working offline. Changes are saved locally in your browser and will automatically sync to cloud when you reconnect."
+                  >
+                    <CloudOff className="w-[1.1vw] h-[1.1vw] text-amber-600" />
+                    <span className="font-medium text-[0.8vw]">Saved locally (Offline)</span>
+                  </div>
+                ) : isSaving ? (
+                  <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-blue-50/80 border border-blue-200 rounded-[2vw] text-blue-700 select-none">
+                    <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-blue-600" />
+                    <span className="font-medium text-[0.8vw] text-blue-800">Saving...</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onSave && onSave(false)}
+                    title="All changes saved. Click to force sync now."
+                    className="group/sync flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 hover:bg-gray-100/90 border border-gray-200 hover:border-gray-300 rounded-[2vw] text-gray-700 select-none transition-colors cursor-pointer"
+                  >
+                    <Icon
+                      icon="reicon:tick-circle-filled"
+                      className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
+                    />
+                    <span className="font-medium text-[0.8vw] text-gray-600 group-hover/sync:text-gray-900 transition-colors">
+                      Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
+                    </span>
+                  </button>
+                )}
+              </div>
+            )
+          ) : (
+            /* When AutoSave is DISABLED: Show the manual Save button */
+            <div className="relative group/tooltip flex items-center ml-[0.2vw]">
+              <button
+                onClick={() => onSave && onSave(true)}
+                disabled={isSaving || !hasUnsavedChanges}
+                className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] rounded-[2vw] flex-shrink-0 ${
+                  isSaving
+                    ? "bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed"
+                    : hasUnsavedChanges
+                    ? "bg-[#EC5137] hover:bg-[#d9482f] border border-[#EC5137] text-white shadow-sm cursor-pointer active:scale-[0.98]"
+                    : "bg-white border border-[#D9D9D9] text-gray-600 cursor-default"
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137]" />
+                    <span className="font-medium text-[0.85vw]">Saving...</span>
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <Save className="w-[1.1vw] h-[1.1vw] text-white" />
+                    <span className="font-medium text-[0.85vw]">Save</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon
+                      icon="reicon:tick-circle-filled"
+                      className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
+                    />
+                    <span className="font-medium text-[0.85vw] text-gray-600">Saved</span>
+                  </>
+                )}
+              </button>
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
+                <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
+                <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
+                  {hasUnsavedChanges
+                    ? "You have unsaved changes - Click to Save"
+                    : isSaving
+                    ? "Saving changes..."
+                    : "All changes saved"}
                 </div>
-              ) : isSaving ? (
-                <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-blue-50/80 border border-blue-200 rounded-[2vw] text-blue-700 select-none">
-                  <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-blue-600" />
-                  <span className="font-medium text-[0.8vw] text-blue-800">Saving...</span>
-                </div>
-              ) : (
-                <button
-                  onClick={onSave}
-                  title="All changes saved. Click to force sync now."
-                  className="group/sync flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 hover:bg-gray-100/90 border border-gray-200 hover:border-gray-300 rounded-[2vw] text-gray-700 select-none transition-colors cursor-pointer"
-                >
-                  <Icon
-                    icon="reicon:tick-circle-filled"
-                    className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
-                  />
-                  <span className="font-medium text-[0.8vw] text-gray-600 group-hover/sync:text-gray-900 transition-colors">
-                    Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
-                  </span>
-                </button>
-              )}
+              </div>
             </div>
           )}
 

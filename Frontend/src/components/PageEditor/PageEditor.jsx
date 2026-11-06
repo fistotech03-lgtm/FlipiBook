@@ -29,6 +29,7 @@ import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
 import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmationContext";
 import { queryClient } from "../../queryClient";
 
 import {
@@ -125,6 +126,13 @@ const PageEditor = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [selectedLayerId, setSelectedLayerIdRaw] = useState(null);
+
+  const confirm = useConfirm();
+  const currentUrlRef = useRef(window.location.href);
+  useEffect(() => {
+    currentUrlRef.current = window.location.href;
+  }, [location.pathname, location.search]);
+  const isConfirmingBackRef = useRef(false);
 
   // Clear previous book from IndexedDB when opening a new book
   useEffect(() => {
@@ -587,6 +595,7 @@ const PageEditor = () => {
       navigate,
       setActiveTopTool,
       setSelectedLayerId,
+      isAutoSaveEnabled,
     });
 
   // ── Hook 7: 3D Preview Manager ─────────────────────────────────────────────
@@ -669,9 +678,9 @@ const PageEditor = () => {
   useEffect(() => {
     if (setSaveHandler) {
       setSaveHandler(
-        () => () =>
+        () => (isManual = true) =>
           saveFlipbook(
-            true,
+            isManual,
             popupEditContext ? popupEditContext.backup.pages : pages,
           ),
       );
@@ -942,8 +951,13 @@ const PageEditor = () => {
 
   // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (e) => {
       flushPageEditorToDBRef.current?.();
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
     };
 
     const handlePageHide = () => {
@@ -956,10 +970,36 @@ const PageEditor = () => {
       }
     };
 
-    const handlePopState = () => {
+    const handlePopState = async () => {
       flushPageEditorToDBRef.current?.();
       if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
         saveFlipbookRef.current?.(false, latestPagesRef.current);
+        return;
+      }
+
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        if (isConfirmingBackRef.current) return;
+        isConfirmingBackRef.current = true;
+
+        // Restore URL so the user stays on the editor while the confirm modal is open
+        window.history.pushState(null, '', currentUrlRef.current);
+
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger",
+        });
+
+        if (ok) {
+          hasUnsavedChangesRef.current = false;
+          setHasUnsavedChanges(false);
+          isConfirmingBackRef.current = false;
+          window.history.back();
+        } else {
+          isConfirmingBackRef.current = false;
+        }
       }
     };
 

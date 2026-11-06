@@ -118,7 +118,7 @@ const EditorLayout = () => {
   // Prevent closing the tab if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges && !isAutoSaveEnabled) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -128,7 +128,7 @@ const EditorLayout = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, isAutoSaveEnabled]);
 
   const handleSaveSuccess = (info) => {
     setSaveSuccessInfo(info);
@@ -145,10 +145,10 @@ const EditorLayout = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (isManual = true) => {
     triggerSave();
     if (saveHandlerRef.current) {
-      return await saveHandlerRef.current();
+      return await saveHandlerRef.current(isManual);
     }
   };
 

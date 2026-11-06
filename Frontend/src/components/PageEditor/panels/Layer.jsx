@@ -649,7 +649,7 @@ const Layer = ({
 }) => {
   const navigate = useNavigate();
   const { folder, v_id } = useParams();
-  const { hasUnsavedChanges } = useOutletContext() || {};
+  const { hasUnsavedChanges, isAutoSaveEnabled } = useOutletContext() || {};
   const [activeLayerMenu, setActiveLayerMenu] = useState(null); // { layerId, x, y }
   const layerMenuRef = useRef(null);
   const [isVisible, setIsVisible] = useState(true);
@@ -701,15 +701,25 @@ const Layer = ({
 
   const handleGoToCustomize = async () => {
     if (hasUnsavedChanges) {
-      const ok = await confirm({
-        title: "Leave Site?",
-        message: "Changes you made may not be saved.",
-        confirmText: "Leave",
-        cancelText: "Stay",
-        type: "danger"
-      });
-      if (!ok) {
-        return;
+      if (!isAutoSaveEnabled) {
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger"
+        });
+        if (!ok) {
+          return;
+        }
+      } else {
+        if (onSave) {
+          try {
+            await onSave(true);
+          } catch (e) {
+            console.warn("Auto-save before navigating to customize failed:", e);
+          }
+        }
       }
     }
     const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));

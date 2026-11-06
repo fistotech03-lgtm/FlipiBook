@@ -56,6 +56,7 @@ export const useSaveEngine = ({
   navigate,
   setActiveTopTool,
   setSelectedLayerId,
+  isAutoSaveEnabled = true,
 }) => {
   const { user } = useAuth();
   const autoSaveTimerRef = useRef(null);
@@ -65,6 +66,9 @@ export const useSaveEngine = ({
   const saveFlipbook = async (isManual = false, overridePages = null) => {
     let pagesToSave = overridePages || pages;
     if (isSaving || !pagesToSave || pagesToSave.length === 0) return;
+
+    // If auto-save is turned OFF, refuse automated saves - only manual save button writes to DB
+    if (!isManual && !isAutoSaveEnabled) return;
 
     // Only blur active element on explicit manual save (e.g. clicking the navbar Save button)
     // NEVER blur during automatic background saves, so typing is never interrupted!

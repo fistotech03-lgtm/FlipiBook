@@ -288,6 +288,19 @@ const customizedSettingsSchema = new mongoose.Schema(
         btnFill: { type: String, default: '#4A3AFF' },
         btnStroke: { type: String, default: '#' },
         btnText: { type: String, default: '#FFFFFF' }
+      },
+      enquiryButton: {
+        enabled: { type: Boolean, default: true },
+        showText: { type: Boolean, default: true },
+        text: { type: String, default: 'Enquiry Now' },
+        icon: { type: String, default: 'lucide:message-square' },
+        bgFill: { type: String, default: '#E05638' },
+        bgOpacity: { type: Number, default: 100 },
+        textColor: { type: String, default: '#FFFFFF' },
+        textOpacity: { type: Number, default: 100 },
+        iconColor: { type: String, default: '#FFFFFF' },
+        iconOpacity: { type: Number, default: 100 },
+        position: { type: String, default: 'bottom-right' }
       }
     },
 

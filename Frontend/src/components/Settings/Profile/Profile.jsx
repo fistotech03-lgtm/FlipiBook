@@ -159,7 +159,7 @@ const defaultProfile = {
   contact3CountryCode: '+91',
   contact3Label: 'Contact 3',
   contactCount: 2,
-  profileType: 'Individual',
+  profileType: '',
   professionalTitle: '',
   companyName: '',
   industryType: '',
@@ -355,7 +355,7 @@ const Profile = () => {
             contact3Label: p.contact3Label !== undefined ? p.contact3Label : (user.contact3Label || 'Contact 3'),
             contactCount: p.contactCount !== undefined ? p.contactCount : (user.contactCount || 2),
             displayName: p.displayName || p.name || user.displayName || '',
-            profileType: p.profileType || user.profileType || 'Individual',
+            profileType: p.profileType || user.profileType || '',
             professionalTitle: p.professionalTitle || p.title || user.professionalTitle || user.title || '',
             address1: p.address1 !== undefined ? p.address1 : (user.address1 || ''),
             address2: p.address2 !== undefined ? p.address2 : (user.address2 || ''),
@@ -676,31 +676,31 @@ const Profile = () => {
 
               {/* Avatar Wrapper (Fixed default size, no scroll scaling) */}
               <div
-                className="relative flex justify-center items-center z-[70] w-[10.5vw] h-[10.5vw] mt-[-5.25vw]"
+                className="relative flex justify-center items-center z-[70] w-[10.5vw] h-[10.5vw] mt-[-6.3vw]"
               >
                 {/* Left Smooth Corner (White fill) */}
-                <svg className="absolute top-[3.7vw] -left-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
+                <svg className="absolute top-[4.75vw] -left-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
                   <path d="M0,10 L10,10 L10,0 A10,10 0 0,1 0,10 Z" fill="white" />
                 </svg>
                 {/* Right Smooth Corner (White fill) */}
-                <svg className="absolute top-[3.7vw] -right-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
+                <svg className="absolute top-[4.75vw] -right-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
                   <path d="M10,10 L0,10 L0,0 A10,10 0 0,0 10,10 Z" fill="white" />
                 </svg>
 
                 <div className="w-full h-full rounded-full bg-white p-[0.8vw] relative flex items-center justify-center">
 
-                  {/* Semi-circle border for the bottom half */}
+                  {/* Perfect Round Circular Arc for the bottom half */}
                   <div
-                    className="absolute bottom-0 left-0 w-full h-[50%] border-b-2 border-l-2 border-r-2 border-gray-200 rounded-b-full pointer-events-none z-20"
-                    style={{ clipPath: 'polygon(0 0%, 100% 0%, 100% 100%, 0 100%)' }}
+                    className="absolute inset-0 w-full h-full border-2 border-gray-200 rounded-full pointer-events-none z-20"
+                    style={{ clipPath: 'polygon(0 60%, 100% 60%, 100% 100%, 0 100%)' }}
                   ></div>
 
                   {/* Left Connecting Curve to Container Top Border */}
-                  <svg className="absolute top-[5.15vw] -left-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
+                  <svg className="absolute top-[6.3vw] -left-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
                     <path d="M -10 0 L 0 0 A 10 10 0 0 1 10 10" fill="none" stroke="#e5e7eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                   </svg>
                   {/* Right Connecting Curve to Container Top Border */}
-                  <svg className="absolute top-[5.15vw] -right-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
+                  <svg className="absolute top-[6.3vw] -right-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
                     <path d="M 20 0 L 10 0 A 10 10 0 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                   </svg>
 
@@ -841,7 +841,7 @@ const Profile = () => {
                     <div>
                       <p className="text-[0.82vw] text-gray-400 font-normal leading-none">Profile Type</p>
                       <p className="text-[0.82vw] text-gray-700 font-normal leading-snug mt-[0.35vw]">
-                        {displayUser.profileType || 'Individual'}
+                        {displayUser.profileType || '-'}
                       </p>
                     </div>
 

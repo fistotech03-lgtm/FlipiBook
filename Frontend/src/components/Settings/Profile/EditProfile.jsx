@@ -230,7 +230,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
 
     const initialServices = rawServices !== null
       ? rawServices
-      : [];
+      : ['Software Development', '3D / AR'];
 
     return {
       ...user,
@@ -372,7 +372,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
       contact3Label: (u.contact3Label || 'Contact 3').trim(),
       contactCount: u.contactCount !== undefined ? u.contactCount : 2,
       companyName: (u.companyName || u.agencyName || u.businessName || '').trim(),
-      profileType: (u.profileType || 'Individual').trim(),
+      profileType: (u.profileType || '').trim(),
       professionalTitle: (u.professionalTitle || u.title || '').trim(),
       industryType: (u.industryType || u.industry || 'Software Development').trim(),
       experience: (u.experience || '').trim(),
@@ -657,7 +657,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   ];
 
   // Services tags helper
-  const defaultServicesList = [];
+  const defaultServicesList = ['Software Development', '3D / AR'];
 
   const [isExperienceOpen, setIsExperienceOpen] = useState(false);
   const [isTeamSizeOpen, setIsTeamSizeOpen] = useState(false);
@@ -860,7 +860,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Monkey D Luffy"
+                  placeholder="e.g. Alex Morgan"
                   value={editedUser?.name || ''}
                   onChange={(e) => {
                     updateEditedUser({ name: e.target.value });
@@ -878,7 +878,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Luffy"
+                  placeholder="e.g. Alex"
                   value={editedUser?.displayName || ''}
                   onChange={(e) => {
                     updateEditedUser({ displayName: e.target.value });
@@ -902,7 +902,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                 </div>
                 <input
                   type="email"
-                  placeholder="luffyonepiece@gmail.com"
+                  placeholder="alexmorgan@gmail.com"
                   value={editedUser?.email || ''}
                   disabled
                   className="w-full h-[2.5vw] border border-gray-200 bg-white cursor-default pointer-events-none rounded-[0.7vw] pl-[2.8vw] pr-[0.9vw] text-[0.82vw] focus:outline-none text-gray-700 font-normal"
@@ -928,7 +928,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   <div className="flex items-center gap-[0.7vw] text-[0.82vw] text-gray-800">
                     <Icon icon={profileTypeOptions.find(p => p.label === editedUser?.profileType)?.icon || 'lucide:user'} className="w-[1vw] h-[1vw] text-gray-500" />
                     <span className={`font-normal ${editedUser?.profileType ? 'text-gray-800' : 'text-gray-400'}`}>
-                      {editedUser?.profileType || 'Select Profile Type'}
+                      {editedUser?.profileType || 'Select your profile type'}
                     </span>
                   </div>
                   <Icon icon="lucide:chevron-down" className="w-[1vw] h-[1vw] text-gray-500" />
@@ -1330,7 +1330,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Luffy"
+                    placeholder="e.g. UI/UX Designer, Software Engineer"
                     value={editedUser?.professionalTitle || editedUser?.title || ''}
                     onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
                     className="w-full h-[2.5vw] border border-gray-200 rounded-[0.7vw] px-[0.9vw] text-[0.82vw] focus:outline-none focus:border-gray-300 text-gray-700 bg-white placeholder:text-gray-400"

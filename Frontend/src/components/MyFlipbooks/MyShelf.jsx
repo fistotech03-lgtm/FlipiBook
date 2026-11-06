@@ -1763,9 +1763,9 @@ const MyShelf = () => {
                 ) : null}
 
                 {/* Shelf Stage Container (Responsive aspect ratio and centered without stretching) */}
-                <div className="w-full flex-1 flex items-center justify-center min-h-0 overflow-hidden">
+                <div className="w-full flex-1 flex items-center justify-center min-h-0 overflow-hidden my-0.5">
                   <div
-                    className="w-full h-full max-h-[58vh] aspect-[16/8.4] rounded-2xl overflow-hidden relative shadow-sm"
+                    className="w-full h-full max-h-[62vh] aspect-[16/8.2] rounded-2xl overflow-hidden relative shadow-sm"
                     style={{
                       backgroundImage: (!Array.isArray(activeAssets.bg) && activeAssets.bg) ? `url('${activeAssets.bg}')` : 'none',
                       backgroundSize: 'cover',

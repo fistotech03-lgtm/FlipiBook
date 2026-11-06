@@ -20,15 +20,20 @@ const fontFamilies = [
 
 const Switch = ({ enabled, onChange }) => (
   <button
+    type="button"
     onClick={(e) => {
       e.stopPropagation();
       onChange(!enabled);
     }}
-    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.3)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#4A3AFF]' : 'bg-[#bbbbbb]'}`}
+    className={`relative block w-[1.8vw] h-[1vw] rounded-[1vw] transition-all duration-200 ease-in-out shadow-[inset_0_0.05vw_0.1vw_rgba(0,0,0,0.15)] outline-none shrink-0 cursor-pointer ${enabled ? 'bg-[#E05638]' : 'bg-[#D1D5DB]'}`}
   >
     <div
-      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.1vw_rgba(0,0,0,0.4)] ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
-    />
+      className={`absolute top-[0.1vw] w-[0.8vw] h-[0.8vw] bg-white rounded-full transition-all duration-200 ease-in-out shadow-[0_0.05vw_0.15vw_rgba(0,0,0,0.25)] flex items-center justify-center ${enabled ? 'left-[0.9vw]' : 'left-[0.1vw]'}`}
+    >
+      {enabled && (
+        <Icon icon="lucide:check" className="w-[0.55vw] h-[0.55vw] text-[#E05638] stroke-[3]" />
+      )}
+    </div>
   </button>
 );
 
@@ -163,8 +168,11 @@ const LeadForm = ({ onBack, settings, onUpdate, pages = [], folderName, bookName
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
   const [uploadingProductImgId, setUploadingProductImgId] = useState(null);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
+  const [isCustomizeFieldsOpen, setIsCustomizeFieldsOpen] = useState(true);
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [isEnquiryBtnOpen, setIsEnquiryBtnOpen] = useState(true);
+  const [isEmailOpen, setIsEmailOpen] = useState(true);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
   const updateNested = (category, field, value) => {
     onUpdate({
@@ -644,37 +652,42 @@ const LeadForm = ({ onBack, settings, onUpdate, pages = [], folderName, bookName
       <div className="h-[8vh] flex items-center justify-between px-[1vw] border-b border-gray-100">
         <div className="flex items-center gap-[0.5vw]">
           <Icon icon="fluent:form-48-regular" className="w-[1vw] h-[1vw] text-gray-700 font-semibold" />
-          <span className="text-[1vw] font-semibold text-gray-900">Lead Form</span>
+          <span className="text-[1vw] font-semibold text-gray-900">Lead & Enquiry Form</span>
         </div>
         <button onClick={onBack} className="text-gray-600 hover:text-gray-900">
           <Icon icon="ic:round-arrow-back" className="w-[1.25vw] h-[1.25vw]" />
         </button>
       </div>
 
-      <div className="flex items-center justify-between pt-[1vw] pb-[0.5vw] pr-[1vw] pl-[1vw]">
-        <span className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap">Turn ON/OFF the Lead Form</span>
-        <Switch
-          enabled={settings.enabled}
-          onChange={(val) => {
-            if (val && (!settings.fields || settings.fields.length === 0)) {
-              onUpdate({
-                ...settings,
-                enabled: true,
-                selectedTemplateId: settings.selectedTemplateId || 'basic-contact',
-                formTitle: settings.formTitle || 'Get in Touch',
-                leadText: settings.leadText || 'Share your details and we will contact you shortly',
-                buttonText: settings.buttonText || 'SUBMIT',
-                fields: [
-                  { id: Date.now().toString() + '-1', type: 'name', label: 'Full Name', placeholder: 'Enter your Name', required: true },
-                  { id: Date.now().toString() + '-2', type: 'email', label: 'Email Address', placeholder: 'Enter your Gmail', required: true },
-                  { id: Date.now().toString() + '-3', type: 'phone', label: 'Phone Number', placeholder: 'Enter your Phone Number', required: true }
-                ]
-              });
-            } else {
-              onUpdate({ ...settings, enabled: val });
-            }
-          }}
-        />
+      <div className="flex flex-col pt-[1vw] pb-[0.5vw] px-[1vw] space-y-[0.35vw]">
+        <div className="flex items-center justify-between">
+          <span className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap">Turn ON/OFF the Lead Form</span>
+          <Switch
+            enabled={settings.enabled}
+            onChange={(val) => {
+              if (val && (!settings.fields || settings.fields.length === 0)) {
+                onUpdate({
+                  ...settings,
+                  enabled: true,
+                  selectedTemplateId: settings.selectedTemplateId || 'basic-contact',
+                  formTitle: settings.formTitle || 'Get in Touch',
+                  leadText: settings.leadText || 'Share your details and we will contact you shortly',
+                  buttonText: settings.buttonText || 'SUBMIT',
+                  fields: [
+                    { id: Date.now().toString() + '-1', type: 'name', label: 'Full Name', placeholder: 'Enter your Name', required: true },
+                    { id: Date.now().toString() + '-2', type: 'email', label: 'Email Address', placeholder: 'Enter your Gmail', required: true },
+                    { id: Date.now().toString() + '-3', type: 'phone', label: 'Phone Number', placeholder: 'Enter your Phone Number', required: true }
+                  ]
+                });
+              } else {
+                onUpdate({ ...settings, enabled: val });
+              }
+            }}
+          />
+        </div>
+        <p className="text-[0.62vw] text-gray-500 font-normal leading-relaxed">
+          Turning this OFF will disable all lead form settings below, and turning it ON will enable them again<span className="text-red-500">*</span>
+        </p>
       </div>
 
       <div
@@ -683,980 +696,658 @@ const LeadForm = ({ onBack, settings, onUpdate, pages = [], folderName, bookName
       >
         <div className={`space-y-[1vw] transition-all duration-300 ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
 
-          {/* Quick Templates Section - Collapsible Accordion to save space */}
-          <div className={`bg-white rounded-[0.8vw] shadow-[0_0.9vw_1.2vw_rgba(0,0,0,0.05)] transition-all duration-300 relative z-0 ${isTemplatesOpen ? 'ring-1 ring-gray-200' : ''}`}>
-            <button
-              onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
-              className={`w-full flex items-center justify-between px-[0.5vw] py-[0.8vw] pl-[1vw] pr-[1vw] shadow-sm transition-all duration-300 ${isTemplatesOpen ? 'rounded-t-[0.8vw] border-b-transparent bg-gray-50/50' : 'rounded-[0.8vw] bg-white'}`}
-            >
-              <div className="flex items-center gap-[0.4vw]">
-                <Icon icon="lucide:layout-template" className="w-[1vw] h-[1vw] text-indigo-600" />
-                <span className="text-[0.8vw] font-semibold text-gray-900">Quick Templates</span>
-              </div>
-              <Icon icon="lucide:chevron-down" className={`w-[1.2vw] h-[1.2vw] text-gray-400 transition-transform duration-300 ${isTemplatesOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isTemplatesOpen && (
-              <div className="p-[0.8vw] border-t border-gray-200 bg-gray-50/50 rounded-b-[0.8vw] space-y-[0.6vw] animate-in fade-in slide-in-from-top-2">
-                <div className="grid grid-cols-3 gap-[0.5vw] w-full">
-                  {quickTemplates.map((template) => {
-                    const isSelected = settings.selectedTemplateId
-                      ? settings.selectedTemplateId === template.id
-                      : (settings.formTitle ? settings.formTitle === template.config.formTitle : template.id === 'basic-contact');
-
-                    return (
-                      <div
-                        key={template.id}
-                        onClick={() => handleSelectTemplate(template)}
-                        className={`flex flex-col items-center justify-between cursor-pointer group rounded-[0.5vw] p-[0.4vw] transition-all bg-white ${
-                          isSelected
-                            ? 'border-1 border-[#4A3AFF] shadow-[0_0.2vw_0.6vw_rgba(74,58,255,0.15)]'
-                            : 'border border-gray-200 shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.03)] hover:border-[#4A3AFF] hover:shadow-[0_0.2vw_0.6vw_rgba(74,58,255,0.12)]'
-                        }`}
-                      >
-                        <div className={`w-full flex items-center justify-center rounded-[0.4vw] p-[0.3vw] mb-[0.4vw] transition-colors aspect-[1.2/1] overflow-hidden ${
-                          isSelected ? 'bg-[#F4F3FF]' : 'bg-gray-50/60 group-hover:bg-[#F4F3FF]'
-                        }`}>
-                          <img src={template.icon} alt={template.name} className="w-full h-full object-contain rounded-[0.3vw]" />
-                        </div>
-                        <span className={`text-[0.62vw] font-normal text-center leading-tight transition-colors whitespace-pre mt-auto ${
-                          isSelected ? 'text-[#4A3AFF]' : 'text-gray-900 group-hover:text-[#4A3AFF]'
-                        }`}>
-                          {template.name}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Customize your Form */}
-          <div className="space-y-[1vw]">
-            <div className="flex items-center gap-[0.5vw]">
-              <h3 className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap">Customize your Form</h3>
-              <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1vw' }}> </div>
+          {/* Quick Template Section */}
+          <div className="bg-white rounded-[0.8vw] border border-gray-200/90 shadow-[0_0.2vw_0.8vw_rgba(0,0,0,0.04)] p-[1vw] space-y-[0.8vw]">
+            <div className="flex flex-col gap-[0.15vw]">
+              <span className="text-[0.82vw] font-semibold text-gray-800">Quick Template</span>
+              <span className="text-[0.65vw] text-gray-500 font-normal">Choose a ready-made template.</span>
             </div>
 
-            <div className="space-y-[1vw]">
-              <div className="flex flex-col gap-[0.4vw]">
-                <label className="text-[0.7vw] font-medium text-gray-900">Title :</label>
-                <input
-                  type="text"
-                  value={settings.formTitle !== undefined ? settings.formTitle : 'Request More Information'}
-                  onChange={(e) => onUpdate({ ...settings, formTitle: e.target.value })}
-                  className="w-full border border-gray-200 rounded-[0.4vw] p-[0.6vw] text-[0.7vw] text-gray-600 focus:outline-none focus:border-indigo-500 bg-white shadow-sm"
-                  placeholder="Request More Information"
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-[0.6vw] w-full pt-[0.2vw]">
+              {quickTemplates.map((template) => {
+                const isSelected = settings.selectedTemplateId
+                  ? settings.selectedTemplateId === template.id
+                  : (settings.formTitle ? settings.formTitle === template.config.formTitle : template.id === 'basic-contact');
 
-              <div className="flex flex-col gap-[0.4vw]">
-                <label className="text-[0.7vw] font-medium text-gray-900">Description :</label>
-                <textarea
-                  value={settings.leadText !== undefined ? settings.leadText : 'Tell us about your requirements and our team will reach out.'}
-                  onChange={(e) => onUpdate({ ...settings, leadText: e.target.value })}
-                  className="w-full h-[4.5vw] border border-gray-200 rounded-[0.4vw] p-[0.6vw] text-[0.7vw] text-gray-600 focus:outline-none focus:border-indigo-500 resize-none bg-white shadow-sm"
-                  placeholder="Tell us about your requirements and our team will reach out."
-                />
-              </div>
+                return (
+                  <div
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className={`flex flex-col items-center justify-between cursor-pointer group rounded-[0.6vw] p-[0.45vw] transition-all bg-white border ${
+                      isSelected
+                        ? 'border-[#E05638] shadow-[0_0.2vw_0.6vw_rgba(224,86,56,0.18)]'
+                        : 'border-gray-200 shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.03)] hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="w-full flex items-center justify-center rounded-[0.4vw] p-[0.2vw] mb-[0.4vw] transition-colors aspect-[1/1] overflow-hidden bg-white">
+                      <img src={template.icon} alt={template.name} className="w-full h-full object-contain rounded-[0.3vw]" />
+                    </div>
+                    <span className="text-[0.62vw] font-medium text-center leading-tight transition-colors text-gray-800 group-hover:text-black mt-auto whitespace-pre-line px-[0.1vw]">
+                      {template.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-              <div className="flex flex-col gap-[0.4vw]">
-                <label className="text-[0.7vw] font-medium text-gray-900">Button Text :</label>
-                <input
-                  type="text"
-                  value={settings.buttonText !== undefined ? settings.buttonText : 'Request Callback'}
-                  onChange={(e) => onUpdate({ ...settings, buttonText: e.target.value })}
-                  className="w-full border border-gray-200 rounded-[0.4vw] p-[0.6vw] text-[0.7vw] text-gray-600 focus:outline-none focus:border-indigo-500 bg-white shadow-sm"
-                  placeholder="Request Callback"
-                />
+          {/* Customize Fields Accordion Card */}
+          <div className="bg-white rounded-[0.8vw] border border-gray-200/90 shadow-[0_0.2vw_0.8vw_rgba(0,0,0,0.04)] overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              type="button"
+              onClick={() => setIsCustomizeFieldsOpen(!isCustomizeFieldsOpen)}
+              className="w-full flex items-center justify-between p-[0.9vw] bg-white hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-[0.82vw] font-semibold text-gray-800 leading-tight">Customize Fields</span>
+                <span className="text-[0.65vw] text-gray-500 font-normal mt-[0.1vw]">Add or edit form fields.</span>
               </div>
+              <Icon
+                icon="fluent:chevron-down-12-regular"
+                className={`w-[0.9vw] h-[0.9vw] text-gray-400 transition-transform duration-200 ${isCustomizeFieldsOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-              {/* Form Layout: 1 Column vs 2 Columns */}
-              <div className="pt-[0.5vw] border-t border-gray-100 space-y-[0.4vw]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.72vw] font-semibold text-gray-900">Form Layout (Desktop)</span>
-                  <div className="flex items-center gap-[0.4vw] bg-gray-100 p-[0.15vw] rounded-[0.4vw]">
+            {isCustomizeFieldsOpen && (
+              <div className="p-[0.9vw] pt-[0.4vw] border-t border-gray-100 space-y-[0.9vw]">
+                {/* Form Layout: 1 column vs 2 Column */}
+                <div className="flex items-center justify-between pt-[0.3vw]">
+                  <span className="text-[0.72vw] font-semibold text-gray-900">Form Layout (Desktop):</span>
+                  <div className="flex items-center border border-gray-200 rounded-[0.4vw] p-[0.15vw] bg-white">
                     <button
                       type="button"
                       onClick={() => updateAppearance('layoutColumns', '1')}
-                      className={`px-[0.6vw] py-[0.25vw] rounded-[0.3vw] text-[0.65vw] font-medium transition-all ${(settings.appearance?.layoutColumns || '1') === '1'
-                          ? 'bg-white text-gray-900 shadow-xs'
-                          : 'text-gray-500 hover:text-gray-700'
+                      className={`px-[0.7vw] py-[0.22vw] rounded-[0.3vw] text-[0.65vw] font-medium transition-all ${(settings.appearance?.layoutColumns || '1') === '1'
+                          ? 'bg-[#E05638] text-white shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                      1 Column
+                      1 column
                     </button>
                     <button
                       type="button"
                       onClick={() => updateAppearance('layoutColumns', '2')}
-                      className={`px-[0.6vw] py-[0.25vw] rounded-[0.3vw] text-[0.65vw] font-medium transition-all ${settings.appearance?.layoutColumns === '2'
-                          ? 'bg-white text-indigo-600 font-semibold shadow-xs'
-                          : 'text-gray-500 hover:text-gray-700'
+                      className={`px-[0.7vw] py-[0.22vw] rounded-[0.3vw] text-[0.65vw] font-medium transition-all ${settings.appearance?.layoutColumns === '2'
+                          ? 'bg-[#E05638] text-white shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                      2 Columns
+                      2 Column
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Organize into Sections Provision */}
-              <div className="pt-[0.5vw] border-t border-gray-100 space-y-[0.6vw]">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[0.72vw] font-semibold text-gray-900">Separate Form Sections</span>
-                    <span className="text-[0.6vw] text-gray-500">Group contact info & product/other details under section titles</span>
+                {/* Form Meta Inputs */}
+                <div className="space-y-[0.8vw]">
+                  <div className="flex flex-col gap-[0.3vw]">
+                    <label className="text-[0.7vw] font-medium text-gray-900">Title :</label>
+                    <input
+                      type="text"
+                      value={settings.formTitle !== undefined ? settings.formTitle : 'Get in Touch'}
+                      onChange={(e) => onUpdate({ ...settings, formTitle: e.target.value })}
+                      className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.5vw] text-[0.7vw] text-gray-700 focus:outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400"
+                      placeholder="Get in Touch"
+                    />
                   </div>
-                  <Switch
-                    enabled={settings.appearance?.enableSections === true}
-                    onChange={(val) => updateAppearance('enableSections', val)}
-                  />
+
+                  <div className="flex flex-col gap-[0.3vw]">
+                    <label className="text-[0.7vw] font-medium text-gray-900">Description :</label>
+                    <textarea
+                      value={settings.leadText !== undefined ? settings.leadText : 'Share your details and we will contact you shortly.'}
+                      onChange={(e) => onUpdate({ ...settings, leadText: e.target.value })}
+                      className="w-full h-[3.8vw] border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.5vw] text-[0.7vw] text-gray-700 focus:outline-none focus:border-[#E05638] resize-none bg-white shadow-xs placeholder:text-gray-400"
+                      placeholder="Share your details and we will contact you shortly."
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-[0.3vw]">
+                    <label className="text-[0.7vw] font-medium text-gray-900">Button Text :</label>
+                    <input
+                      type="text"
+                      value={settings.buttonText !== undefined ? settings.buttonText : 'Request Callback'}
+                      onChange={(e) => onUpdate({ ...settings, buttonText: e.target.value })}
+                      className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.5vw] text-[0.7vw] text-gray-700 focus:outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400"
+                      placeholder="Request Callback"
+                    />
+                  </div>
+
+
                 </div>
 
-                {settings.appearance?.enableSections && (
-                  <div className="space-y-[0.75vw] pl-[0.8vw] py-[0.4vw] ml-[0.2vw] border-l-2 border-indigo-500 bg-gray-50/60 rounded-r-[0.5vw] p-[0.6vw]">
-                    <div className="flex flex-col gap-[0.35vw]">
-                      <label className="text-[0.68vw] font-medium text-gray-700">Contact / Basic Section Title :</label>
-                      <input
-                        type="text"
-                        value={settings.appearance?.contactSectionTitle !== undefined ? settings.appearance?.contactSectionTitle : 'Contact Information'}
-                        onChange={(e) => updateAppearance('contactSectionTitle', e.target.value)}
-                        placeholder="Contact Information"
-                        className="w-full border border-gray-200 rounded-[0.4vw] px-[0.65vw] py-[0.45vw] text-[0.7vw] text-gray-800 bg-white shadow-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-[0.35vw]">
-                      <label className="text-[0.68vw] font-medium text-gray-700">Product / Details Section Title :</label>
-                      <input
-                        type="text"
-                        value={settings.appearance?.productSectionTitle !== undefined ? settings.appearance?.productSectionTitle : 'Product Selection'}
-                        onChange={(e) => updateAppearance('productSectionTitle', e.target.value)}
-                        placeholder="Product Selection"
-                        className="w-full border border-gray-200 rounded-[0.4vw] px-[0.65vw] py-[0.45vw] text-[0.7vw] text-gray-800 bg-white shadow-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder:text-gray-400"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                {/* Form Fields List */}
+                <div className="space-y-[0.7vw] font-sans pt-[0.2vw]">
+                  {settings.fields?.map((field) => {
+                    const isRequired = field.required === true;
 
-          {/* Add Fields */}
-          <div className="space-y-[1vw] font-sans">
-            <div className="flex items-center gap-[0.5vw]">
-              <h3 className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap pb-[0.5vw]">Add Fields</h3>
-              <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-            </div>
-
-            <div className="space-y-[1vw]">
-              {settings.fields?.map((field) => {
-                if (field.type === 'dropdown' || field.type === 'radio' || field.type === 'checkbox') {
-                  return (
-                    <div
-                      key={field.id}
-                      className="bg-white border border-gray-200 rounded-[0.5vw] overflow-visible shadow-sm"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
-                        <span className="text-[0.75vw] text-gray-800 font-medium">
-                          {field.type === 'radio' ? 'Radio Button' : field.type === 'checkbox' ? 'Check Box' : 'Drop Down'}
-                        </span>
-                        <div className="relative" id={`delete-menu-${field.id}`}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
-                            className="text-gray-600 hover:text-gray-900 transition-colors p-[0.2vw] rounded-full hover:bg-gray-100"
-                            title="More Options"
-                          >
-                            <Icon icon="lucide:more-vertical" width="1vw" />
-                          </button>
-                          {activeDeleteMenuId === field.id && (
-                            <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                    if (field.type === 'dropdown' || field.type === 'radio' || field.type === 'checkbox') {
+                      return (
+                        <div
+                          key={field.id}
+                          className="bg-white border border-gray-200/90 rounded-[0.6vw] overflow-visible shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.02)]"
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
+                            <span className="text-[0.75vw] text-gray-800 font-semibold">
+                              {field.type === 'radio' ? 'Radio Button' : field.type === 'checkbox' ? 'Check Box' : 'Drop Down'}
+                            </span>
+                            <div className="flex items-center gap-[0.6vw]">
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
-                                className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                type="button"
+                                onClick={() => handleFieldChange(field.id, field.placeholder, field.label, { required: !isRequired })}
+                                className="flex items-center gap-[0.25vw] cursor-pointer select-none group"
+                                title="Toggle Required"
                               >
-                                <Icon icon="lucide:trash-2" width="0.8vw" />
-                                Delete Field
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-[0.75vw] space-y-[0.75vw]">
-                        {/* Label Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[3.5vw]">Label :</label>
-                          <input
-                            type="text"
-                            value={field.label || ''}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                            placeholder="Enter label"
-                          />
-                        </div>
-
-                        {/* Options */}
-                        <div className="flex items-start gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[3.5vw] pt-[0.4vw]">Options :</label>
-                          <div className="flex-1 space-y-[0.4vw]">
-                            {(field.options || []).map((opt, idx) => (
-                              <div key={idx} className="flex items-center gap-[0.5vw]">
-                                <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-gray-600 text-white flex items-center justify-center text-[0.6vw] font-semibold shrink-0">
-                                  {idx + 1}
+                                <div className={`w-[0.85vw] h-[0.85vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isRequired ? 'bg-[#E05638] text-white' : 'border border-gray-300 bg-white'}`}>
+                                  {isRequired && <Icon icon="lucide:check" className="w-[0.65vw] h-[0.65vw] stroke-[3]" />}
                                 </div>
-                                <input
-                                  type="text"
-                                  value={opt}
-                                  onChange={(e) => handleOptionChange(field.id, idx, e.target.value)}
-                                  className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                                  placeholder={`Option ${idx + 1}`}
-                                />
-                                {(field.options || []).length > 2 && (
-                                  <button
-                                    onClick={() => handleRemoveOption(field.id, idx)}
-                                    className="text-red-400 hover:text-red-600 hover:bg-red-50 p-[0.3vw] rounded-[0.3vw] transition-colors flex-shrink-0"
-                                    title="Remove Option"
-                                  >
-                                    <Icon icon="lucide:trash-2" className="w-[0.9vw] h-[0.9vw]" />
-                                  </button>
+                                <span className="text-[0.68vw] font-medium text-gray-600">
+                                  Required <span className="text-red-500">*</span>
+                                </span>
+                              </button>
+                              <div className="relative" id={`delete-menu-${field.id}`}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
+                                  className="text-gray-500 hover:text-gray-800 transition-colors p-[0.15vw] rounded-full hover:bg-gray-100"
+                                  title="More Options"
+                                >
+                                  <Icon icon="lucide:more-vertical" width="0.95vw" />
+                                </button>
+                                {activeDeleteMenuId === field.id && (
+                                  <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
+                                      className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                    >
+                                      <Icon icon="lucide:trash-2" width="0.8vw" />
+                                      Delete Field
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-                            ))}
-                            <div className="flex justify-end pt-[0.2vw]">
-                              <button
-                                onClick={() => handleAddOption(field.id)}
-                                className="flex items-center gap-[0.2vw] px-[0.6vw] py-[0.3vw] bg-gray-100 rounded-[0.4vw] text-gray-600 text-[0.65vw] font-medium hover:bg-gray-200 transition-colors"
-                              >
-                                <Plus size="0.7vw" /> Add
-                              </button>
+                            </div>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="p-[0.75vw] space-y-[0.6vw]">
+                            {/* Label Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Label :</label>
+                              <input
+                                type="text"
+                                value={field.label || ''}
+                                onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
+                                className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white w-full"
+                                placeholder="Enter label"
+                              />
+                            </div>
+
+                            {/* Options */}
+                            <div className="flex items-start gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] pt-[0.35vw] shrink-0">Options :</label>
+                              <div className="flex-1 space-y-[0.4vw]">
+                                {(field.options || []).map((opt, oIdx) => (
+                                  <div key={oIdx} className="flex items-center gap-[0.35vw]">
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      onChange={(e) => handleOptionChange(field.id, oIdx, e.target.value)}
+                                      className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.25vw] text-[0.68vw] text-gray-700 outline-none focus:border-[#E05638] bg-white"
+                                      placeholder={`Option ${oIdx + 1}`}
+                                    />
+                                    {(field.options || []).length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveOption(field.id, oIdx)}
+                                        className="text-gray-400 hover:text-red-500 p-[0.15vw] transition-colors"
+                                      >
+                                        <Trash2 size="0.75vw" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddOption(field.id)}
+                                  className="flex items-center gap-[0.2vw] text-[0.65vw] text-[#E05638] hover:text-[#c94529] font-medium pt-[0.1vw]"
+                                >
+                                  <Plus size="0.65vw" /> Add Option
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                } else if (field.type === 'products') {
-                  return (
-                    <div
-                      key={field.id}
-                      className="bg-white border border-gray-200 rounded-[0.5vw] overflow-visible shadow-sm"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
-                        <div className="flex items-center gap-[0.4vw]">
-                          <Icon icon="lucide:shopping-bag" className="w-[0.9vw] h-[0.9vw] text-indigo-600" />
-                          <span className="text-[0.75vw] text-gray-800 font-medium">Product Selection</span>
-                        </div>
-                        <div className="flex items-center gap-[0.75vw]">
-                          <label className="flex items-center gap-[0.3vw] cursor-pointer select-none group" title="Toggle Required">
-                            <input
-                              type="checkbox"
-                              checked={field.required === true}
-                              onChange={(e) => handleFieldChange(field.id, field.placeholder, field.label, { required: e.target.checked })}
-                              className="w-[0.85vw] h-[0.85vw] rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                            />
-                            <span className={`text-[0.68vw] font-medium transition-colors ${field.required ? 'text-indigo-600 font-semibold' : 'text-gray-500 group-hover:text-gray-700'}`}>
-                              Required {field.required && <span className="text-red-500">*</span>}
-                            </span>
-                          </label>
-                          <div className="relative" id={`delete-menu-${field.id}`}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
-                              className="text-gray-600 hover:text-gray-900 transition-colors p-[0.2vw] rounded-full hover:bg-gray-100"
-                              title="More Options"
-                            >
-                              <Icon icon="lucide:more-vertical" width="1vw" />
-                            </button>
-                            {activeDeleteMenuId === field.id && (
-                              <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                      );
+                    } else if (field.type === 'products') {
+                      return (
+                        <div
+                          key={field.id}
+                          className="bg-white border border-gray-200/90 rounded-[0.6vw] overflow-visible shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.02)]"
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
+                            <span className="text-[0.75vw] text-gray-800 font-semibold">Select Products</span>
+                            <div className="flex items-center gap-[0.6vw]">
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(field.id, field.placeholder, field.label, { required: !isRequired })}
+                                className="flex items-center gap-[0.25vw] cursor-pointer select-none group"
+                                title="Toggle Required"
+                              >
+                                <div className={`w-[0.85vw] h-[0.85vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isRequired ? 'bg-[#E05638] text-white' : 'border border-gray-300 bg-white'}`}>
+                                  {isRequired && <Icon icon="lucide:check" className="w-[0.65vw] h-[0.65vw] stroke-[3]" />}
+                                </div>
+                                <span className="text-[0.68vw] font-medium text-gray-600">
+                                  Required <span className="text-red-500">*</span>
+                                </span>
+                              </button>
+                              <div className="relative" id={`delete-menu-${field.id}`}>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
-                                  className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                  onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
+                                  className="text-gray-500 hover:text-gray-800 transition-colors p-[0.15vw] rounded-full hover:bg-gray-100"
+                                  title="More Options"
                                 >
-                                  <Icon icon="lucide:trash-2" width="0.8vw" />
-                                  Delete Field
+                                  <Icon icon="lucide:more-vertical" width="0.95vw" />
+                                </button>
+                                {activeDeleteMenuId === field.id && (
+                                  <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
+                                      className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                    >
+                                      <Icon icon="lucide:trash-2" width="0.8vw" />
+                                      Delete Field
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="p-[0.75vw] space-y-[0.6vw]">
+                            {/* Label Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Label :</label>
+                              <input
+                                type="text"
+                                value={field.label || ''}
+                                onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
+                                className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white w-full"
+                                placeholder="Select Products"
+                              />
+                            </div>
+
+                            {/* Quantity Toggle Row */}
+                            <div className="flex items-center justify-between py-[0.2vw] px-[0.3vw] bg-gray-50/70 rounded-[0.4vw] border border-gray-100">
+                              <span className="text-[0.68vw] font-medium text-gray-700">Enable Quantity Selector</span>
+                              <Switch
+                                enabled={field.showQuantity !== false}
+                                onChange={(val) => handleFieldChange(field.id, field.placeholder, field.label, { showQuantity: val })}
+                              />
+                            </div>
+
+                            {/* Category-Grouped Products Section */}
+                            <div className="space-y-[0.5vw]">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[0.68vw] font-medium text-gray-700">Product Categories & Items :</label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCategoryGroup(field.id)}
+                                  className="flex items-center gap-[0.2vw] px-[0.45vw] py-[0.2vw] bg-orange-50 hover:bg-orange-100 text-[#E05638] rounded-[0.35vw] text-[0.62vw] font-medium transition-colors"
+                                  title="Add a new category"
+                                >
+                                  <Plus size="0.65vw" /> Add Category
                                 </button>
                               </div>
-                            )}
+
+                              {(() => {
+                                const productsList = field.products || [];
+                                const categories = [];
+                                productsList.forEach(p => {
+                                  const cat = (p.category || 'Product category 1').trim();
+                                  if (!categories.includes(cat)) {
+                                    categories.push(cat);
+                                  }
+                                });
+                                if (categories.length === 0) categories.push('Product category 1');
+
+                                return categories.map((catName, cIdx) => (
+                                  <CategoryGroupItem
+                                    key={`cat-${cIdx}`}
+                                    catName={catName}
+                                    cIdx={cIdx}
+                                    fieldId={field.id}
+                                    productsList={productsList}
+                                    categoriesCount={categories.length}
+                                    onRenameCategory={handleRenameCategory}
+                                    onAddProduct={handleAddProductItem}
+                                    onDeleteCategory={handleDeleteCategoryGroup}
+                                    onProductChange={handleProductChange}
+                                    onProductImageUpload={handleProductImageUpload}
+                                    onRemoveProduct={handleRemoveProductItem}
+                                    uploadingProductImgId={uploadingProductImgId}
+                                  />
+                                ));
+                              })()}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      );
+                    } else if (field.type === 'rating') {
+                      return (
+                        <div
+                          key={field.id}
+                          className="bg-white border border-gray-200/90 rounded-[0.6vw] overflow-visible shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.02)]"
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
+                            <span className="text-[0.75vw] text-gray-800 font-semibold">Ratings</span>
+                            <div className="flex items-center gap-[0.6vw]">
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(field.id, field.placeholder, field.label, { required: !isRequired })}
+                                className="flex items-center gap-[0.25vw] cursor-pointer select-none group"
+                                title="Toggle Required"
+                              >
+                                <div className={`w-[0.85vw] h-[0.85vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isRequired ? 'bg-[#E05638] text-white' : 'border border-gray-300 bg-white'}`}>
+                                  {isRequired && <Icon icon="lucide:check" className="w-[0.65vw] h-[0.65vw] stroke-[3]" />}
+                                </div>
+                                <span className="text-[0.68vw] font-medium text-gray-600">
+                                  Required <span className="text-red-500">*</span>
+                                </span>
+                              </button>
+                              <div className="relative" id={`delete-menu-${field.id}`}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
+                                  className="text-gray-500 hover:text-gray-800 transition-colors p-[0.15vw] rounded-full hover:bg-gray-100"
+                                  title="More Options"
+                                >
+                                  <Icon icon="lucide:more-vertical" width="0.95vw" />
+                                </button>
+                                {activeDeleteMenuId === field.id && (
+                                  <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
+                                      className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                    >
+                                      <Icon icon="lucide:trash-2" width="0.8vw" />
+                                      Delete Field
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-                      {/* Card Body */}
-                      <div className="p-[0.75vw] space-y-[0.75vw]">
-                        {/* Label Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[3.5vw]">Label :</label>
-                          <input
-                            type="text"
-                            value={field.label || ''}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                            placeholder="Select Products"
-                          />
+                          {/* Card Body */}
+                          <div className="p-[0.75vw] space-y-[0.6vw]">
+                            {/* Label Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Label :</label>
+                              <input
+                                type="text"
+                                value={field.label || ''}
+                                onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
+                                className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white w-full"
+                                placeholder="Provide Ratings"
+                              />
+                            </div>
+
+                            {/* Input Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Input :</label>
+                              <div className="flex items-center gap-[0.3vw]">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Icon key={star} icon="lucide:star" className="w-[1.3vw] h-[1.3vw] text-yellow-400 stroke-[1.5]" />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </div>
+                      );
+                    } else if (field.type === 'feedback') {
+                      return (
+                        <div
+                          key={field.id}
+                          className="bg-white border border-gray-200/90 rounded-[0.6vw] overflow-visible shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.02)]"
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
+                            <span className="text-[0.75vw] text-gray-800 font-semibold">Text Area</span>
+                            <div className="flex items-center gap-[0.6vw]">
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(field.id, field.placeholder, field.label, { required: !isRequired })}
+                                className="flex items-center gap-[0.25vw] cursor-pointer select-none group"
+                                title="Toggle Required"
+                              >
+                                <div className={`w-[0.85vw] h-[0.85vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isRequired ? 'bg-[#E05638] text-white' : 'border border-gray-300 bg-white'}`}>
+                                  {isRequired && <Icon icon="lucide:check" className="w-[0.65vw] h-[0.65vw] stroke-[3]" />}
+                                </div>
+                                <span className="text-[0.68vw] font-medium text-gray-600">
+                                  Required <span className="text-red-500">*</span>
+                                </span>
+                              </button>
+                              <div className="relative" id={`delete-menu-${field.id}`}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
+                                  className="text-gray-500 hover:text-gray-800 transition-colors p-[0.15vw] rounded-full hover:bg-gray-100"
+                                  title="More Options"
+                                >
+                                  <Icon icon="lucide:more-vertical" width="0.95vw" />
+                                </button>
+                                {activeDeleteMenuId === field.id && (
+                                  <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
+                                      className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                    >
+                                      <Icon icon="lucide:trash-2" width="0.8vw" />
+                                      Delete Field
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-                        {/* Quantity Toggle Row */}
-                        <div className="flex items-center justify-between py-[0.2vw] px-[0.2vw] bg-gray-50/70 rounded-[0.4vw] border border-gray-100">
-                          <span className="text-[0.68vw] font-medium text-gray-700">Enable Quantity Selector</span>
-                          <Switch
-                            enabled={field.showQuantity !== false}
-                            onChange={(val) => handleFieldChange(field.id, field.placeholder, field.label, { showQuantity: val })}
-                          />
+                          {/* Card Body */}
+                          <div className="p-[0.75vw] space-y-[0.6vw]">
+                            {/* Label Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Label :</label>
+                              <input
+                                type="text"
+                                value={field.label || ''}
+                                onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
+                                className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white w-full"
+                                placeholder="Enter label"
+                              />
+                            </div>
+
+                            {/* Input Row */}
+                            <div className="flex items-center gap-[0.5vw]">
+                              <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Input :</label>
+                              <input
+                                type="text"
+                                value={field.placeholder || ''}
+                                onChange={(e) => handleFieldChange(field.id, e.target.value, field.label)}
+                                className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white w-full"
+                                placeholder="Enter your Name"
+                              />
+                            </div>
+                          </div>
                         </div>
+                      );
+                    }
 
-                        {/* Category-Grouped Products Section */}
-                        <div className="space-y-[0.6vw]">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[0.7vw] font-medium text-gray-700">Product Categories & Items :</label>
+                    // Default Input Box (Text, email, phone, company, etc.)
+                    return (
+                      <div
+                        key={field.id}
+                        className="bg-white border border-gray-200/90 rounded-[0.6vw] overflow-visible shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.02)]"
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
+                          <span className="text-[0.75vw] text-gray-800 font-semibold">Input Box</span>
+                          <div className="flex items-center gap-[0.6vw]">
                             <button
                               type="button"
-                              onClick={() => handleAddCategoryGroup(field.id)}
-                              className="flex items-center gap-[0.2vw] px-[0.45vw] py-[0.2vw] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-[0.35vw] text-[0.62vw] font-medium transition-colors"
-                              title="Add a new category"
+                              onClick={() => handleFieldChange(field.id, field.placeholder, field.label, { required: !isRequired })}
+                              className="flex items-center gap-[0.25vw] cursor-pointer select-none group"
+                              title="Toggle Required"
                             >
-                              <Plus size="0.65vw" /> Add Category
-                            </button>
-                          </div>
-
-                          {(() => {
-                            const productsList = field.products || [];
-                            // Extract categories preserving order
-                            const categories = [];
-                            productsList.forEach(p => {
-                              const cat = (p.category || 'Product category 1').trim();
-                              if (!categories.includes(cat)) {
-                                categories.push(cat);
-                              }
-                            });
-                            if (categories.length === 0) categories.push('Product category 1');
-
-                            return categories.map((catName, cIdx) => (
-                              <CategoryGroupItem
-                                key={`cat-${cIdx}`}
-                                catName={catName}
-                                cIdx={cIdx}
-                                fieldId={field.id}
-                                productsList={productsList}
-                                categoriesCount={categories.length}
-                                onRenameCategory={handleRenameCategory}
-                                onAddProduct={handleAddProductItem}
-                                onDeleteCategory={handleDeleteCategoryGroup}
-                                onProductChange={handleProductChange}
-                                onProductImageUpload={handleProductImageUpload}
-                                onRemoveProduct={handleRemoveProductItem}
-                                uploadingProductImgId={uploadingProductImgId}
-                              />
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else if (field.type === 'rating') {
-                  return (
-                    <div
-                      key={field.id}
-                      className="bg-white border border-gray-200 rounded-[0.5vw] overflow-visible shadow-sm"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
-                        <span className="text-[0.75vw] text-gray-800 font-medium">Ratings</span>
-                        <div className="flex items-center gap-[0.75vw]">
-                          <label className="flex items-center gap-[0.3vw] cursor-pointer select-none group" title="Toggle Required">
-                            <input
-                              type="checkbox"
-                              checked={field.required === true}
-                              onChange={(e) => handleFieldChange(field.id, field.placeholder, field.label, { required: e.target.checked })}
-                              className="w-[0.85vw] h-[0.85vw] rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                            />
-                            <span className={`text-[0.68vw] font-medium transition-colors ${field.required ? 'text-indigo-600 font-semibold' : 'text-gray-500 group-hover:text-gray-700'}`}>
-                              Required {field.required && <span className="text-red-500">*</span>}
-                            </span>
-                          </label>
-                          <div className="relative" id={`delete-menu-${field.id}`}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
-                              className="text-gray-600 hover:text-gray-900 transition-colors p-[0.2vw] rounded-full hover:bg-gray-100"
-                              title="More Options"
-                            >
-                              <Icon icon="lucide:more-vertical" width="1vw" />
-                            </button>
-                            {activeDeleteMenuId === field.id && (
-                              <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
-                                  className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
-                                >
-                                  <Icon icon="lucide:trash-2" width="0.8vw" />
-                                  Delete Field
-                                </button>
+                              <div className={`w-[0.85vw] h-[0.85vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isRequired ? 'bg-[#E05638] text-white' : 'border border-gray-300 bg-white'}`}>
+                                {isRequired && <Icon icon="lucide:check" className="w-[0.65vw] h-[0.65vw] stroke-[3]" />}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-[0.75vw] space-y-[0.75vw]">
-                        {/* Label Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Label :</label>
-                          <input
-                            type="text"
-                            value={field.label || ''}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                            placeholder="Provide Ratings"
-                          />
-                        </div>
-
-                        {/* Input Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Input :</label>
-                          <div className="flex items-center gap-[0.3vw]">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Icon key={star} icon="lucide:star" className="w-[1.4vw] h-[1.4vw] text-yellow-400 stroke-[1.5]" />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else if (field.type === 'feedback') {
-                  return (
-                    <div
-                      key={field.id}
-                      className="bg-white border border-gray-200 rounded-[0.5vw] overflow-visible shadow-sm"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
-                        <span className="text-[0.75vw] text-gray-800 font-medium">Text Area</span>
-                        <div className="flex items-center gap-[0.75vw]">
-                          <label className="flex items-center gap-[0.3vw] cursor-pointer select-none group" title="Toggle Required">
-                            <input
-                              type="checkbox"
-                              checked={field.required === true}
-                              onChange={(e) => handleFieldChange(field.id, field.placeholder, field.label, { required: e.target.checked })}
-                              className="w-[0.85vw] h-[0.85vw] rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                            />
-                            <span className={`text-[0.68vw] font-medium transition-colors ${field.required ? 'text-indigo-600 font-semibold' : 'text-gray-500 group-hover:text-gray-700'}`}>
-                              Required {field.required && <span className="text-red-500">*</span>}
-                            </span>
-                          </label>
-                          <div className="relative" id={`delete-menu-${field.id}`}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
-                              className="text-gray-600 hover:text-gray-900 transition-colors p-[0.2vw] rounded-full hover:bg-gray-100"
-                              title="More Options"
-                            >
-                              <Icon icon="lucide:more-vertical" width="1vw" />
+                              <span className="text-[0.68vw] font-medium text-gray-600">
+                                Required <span className="text-red-500">*</span>
+                              </span>
                             </button>
-                            {activeDeleteMenuId === field.id && (
-                              <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
-                                  className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
-                                >
-                                  <Icon icon="lucide:trash-2" width="0.8vw" />
-                                  Delete Field
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-[0.75vw] space-y-[0.75vw]">
-                        {/* Label Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Label :</label>
-                          <input
-                            type="text"
-                            value={field.label || ''}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                            placeholder="Enter label"
-                          />
-                        </div>
-
-                        {/* Input Row */}
-                        <div className="flex items-center gap-[0.5vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Input :</label>
-                          <input
-                            type="text"
-                            value={field.placeholder || ''}
-                            onChange={(e) => handleFieldChange(field.id, e.target.value, field.label)}
-                            className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                            placeholder="Enter your Name"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={field.id}
-                    className="bg-white border border-gray-200 rounded-[0.5vw] overflow-visible shadow-sm"
-                  >
-                    {/* Card Header */}
-                    <div className="flex items-center justify-between px-[0.75vw] py-[0.5vw] border-b border-gray-100">
-                      <span className="text-[0.75vw] text-gray-800 font-medium">Input Box</span>
-                      <div className="flex items-center gap-[0.75vw]">
-                        <label className="flex items-center gap-[0.3vw] cursor-pointer select-none group" title="Toggle Required">
-                          <input
-                            type="checkbox"
-                            checked={field.required === true}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, field.label, { required: e.target.checked })}
-                            className="w-[0.85vw] h-[0.85vw] rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                          />
-                          <span className={`text-[0.68vw] font-medium transition-colors ${field.required ? 'text-indigo-600 font-semibold' : 'text-gray-500 group-hover:text-gray-700'}`}>
-                            Required {field.required && <span className="text-red-500">*</span>}
-                          </span>
-                        </label>
-                        <div className="relative" id={`delete-menu-${field.id}`}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
-                            className="text-gray-600 hover:text-gray-900 transition-colors p-[0.2vw] rounded-full hover:bg-gray-100"
-                            title="More Options"
-                          >
-                            <Icon icon="lucide:more-vertical" width="1vw" />
-                          </button>
-                          {activeDeleteMenuId === field.id && (
-                            <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                            <div className="relative" id={`delete-menu-${field.id}`}>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
-                                className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                onClick={(e) => { e.stopPropagation(); setActiveDeleteMenuId(activeDeleteMenuId === field.id ? null : field.id); }}
+                                className="text-gray-500 hover:text-gray-800 transition-colors p-[0.15vw] rounded-full hover:bg-gray-100"
+                                title="More Options"
                               >
-                                <Icon icon="lucide:trash-2" width="0.8vw" />
-                                Delete Field
+                                <Icon icon="lucide:more-vertical" width="0.95vw" />
                               </button>
+                              {activeDeleteMenuId === field.id && (
+                                <div className="absolute right-0 top-[100%] mt-[0.2vw] bg-white border border-gray-200 shadow-md rounded-[0.4vw] p-[0.2vw] z-[50] min-w-[7vw]">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleRemoveField(field.id); setActiveDeleteMenuId(null); }}
+                                    className="flex items-center gap-[0.4vw] w-full px-[0.5vw] py-[0.4vw] text-red-500 hover:bg-red-50 rounded-[0.3vw] text-[0.7vw] font-medium transition-colors"
+                                  >
+                                    <Icon icon="lucide:trash-2" width="0.8vw" />
+                                    Delete Field
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="p-[0.75vw] space-y-[0.75vw]">
-                      {/* Label Row */}
-                      <div className="flex items-center gap-[0.5vw] relative" id={`dropdown-container-${field.id}`}>
-                        <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Label :</label>
-                        <div className="flex-1 flex items-center border border-gray-200 rounded-[0.4vw] focus-within:border-indigo-500 bg-white">
-                          {/* Dropdown Trigger */}
-                          <div
-                            className="h-[1.8vw] px-[0.4vw] border-r border-gray-200 flex items-center justify-center cursor-pointer bg-gray-50/50 rounded-l-[0.4vw] hover:bg-gray-100"
-                            onClick={() => setActiveDropdownId(activeDropdownId === field.id ? null : field.id)}
-                          >
-                            {field.type === 'email' ? (
-                              <Icon icon="logos:google-gmail" width="0.8vw" />
-                            ) : field.type === 'name' ? (
-                              <Icon icon="lucide:user" width="0.8vw" className="text-gray-900" />
-                            ) : field.type === 'company' ? (
-                              <Icon icon="lucide:building-2" width="0.8vw" className="text-gray-900" />
-                            ) : field.type === 'phone' ? (
-                              <Icon icon="lucide:phone" width="0.8vw" className="text-gray-400" />
-                            ) : field.type === 'services' ? (
-                              <Icon icon="lucide:settings" width="0.8vw" className="text-gray-900" />
-                            ) : field.type === 'enquiry' || field.type === 'feedback' ? (
-                              <Icon icon="lucide:message-square" width="0.8vw" className="text-gray-900" />
-                            ) : (
-                              <Icon icon="lucide:user" width="0.8vw" className="text-gray-900" />
-                            )}
-                            <Icon icon="fluent:chevron-down-12-regular" width="0.6vw" className="ml-[0.2vw] text-gray-500" />
                           </div>
+                        </div>
 
-                          {/* Dropdown Content */}
-                          {activeDropdownId === field.id && (
-                            <div className="absolute top-[2vw] left-[3vw] z-50 bg-white rounded-[0.5vw] shadow-lg p-[0.5vw] w-[10vw] border border-gray-100 animate-in fade-in zoom-in-95 duration-100">
-                              <div className="space-y-[0.5vw]">
-                                {fieldOptions
-                                  .filter(opt => !settings.fields.some(f => f.type === opt.type && f.id !== field.id))
-                                  .map((opt) => (
-                                    <div
-                                      key={opt.type}
-                                      className="flex items-center gap-[0.75vw] p-[0.4vw] hover:bg-gray-50 rounded-[0.3vw] cursor-pointer"
-                                      onMouseDown={(e) => {
-                                        e.stopPropagation();
-                                        handleTypeChange(field.id, opt.type);
-                                      }}
-                                    >
-                                      {opt.type === 'email' ? (
-                                        <Icon icon="logos:google-gmail" width="0.9vw" />
-                                      ) : (
-                                        <Icon icon={opt.icon} width="0.9vw" className="text-gray-600" />
-                                      )}
-                                      <span className="text-[0.7vw] font-medium text-gray-700">{opt.label}</span>
-                                    </div>
-                                  ))}
+                        {/* Card Body */}
+                        <div className="p-[0.75vw] space-y-[0.6vw]">
+                          {/* Label Row */}
+                          <div className="flex items-center gap-[0.5vw] relative" id={`dropdown-container-${field.id}`}>
+                            <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Label :</label>
+                            <div className="flex-1 flex items-center border border-gray-200 rounded-[0.45vw] focus-within:border-[#E05638] bg-white">
+                              {/* Dropdown Trigger Box */}
+                              <div
+                                className="h-[1.9vw] px-[0.45vw] border-r border-gray-200 flex items-center justify-center cursor-pointer bg-gray-50/60 rounded-l-[0.45vw] hover:bg-gray-100 gap-[0.2vw]"
+                                onClick={() => setActiveDropdownId(activeDropdownId === field.id ? null : field.id)}
+                              >
+                                {field.type === 'email' ? (
+                                  <Icon icon="logos:google-gmail" width="0.85vw" />
+                                ) : field.type === 'name' ? (
+                                  <Icon icon="lucide:user" width="0.85vw" className="text-gray-900" />
+                                ) : field.type === 'company' ? (
+                                  <Icon icon="lucide:building-2" width="0.85vw" className="text-gray-900" />
+                                ) : field.type === 'phone' ? (
+                                  <Icon icon="lucide:phone" width="0.85vw" className="text-gray-700" />
+                                ) : field.type === 'services' ? (
+                                  <Icon icon="lucide:settings" width="0.85vw" className="text-gray-900" />
+                                ) : field.type === 'enquiry' || field.type === 'feedback' ? (
+                                  <Icon icon="lucide:message-square" width="0.85vw" className="text-gray-900" />
+                                ) : (
+                                  <Icon icon="lucide:user" width="0.85vw" className="text-gray-900" />
+                                )}
+                                <Icon icon="fluent:chevron-down-12-regular" width="0.65vw" className="text-gray-500" />
                               </div>
+
+                              {/* Dropdown Content */}
+                              {activeDropdownId === field.id && (
+                                <div className="absolute top-[2.2vw] left-[3.5vw] z-50 bg-white rounded-[0.5vw] shadow-lg p-[0.4vw] w-[10.5vw] border border-gray-100 animate-in fade-in zoom-in-95 duration-100">
+                                  <div className="space-y-[0.3vw]">
+                                    {fieldOptions
+                                      .filter(opt => !settings.fields.some(f => f.type === opt.type && f.id !== field.id))
+                                      .map((opt) => (
+                                        <div
+                                          key={opt.type}
+                                          className="flex items-center gap-[0.6vw] p-[0.4vw] hover:bg-gray-50 rounded-[0.3vw] cursor-pointer"
+                                          onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            handleTypeChange(field.id, opt.type);
+                                          }}
+                                        >
+                                          {opt.type === 'email' ? (
+                                            <Icon icon="logos:google-gmail" width="0.85vw" />
+                                          ) : (
+                                            <Icon icon={opt.icon} width="0.85vw" className="text-gray-600" />
+                                          )}
+                                          <span className="text-[0.68vw] font-medium text-gray-700">{opt.label}</span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Label Input */}
+                              <input
+                                type="text"
+                                value={field.label !== undefined ? field.label : (fieldOptions.find(o => o.type === field.type)?.label || field.type)}
+                                onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
+                                className="flex-1 px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none bg-transparent h-[1.9vw] w-full normal-case"
+                                placeholder="Full Name"
+                                disabled={field.type === 'empty'}
+                              />
                             </div>
-                          )}
-
-                          {/* Label Input */}
-                          <input
-                            type="text"
-                            value={field.label !== undefined ? field.label : (fieldOptions.find(o => o.type === field.type)?.label || field.type)}
-                            onChange={(e) => handleFieldChange(field.id, field.placeholder, e.target.value)}
-                            className="flex-1 px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none bg-transparent h-[1.8vw] w-full normal-case"
-                            placeholder="Label name"
-                            disabled={field.type === 'empty'}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Input Placeholder Row */}
-                      <div className="flex items-center gap-[0.5vw]">
-                        <label className="text-[0.7vw] font-medium text-gray-700 w-[2.5vw]">Input :</label>
-                        <input
-                          type="text"
-                          value={field.placeholder || ''}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value, field.label)}
-                          placeholder={field.type === 'empty' ? 'Select a type...' : `Enter your ${field.type === 'email' ? 'Email' : fieldOptions.find(o => o.type === field.type)?.label || field.type}`}
-                          className="flex-1 border border-gray-200 rounded-[0.4vw] px-[0.5vw] py-[0.3vw] text-[0.7vw] text-gray-600 outline-none focus:border-indigo-500 h-[1.8vw] bg-white w-full normal-case"
-                          disabled={field.type === 'empty'}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Add Lead Field Button */}
-              <button
-                onClick={() => setIsAddFieldPopupOpen(true)}
-                className="w-full flex items-center justify-center gap-[0.4vw] py-[0.6vw] bg-white border border-gray-200 rounded-[0.5vw] text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors shadow-[0_0.1vw_0.2vw_rgba(0,0,0,0.02)] mt-[0.5vw]"
-              >
-                <Plus size="0.9vw" className="stroke-[2.5]" />
-                <span className="text-[0.8vw] font-medium tracking-wide">Add Lead Field</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Lead form Timing */}
-          <div className="space-y-[1vw]">
-            <div className="flex items-center gap-[0.5vw]">
-              <h3 className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap pb-[0.5vw]">Lead form should Appears at</h3>
-              <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-            </div>
-
-            <div className="rounded-[0.75vw]">
-              {[
-                { id: 'before', label: 'Before opening the flipbook' },
-                { id: 'after-pages', label: 'Show on selected page' },
-                { id: 'after-seconds', label: 'After X seconds' },
-                { id: 'end', label: 'At the end of the flipbook' }
-              ].map((opt, idx, arr) => (
-                <div
-                  key={opt.id}
-                  className={`transition-colors flex flex-col p-[0.75vw] ${settings.appearance.timing === opt.id ? 'bg-transparent' : 'bg-transparent'
-                    } ${idx === 0 ? 'rounded-t-[0.75vw]' : ''} ${idx === arr.length - 1 ? 'rounded-b-[0.75vw]' : ''}`}
-                >
-                  <label className="text-[0.7vw] font-semibold text-gray-700 flex items-center gap-[0.75vw] cursor-pointer group">
-                    <div className="relative flex items-center justify-center">
-                      <input
-                        type="radio"
-                        name="timing"
-                        checked={settings.appearance.timing === opt.id}
-                        onChange={() => updateAppearance('timing', opt.id)}
-                        className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
-                      />
-                      <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
-                    </div>
-                    <span className={`text-[0.75vw] font-medium ${settings.appearance.timing === opt.id ? 'text-gray-900' : 'text-gray-600'}`}>{opt.label}</span>
-                  </label>
-
-                  {opt.id === 'after-pages' && settings.appearance.timing === 'after-pages' && (
-                    <div className="ml-[1.85vw] mt-[0.5vw]">
-                      <div className="relative inline-block w-[6vw]">
-                        <select
-                          value={settings.appearance.afterPages || 1}
-                          onChange={(e) => updateAppearance('afterPages', parseInt(e.target.value))}
-                          className="w-full appearance-none bg-white border border-gray-100 shadow-sm rounded-[0.4vw] py-[0.4vw] pl-[0.6vw] pr-[1.8vw] text-[0.75vw] text-black font-medium focus:outline-none cursor-pointer"
-                        >
-                          {pages.length > 0 ? (
-                            pages.map((_, idx) => (
-                              <option key={idx} value={idx + 1}>Page {idx + 1}</option>
-                            ))
-                          ) : (
-                            [1, 2, 3, 4, 5].map(num => (
-                              <option key={num} value={num}>Page {num}</option>
-                            ))
-                          )}
-                        </select>
-                        <div className="absolute right-[0.5vw] top-1/2 -translate-y-1/2 pointer-events-none">
-                          <Icon icon="fluent:chevron-down-12-regular" className="w-[0.9vw] h-[0.9vw] text-gray-700 stroke-[1.5]" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {opt.id === 'after-seconds' && settings.appearance.timing === 'after-seconds' && (
-                    <div className="ml-[1.85vw] mt-[0.5vw] flex items-center gap-[0.5vw]">
-                      <Icon
-                        icon="material-symbols:play-arrow-rounded"
-                        className="text-gray-600 w-[1.2vw] h-[1.2vw] cursor-pointer hover:text-gray-900 rotate-180"
-                        onClick={() => updateAppearance('afterSeconds', Math.max(1, (settings.appearance.afterSeconds || 30) - 1))}
-                      />
-                      <span className="text-[0.75vw] text-gray-700 font-medium w-[1vw] text-center">
-                        {settings.appearance.afterSeconds || 30}
-                      </span>
-                      <Icon
-                        icon="material-symbols:play-arrow-rounded"
-                        className="text-gray-600 w-[1.2vw] h-[1.2vw] cursor-pointer hover:text-gray-900"
-                        onClick={() => updateAppearance('afterSeconds', (settings.appearance.afterSeconds || 30) + 1)}
-                      />
-                      <span className="text-[0.75vw] font-medium text-gray-600 ml-[0.2vw]">Seconds</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Lead Form Mode */}
-          <div className="space-y-[1vw]">
-            <div className="flex items-center gap-[0.5vw]">
-              <h3 className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap pb-[0.5vw]">Lead Form Mode</h3>
-              <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-            </div>
-
-            <div className="space-y-[0.75vw]">
-              <label className="flex items-center gap-[0.75vw] cursor-pointer group w-fit">
-                <div className="relative flex items-center justify-center">
-                  <input
-                    type="radio"
-                    name="allowSkip"
-                    checked={!settings.appearance.allowSkip}
-                    onChange={() => updateAppearance('allowSkip', false)}
-                    className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
-                  />
-                  <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
-                </div>
-                <span className={`text-[0.75vw] font-medium ${!settings.appearance.allowSkip ? 'text-gray-900' : 'text-gray-500'}`}>Mandatory (Require Submission)</span>
-              </label>
-
-              <div className="space-y-[0.75vw]">
-                <label className="flex items-center gap-[0.75vw] cursor-pointer group w-fit">
-                  <div className="relative flex items-center justify-center">
-                    <input
-                      type="radio"
-                      name="allowSkip"
-                      checked={settings.appearance.allowSkip}
-                      onChange={() => updateAppearance('allowSkip', true)}
-                      className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
-                    />
-                    <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
-                  </div>
-                  <span className={`text-[0.75vw] font-medium ${settings.appearance.allowSkip ? 'text-gray-900' : 'text-gray-500'}`}>Optional (Allow Skip)</span>
-                </label>
-
-                {settings.appearance.allowSkip && (
-                  <div className="ml-[1.85vw] space-y-[0.8vw] pt-[0.25vw] border-t border-gray-200 mt-[0.5vw]">
-                    {/* Skip Button Style Selector */}
-                    <div className="space-y-[0.4vw]">
-                      <span className="block text-[0.75vw] font-medium text-gray-900 mt-[0.4vw]">Skip Button Type :</span>
-                      <div className="flex items-center gap-[1vw]">
-                        <label className="flex items-center gap-[0.5vw] cursor-pointer group">
-                          <div className="relative flex items-center justify-center">
-                            <input
-                              type="radio"
-                              name="skipType"
-                              checked={(settings.appearance.skipType || 'text') === 'text'}
-                              onChange={() => updateAppearance('skipType', 'text')}
-                              className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
-                            />
-                            <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
                           </div>
-                          <span className={`text-[0.7vw] font-medium ${(settings.appearance.skipType || 'text') === 'text' ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>Text Button ("Skip")</span>
-                        </label>
-                        <label className="flex items-center gap-[0.5vw] cursor-pointer group">
-                          <div className="relative flex items-center justify-center">
+
+                          {/* Input Placeholder Row */}
+                          <div className="flex items-center gap-[0.5vw]">
+                            <label className="text-[0.7vw] font-medium text-gray-700 w-[3vw] shrink-0">Input :</label>
                             <input
-                              type="radio"
-                              name="skipType"
-                              checked={settings.appearance.skipType === 'icon'}
-                              onChange={() => updateAppearance('skipType', 'icon')}
-                              className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
+                              type="text"
+                              value={field.placeholder || ''}
+                              onChange={(e) => handleFieldChange(field.id, e.target.value, field.label)}
+                              placeholder={field.type === 'empty' ? 'Select a type...' : (field.placeholder || `Enter your ${field.type === 'email' ? 'Email' : fieldOptions.find(o => o.type === field.type)?.label || field.type}`)}
+                              className="flex-1 border border-gray-200 rounded-[0.45vw] px-[0.55vw] py-[0.35vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] h-[1.9vw] bg-white w-full normal-case"
+                              disabled={field.type === 'empty'}
                             />
-                            <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
                           </div>
-                          <span className={`text-[0.7vw] font-medium ${settings.appearance.skipType === 'icon' ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>Cancel "X" Button</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {(settings.appearance.skipType || 'text') === 'text' && (
-                      <div className="flex flex-col gap-[0.3vw]">
-                        <label className="text-[0.7vw] font-medium text-gray-700">Skip Button Text :</label>
-                        <input
-                          type="text"
-                          value={settings.appearance.skipText !== undefined ? settings.appearance.skipText : 'Skip'}
-                          onChange={(e) => updateAppearance('skipText', e.target.value)}
-                          placeholder="Skip"
-                          className="w-full border border-gray-200 rounded-[0.4vw] px-[0.6vw] py-[0.35vw] text-[0.7vw] text-gray-700 focus:outline-none focus:border-indigo-500 bg-white shadow-sm"
-                        />
-                      </div>
-                    )}
-
-                    <span className="block text-[0.75vw] font-medium text-gray-900 mt-[0.6vw] mb-[0.2vw]">If Skipped :</span>
-
-                    {[
-                      { id: 'never', label: 'Never show again' },
-                      { id: '1_day', label: 'Show again after 1 day' },
-                      { id: 'next_visit', label: 'Show again on next visit' }
-                    ].map(opt => (
-                      <label key={opt.id} className="flex items-center gap-[0.75vw] cursor-pointer group w-fit">
-                        <div className="relative flex items-center justify-center">
-                          <input
-                            type="radio"
-                            name="skipBehavior"
-                            checked={(settings.appearance.skipBehavior || 'never') === opt.id}
-                            onChange={() => updateAppearance('skipBehavior', opt.id)}
-                            className="peer appearance-none w-[1.1vw] h-[1.1vw] border-[1.5px] border-black rounded-full checked:border-[#4A3AFF] transition-all bg-transparent"
-                          />
-                          <div className="absolute w-[0.55vw] h-[0.55vw] bg-[#4A3AFF] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
                         </div>
-                        <span className={`text-[0.7vw] font-medium ${(settings.appearance.skipBehavior || 'never') === opt.id ? 'text-gray-800' : 'text-gray-500'}`}>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                      </div>
+                    );
+                  })}
 
-          {/* Lead Notification */}
-          <div className="space-y-[1vw]">
-            <div className="flex items-center justify-between pb-[0.2vw]">
-              <div className="flex items-center gap-[0.5vw]">
-                <div className="w-[1.6vw] h-[1.6vw] rounded-[0.35vw] bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Mail className="w-[0.95vw] h-[0.95vw] stroke-[2]" />
-                </div>
-                <h3 className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Lead Email Notification</h3>
-              </div>
-              <Switch
-                enabled={settings.leadNotification?.enabled !== false}
-                onChange={(val) => updateNested('leadNotification', 'enabled', val)}
-              />
-            </div>
-
-            {settings.leadNotification?.enabled !== false && (
-              <div className="space-y-[1vw] pt-[0.2vw] border-t border-gray-100">
-                <div className="flex flex-col gap-[0.4vw]">
-                  <label className="text-[0.7vw] font-medium text-gray-900">Primary recipient (To)</label>
-                  <input
-                    type="email"
-                    value={settings.leadNotification?.primaryRecipient || ''}
-                    onChange={(e) => updateNested('leadNotification', 'primaryRecipient', e.target.value)}
-                    className="w-full border border-gray-200 rounded-[0.4vw] p-[0.6vw] text-[0.7vw] text-gray-600 focus:outline-none focus:border-indigo-500 bg-white shadow-sm"
-                    placeholder="admin@example.com"
-                  />
-                </div>
-
-              <div className="flex flex-col gap-[0.4vw]">
-                <label className="text-[0.7vw] font-medium text-gray-900">Additional recipients (Max 2)</label>
-                <div className="space-y-[0.5vw]">
-                  {(settings.leadNotification?.additionalRecipients || []).map((recipient, idx) => (
-                    <div key={idx} className="flex items-center border border-gray-200 rounded-[0.4vw] bg-white shadow-sm focus-within:border-indigo-500 transition-colors h-[2vw]">
-                      <input
-                        type="text"
-                        value={recipient}
-                        onChange={(e) => {
-                          const newRecipients = [...(settings.leadNotification?.additionalRecipients || [])];
-                          newRecipients[idx] = e.target.value;
-                          updateNested('leadNotification', 'additionalRecipients', newRecipients);
-                        }}
-                        className="flex-1 px-[0.6vw] py-[0.4vw] text-[0.7vw] text-gray-600 outline-none bg-transparent"
-                        placeholder={idx === 0 ? "marketing@fisto.com" : "sales@fisto.com"}
-                      />
-                      <div className="h-[60%] w-[1px] bg-gray-200"></div>
-                      <button
-                        onClick={() => {
-                          const newRecipients = (settings.leadNotification?.additionalRecipients || []).filter((_, i) => i !== idx);
-                          updateNested('leadNotification', 'additionalRecipients', newRecipients);
-                        }}
-                        className="px-[0.6vw] text-red-500 hover:text-red-700"
-                      >
-                        <Icon icon="lucide:trash-2" className="w-[0.9vw] h-[0.9vw]" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {(!settings.leadNotification?.additionalRecipients || settings.leadNotification.additionalRecipients.length < 2) && (
-                    <button
-                      onClick={() => {
-                        const newRecipients = [...(settings.leadNotification?.additionalRecipients || []), ''];
-                        updateNested('leadNotification', 'additionalRecipients', newRecipients);
-                      }}
-                      className="w-full flex items-center justify-center gap-[0.4vw] py-[0.5vw] bg-[#F7F7F7] border border-gray-200 rounded-[0.4vw] text-gray-500 hover:bg-gray-200 transition-colors shadow-sm"
-                    >
-                      <Plus size="0.8vw" />
-                      <span className="text-[0.75vw] font-medium">Add another recipient</span>
-                    </button>
-                  )}
+                  {/* Add Lead Field Button (Styled as Screenshot 2) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAddFieldPopupOpen(true)}
+                    className="w-full flex items-center justify-center gap-[0.35vw] py-[0.55vw] bg-[#FFF5F3] border border-[#E05638]/40 hover:border-[#E05638] rounded-[0.45vw] text-[#E05638] hover:bg-[#FFEBE7] transition-all shadow-[0_0.1vw_0.2vw_rgba(224,86,56,0.04)] mt-[0.6vw]"
+                  >
+                    <Plus size="0.85vw" className="stroke-[2.5]" />
+                    <span className="text-[0.72vw] font-medium tracking-wide">Add Lead Field</span>
+                  </button>
                 </div>
               </div>
-
-              {/* Viewer auto-reply toggle */}
-              <div className="flex items-center justify-between py-[0.2vw]">
-                <span className="text-[0.74vw] font-medium text-gray-900">Send confirmation to viewer</span>
-                <Switch
-                  enabled={settings.leadNotification?.sendToViewer !== false}
-                  onChange={(val) => updateNested('leadNotification', 'sendToViewer', val)}
-                />
-              </div>
-
-              {/* Customize Email Content Button */}
-              <div className="pt-[0.2vw]">
-                <button
-                  type="button"
-                  onClick={() => setIsEmailCustomModalOpen(true)}
-                  className="w-full flex items-center justify-between px-[0.8vw] py-[0.55vw] bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border border-indigo-200/80 rounded-[0.5vw] text-indigo-700 transition-all shadow-sm group"
-                >
-                  <div className="flex items-center gap-[0.5vw]">
-                    <div className="w-[1.6vw] h-[1.6vw] rounded-[0.35vw] bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                      <Mail className="w-[0.9vw] h-[0.9vw] stroke-[2]" />
-                    </div>
-                    <div className="text-[0.74vw] font-semibold text-indigo-950 flex items-center gap-[0.3vw]">
-                      Customize Email Content
-                      {(settings.leadNotification?.subject || settings.leadNotification?.message || settings.leadNotification?.viewerSubject || settings.leadNotification?.viewerMessage) && (
-                        <span className="inline-block w-[0.4vw] h-[0.4vw] rounded-full bg-indigo-600"></span>
-                      )}
-                    </div>
-                  </div>
-                  <Icon icon="lucide:chevron-right" className="w-[0.9vw] h-[0.9vw] text-indigo-500 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </div>
-            </div>
             )}
           </div>
 
-          {/* Other Customization Options */}
-          <div className="space-y-[0.5vw]">
-            <div className="flex items-center gap-[0.3vw]">
-              <h3 className="text-[0.8vw] font-semibold text-gray-900 whitespace-nowrap pb-[0.5vw]">Other Customization options</h3>
-              <div className="h-[0.0925vw] bg-gray-200 flex-1" style={{ marginRight: '-1.5vw' }}> </div>
-            </div>
+          {/* Form Appearance Accordion Card */}
+          <div className="bg-white rounded-[0.8vw] border border-gray-200/90 shadow-[0_0.2vw_0.8vw_rgba(0,0,0,0.04)] overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              type="button"
+              onClick={() => setIsColorOpen(!isColorOpen)}
+              className="w-full flex items-center justify-between p-[0.9vw] bg-white hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-[0.82vw] font-semibold text-gray-800 leading-tight">Form Appearance</span>
+                <span className="text-[0.65vw] text-gray-500 font-normal mt-[0.1vw]">Customize colors for your form.</span>
+              </div>
+              <Icon
+                icon="fluent:chevron-down-12-regular"
+                className={`w-[0.9vw] h-[0.9vw] text-gray-400 transition-transform duration-200 ${isColorOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-            <div className={`bg-white rounded-[0.8vw] shadow-[0_0.9vw_1.2vw_rgba(0,0,0,0.05)] transition-all duration-300 relative z-0 ${isColorOpen ? 'ring-1 ring-gray-200' : ''}`}>
-              <button
-                onClick={() => setIsColorOpen(!isColorOpen)}
-                className={`w-full flex items-center justify-between px-[0.5vw] py-[0.8vw] pl-[1vw] pr-[1vw] shadow-sm transition-all duration-300 ${isColorOpen ? 'rounded-t-[0.8vw] border-b-transparent bg-gray-50/50' : 'rounded-[0.8vw] bg-white'}`}
-              >
-                <span className="text-[0.8vw] font-semibold text-gray-900">Color Customization</span>
-                <Icon icon="lucide:chevron-down" className={`w-[1.2vw] h-[1.2vw] text-gray-400 transition-transform duration-300 ${isColorOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isColorOpen && (
-                <div className="p-[1vw] border-t border-gray-200 bg-gray-50/50 rounded-b-[0.8vw] space-y-[0.8vw] animate-in fade-in slide-in-from-top-2">
-                  {/* Text Properties */}
+            {isColorOpen && (
+              <div className="p-[0.9vw] pt-[0.4vw] border-t border-gray-100 space-y-[0.8vw]">
+                {/* Text Properties */}
                   <div className="space-y-[0.75vw] ">
                     <div className="flex items-center gap-[0.5vw]">
                       <h4 className="text-[0.75vw] font-semibold text-gray-900 whitespace-nowrap pb-[0.5vw]">Text Properties</h4>
@@ -1776,141 +1467,498 @@ const LeadForm = ({ onBack, settings, onUpdate, pages = [], folderName, bookName
                       )}
                     </div>
                   )}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
-            {/* Canvas Enquiry Floating Button Settings */}
-            <div className={`bg-white rounded-[0.8vw] shadow-[0_0.9vw_1.2vw_rgba(0,0,0,0.05)] transition-all duration-300 relative z-0 ${isEnquiryBtnOpen ? 'ring-1 ring-gray-200' : ''}`}>
-              <button
-                onClick={() => setIsEnquiryBtnOpen(!isEnquiryBtnOpen)}
-                className={`w-full flex items-center justify-between px-[0.5vw] py-[0.8vw] pl-[1vw] pr-[1vw] shadow-sm transition-all duration-300 ${isEnquiryBtnOpen ? 'rounded-t-[0.8vw] border-b-transparent bg-gray-50/50' : 'rounded-[0.8vw] bg-white'}`}
-              >
-                <div className="flex items-center gap-[0.4vw]">
-                  <Icon icon="lucide:message-square-plus" className="w-[1vw] h-[1vw] text-[#4A3AFF]" />
-                  <span className="text-[0.8vw] font-semibold text-gray-900">Canvas Enquiry Button</span>
-                </div>
-                <Icon icon="lucide:chevron-down" className={`w-[1.2vw] h-[1.2vw] text-gray-400 transition-transform duration-300 ${isEnquiryBtnOpen ? 'rotate-180' : ''}`} />
-              </button>
+          {/* Form Display Setting Accordion Card */}
+          <div className="bg-white rounded-[0.8vw] border border-gray-200/90 shadow-[0_0.2vw_0.8vw_rgba(0,0,0,0.04)] overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              type="button"
+              onClick={() => setIsEnquiryBtnOpen(!isEnquiryBtnOpen)}
+              className="w-full flex items-center justify-between p-[0.9vw] bg-white hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-[0.82vw] font-semibold text-gray-800 leading-tight">Form Display Setting</span>
+                <span className="text-[0.65vw] text-gray-500 font-normal mt-[0.1vw]">Choose where to display the form.</span>
+              </div>
+              <Icon
+                icon="fluent:chevron-down-12-regular"
+                className={`w-[0.9vw] h-[0.9vw] text-gray-400 transition-transform duration-200 ${isEnquiryBtnOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-              {isEnquiryBtnOpen && (
-                <div className="p-[1vw] border-t border-gray-200 bg-gray-50/50 rounded-b-[0.8vw] space-y-[0.8vw] animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[0.75vw] font-normal text-gray-900">Show Button on Canvas</span>
-                    <Switch
-                      enabled={settings.enquiryButton?.enabled !== false}
-                      onChange={(val) => updateNested('enquiryButton', 'enabled', val)}
-                    />
+            {isEnquiryBtnOpen && (
+              <div className="p-[0.9vw] pt-[0.4vw] border-t border-gray-100 space-y-[0.8vw]">
+                {/* Add Enquiry Button in Layout */}
+                <div className="flex items-center justify-between pt-[0.2vw]">
+                  <div className="flex items-center gap-[0.5vw] flex-1 mr-[0.8vw]">
+                    <span className="text-[0.72vw] font-semibold text-gray-900 whitespace-nowrap">Add Enquiry Button in Layout</span>
+                    <div className="h-[1px] bg-gray-200 flex-1"></div>
                   </div>
+                  <Switch
+                    enabled={settings.enquiryButton?.enabled !== false}
+                    onChange={(val) => updateNested('enquiryButton', 'enabled', val)}
+                  />
+                </div>
 
-                  {settings.enquiryButton?.enabled !== false && (
-                    <div className="space-y-[0.75vw] pt-[0.25vw] border-t border-gray-200">
-                      {/* Show Text Switch */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-[0.7vw] font-normal text-gray-900">Show Button Text</span>
-                        <Switch
-                          enabled={settings.enquiryButton?.showText !== false}
-                          onChange={(val) => {
-                            if (!val && (!settings.enquiryButton?.icon || settings.enquiryButton?.icon === 'none')) {
-                              // If turning off text and currently icon is 'none', automatically default icon to 'lucide:mail'
-                              onUpdate({
-                                ...settings,
-                                enquiryButton: {
-                                  ...settings.enquiryButton,
-                                  showText: false,
-                                  icon: 'lucide:mail'
-                                }
-                              });
-                            } else {
-                              updateNested('enquiryButton', 'showText', val);
-                            }
-                          }}
-                        />
+                {settings.enquiryButton?.enabled !== false && (
+                  <div className="space-y-[0.8vw] pt-[0.2vw]">
+                    {/* Button Icon & Add Text in button row */}
+                    <div className="grid grid-cols-2 gap-[0.8vw] items-start">
+                      {/* Button Icon selector */}
+                      <div className="flex flex-col gap-[0.3vw] relative">
+                        <span className="text-[0.7vw] font-medium text-gray-800">Button Icon</span>
+                        <div
+                          onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
+                          className="w-full h-[4vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-white flex items-center justify-center cursor-pointer relative shadow-xs transition-colors group"
+                        >
+                          <Icon
+                            icon={settings.enquiryButton?.icon && settings.enquiryButton?.icon !== 'none' ? settings.enquiryButton.icon : 'lucide:message-square'}
+                            className="w-[1.6vw] h-[1.6vw] text-gray-700"
+                          />
+                          <div className="absolute top-[0.3vw] right-[0.4vw] text-gray-400 group-hover:text-gray-600 transition-colors" title="Change icon">
+                            <Icon icon="lucide:arrow-left-right" className="w-[0.75vw] h-[0.75vw]" />
+                          </div>
+                        </div>
+
+                        {/* Icon picker flyout */}
+                        {isIconPickerOpen && (
+                          <div className="absolute top-[5.2vw] left-0 z-50 bg-white rounded-[0.5vw] shadow-lg p-[0.5vw] w-[13vw] border border-gray-200 animate-in fade-in zoom-in-95 duration-100">
+                            <div className="flex items-center justify-between pb-[0.3vw] mb-[0.3vw] border-b border-gray-100">
+                              <span className="text-[0.65vw] font-semibold text-gray-700">Select Icon</span>
+                              <button
+                                type="button"
+                                onClick={() => setIsIconPickerOpen(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <Icon icon="lucide:x" className="w-[0.75vw] h-[0.75vw]" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-4 gap-[0.3vw]">
+                              {[
+                                { id: 'lucide:message-square', label: 'Message' },
+                                { id: 'lucide:mail', label: 'Mail' },
+                                { id: 'lucide:phone', label: 'Phone' },
+                                { id: 'lucide:send', label: 'Send' },
+                                { id: 'lucide:help-circle', label: 'Help' },
+                                { id: 'lucide:user-check', label: 'Contact' },
+                                { id: 'lucide:clipboard-list', label: 'Form' },
+                                { id: 'lucide:info', label: 'Info' }
+                              ].map(item => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    updateNested('enquiryButton', 'icon', item.id);
+                                    setIsIconPickerOpen(false);
+                                  }}
+                                  className={`flex flex-col items-center justify-center p-[0.35vw] rounded-[0.35vw] border transition-all ${(settings.enquiryButton?.icon || 'lucide:message-square') === item.id
+                                      ? 'border-[#E05638] bg-orange-50 text-[#E05638]'
+                                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                    }`}
+                                  title={item.label}
+                                >
+                                  <Icon icon={item.id} className="w-[1vw] h-[1vw]" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Button Label Text */}
-                      {settings.enquiryButton?.showText !== false && (
-                        <div className="flex flex-col gap-[0.3vw]">
-                          <label className="text-[0.7vw] font-medium text-gray-800">Button Text :</label>
-                          <input
-                            type="text"
-                            value={settings.enquiryButton?.text !== undefined ? settings.enquiryButton.text : 'Enquire Now'}
-                            onChange={(e) => updateNested('enquiryButton', 'text', e.target.value)}
-                            className="w-full border border-gray-200 rounded-[0.4vw] px-[0.6vw] py-[0.35vw] text-[0.7vw] text-gray-700 focus:outline-none focus:border-indigo-500 bg-white shadow-sm"
-                            placeholder="Enquire Now"
+                      {/* Add Text in button */}
+                      <div className="flex flex-col gap-[0.3vw]">
+                        <div className="flex items-center justify-between h-[1.3vw]">
+                          <span className="text-[0.7vw] font-medium text-gray-800">Add Text in button</span>
+                          <Switch
+                            enabled={settings.enquiryButton?.showText !== false}
+                            onChange={(val) => updateNested('enquiryButton', 'showText', val)}
                           />
                         </div>
-                      )}
-
-                      {/* Select Icon */}
-                      <div className="flex flex-col gap-[0.3vw]">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[0.7vw] font-medium text-gray-800">Choose Icon :</label>
-                          {settings.enquiryButton?.showText === false && (
-                            <span className="text-[0.55vw] text-amber-600 font-medium">* Icon is mandatory when text is hidden</span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-4 gap-[0.4vw]">
-                          {[
-                            { id: 'lucide:mail', label: 'Mail' },
-                            { id: 'lucide:message-square', label: 'Message' },
-                            { id: 'lucide:phone', label: 'Phone' },
-                            { id: 'lucide:send', label: 'Send' },
-                            { id: 'lucide:help-circle', label: 'Help' },
-                            { id: 'lucide:user-check', label: 'Contact' },
-                            { id: 'lucide:clipboard-list', label: 'Form' },
-                            ...(settings.enquiryButton?.showText !== false ? [{ id: 'none', label: 'None' }] : [])
-                          ].map(item => {
-                            const currentIcon = (settings.enquiryButton?.showText === false && (!settings.enquiryButton?.icon || settings.enquiryButton?.icon === 'none'))
-                              ? 'lucide:mail'
-                              : (settings.enquiryButton?.icon || 'lucide:mail');
-                            const isSelected = currentIcon === item.id;
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => updateNested('enquiryButton', 'icon', item.id)}
-                                className={`flex flex-col items-center justify-center p-[0.4vw] rounded-[0.4vw] border transition-all ${isSelected
-                                    ? 'border-[#4A3AFF] bg-[#EEF2FF] text-[#4A3AFF] shadow-sm'
-                                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                                  }`}
-                                title={item.label}
-                              >
-                                {item.id === 'none' ? (
-                                  <span className="text-[0.6vw] font-bold text-gray-400">None</span>
-                                ) : (
-                                  <Icon icon={item.id} className="w-[1vw] h-[1vw]" />
-                                )}
-                                <span className="text-[0.55vw] mt-[0.1vw] font-medium">{item.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Button Colors */}
-                      <div className="space-y-[0.5vw] pt-[0.2vw]">
-                        <ColorPickerItem
-                          label="Bg Color :"
-                          color={settings.enquiryButton?.bgFill || '#4A3AFF'}
-                          opacity={settings.enquiryButton?.bgOpacity ?? 100}
-                          onChange={(val) => updateNested('enquiryButton', 'bgFill', val)}
-                          onOpacityChange={(val) => updateNested('enquiryButton', 'bgOpacity', val)}
-                        />
-                        <ColorPickerItem
-                          label="Text Color :"
-                          color={settings.enquiryButton?.textColor || '#FFFFFF'}
-                          opacity={settings.enquiryButton?.textOpacity ?? 100}
-                          onChange={(val) => updateNested('enquiryButton', 'textColor', val)}
-                          onOpacityChange={(val) => updateNested('enquiryButton', 'textOpacity', val)}
+                        <input
+                          type="text"
+                          value={settings.enquiryButton?.text !== undefined ? settings.enquiryButton.text : 'Enquiry Now'}
+                          onChange={(e) => updateNested('enquiryButton', 'text', e.target.value)}
+                          placeholder="Enquiry Now"
+                          disabled={settings.enquiryButton?.showText === false}
+                          className={`w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.55vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400 ${settings.enquiryButton?.showText === false ? 'opacity-40 cursor-not-allowed bg-gray-50' : ''}`}
                         />
                       </div>
                     </div>
+
+                    {/* Color Customizations */}
+                    <div className="space-y-[0.5vw] pt-[0.2vw]">
+                      <ColorPickerItem
+                        label="Icon Color :"
+                        color={settings.enquiryButton?.iconColor || '#FFFFFF'}
+                        opacity={settings.enquiryButton?.iconOpacity ?? 100}
+                        onChange={(val) => updateNested('enquiryButton', 'iconColor', val)}
+                        onOpacityChange={(val) => updateNested('enquiryButton', 'iconOpacity', val)}
+                      />
+                      <ColorPickerItem
+                        label="Text Color :"
+                        color={settings.enquiryButton?.textColor || '#FFFFFF'}
+                        opacity={settings.enquiryButton?.textOpacity ?? 100}
+                        onChange={(val) => updateNested('enquiryButton', 'textColor', val)}
+                        onOpacityChange={(val) => updateNested('enquiryButton', 'textOpacity', val)}
+                      />
+                      <ColorPickerItem
+                        label="Button Color :"
+                        color={settings.enquiryButton?.bgFill || '#E05638'}
+                        opacity={settings.enquiryButton?.bgOpacity ?? 100}
+                        onChange={(val) => updateNested('enquiryButton', 'bgFill', val)}
+                        onOpacityChange={(val) => updateNested('enquiryButton', 'bgOpacity', val)}
+                      />
+                    </div>
+
+                    {/* Where Should Button Appear */}
+                    <div className="space-y-[0.4vw] pt-[0.3vw]">
+                      <span className="text-[0.72vw] font-medium text-gray-700">Where Should Button Appear</span>
+                      <div className="grid grid-cols-2 gap-[0.5vw]">
+                        {[
+                          { id: 'top-left', label: 'Top Left', icon: 'lucide:arrow-up-left' },
+                          { id: 'top-right', label: 'Top Right', icon: 'lucide:arrow-up-right' },
+                          { id: 'bottom-left', label: 'Bottom Left', icon: 'lucide:arrow-down-left' },
+                          { id: 'bottom-right', label: 'Bottom Right', icon: 'lucide:arrow-down-right' }
+                        ].map(pos => {
+                          const currentPos = settings.enquiryButton?.position || 'bottom-right';
+                          const isSelected = currentPos === pos.id;
+                          return (
+                            <button
+                              key={pos.id}
+                              type="button"
+                              onClick={() => updateNested('enquiryButton', 'position', pos.id)}
+                              className={`flex items-center justify-center gap-[0.3vw] py-[0.55vw] px-[0.6vw] border rounded-[0.5vw] text-[0.68vw] font-medium transition-all ${isSelected
+                                  ? 'border-[#E05638] bg-orange-50 text-[#E05638] shadow-xs'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800'
+                                }`}
+                            >
+                              <Icon icon={pos.icon} className="w-[0.85vw] h-[0.85vw]" />
+                              <span>{pos.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lead form should Appears at */}
+                <div className="space-y-[0.6vw] pt-[0.4vw] border-t border-gray-100">
+                  <div className="flex items-center gap-[0.5vw]">
+                    <span className="text-[0.72vw] font-semibold text-gray-900 whitespace-nowrap">Lead form should Appears at</span>
+                    <div className="h-[1px] bg-gray-200 flex-1"></div>
+                  </div>
+
+                  <div className="space-y-[0.5vw] pl-[0.2vw]">
+                    {[
+                      { id: 'before', label: 'Before opening the flipbook' },
+                      { id: 'after-pages', label: 'Show on selected page' },
+                      { id: 'after-seconds', label: 'After X seconds' },
+                      { id: 'end', label: 'At the end of the flipbook' }
+                    ].map((opt) => {
+                      const isSelected = settings.appearance.timing === opt.id;
+                      return (
+                        <div key={opt.id} className="space-y-[0.4vw]">
+                          <label className="flex items-center gap-[0.6vw] cursor-pointer group w-fit select-none">
+                            <div className="relative flex items-center justify-center">
+                              <input
+                                type="radio"
+                                name="timing"
+                                checked={isSelected}
+                                onChange={() => updateAppearance('timing', opt.id)}
+                                className="peer appearance-none w-[1vw] h-[1vw] border-[1.5px] border-gray-400 rounded-full checked:border-[#E05638] transition-all bg-transparent"
+                              />
+                              <div className="absolute w-[0.5vw] h-[0.5vw] bg-[#E05638] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
+                            </div>
+                            <span className={`text-[0.72vw] transition-colors ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
+                              {opt.label}
+                            </span>
+                          </label>
+
+                          {opt.id === 'after-pages' && isSelected && (
+                            <div className="ml-[1.6vw] mt-[0.2vw]">
+                              <div className="relative inline-block w-[6.5vw]">
+                                <select
+                                  value={settings.appearance.afterPages || 1}
+                                  onChange={(e) => updateAppearance('afterPages', parseInt(e.target.value))}
+                                  className="w-full appearance-none bg-white border border-gray-200 shadow-xs rounded-[0.4vw] py-[0.35vw] pl-[0.6vw] pr-[1.8vw] text-[0.7vw] text-gray-800 font-medium focus:outline-none focus:border-[#E05638] cursor-pointer"
+                                >
+                                  {pages.length > 0 ? (
+                                    pages.map((_, idx) => (
+                                      <option key={idx} value={idx + 1}>Page {idx + 1}</option>
+                                    ))
+                                  ) : (
+                                    [1, 2, 3, 4, 5].map(num => (
+                                      <option key={num} value={num}>Page {num}</option>
+                                    ))
+                                  )}
+                                </select>
+                                <div className="absolute right-[0.5vw] top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                  <Icon icon="fluent:chevron-down-12-regular" className="w-[0.8vw] h-[0.8vw]" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {opt.id === 'after-seconds' && isSelected && (
+                            <div className="ml-[1.6vw] mt-[0.2vw] flex items-center border border-gray-200 rounded-[0.4vw] px-[0.6vw] py-[0.3vw] bg-white w-fit gap-[0.5vw] shadow-xs">
+                              <button
+                                type="button"
+                                onClick={() => updateAppearance('afterSeconds', Math.max(1, (settings.appearance.afterSeconds || 30) - 1))}
+                                className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw]"
+                              >
+                                <Icon icon="lucide:play" className="w-[0.7vw] h-[0.7vw] rotate-180 fill-current text-gray-600" />
+                              </button>
+                              <span className="text-[0.72vw] text-gray-800 font-semibold min-w-[1.2vw] text-center">
+                                {settings.appearance.afterSeconds || 30}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateAppearance('afterSeconds', (settings.appearance.afterSeconds || 30) + 1)}
+                                className="text-gray-600 hover:text-gray-900 transition-colors p-[0.1vw]"
+                              >
+                                <Icon icon="lucide:play" className="w-[0.7vw] h-[0.7vw] fill-current text-gray-600" />
+                              </button>
+                              <span className="text-[0.7vw] text-gray-600 ml-[0.2vw]">Seconds</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Lead Form Mode */}
+                <div className="space-y-[0.6vw] pt-[0.4vw] border-t border-gray-100">
+                  <div className="flex items-center gap-[0.5vw]">
+                    <span className="text-[0.72vw] font-semibold text-gray-900 whitespace-nowrap">Lead Form Mode</span>
+                    <div className="h-[1px] bg-gray-200 flex-1"></div>
+                  </div>
+
+                  <div className="space-y-[0.5vw] pl-[0.2vw]">
+                    {/* Mandatory */}
+                    <label className="flex items-center gap-[0.6vw] cursor-pointer group w-fit select-none">
+                      <div className="relative flex items-center justify-center">
+                        <input
+                          type="radio"
+                          name="allowSkip"
+                          checked={!settings.appearance.allowSkip}
+                          onChange={() => updateAppearance('allowSkip', false)}
+                          className="peer appearance-none w-[1vw] h-[1vw] border-[1.5px] border-gray-400 rounded-full checked:border-[#E05638] transition-all bg-transparent"
+                        />
+                        <div className="absolute w-[0.5vw] h-[0.5vw] bg-[#E05638] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
+                      </div>
+                      <span className={`text-[0.72vw] transition-colors ${!settings.appearance.allowSkip ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
+                        Mandatory (Require Submission)
+                      </span>
+                    </label>
+
+                    {/* Optional */}
+                    <div className="space-y-[0.4vw]">
+                      <label className="flex items-center gap-[0.6vw] cursor-pointer group w-fit select-none">
+                        <div className="relative flex items-center justify-center">
+                          <input
+                            type="radio"
+                            name="allowSkip"
+                            checked={Boolean(settings.appearance.allowSkip)}
+                            onChange={() => updateAppearance('allowSkip', true)}
+                            className="peer appearance-none w-[1vw] h-[1vw] border-[1.5px] border-gray-400 rounded-full checked:border-[#E05638] transition-all bg-transparent"
+                          />
+                          <div className="absolute w-[0.5vw] h-[0.5vw] bg-[#E05638] rounded-full scale-0 peer-checked:scale-100 transition-transform" />
+                        </div>
+                        <span className={`text-[0.72vw] transition-colors ${settings.appearance.allowSkip ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
+                          Optional (Allow Skip)
+                        </span>
+                      </label>
+
+                      {settings.appearance.allowSkip && (
+                        <div className="ml-[1.6vw] space-y-[0.4vw] pt-[0.2vw]">
+                          <span className="block text-[0.68vw] text-gray-500 font-normal">If Skipped</span>
+                          <div className="relative inline-block w-full max-w-[14vw]">
+                            <select
+                              value={settings.appearance.skipBehavior || 'never'}
+                              onChange={(e) => updateAppearance('skipBehavior', e.target.value)}
+                              className="w-full appearance-none bg-white border border-gray-200 rounded-[0.5vw] py-[0.45vw] pl-[0.7vw] pr-[2vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] cursor-pointer shadow-xs"
+                            >
+                              <option value="never">Never Show again</option>
+                              <option value="1_day">Show again after 1 day</option>
+                              <option value="next_visit">Show again on next visit</option>
+                            </select>
+                            <div className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                              <Icon icon="fluent:chevron-down-12-regular" className="w-[0.8vw] h-[0.8vw]" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Email Configuration Accordion Card */}
+          <div className="bg-white rounded-[0.8vw] border border-gray-200/90 shadow-[0_0.2vw_0.8vw_rgba(0,0,0,0.04)] overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              type="button"
+              onClick={() => setIsEmailOpen(!isEmailOpen)}
+              className="w-full flex items-center justify-between p-[0.9vw] bg-white hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-[0.82vw] font-semibold text-gray-800 leading-tight">Email Configuration</span>
+                <span className="text-[0.65vw] text-gray-500 font-normal mt-[0.1vw]">Set up confirmation email & manage recipients.</span>
+              </div>
+              <Icon
+                icon="fluent:chevron-down-12-regular"
+                className={`w-[0.9vw] h-[0.9vw] text-gray-400 transition-transform duration-200 ${isEmailOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {isEmailOpen && (
+              <div className="p-[0.9vw] pt-[0.4vw] border-t border-gray-100 space-y-[0.8vw]">
+                {/* Manage Recipients Header */}
+                <div className="flex items-center gap-[0.5vw] pt-[0.2vw]">
+                  <span className="text-[0.72vw] font-semibold text-gray-900 whitespace-nowrap">Manage Recipients</span>
+                  <div className="h-[1px] bg-gray-200 flex-1"></div>
+                </div>
+
+                {/* Primary Recipient (To) */}
+                <div className="flex flex-col gap-[0.3vw]">
+                  <label className="text-[0.7vw] font-medium text-gray-800">Primary Recipient (To)</label>
+                  <input
+                    type="email"
+                    value={settings.leadNotification?.primaryRecipient || ''}
+                    onChange={(e) => updateNested('leadNotification', 'primaryRecipient', e.target.value)}
+                    placeholder="admin@gmail.com"
+                    className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.55vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400"
+                  />
+                </div>
+
+                {/* Additional Recipients */}
+                <div className="space-y-[0.5vw]">
+                  {(settings.leadNotification?.additionalRecipients || []).map((recipient, idx) => (
+                    <div key={idx} className="flex flex-col gap-[0.3vw]">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[0.7vw] font-medium text-gray-800">Recipient {idx + 1}</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRecipients = (settings.leadNotification?.additionalRecipients || []).filter((_, i) => i !== idx);
+                            updateNested('leadNotification', 'additionalRecipients', newRecipients);
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Remove recipient"
+                        >
+                          <Icon icon="lucide:trash-2" className="w-[0.75vw] h-[0.75vw]" />
+                        </button>
+                      </div>
+                      <input
+                        type="email"
+                        value={recipient}
+                        onChange={(e) => {
+                          const newRecipients = [...(settings.leadNotification?.additionalRecipients || [])];
+                          newRecipients[idx] = e.target.value;
+                          updateNested('leadNotification', 'additionalRecipients', newRecipients);
+                        }}
+                        placeholder="user@gmail.com"
+                        className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.55vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400"
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add Another Recipient Button */}
+                  {(!settings.leadNotification?.additionalRecipients || settings.leadNotification.additionalRecipients.length < 2) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRecipients = [...(settings.leadNotification?.additionalRecipients || []), ''];
+                        updateNested('leadNotification', 'additionalRecipients', newRecipients);
+                      }}
+                      className="w-full flex items-center justify-center gap-[0.3vw] py-[0.55vw] border border-red-200/80 bg-red-50/30 hover:bg-red-50 rounded-[0.5vw] text-[#E05638] text-[0.72vw] font-medium transition-colors shadow-2xs"
+                    >
+                      <Plus size="0.75vw" className="stroke-[2.5]" />
+                      <span>Add Another Recipient</span>
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
+
+                {/* Customer Confirmation Email Header */}
+                <div className="flex items-center gap-[0.5vw] pt-[0.4vw]">
+                  <span className="text-[0.72vw] font-semibold text-gray-900 whitespace-nowrap">Customer Confirmation Email</span>
+                  <div className="h-[1px] bg-gray-200 flex-1"></div>
+                </div>
+
+                {/* Subject Line */}
+                <div className="flex flex-col gap-[0.3vw]">
+                  <label className="text-[0.7vw] font-medium text-gray-800">Subject Line</label>
+                  <input
+                    type="text"
+                    value={settings.leadNotification?.viewerSubject !== undefined ? settings.leadNotification.viewerSubject : 'Thank you for reaching out - {flipbookname}'}
+                    onChange={(e) => updateNested('leadNotification', 'viewerSubject', e.target.value)}
+                    placeholder="Thank you for reaching out - {flipbookname}"
+                    className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.55vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white shadow-xs placeholder:text-gray-400"
+                  />
+                  <div className="flex items-center gap-[0.25vw] text-[0.6vw] text-red-500 pt-[0.1vw]">
+                    <Icon icon="lucide:info" className="w-[0.75vw] h-[0.75vw] shrink-0" />
+                    <span>Use &#123;flipbook&#125; Name to insert the book name.</span>
+                  </div>
+                </div>
+
+                {/* Body Text */}
+                <div className="flex flex-col gap-[0.3vw]">
+                  <label className="text-[0.7vw] font-medium text-gray-800">Body Text</label>
+                  <textarea
+                    rows={4}
+                    value={settings.leadNotification?.viewerMessage !== undefined ? settings.leadNotification.viewerMessage : 'Thank you for your interest in {flipbookname}. We have received your inquiry and our team will get in touch with you shortly.'}
+                    onChange={(e) => updateNested('leadNotification', 'viewerMessage', e.target.value)}
+                    placeholder="Thank you for your interest in {flipbookname}. We have received your inquiry and our team will get in touch with you shortly."
+                    className="w-full border border-gray-200 rounded-[0.5vw] px-[0.6vw] py-[0.5vw] text-[0.7vw] text-gray-700 outline-none focus:border-[#E05638] bg-white shadow-xs resize-none placeholder:text-gray-400"
+                  />
+                </div>
+
+                {/* Actions: Reset, Cancel, Save Changes */}
+                <div className="flex items-center justify-between pt-[0.4vw]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateNested('leadNotification', 'viewerSubject', 'Thank you for reaching out - {flipbookname}');
+                      updateNested('leadNotification', 'viewerMessage', 'Thank you for your interest in {flipbookname}. We have received your inquiry and our team will get in touch with you shortly.');
+                      updateNested('leadNotification', 'primaryRecipient', '');
+                      updateNested('leadNotification', 'additionalRecipients', []);
+                    }}
+                    className="flex items-center gap-[0.25vw] px-[0.6vw] py-[0.45vw] text-[0.68vw] text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-[0.4vw] hover:bg-gray-50 transition-colors shadow-2xs font-medium"
+                  >
+                    <span>Reset</span>
+                    <Icon icon="lucide:rotate-ccw" className="w-[0.75vw] h-[0.75vw]" />
+                  </button>
+
+                  <div className="flex items-center gap-[0.4vw]">
+                    <button
+                      type="button"
+                      onClick={() => setIsEmailOpen(false)}
+                      className="px-[0.8vw] py-[0.45vw] text-[0.68vw] text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-[0.4vw] transition-colors shadow-2xs font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEmailOpen(false);
+                      }}
+                      className="px-[0.9vw] py-[0.45vw] text-[0.68vw] text-white bg-[#E05638] hover:bg-[#d04b2f] rounded-[0.4vw] transition-colors shadow-2xs font-semibold"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
         </div>
       </div>
 
@@ -1940,39 +1988,39 @@ const LeadForm = ({ onBack, settings, onUpdate, pages = [], folderName, bookName
               </p>
 
               <div className="grid grid-cols-2 gap-[0.7vw] w-full">
-                <button onClick={() => handleAddField('empty')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:type" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Input Box</span>
+                <button onClick={() => handleAddField('empty')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:type" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Input Box</span>
                 </button>
 
-                <button onClick={() => handleAddField('feedback')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:text-cursor-input" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Text Area</span>
+                <button onClick={() => handleAddField('feedback')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:text-cursor-input" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Text Area</span>
                 </button>
 
-                <button onClick={() => handleAddField('radio')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:circle-dot" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Radio Button</span>
+                <button onClick={() => handleAddField('radio')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:circle-dot" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Radio Button</span>
                 </button>
 
-                <button onClick={() => handleAddField('dropdown')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:list-collapse" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Dropdown</span>
+                <button onClick={() => handleAddField('dropdown')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:list-collapse" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Dropdown</span>
                 </button>
 
-                <button onClick={() => handleAddField('rating')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:star" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Rating</span>
+                <button onClick={() => handleAddField('rating')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:star" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Rating</span>
                 </button>
 
-                <button onClick={() => handleAddField('checkbox')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center">
-                  <Icon icon="lucide:check-square" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Checkbox</span>
+                <button onClick={() => handleAddField('checkbox')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center">
+                  <Icon icon="lucide:check-square" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Checkbox</span>
                 </button>
 
-                <button onClick={() => handleAddField('products')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#4A3AFF] hover:bg-gray-50 transition-all group bg-white justify-center col-span-2">
-                  <Icon icon="lucide:shopping-bag" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#4A3AFF]" />
-                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#4A3AFF]">Products</span>
+                <button onClick={() => handleAddField('products')} className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.6vw] border border-gray-100 rounded-[0.4vw] shadow-[0_0.1vw_0.3vw_rgba(0,0,0,0.04)] hover:border-[#E05638] hover:bg-orange-50/40 transition-all group bg-white justify-center col-span-2">
+                  <Icon icon="lucide:shopping-bag" className="w-[1vw] h-[1vw] text-gray-600 group-hover:text-[#E05638]" />
+                  <span className="text-[0.7vw] font-medium text-gray-700 group-hover:text-[#E05638]">Products</span>
                 </button>
               </div>
             </div>

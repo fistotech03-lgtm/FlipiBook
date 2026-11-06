@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import FlipbookPreview from '../components/PageEditor/modals/FlipbookPreview';
 import { resolveUploadsPath, rewriteHtmlUploadsToSupabase } from '../utils/assetUtils';
 import { useAuth } from '../context/AuthContext';
+import { getFromDB, CUSTOMIZED_EDITOR_KEY, getCustomizedEditorKey } from '../utils/dbUtils';
 
 const PreviewPage = () => {
   const [data, setData] = useState(null);
@@ -38,6 +39,9 @@ const PreviewPage = () => {
         const backendUrl = getBackendUrl();
         const params = {};
         if (v_id) params.v_id = v_id;
+        if (currentUserEmail) params.emailId = currentUserEmail;
+        if (currentUserID) params.userID = currentUserID;
+        if (currentUserId) params.userId = currentUserId;
 
         let res;
         if (targetIdentifier) {
@@ -47,8 +51,8 @@ const PreviewPage = () => {
               withCredentials: true
             });
           } catch (pubErr) {
-            // Fallback to /api/flipbook/get if public get endpoint is unavailable or returns 404
-            if (pubErr.response?.status === 404 || pubErr.response?.status === 502) {
+            // Fallback to /api/flipbook/get if public get endpoint is unavailable or returns 404/500/502
+            if (pubErr.response?.status === 404 || pubErr.response?.status === 500 || pubErr.response?.status === 502) {
               const fallbackVId = v_id || targetIdentifier;
               try {
                 res = await axios.get(`${backendUrl}/api/flipbook/get`, {
@@ -179,7 +183,22 @@ const PreviewPage = () => {
             ...rawApp,
             flipSpeed: validSpeed
           };
-          const leadFormObj = processedData.Customized_Settings?.leadForm || processedData.Customized_Settings?.leadform || processedData.settings?.leadForm || processedData.settings?.leadform || {};
+          let leadFormObj = processedData.Customized_Settings?.leadForm || processedData.Customized_Settings?.leadform || processedData.settings?.leadForm || processedData.settings?.leadform || {};
+          
+          // Check IndexedDB cache for real-time unsaved changes in preview
+          try {
+            const activeVId = actualVId || v_id;
+            let cachedCust = activeVId ? await getFromDB(getCustomizedEditorKey(activeVId)) : null;
+            if (!cachedCust) cachedCust = await getFromDB(CUSTOMIZED_EDITOR_KEY);
+            if (cachedCust && (!activeVId || cachedCust.v_id === activeVId)) {
+              if (cachedCust.leadForm && (cachedCust.leadForm.enabled !== undefined || cachedCust.leadForm.fields)) {
+                leadFormObj = { ...leadFormObj, ...cachedCust.leadForm };
+              }
+            }
+          } catch (cErr) {
+            console.warn('[PreviewPage] Could not read IndexedDB cache:', cErr);
+          }
+
           const mergedSettings = {
             ...(processedData.meta || {}),
             FlipbookInfo: processedData.Customized_Settings?.FlipbookInfo || {},
@@ -189,7 +208,8 @@ const PreviewPage = () => {
             Layouts: layoutsObj,
             BookAppearance: appearanceObj,
             otherSetup: otherSetupObj,
-            leadForm: leadFormObj
+            leadForm: leadFormObj,
+            leadform: leadFormObj
           };
 
           setData({

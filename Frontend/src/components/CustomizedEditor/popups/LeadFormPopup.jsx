@@ -37,9 +37,11 @@ const LeadFormPopup = ({
 
     useEffect(() => {
         let isMounted = true;
-        axios.get('https://api.ipify.org?format=json', { timeout: 2500 })
-            .then(res => {
-                if (isMounted && res.data?.ip) setViewerIp(res.data.ip);
+        // Plain fetch with no credentials to avoid CORS wildcard conflict
+        fetch('https://api.ipify.org?format=json', { mode: 'cors' })
+            .then(res => res.json())
+            .then(data => {
+                if (isMounted && data?.ip) setViewerIp(data.ip);
             })
             .catch(() => {});
         return () => { isMounted = false; };
@@ -155,17 +157,40 @@ const LeadFormPopup = ({
 
         setIsSubmitting(true);
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            await axios.post(`${backendUrl}/api/flipbook/submit-lead`, {
-                v_id: vId,
-                shareId: shareId,
-                flipbookName: flipbookName,
-                userEmail: userEmail,
-                leadData: leadPayload,
-                rawLeadData: formValues,
-                viewerIp: viewerIp || '',
-                leadNotification: leadFormSettings?.leadNotification
-            });
+            const getBackendUrl = () => {
+                if (import.meta.env.VITE_BACKEND_URL) return import.meta.env.VITE_BACKEND_URL;
+                if (typeof window !== 'undefined') {
+                    const origin = window.location.origin;
+                    if (origin.includes(':5173')) return origin.replace(':5173', ':8000');
+                    if (origin.includes(':3000')) return origin.replace(':3000', ':8000');
+                }
+                return 'http://localhost:8000';
+            };
+            const backendUrl = getBackendUrl();
+            try {
+                await axios.post(`${backendUrl}/api/flipbook/submit-lead`, {
+                    v_id: vId,
+                    shareId: shareId,
+                    flipbookName: flipbookName,
+                    userEmail: userEmail,
+                    leadData: leadPayload,
+                    rawLeadData: formValues,
+                    viewerIp: viewerIp || '',
+                    leadNotification: leadFormSettings?.leadNotification
+                }, { withCredentials: true });
+            } catch (postErr) {
+                // Direct fallback to customized-editor service route if /api/flipbook rewrite encounters any issue
+                await axios.post(`${backendUrl}/api/customized-editor/submit-lead`, {
+                    v_id: vId,
+                    shareId: shareId,
+                    flipbookName: flipbookName,
+                    userEmail: userEmail,
+                    leadData: leadPayload,
+                    rawLeadData: formValues,
+                    viewerIp: viewerIp || '',
+                    leadNotification: leadFormSettings?.leadNotification
+                }, { withCredentials: true });
+            }
             setIsSubmitted(true);
             try {
                 if (vId && vId !== 'preview') localStorage.setItem(`lead_form_submitted_${vId}`, 'true');

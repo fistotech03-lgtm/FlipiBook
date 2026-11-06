@@ -1273,9 +1273,6 @@ export const useSaveEngine = ({
 
         setHasUnsavedChanges(false);
         justSavedRef.current = true;
-        try {
-          localStorage.removeItem(`emergency_editor_${currentVId}`);
-        } catch (_) {}
         // Merge backend v_id properties without overwriting live page HTML edited during async save window
         setPages((prevPages) => {
           if (!prevPages || prevPages.length === 0) return pagesToSave;

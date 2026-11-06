@@ -798,30 +798,77 @@ const PageEditor = () => {
     }
   }, [pages, currentBook, isLoading, setHasUnsavedChanges, justSavedRef]);
 
-  // Auto-Save Mechanism
+  // Refs for zero-data-loss handlers
+  const isAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
+  useEffect(() => {
+    isAutoSaveEnabledRef.current = isAutoSaveEnabled;
+  }, [isAutoSaveEnabled]);
+
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Auto-Save Mechanism (Strictly respects isAutoSaveEnabled; never interrupts active typing or interactions)
   useEffect(() => {
     if (
-      isAutoSaveEnabled &&
-      hasUnsavedChanges &&
-      pages.length > 0 &&
-      !isLoading &&
-      !isSaving &&
-      !isFirstLoadRef.current
+      !isAutoSaveEnabled ||
+      !hasUnsavedChanges ||
+      pages.length === 0 ||
+      isLoading ||
+      isSaving ||
+      isFirstLoadRef.current
     ) {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = setTimeout(() => {
-        const isUserInteracting =
-          !!document.querySelector('[data-dragging="true"]') ||
-          document.body.classList.contains("resizing-active");
-        if (isUserInteracting) {
-          return;
-        }
-        saveFlipbook(
-          false,
-          popupEditContext ? popupEditContext.backup.pages : pages,
-        );
-      }, 2500);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      return;
     }
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      // 1. Never save while user is actively dragging or resizing
+      const isUserInteracting =
+        !!document.querySelector('[data-dragging="true"]') ||
+        document.body.classList.contains("resizing-active");
+      if (isUserInteracting) {
+        return;
+      }
+
+      // 2. Never interrupt the user while typing in an input, textarea, or contentEditable element
+      const activeEl = document.activeElement;
+      const isTyping =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable ||
+          activeEl.getAttribute("contenteditable") === "true");
+
+      if (isTyping) {
+        // Defer auto-save until typing has ceased
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 3000);
+        return;
+      }
+
+      saveFlipbook(
+        false,
+        popupEditContext ? popupEditContext.backup.pages : pages,
+      );
+    }, 2500);
+
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
@@ -864,6 +911,16 @@ const PageEditor = () => {
     }
   }, [v_id, currentBook, location.state]);
 
+  const flushPageEditorToDBRef = useRef(flushPageEditorToDB);
+  useEffect(() => {
+    flushPageEditorToDBRef.current = flushPageEditorToDB;
+  }, [flushPageEditorToDB]);
+
+  const saveFlipbookRef = useRef(saveFlipbook);
+  useEffect(() => {
+    saveFlipbookRef.current = saveFlipbook;
+  }, [saveFlipbook]);
+
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
@@ -886,29 +943,29 @@ const PageEditor = () => {
   // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
   useEffect(() => {
     const handleBeforeUnload = () => {
-      flushPageEditorToDB();
+      flushPageEditorToDBRef.current?.();
     };
 
     const handlePageHide = () => {
-      flushPageEditorToDB();
+      flushPageEditorToDBRef.current?.();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        flushPageEditorToDB();
+        flushPageEditorToDBRef.current?.();
       }
     };
 
     const handlePopState = () => {
-      flushPageEditorToDB();
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
+      flushPageEditorToDBRef.current?.();
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
       }
     };
 
     const handleOnline = () => {
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
       }
     };
 
@@ -919,11 +976,8 @@ const PageEditor = () => {
     window.addEventListener('online', handleOnline);
 
     return () => {
-      // Synchronously flush on component unmount
-      flushPageEditorToDB();
-      if (hasUnsavedChanges && latestPagesRef.current?.length > 0) {
-        saveFlipbook(false, latestPagesRef.current);
-      }
+      // Synchronously flush to local IndexedDB on component unmount only
+      flushPageEditorToDBRef.current?.();
 
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
@@ -931,7 +985,7 @@ const PageEditor = () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('online', handleOnline);
     };
-  }, [flushPageEditorToDB, hasUnsavedChanges, saveFlipbook]);
+  }, []);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {

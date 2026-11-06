@@ -66,7 +66,10 @@ export const useSaveEngine = ({
     let pagesToSave = overridePages || pages;
     if (isSaving || !pagesToSave || pagesToSave.length === 0) return;
 
+    // Only blur active element on explicit manual save (e.g. clicking the navbar Save button)
+    // NEVER blur during automatic background saves, so typing is never interrupted!
     if (
+      isManual &&
       document.activeElement &&
       typeof document.activeElement.blur === "function"
     ) {

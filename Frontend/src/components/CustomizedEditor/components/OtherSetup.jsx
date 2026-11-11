@@ -21,7 +21,6 @@ import { CoverPicturePopup } from '../../FlipbookInfoModal';
 import BookmarkStylesPopup from './BookmarkStylesPopup';
 import AlertModal from '../../AlertModal';
 import ReplaceMediaModal from '../../PageEditor/modals/ReplaceMediaModal';
-import cover1 from '../../../assets/cover/cover1.svg';
 import Switch from './Switch';
 import { fontFamilies } from '../utils/fontConstants';
 
@@ -1650,7 +1649,7 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
               This image will appear as the cover of your flipbook<span className="text-red-500">*</span>
             </p>
 
-            <div className="relative w-[15vw] h-[14vw] mx-auto rounded-[1.2vw] overflow-hidden bg-gray-100 flex items-center justify-center group shadow-md border border-gray-200">
+            <div className="relative w-[15vw] aspect-[4/3] mx-auto rounded-[1.2vw] overflow-hidden bg-gray-100 flex items-center justify-center group shadow-md border border-gray-200">
               {settings.coverPicture?.url ? (
                 <img src={settings.coverPicture.url} className="w-full h-full object-cover" alt="Cover" />
               ) : settings.coverPicture?.type === 'template' ? (
@@ -1659,7 +1658,24 @@ const AdvancedSettings = ({ onBack, settings, onUpdate, folderName, bookName, pa
                   <p className="text-[0.6vw]" style={{ color: settings.coverPicture.shadowColor || '#000000', opacity: 0.8 }}>{settings.coverPicture.text2 || 'Supporting Text'}</p>
                 </div>
               ) : (
-                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${cover1})` }}></div>
+                <div className="w-full h-full bg-[#edd8cd] flex items-center justify-center relative overflow-hidden">
+                  <div className="relative w-[5vw] h-[5.5vw] flex items-center justify-center scale-[0.6]">
+                    <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-orange-500 to-amber-600 rounded-[0.6vw] shadow-xl transform -rotate-6 border border-orange-400 p-[0.7vw] flex flex-col justify-between text-white">
+                      <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
+                      <div>
+                        <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
+                        <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
+                      </div>
+                    </div>
+                    <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-amber-600 to-orange-500 rounded-[0.6vw] shadow-2xl transform rotate-6 border border-amber-400 p-[0.7vw] flex flex-col justify-between text-white">
+                      <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
+                      <div>
+                        <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
+                        <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
               {/* Dark overlay for editing */}
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

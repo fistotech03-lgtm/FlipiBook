@@ -1,47 +1,46 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  Home,
+  Rocket,
+  UserCheck,
   BookOpen,
   Sliders,
   FileEdit,
   Box,
+  HelpCircle,
+  MessageSquare,
   Compass,
-  User,
-  Settings,
-  RefreshCw,
   Search,
   ChevronDown,
   ChevronUp,
   ChevronRight,
   Layers,
-  HelpCircle,
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomScrollbar from '../../components/CustomScrollbar';
 
-import HomeGuide, { homeGuideSections } from './Home/HomeGuide';
+import GetStartedGuide, { getStartedGuideSections } from './GetStarted/GetStartedGuide';
+import ProfileAccountGuide, { profileAccountGuideSections } from './ProfileAccount/ProfileAccountGuide';
+import FlipbookGuide, { flipbookGuideSections } from './Flipbook/FlipbookGuide';
+import CustomizationGuide, { customizationGuideSections } from './Customization/CustomizationGuide';
+import PageEditorGuide, { pageEditorSections } from './PageEditor/PageEditorGuide';
+import ThreeDStudioEditorGuide, { threeDStudioEditorSections } from './3DEditor/3DEditorGuide';
+import ThreeDRequestGuide, { threeDRequestGuideSections } from './ThreeDRequest/ThreeDRequestGuide';
+import ForumGuide, { forumGuideSections } from './ForumGuide/ForumGuide';
 import ExploreGuide, { exploreGuideSections } from './Explore/ExploreGuide';
-import ConverterGuide, { converterGuideSections } from './Converter/ConverterGuide';
-import MyFlipbookGuide, { myFlipbookGuideSections } from './MyFlipbook/MyFlipbookGuide';
-import LayoutEditorGuide, { layoutEditorGuideSections } from './LayoutEditor/LayoutEditorGuide';
-import PageEditorGuide, { pageEditorGuideSections } from './PageEditor/PageEditorGuide';
-import ThreeDEditorGuide, { threeDEditorGuideSections } from './3DEditor/3DEditorGuide';
-import ProfileGuide, { profileGuideSections } from './Profile/ProfileGuide';
-import SettingsGuide, { settingsGuideSections } from './SettingsGuide/SettingsGuide';
 
 export default function Guide() {
   const navigate = useNavigate();
 
   // Navigation states
-  const [activeNav, setActiveNav] = useState('Home');
-  const [selectedSubItem, setSelectedSubItem] = useState('home-overview');
+  const [activeNav, setActiveNav] = useState('Get Started');
+  const [selectedSubItem, setSelectedSubItem] = useState('get-started-auth');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchContainerRef = useRef(null);
 
   // Accordion state tracker: single active open section at a time
-  const [openSectionId, setOpenSectionId] = useState('home-main');
+  const [openSectionId, setOpenSectionId] = useState('get-started-main');
 
   // Dropdown states
   const [isQuickNavOpen, setIsQuickNavOpen] = useState(false);
@@ -62,66 +61,62 @@ export default function Guide() {
   }, []);
 
   const toggleSection = (sectionId, defaultItemId) => {
-    if (openSectionId === sectionId) {
-      setOpenSectionId(null);
-    } else {
-      setOpenSectionId(sectionId);
-      if (defaultItemId) {
-        setSelectedSubItem(defaultItemId);
-      }
+    setOpenSectionId(sectionId);
+    if (defaultItemId) {
+      setSelectedSubItem(defaultItemId);
     }
   };
 
   // Left primary navigation items
   const primaryNavItems = [
-    { id: 'Home', label: 'Home', icon: Home, path: '/', defaultSubItem: 'home-overview' },
-    { id: 'Explore', label: 'Explore', icon: Compass, path: '/explore', defaultSubItem: 'explore-books-search' },
-    { id: 'Convert', label: 'Converter', icon: RefreshCw, path: '/converter', defaultSubItem: 'converter-image-overview' },
-    { id: 'My FlipBook', label: 'My FlipBook', icon: BookOpen, path: '/my-flipbooks', defaultSubItem: 'create-flipbook' },
-    { id: 'Layout Editor', label: 'Layout Editor', icon: Sliders, path: '/templates', defaultSubItem: 'background' },
-    { id: 'Page Editor', label: 'Page Editor', icon: FileEdit, path: '/my-flipbooks', defaultSubItem: 'manage-pages' },
-    { id: '3D Editor', label: '3D Editor', icon: Box, path: '/converter', defaultSubItem: '3d-model-tree' },
-    { id: 'Profile', label: 'Profile', icon: User, path: '/overview', defaultSubItem: 'profile-type-individual' },
-    { id: 'Settings', label: 'Settings', icon: Settings, path: '/settings', defaultSubItem: 'settings-account-overview' },
+    { id: 'Get Started', label: 'Get Started', icon: Rocket, path: '/login', defaultSubItem: 'get-started-auth' },
+    { id: 'Profile & Account', label: 'Profile & Account', icon: UserCheck, path: '/overview', defaultSubItem: 'profile-overview-setup' },
+    { id: 'Flipbook', label: 'Flipbook', icon: BookOpen, path: '/my-flipbooks', defaultSubItem: 'flipbook-file-create' },
+    { id: 'Customization', label: 'Customization', icon: Sliders, path: '/templates', defaultSubItem: 'custom-bg-theme-layouts' },
+    { id: 'Page Editor', label: 'Page Editor', icon: FileEdit, path: '/my-flipbooks', defaultSubItem: 'page-editor-settings' },
+    { id: '3D Studio Editor', label: '3D Studio Editor', icon: Box, path: '/converter', defaultSubItem: '3d-studio-create-upload' },
+    { id: '3D Request Page', label: '3D Request Page', icon: HelpCircle, path: '/converter', defaultSubItem: '3d-request-page-overview' },
+    { id: 'Forum', label: 'Forum', icon: MessageSquare, path: '/forum', defaultSubItem: 'forum-discussions-overview' },
+    { id: 'Explore', label: 'Explore', icon: Compass, path: '/explore', defaultSubItem: 'explore-books-overview' },
   ];
 
   // Map each primary tab to its sub-sections and component
   const navContentConfig = {
-    'Home': {
-      sections: homeGuideSections,
-      component: HomeGuide
+    'Get Started': {
+      sections: getStartedGuideSections,
+      component: GetStartedGuide
+    },
+    'Profile & Account': {
+      sections: profileAccountGuideSections,
+      component: ProfileAccountGuide
+    },
+    'Flipbook': {
+      sections: flipbookGuideSections,
+      component: FlipbookGuide
+    },
+    'Customization': {
+      sections: customizationGuideSections,
+      component: CustomizationGuide
+    },
+    'Page Editor': {
+      sections: pageEditorSections,
+      component: PageEditorGuide
+    },
+    '3D Studio Editor': {
+      sections: threeDStudioEditorSections,
+      component: ThreeDStudioEditorGuide
+    },
+    '3D Request Page': {
+      sections: threeDRequestGuideSections,
+      component: ThreeDRequestGuide
+    },
+    'Forum': {
+      sections: forumGuideSections,
+      component: ForumGuide
     },
     'Explore': {
       sections: exploreGuideSections,
       component: ExploreGuide
-    },
-    'Convert': {
-      sections: converterGuideSections,
-      component: ConverterGuide
-    },
-    'My FlipBook': {
-      sections: myFlipbookGuideSections,
-      component: MyFlipbookGuide
-    },
-    'Layout Editor': {
-      sections: layoutEditorGuideSections,
-      component: LayoutEditorGuide
-    },
-    'Page Editor': {
-      sections: pageEditorGuideSections,
-      component: PageEditorGuide
-    },
-    '3D Editor': {
-      sections: threeDEditorGuideSections,
-      component: ThreeDEditorGuide
-    },
-    'Profile': {
-      sections: profileGuideSections,
-      component: ProfileGuide
-    },
-    'Settings': {
-      sections: settingsGuideSections,
-      component: SettingsGuide
     }
   };
 
@@ -243,19 +238,25 @@ export default function Guide() {
         >
           <div className="space-y-[1.4vh]">
             {currentSections.map((section) => {
+              const hasMultipleItems = (section.items?.length || 0) > 1;
+              const hasActiveSubItem = section.items?.some((i) => i.id === selectedSubItem);
               const isOpen = openSectionId === section.id;
-              const hasActiveSubItem = section.items.some((i) => i.id === selectedSubItem);
               const isSectionActive = isOpen || hasActiveSubItem;
               const firstItemId = section.items?.[0]?.id;
 
               return (
                 <div key={section.id} className="text-[0.85vw]">
-                  {/* Section Header */}
+                  {/* Section Item Button */}
                   <button
                     type="button"
-                    onClick={() => toggleSection(section.id, firstItemId)}
-                    className={`w-full flex items-center justify-between px-[0.6vw] py-[0.7vh] rounded-[0.4vw] transition-colors group ${
-                      isSectionActive ? 'text-[#EC5137]' : 'text--gray-600 hover:text-black hover:bg-gray-50'
+                    onClick={() => {
+                      setOpenSectionId(section.id);
+                      if (firstItemId) setSelectedSubItem(firstItemId);
+                    }}
+                    className={`w-full flex items-center justify-between px-[0.6vw] py-[0.7vh] rounded-[0.4vw] transition-colors group cursor-pointer ${
+                      isSectionActive
+                        ? 'text-[#EC5137] bg-[#EC5137]/10 font-semibold'
+                        : 'text-gray-600 hover:text-black hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center gap-[0.5vw] font-semibold text-[0.85vw]">
@@ -266,23 +267,27 @@ export default function Guide() {
                         {section.title}
                       </span>
                     </div>
-                    {isOpen ? (
-                      <ChevronUp
-                        className={`w-[0.8vw] h-[0.8vw] shrink-0 ${
-                          isSectionActive ? 'text-[#EC5137]' : 'text-gray-400'
-                        }`}
-                      />
-                    ) : (
-                      <ChevronDown
-                        className={`w-[0.8vw] h-[0.8vw] shrink-0 ${
-                          isSectionActive ? 'text-[#EC5137]' : 'text-gray-400'
-                        }`}
-                      />
+
+                    {/* Only show expand/collapse chevron if there are multiple sub items */}
+                    {hasMultipleItems && (
+                      isOpen ? (
+                        <ChevronUp
+                          className={`w-[0.8vw] h-[0.8vw] shrink-0 ${
+                            isSectionActive ? 'text-[#EC5137]' : 'text-gray-400'
+                          }`}
+                        />
+                      ) : (
+                        <ChevronDown
+                          className={`w-[0.8vw] h-[0.8vw] shrink-0 ${
+                            isSectionActive ? 'text-[#EC5137]' : 'text-gray-400'
+                          }`}
+                        />
+                      )
                     )}
                   </button>
 
-                  {/* Sub items */}
-                  {isOpen && (
+                  {/* Sub items dropdown only rendered when multiple items exist */}
+                  {hasMultipleItems && isOpen && (
                     <div className="mt-[0.3vh] ml-[0.9vw] pl-[0.7vw] border-l border-gray-200 space-y-[0.3vh]">
                       {section.items.map((subItem, itemIdx) => {
                         const isSelected = selectedSubItem === subItem.id;
@@ -484,9 +489,9 @@ export default function Guide() {
             <button
               type="button"
               onClick={() => {
-                setActiveNav('Home');
-                setOpenSectionId('help-main');
-                setSelectedSubItem('help-overview');
+                setActiveNav('Profile & Account');
+                setOpenSectionId('support-section');
+                setSelectedSubItem('support-help-tickets');
               }}
               className="flex items-center gap-[0.35vw] px-[0.75vw] py-[0.45vw] rounded-[0.45vw] border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[0.78vw] font-medium shadow-2xs transition-all cursor-pointer"
             >

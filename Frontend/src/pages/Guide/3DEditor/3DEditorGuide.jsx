@@ -1,38 +1,28 @@
 import React from 'react';
-import ThreeDModelHierarchy, { threeDModelHierarchySections } from './ThreeDModelHierarchy';
-import ThreeDMaterialsTextures, { threeDMaterialsTexturesSections } from './ThreeDMaterialsTextures';
-import ThreeDLightingEnvironment, { threeDLightingEnvironmentSections } from './ThreeDLightingEnvironment';
-import ThreeDCameraFraming, { threeDCameraFramingSections } from './ThreeDCameraFraming';
-import ThreeDHotspotsAnimation, { threeDHotspotsAnimationSections } from './ThreeDHotspotsAnimation';
-import ThreeDCanvasExport, { threeDCanvasExportSections } from './ThreeDCanvasExport';
+import ThreeDStudioCreateUpload, { threeDStudioCreateUploadSections } from './ThreeDStudioCreateUpload';
+import ThreeDStudioMaterialTexture, { threeDStudioMaterialTextureSections } from './ThreeDStudioMaterialTexture';
+import ThreeDStudioLightingEnvironments, { threeDStudioLightingEnvironmentsSections } from './ThreeDStudioLightingEnvironments';
+import ThreeDStudioRenderSaveExport, { threeDStudioRenderSaveExportSections } from './ThreeDStudioRenderSaveExport';
 
-export const threeDEditorGuideSections = [
-  ...threeDModelHierarchySections,
-  ...threeDMaterialsTexturesSections,
-  ...threeDLightingEnvironmentSections,
-  ...threeDCameraFramingSections,
-  ...threeDHotspotsAnimationSections,
-  ...threeDCanvasExportSections
+export const threeDStudioEditorSections = [
+  ...threeDStudioCreateUploadSections,
+  ...threeDStudioMaterialTextureSections,
+  ...threeDStudioLightingEnvironmentsSections,
+  ...threeDStudioRenderSaveExportSections
 ];
 
-export default function ThreeDEditorGuide({ selectedSubItem }) {
-  if (threeDModelHierarchySections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDModelHierarchy selectedSubItem={selectedSubItem} />;
+export default function ThreeDStudioEditorGuide({ selectedSubItem }) {
+  if (threeDStudioCreateUploadSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
+    return <ThreeDStudioCreateUpload selectedSubItem={selectedSubItem} />;
   }
-  if (threeDMaterialsTexturesSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDMaterialsTextures selectedSubItem={selectedSubItem} />;
+  if (threeDStudioMaterialTextureSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
+    return <ThreeDStudioMaterialTexture selectedSubItem={selectedSubItem} />;
   }
-  if (threeDLightingEnvironmentSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDLightingEnvironment selectedSubItem={selectedSubItem} />;
+  if (threeDStudioLightingEnvironmentsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
+    return <ThreeDStudioLightingEnvironments selectedSubItem={selectedSubItem} />;
   }
-  if (threeDCameraFramingSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDCameraFraming selectedSubItem={selectedSubItem} />;
-  }
-  if (threeDHotspotsAnimationSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDHotspotsAnimation selectedSubItem={selectedSubItem} />;
-  }
-  if (threeDCanvasExportSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDCanvasExport selectedSubItem={selectedSubItem} />;
+  if (threeDStudioRenderSaveExportSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
+    return <ThreeDStudioRenderSaveExport selectedSubItem={selectedSubItem} />;
   }
   return null;
 }

@@ -11,6 +11,7 @@ import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
 import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import { loadWindowFromIDB } from '../../utils/pageWindowStore';
 import { queryClient } from '../../queryClient';
 import {
   createDefaultLogoSettings,
@@ -201,33 +202,47 @@ const CustomizedEditor = () => {
 
     const flushPending = () => {
       if (pendingUpdates.length === 0) return;
+
+      // Postpone React state update if user is in the middle of flipping a page to keep 60fps
+      if (typeof document !== 'undefined' && document.querySelector('.fbe-is-flipping')) {
+        if (batchTimer) clearTimeout(batchTimer);
+        batchTimer = setTimeout(flushPending, 250);
+        return;
+      }
+
       const updates = [...pendingUpdates];
       pendingUpdates = [];
 
       setPages(prevPages => {
         if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
         let changed = false;
-        const next = [...prevPages];
+        let next = [...prevPages];
 
         for (const update of updates) {
-          const { pageNumber, resolvedHtml } = update;
-          // O(1) direct index lookup
-          const targetIdx = (typeof pageNumber === 'number' && pageNumber >= 1 && pageNumber <= next.length)
-            ? (pageNumber - 1)
-            : next.findIndex((p, i) => (
-                p.pageNumber === pageNumber || 
-                p.name === `Page ${pageNumber}` || 
-                (p.id !== undefined && p.id === pageNumber - 1) || 
-                i === pageNumber - 1
-              ));
-          if (targetIdx === -1 || targetIdx >= next.length) continue;
-          const current = next[targetIdx];
-          if (current.html === resolvedHtml && !current.isPlaceholder) continue;
+          const { pageNumber, rawHtml } = update;
+          if (typeof pageNumber !== 'number' || pageNumber < 1) continue;
+          const targetIdx = pageNumber - 1;
 
+          // Extend array if targetIdx exceeds current length to ensure pages are never lost or skipped
+          while (next.length <= targetIdx) {
+            next.push({
+              id: next.length,
+              pageNumber: next.length + 1,
+              name: `Page ${next.length + 1}`,
+              html: '',
+              content: '',
+              isHidden: false,
+              isPlaceholder: true
+            });
+            changed = true;
+          }
+
+          const current = next[targetIdx];
+          if (current.html === rawHtml && !current.isPlaceholder) continue;
           next[targetIdx] = {
             ...current,
-            html: resolvedHtml,
-            content: resolvedHtml,
+            html: rawHtml,
+            content: rawHtml,
             isPlaceholder: false
           };
           changed = true;
@@ -242,11 +257,10 @@ const CustomizedEditor = () => {
       if (!eventVId || (v_id && eventVId !== v_id)) return;
       const rawHtml = html || content || '';
       if (!rawHtml) return;
-      const resolvedHtml = normalizeSvgMarkup(rawHtml);
 
-      pendingUpdates.push({ pageNumber, resolvedHtml });
+      pendingUpdates.push({ pageNumber, rawHtml });
       if (batchTimer) clearTimeout(batchTimer);
-      batchTimer = setTimeout(flushPending, 120);
+      batchTimer = setTimeout(flushPending, 500);
     };
 
     window.addEventListener('flipbook-page-extracted', handlePageExtracted);
@@ -255,6 +269,43 @@ const CustomizedEditor = () => {
       window.removeEventListener('flipbook-page-extracted', handlePageExtracted);
     };
   }, [v_id]);
+
+  // Virtual Sliding Window: dynamically hydrates active spread ± 2 buffer pages from IndexedDB
+  useEffect(() => {
+    if (!v_id || !pages || pages.length === 0) return;
+    const centerIdx = Math.max(0, targetPage);
+    const totalCount = pages.length;
+
+    let isMounted = true;
+    loadWindowFromIDB(v_id, centerIdx, totalCount).then(({ pages: windowPages }) => {
+      if (!isMounted || !windowPages || Object.keys(windowPages).length === 0) return;
+
+      setPages(prevPages => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        let changed = false;
+        const next = [...prevPages];
+
+        for (const [strIdx, pageData] of Object.entries(windowPages)) {
+          const idx = Number(strIdx);
+          if (idx < 0 || idx >= next.length) continue;
+          const current = next[idx];
+          const freshHtml = pageData.html || pageData.content || '';
+          if (freshHtml && current.html !== freshHtml) {
+            next[idx] = {
+              ...current,
+              html: freshHtml,
+              content: freshHtml,
+              isPlaceholder: false
+            };
+            changed = true;
+          }
+        }
+        return changed ? next : prevPages;
+      });
+    }).catch(() => {});
+
+    return () => { isMounted = false; };
+  }, [v_id, targetPage, pages.length]);
 
   const profilePreviewForcedRef = useRef(false);
   const hasFetchedRef = useRef(null);
@@ -291,7 +342,8 @@ const CustomizedEditor = () => {
           location.state?.folder_v_id ||
           (isFolId(folder) ? folder : null);
 
-        const targetFolderParam = activeFolderVId || folder;
+        const rawTargetFolder = activeFolderVId || folder;
+        const targetFolderParam = (typeof rawTargetFolder === 'string' ? rawTargetFolder.replace(/^fol_/, '') : rawTargetFolder) || 'default';
         const targetPath = targetPage > 0
           ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
           : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;

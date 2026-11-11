@@ -330,7 +330,8 @@ function FlipbookCard({
                 ? book.pages
                 : book.pagesCount || (Array.isArray(book.pagesList) ? book.pagesList.length : 1)) || 1;
         const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
-        const folderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(folderVId)}/${identifier}`,
@@ -362,7 +363,8 @@ function FlipbookCard({
             : undefined;
 
         const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
-        const folderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(folderVId)}/${identifier}`, {
             state: {

@@ -13,6 +13,7 @@ import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
 import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
+import { saveAllPagesToIDB } from '../utils/pageWindowStore';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
 import { backgroundExtractionManager } from '../utils/backgroundExtractionManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
@@ -564,7 +565,8 @@ export default function MyFlipbooks() {
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
             const matchedFolder = folders.find(f => (f.name || '').trim().toLowerCase() === targetFolder.trim().toLowerCase() || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const rawTargetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const targetFolderVId = String(rawTargetFolderVId).replace(/^fol_/, '');
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -726,6 +728,7 @@ export default function MyFlipbooks() {
             });
             const v_id = createRes.data?.v_id || cryptoVId;
             createdFlipbookVIdRef.current = v_id;
+            saveAllPagesToIDB(v_id, allPages).catch(e => console.warn('[MyFlipbooks] saveAllPagesToIDB error:', e));
 
             if (isUploadCancelledRef.current) {
                 flipbookApi.deleteBook(v_id).catch(() => {});

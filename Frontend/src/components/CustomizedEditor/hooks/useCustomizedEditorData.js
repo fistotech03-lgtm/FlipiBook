@@ -79,6 +79,7 @@ export const useCustomizedEditorData = ({
   }, [isDataLoadingComplete, loadingProgress, isLoading, hasInMemoryPages]);
 
   const initialLoadRef = useRef(true);
+  const fetchedBookVIdRef = useRef(null);
 
   // Initial load management
   useEffect(() => {
@@ -94,6 +95,10 @@ export const useCustomizedEditorData = ({
 
   // Load Flipbook Data
   useEffect(() => {
+    if (!v_id) return;
+    if (fetchedBookVIdRef.current === v_id) return; // Prevent repeated fetches for the same book
+    fetchedBookVIdRef.current = v_id;
+
     const fetchBook = async () => {
       const userEmail = user?.emailId || user?.email;
 
@@ -167,7 +172,18 @@ export const useCustomizedEditorData = ({
             const actualFolder = (folder && folder !== 'Recent Book') ? folder : 'My_Flipbooks';
             const autoBaseUrl = getSupabaseBaseUrl(userFolder, actualFolder, data.pageName || bookName);
 
-            setPages(data.pages.map((p, i) => {
+            const sortedDbPages = [...data.pages].sort((a, b) => {
+              const numA = (typeof a.pageNumber === 'number' && a.pageNumber >= 1)
+                ? a.pageNumber
+                : (parseInt(String(a.name || '').replace(/\D+/g, ''), 10) || 0);
+              const numB = (typeof b.pageNumber === 'number' && b.pageNumber >= 1)
+                ? b.pageNumber
+                : (parseInt(String(b.name || '').replace(/\D+/g, ''), 10) || 0);
+              return numA - numB;
+            });
+
+            setPages(sortedDbPages.map((p, i) => {
+              const pageNum = (typeof p.pageNumber === 'number' && p.pageNumber >= 1) ? p.pageNumber : (i + 1);
               let rawHTML = p.html || p.content || '';
               if (autoBaseUrl) {
                 if (rawHTML.includes('../assets/')) {
@@ -184,11 +200,13 @@ export const useCustomizedEditorData = ({
               rawHTML = rewriteHtmlUploads(rawHTML);
 
               return {
-                id: p.id || i,
-                name: p.name || `Page ${i + 1}`,
+                id: p.id !== undefined ? p.id : i,
+                pageNumber: pageNum,
+                name: p.name || `Page ${pageNum}`,
                 html: rawHTML,
                 content: rawHTML,
-                isHidden: p.isHidden || p.hide === 1
+                isHidden: p.isHidden || p.hide === 1,
+                isPlaceholder: !rawHTML || rawHTML.trim() === ''
               };
             }));
             if (data.pageName && (!currentBook?.flipbookName || currentBook?.flipbookName === 'Name of the Book')) {
@@ -241,18 +259,20 @@ export const useCustomizedEditorData = ({
               if (lastLoadedBookNameRef) lastLoadedBookNameRef.current = fetchedName;
             }
 
-            if (res.data.pages) {
-              const mappedPages = await Promise.all(res.data.pages.map(async (p, i) => {
+            if (res.data.pages && Array.isArray(res.data.pages)) {
+              const mappedEntries = await Promise.all(res.data.pages.map(async (p, i) => {
+                const pageNum = (typeof p.pageNumber === 'number' && p.pageNumber >= 1) ? p.pageNumber : (i + 1);
+                const slotIdx = pageNum - 1;
                 let rawHTML = p.html || p.content || '';
 
                 if (!rawHTML || typeof rawHTML !== 'string' || rawHTML.trim() === '') {
-                  const cachedPage = cached?.pages?.[i] || location?.state?.pages?.[i];
+                  const cachedPage = cached?.pages?.[slotIdx] || location?.state?.pages?.[slotIdx];
                   if (cachedPage && (cachedPage.html || cachedPage.content)) {
                     rawHTML = cachedPage.html || cachedPage.content;
                   } else {
                     const metaW = res.data.meta?.width || res.data.settings?.width || location.state?.width || currentBook?.width || 210;
                     const metaH = res.data.meta?.height || res.data.settings?.height || location.state?.height || currentBook?.height || 297;
-                    const defaultData = createDefaultPageData(p.name || `Page ${i + 1}`, metaW, metaH);
+                    const defaultData = createDefaultPageData(p.name || `Page ${pageNum}`, metaW, metaH);
                     rawHTML = defaultData;
                   }
                 }
@@ -273,29 +293,57 @@ export const useCustomizedEditorData = ({
                 rawHTML = rewriteHtmlUploads(rawHTML);
 
                 return {
-                  id: p.id || i,
-                  content: rawHTML,
-                  name: p.name || `Page ${i + 1}`,
-                  html: rawHTML,
-                  isHidden: p.hide === 1 || p.isHidden
+                  slotIdx,
+                  page: {
+                    id: p.id !== undefined ? p.id : slotIdx,
+                    pageNumber: pageNum,
+                    content: rawHTML,
+                    name: p.name || `Page ${pageNum}`,
+                    html: rawHTML,
+                    isHidden: p.hide === 1 || p.isHidden,
+                    isPlaceholder: false
+                  }
                 };
               }));
+
               setPages(prevPages => {
-                if (prevPages && Array.isArray(prevPages) && prevPages.length > 0) {
-                  return mappedPages.map((mp, idx) => {
-                    const prevP = prevPages[idx];
-                    const isBlank = !mp.html || !mp.content || mp.html.includes('createDefaultPageData') || mp.html.includes('rect width="100%" height="100%" fill="#fff"');
-                    if (isBlank && prevP && (prevP.html || prevP.content) && !prevP.html?.includes('createDefaultPageData')) {
-                      return {
-                        ...mp,
-                        html: prevP.html || prevP.content,
-                        content: prevP.content || prevP.html
-                      };
+                const maxPageNumFromRes = Math.max(0, ...res.data.pages.map(p => Number(p.pageNumber) || 0));
+                const targetLen = Math.max(
+                  Number(location?.state?.pageCount) || 0,
+                  Number(res.data.meta?.pageCount) || 0,
+                  Number(res.data.pageCount) || 0,
+                  prevPages?.length || 0,
+                  maxPageNumFromRes,
+                  res.data.pages.length
+                );
+
+                const next = Array.from({ length: targetLen }, (_, idx) => {
+                  const existing = prevPages?.[idx];
+                  if (existing) return { ...existing };
+                  return {
+                    id: idx,
+                    pageNumber: idx + 1,
+                    name: `Page ${idx + 1}`,
+                    html: '',
+                    content: '',
+                    isHidden: false,
+                    isPlaceholder: true
+                  };
+                });
+
+                for (const { slotIdx, page } of mappedEntries) {
+                  if (slotIdx >= 0 && slotIdx < next.length) {
+                    const current = next[slotIdx];
+                    const isBlank = !page.html || page.html.includes('createDefaultPageData') || page.html.includes('rect width="100%" height="100%" fill="#fff"');
+                    if (isBlank && current && current.html && !current.isPlaceholder && !current.html.includes('createDefaultPageData')) {
+                      next[slotIdx] = { ...page, html: current.html, content: current.content || current.html, isPlaceholder: false };
+                    } else {
+                      next[slotIdx] = page;
                     }
-                    return mp;
-                  });
+                  }
                 }
-                return mappedPages;
+
+                return next;
               });
             }
 
@@ -578,7 +626,7 @@ export const useCustomizedEditorData = ({
       }
     };
     fetchBook();
-  }, [v_id, folder, user]);
+  }, [v_id, folder, user?.userId || user?._id || user?.id || user?.email]);
 
   return {
     isLoading,

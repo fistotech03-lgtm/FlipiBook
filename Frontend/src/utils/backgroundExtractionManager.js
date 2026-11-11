@@ -9,6 +9,7 @@
  */
 import { flipbookApi } from '../api/flipbookApi';
 import { saveCustomizedEditorState, savePageEditorState, getCustomizedEditorState, getPageEditorState } from './dbUtils';
+import { savePageToIDB } from './pageWindowStore';
 
 class BackgroundExtractionManager {
   constructor() {
@@ -185,7 +186,8 @@ class BackgroundExtractionManager {
                   }));
                 }
 
-                // Update IndexedDB in background
+                // Update IndexedDB individual page in background
+                savePageToIDB(v_id, taskItem.pageNum - 1, pageData).catch(() => {});
                 this._updateIndexedDbPage(v_id, taskItem.pageNum, svgContent);
               });
 

@@ -203,6 +203,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
       ? String(doc.folder_id)
       : (doc.folder_id || 'default');
   }
+  folderVId = String(folderVId).replace(/^fol_/, '');
 
   const primaryFolder = folderVId;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
@@ -2765,7 +2766,10 @@ exports.getBook = async (req, res) => {
       : candidateDirs;
 
     // 2. Load page data asynchronously in non-blocking parallel to prevent event-loop freezes on 100-page books
-    const populatedPages = await Promise.all((book.pages || []).map(async (p) => {
+    const sortedRawPages = (book.pages || []).slice().sort(
+      (a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0)
+    );
+    const populatedPages = await Promise.all(sortedRawPages.map(async (p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = "";
 
@@ -3278,7 +3282,7 @@ exports.previewBook = async (req, res) => {
     res.status(200).json({
       success: true,
       book: formatBook(book, null, null, folderMap, reverseFolderMap),
-      pages: book.pages || [],
+      pages: (book.pages || []).slice().sort((a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0)),
       html: firstPageHtml,
     });
   } catch (err) {

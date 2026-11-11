@@ -43,7 +43,7 @@ export function useTickets(itemsPerPage = 8) {
         isAdmin: isAdminUser,
         email: isAdminUser ? undefined : email,
         limit: 100
-      });
+      }, currentUser);
 
       if (res && res.success && Array.isArray(res.data)) {
         setTickets(res.data);
@@ -95,12 +95,13 @@ export function useTickets(itemsPerPage = 8) {
     }
   }, [tickets]);
 
-  // Compute counts (Total, Open, Closed)
+  // Compute counts (Total, Open, Waiting for you, Resolved/Closed)
   const counts = useMemo(() => {
     const total = tickets.length;
-    const open = tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length;
-    const closed = tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length;
-    return { total, open, closed };
+    const open = tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved' && t.status !== 'waiting').length;
+    const waiting = tickets.filter(t => t.status === 'waiting' || (t.statusText && t.statusText.toLowerCase().includes('waiting'))).length;
+    const resolved = tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length;
+    return { total, open, waiting, resolved, closed: resolved };
   }, [tickets]);
 
   // Filtered & sorted tickets (chronological, newest first)
@@ -124,10 +125,12 @@ export function useTickets(itemsPerPage = 8) {
         if (!matchesId && !matchesSub && !matchesDesc && !matchesRequester) return false;
       }
 
-      // 2. Status Tab filter
+      // 2. Status Tab filter ('all' | 'open' | 'waiting' | 'resolved' | 'closed')
       if (statusFilter === 'open') {
-        if (ticket.status === 'closed' || ticket.status === 'resolved') return false;
-      } else if (statusFilter === 'closed') {
+        if (ticket.status === 'closed' || ticket.status === 'resolved' || ticket.status === 'waiting') return false;
+      } else if (statusFilter === 'waiting') {
+        if (ticket.status !== 'waiting' && !(ticket.statusText && ticket.statusText.toLowerCase().includes('waiting'))) return false;
+      } else if (statusFilter === 'resolved' || statusFilter === 'closed') {
         if (ticket.status !== 'closed' && ticket.status !== 'resolved') return false;
       }
 

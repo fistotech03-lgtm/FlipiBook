@@ -1,16 +1,16 @@
 import React from 'react';
 import { 
   ArrowLeft, 
-  Reply, 
-  FileText, 
+  Download,
+  MoreVertical,
+  Check,
+  Send,
   Paperclip, 
   Loader2, 
-  Trash2, 
-  Image as ImageIcon, 
-  AlertTriangle, 
-  ShieldCheck, 
-  X 
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import { useTicketDetails } from './hooks';
 import { formatDateTime, formatFileSize } from './utils';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
@@ -22,8 +22,6 @@ export default function TicketDetailsPage() {
     isLoadingTicket,
     isAdminUser,
     currentUser,
-    showReplyForm,
-    setShowReplyForm,
     replyText,
     setReplyText,
     replyAttachments,
@@ -42,8 +40,8 @@ export default function TicketDetailsPage() {
 
   if (isLoadingTicket) {
     return (
-      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center p-[1.5vw] text-center select-none font-sans">
-        <Loader2 className="w-[1.8vw] h-[1.8vw] animate-spin text-[#EC5137] mb-[0.6vw]" />
+      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center p-[2vw] text-center select-none font-sans">
+        <Loader2 className="w-[1.8vw] h-[1.8vw] animate-spin text-[#FF5733] mb-[0.6vw]" />
         <h2 className="text-[0.88vw] font-medium text-gray-800">Loading ticket #{ticketId}...</h2>
       </div>
     );
@@ -51,27 +49,45 @@ export default function TicketDetailsPage() {
 
   if (!currentTicket) {
     return (
-      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center p-[1.5vw] text-center select-none font-sans">
-        <div className="w-[2.8vw] h-[2.8vw] rounded-[0.8vw] bg-orange-50 text-[#EC5137] flex items-center justify-center mb-[0.6vw]">
-          <FileText className="w-[1.4vw] h-[1.4vw]" />
+      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center p-[2vw] text-center select-none font-sans">
+        <div className="w-[3vw] h-[3vw] rounded-[0.8vw] bg-orange-50 text-[#FF5733] flex items-center justify-center mb-[0.8vw]">
+          <FileText className="w-[1.5vw] h-[1.5vw]" />
         </div>
         <h2 className="text-[1.1vw] font-semibold text-gray-800">Ticket not found</h2>
-        <p className="text-[0.74vw] text-gray-500 mt-[0.2vw] max-w-[20vw] font-normal">
+        <p className="text-[0.75vw] text-gray-500 mt-[0.2vw] max-w-[20vw] font-normal">
           Ticket #{ticketId} doesn't exist or may have been deleted.
         </p>
         <button
           type="button"
           onClick={handleBack}
-          className="mt-[0.9vw] px-[1.05vw] py-[0.48vw] text-[0.78vw] font-medium text-white bg-[#EC5137] hover:bg-[#d94229] rounded-[0.5vw] cursor-pointer shadow-xs transition-all active:scale-[0.98]"
+          className="mt-[1vw] px-[1.2vw] py-[0.5vw] text-[0.78vw] font-medium text-white bg-[#FF5733] hover:bg-[#E04D2D] rounded-[0.5vw] cursor-pointer shadow-xs transition-all active:scale-[0.98]"
         >
-          Back to Tickets
+          Back to Requests
         </button>
       </div>
     );
   }
 
   const ticket = currentTicket;
-  const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
+  const isResolved = ticket.status === 'closed' || ticket.status === 'resolved';
+  const isWaiting = ticket.status === 'waiting' || (ticket.statusText && ticket.statusText.toLowerCase().includes('waiting'));
+  
+  let statusBadgeLabel = 'In Progress';
+  let statusBadgeColor = 'bg-[#FF5733] text-white';
+  if (isResolved) {
+    statusBadgeLabel = 'Resolved';
+    statusBadgeColor = 'bg-emerald-600 text-white';
+  } else if (isWaiting) {
+    statusBadgeLabel = 'Waiting for you';
+    statusBadgeColor = 'bg-blue-600 text-white';
+  }
+
+  const ticketIdStr = String(ticket.id).startsWith('#') ? ticket.id : `#FB-${ticket.id}`;
+  const categoryName = ticket.department || ticket.moduleName || 'Technical Issue';
+  const createdDateStr = formatDateTime(ticket.createdAt || ticket.submittedAt);
+  const lastUpdatedStr = formatDateTime(ticket.updatedAt || ticket.lastUpdated || ticket.createdAt || ticket.submittedAt);
+  const requesterName = ticket.requester?.name || currentUser?.name || 'Luffy';
+  const requesterEmail = ticket.requester?.email || currentUser?.email || currentUser?.emailId || 'luffyonepiece@gmail.com';
 
   const allMessages = ticket.messages && ticket.messages.length > 0
     ? ticket.messages
@@ -79,378 +95,394 @@ export default function TicketDetailsPage() {
         {
           id: 'initial',
           sender: 'user',
-          authorName: ticket.requester?.name || 'Requester',
-          badge: 'Authorized User',
-          email: ticket.requester?.email || '',
+          authorName: requesterName,
+          email: requesterEmail,
           timestamp: ticket.submittedAt || ticket.createdAt || 'Earlier',
-          content: ticket.description,
+          content: ticket.description || ticket.subject,
           attachments: ticket.attachments
         }
       ];
 
-  return (
-    <div className="w-full flex flex-col p-[1.5vw] font-sans relative select-none">
-      {/* Top Navigation: Back to Tickets */}
-      <div className="mb-[1.4vw] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-[0.7vw]">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 px-[0.8vw] py-[0.45vw] rounded-[0.5vw] shadow-xs text-[0.78vw] font-medium transition-colors cursor-pointer group active:scale-[0.98]"
-            title="Back to Tickets"
-          >
-            <ArrowLeft className="w-[0.9vw] h-[0.9vw] text-gray-500 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Tickets</span>
-          </button>
-          <span className="text-gray-300">|</span>
-          <span className="text-[0.76vw] text-gray-500 font-medium">
-            Support Tickets &gt; #{ticket.id}
-          </span>
-        </div>
+  // Collect all unique attachments across ticket and replies for the right sidebar
+  const allAttachmentsList = [];
+  if (ticket.attachments && Array.isArray(ticket.attachments)) {
+    allAttachmentsList.push(...ticket.attachments);
+  }
+  allMessages.forEach(m => {
+    if (m.attachments && Array.isArray(m.attachments)) {
+      m.attachments.forEach(att => {
+        const attId = typeof att === 'object' ? (att.url || att.name) : att;
+        if (!allAttachmentsList.some(item => (typeof item === 'object' ? (item.url || item.name) : item) === attId)) {
+          allAttachmentsList.push(att);
+        }
+      });
+    }
+  });
 
-        {/* Reply Action button in header */}
+  return (
+    <div className="w-full flex-1 bg-[#F9F9F9] min-h-full px-[2vw] py-[1.8vw] overflow-y-auto select-none font-sans">
+      {/* Top Breadcrumb Navigation */}
+      <div className="flex items-center gap-[0.4vw] text-[0.74vw] text-gray-400 mb-[1.2vw]">
         <button 
           type="button"
-          onClick={() => setShowReplyForm(!showReplyForm)}
-          className="inline-flex items-center gap-[0.4vw] px-[1.05vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs cursor-pointer shrink-0"
+          onClick={handleBack}
+          className="hover:text-gray-700 transition-colors cursor-pointer"
         >
-          <Reply className="w-[0.85vw] h-[0.85vw]" />
-          <span>{showReplyForm ? 'Close Reply' : 'Reply to Ticket'}</span>
+          Help & Support
         </button>
+        <span>&gt;</span>
+        <span className="text-[#FF5733] font-medium">New{ticketIdStr.toLowerCase()}</span>
       </div>
 
-      {/* Ticket Subject Header Banner */}
-      <div className="mb-[1.5vw]">
-        <div className="flex items-center gap-[0.6vw]">
-          <span className="font-mono text-[0.85vw] font-medium text-gray-400">
-            #{ticket.id}
-          </span>
-          <h1 className="text-[1.25vw] font-semibold text-gray-800 tracking-tight leading-tight">
-            {ticket.subject}
-          </h1>
-          {isClosed ? (
-            <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
-              Closed
-            </span>
-          ) : (
-            <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
-              Open
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Main 2-Column Content Grid matching Screenshot 2 */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-[1.6vw] items-start">
+        {/* Left / Center Section: Messages and Chat Feed */}
+        <div className="xl:col-span-9 bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.8vw] flex flex-col justify-between min-h-[75vh]">
+          {/* Top Banner Row inside Card */}
+          <div>
+            {/* Top Navigation Row: Back to Requests & Status Badge */}
+            <div className="flex items-center justify-between mb-[0.6vw]">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 text-[0.8vw] font-medium transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-[0.9vw] h-[0.9vw]" />
+                <span>Back to Requests</span>
+              </button>
 
-      {/* Main Content 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-[1.5vw] items-start">
-        {/* Left Column (Ticket Info Sidebar) */}
-        <div className="lg:col-span-4 xl:col-span-4 space-y-[1.2vw]">
-          <div className="w-full bg-white rounded-[1vw] border border-gray-200 p-[1.5vw] shadow-sm">
-            {/* Header */}
-            <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
-              <FileText className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-              <h2 className="text-[0.98vw] font-medium text-gray-800">
-                Ticket Information
-              </h2>
-            </div>
-            <p className="text-[0.72vw] text-gray-500 mb-[1.2vw] pl-[1.65vw] font-normal">
-              Key ticket details and resolution status
-            </p>
-
-            {/* Inner Gray Sub-Container */}
-            <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] space-y-[0.75vw] shadow-xs">
-              <div>
-                <span className="text-[0.7vw] text-gray-400 font-normal">Requestor</span>
-                <div className="mt-[0.1vw] font-medium text-gray-800 text-[0.82vw]">
-                  {ticket.requester?.name || 'Authorized User'}
+              <div className="flex items-center gap-[0.8vw]">
+                {/* Status Pill */}
+                <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.3vw] rounded-full text-[0.74vw] font-semibold shadow-xs bg-[#FF5733] text-white">
+                  <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-white animate-pulse" />
+                  <span>{statusBadgeLabel}</span>
                 </div>
-              </div>
 
-              <div>
-                <span className="text-[0.7vw] text-gray-400 font-normal">Department / Module</span>
-                <div className="mt-[0.1vw] font-medium text-gray-800 text-[0.82vw]">
-                  {ticket.department || ticket.moduleName || 'IDC Support'}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[0.7vw] text-gray-400 font-normal">Submitted</span>
-                <div className="mt-[0.1vw] text-gray-700 font-normal text-[0.78vw]">
-                  {formatDateTime(ticket.createdAt || ticket.submittedAt)}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[0.7vw] text-gray-400 font-normal">Last Updated</span>
-                <div className="mt-[0.1vw] text-gray-700 font-normal text-[0.78vw]">
-                  {formatDateTime(ticket.updatedAt || ticket.lastUpdated || ticket.createdAt || ticket.submittedAt)}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[0.7vw] text-gray-400 font-normal">Status</span>
-                <div className="mt-[0.2vw]">
-                  {isClosed ? (
-                    <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
-                      Closed
-                    </span>
-                  ) : (
-                    <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
-                      Open
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="pt-[0.6vw] flex items-center gap-[0.55vw]">
-                <button 
-                  type="button"
-                  onClick={() => setShowReplyForm(true)}
-                  className="flex-1 py-[0.48vw] px-[0.75vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] flex items-center justify-center gap-[0.4vw] transition-all cursor-pointer shadow-xs"
-                >
-                  <Reply className="w-[0.8vw] h-[0.8vw]" />
-                  <span>Reply</span>
-                </button>
-
-                {isClosed ? (
-                  <button
-                    type="button"
-                    onClick={handleToggleStatus}
-                    className="flex-1 py-[0.48vw] px-[0.75vw] rounded-[0.5vw] bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium text-[0.78vw] flex items-center justify-center gap-[0.35vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
-                  >
-                    <span>Reopen</span>
-                  </button>
-                ) : (
-                  <button 
-                    type="button"
-                    onClick={() => setShowCloseConfirm(true)}
-                    className="flex-1 py-[0.48vw] px-[0.75vw] rounded-[0.5vw] bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium text-[0.78vw] flex items-center justify-center gap-[0.35vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
-                  >
-                    <X className="w-[0.8vw] h-[0.8vw]" />
-                    <span>Close</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column (Ticket Messages & Replies) */}
-        <div className="lg:col-span-8 xl:col-span-8 space-y-[1.2vw]">
-          {/* Conditional Inline Reply Box */}
-          {showReplyForm && (
-            <form onSubmit={handleAddReply} className="w-full bg-white rounded-[1vw] border border-gray-200 p-[1.5vw] shadow-sm space-y-[0.85vw] animate-in fade-in">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-[0.5vw]">
-                  <span className="text-[0.85vw] font-medium text-gray-800">
-                    {isAdminUser ? 'Post Staff / Admin Reply' : 'Post Reply to Staff'}
-                  </span>
-                  {isAdminUser && (
-                    <span className="inline-flex items-center gap-[0.25vw] px-[0.5vw] py-[0.1vw] rounded text-[0.66vw] font-medium bg-amber-100 text-amber-900 border border-amber-300">
-                      <ShieldCheck className="w-[0.75vw] h-[0.75vw] text-amber-700" />
-                      Staff Mode
-                    </span>
-                  )}
-                </div>
                 <button 
                   type="button" 
-                  onClick={() => setShowReplyForm(false)}
-                  className="text-gray-400 hover:text-gray-600 text-[0.74vw] font-medium cursor-pointer"
+                  onClick={() => setShowCloseConfirm(true)}
+                  className="p-[0.35vw] text-gray-400 hover:text-gray-600 rounded-[0.4vw] hover:bg-gray-50 transition-colors"
+                  title="Ticket options"
                 >
-                  Cancel
+                  <MoreVertical className="w-[1vw] h-[1vw]" />
                 </button>
               </div>
+            </div>
 
+            {/* Ticket Title Header with Message Icon (Just below Back to Requests, above the horizontal line) */}
+            <div className="flex items-start gap-[0.65vw] pb-[0.8vw] mb-[1.2vw] border-b border-gray-100">
+              <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 mt-[0.1vw]">
+                <Icon icon="lucide:message-square" className="w-[1vw] h-[1vw]" />
+              </div>
+              <div>
+                <h1 className="text-[1.1vw] font-bold text-gray-900 leading-snug">
+                  {ticket.subject}
+                </h1>
+                <p className="text-[0.7vw] text-gray-400 mt-[0.15vw] font-normal">
+                  {ticketIdStr} Created on {createdDateStr}
+                </p>
+              </div>
+            </div>
+
+            {/* Messages Thread: User bubbles on right, Admin/Support bubbles on left */}
+            <div className="space-y-[1.6vw] mb-[2vw]">
+              {allMessages.map((msg, index) => {
+                const isAgent = msg.sender === 'agent' || msg.sender === 'staff' || msg.sender === 'admin';
+                const messageAttachments = msg.attachments || (index === 0 ? ticket.attachments : null);
+                const timeStr = formatDateTime(msg.createdAt || msg.timestamp);
+
+                if (isAgent) {
+                  {/* Support / Admin Message on the Left */}
+                  return (
+                    <div key={msg.id || index} className="flex items-start gap-[0.8vw] max-w-[85%]">
+                      {/* Red Logo Avatar */}
+                      <div className="w-[2.2vw] h-[2.2vw] rounded-[0.45vw] bg-[#FF5733] flex items-center justify-center text-white font-bold text-[0.8vw] flex-shrink-0 shadow-xs">
+                        F
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-[0.6vw] text-[0.75vw] text-gray-400 mb-[0.4vw]">
+                          <span className="font-semibold text-gray-800">Flipibook Admin</span>
+                          <span>{timeStr}</span>
+                        </div>
+                        <div className="bg-[#FFF5F3] border border-red-50 text-gray-800 text-[0.8vw] p-[1vw] rounded-[0.75vw] rounded-tl-none leading-relaxed font-normal whitespace-pre-line shadow-2xs">
+                          {msg.content}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                {/* User Message on the Right */}
+                return (
+                  <div key={msg.id || index} className="flex flex-col items-end">
+                    <div className="flex items-center gap-[0.5vw] text-[0.75vw] text-gray-400 mb-[0.4vw]">
+                      <span>{timeStr}</span>
+                      <span className="font-semibold text-gray-800">{msg.authorName || requesterName}</span>
+                      {/* User Avatar */}
+                      <div className="w-[1.6vw] h-[1.6vw] rounded-full overflow-hidden bg-gray-200 border border-gray-100 flex-shrink-0">
+                        {currentUser?.picture ? (
+                          <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-emerald-700 text-white text-[0.65vw] font-bold">
+                            {(msg.authorName || requesterName)[0]?.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-w-[75%] bg-[#F5F5F7] text-gray-800 text-[0.8vw] p-[1vw] rounded-[0.75vw] rounded-tr-none leading-relaxed font-normal whitespace-pre-line shadow-2xs mb-[0.6vw]">
+                      {msg.content}
+                    </div>
+
+                    {/* Inline Attachment Cards below message bubble */}
+                    {messageAttachments && messageAttachments.length > 0 && (
+                      <div className="flex flex-wrap justify-end gap-[0.6vw] max-w-[75%]">
+                        {messageAttachments.map((att, attIdx) => {
+                          const isObj = typeof att === 'object';
+                          const name = isObj ? att.name : att;
+                          const url = isObj ? att.url : (att.dataUrl || null);
+                          const size = isObj ? formatFileSize(att.size) : null;
+                          const resolvedUrl = url ? resolveUploadsPath(url) : null;
+                          const isPdf = name?.toLowerCase().endsWith('.pdf');
+
+                          return (
+                            <div 
+                              key={attIdx}
+                              className="flex items-center gap-[0.6vw] bg-white border border-gray-200 rounded-[0.5vw] p-[0.4vw] pl-[0.5vw] pr-[0.8vw] shadow-2xs max-w-[13vw]"
+                            >
+                              {resolvedUrl && !isPdf ? (
+                                <img 
+                                  src={resolvedUrl} 
+                                  alt={name} 
+                                  className="w-[2.2vw] h-[2.2vw] rounded-[0.35vw] object-cover border border-gray-100 flex-shrink-0" 
+                                />
+                              ) : (
+                                <div className="w-[2.2vw] h-[2.2vw] rounded-[0.35vw] bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                                  <Icon icon={isPdf ? "lucide:file-text" : "lucide:image"} className="w-[1.1vw] h-[1.1vw]" />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[0.72vw] font-medium text-gray-800 truncate block" title={name}>
+                                  {name}
+                                </span>
+                                <span className="text-[0.62vw] text-gray-400 block">{size || 'Ready'}</span>
+                              </div>
+                              {resolvedUrl && (
+                                <a 
+                                  href={resolvedUrl} 
+                                  download={name}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-gray-400 hover:text-gray-700 p-[0.15vw] rounded transition-colors"
+                                  title="Download attachment"
+                                >
+                                  <Download className="w-[0.8vw] h-[0.8vw]" />
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom Chat Reply Input Box matching Screenshot 2 */}
+          <form onSubmit={handleAddReply} className="border-t border-gray-100 pt-[1.2vw]">
+            <div className="w-full bg-white border border-gray-200 rounded-[0.8vw] shadow-xs p-[0.9vw] focus-within:border-[#FF5733] transition-colors">
               <textarea
-                rows={4}
+                rows={3}
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                placeholder={isAdminUser ? "Write official engineering or support response to the user..." : "Provide your feedback or further issue details..."}
-                className="w-full p-[0.85vw] text-[0.78vw] border border-gray-200 rounded-[0.5vw] focus:outline-none focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] font-sans leading-relaxed text-gray-800 placeholder:text-gray-400"
+                placeholder="Type your replay here..."
+                className="w-full text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none resize-none bg-transparent"
               />
 
-              {/* Reply Image Upload Area */}
-              <div className="p-[0.75vw] rounded-[0.5vw] border border-dashed border-gray-200 bg-[#f8f9fa]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-[0.45vw] text-[0.74vw] text-gray-600 font-normal">
-                    <ImageIcon className="w-[0.85vw] h-[0.85vw] text-gray-400" />
-                    <span>Attach images (max 5, JPG, PNG, WebP)</span>
-                  </div>
-                  <label className={`px-[0.75vw] py-[0.35vw] rounded-[0.45vw] border border-gray-200 bg-white text-[0.74vw] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer shadow-xs flex items-center gap-[0.35vw] ${
-                    replyAttachments.length >= 5 || isCompressingReply ? 'opacity-50 pointer-events-none' : ''
-                  }`}>
-                    {isCompressingReply ? (
-                      <>
-                        <Loader2 className="w-[0.75vw] h-[0.75vw] animate-spin text-gray-600" />
-                        <span>Optimizing...</span>
-                      </>
-                    ) : (
-                      <span>Add Images ({replyAttachments.length}/5)</span>
-                    )}
+              {/* Attachments preview if selected */}
+              {replyAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-[0.5vw] py-[0.4vw] mb-[0.4vw] border-t border-gray-100">
+                  {replyAttachments.map((att, idx) => (
+                    <div key={idx} className="flex items-center gap-[0.35vw] bg-gray-50 border border-gray-200 rounded-[0.35vw] px-[0.4vw] py-[0.15vw] text-[0.68vw]">
+                      <span className="truncate max-w-[8vw]">{att.name}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => removeAttachment(idx)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {replyError && (
+                <p className="text-[0.68vw] text-red-500 mb-[0.3vw]">{replyError}</p>
+              )}
+
+              {/* Toolbar Row */}
+              <div className="flex items-center justify-between pt-[0.4vw] border-t border-gray-100/70">
+                <div className="flex items-center gap-[0.6vw]">
+                  <label className="flex items-center gap-[0.3vw] px-[0.7vw] py-[0.35vw] rounded-[0.45vw] border border-gray-200 hover:bg-gray-50 text-[0.74vw] font-medium text-gray-700 cursor-pointer transition-colors shadow-2xs">
+                    <Paperclip className="w-[0.8vw] h-[0.8vw] text-gray-500" />
+                    <span>Attach file</span>
                     <input 
                       ref={replyFileInputRef}
                       type="file" 
-                      accept="image/png,image/jpeg,image/jpg,image/webp" 
+                      accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf" 
                       multiple
                       disabled={replyAttachments.length >= 5 || isCompressingReply}
                       onChange={handleImageFilesChange} 
                       className="hidden" 
                     />
                   </label>
+                  <span className="text-[0.68vw] text-gray-400 font-normal">
+                    You can attach image, Pdf or Videos (Max 20MB each)
+                  </span>
                 </div>
 
-                {replyError && (
-                  <p className="mt-[0.45vw] text-[0.72vw] text-red-600 font-normal">
-                    {replyError}
-                  </p>
-                )}
+                <div className="flex items-center gap-[0.6vw]">
+                  {/* Mark as Resolved button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleStatus}
+                    className="flex items-center gap-[0.35vw] px-[0.8vw] py-[0.45vw] rounded-[0.5vw] border border-gray-200 hover:bg-gray-50 text-[0.74vw] font-medium text-gray-700 transition-colors cursor-pointer"
+                  >
+                    <div className="w-[0.9vw] h-[0.9vw] rounded-full bg-gray-800 text-white flex items-center justify-center">
+                      <Check className="w-[0.55vw] h-[0.55vw]" />
+                    </div>
+                    <span>{isResolved ? 'Reopen Ticket' : 'Mark as Resolved'}</span>
+                  </button>
 
-                {replyAttachments.length > 0 && (
-                  <div className="mt-[0.65vw] grid grid-cols-1 sm:grid-cols-2 gap-[0.5vw]">
-                    {replyAttachments.map((att, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-[0.45vw] rounded-[0.45vw] bg-white border border-gray-200 text-[0.74vw] shadow-xs">
-                        <div className="flex items-center gap-[0.5vw] min-w-0">
-                          <img src={att.dataUrl} alt={att.name} className="w-[1.8vw] h-[1.8vw] rounded-[0.35vw] object-cover border border-gray-200 shrink-0" />
-                          <div className="min-w-0">
-                            <span className="truncate block font-medium text-gray-800 text-[0.72vw]">{att.name}</span>
-                            <span className="text-[0.65vw] text-gray-400 font-normal">{formatFileSize(att.size)}</span>
-                          </div>
-                        </div>
-
-                        <button 
-                          type="button" 
-                          onClick={() => removeAttachment(idx)}
-                          className="text-gray-400 hover:text-red-500 p-[0.25vw] rounded-[0.3vw] hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-[0.85vw] h-[0.85vw]" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between pt-[0.4vw]">
-                <div className="text-[0.74vw] text-gray-500 font-normal">
-                  Replying as: <strong className="text-gray-800 font-medium">{isAdminUser ? (currentUser?.name || 'Support Engineer') : (ticket.requester?.name || 'Authorized User')}</strong>
+                  {/* Send Replay button (Orange theme) */}
+                  <button
+                    type="submit"
+                    disabled={(!replyText.trim() && replyAttachments.length === 0) || isSubmitting || isCompressingReply}
+                    className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.45vw] rounded-[0.5vw] bg-[#FF5733] hover:bg-[#E04D2D] text-white text-[0.78vw] font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>{isSubmitting ? 'Sending...' : 'Send Replay'}</span>
+                    <Send className="w-[0.8vw] h-[0.8vw]" />
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={(!replyText.trim() && replyAttachments.length === 0) || isSubmitting || isCompressingReply}
-                  className="px-[1.2vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Post Reply'}
-                </button>
               </div>
-            </form>
-          )}
+            </div>
+          </form>
+        </div>
 
-          {/* Conversation Messages Thread */}
-          <div className="space-y-[1.2vw]">
-            {allMessages.map((msg) => {
-              const isAgent = msg.sender === 'agent' || msg.sender === 'staff' || msg.sender === 'admin';
-              const messageAttachments = msg.attachments || (msg.id === 'initial' || msg.id === allMessages[0]?.id ? ticket.attachments : null);
+        {/* Right Section: Participants & Attachments Sidebar matching Screenshot 2 */}
+        <div className="xl:col-span-3 space-y-[1.2vw]">
+          {/* 1. Participants Card */}
+          <div className="bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.4vw]">
+            <h3 className="text-[0.88vw] font-bold text-gray-900 pb-[1vw] border-b border-gray-100 mb-[0.8vw]">
+              Participants
+            </h3>
 
-              return (
-                <div 
-                  key={msg.id}
-                  className="w-full bg-white rounded-[1vw] border border-gray-200 overflow-hidden shadow-sm"
-                >
-                  {/* Message Header */}
-                  <div className="bg-[#f8f9fa] px-[1.2vw] py-[0.8vw] border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-[0.55vw]">
-                    <div className="flex items-center gap-[0.75vw]">
-                      {/* Avatar Circle with Initials */}
-                      <div 
-                        className="w-[2.3vw] h-[2.3vw] rounded-full flex items-center justify-center text-white text-[0.78vw] font-semibold shrink-0 shadow-xs ring-1 ring-gray-200"
-                        style={{ 
-                          backgroundColor: isAgent 
-                            ? '#2563eb' 
-                            : (ticket.requester?.avatarColor || '#ec5137') 
-                        }}
-                      >
-                        {(msg.authorName || 'User').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-[0.5vw]">
-                          <span className="text-[0.85vw] font-medium text-gray-800">
-                            {msg.authorName}
-                          </span>
-                          {msg.badge && (
-                            <span className={`text-[0.66vw] px-[0.55vw] py-[0.1vw] rounded-full font-medium ${
-                              isAgent 
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                                : 'bg-gray-100 text-gray-700 border border-gray-200'
-                            }`}>
-                              {msg.badge}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[0.68vw] text-gray-400 mt-[0.1vw] font-normal">
-                          {msg.subRole || msg.email || ''}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-[0.72vw] text-gray-400 font-normal">
-                      {formatDateTime(msg.createdAt || msg.timestamp)}
-                    </div>
-                  </div>
-
-                  {/* Message Body */}
-                  <div className="p-[1.3vw] text-[0.8vw] text-gray-700 font-normal leading-relaxed whitespace-pre-line">
-                    {msg.content}
-                  </div>
-
-                  {/* Message Attachments Gallery */}
-                  {messageAttachments && messageAttachments.length > 0 && (
-                    <div className="px-[1.2vw] pb-[1.2vw] pt-[0.2vw]">
-                      <div className="text-[0.68vw] font-medium text-gray-500 uppercase tracking-wider mb-[0.45vw] flex items-center gap-[0.35vw]">
-                        <Paperclip className="w-[0.75vw] h-[0.75vw]" />
-                        <span>Attached Images ({messageAttachments.length})</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-[0.7vw]">
-                        {messageAttachments.map((att, attIdx) => {
-                          const isObj = typeof att === 'object';
-                          const name = isObj ? att.name : att;
-                          const url = isObj ? att.url : null;
-                          const size = isObj ? formatFileSize(att.size) : null;
-                          const resolvedUrl = url ? resolveUploadsPath(url) : null;
-
-                          return (
-                            <div 
-                              key={attIdx} 
-                              className="group relative rounded-[0.5vw] border border-gray-200 overflow-hidden bg-gray-50 hover:shadow-xs transition-shadow"
-                            >
-                              {resolvedUrl ? (
-                                <a href={resolvedUrl} target="_blank" rel="noopener noreferrer" className="block aspect-video overflow-hidden bg-gray-100">
-                                  <img 
-                                    src={resolvedUrl} 
-                                    alt={name} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                                  />
-                                </a>
-                              ) : (
-                                <div className="aspect-video flex items-center justify-center bg-gray-100 text-gray-400">
-                                  <ImageIcon className="w-[1.4vw] h-[1.4vw]" />
-                                </div>
-                              )}
-                              <div className="p-[0.35vw] bg-white border-t border-gray-100">
-                                <p className="text-[0.68vw] font-medium text-gray-800 truncate" title={name}>
-                                  {name}
-                                </p>
-                                {size && (
-                                  <p className="text-[0.62vw] text-gray-400 font-normal">{size}</p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+            <div className="space-y-[0.9vw]">
+              {/* User Participant */}
+              <div className="flex items-center gap-[0.7vw]">
+                <div className="w-[2vw] h-[2vw] rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  {currentUser?.picture ? (
+                    <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <Icon icon="lucide:user" className="w-[1vw] h-[1vw] text-emerald-700" />
                   )}
                 </div>
-              );
-            })}
+                <div className="min-w-0">
+                  <p className="text-[0.78vw] font-semibold text-gray-800 leading-tight truncate">
+                    {requesterName}
+                  </p>
+                  <p className="text-[0.68vw] text-gray-400 truncate mt-[0.1vw]">
+                    {requesterEmail}
+                  </p>
+                </div>
+              </div>
+
+              {/* Support Staff Participant */}
+              <div className="flex items-center gap-[0.7vw]">
+                <div className="w-[2vw] h-[2vw] rounded-[0.4vw] bg-[#FF5733] text-white flex items-center justify-center font-bold text-[0.85vw] flex-shrink-0 shadow-2xs">
+                  F
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[0.78vw] font-semibold text-gray-800 leading-tight">
+                    Flipibook Support
+                  </p>
+                  <p className="text-[0.68vw] text-gray-400 truncate mt-[0.1vw]">
+                    support@flipibook.com
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Attachments Summary Sidebar Card */}
+          <div className="bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.4vw]">
+            <div className="flex items-center justify-between pb-[1vw] border-b border-gray-100 mb-[0.8vw]">
+              <h3 className="text-[0.88vw] font-bold text-gray-900">
+                Attachments ({allAttachmentsList.length})
+              </h3>
+              {allAttachmentsList.length > 0 && (
+                <span className="text-[0.7vw] font-semibold text-[#FF5733] cursor-pointer hover:underline">
+                  View All
+                </span>
+              )}
+            </div>
+
+            {allAttachmentsList.length > 0 ? (
+              <div className="space-y-[0.7vw]">
+                {allAttachmentsList.map((att, idx) => {
+                  const isObj = typeof att === 'object';
+                  const name = isObj ? att.name : att;
+                  const url = isObj ? att.url : (att.dataUrl || null);
+                  const size = isObj ? formatFileSize(att.size) : 'Ready';
+                  const resolvedUrl = url ? resolveUploadsPath(url) : null;
+                  const isPdf = name?.toLowerCase().endsWith('.pdf');
+
+                  return (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between p-[0.4vw] rounded-[0.5vw] hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
+                        {resolvedUrl && !isPdf ? (
+                          <img 
+                            src={resolvedUrl} 
+                            alt={name} 
+                            className="w-[2vw] h-[2vw] rounded-[0.35vw] object-cover border border-gray-100 flex-shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-[2vw] h-[2vw] rounded-[0.35vw] bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                            <Icon icon={isPdf ? "lucide:file-text" : "lucide:image"} className="w-[1vw] h-[1vw]" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[0.74vw] font-medium text-gray-800 truncate" title={name}>
+                            {name}
+                          </p>
+                          <p className="text-[0.62vw] text-gray-400">{size}</p>
+                        </div>
+                      </div>
+
+                      {resolvedUrl && (
+                        <a 
+                          href={resolvedUrl} 
+                          download={name}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-700 p-[0.2vw] rounded transition-colors ml-[0.4vw]"
+                        >
+                          <Download className="w-[0.85vw] h-[0.85vw]" />
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[0.72vw] text-gray-400 py-[0.5vw]">No attachments uploaded.</p>
+            )}
           </div>
         </div>
       </div>
@@ -460,21 +492,23 @@ export default function TicketDetailsPage() {
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-[1vw] bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-150">
           <div className="bg-white rounded-[1vw] shadow-xl max-w-[28vw] w-full p-[1.5vw] border border-gray-200 space-y-[0.85vw]">
             <div className="flex items-center gap-[0.7vw] text-gray-800">
-              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-orange-50 flex items-center justify-center shrink-0 text-[#EC5137]">
+              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-orange-50 flex items-center justify-center shrink-0 text-[#FF5733]">
                 <AlertTriangle className="w-[1.2vw] h-[1.2vw]" />
               </div>
               <div>
                 <h3 className="text-[1vw] font-semibold text-gray-800">
-                  Close Ticket #{ticket.id}?
+                  {isResolved ? 'Reopen Ticket?' : 'Close Ticket?'}
                 </h3>
                 <p className="text-[0.72vw] text-gray-500 font-normal">
-                  Mark this support ticket as resolved/closed.
+                  {isResolved ? 'Reactivate this inquiry for assistance.' : 'Mark this support ticket as resolved/closed.'}
                 </p>
               </div>
             </div>
 
             <p className="text-[0.76vw] text-gray-600 leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.5vw] border border-gray-200">
-              Are you sure you want to mark <strong className="text-gray-900 font-medium">"{ticket.subject}"</strong> as closed? You will still be able to view the full discussion history at any time.
+              {isResolved
+                ? `Reopening "${ticket.subject}" will notify support engineers that you still need help.`
+                : `Are you sure you want to mark "${ticket.subject}" as closed? You can still view conversation history.`}
             </p>
 
             <div className="flex items-center justify-end gap-[0.6vw] pt-[0.45vw]">
@@ -488,9 +522,9 @@ export default function TicketDetailsPage() {
               <button
                 type="button"
                 onClick={handleToggleStatus}
-                className="px-[1vw] py-[0.48vw] text-[0.76vw] font-medium text-white bg-gray-900 hover:bg-black rounded-[0.5vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                className="px-[1vw] py-[0.48vw] text-[0.76vw] font-medium text-white bg-[#FF5733] hover:bg-[#E04D2D] rounded-[0.5vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
               >
-                Yes, Close Ticket
+                {isResolved ? 'Yes, Reopen' : 'Yes, Close Ticket'}
               </button>
             </div>
           </div>

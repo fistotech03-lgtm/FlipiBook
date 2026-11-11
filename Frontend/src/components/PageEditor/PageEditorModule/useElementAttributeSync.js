@@ -6,6 +6,7 @@
 
 import { parseLayersFromSVG, syncGradient, syncFilters } from './svgFilterUtils';
 import { applySvgGradientOrSolid } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { normalizeForeignObjectNamespaces } from '../LeftActionMenu/Elements/utils/tableElementUtils';
 import { safeSerializeSvg } from '../utils/editorUtils';
 
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
@@ -14,9 +15,10 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     // Special case: ImageProperties or ShapeProperties serializes the whole SVG and passes it directly
     const isDomSync = attribute === '__dom_sync__' || (typeof attribute === 'object' && attribute !== null && Boolean(attribute.__dom_sync__));
     if (isDomSync) {
-      const syncValue = attribute === '__dom_sync__' ? value : attribute.__dom_sync__;
+      const rawSync = attribute === '__dom_sync__' ? value : attribute.__dom_sync__;
+      const syncValue = normalizeForeignObjectNamespaces(rawSync);
       const safeParseSVG = (htmlStr) => {
-        let safeStr = htmlStr;
+        let safeStr = normalizeForeignObjectNamespaces(htmlStr);
         if (!safeStr.includes('xmlns:xlink=')) {
           safeStr = safeStr.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ');
         }
@@ -53,7 +55,7 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
       if (!page || !page.html) return prev;
 
       const parser = new DOMParser();
-      let safeStr = page.html;
+      let safeStr = normalizeForeignObjectNamespaces(page.html);
       if (!safeStr.includes('xmlns:xlink=')) safeStr = safeStr.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ');
       let doc = parser.parseFromString(safeStr, 'image/svg+xml');
       if (doc.querySelector('parsererror')) doc = parser.parseFromString(safeStr, 'text/html');
@@ -508,7 +510,8 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
           syncFilters(doc, element);
         }
 
-        const newHtml = safeSerializeSvg(doc) || page.html;
+        const rawSvg = safeSerializeSvg(doc) || (typeof XMLSerializer !== 'undefined' ? new XMLSerializer().serializeToString(doc.documentElement) : '');
+        const newHtml = normalizeForeignObjectNamespaces(rawSvg) || page.html;
         updated[pageIndex] = { ...page, html: newHtml };
       }
       return updated;

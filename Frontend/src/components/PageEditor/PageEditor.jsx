@@ -45,6 +45,7 @@ import {
   use3DPreviewManager,
   useKeyboardShortcuts,
 } from "./PageEditorModule";
+import { normalizeForeignObjectNamespaces, healTableElementNode } from "./LeftActionMenu/Elements/utils/tableElementUtils";
 
 export { parseLayersFromSVG };
 
@@ -1509,6 +1510,9 @@ const PageEditor = () => {
 
                 updatedHtml = sanitizeSvgXml(updatedHtml);
 
+                // Normalize any foreignObject so XHTML namespace is preserved before XML parsing
+                updatedHtml = normalizeForeignObjectNamespaces(updatedHtml);
+
                 const cachedLayers = pageCacheManager.getCachedLayers(
                   pageUniqueId,
                   updatedHtml,
@@ -1663,7 +1667,12 @@ const PageEditor = () => {
                   }
                 });
 
-                updatedHtml = safeSerializeSvg(doc) || updatedHtml;
+                // Auto-heal Table elements on load if inner table was stripped or missing
+                const tableElements = doc.querySelectorAll('[data-type="table-frame"], g[id^="table-"]');
+                tableElements.forEach((tblEl) => healTableElementNode(tblEl));
+
+                const rawSvg = safeSerializeSvg(doc) || new XMLSerializer().serializeToString(doc);
+                updatedHtml = normalizeForeignObjectNamespaces(rawSvg) || updatedHtml;
 
                 const svgEl = doc.querySelector("svg");
                 const filterLayers = (layers) => {

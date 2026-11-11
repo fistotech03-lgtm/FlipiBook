@@ -10,6 +10,7 @@ const myflipibookRoutes = require('./routes/myflipibookRoutes');
 const userSettingRoutes = require('./routes/userSettingRoutes');
 const exploreRoutes = require('./routes/exploreRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const analyticsRoutes = require('./analytics_tracking/analyticsRoutes');
 
 const app = express();
 app.set('trust proxy', true);
@@ -124,6 +125,8 @@ app.use('/uploads', storageStaticMiddleware);
 app.use('/uploads', express.static(getStorageRoot()));
 
 // Service routes (Both /api/myflipibook and /api/flipbook, plus root fallback for full compatibility)
+app.use('/api/analytics', analyticsRoutes);
+app.use('/analytics', analyticsRoutes);
 app.use('/api/myflipibook', myflipibookRoutes);
 app.use('/api/flipbook', myflipibookRoutes);
 app.use('/api/usersetting', userSettingRoutes);

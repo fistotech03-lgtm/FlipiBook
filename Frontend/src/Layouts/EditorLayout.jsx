@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import EditorNavbar from '../components/NavBar/EditorNav';
 import AlertModal from '../components/AlertModal';
+import { Monitor, Laptop, Home } from 'lucide-react';
 const ExportModal = React.lazy(() => import('../components/ExportModal'));
 const PublishModal = React.lazy(() => import('../components/PublishModal'));
 import axios from 'axios';
@@ -12,6 +13,41 @@ import { queryClient } from '../queryClient';
 const STATE_KEY = 'threed_editor_state';
 
 const EditorLayout = () => {
+  // Block Mobile and Tablet Devices from Application
+  const isMobileOrTablet = typeof window !== 'undefined' && (
+    window.innerWidth < 1024 ||
+    (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+  );
+
+  if (isMobileOrTablet) {
+    return (
+      <div className="w-screen h-screen flex flex-col items-center justify-center p-6 text-center bg-white font-sans select-none">
+        <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200/80 flex items-center justify-center text-[#ec5137] mb-4 shadow-xs">
+          <Monitor className="w-8 h-8" />
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-[#ec5137] border border-orange-200 text-xs font-semibold mb-3">
+          <Laptop className="w-3.5 h-3.5" />
+          <span>Desktop Only Application</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 max-w-md leading-snug">
+          Try Application on Your Desktop for Best Experience
+        </h1>
+        <p className="text-gray-500 text-xs sm:text-sm mt-2 mb-6 max-w-sm leading-relaxed">
+          FlipiBook Application (Studio, 3D Canvas, and Page Editors) is designed exclusively for desktop and laptop computers. Mobile and tablet devices are not supported for creating and editing flipbooks.
+        </p>
+        <button
+          onClick={() => {
+            if (typeof window !== 'undefined') window.location.href = '/home';
+          }}
+          className="px-6 py-2.5 rounded-xl bg-[#ec5137] hover:bg-[#d5452e] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+        >
+          <Home className="w-4 h-4" />
+          <span>Back to Home</span>
+        </button>
+      </div>
+    );
+  }
+
   const { user } = useAuth();
   const {
     currentBook,

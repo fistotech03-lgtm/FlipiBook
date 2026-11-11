@@ -34,8 +34,8 @@ export const getEmbedOverlayHtml = ({
   const showOpenBtn = openWebsiteBtn !== false && openWebsiteBtn !== 'false';
   const showFsBtn = allowFullscreen !== false && allowFullscreen !== 'false';
 
-  // Only show overlay buttons if enabled AND there is a target URL/code
-  if ((!showOpenBtn && !showFsBtn) || !targetUrl || !String(targetUrl).trim()) {
+  // Only show overlay buttons if at least one button is enabled
+  if (!showOpenBtn && !showFsBtn) {
     return '';
   }
 
@@ -155,7 +155,7 @@ export const getEmbedSvgCode = (isClick = false) => {
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="-0.5" y="-0.5" width="${w + 1}" height="${h + 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" rx="1" ry="1" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="paint-order: stroke fill;" paint-order="stroke fill" />
     </g>
   `.trim();
 };
@@ -219,7 +219,7 @@ export function createEmbedElementNode(cx = 105, cy = 148, customCode = '') {
           </div>
         </foreignObject>
       </g>
-      <rect class="svg-image-stroke-overlay" x="-0.5" y="-0.5" width="${w + 1}" height="${h + 1}" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="1" />
+      <rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" rx="1" ry="1" fill="transparent" pointer-events="all" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="paint-order: stroke fill;" paint-order="stroke fill" />
     </g>
   `.trim();
 

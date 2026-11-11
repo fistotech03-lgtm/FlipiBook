@@ -12,6 +12,7 @@ import {
   TYPE_CURSOR,
   svgGlobalStyles
 } from '../utils/constants';
+import { normalizeForeignObjectNamespaces, healTableElementNode } from '../../LeftActionMenu/Elements/utils/tableElementUtils';
 
 export const CanvasViewport = ({
   zoomContainerRef,
@@ -102,6 +103,9 @@ export const CanvasViewport = ({
       });
       clean = clean.replace(/(<rect\b[^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^>]*)data-shape-type="[^"]*"/gi, '$1');
     }
+
+    // Auto-heal: Ensure foreignObjects retain explicit XHTML namespace so HTML elements render
+    clean = normalizeForeignObjectNamespaces(clean);
 
     if (isEditingTextRef?.current && lastRenderedHtmlRef.current[index]) {
       return lastRenderedHtmlRef.current[index];
@@ -212,6 +216,10 @@ export const CanvasViewport = ({
                                         });
                                         el.querySelectorAll?.('rect.audio-fill-layer[data-shape-type]').forEach(rectEl => {
                                           rectEl.removeAttribute('data-shape-type');
+                                        });
+                                        // Auto-heal Table elements: restore inner table structure if missing or corrupted
+                                        el.querySelectorAll?.('[data-type="table-frame"], g[id^="table-"]').forEach(tblG => {
+                                          healTableElementNode(tblG);
                                         });
                                       } else {
                                         const parser = new DOMParser();

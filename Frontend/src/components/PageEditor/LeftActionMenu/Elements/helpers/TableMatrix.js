@@ -202,11 +202,15 @@ export class TableMatrix {
     const {
       themeColor = '#ffffff',
       borderColor = '#cbd5e1',
-      borderWidth = 1.5,
+      borderWidth = 1,
       borderStyle = 'solid',
       cellColor = '#000000',
       headerBg = null,
       headerColor = null,
+      footerBg = null,
+      footerColor = null,
+      stripeBg = null,
+      rowBackgrounds = null,
       fontFamily = 'Poppins',
       fontSize = 13,
       paddingX = 8,
@@ -222,20 +226,35 @@ export class TableMatrix {
     let trs = '';
     for (let r = 0; r < this.rows; r++) {
       let tds = '';
-      const isHeaderRow = r === 0 && Boolean(headerBg);
-      const rowBg = isHeaderRow ? headerBg : themeColor;
-      const rowTextColor = isHeaderRow ? (headerColor || '#ffffff') : cellColor;
-      const rowFontWeight = isHeaderRow ? '600' : '400';
+      let rowBg = themeColor;
+      let rowTextColor = cellColor;
+      let rowFontWeight = '400';
+
+      if (Array.isArray(rowBackgrounds) && rowBackgrounds[r]) {
+        rowBg = rowBackgrounds[r];
+        if (r === 0 && headerColor) rowTextColor = headerColor;
+        if (r === 0) rowFontWeight = '600';
+      } else if (r === 0 && headerBg) {
+        rowBg = headerBg;
+        rowTextColor = headerColor || '#ffffff';
+        rowFontWeight = '600';
+      } else if (r === this.rows - 1 && footerBg) {
+        rowBg = footerBg;
+        rowTextColor = footerColor || headerColor || '#ffffff';
+        rowFontWeight = '600';
+      } else if (stripeBg && r % 2 === 1) {
+        rowBg = stripeBg;
+      }
 
       for (let c = 0; c < this.cols; c++) {
         const cellText = this.grid[r][c] || '';
         const colWidthPercent = colPercentages[c] || (100 / this.cols).toFixed(3);
-        tds += `<td data-row="${r}" data-col="${c}" style="width:${colWidthPercent}%;height:${rowHeightPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};overflow-wrap:break-word;outline:none;font-weight:${rowFontWeight};cursor:default;user-select:none;">${cellText}</td>`;
+        tds += `<td data-row="${r}" data-col="${c}" data-cell-border-color="${borderColor}" data-cell-bg="${rowBg}" style="width:${colWidthPercent}%;border:${borderWidth}px ${borderStyle} ${borderColor};padding:${paddingY}px ${paddingX}px;color:${rowTextColor};background-color:${rowBg};text-align:${textAlign};vertical-align:${verticalAlign};box-sizing:border-box;word-break:${textWrapping ? 'break-word' : 'normal'};overflow-wrap:break-word;outline:none;font-weight:${rowFontWeight};cursor:default;user-select:none;">${cellText}</td>`;
       }
       trs += `<tr style="height:${rowHeightPercent}%;box-sizing:border-box;">${tds}</tr>`;
     }
 
-    return `<table style="width:100%;height:100%;border-collapse:collapse;border:${borderWidth}px ${borderStyle} ${borderColor};background-color:${themeColor};font-family:'${fontFamily}',sans-serif;font-size:${fontSize}px;table-layout:fixed;margin:0;padding:0;white-space:normal;box-sizing:border-box;"><tbody>${trs}</tbody></table>`;
+    return `<table style="width:100%;height:100%;border-collapse:collapse;border:${borderWidth}px ${borderStyle} ${borderColor};background-color:${themeColor};font-family:'${fontFamily}',sans-serif;font-size:${fontSize}px;table-layout:fixed;margin:0;padding:0;white-space:normal;outline:none;box-sizing:border-box;"><tbody>${trs}</tbody></table>`;
   }
 
   /**

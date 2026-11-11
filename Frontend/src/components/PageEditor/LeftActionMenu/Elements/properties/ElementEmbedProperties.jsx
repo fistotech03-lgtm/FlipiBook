@@ -575,6 +575,33 @@ const ElementEmbedProperties = ({
     // Make sure live canvas element has filter properly rendered
     syncLiveFilters(frameGroup);
 
+    // Guarantee that embed overlay buttons are rendered in the DOM if enabled
+    const rootContainer = frameGroup.querySelector('.embed-root-container');
+    if (rootContainer) {
+      const shouldHaveOverlay = (savedOpenBtn !== null ? savedOpenBtn === 'true' : true) || (savedAllowFs !== null ? savedAllowFs === 'true' : true);
+      const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+      if (shouldHaveOverlay) {
+        const effectiveUrl = savedVia === 'URL' ? currentUrl : (currentCode?.trim().startsWith('<') ? currentCode : '');
+        const overlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn: savedOpenBtn !== null ? savedOpenBtn === 'true' : true,
+          allowFullscreen: savedAllowFs !== null ? savedAllowFs === 'true' : true,
+          behavior: savedBehavior || 'Open in - Current Tab'
+        });
+        if (!existingOverlay && overlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        } else if (existingOverlay && overlayHtml && !existingOverlay.querySelector('.svg-icon-override')) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          existingOverlay.replaceWith(tempDiv.firstElementChild);
+        }
+      } else if (existingOverlay) {
+        existingOverlay.remove();
+      }
+    }
+
     // Record hydrated snapshot to prevent redundant sync effects from modifying DOM
     lastAppliedSnapshotRef.current = {
       code: currentCode,
@@ -608,8 +635,7 @@ const ElementEmbedProperties = ({
 
     const snap = lastAppliedSnapshotRef.current;
     const hasOverlayInDom = !!frameGroup.querySelector('.embed-overlay-wrapper');
-    const hasValidSource = embedVia === 'URL' ? !!url : !!(customCode?.trim().startsWith('<'));
-    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && hasValidSource;
+    const shouldHaveOverlay = openWebsiteBtn || allowFullscreen;
     const hasCorrectOverlay = !!frameGroup.querySelector('.embed-overlay-wrapper .svg-icon-override');
     const overlayNeedsUpdate = hasOverlayInDom !== shouldHaveOverlay || (shouldHaveOverlay && !hasCorrectOverlay);
 
@@ -650,8 +676,11 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-line-corner', lineCorner);
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
-      frameGroup.setAttribute('stroke-linecap', lineCorner === 'Rounded' ? 'round' : 'square');
-      frameGroup.setAttribute('stroke-linejoin', lineCorner === 'Rounded' ? 'round' : 'miter');
+      frameGroup.removeAttribute('stroke');
+      frameGroup.removeAttribute('stroke-width');
+      frameGroup.removeAttribute('stroke-opacity');
+      frameGroup.removeAttribute('stroke-linecap');
+      frameGroup.removeAttribute('stroke-linejoin');
       frameGroup.removeAttribute('data-tl');
       frameGroup.removeAttribute('data-tr');
       frameGroup.removeAttribute('data-bl');
@@ -666,42 +695,50 @@ const ElementEmbedProperties = ({
       const strokeOp = strokeOpacity / 100;
       const strokeCap = lineCorner === 'Rounded' ? 'round' : 'square';
       const strokeJoin = lineCorner === 'Rounded' ? 'round' : 'miter';
-
-      const sHalf = strokeW > 0 ? strokeW / 2 : 0;
-      const sRectX = strokeW > 0 ? -sHalf : 0;
-      const sRectY = strokeW > 0 ? -sHalf : 0;
-      const sRectW = strokeW > 0 ? w + strokeW : w;
-      const sRectH = strokeW > 0 ? h + strokeW : h;
+      const cornerR = lineCorner === 'Rounded' ? Math.max(0, Math.min(strokeW, 16)) : 0;
 
       // 1. Update Stroke Layer in-place (without wiping innerHTML)
       let strokeLayer = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeLayer) {
         if (strokeLayer.tagName.toLowerCase() === 'rect') {
-          strokeLayer.setAttribute('x', sRectX.toString());
-          strokeLayer.setAttribute('y', sRectY.toString());
-          strokeLayer.setAttribute('width', sRectW.toString());
-          strokeLayer.setAttribute('height', sRectH.toString());
-          strokeLayer.removeAttribute('rx');
-          strokeLayer.removeAttribute('ry');
+          strokeLayer.setAttribute('x', '0');
+          strokeLayer.setAttribute('y', '0');
+          strokeLayer.setAttribute('width', w.toString());
+          strokeLayer.setAttribute('height', h.toString());
+          if (cornerR > 0) {
+            strokeLayer.setAttribute('rx', cornerR.toString());
+            strokeLayer.setAttribute('ry', cornerR.toString());
+          } else {
+            strokeLayer.removeAttribute('rx');
+            strokeLayer.removeAttribute('ry');
+          }
           strokeLayer.setAttribute('stroke', strokeCol);
-          strokeLayer.setAttribute('stroke-width', strokeW.toString());
+          strokeLayer.setAttribute('stroke-width', (strokeW * 2).toString());
           strokeLayer.setAttribute('stroke-opacity', strokeOp.toString());
           strokeLayer.setAttribute('stroke-linecap', strokeCap);
           strokeLayer.setAttribute('stroke-linejoin', strokeJoin);
+          strokeLayer.setAttribute('paint-order', 'stroke fill');
+          strokeLayer.style.paintOrder = 'stroke fill';
         } else {
           const newStrokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           newStrokeEl.setAttribute('class', 'svg-image-stroke-overlay');
           newStrokeEl.setAttribute('fill', 'transparent');
           newStrokeEl.setAttribute('pointer-events', 'all');
           newStrokeEl.setAttribute('stroke', strokeCol);
-          newStrokeEl.setAttribute('stroke-width', strokeW.toString());
+          newStrokeEl.setAttribute('stroke-width', (strokeW * 2).toString());
           newStrokeEl.setAttribute('stroke-opacity', strokeOp.toString());
           newStrokeEl.setAttribute('stroke-linecap', strokeCap);
           newStrokeEl.setAttribute('stroke-linejoin', strokeJoin);
-          newStrokeEl.setAttribute('x', sRectX.toString());
-          newStrokeEl.setAttribute('y', sRectY.toString());
-          newStrokeEl.setAttribute('width', sRectW.toString());
-          newStrokeEl.setAttribute('height', sRectH.toString());
+          newStrokeEl.setAttribute('paint-order', 'stroke fill');
+          newStrokeEl.style.paintOrder = 'stroke fill';
+          newStrokeEl.setAttribute('x', '0');
+          newStrokeEl.setAttribute('y', '0');
+          newStrokeEl.setAttribute('width', w.toString());
+          newStrokeEl.setAttribute('height', h.toString());
+          if (cornerR > 0) {
+            newStrokeEl.setAttribute('rx', cornerR.toString());
+            newStrokeEl.setAttribute('ry', cornerR.toString());
+          }
           strokeLayer.replaceWith(newStrokeEl);
         }
       }
@@ -813,9 +850,9 @@ const ElementEmbedProperties = ({
           rootContainer.appendChild(tempDiv.firstElementChild);
         }
       } else {
-        const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}"`;
+        const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW * 2}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}" style="paint-order: stroke fill;" paint-order="stroke fill"${cornerR > 0 ? ` rx="${cornerR}" ry="${cornerR}"` : ''}`;
         const fillLayerHtml = `<rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />`;
-        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="${sRectX}" y="${sRectY}" width="${sRectW}" height="${sRectH}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
+        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
 
         frameGroup.innerHTML = `
           ${fillLayerHtml}
@@ -1027,7 +1064,7 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-color', newColor);
-      frameGroup.setAttribute('stroke', newColor);
+      frameGroup.removeAttribute('stroke');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
@@ -1037,7 +1074,6 @@ const ElementEmbedProperties = ({
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke': newColor,
         'data-stroke-color': newColor,
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1051,7 +1087,7 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-opacity', (newOpacity / 100).toString());
-      frameGroup.setAttribute('stroke-opacity', (newOpacity / 100).toString());
+      frameGroup.removeAttribute('stroke-opacity');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
@@ -1061,7 +1097,6 @@ const ElementEmbedProperties = ({
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke-opacity': (newOpacity / 100).toString(),
         'data-stroke-opacity': (newOpacity / 100).toString(),
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1076,32 +1111,39 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-width', val.toString());
-      frameGroup.setAttribute('stroke-width', val.toString());
+      frameGroup.removeAttribute('stroke-width');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
-        strokeOverlay.setAttribute('stroke-width', val.toString());
+        strokeOverlay.setAttribute('stroke-width', (val * 2).toString());
+        strokeOverlay.setAttribute('paint-order', 'stroke fill');
+        strokeOverlay.style.paintOrder = 'stroke fill';
         const fo = frameGroup.querySelector('foreignObject');
         const fillLayer = frameGroup.querySelector('.embed-fill-layer');
         const baseW = fo ? parseFloat(fo.getAttribute('width')) : (fillLayer ? parseFloat(fillLayer.getAttribute('width')) : parseFloat(frameGroup.getAttribute('width') || '650'));
         const baseH = fo ? parseFloat(fo.getAttribute('height')) : (fillLayer ? parseFloat(fillLayer.getAttribute('height')) : parseFloat(frameGroup.getAttribute('height') || '400'));
         if (baseW && baseH) {
-          const sHalf = val > 0 ? val / 2 : 0;
-          const sX = val > 0 ? -sHalf : 0;
-          const sY = val > 0 ? -sHalf : 0;
-          const sW = val > 0 ? baseW + val : baseW;
-          const sH = val > 0 ? baseH + val : baseH;
-          strokeOverlay.setAttribute('x', sX.toString());
-          strokeOverlay.setAttribute('y', sY.toString());
-          strokeOverlay.setAttribute('width', sW.toString());
-          strokeOverlay.setAttribute('height', sH.toString());
+          strokeOverlay.setAttribute('x', '0');
+          strokeOverlay.setAttribute('y', '0');
+          strokeOverlay.setAttribute('width', baseW.toString());
+          strokeOverlay.setAttribute('height', baseH.toString());
+        }
+        const cornerR = lineCorner === 'Rounded' ? Math.max(0, Math.min(val, 16)) : 0;
+        if (cornerR > 0) {
+          strokeOverlay.setAttribute('rx', cornerR.toString());
+          strokeOverlay.setAttribute('ry', cornerR.toString());
+        } else {
+          strokeOverlay.removeAttribute('rx');
+          strokeOverlay.removeAttribute('ry');
         }
       }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', {
+        detail: { elementId: frameGroup.id || selectedLayerId }
+      }));
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke-width': val.toString(),
         'data-stroke-width': val.toString(),
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1117,21 +1159,30 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-line-corner', corner);
-      frameGroup.setAttribute('stroke-linecap', linecap);
-      frameGroup.setAttribute('stroke-linejoin', linejoin);
+      frameGroup.removeAttribute('stroke-linecap');
+      frameGroup.removeAttribute('stroke-linejoin');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-linecap', linecap);
         strokeOverlay.setAttribute('stroke-linejoin', linejoin);
+        const cornerR = corner === 'Rounded' ? Math.max(0, Math.min(strokeWidth, 16)) : 0;
+        if (cornerR > 0) {
+          strokeOverlay.setAttribute('rx', cornerR.toString());
+          strokeOverlay.setAttribute('ry', cornerR.toString());
+        } else {
+          strokeOverlay.removeAttribute('rx');
+          strokeOverlay.removeAttribute('ry');
+        }
       }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', {
+        detail: { elementId: frameGroup.id || selectedLayerId }
+      }));
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'data-line-corner': corner,
-        'stroke-linecap': linecap,
-        'stroke-linejoin': linejoin,
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
       });
@@ -1228,6 +1279,17 @@ const ElementEmbedProperties = ({
         />
       </div>
 
+      {/* Behavior (only visible when Open website button is enabled) */}
+      {openWebsiteBtn && (
+        <PropertyRow label="Behavior">
+          <CustomSelect
+            value={behavior}
+            onChange={handleBehaviorChange}
+            options={BEHAVIOR_OPTIONS}
+          />
+        </PropertyRow>
+      )}
+      
       {/* Allow Fullscreen */}
       <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
         <div className="flex items-center gap-[0.25vw]">
@@ -1239,85 +1301,7 @@ const ElementEmbedProperties = ({
         />
       </div>
 
-      {/* Behavior */}
-      <PropertyRow label="Behavior">
-        <CustomSelect
-          value={behavior}
-          onChange={handleBehaviorChange}
-          options={BEHAVIOR_OPTIONS}
-        />
-      </PropertyRow>
-
-      {/* ─── 3. STROKE COLOR ─── */}
-      <SectionHeader title="Stroke Color" />
-
-      {/* Row 1: Swatch, Hex, Opacity */}
-      <div className="pl-[0.5vw]">
-        <ColorInput
-          color={strokeColor}
-          onChange={handleStrokeColorChange}
-          opacity={strokeOpacity}
-          onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
-          isActive={activeColorPicker === 'strokeColor'}
-        />
-      </div>
-
-      {/* Stroke Settings Grid */}
-      {(() => {
-        const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
-        return (
-          <div className={`flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
-            {/* Stroke Width & Line Corner */}
-            <div className="grid grid-cols-2 gap-[0.6vw]">
-              {/* Stroke Width */}
-              <div className="flex flex-col gap-[0.25vw]">
-                <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-                <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-                  <button
-                    type="button"
-                    disabled={isStrokeDisabled}
-                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
-                  >
-                    −
-                  </button>
-                  <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                    <input
-                      type="number"
-                      disabled={isStrokeDisabled}
-                      value={strokeWidth}
-                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isStrokeDisabled}
-                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Line Corner */}
-              <div className="flex flex-col gap-[0.25vw] relative">
-                <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-                <ElementDropdown
-                  disabled={isStrokeDisabled}
-                  value={lineCorner}
-                  onChange={handleLineCornerChange}
-                  options={['Square', 'Rounded']}
-                  buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ─── 4. EFFECTS ─── */}
+      {/* ─── 3. EFFECTS ─── */}
       <SectionHeader title="Effects" />
 
       <div>
@@ -1340,32 +1324,6 @@ const ElementEmbedProperties = ({
       </div>
 
       {/* ─── PORTALS ─── */}
-      {/* Official ColorPicker Portal Popup */}
-      {activeColorPicker === 'strokeColor' && createPortal(
-        <div
-          className="fixed z-[5000]"
-          style={{
-            top: '50%',
-            right: '19.5vw',
-            transform: 'translateY(-50%)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="animate-in fade-in zoom-in-95 duration-200">
-            <ColorPicker
-              color={strokeColor}
-              opacity={strokeOpacity}
-              onOpacityChange={handleStrokeOpacityChange}
-              onChange={handleStrokeColorChange}
-              onClose={() => setActiveColorPicker(null)}
-              disableGradient={false}
-              colorsOnPage={colorsOnPageList}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
-
     </div>
   );
 };

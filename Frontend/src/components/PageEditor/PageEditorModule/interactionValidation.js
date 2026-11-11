@@ -58,6 +58,15 @@
 
     const isBlank = (v) => !v || typeof v !== 'string' || !v.trim() || v === 'null' || v === 'undefined';
 
+    const isQrUrlFilled = (urlStr) => {
+      if (isBlank(urlStr)) return false;
+      const clean = urlStr.trim().toLowerCase();
+      if (clean === 'https://' || clean === 'http://' || clean === 'https:' || clean === 'http:') {
+        return false;
+      }
+      return true;
+    };
+
     const getPlatformConfig = (targetEl, rawVal = '') => {
       const presetId = (targetEl.getAttribute('data-preset-id') || '').toLowerCase();
       if (SOCIAL_PLATFORMS[presetId]) return { platformKey: presetId, ...SOCIAL_PLATFORMS[presetId] };
@@ -118,6 +127,48 @@
             interactiveEls.push(liveEl);
           }
         });
+      }
+
+      // Check QR Code elements for empty or missing URL
+      const qrSelector = '[data-type="qrcode"], [data-type="qr-code"], g[id^="qrcode-"]';
+      const qrEls = Array.from(doc.querySelectorAll(qrSelector));
+      if (activeContainer) {
+        const liveQrEls = activeContainer.querySelectorAll(qrSelector);
+        liveQrEls.forEach(liveEl => {
+          if (!qrEls.some(el => el.id && el.id === liveEl.id)) {
+            qrEls.push(liveEl);
+          }
+        });
+      }
+
+      for (let el of qrEls) {
+        if (el.getAttribute('data-name') === 'Overlay' || el.getAttribute('data-type') === 'shield') continue;
+        if (el.parentElement && el.parentElement.closest && el.parentElement.closest(qrSelector)) {
+          continue;
+        }
+
+        let liveEl = null;
+        if (activeContainer && el.id) {
+          try {
+            liveEl = activeContainer.querySelector(`[id="${CSS.escape(el.id)}"]`);
+          } catch { /* ignore */ }
+        }
+        const targetEl = liveEl || el;
+
+        const qrUrl = targetEl.getAttribute('data-qr-url');
+        if (!isQrUrlFilled(qrUrl)) {
+          return {
+            isValid: false,
+            pageIndex: pageIdx,
+            elementId: targetEl.id,
+            action: 'qrcode',
+            actionLabel: 'QR Code',
+            isQRCode: true,
+            type: 'qrcode',
+            field: 'url',
+            message: `Please enter a URL for "QR Code" on Page ${pageIdx + 1}`
+          };
+        }
       }
 
       for (let el of interactiveEls) {

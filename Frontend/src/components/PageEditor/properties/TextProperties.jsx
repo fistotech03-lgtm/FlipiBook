@@ -1537,6 +1537,10 @@ const TextProperties = ({
       // Replace any variation of <br> (with or without attributes/slashes) and any closing </br> with a clean <br/>
       // and replace invalid XML entity &nbsp; with &#160;
       let cleanHtml = page.html
+        .replace(/<col\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*col\s*>|>)/gi, '<col$1 />')
+        .replace(/<img\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*img\s*>|>)/gi, '<img$1 />')
+        .replace(/<hr\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*hr\s*>|>)/gi, '<hr$1 />')
+        .replace(/<input\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*input\s*>|>)/gi, '<input$1 />')
         .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
         .replace(/<\/\s*br\s*>/gi, '')
         .replace(/&nbsp;/gi, '&#160;');
@@ -2304,6 +2308,10 @@ const TextProperties = ({
                 if (!page.html) return prev;
                 const parser = new DOMParser();
                 const cleanHtml = page.html
+                  .replace(/<col\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*col\s*>|>)/gi, '<col$1 />')
+                  .replace(/<img\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*img\s*>|>)/gi, '<img$1 />')
+                  .replace(/<hr\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*hr\s*>|>)/gi, '<hr$1 />')
+                  .replace(/<input\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*input\s*>|>)/gi, '<input$1 />')
                   .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
                   .replace(/<\/\s*br\s*>/gi, '')
                   .replace(/&nbsp;/gi, '&#160;');

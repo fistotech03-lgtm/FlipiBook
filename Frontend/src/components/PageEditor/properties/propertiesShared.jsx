@@ -161,7 +161,7 @@ export const PropertySlider = ({ label, value, onChange, min = 0, max = 100, dis
       onPointerUp={onPointerUp}
     >
       <span
-        className="text-[0.78vw] font-semibold text-gray-700 w-[4.5vw] flex-shrink-0 cursor-ew-resize select-none hover:text-[#E05638] transition-colors"
+        className="text-[0.78vw] font-semibold text-gray-700 min-w-[5.2vw] whitespace-nowrap flex-shrink-0 cursor-ew-resize select-none hover:text-[#E05638] transition-colors"
         onPointerDown={(e) => {
           handleScrubHelper(e, value, (v) => {
             const num = parseFloat(v);

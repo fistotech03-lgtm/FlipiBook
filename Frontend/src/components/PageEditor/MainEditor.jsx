@@ -50,6 +50,7 @@ import { parseLayersFromSVG } from './utils/editorUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
 import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
+import { normalizeForeignObjectNamespaces } from './LeftActionMenu/Elements/utils/tableElementUtils';
 
 // Re-export geometry utilities for backward compatibility with external components
 
@@ -456,6 +457,9 @@ const MainEditor = ({
       .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
       .replace(/<\/\s*br\s*>/gi, '');
 
+    // Normalize any foreignObject so XHTML namespace is explicitly preserved
+    finalHtml = normalizeForeignObjectNamespaces(finalHtml);
+
     const resolvedLayers = explicitLayers || (targetSvg && typeof parseLayersFromSVG === 'function' ? parseLayersFromSVG(targetSvg) : null);
 
     if (updatePageHtmlRef.current) {
@@ -831,6 +835,10 @@ const MainEditor = ({
 
       document.querySelectorAll('[data-selected="true"]').forEach(el => el.removeAttribute('data-selected'));
       document.querySelectorAll('[data-child-selected="true"]').forEach(el => el.removeAttribute('data-child-selected'));
+      document.querySelectorAll('[data-table-selected="true"]').forEach(el => {
+        el.removeAttribute('data-table-selected');
+        el.removeAttribute('data-table-mode');
+      });
     }
   }, [activeMainTool, selectedSelectTool, selectedPenTool, selectedShapeTool, setSelectedLayerId, setMultiSelectedIds]);
 

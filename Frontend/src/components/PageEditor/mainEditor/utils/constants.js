@@ -314,7 +314,30 @@ export const svgGlobalStyles = `
     cursor: var(--resizing-cursor, inherit) !important;
   }
 
-  /* Hide corner dots, sides, and rotate handles while moving elements */
+  /* Suppress all native browser focus rings and outlines on tables and foreignObjects */
+  .page-svg-container *:focus,
+  .page-svg-container *:focus-visible,
+  .page-svg-container [data-type="table-frame"],
+  .page-svg-container [data-type="table-frame"] *,
+  foreignObject,
+  foreignObject *,
+  .table-card-wrapper,
+  .table-container,
+  table,
+  table td,
+  table th {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+    outline-color: transparent !important;
+    -webkit-focus-ring-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Hide selection outlines, polygons, corner dots, sides, and rotate handles while moving elements */
+  body.dragging-active .selection-overlay-layer [id^="overlay-poly-"],
+  body.dragging-active .selection-overlay-layer [id^="overlay-path-"],
   body.dragging-active .resize-handle,
   body.dragging-active .rotate-handle,
   body.dragging-active .rotate-hotspot,

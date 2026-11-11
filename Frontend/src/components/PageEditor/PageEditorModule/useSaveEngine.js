@@ -12,6 +12,7 @@ import {
 } from "../../../utils/assetUtils";
 import { validateInteractions } from "./interactionValidation";
 import { useAuth } from "../../../context/AuthContext";
+import { normalizeForeignObjectNamespaces } from "../LeftActionMenu/Elements/utils/tableElementUtils";
 
 const VIRTUAL_FOLDERS = new Set([
   "recent book",
@@ -157,7 +158,7 @@ export const useSaveEngine = ({
         if (projectBaseUrl && res.includes(projectBaseUrl)) {
           res = res.split(projectBaseUrl).join("../");
         }
-        return res;
+        return normalizeForeignObjectNamespaces(res);
       };
 
       pagesToSave = await Promise.all(
@@ -592,8 +593,8 @@ export const useSaveEngine = ({
                 }
               }
 
-              newHtml = new XMLSerializer().serializeToString(
-                doc.documentElement,
+              newHtml = normalizeForeignObjectNamespaces(
+                new XMLSerializer().serializeToString(doc.documentElement),
               );
             } catch (err) {
               console.error(

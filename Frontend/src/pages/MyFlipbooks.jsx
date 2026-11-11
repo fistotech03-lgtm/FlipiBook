@@ -775,12 +775,14 @@ export default function MyFlipbooks() {
             // Smooth transition: brief delay to let spring physics smoothly glide to 100%
             await new Promise(res => setTimeout(res, 220));
 
-            // Navigate to the customized editor IMMEDIATELY with all in-memory pages
+            // Navigate to the customized editor IMMEDIATELY (pass initial pages to stay within history quota)
+            const safeStatePages = allPages.length > 20 ? allPages.slice(0, 10) : allPages;
+
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolderVId)}/${v_id}`, {
                 state: { 
                     flipbookName: uniqueName, 
                     pageCount: allPages.length,
-                    pages: allPages,
+                    pages: safeStatePages,
                     width: maxWidth,
                     height: maxHeight,
                     orientation,

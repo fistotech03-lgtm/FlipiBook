@@ -230,11 +230,14 @@ const Grid1Layout = React.memo((props) => {
     const [activePopup, setActivePopup] = useState(null);
 
     const closeAllPopups = useCallback(() => {
+        if (!activePopup && !showTOC && !showThumbnailBar && !showSoundPopup && !showProfilePopup && !showBookmarkMenu && !showMoreMenu && !showNotesMenu && !showViewBookmarkPopup) {
+            return;
+        }
         setActivePopup(null);
-        setShowTOCMemo?.(false);
-        setShowThumbnailBarMemo?.(false);
-        setShowSoundPopupMemo?.(false);
-        setShowProfilePopup?.(false);
+        if (showTOC) setShowTOCMemo?.(false);
+        if (showThumbnailBar) setShowThumbnailBarMemo?.(false);
+        if (showSoundPopup) setShowSoundPopupMemo?.(false);
+        if (showProfilePopup) setShowProfilePopup?.(false);
         setShowGalleryPopupMemo?.(false);
         setShowBookmarkMenuMemo?.(false);
         setShowMoreMenuMemo?.(false);
@@ -242,7 +245,7 @@ const Grid1Layout = React.memo((props) => {
         setShowViewBookmarkPopup?.(false);
         setShowAddNotesPopupMemo?.(false);
         setShowNotesViewerMemo?.(false);
-    }, [setShowTOCMemo, setShowThumbnailBarMemo, setShowSoundPopupMemo, setShowProfilePopup, setShowGalleryPopupMemo, setShowBookmarkMenuMemo, setShowMoreMenuMemo, setShowNotesMenuMemo, setShowViewBookmarkPopup, setShowAddNotesPopupMemo, setShowNotesViewerMemo]);
+    }, [activePopup, showTOC, showThumbnailBar, showSoundPopup, showProfilePopup, showBookmarkMenu, showMoreMenu, showNotesMenu, showViewBookmarkPopup, setShowTOCMemo, setShowThumbnailBarMemo, setShowSoundPopupMemo, setShowProfilePopup, setShowGalleryPopupMemo, setShowBookmarkMenuMemo, setShowMoreMenuMemo, setShowNotesMenuMemo, setShowViewBookmarkPopup, setShowAddNotesPopupMemo, setShowNotesViewerMemo]);
 
     const togglePopup = (popup, e) => {
         if (e) e.stopPropagation();

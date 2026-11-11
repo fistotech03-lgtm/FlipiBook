@@ -338,13 +338,38 @@ export const getPageEditorState = async (v_id) => {
   return await getFromDB('editor_autosave');
 };
 
+// Cache maps to prevent redundant 100-page deep-cloning and duplicate writes on auto-save
+const lastSavedPagesSigMap = new Map();
+const cachedSanitizedPagesMap = new Map();
+
+const getPagesSignature = (pages) => {
+  if (!Array.isArray(pages) || pages.length === 0) return 'empty';
+  const len = pages.length;
+  const first = pages[0]?.html?.length || pages[0]?.content?.length || 0;
+  const mid = pages[Math.floor(len / 2)]?.html?.length || pages[Math.floor(len / 2)]?.content?.length || 0;
+  const last = pages[len - 1]?.html?.length || pages[len - 1]?.content?.length || 0;
+  return `${len}_${first}_${mid}_${last}`;
+};
+
 /**
  * Saves the latest Customized Editor state strictly under the book's unique v_id.
  */
 export const saveCustomizedEditorState = async (data) => {
   try {
     if (!data || !data.v_id) return;
-    const sanitizedPages = sanitizePages(data?.pages);
+
+    // Detect if pages changed to avoid expensive deep-cloning and re-compressing 100MB+ on setting tweaks
+    const incomingSig = getPagesSignature(data?.pages);
+    const prevSig = lastSavedPagesSigMap.get(data.v_id);
+    let sanitizedPages;
+
+    if (incomingSig === prevSig && cachedSanitizedPagesMap.has(data.v_id)) {
+      sanitizedPages = cachedSanitizedPagesMap.get(data.v_id);
+    } else {
+      sanitizedPages = sanitizePages(data?.pages);
+      cachedSanitizedPagesMap.set(data.v_id, sanitizedPages);
+    }
+
     const rawPayload = {
       v_id: data.v_id,
       bookName: data.bookName || 'Untitled Flipbook',
@@ -370,8 +395,9 @@ export const saveCustomizedEditorState = async (data) => {
 
     await saveToDB(bookKey, payload);
 
-    // Keep page_editor synchronized strictly under its unique v_id
-    if (payload.v_id && sanitizedPages.length > 0) {
+    // Keep page_editor synchronized strictly when pages have actually changed
+    if (payload.v_id && sanitizedPages.length > 0 && incomingSig !== prevSig) {
+      lastSavedPagesSigMap.set(payload.v_id, incomingSig);
       const pagePayload = {
         v_id: payload.v_id,
         pageName: payload.bookName,
@@ -381,6 +407,8 @@ export const saveCustomizedEditorState = async (data) => {
         timestamp: payload.timestamp
       };
       await saveToDB(getPageEditorKey(payload.v_id), pagePayload);
+    } else if (incomingSig !== prevSig) {
+      lastSavedPagesSigMap.set(payload.v_id, incomingSig);
     }
   } catch (err) {
     console.error("[dbUtils] Save Customized Editor Error:", err);

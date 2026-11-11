@@ -153,7 +153,7 @@ export function buildPdf(pages, { title = 'Document', author = 'Extractor' } = {
  * @param {number} [quality=0.92]
  * @returns {Promise<Uint8Array>}
  */
-export function canvasToJpegBytes(canvas, quality = 0.92) {
+export function canvasToJpegBytes(canvas, quality = 0.82) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {

@@ -138,6 +138,7 @@ export const loadImg = (src) => new Promise((resolve) => {
 
 // Cache to store pre-rendered data URLs
 const qrImageCache = new Map();
+export const logoAspectCache = new Map();
 
 export const svgToDataUrl = (svgString) => {
   try {
@@ -249,39 +250,72 @@ export function renderModuleSvg(x, y, size, style, color) {
   }
 }
 
+export function isTransparentColor(c) {
+  if (!c) return true;
+  const s = String(c).trim().toLowerCase();
+  return s === 'none' || s === 'transparent' || s === '#' || s === 'rgba(0, 0, 0, 0)' || s === 'rgba(0,0,0,0)';
+}
+
 export function renderEyeFrameSvg(x, y, size, thickness, style, color, backdrop) {
   const S = size;
   const T = thickness;
+  const hasBackdrop = !isTransparentColor(backdrop);
+  const bgFill = hasBackdrop ? backdrop : 'none';
 
   switch (style) {
     case 'circular-frame': {
       const cx = x + S / 2;
       const cy = y + S / 2;
+      if (!hasBackdrop) {
+        return `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T / 2}" fill="none" stroke="${color}" stroke-width="${T}" />`;
+      }
       return `<circle cx="${cx}" cy="${cy}" r="${S / 2}" fill="${color}" />` +
-             `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T}" fill="${backdrop}" />`;
+             `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T}" fill="${bgFill}" />`;
     }
     case 'rounded-square': {
       const R = S * 0.24;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
-             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
     }
     case 'octagon': {
       const C = T * 1.8;
       const outerPts = `${x + C},${y} ${x + S - C},${y} ${x + S},${y + C} ${x + S},${y + S - C} ${x + S - C},${y + S} ${x + C},${y + S} ${x},${y + S - C} ${x},${y + C}`;
       const c = Math.max(2, C - T * 0.7);
       const innerPts = `${x + T + c},${y + T} ${x + S - T - c},${y + T} ${x + S - T},${y + T + c} ${x + S - T},${y + S - T - c} ${x + S - T - c},${y + S - T} ${x + T + c},${y + S - T} ${x + T},${y + S - T - c} ${x + T},${y + T + c}`;
+      if (!hasBackdrop) {
+        const oCoords = outerPts.split(' ').map(p => p.split(','));
+        const iCoords = innerPts.split(' ').map(p => p.split(','));
+        const d = `M ${oCoords[0][0]} ${oCoords[0][1]} ` + oCoords.slice(1).map(p => `L ${p[0]} ${p[1]}`).join(' ') + ' Z ' +
+                  `M ${iCoords[0][0]} ${iCoords[0][1]} ` + iCoords.slice(1).map(p => `L ${p[0]} ${p[1]}`).join(' ') + ' Z';
+        return `<path d="${d}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<polygon points="${outerPts}" fill="${color}" />` +
-             `<polygon points="${innerPts}" fill="${backdrop}" />`;
+             `<polygon points="${innerPts}" fill="${bgFill}" />`;
     }
     case 'squircle': {
       const R = S * 0.38;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
-             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
     }
     case 'cut-corners': {
       const R = S * 0.44;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, { tl: R, tr: 0, br: R, bl: 0 });
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 });
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<path d="${getSvgPathRoundRect(x, y, S, S, { tl: R, tr: 0, br: R, bl: 0 })}" fill="${color}" />` +
-             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 })}" fill="${backdrop}" />`;
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 })}" fill="${bgFill}" />`;
     }
     case 'double-border': {
       const b1 = T * 0.42;
@@ -290,20 +324,37 @@ export function renderEyeFrameSvg(x, y, size, thickness, style, color, backdrop)
       const x2 = x + b1 + gap;
       const y2 = y + b1 + gap;
       const S2 = S - 2 * (b1 + gap);
+      if (!hasBackdrop) {
+        const outer1 = `M ${x} ${y} H ${x + S} V ${y + S} H ${x} Z`;
+        const inner1 = `M ${x + b1} ${y + b1} H ${x + S - b1} V ${y + S - b1} H ${x + b1} Z`;
+        const outer2 = `M ${x2} ${y2} H ${x2 + S2} V ${y2 + S2} H ${x2} Z`;
+        const inner2 = `M ${x2 + b2} ${y2 + b2} H ${x2 + S2 - b2} V ${y2 + S2 - b2} H ${x2 + b2} Z`;
+        return `<path d="${outer1} ${inner1} ${outer2} ${inner2}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
-             `<rect x="${x + b1}" y="${y + b1}" width="${S - 2 * b1}" height="${S - 2 * b1}" fill="${backdrop}" />` +
+             `<rect x="${x + b1}" y="${y + b1}" width="${S - 2 * b1}" height="${S - 2 * b1}" fill="${bgFill}" />` +
              `<rect x="${x2}" y="${y2}" width="${S2}" height="${S2}" fill="${color}" />` +
-             `<rect x="${x2 + b2}" y="${y2 + b2}" width="${S2 - 2 * b2}" height="${S2 - 2 * b2}" fill="${backdrop}" />`;
+             `<rect x="${x2 + b2}" y="${y2 + b2}" width="${S2 - 2 * b2}" height="${S2 - 2 * b2}" fill="${bgFill}" />`;
     }
     case 'soft-corners': {
       const R = S * 0.32;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
-             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${backdrop}" />`;
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
     }
     case 'classic-square':
     default: {
+      if (!hasBackdrop) {
+        const outer = `M ${x} ${y} H ${x + S} V ${y + S} H ${x} Z`;
+        const inner = `M ${x + T} ${y + T} H ${x + S - T} V ${y + S - T} H ${x + T} Z`;
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
       return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
-             `<rect x="${x + T}" y="${y + T}" width="${S - 2 * T}" height="${S - 2 * T}" fill="${backdrop}" />`;
+             `<rect x="${x + T}" y="${y + T}" width="${S - 2 * T}" height="${S - 2 * T}" fill="${bgFill}" />`;
     }
   }
 }
@@ -312,6 +363,8 @@ export function renderEyeBallSvg(cx, cy, size, style, color, backdrop) {
   const B = size;
   const bx = cx - B / 2;
   const by = cy - B / 2;
+  const hasBackdrop = !isTransparentColor(backdrop);
+  const bgFill = hasBackdrop ? backdrop : 'none';
 
   switch (style) {
     case 'circle':
@@ -339,8 +392,11 @@ export function renderEyeBallSvg(cx, cy, size, style, color, backdrop) {
       return `<polygon points="${pts.join(' ')}" fill="${color}" />`;
     }
     case 'ring':
+      if (!hasBackdrop) {
+        return `<circle cx="${cx}" cy="${cy}" r="${(B / 2 + B * 0.28) / 2}" fill="none" stroke="${color}" stroke-width="${B / 2 - B * 0.28}" />`;
+      }
       return `<circle cx="${cx}" cy="${cy}" r="${B / 2}" fill="${color}" />` +
-             `<circle cx="${cx}" cy="${cy}" r="${B * 0.28}" fill="${backdrop}" />`;
+             `<circle cx="${cx}" cy="${cy}" r="${B * 0.28}" fill="${bgFill}" />`;
     case 'square':
     default:
       return `<rect x="${bx}" y="${by}" width="${B}" height="${B}" fill="${color}" />`;
@@ -355,10 +411,11 @@ export function generatePureVectorQRSvg({
   frame = 'frame-none',
   text = 'SCAN ME',
   logoSrc = null,
-  logoSize = 22,
-  logoRadius = 80,
+  logoSize = 17,
+  logoRadius = 0,
   logoBg = true,
   logoBgColor = '#FFFFFF',
+  logoAspect = null,
   qrColor = '#000000',
   backdrop = '#FFFFFF',
   patternStyle = 'classic-square',
@@ -536,8 +593,12 @@ export function generatePureVectorQRSvg({
   };
 
   const qrElements = [];
+  const hasBackdrop = !isTransparentColor(backdrop);
+
   // QR Backdrop
-  qrElements.push(`<rect x="${qrX}" y="${qrY}" width="${qrRenderSize}" height="${qrRenderSize}" fill="${backdrop || '#FFFFFF'}" />`);
+  if (hasBackdrop) {
+    qrElements.push(`<rect x="${qrX}" y="${qrY}" width="${qrRenderSize}" height="${qrRenderSize}" fill="${backdrop}" />`);
+  }
 
   // QR Modules
   for (let r = 0; r < count; r++) {
@@ -563,18 +624,28 @@ export function generatePureVectorQRSvg({
   ];
 
   eyePositions.forEach((pos) => {
-    qrElements.push(`<rect x="${pos.x}" y="${pos.y}" width="${eyeSize}" height="${eyeSize}" fill="${backdrop || '#FFFFFF'}" />`);
-    qrElements.push(renderEyeFrameSvg(pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor || '#000000', backdrop || '#FFFFFF'));
+    if (hasBackdrop) {
+      qrElements.push(`<rect x="${pos.x}" y="${pos.y}" width="${eyeSize}" height="${eyeSize}" fill="${backdrop}" />`);
+    }
+    qrElements.push(renderEyeFrameSvg(pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor || '#000000', backdrop));
     const cx = pos.x + eyeSize / 2;
     const cy = pos.y + eyeSize / 2;
-    qrElements.push(renderEyeBallSvg(cx, cy, eyeBallSize, normEyeBall, qrColor || '#000000', backdrop || '#FFFFFF'));
+    qrElements.push(renderEyeBallSvg(cx, cy, eyeBallSize, normEyeBall, qrColor || '#000000', backdrop));
   });
 
   // Center logo
   if (logoSrc) {
     const maxBoxDim = Math.round((qrRenderSize * (logoSize || 22)) / 100);
-    const drawW = maxBoxDim;
-    const drawH = maxBoxDim;
+    const aspect = Number(logoAspect) || (logoAspectCache.get(logoSrc)) || 1;
+    let drawW, drawH;
+    if (aspect >= 1) {
+      drawW = maxBoxDim;
+      drawH = Math.max(4, Math.round(maxBoxDim / aspect));
+    } else {
+      drawH = maxBoxDim;
+      drawW = Math.max(4, Math.round(maxBoxDim * aspect));
+    }
+
     const lx = qrX + (qrRenderSize - drawW) / 2;
     const ly = qrY + (qrRenderSize - drawH) / 2;
     const maxAllowedR = Math.floor(Math.min(drawW, drawH) / 2);
@@ -582,7 +653,8 @@ export function generatePureVectorQRSvg({
 
     if (logoBg) {
       const pad = 4;
-      qrElements.push(`<path d="${getSvgPathRoundRect(lx - pad, ly - pad, drawW + pad * 2, drawH + pad * 2, radiusPx + pad)}" fill="${logoBgColor || '#FFFFFF'}" />`);
+      const bgRadius = Math.max(0, Math.min(radiusPx + pad, Math.floor(Math.min(drawW + pad * 2, drawH + pad * 2) / 2)));
+      qrElements.push(`<path d="${getSvgPathRoundRect(lx - pad, ly - pad, drawW + pad * 2, drawH + pad * 2, bgRadius)}" fill="${logoBgColor || '#FFFFFF'}" />`);
     }
 
     const clipId = `qr-logo-clip-${Math.random().toString(36).substr(2, 6)}`;
@@ -597,7 +669,10 @@ export function generatePureVectorQRSvg({
   const safeFontSize = parseInt(fontSize) || 24;
 
   if (effectiveFrame === 'frame-none') {
-    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || backdrop || '#FFFFFF'}" />`);
+    const bg = !isTransparentColor(frameBgColor) ? frameBgColor : (!isTransparentColor(backdrop) ? backdrop : null);
+    if (bg) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${bg}" />`);
+    }
   } else if (effectiveFrame === 'frame-bottom-bar') {
     const bw = 7;
     const radius = 14;
@@ -615,8 +690,9 @@ export function generatePureVectorQRSvg({
     }
 
     const bannerCenterY = totalH - bw - bannerH / 2;
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
 
-    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
     frameElements.push(`<path d="${getSvgPathRoundRect(bw, totalH - bw - bannerH, totalW - bw * 2, bannerH, { tl: 0, tr: 0, br: radius - bw / 2, bl: radius - bw / 2 })}" fill="${arrowColor || '#000000'}" />`);
 
     if (lines.length === 1) {
@@ -653,7 +729,8 @@ export function generatePureVectorQRSvg({
     const bubbleW = Math.min(maxBubbleW, Math.max(120, Math.round(measuredW + paddingX)));
     const bubbleX = totalW / 2 - bubbleW / 2;
 
-    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, boxY + bw / 2, totalW - bw, boxH + bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, boxY + bw / 2, totalW - bw, boxH + bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
     frameElements.push(`<path d="${getSvgPathRoundRect(bubbleX, bubbleY, bubbleW, bubbleH, 7)}" fill="${arrowColor || '#000000'}" />`);
     frameElements.push(`<polygon points="${totalW / 2 - 8},${bubbleY + bubbleH} ${totalW / 2},${bubbleY + bubbleH + pointerH} ${totalW / 2 + 8},${bubbleY + bubbleH}" fill="${arrowColor || '#000000'}" />`);
 
@@ -678,7 +755,9 @@ export function generatePureVectorQRSvg({
       measuredW = measureTextWidth(longestLine, scriptFontSize, safeFontFamily, safeFontWeight);
     }
 
-    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || '#FFFFFF'}" />`);
+    if (!isTransparentColor(frameBgColor)) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor}" />`);
+    }
     frameElements.push(`<path d="M 52 250 C 20 215, 18 140, 56 92" fill="none" stroke="${arrowColor || '#000000'}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />`);
     const tipX = 66, tipY = 88;
     const angle = Math.atan2(88 - 98, 66 - 54);
@@ -718,7 +797,8 @@ export function generatePureVectorQRSvg({
     frameElements.push(`<path d="${getSvgPathRoundRect(totalW / 2 - 16, 14, 32, 4, 2)}" fill="#e2e8f0" />`);
     frameElements.push(`<circle cx="${totalW / 2 - 28}" cy="16" r="2.5" fill="#475569" />`);
     const screenX = 14, screenY = 28, screenW = totalW - 28, screenH = 270;
-    frameElements.push(`<path d="${getSvgPathRoundRect(screenX, screenY, screenW, screenH, 10)}" fill="${frameBgColor || '#FFFFFF'}" />`);
+    const screenFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(screenX, screenY, screenW, screenH, 10)}" fill="${screenFill}" />`);
 
     const textCenterY = (screenY + screenH + totalH - 8) / 2;
     if (lines.length === 1) {
@@ -749,8 +829,11 @@ export function generatePureVectorQRSvg({
 
     const textCenterY = boxH + bw * 2 + textSectionH / 2;
 
-    frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor || '#FFFFFF'}" />`);
-    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, boxH + bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    if (!isTransparentColor(frameBgColor)) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor}" />`);
+    }
+    const boxFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, boxH + bw, radius)}" fill="${boxFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
 
     if (lines.length === 1) {
       frameElements.push(`<text x="${totalW / 2}" y="${textCenterY}" fill="${effectiveTextColor || '#000000'}" font-family="${safeFontFamily}, sans-serif" font-size="${textFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
@@ -779,7 +862,8 @@ export function generatePureVectorQRSvg({
 
     const headerCenterY = bw + headerH / 2;
 
-    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${frameBgColor || '#FFFFFF'}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
     frameElements.push(`<path d="${getSvgPathRoundRect(bw, bw, totalW - bw * 2, headerH, { tl: radius - bw / 2, tr: radius - bw / 2, br: 0, bl: 0 })}" fill="${arrowColor || '#000000'}" />`);
 
     if (lines.length === 1) {
@@ -1146,9 +1230,11 @@ export async function generateStyledQRImage({
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Fill backdrop
-    ctx.fillStyle = backdrop || '#FFFFFF';
-    ctx.fillRect(0, 0, size, size);
+    // Fill backdrop if not transparent
+    if (!isTransparentColor(backdrop)) {
+      ctx.fillStyle = backdrop;
+      ctx.fillRect(0, 0, size, size);
+    }
 
     // Normalize legacy style names
     let normPattern = patternStyle || 'classic-square';
@@ -1196,9 +1282,11 @@ export async function generateStyledQRImage({
     ];
 
     eyePositions.forEach((pos) => {
-      // Clear eye area with backdrop
-      ctx.fillStyle = backdrop || '#FFFFFF';
-      ctx.fillRect(pos.x, pos.y, eyeSize, eyeSize);
+      // Clear eye area with backdrop if not transparent
+      if (!isTransparentColor(backdrop)) {
+        ctx.fillStyle = backdrop;
+        ctx.fillRect(pos.x, pos.y, eyeSize, eyeSize);
+      }
 
       // Draw Eye Frame
       drawEyeFrame(ctx, pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor, backdrop);
@@ -1228,10 +1316,11 @@ export async function renderQRWithFrame({
   frame = 'frame-bottom-bar',
   text = 'SCAN ME',
   logoSrc = null,
-  logoSize = 22,
-  logoRadius = 80,
+  logoSize = 17,
+  logoRadius = 0,
   logoBg = true,
   logoBgColor = '#FFFFFF',
+  logoAspect = null,
   qrColor = '#000000',
   backdrop = '#FFFFFF',
   patternStyle = 'square',
@@ -1263,8 +1352,34 @@ export async function renderQRWithFrame({
     effectiveTextColor = arrowColor || '#000000';
   }
 
+  // Auto-resolve logo aspect ratio if logoSrc is present
+  let resolvedLogoAspect = logoAspect;
+  if (logoSrc) {
+    if (!resolvedLogoAspect && logoAspectCache.has(logoSrc)) {
+      resolvedLogoAspect = logoAspectCache.get(logoSrc);
+    }
+    if (!resolvedLogoAspect && typeof window !== 'undefined') {
+      try {
+        const img = await loadImg(logoSrc);
+        if (img) {
+          const nw = img.naturalWidth || img.width;
+          const nh = img.naturalHeight || img.height;
+          if (nw && nh && nh > 0) {
+            resolvedLogoAspect = nw / nh;
+            logoAspectCache.set(logoSrc, resolvedLogoAspect);
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  const effectiveQrData = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const qrEncodedPayload = (!effectiveQrData.startsWith('http://') && !effectiveQrData.startsWith('https://') && !effectiveQrData.startsWith('mailto:') && !effectiveQrData.startsWith('tel:') && !effectiveQrData.startsWith('sms:'))
+    ? `https://${effectiveQrData}`
+    : effectiveQrData;
+
   const cacheKey = JSON.stringify({
-    url, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor,
+    url: qrEncodedPayload, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor, logoAspect: resolvedLogoAspect,
     qrColor, backdrop, patternStyle, eyeFrame, eyeBall,
     fontFamily, fontSize, fontWeight, textColor: effectiveTextColor, frameBgColor, arrowColor, dropShadow
   });
@@ -1275,7 +1390,7 @@ export async function renderQRWithFrame({
   // Generate pure vector SVG representation
   try {
     const vectorResult = generatePureVectorQRSvg({
-      url,
+      url: qrEncodedPayload,
       frame: effectiveFrame,
       text,
       logoSrc,
@@ -1283,6 +1398,7 @@ export async function renderQRWithFrame({
       logoRadius,
       logoBg,
       logoBgColor,
+      logoAspect: resolvedLogoAspect,
       qrColor,
       backdrop,
       patternStyle,
@@ -1306,7 +1422,7 @@ export async function renderQRWithFrame({
 
   const baseQRSize = 240;
   const qrImg = await generateStyledQRImage({
-    url,
+    url: qrEncodedPayload,
     qrColor,
     backdrop,
     patternStyle,

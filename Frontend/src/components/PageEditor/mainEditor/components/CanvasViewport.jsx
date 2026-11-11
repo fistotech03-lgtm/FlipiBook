@@ -51,6 +51,9 @@ export const CanvasViewport = ({
   const getHtmlToRender = (index, currentHtml) => {
     let clean = currentHtml || '';
 
+    // Auto-heal any corrupted asset URLs with trailing base64 garbage
+    clean = clean.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
+
     // Auto-fix for corrupted templates: strip out the pink XML parsererror and any baked-in custom controls
     if (clean.includes('parsererror') || clean.includes('id="custom-ctrl-')) {
       clean = clean.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, '');

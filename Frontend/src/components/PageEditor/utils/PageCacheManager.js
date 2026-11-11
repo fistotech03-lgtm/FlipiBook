@@ -18,6 +18,8 @@
  *    - Caches parsed layer trees to prevent expensive repeated DOMParser & recursive traversals.
  */
 
+import { sanitizeSvgXml } from './editorUtils';
+
 class PageCacheManager {
   constructor() {
     // Map<pageId, { blobUrl: string, hash: string, timestamp: number }>
@@ -87,7 +89,7 @@ class PageCacheManager {
   prepareSvgForBlob(svgHtml) {
     if (!svgHtml || typeof svgHtml !== 'string') return '';
 
-    let cleaned = svgHtml;
+    let cleaned = sanitizeSvgXml(svgHtml);
 
     // Ensure xmlns is present on <svg
     if (!cleaned.includes('xmlns=')) {

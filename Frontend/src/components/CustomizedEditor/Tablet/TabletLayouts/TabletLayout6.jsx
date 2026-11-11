@@ -34,7 +34,7 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
             title={`Thumbnail ${index + 1}`}
             className="w-full h-full border-none select-none pointer-events-none bg-white"
             scrolling="no"
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-scripts"
         />
     );
 });

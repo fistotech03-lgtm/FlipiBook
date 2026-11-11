@@ -22,12 +22,6 @@ const authenticateUser = (req, res, next) => {
     return next();
   }
 
-  const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
-  if (fallbackEmail) {
-    req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    return next();
-  }
-
   return res.status(401).json({
     success: false,
     message: 'Authentication required. Please sign in to access payment services.'

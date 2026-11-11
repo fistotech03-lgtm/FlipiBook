@@ -10,6 +10,8 @@ if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' &&
   }
 }
 
+export const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val.trim()) || val === 'fol_default' || val === 'default'));
+
 /**
  * Build the base URL for a flipbook's folder using the backend uploads directory.
  *
@@ -37,7 +39,7 @@ export function getAssetBaseUrl(sanitizedEmail, folderName, flipbookName) {
   }
 
   const lowerFolder = folder.toLowerCase();
-  if (!lowerFolder || lowerFolder === 'my flipbooks' || lowerFolder === 'my_flipbooks' || lowerFolder === 'all flipbook' || lowerFolder === 'all flipbooks' || lowerFolder === 'recent' || lowerFolder === 'recent book' || lowerFolder.startsWith('fol_')) {
+  if (!lowerFolder || lowerFolder === 'my flipbooks' || lowerFolder === 'my_flipbooks' || lowerFolder === 'all flipbook' || lowerFolder === 'all flipbooks' || lowerFolder === 'recent' || lowerFolder === 'recent book' || isFolId(lowerFolder)) {
     folder = 'default';
   }
 

@@ -7,6 +7,7 @@
 import { parseLayersFromSVG, syncGradient, syncFilters } from './svgFilterUtils';
 import { applySvgGradientOrSolid } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
 import { normalizeForeignObjectNamespaces } from '../LeftActionMenu/Elements/utils/tableElementUtils';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     const updateElementAttribute = (pageIndex, elementId, attribute, value) => {
@@ -509,9 +510,9 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
           syncFilters(doc, element);
         }
 
-        const serializer = new XMLSerializer();
-        const serialized = serializer.serializeToString(doc.documentElement);
-        updated[pageIndex] = { ...page, html: normalizeForeignObjectNamespaces(serialized) };
+        const rawSvg = safeSerializeSvg(doc) || (typeof XMLSerializer !== 'undefined' ? new XMLSerializer().serializeToString(doc.documentElement) : '');
+        const newHtml = normalizeForeignObjectNamespaces(rawSvg) || page.html;
+        updated[pageIndex] = { ...page, html: newHtml };
       }
       return updated;
     });
@@ -528,7 +529,7 @@ export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
         const overlay = doc.querySelector('[data-name="Overlay"]');
         if (overlay) {
           overlay.setAttribute('fill', color);
-          page.html = new XMLSerializer().serializeToString(doc);
+          page.html = safeSerializeSvg(doc) || page.html;
         }
         updated[pageIndex] = { ...page };
       }

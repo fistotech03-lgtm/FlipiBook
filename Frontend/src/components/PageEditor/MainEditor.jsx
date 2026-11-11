@@ -46,7 +46,7 @@ import {
   IconsModal
 } from './LeftActionMenu';
 import { getTopLevelFrames, hitTest as hitTestExt, isPageRootElement } from './mainEditor/utils/frameHierarchyUtils';
-import { parseLayersFromSVG } from './utils/editorUtils';
+import { parseLayersFromSVG, sanitizeSvgXml } from './utils/editorUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
 import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
@@ -456,6 +456,7 @@ const MainEditor = ({
     finalHtml = finalHtml
       .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
       .replace(/<\/\s*br\s*>/gi, '');
+    finalHtml = sanitizeSvgXml(finalHtml);
 
     // Normalize any foreignObject so XHTML namespace is explicitly preserved
     finalHtml = normalizeForeignObjectNamespaces(finalHtml);

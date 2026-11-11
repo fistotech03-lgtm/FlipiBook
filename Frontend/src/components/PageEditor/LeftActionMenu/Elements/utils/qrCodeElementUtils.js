@@ -25,7 +25,9 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
     textColor,
     fontFamily,
     logoSrc = '',
-    logoSize = 22,
+    logoSize = 60,
+    logoRadius = 0,
+    logoBgColor = '#FFFFFF',
     logoBg = true,
     width = 55
   } = options;
@@ -39,8 +41,9 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
   const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
-  const cached = getCachedFrame(frameId, url);
-  const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;
+  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const cached = getCachedFrame(frameId, sampleUrl);
+  const imgHref = cached?.dataUrl || (url ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240` : (cached?.dataUrl || ''));
 
   const uniqueId = `qrcode-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
   const x = Math.round(cx - width / 2);
@@ -57,6 +60,8 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   g.setAttribute('data-qr-text-color', resolvedTextColor);
   g.setAttribute('data-qr-font-family', resolvedFontFamily);
   g.setAttribute('data-qr-logo-size', String(logoSize));
+  g.setAttribute('data-qr-logo-radius', String(logoRadius));
+  g.setAttribute('data-qr-logo-bg-color', logoBgColor);
   g.setAttribute('data-qr-logo-bg', String(logoBg));
   g.setAttribute('data-qr-logo', logoSrc || '');
   g.setAttribute('transform', `translate(${x}, ${y})`);
@@ -82,14 +87,17 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
 
   // Asynchronously re-render the high-resolution composite canvas frame
   renderQRWithFrame({
-    url,
+    url: sampleUrl,
     frame: frameId,
     text: resolvedText,
     textColor: resolvedTextColor,
     fontFamily: resolvedFontFamily,
     logoSrc: logoSrc || null,
-    logoSize: Number(logoSize) || 22,
-    logoBg: logoBg !== false && logoBg !== 'false'
+    logoSize: Math.round((Number(logoSize) / 100) * 28),
+    logoRadius: Number(logoRadius) || 0,
+    logoBg: logoBg !== false && logoBg !== 'false',
+    logoBgColor: logoBgColor || '#FFFFFF',
+    logoAspect: options.logoAspect || null
   })
     .then((rendered) => {
       if (rendered?.dataUrl) {
@@ -115,7 +123,9 @@ export function getQRCodeSvgString(options = {}, isDrag = false) {
     textColor,
     fontFamily,
     logoSrc = '',
-    logoSize = 22,
+    logoSize = 60,
+    logoRadius = 0,
+    logoBgColor = '#FFFFFF',
     logoBg = true,
     width = 55
   } = options;
@@ -128,13 +138,14 @@ export function getQRCodeSvgString(options = {}, isDrag = false) {
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
   const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
-  const cached = getCachedFrame(frameId, url);
-  const imgHref = cached?.dataUrl || `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240`;
+  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const cached = getCachedFrame(frameId, sampleUrl);
+  const imgHref = cached?.dataUrl || (url ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240` : (cached?.dataUrl || ''));
   const uniqueId = `qrcode-${Date.now()}`;
   const transform = isDrag ? '' : 'transform="translate(80, 120)"';
 
   return `
-    <g id="${uniqueId}" data-type="qrcode" cursor="pointer" data-qr-url="${url}" data-qr-frame="${frameId}" data-qr-text="${resolvedText}" data-qr-text-color="${resolvedTextColor}" data-qr-font-family="${resolvedFontFamily}" data-qr-logo-size="${logoSize}" data-qr-logo-bg="${logoBg}" data-qr-logo="${logoSrc || ''}" ${transform}>
+    <g id="${uniqueId}" data-type="qrcode" cursor="pointer" data-qr-url="${url}" data-qr-frame="${frameId}" data-qr-text="${resolvedText}" data-qr-text-color="${resolvedTextColor}" data-qr-font-family="${resolvedFontFamily}" data-qr-logo-size="${logoSize}" data-qr-logo-radius="${logoRadius}" data-qr-logo-bg-color="${logoBgColor}" data-qr-logo-bg="${logoBg}" data-qr-logo="${logoSrc || ''}" ${transform}>
       <image x="0" y="0" width="${width}" height="${height}" href="${imgHref}" preserveAspectRatio="none" />
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent" pointer-events="all" />
     </g>

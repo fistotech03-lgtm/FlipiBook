@@ -42,8 +42,10 @@ export const fetchFlipbookFolders = async (userKey) => {
       if (!hasDefault) {
         hasDefault = true;
         const displayName = (lower === 'default') ? 'My Flipbooks' : String(rawName).trim();
+        const defId = (typeof f === 'object' && (f.fol_v_id || f.id || f._id)) ? String(f.fol_v_id || f.id || f._id) : 'default';
         cleanedFolders.unshift({
-          id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : 'default_folder',
+          id: defId,
+          fol_v_id: defId,
           name: displayName,
           isDefault: true
         });
@@ -54,8 +56,10 @@ export const fetchFlipbookFolders = async (userKey) => {
 
     if (!seenNames.has(lower)) {
       seenNames.add(lower);
+      const folId = (typeof f === 'object' && (f.fol_v_id || f.id || f._id)) ? String(f.fol_v_id || f.id || f._id) : rawName;
       cleanedFolders.push({
-        id: (typeof f === 'object' && (f.id || f._id)) ? String(f.id || f._id) : rawName,
+        id: folId,
+        fol_v_id: folId,
         name: String(rawName).trim(),
         isDefault: false
       });
@@ -63,7 +67,7 @@ export const fetchFlipbookFolders = async (userKey) => {
   });
 
   if (!hasDefault) {
-    cleanedFolders.unshift({ id: 'default_folder', name: 'My Flipbooks', isDefault: true });
+    cleanedFolders.unshift({ id: 'default', fol_v_id: 'default', name: 'My Flipbooks', isDefault: true });
   }
 
   return cleanedFolders;
@@ -87,8 +91,8 @@ export const fetchFlipbookBooks = async (userKey) => {
       ...b,
       folder: resolvedFolder,
       folderName: resolvedFolder,
-      folder_v_id: b.folder_v_id || b.folder_id || 'fol_default',
-      folder_id: b.folder_v_id || b.folder_id || 'fol_default',
+      folder_v_id: b.folder_v_id || b.folder_id || 'default',
+      folder_id: b.folder_v_id || b.folder_id || 'default',
       pages: pageCount,
       pagesCount: pageCount,
       pagesList: Array.isArray(b.pages) ? b.pages : (b.pagesList || []),

@@ -6,7 +6,7 @@ const folderItemSchema = new mongoose.Schema(
     fol_v_id: {
       type: String,
       required: true,
-      default: () => 'fol_' + crypto.randomBytes(6).toString('hex')
+      default: () => crypto.randomBytes(6).toString('hex')
     },
     name: {
       type: String,
@@ -50,6 +50,7 @@ const userFolderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
     strict: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }

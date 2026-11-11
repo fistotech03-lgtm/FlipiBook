@@ -1,12 +1,12 @@
 export const DEFAULT_MAP_DATA = {
-  name: 'Fisto Tech Private Limited',
-  address: 'Coimbatore , India',
+  name: 'Gandhipuram',
+  address: 'Coimbatore, Tamil Nadu, India',
   rating: '4.9',
   reviews: '1500',
-  category: 'Animation Studio',
+  category: 'Commercial Center',
   phone: '',
   image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&auto=format&fit=crop&q=80',
-  location: 'Coimbatore, Tamil Nadu',
+  location: 'Gandhipuram, Coimbatore, Tamil Nadu',
   gallery: [
     'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=200&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=200&auto=format&fit=crop&q=80',
@@ -39,12 +39,6 @@ export const MAP_TEMPLATES = [
     name: 'Quick Actions',
     description: 'Bottom sheet with Directions, Call & Share buttons',
     badge: 'Action'
-  },
-  {
-    id: 'gallery',
-    name: 'Photo Gallery',
-    description: 'Bottom sheet with studio photos & View Details CTA',
-    badge: 'Detailed'
   }
 ];
 
@@ -128,17 +122,7 @@ export const generateOverlayHtml = (style, data = {}) => {
   const shortName = name.split(' ')[0] || 'Location';
 
   if (style === 'none' || style === 'plain') {
-    return `
-      <!-- Center Pin Pointer (Map Only) -->
-      <div class="map-center-pin" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 5;">
-        <div style="width: 24px; height: 24px; border-radius: 999px; background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.22); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg class="svg-icon-override" width="14" height="14" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="0.5" style="width: 14px !important; height: 14px !important; display: block;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        </div>
-        <div style="margin-top: 3px; background: rgba(255,255,255,0.92); backdrop-filter: blur(2px); border-radius: 4px; padding: 1.5px 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); display: flex; align-items: center; max-width: 90px; overflow: hidden;">
-          <span class="map-nowrap" data-nowrap="true" style="font-size: 7.5px; font-weight: 600; color: #374151; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${shortName}</span>
-        </div>
-      </div>
-    `;
+    return '';
   }
 
   // Theme styling tokens
@@ -157,17 +141,6 @@ export const generateOverlayHtml = (style, data = {}) => {
 
   if (style === 'actions') {
     return `
-      <!-- Top Pin Badge -->
-      <div class="map-top-badge" style="position: absolute; top: 6px; left: 50%; transform: translateX(-50%); background: ${badgeBg}; ${badgeBorder} border-radius: 999px; padding: 2px 8px 2px 4px; display: flex; align-items: center; gap: 4px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: none; z-index: 5; white-space: nowrap !important; max-width: 90%;">
-        <div class="map-badge-icon" style="width: 14px; height: 14px; border-radius: 999px; background: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg class="svg-icon-override" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="1" style="width: 9px !important; height: 9px !important; min-width: 9px !important; max-width: 9px !important; min-height: 9px !important; max-height: 9px !important; display: inline-block !important; flex-shrink: 0 !important;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="#ffffff"/></svg>
-        </div>
-        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
-          <span class="map-nowrap map-badge-title" data-nowrap="true" style="font-weight: 700; font-size: 9px; color: ${textTitle}; line-height: 1.1; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">${name}</span>
-          <span class="map-nowrap map-badge-subtitle" data-nowrap="true" style="font-size: 7.5px; color: ${textSubtitle}; line-height: 1; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">${address}</span>
-        </div>
-      </div>
-
       <!-- Bottom Sheet with Actions -->
       <div class="map-card-overlay map-card-actions" style="position: absolute; bottom: 0; left: 0; right: 0; background: ${cardBg}; ${cardBorder} border-radius: 14px 14px 0 0; padding: 5px 8px 6px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 52%; display: flex; flex-direction: column; justify-content: flex-end;">
         <div class="map-drag-pill" style="width: 24px; height: 2.5px; background: ${dragPill}; border-radius: 999px; margin: 0 auto 4px; flex-shrink: 0;"></div>
@@ -224,64 +197,6 @@ export const generateOverlayHtml = (style, data = {}) => {
         <!-- Downward triangle arrow -->
         <div class="map-callout-arrow" style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 5px solid ${cardBg};"></div>
       </div>
-
-      <!-- Center Pin Marker -->
-      <div class="map-center-pin" style="position: absolute; top: 62%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 4px; background: ${badgeBg}; ${badgeBorder} border-radius: 999px; padding: 2px 7px 2px 4px; ${shadow} pointer-events: none; z-index: 5; white-space: nowrap !important; max-width: 80%;">
-        <div class="map-badge-icon" style="width: 14px; height: 14px; border-radius: 999px; background: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg class="svg-icon-override" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" style="width: 9px !important; height: 9px !important; min-width: 9px !important; max-width: 9px !important; min-height: 9px !important; max-height: 9px !important; display: inline-block !important; flex-shrink: 0 !important;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="#ffffff"/></svg>
-        </div>
-        <span class="map-nowrap map-biz-name" data-nowrap="true" style="font-size: 9px; font-weight: 700; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${shortName}</span>
-      </div>
-    `;
-  }
-
-  if (style === 'gallery') {
-    const galleryItems = gallery && gallery.length ? gallery : DEFAULT_MAP_DATA.gallery;
-    return `
-      <!-- Top Pin Badge -->
-      <div class="map-top-badge" style="position: absolute; top: 6px; left: 50%; transform: translateX(-50%); background: ${badgeBg}; ${badgeBorder} border-radius: 999px; padding: 2px 8px 2px 4px; display: flex; align-items: center; gap: 4px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: none; z-index: 5; white-space: nowrap !important; max-width: 90%;">
-        <div class="map-badge-icon" style="width: 14px; height: 14px; border-radius: 999px; background: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg class="svg-icon-override" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="1" style="width: 9px !important; height: 9px !important; min-width: 9px !important; max-width: 9px !important; min-height: 9px !important; max-height: 9px !important; display: inline-block !important; flex-shrink: 0 !important;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="#ffffff"/></svg>
-        </div>
-        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
-          <span class="map-nowrap map-badge-title" data-nowrap="true" style="font-weight: 700; font-size: 9px; color: ${textTitle}; line-height: 1.1; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">${name}</span>
-          <span class="map-nowrap map-badge-subtitle" data-nowrap="true" style="font-size: 7.5px; color: ${textSubtitle}; line-height: 1; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">${address}</span>
-        </div>
-      </div>
-
-      <!-- Bottom Sheet with Gallery and Action CTA -->
-      <div class="map-card-overlay map-card-gallery" style="position: absolute; bottom: 0; left: 0; right: 0; background: ${cardBg}; ${cardBorder} border-radius: 14px 14px 0 0; padding: 5px 8px 6px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 52%; display: flex; flex-direction: column; justify-content: flex-end;">
-        <div class="map-drag-pill" style="width: 24px; height: 2.5px; background: ${dragPill}; border-radius: 999px; margin: 0 auto 4px; flex-shrink: 0;"></div>
-        <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; min-width: 0;">
-          <img class="map-biz-img" src="${image}" alt="${name}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 30px; height: 30px; border-radius: 5px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);" />
-          <div class="map-biz-info" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-            <div class="map-nowrap map-biz-name" data-nowrap="true" style="font-weight: 700; font-size: 10px; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;">${name}</div>
-            <div class="map-nowrap map-biz-addr" data-nowrap="true" style="font-size: 8px; color: ${textSubtitle}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${address}</div>
-            <div class="map-biz-meta" style="display: flex; align-items: center; gap: 2px; margin-top: 1px;">
-              <span class="map-biz-star" style="color: #f59e0b; font-size: 6.5px; line-height: 1;">★</span>
-              <span class="map-biz-rating" style="font-size: 8.5px; font-weight: 700; color: ${textTitle};">${rating}</span>
-              <span class="map-biz-reviews" style="font-size: 7.5px; color: ${textReviews};">(${reviews})</span>
-            </div>
-            <div class="map-nowrap map-biz-category" data-nowrap="true" style="font-size: 7.5px; color: ${textCategory}; margin-top: 1px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${category}</div>
-          </div>
-        </div>
-        
-        <!-- Gallery Strip -->
-        <div class="map-gallery-strip" style="display: flex; gap: 3px; margin-bottom: 4px; width: 100%;">
-          ${galleryItems.slice(0, 4).map((img, i) => `
-            <img key="${i}" class="map-gallery-thumb" src="${img}" alt="Preview ${i+1}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="flex: 1; height: 24px; border-radius: 3px; object-fit: cover; min-width: 0;" />
-          `).join('')}
-          <div class="map-gallery-thumb" style="position: relative; flex: 1; height: 24px; border-radius: 3px; overflow: hidden; min-width: 0;">
-            <img src="${galleryItems[4] || galleryItems[0]}" alt="More" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&amp;auto=format&amp;fit=crop&amp;q=80';" style="width: 100%; height: 100%; object-fit: cover;" />
-            <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.52); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 9px;">+</div>
-          </div>
-        </div>
-
-        <!-- Full-Width CTA -->
-        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="map-nowrap map-action-btn map-action-btn-primary" data-nowrap="true" style="display: block; width: 100%; text-align: center; background: ${buttonColor || '#00828a'}; color: #ffffff; padding: 4px 0; border-radius: 5px; font-size: 8.5px; font-weight: 600; text-decoration: none; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25); white-space: nowrap !important;">
-          View Details
-        </a>
-      </div>
     `;
   }
 
@@ -291,14 +206,6 @@ export const generateOverlayHtml = (style, data = {}) => {
   const btnColor = buttonColor || (isDark ? '#38bdf8' : '#00828a');
 
   return `
-    <!-- Center Pin Marker -->
-    <div class="map-center-pin" style="position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 4px; background: ${badgeBg}; ${badgeBorder} border-radius: 999px; padding: 2px 7px 2px 4px; ${shadow} pointer-events: none; z-index: 5; white-space: nowrap !important; max-width: 80%;">
-      <div class="map-badge-icon" style="width: 14px; height: 14px; border-radius: 999px; background: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-        <svg class="svg-icon-override" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" style="width: 9px !important; height: 9px !important; min-width: 9px !important; max-width: 9px !important; min-height: 9px !important; max-height: 9px !important; display: inline-block !important; flex-shrink: 0 !important;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="#ffffff"/></svg>
-      </div>
-      <span class="map-nowrap map-biz-name" data-nowrap="true" style="font-size: 9px; font-weight: 700; color: ${textTitle}; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">${shortName}</span>
-    </div>
-
     <!-- Floating Card -->
     <div class="map-card-overlay map-card-carousel" style="position: absolute; bottom: 8px; left: 5px; right: 5px; background: ${cardBg}; ${cardBorder} border-radius: 8px; padding: 5px 7px; ${shadow} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: auto; z-index: 10; box-sizing: border-box; max-height: 50%;">
       <div class="map-biz-row" style="display: flex; align-items: center; gap: 6px;">
@@ -333,8 +240,8 @@ export const generateOverlayHtml = (style, data = {}) => {
 export const getMapSvgCode = (templateId = 'none', isClick = false, customData = {}) => {
   const uniqueId = Date.now();
   const data = { ...DEFAULT_MAP_DATA, ...customData };
-  const loc = data.location || 'Coimbatore, Tamil Nadu';
-  const zoom = customData.zoom !== undefined ? customData.zoom : (data.zoom !== undefined ? data.zoom : 11);
+  const loc = data.location || 'Gandhipuram, Coimbatore, Tamil Nadu';
+  const zoom = customData.zoom !== undefined ? customData.zoom : (data.zoom !== undefined ? data.zoom : 14);
   const defaultUrl = `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=${zoom}&ie=UTF8&iwloc=near&output=embed`;
   const theme = data.theme || 'Light Theme';
   const buttonColor = data.buttonColor || '#000000';

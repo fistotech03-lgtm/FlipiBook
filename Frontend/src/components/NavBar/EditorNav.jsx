@@ -15,6 +15,7 @@ import {
   Tablet,
   Smartphone,
   Settings,
+  CloudOff,
 } from "lucide-react";
 import { Icon } from "@iconify/react";
 import ProfileModal from "../Settings/ProfileModal";
@@ -159,10 +160,23 @@ const EditorNavbar = ({
 
   // When save completes or no unsaved changes exist, reset seconds counter to 0
   useEffect(() => {
-    if (saveSuccessInfo || !hasUnsavedChanges) {
+    if (saveSuccessInfo || (!hasUnsavedChanges && !isSaving)) {
       setSecondsSinceSave(0);
     }
-  }, [saveSuccessInfo, hasUnsavedChanges]);
+  }, [saveSuccessInfo, hasUnsavedChanges, isSaving]);
+
+  // Online / Offline Detection
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const formatTime = (totalSeconds) => {
     if (totalSeconds < 5) return "Just now";
@@ -181,14 +195,24 @@ const EditorNavbar = ({
     queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
-      const ok = await confirm({
-        title: "Leave Site?",
-        message: "Changes you made may not be saved.",
-        confirmText: "Leave",
-        cancelText: "Stay",
-        type: "danger"
-      });
-      if (!ok) return;
+      if (!isAutoSaveEnabled) {
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger",
+        });
+        if (!ok) return;
+      } else {
+        try {
+          if (onSave) {
+            await onSave();
+          }
+        } catch (err) {
+          console.warn("[EditorNav] Auto-save before navigation error:", err);
+        }
+      }
     }
     navigate(to);
   };
@@ -356,58 +380,38 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Save / Sync Status Area: When auto-save is enabled, ONLY show last sync time instead of Save button */}
-          {isAutoSaveEnabled ? (
-            <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-gray-50/80 border border-gray-200 rounded-[2vw] text-gray-700 select-none ml-[0.2vw]">
-              {isSaving ? (
-                <>
-                  <Loader2 size="1.1vw" className="animate-spin text-[#ea543a]" />
-                  <span className="font-medium text-[0.8vw] text-gray-700">Syncing...</span>
-                </>
-              ) : (
-                <>
-                  <Icon
-                    icon="reicon:tick-circle-filled"
-                    className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
-                  />
-                  <span className="font-medium text-[0.8vw] text-gray-600">
-                    Saved : <span className="font-semibold text-gray-900">{formatTime(secondsSinceSave)}</span>
-                  </span>
-                </>
-              )}
-            </div>
-          ) : (
+          {/* Save & Sync Status Area: Hidden when AutoSave is enabled per user request */}
+          {!isAutoSaveEnabled && (
             /* When AutoSave is DISABLED: Show the manual Save button */
             <div className="relative group/tooltip flex items-center ml-[0.2vw]">
               <button
-                onClick={onSave}
-                disabled={!hasUnsavedChanges || isSaving}
-                className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] bg-white border border-[#D9D9D9] rounded-[2vw] text-gray-700 flex-shrink-0 ${
-                  hasUnsavedChanges && !isSaving
-                    ? "cursor-pointer hover:bg-gray-50 border-[#ea543a]/50 text-gray-900 shadow-sm"
-                    : "cursor-default text-gray-500"
+                onClick={() => onSave && onSave(true)}
+                disabled={isSaving || !hasUnsavedChanges}
+                className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] rounded-[2vw] flex-shrink-0 ${
+                  isSaving
+                    ? "bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed"
+                    : hasUnsavedChanges
+                    ? "bg-[#EC5137] hover:bg-[#d9482f] border border-[#EC5137] text-white shadow-sm cursor-pointer active:scale-[0.98]"
+                    : "bg-white border border-[#D9D9D9] text-gray-600 cursor-default"
                 }`}
               >
                 {isSaving ? (
                   <>
-                    <Loader2
-                      size="1.2vw"
-                      className="animate-spin text-yellow-500"
-                    />
-                    <span className="font-medium text-[0.85vw]">Saving</span>
+                    <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137]" />
+                    <span className="font-medium text-[0.85vw]">Saving...</span>
                   </>
                 ) : hasUnsavedChanges ? (
                   <>
-                    <Save size="1.2vw" className="text-yellow-500" />
+                    <Save className="w-[1.1vw] h-[1.1vw] text-white" />
                     <span className="font-medium text-[0.85vw]">Save</span>
                   </>
                 ) : (
                   <>
                     <Icon
                       icon="reicon:tick-circle-filled"
-                      className="w-[1.2vw] h-[1.2vw] text-[#22c55e]"
+                      className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
                     />
-                    <span className="font-medium text-[0.85vw]">Saved</span>
+                    <span className="font-medium text-[0.85vw] text-gray-600">Saved</span>
                   </>
                 )}
               </button>
@@ -416,34 +420,11 @@ const EditorNavbar = ({
                 <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
                   {hasUnsavedChanges
                     ? "You have unsaved changes - Click to Save"
+                    : isSaving
+                    ? "Saving changes..."
                     : "All changes saved"}
                 </div>
               </div>
-
-              {/* Success Toast Popup */}
-              {saveSuccessInfo && (
-                <div className="absolute top-full right-0 mt-[0.5vw] w-[12vw] z-[99999] animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="bg-[#5CBC49] rounded-[0.5vw] shadow-2xl p-[0.6vw] text-white relative">
-                    <div className="absolute -top-[0.2vw] right-[1vw] w-[0.6vw] h-[0.6vw] bg-[#5CBC49] rotate-45 transform"></div>
-                    <div className="flex items-center gap-[0.4vw]">
-                      <div className="w-[1.2vw] h-[1.2vw] rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <Icon
-                          icon="lucide:check"
-                          className="w-[0.8vw] h-[0.8vw] text-white"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.75vw] font-semibold truncate">
-                          {saveSuccessInfo.name || "Flipbook"}
-                        </p>
-                        <p className="text-[0.65vw] text-white/90">
-                          Saved successfully
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

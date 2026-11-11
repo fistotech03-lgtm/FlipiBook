@@ -16,18 +16,12 @@ export const customLeadFormSections = [
 
 const videoId = getYoutubeVideoId(GUIDE_VIDEOS.customLeadForm);
 
-export default function CustomLeadForm() {
+export default function CustomLeadForm({ id }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <CustomScrollbar
-      color="#d1d5db"
-      hoverColor="#9ca3af"
-      width="0.25vw"
-      className="w-full h-full"
-    >
-      <div className="w-full min-h-full flex flex-col pt-[1.5vh] pb-[3vh] px-[1.5vw] space-y-[2.5vh]">
-        <div className="pb-[1.8vh] border-b border-gray-200 -mx-[1.5vw] px-[1.5vw]">
+    <div id={id} className="w-full flex flex-col pt-[1.5vh] pb-[4vh] px-[1.5vw] space-y-[2.5vh] scroll-mt-[2vh]">
+        <div className="pb-[1.2vh] -mx-[1.5vw] px-[1.5vw]">
           <div className="flex items-center gap-[0.6vw]">
             <span className="p-[0.45vw] rounded-[0.45vw] bg-[#ec5137]/10 text-[#ec5137]">
               <FileCheck2 className="w-[1.1vw] h-[1.1vw]" />
@@ -36,7 +30,7 @@ export default function CustomLeadForm() {
               Lead Form
             </h1>
           </div>
-          <p className="text-[0.9vw] font-semibold text-gray-400 mt-[1.8vh] ml-[4vw] mr-[4vw] leading-relaxed">
+          <p className="text-[0.9vw] font-semibold text-gray-400 mt-[1.8vh] ml-[4vw] mr-[2vw] leading-relaxed">
             Add an interactive lead capture pop-up to collect visitor names and emails before or while reading your flipbook. Export captured reader contacts to CSV or sync them straight into your marketing CRM.
           </p>
         </div>
@@ -72,7 +66,7 @@ export default function CustomLeadForm() {
               />
             )}
           </div>
-        </div></div>
-    </CustomScrollbar>
+        </div>
+      </div>
   );
 }

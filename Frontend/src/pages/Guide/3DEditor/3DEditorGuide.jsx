@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import ThreeDStudioCreateUpload, { threeDStudioCreateUploadSections } from './ThreeDStudioCreateUpload';
 import ThreeDStudioMaterialTexture, { threeDStudioMaterialTextureSections } from './ThreeDStudioMaterialTexture';
 import ThreeDStudioLightingEnvironments, { threeDStudioLightingEnvironmentsSections } from './ThreeDStudioLightingEnvironments';
 import ThreeDStudioRenderSaveExport, { threeDStudioRenderSaveExportSections } from './ThreeDStudioRenderSaveExport';
+import CustomScrollbar from '../../../components/CustomScrollbar';
 
 export const threeDStudioEditorSections = [
   ...threeDStudioCreateUploadSections,
@@ -12,17 +13,30 @@ export const threeDStudioEditorSections = [
 ];
 
 export default function ThreeDStudioEditorGuide({ selectedSubItem }) {
-  if (threeDStudioCreateUploadSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDStudioCreateUpload selectedSubItem={selectedSubItem} />;
-  }
-  if (threeDStudioMaterialTextureSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDStudioMaterialTexture selectedSubItem={selectedSubItem} />;
-  }
-  if (threeDStudioLightingEnvironmentsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDStudioLightingEnvironments selectedSubItem={selectedSubItem} />;
-  }
-  if (threeDStudioRenderSaveExportSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <ThreeDStudioRenderSaveExport selectedSubItem={selectedSubItem} />;
-  }
-  return null;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedSubItem) return;
+    const targetElement = document.getElementById(selectedSubItem);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedSubItem]);
+
+  return (
+    <CustomScrollbar
+      ref={containerRef}
+      color="#d1d5db"
+      hoverColor="#9ca3af"
+      width="0.25vw"
+      className="w-full h-full"
+    >
+      <div className="w-full flex flex-col divide-y divide-gray-200">
+        <ThreeDStudioCreateUpload id="3d-studio-create-upload" />
+        <ThreeDStudioMaterialTexture id="3d-studio-material-texture" />
+        <ThreeDStudioLightingEnvironments id="3d-studio-lighting-environments" />
+        <ThreeDStudioRenderSaveExport id="3d-studio-render-save-export" />
+      </div>
+    </CustomScrollbar>
+  );
 }

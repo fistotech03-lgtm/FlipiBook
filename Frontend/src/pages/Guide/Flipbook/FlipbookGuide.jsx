@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import FlipbookFileCreate, { flipbookFileCreateSections } from './FlipbookFileCreate';
 import FlipbookFileUpload, { flipbookFileUploadSections } from './FlipbookFileUpload';
 import FlipbookBuildScratch, { flipbookBuildScratchSections } from './FlipbookBuildScratch';
 import FlipbookTemplate, { flipbookTemplateSections } from './FlipbookTemplate';
+import CustomScrollbar from '../../../components/CustomScrollbar';
 
 export const flipbookGuideSections = [
   ...flipbookFileCreateSections,
@@ -12,17 +13,30 @@ export const flipbookGuideSections = [
 ];
 
 export default function FlipbookGuide({ selectedSubItem }) {
-  if (flipbookFileCreateSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <FlipbookFileCreate selectedSubItem={selectedSubItem} />;
-  }
-  if (flipbookFileUploadSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <FlipbookFileUpload selectedSubItem={selectedSubItem} />;
-  }
-  if (flipbookBuildScratchSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <FlipbookBuildScratch selectedSubItem={selectedSubItem} />;
-  }
-  if (flipbookTemplateSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <FlipbookTemplate selectedSubItem={selectedSubItem} />;
-  }
-  return null;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedSubItem) return;
+    const targetElement = document.getElementById(selectedSubItem);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedSubItem]);
+
+  return (
+    <CustomScrollbar
+      ref={containerRef}
+      color="#d1d5db"
+      hoverColor="#9ca3af"
+      width="0.25vw"
+      className="w-full h-full"
+    >
+      <div className="w-full flex flex-col divide-y divide-gray-200">
+        <FlipbookFileCreate id="flipbook-file-create" />
+        <FlipbookFileUpload id="flipbook-use-file-upload" />
+        <FlipbookBuildScratch id="flipbook-build-from-scratch" />
+        <FlipbookTemplate id="flipbook-use-template" />
+      </div>
+    </CustomScrollbar>
+  );
 }

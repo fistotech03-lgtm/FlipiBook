@@ -196,8 +196,8 @@ export default function Guide() {
   return (
     <div className="h-full w-full bg-white text-black flex font-sans antialiased select-none overflow-hidden">
       {/* 1. Dark Primary Left Sidebar */}
-      <aside className="w-[5.5vw] min-w-[5rem] max-w-[6rem] bg-[#151c28] text-gray-300 flex flex-col items-center py-[1vh] shrink-0 border-r border-[#1f293d] h-full overflow-y-auto">
-        <div className="flex flex-col items-center gap-[0.6vh] w-full px-[0.3vw]">
+      <aside className="w-[6.5vw] min-w-[5.8rem] max-w-[7.5rem] bg-[#151c28] text-gray-300 flex flex-col items-center py-[1vh] shrink-0 border-r border-[#1f293d] h-full overflow-y-auto">
+        <div className="flex flex-col items-center gap-[0.4vh] w-full px-[0.3vw]">
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
@@ -219,7 +219,7 @@ export default function Guide() {
                   }`}
                   strokeWidth={1.75}
                 />
-                <span className="text-[0.6vw] font-medium text-center leading-tight">
+                <span className="text-[0.63vw] font-semibold text-center leading-tight">
                   {item.label}
                 </span>
               </button>
@@ -229,7 +229,7 @@ export default function Guide() {
       </aside>
 
       {/* 2. Secondary Sub-Sidebar (Collapsible Subcontent Accordions) */}
-      <aside className="w-[18vw] max-w-[30rem] bg-[#fcfcfd] border-r border-gray-100 flex flex-col shrink-0 h-full overflow-hidden">
+      <aside className="w-[16vw] max-w-[20rem] bg-[#fcfcfd] border-r border-gray-100 flex flex-col shrink-0 h-full overflow-hidden">
         <CustomScrollbar
           color="#d1d5db"
           hoverColor="#9ca3af"
@@ -259,11 +259,11 @@ export default function Guide() {
                         : 'text-gray-600 hover:text-black hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-center gap-[0.5vw] font-semibold text-[0.85vw]">
-                      <span className={isSectionActive ? 'text-[#EC5137]' : 'text-gray-700'}>
+                    <div className="flex items-center gap-[0.5vw] font-semibold text-[0.8vw]">
+                      <span className={isSectionActive ? 'text-[#EC5137]' : 'text-gray-500'}>
                         {section.icon}
                       </span>
-                      <span className={`text-left font-semibold ${isSectionActive ? 'text-[#EC5137]' : 'text-gray-700'}`}>
+                      <span className={`text-left font-semibold ${isSectionActive ? 'text-[#EC5137]' : 'text-gray-500'}`}>
                         {section.title}
                       </span>
                     </div>
@@ -336,7 +336,7 @@ export default function Guide() {
           {/* Title on the left */}
           <div className="flex items-center">
             <h1 className="text-[1.5vw] font-semibold text-black">
-              Flipbook Guide
+              {activeNav === 'Get Started' ? 'Get Started Guide' : activeNav === 'Profile & Account' ? 'Profile & Account Guide' : `${activeNav} Guide`}
             </h1>
           </div>
 
@@ -502,7 +502,7 @@ export default function Guide() {
         </div>
 
         {/* Content Body */}
-        <div className="flex-1">
+        <div className="flex-1 min-h-0 h-full overflow-hidden">
           {ActiveComponent && <ActiveComponent selectedSubItem={selectedSubItem} />}
         </div>
       </main>

@@ -53,10 +53,27 @@ export const COVER_TEMPLATES = [
   { id: 6, label: 'Isometric Floating', defaultText1: 'Minimalist Journal', defaultText2: 'Special Edition Portfolio' },
 ];
 
+export const extractPageBgColor = (page) => {
+  if (!page) return null;
+  if (page.backgroundColor && page.backgroundColor !== 'transparent') return page.backgroundColor;
+  if (page.bg && page.bg !== 'transparent') return page.bg;
+  if (typeof page.html === 'string') {
+    const bgMatch = page.html.match(/data-type=["']background["'][^>]*fill=["']([^"']+)["']/i) ||
+                    page.html.match(/data-name=["']Overlay["'][^>]*fill=["']([^"']+)["']/i) ||
+                    page.html.match(/<rect[^>]*fill=["'](#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))["']/i);
+    if (bgMatch && bgMatch[1] && bgMatch[1] !== 'none' && bgMatch[1] !== 'transparent') {
+      return bgMatch[1];
+    }
+  }
+  return null;
+};
+
 export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], scaleClass = "scale-[1.05]", customTitle = null, customSubtitle = null) => {
   const page1 = selectedPages[0] && pages[selectedPages[0] - 1] ? pages[selectedPages[0] - 1] : null;
   const page2 = selectedPages[1] && pages[selectedPages[1] - 1] ? pages[selectedPages[1] - 1] : page1;
   const page3 = selectedPages[2] && pages[selectedPages[2] - 1] ? pages[selectedPages[2] - 1] : page2;
+
+  const page1Color = page1 ? (extractPageBgColor(page1) || '#334155') : null;
 
   switch (templateId) {
     case 1:
@@ -109,8 +126,13 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           {/* Depth / Side spine effect */}
           <div className="relative w-[11.2vw] h-[14.8vw] rounded-[0.5vw] border border-black/10 overflow-hidden bg-white flex">
             {/* Book spine simulation strip */}
-            <div className="w-[0.9vw] h-full bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800 shrink-0 relative shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center">
-              <span className="text-[0.45vw] text-white/70 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">EDITION</span>
+            <div 
+              className={`w-[0.9vw] h-full ${!page1 ? 'bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800' : ''} shrink-0 relative shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.45vw] text-white/70 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">EDITION</span>
+              )}
             </div>
             {/* Book cover area */}
             <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 text-white flex flex-col justify-between p-[0.9vw]">
@@ -143,8 +165,13 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
           <div className="relative w-[18.5vw] h-[12vw] bg-white rounded-[0.5vw] flex overflow-hidden border border-gray-300">
             {/* Spine Left Edge */}
-            <div className="w-[0.8vw] h-full bg-gradient-to-r from-gray-800 to-gray-700 shrink-0 shadow-[inset_-0.15vw_0_0.3vw_rgba(0,0,0,0.4)] z-20 flex items-center justify-center">
-              <span className="text-[0.4vw] text-white/70 font-bold uppercase tracking-wider transform -rotate-90 whitespace-nowrap">CATALOG</span>
+            <div 
+              className={`w-[0.8vw] h-full ${!page1 ? 'bg-gradient-to-r from-gray-800 to-gray-700' : ''} shrink-0 shadow-[inset_-0.15vw_0_0.3vw_rgba(0,0,0,0.4)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.4vw] text-white/70 font-bold uppercase tracking-wider transform -rotate-90 whitespace-nowrap">CATALOG</span>
+              )}
             </div>
             {/* Front Cover Area */}
             <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-zinc-950 text-white p-[1.1vw] flex flex-col justify-between">
@@ -253,8 +280,13 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           {/* Isometric Perspective Book */}
           <div className="relative w-[11.8vw] h-[15.2vw] rounded-[0.4vw] transform rotate-[-8deg] skew-y-[3deg] overflow-hidden bg-white border border-black/10 flex">
             {/* Book Spine Simulation */}
-            <div className="w-[0.9vw] h-full bg-gradient-to-r from-amber-800 via-amber-700 to-amber-900 shrink-0 shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center">
-              <span className="text-[0.45vw] text-amber-200/80 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">PREMIUM</span>
+            <div 
+              className={`w-[0.9vw] h-full ${!page1 ? 'bg-gradient-to-r from-amber-800 via-amber-700 to-amber-900' : ''} shrink-0 shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.45vw] text-amber-200/80 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">PREMIUM</span>
+              )}
             </div>
             {/* Front Cover Body */}
             <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-950 to-slate-950 text-white p-[1vw] flex flex-col justify-between">

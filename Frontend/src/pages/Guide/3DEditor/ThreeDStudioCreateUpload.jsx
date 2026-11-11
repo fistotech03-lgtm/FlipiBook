@@ -16,18 +16,12 @@ export const threeDStudioCreateUploadSections = [
 
 const videoId = getYoutubeVideoId(GUIDE_VIDEOS.threeDStudioCreateUpload);
 
-export default function ThreeDStudioCreateUpload() {
+export default function ThreeDStudioCreateUpload({ id }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <CustomScrollbar
-      color="#d1d5db"
-      hoverColor="#9ca3af"
-      width="0.25vw"
-      className="w-full h-full"
-    >
-      <div className="w-full min-h-full flex flex-col pt-[1.5vh] pb-[3vh] px-[1.5vw] space-y-[2.5vh]">
-        <div className="pb-[1.8vh] border-b border-gray-200 -mx-[1.5vw] px-[1.5vw]">
+    <div id={id} className="w-full flex flex-col pt-[1.5vh] pb-[4vh] px-[1.5vw] space-y-[2.5vh] scroll-mt-[2vh]">
+        <div className="pb-[1.2vh] -mx-[1.5vw] px-[1.5vw]">
           <div className="flex items-center gap-[0.6vw]">
             <span className="p-[0.45vw] rounded-[0.45vw] bg-[#ec5137]/10 text-[#ec5137]">
               <FolderPlus className="w-[1.1vw] h-[1.1vw]" />
@@ -36,7 +30,7 @@ export default function ThreeDStudioCreateUpload() {
               Create & Upload 3D Models
             </h1>
           </div>
-          <p className="text-[0.9vw] font-semibold text-gray-400 mt-[1.8vh] ml-[4vw] mr-[4vw] leading-relaxed">
+          <p className="text-[0.9vw] font-semibold text-gray-400 mt-[1.8vh] ml-[4vw] mr-[2vw] leading-relaxed">
             Import 3D models in GLB, GLTF, OBJ, or FBX formats and inspect sub-mesh hierarchies inside the scene tree. Normalize scale units and auto-center model origins with one click to prepare your 3D workspace.
           </p>
         </div>
@@ -72,7 +66,7 @@ export default function ThreeDStudioCreateUpload() {
               />
             )}
           </div>
-        </div></div>
-    </CustomScrollbar>
+        </div>
+      </div>
   );
 }

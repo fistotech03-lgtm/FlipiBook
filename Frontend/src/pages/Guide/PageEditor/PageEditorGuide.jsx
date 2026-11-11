@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import PageSettings, { pageSettingsSections } from './PageSettings';
 import PageMedia, { pageMediaSections } from './PageMedia';
 import PageShapesGrid, { pageShapesGridSections } from './PageShapesGrid';
@@ -12,6 +12,7 @@ import PageInteractions3dAr, { pageInteractions3dArSections } from './PageIntera
 import PageInteractionsPopup, { pageInteractionsPopupSections } from './PageInteractionsPopup';
 import PageAnimations, { pageAnimationsSections } from './PageAnimations';
 import PageHotspots, { pageHotspotsSections } from './PageHotspots';
+import CustomScrollbar from '../../../components/CustomScrollbar';
 
 export const pageEditorSections = [
   ...pageSettingsSections,
@@ -30,44 +31,39 @@ export const pageEditorSections = [
 ];
 
 export default function PageEditorGuide({ selectedSubItem }) {
-  if (pageSettingsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageSettings selectedSubItem={selectedSubItem} />;
-  }
-  if (pageMediaSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageMedia selectedSubItem={selectedSubItem} />;
-  }
-  if (pageShapesGridSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageShapesGrid selectedSubItem={selectedSubItem} />;
-  }
-  if (pageMapsQrSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageMapsQr selectedSubItem={selectedSubItem} />;
-  }
-  if (pageTypographySlideshowSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageTypographySlideshow selectedSubItem={selectedSubItem} />;
-  }
-  if (pageTablesSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageTables selectedSubItem={selectedSubItem} />;
-  }
-  if (pageAudioButtonsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageAudioButtons selectedSubItem={selectedSubItem} />;
-  }
-  if (pageTemplatesSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageTemplates selectedSubItem={selectedSubItem} />;
-  }
-  if (pageInteractionsCallSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageInteractionsCall selectedSubItem={selectedSubItem} />;
-  }
-  if (pageInteractions3dArSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageInteractions3dAr selectedSubItem={selectedSubItem} />;
-  }
-  if (pageInteractionsPopupSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageInteractionsPopup selectedSubItem={selectedSubItem} />;
-  }
-  if (pageAnimationsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageAnimations selectedSubItem={selectedSubItem} />;
-  }
-  if (pageHotspotsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <PageHotspots selectedSubItem={selectedSubItem} />;
-  }
-  return null;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedSubItem) return;
+    const targetElement = document.getElementById(selectedSubItem);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedSubItem]);
+
+  return (
+    <CustomScrollbar
+      ref={containerRef}
+      color="#d1d5db"
+      hoverColor="#9ca3af"
+      width="0.25vw"
+      className="w-full h-full"
+    >
+      <div className="w-full flex flex-col divide-y divide-gray-200">
+        <PageSettings id="page-editor-settings" />
+        <PageMedia id="page-editor-media" />
+        <PageShapesGrid id="page-editor-shapes-grid" />
+        <PageMapsQr id="page-editor-maps-qr" />
+        <PageTypographySlideshow id="page-editor-typography-slideshow" />
+        <PageTables id="page-editor-tables" />
+        <PageAudioButtons id="page-editor-audio-buttons" />
+        <PageTemplates id="page-editor-templates" />
+        <PageInteractionsCall id="page-editor-interactions-call" />
+        <PageInteractions3dAr id="page-editor-interactions-3d-ar" />
+        <PageInteractionsPopup id="page-editor-interactions-popup" />
+        <PageAnimations id="page-editor-animations" />
+        <PageHotspots id="page-editor-hotspots" />
+      </div>
+    </CustomScrollbar>
+  );
 }

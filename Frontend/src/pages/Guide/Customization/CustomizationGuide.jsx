@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import CustomBgTheme, { customBgThemeSections } from './CustomBgTheme';
 import CustomLayoutSettings, { customLayoutSettingsSections } from './CustomLayoutSettings';
 import CustomLeadForm, { customLeadFormSections } from './CustomLeadForm';
 import CustomVisibilityPrivacy, { customVisibilityPrivacySections } from './CustomVisibilityPrivacy';
 import CustomPreviewShareExport, { customPreviewShareExportSections } from './CustomPreviewShareExport';
 import CustomDevicesViewports, { customDevicesViewportsSections } from './CustomDevicesViewports';
+import CustomScrollbar from '../../../components/CustomScrollbar';
 
 export const customizationGuideSections = [
   ...customBgThemeSections,
@@ -16,23 +17,32 @@ export const customizationGuideSections = [
 ];
 
 export default function CustomizationGuide({ selectedSubItem }) {
-  if (customBgThemeSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomBgTheme selectedSubItem={selectedSubItem} />;
-  }
-  if (customLayoutSettingsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomLayoutSettings selectedSubItem={selectedSubItem} />;
-  }
-  if (customLeadFormSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomLeadForm selectedSubItem={selectedSubItem} />;
-  }
-  if (customVisibilityPrivacySections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomVisibilityPrivacy selectedSubItem={selectedSubItem} />;
-  }
-  if (customPreviewShareExportSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomPreviewShareExport selectedSubItem={selectedSubItem} />;
-  }
-  if (customDevicesViewportsSections.some(s => s.items.some(i => i.id === selectedSubItem))) {
-    return <CustomDevicesViewports selectedSubItem={selectedSubItem} />;
-  }
-  return null;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedSubItem) return;
+    const targetElement = document.getElementById(selectedSubItem);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedSubItem]);
+
+  return (
+    <CustomScrollbar
+      ref={containerRef}
+      color="#d1d5db"
+      hoverColor="#9ca3af"
+      width="0.25vw"
+      className="w-full h-full"
+    >
+      <div className="w-full flex flex-col divide-y divide-gray-200">
+        <CustomBgTheme id="custom-bg-theme-layouts" />
+        <CustomLayoutSettings id="custom-layout-settings" />
+        <CustomLeadForm id="custom-lead-form" />
+        <CustomVisibilityPrivacy id="custom-visibility-privacy" />
+        <CustomPreviewShareExport id="custom-preview-share-export" />
+        <CustomDevicesViewports id="custom-devices-viewports" />
+      </div>
+    </CustomScrollbar>
+  );
 }

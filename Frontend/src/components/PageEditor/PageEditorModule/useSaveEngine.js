@@ -12,6 +12,8 @@ import {
 } from "../../../utils/assetUtils";
 import { validateInteractions } from "./interactionValidation";
 import { useAuth } from "../../../context/AuthContext";
+import { normalizeForeignObjectNamespaces } from "../LeftActionMenu/Elements/utils/tableElementUtils";
+import { sanitizeSvgXml, safeSerializeSvg } from "../utils/editorUtils";
 
 const VIRTUAL_FOLDERS = new Set([
   "recent book",
@@ -50,12 +52,14 @@ export const useSaveEngine = ({
   setIsSaving,
   triggerSaveSuccess,
   getFlipbookDimensions,
+  activePageIndex,
   setActivePageIndex,
   toast,
   location,
   navigate,
   setActiveTopTool,
   setSelectedLayerId,
+  isAutoSaveEnabled = true,
 }) => {
   const { user } = useAuth();
   const autoSaveTimerRef = useRef(null);
@@ -63,17 +67,49 @@ export const useSaveEngine = ({
   const lastSavedHtmlsRef = useRef({});
 
   const saveFlipbook = async (isManual = false, overridePages = null) => {
-    let pagesToSave = overridePages || pages;
+    // 0. Ensure any active pen or node drawing session commits clean path before saving
+    try {
+      window.dispatchEvent(new CustomEvent("editor-commit-active-tools", { detail: { isManual } }));
+    } catch (_) {}
+
+    let pagesToSave = overridePages ? [...overridePages] : [...pages];
     if (isSaving || !pagesToSave || pagesToSave.length === 0) return;
 
+    // If auto-save is turned OFF, refuse automated saves - only manual save button writes to DB
+    if (!isManual && !isAutoSaveEnabled) return;
+
+    // Sync live canvas DOM for the active page if available so no uncommitted canvas edits are lost
+    if (typeof activePageIndex === "number" && pagesToSave[activePageIndex]) {
+      try {
+        const container = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"]`);
+        const liveSvg = container?.querySelector('[id^="canvas-content-"] svg') || container?.querySelector('svg:not([id^="highlight-overlay-"]):not(#marquee-selection-overlay)');
+        if (liveSvg) {
+          const clone = liveSvg.cloneNode(true);
+          clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, #vectra-overlay-group, #node-edit-overlay-group, [id="multi-selection-bounds"], .video-damage-rect, [class*="damage-rect"], [data-is-dummy="true"]').forEach(e => e.remove());
+          const serialized = safeSerializeSvg(clone);
+          if (serialized && serialized.length > 50 && serialized.includes('<svg')) {
+            pagesToSave[activePageIndex] = {
+              ...pagesToSave[activePageIndex],
+              html: serialized
+            };
+          }
+        }
+      } catch (err) {
+        console.warn("[SaveEngine] Live canvas sync fallback:", err);
+      }
+    }
+
+    // Only blur active element on explicit manual save (e.g. clicking the navbar Save button)
+    // NEVER blur during automatic background saves, so typing is never interrupted!
     if (
+      isManual &&
       document.activeElement &&
       typeof document.activeElement.blur === "function"
     ) {
       document.activeElement.blur();
     }
 
-    const validation = validateInteractions(pagesToSave);
+    const validation = validateInteractions(pagesToSave, activePageIndex);
     if (!validation.isValid) {
       if (isManual) {
         toast.error(validation.message);
@@ -84,7 +120,11 @@ export const useSaveEngine = ({
           setActivePageIndex(validation.pageIndex);
         }
         if (validation.elementId) {
-          setActiveTopTool("interaction");
+          if (validation.isQRCode) {
+            setActiveTopTool("editor");
+          } else {
+            setActiveTopTool("interaction");
+          }
           setSelectedLayerId(validation.elementId);
           window.dispatchEvent(
             new CustomEvent("select-layer", {
@@ -92,21 +132,35 @@ export const useSaveEngine = ({
             }),
           );
 
-          const dispatchOpen = () => {
-            window.dispatchEvent(
-              new CustomEvent("open-interaction-accordion", {
-                detail: {
-                  elementId: validation.elementId,
-                  pageIndex: validation.pageIndex,
-                  field: validation.field,
-                },
-              }),
-            );
-          };
-          dispatchOpen();
-          setTimeout(dispatchOpen, 100);
-          setTimeout(dispatchOpen, 250);
-          setTimeout(dispatchOpen, 400);
+          if (validation.isQRCode) {
+            const dispatchFocus = () => {
+              window.dispatchEvent(
+                new CustomEvent("focus-qr-url", {
+                  detail: { elementId: validation.elementId },
+                }),
+              );
+            };
+            dispatchFocus();
+            setTimeout(dispatchFocus, 100);
+            setTimeout(dispatchFocus, 250);
+            setTimeout(dispatchFocus, 400);
+          } else {
+            const dispatchOpen = () => {
+              window.dispatchEvent(
+                new CustomEvent("open-interaction-accordion", {
+                  detail: {
+                    elementId: validation.elementId,
+                    pageIndex: validation.pageIndex,
+                    field: validation.field,
+                  },
+                }),
+              );
+            };
+            dispatchOpen();
+            setTimeout(dispatchOpen, 100);
+            setTimeout(dispatchOpen, 250);
+            setTimeout(dispatchOpen, 400);
+          }
         }
       }
       return;
@@ -137,31 +191,31 @@ export const useSaveEngine = ({
 
       const normalizePageAssetUrls = (htmlStr) => {
         if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
-        // Clean up any dangling base64 attached to asset filenames
-        let cleaned = htmlStr.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
+        // Clean up any dangling base64 or corrupted asset URLs (e.g. "../assets/Image/xxx.jpg /9j/..." or "../assets/Image/xxx/.../75FA...")
+        let cleaned = htmlStr.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
         const assetRegex =
-          /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
+          /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi;
         let res = cleaned.replace(assetRegex, "../assets/$1/$2");
         const escapedAssetRegex =
-          /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
+          /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([A-Za-z0-9_.-]+)/gi;
         res = res.replace(escapedAssetRegex, "../assets/$1/$2");
         res = res.replace(
-          /(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(
-          /(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(
-          /(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi,
+          /(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi,
           "$1../assets/$2/$3",
         );
         res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, "../assets/");
         if (projectBaseUrl && res.includes(projectBaseUrl)) {
           res = res.split(projectBaseUrl).join("../");
         }
-        return res;
+        return normalizeForeignObjectNamespaces(res);
       };
 
       pagesToSave = await Promise.all(
@@ -596,8 +650,8 @@ export const useSaveEngine = ({
                 }
               }
 
-              newHtml = new XMLSerializer().serializeToString(
-                doc.documentElement,
+              newHtml = normalizeForeignObjectNamespaces(
+                new XMLSerializer().serializeToString(doc.documentElement),
               );
             } catch (err) {
               console.error(
@@ -765,7 +819,82 @@ export const useSaveEngine = ({
             }
           }
 
-          // --- 3. DIRECT STRING SEARCH base64 extraction and upload ---
+          // Protect PDF Background vector layer and its embedded images from being torn out and re-uploaded
+          const pdfBgPlaceholders = new Map();
+          newHtml = newHtml.replace(/<!--\s*FLIPBOOK_PDF_BG_START\s*-->[\s\S]*?<!--\s*FLIPBOOK_PDF_BG_END\s*-->/gi, (match) => {
+            const ph = `__PDF_BG_PH_${Math.random().toString(36).slice(2)}__`;
+            pdfBgPlaceholders.set(ph, match);
+            return ph;
+          });
+          const bgLayerRegex = /<g\b[^>]*data-(?:name=["'](?:PDF Background|pdf background)["']|type=["']pdf-vector-layer["'])[^>]*>/gi;
+          let bgLayerMatch;
+          while ((bgLayerMatch = bgLayerRegex.exec(newHtml)) !== null) {
+            const startIdx = bgLayerMatch.index;
+            let depth = 1;
+            let i = startIdx + bgLayerMatch[0].length;
+            let endIdx = -1;
+            while (i < newHtml.length) {
+              if (newHtml.startsWith('<g', i) && (newHtml[i + 2] === ' ' || newHtml[i + 2] === '>')) {
+                depth++;
+                i += 2;
+              } else if (newHtml.startsWith('</g>', i)) {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 4;
+                  break;
+                }
+                i += 4;
+              } else {
+                i++;
+              }
+            }
+            if (endIdx !== -1) {
+              const fullBg = newHtml.substring(startIdx, endIdx);
+              const ph = `__PDF_BG_PH_${Math.random().toString(36).slice(2)}__`;
+              pdfBgPlaceholders.set(ph, fullBg);
+              newHtml = newHtml.substring(0, startIdx) + ph + newHtml.substring(endIdx);
+              bgLayerRegex.lastIndex = startIdx + ph.length;
+            } else {
+              break;
+            }
+          }
+
+          // Protect QR Code elements from having their vector SVG data URIs stripped and converted to broken raster jpg files
+          const qrCodePlaceholders = new Map();
+          const qrGroupRegex = /<g\b[^>]*data-type=["']qrcode["'][^>]*>|<g\b[^>]*id=["']qrcode-[^"']*["'][^>]*>/gi;
+          let qrMatch;
+          while ((qrMatch = qrGroupRegex.exec(newHtml)) !== null) {
+            const startIdx = qrMatch.index;
+            let depth = 1;
+            let i = startIdx + qrMatch[0].length;
+            let endIdx = -1;
+            while (i < newHtml.length) {
+              if (newHtml.startsWith('<g', i) && (newHtml[i + 2] === ' ' || newHtml[i + 2] === '>')) {
+                depth++;
+                i += 2;
+              } else if (newHtml.startsWith('</g>', i)) {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 4;
+                  break;
+                }
+                i += 4;
+              } else {
+                i++;
+              }
+            }
+            if (endIdx !== -1) {
+              const fullQr = newHtml.substring(startIdx, endIdx);
+              const ph = `__QR_CODE_PH_${Math.random().toString(36).slice(2)}__`;
+              qrCodePlaceholders.set(ph, fullQr);
+              newHtml = newHtml.substring(0, startIdx) + ph + newHtml.substring(endIdx);
+              qrGroupRegex.lastIndex = startIdx + ph.length;
+            } else {
+              break;
+            }
+          }
+
+          // --- 3. DIRECT STRING SEARCH base64 extraction and upload for user-added assets ---
           // Regex engines often fail silently or hit length limits on 3MB+ contiguous strings.
           // We use a pure indexOf search to safely extract huge data URIs.
           const uniqueDataUris = new Set();
@@ -866,11 +995,13 @@ export const useSaveEngine = ({
               } else if (isVideo) {
                 fileExt = mimeString.includes("webm") ? ".webm" : ".mp4";
               } else {
-                fileExt = mimeString.includes("png")
-                  ? ".png"
-                  : mimeString.includes("webp")
-                    ? ".webp"
-                    : ".jpg";
+                fileExt = mimeString.includes("svg")
+                  ? ".svg"
+                  : mimeString.includes("png")
+                    ? ".png"
+                    : mimeString.includes("webp")
+                      ? ".webp"
+                      : ".jpg";
               }
 
               const formData = new FormData();
@@ -902,7 +1033,7 @@ export const useSaveEngine = ({
 
               if (uploadRes.data && uploadRes.data.url) {
                 const finalUrl = uploadRes.data.url;
-                const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[^/]+$/);
+                const assetPathMatch = finalUrl.match(/assets\/[^/]+\/[A-Za-z0-9_.-]+$/);
                 const relativeUrl = assetPathMatch
                   ? `../${assetPathMatch[0]}`
                   : uploadRes.data.flipbookPath ||
@@ -938,18 +1069,23 @@ export const useSaveEngine = ({
                         );
                       }
                     });
-                    const liveImgs = editorDoc.querySelectorAll(
-                      `image[href*="${actualDataUri}"], image[*|href*="${actualDataUri}"]`,
-                    );
+                    const liveImgs = editorDoc.querySelectorAll("image");
+                    const dataPrefix = actualDataUri.slice(0, 100);
                     liveImgs.forEach((img) => {
-                      img.setAttribute("href", absoluteUrl);
-                      try {
-                        img.setAttributeNS(
-                          "http://www.w3.org/1999/xlink",
-                          "xlink:href",
-                          absoluteUrl,
-                        );
-                      } catch {}
+                      if (img.closest && img.closest('[data-type="qrcode"], g[id^="qrcode-"]')) {
+                        return; // NEVER overwrite QR Code vector image in live DOM
+                      }
+                      const h = img.getAttribute("href") || img.getAttribute("xlink:href") || "";
+                      if (h && (h === actualDataUri || h.startsWith(dataPrefix))) {
+                        img.setAttribute("href", absoluteUrl);
+                        try {
+                          img.setAttributeNS(
+                            "http://www.w3.org/1999/xlink",
+                            "xlink:href",
+                            absoluteUrl,
+                          );
+                        } catch {}
+                      }
                     });
                   }
                 } catch {
@@ -968,8 +1104,22 @@ export const useSaveEngine = ({
             }
           }
 
-          // Clean up any previously corrupted attribute values (e.g. "../assets/Image/xxx.jpg /9j/...")
-          newHtml = newHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[^"&'<>)\s,]+)\s+[\/A-Za-z0-9+=]+(?=["'])/g, "$1");
+          // Restore protected PDF Background
+          if (pdfBgPlaceholders.size > 0) {
+            pdfBgPlaceholders.forEach((origContent, ph) => {
+              newHtml = newHtml.split(ph).join(origContent);
+            });
+          }
+
+          // Restore protected QR Code elements
+          if (qrCodePlaceholders.size > 0) {
+            qrCodePlaceholders.forEach((origContent, ph) => {
+              newHtml = newHtml.split(ph).join(origContent);
+            });
+          }
+
+          // Clean up any previously corrupted attribute values (e.g. "../assets/Image/xxx.jpg /9j/..." or "../assets/Image/xxx/.../75FA...")
+          newHtml = newHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
 
           if (newHtml && !newHtml.includes('id="global-fonts-style"')) {
             const fontsStyle = `<style id="global-fonts-style">
@@ -1004,6 +1154,7 @@ export const useSaveEngine = ({
           }
 
           newHtml = normalizePageAssetUrls(newHtml);
+          newHtml = sanitizeSvgXml(newHtml);
           return { ...p, html: newHtml };
         }),
       );
@@ -1035,7 +1186,7 @@ export const useSaveEngine = ({
                 ? p.name
                 : `${p.name}.svg`
               : `${index + 1}.svg`),
-          content: normalizePageAssetUrls(p.html),
+          content: sanitizeSvgXml(normalizePageAssetUrls(p.html)),
           hide: p.isHidden ? 1 : 0,
           v_id:
             p.v_id ||
@@ -1100,10 +1251,7 @@ export const useSaveEngine = ({
               pid &&
               lastSavedHtmlsRef.current[pid] &&
               lastSavedHtmlsRef.current[pid] === p.html;
-            let content =
-              isModified || !isKnownSaved
-                ? normalizePageAssetUrls(p.html)
-                : undefined;
+            let content = sanitizeSvgXml(normalizePageAssetUrls(p.html));
             let contentChunkId = undefined;
 
             // CHUNKED UPLOAD LOGIC: If content is too large (> 2MB), upload in chunks
@@ -1217,21 +1365,23 @@ export const useSaveEngine = ({
 
         setHasUnsavedChanges(false);
         justSavedRef.current = true;
-        // Merge backend v_id properties without overwriting live page HTML edited during async save window
+        // Merge backend v_id properties and keep React pages state in sync with saved HTML without wiping live canvas
+        if (typeof activePageIndex === "number") {
+          window.__skipCanvasUpdateForPage = activePageIndex;
+        }
         setPages((prevPages) => {
           if (!prevPages || prevPages.length === 0) return pagesToSave;
           const backendPages = lastRes?.data?.pages || [];
           return prevPages.map((page, idx) => {
             const bPage = backendPages[idx];
-            if (
-              bPage &&
-              bPage.v_id &&
-              bPage.v_id !== currentVId &&
-              !page.v_id
-            ) {
-              return { ...page, v_id: bPage.v_id };
-            }
-            return page;
+            const savedHtml = pagesToSave[idx]?.html;
+            return {
+              ...page,
+              ...(savedHtml ? { html: savedHtml } : {}),
+              ...(bPage && bPage.v_id && bPage.v_id !== currentVId && !page.v_id
+                ? { v_id: bPage.v_id }
+                : {}),
+            };
           });
         });
         window.dispatchEvent(new CustomEvent("flipbook-saved"));

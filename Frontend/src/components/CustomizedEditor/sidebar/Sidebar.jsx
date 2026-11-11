@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import axios from 'axios';
 import { useAuth } from '../../../context/AuthContext';
+import { useConfirm } from '../../../context/ConfirmationContext';
 import SidebarItem from './SidebarItem';
 import FlipbookInfoModal from '../../FlipbookInfoModal';
 
@@ -43,10 +44,32 @@ const Sidebar = ({ bookName, setBookName, activeSubView, setActiveSubView, isPan
   const { user } = useAuth();
   const navigate = useNavigate();
   const { folder, v_id } = useParams();
+  const confirm = useConfirm();
+  const { hasUnsavedChanges, isAutoSaveEnabled } = useOutletContext() || {};
   const [openSection, setOpenSection] = useState(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
-  const handleGoToPageEditor = () => {
+  const handleGoToPageEditor = async () => {
+    if (hasUnsavedChanges) {
+      if (!isAutoSaveEnabled) {
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger"
+        });
+        if (!ok) return;
+      } else {
+        if (onSave) {
+          try {
+            await onSave();
+          } catch (e) {
+            console.warn("Auto-save before navigating to page editor failed:", e);
+          }
+        }
+      }
+    }
     const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
     const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && isFolId(folder) ? folder : 'default');
     const path = folderVId ? `/editor/${encodeURIComponent(folderVId)}/${v_id}` : `/editor/${v_id}`;

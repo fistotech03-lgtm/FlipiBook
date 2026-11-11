@@ -50,6 +50,25 @@ const isFolderId = (str) => {
   return s.startsWith("fol_") || /^[0-9a-fA-F]{12,24}$/.test(s);
 };
 
+const cleanSvgMarkup = (str) => {
+  if (!str || typeof str !== "string") return str;
+  let cleaned = str.trim();
+  cleaned = cleaned.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, "");
+  if (cleaned.includes("<html") || cleaned.includes("<!DOCTYPE")) {
+    const svgStart = cleaned.search(/<svg\b/i);
+    const svgEnd = cleaned.lastIndexOf("</svg>");
+    if (svgStart !== -1 && svgEnd !== -1 && svgEnd > svgStart) {
+      cleaned = cleaned.substring(svgStart, svgEnd + 6);
+    }
+  }
+  cleaned = cleaned.replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, "<br/>");
+  cleaned = cleaned.replace(/<\/\s*br\s*>/gi, "");
+  cleaned = cleaned.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, "<br/>");
+  cleaned = cleaned.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, "<$1$2/>");
+  cleaned = cleaned.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  return cleaned;
+};
+
 const resolveFolder = (folderName, folderMap = null) => {
   if (Array.isArray(folderName)) {
     const flat = folderName.flat(Infinity);
@@ -1458,6 +1477,12 @@ exports.saveBook = async (req, res) => {
     let book = null;
     if (providedVId) {
       book = await Flipbook.findOne({ ...userQuery, v_id: providedVId });
+      if (!book) {
+        // Fallback: check by v_id or book_v_id alone to avoid duplicate key collision
+        book = await Flipbook.findOne({
+          $or: [{ v_id: providedVId }, { book_v_id: providedVId }]
+        });
+      }
     }
 
     let finalFlipbookName = safeName;
@@ -1750,17 +1775,40 @@ exports.saveBook = async (req, res) => {
         });
       }
 
-      book = await Flipbook.create({
-        userObjectID: objectId,
-        userID: customUserId || undefined,
-        v_id: resolvedVId,
-        book_v_id: resolvedVId,
-        flipbookName: finalFlipbookName,
-        folder_id: bookFolderId,
-        bookType: resolvedBookType || 'plain',
-        pages: mongoPages,
-        fileSize: resolvedFileSize,
-      });
+      try {
+        book = await Flipbook.create({
+          userObjectID: objectId,
+          userID: customUserId || undefined,
+          v_id: resolvedVId,
+          book_v_id: resolvedVId,
+          flipbookName: finalFlipbookName,
+          folder_id: bookFolderId,
+          bookType: resolvedBookType || 'plain',
+          pages: mongoPages,
+          fileSize: resolvedFileSize,
+        });
+      } catch (createErr) {
+        if (createErr.code === 11000 || createErr.message?.includes("E11000 duplicate key")) {
+          console.warn(`[Book Controller] Duplicate key error on v_id ${resolvedVId}. Resolving with update...`);
+          book = await Flipbook.findOne({
+            $or: [{ v_id: resolvedVId }, { book_v_id: resolvedVId }]
+          });
+          if (book) {
+            book.flipbookName = finalFlipbookName;
+            if (bookFolderId) book.folder_id = bookFolderId;
+            if (resolvedBookType) book.bookType = resolvedBookType;
+            if (mongoPages.length > 0) book.pages = mongoPages;
+            if (resolvedFileSize > 0 || fileSize !== undefined) book.fileSize = resolvedFileSize;
+            if (objectId) book.userObjectID = objectId;
+            if (customUserId) book.userID = customUserId;
+            await book.save();
+          } else {
+            throw createErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
     }
 
     if (meta && Object.keys(meta).length > 0) {
@@ -1904,6 +1952,8 @@ exports.saveBook = async (req, res) => {
           savedBase64Map,
           skipBase64Extraction: keepBase64,
         });
+
+        svgContent = cleanSvgMarkup(svgContent);
 
         await fs.promises.writeFile(
           path.join(pagesDir, targetFileName),
@@ -2365,6 +2415,7 @@ exports.savePagesBatch = async (req, res) => {
           });
 
           svgContent = normalizeToRelativeAssetPaths(svgContent);
+          svgContent = cleanSvgMarkup(svgContent);
           fs.writeFileSync(
             path.join(pagesDir, targetFileName),
             svgContent,
@@ -2697,12 +2748,29 @@ exports.getBook = async (req, res) => {
       }
     }
 
-    const populatedPages = (book.pages || []).map((p) => {
+    // 1. Detect which candidate directory actually contains the pages folder first to avoid scanning 12+ dirs for every page
+    let primaryBookDir = null;
+    for (const candDir of candidateDirs) {
+      const pDir = path.join(candDir, "pages");
+      try {
+        if (fs.existsSync(pDir)) {
+          primaryBookDir = candDir;
+          break;
+        }
+      } catch (_) {}
+    }
+
+    const dirsToSearch = primaryBookDir 
+      ? [primaryBookDir, ...candidateDirs.filter(d => d !== primaryBookDir)]
+      : candidateDirs;
+
+    // 2. Load page data asynchronously in non-blocking parallel to prevent event-loop freezes on 100-page books
+    const populatedPages = await Promise.all((book.pages || []).map(async (p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = "";
 
-      // 1. MUST load page data directly from local storage file on disk first
-      for (const candDir of candidateDirs) {
+      // MUST load page data directly from local storage file on disk first
+      for (const candDir of dirsToSearch) {
         const candidateFiles = [
           pageObj.fileName
             ? path.join(candDir, "pages", pageObj.fileName)
@@ -2716,20 +2784,18 @@ exports.getBook = async (req, res) => {
         ].filter(Boolean);
 
         for (const fPath of candidateFiles) {
-          if (fs.existsSync(fPath)) {
-            try {
-              const str = fs.readFileSync(fPath, "utf8");
-              if (str && str.trim()) {
-                pageContent = str;
-                break;
-              }
-            } catch (e) {}
-          }
+          try {
+            const str = await fs.promises.readFile(fPath, "utf8");
+            if (str && str.trim()) {
+              pageContent = str;
+              break;
+            }
+          } catch (_) {}
         }
         if (pageContent) break;
       }
 
-      // 2. Fallback to MongoDB only if local storage file does not exist
+      // Fallback to MongoDB only if local storage file does not exist
       if (!pageContent) {
         pageContent = pageObj.content || pageObj.html || "";
       }
@@ -2751,7 +2817,7 @@ exports.getBook = async (req, res) => {
         content: pageContent,
         html: pageContent,
       };
-    });
+    }));
 
     let customizedDoc = null;
     try {
@@ -3206,6 +3272,8 @@ exports.previewBook = async (req, res) => {
       const pageHeight = 842;
       firstPageHtml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${pageWidth} ${pageHeight}" width="100%" height="100%"><rect width="${pageWidth}" height="${pageHeight}" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/><text x="50%" y="50%" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#64748b" text-anchor="middle" dominant-baseline="middle">${book.flipbookName || 'Page 1'}</text></svg>`;
     }
+
+    firstPageHtml = cleanSvgMarkup(firstPageHtml);
 
     res.status(200).json({
       success: true,

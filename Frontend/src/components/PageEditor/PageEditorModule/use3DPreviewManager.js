@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { resolveUploadsPath } from '../../../utils/assetUtils';
 import { useAuth, usePageEditorState } from '../../../store/hooks';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 export const use3DPreviewManager = ({
   setPages,
@@ -136,8 +137,7 @@ export const use3DPreviewManager = ({
               } catch  { /* ignore */ }
             }
 
-            const serializer = new XMLSerializer();
-            page.html = serializer.serializeToString(doc);
+            page.html = safeSerializeSvg(doc) || page.html;
             newPages[activePageIndex] = page;
           }
         }

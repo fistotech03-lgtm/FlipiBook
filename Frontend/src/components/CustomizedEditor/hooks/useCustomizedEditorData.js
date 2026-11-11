@@ -98,8 +98,9 @@ export const useCustomizedEditorData = ({
       const userEmail = user?.emailId || user?.email;
 
       // 1. Instant Quick-Load Cache from IndexedDB
+      let cached = null;
       try {
-        const cached = await getCustomizedEditorState(v_id);
+        cached = await getCustomizedEditorState(v_id);
         if (cached && (!v_id || cached.v_id === v_id)) {
           if (cached.Background) setBackgroundSettings(cached.Background);
           if (cached.BookAppearance) setBookAppearanceSettings(cached.BookAppearance);
@@ -123,7 +124,22 @@ export const useCustomizedEditorData = ({
             setBookName(cached.bookName);
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
-            setPages(cached.pages);
+            setPages(prevPages => {
+              if (prevPages && prevPages.length >= cached.pages.length) {
+                return prevPages.map((p, idx) => {
+                  const cp = cached.pages[idx];
+                  if (!cp) return p;
+                  if (p.html && !p.isPlaceholder) return p;
+                  return {
+                    ...p,
+                    html: cp.html || cp.content || '',
+                    content: cp.content || cp.html || '',
+                    isPlaceholder: false
+                  };
+                });
+              }
+              return cached.pages;
+            });
             setIsLoading(false);
             setIsDataLoadingComplete(true);
             setLoadingProgress(100);

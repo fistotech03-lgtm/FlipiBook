@@ -869,6 +869,7 @@ export const createButtonElementNode = (template, cx, cy) => {
   g.setAttribute('data-button-title', template.name || 'Button');
   g.setAttribute('data-type', 'button');
   g.setAttribute('data-is-element-button', 'true');
+  g.setAttribute('data-effect-drop-shadow', 'false');
   g.setAttribute('data-interaction', 'open-link');
   g.setAttribute('data-interaction-value', '');
 

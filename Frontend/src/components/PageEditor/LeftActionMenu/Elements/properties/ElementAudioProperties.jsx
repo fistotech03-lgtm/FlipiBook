@@ -19,7 +19,6 @@ import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../properties/ColorPicker';
 import { handleScrubHelper } from '../../../properties/Color';
 import Effect from '../../../properties/Effect';
-import { ElementToggle, ElementSlider } from './ElementUIControls';
 import {
   AUDIO_TEMPLATES,
   getAudioSvgCode,
@@ -2058,64 +2057,29 @@ const ElementAudioProperties = ({
       {/* ── 3. Audio Player Controls Sub-section ── */}
       <SectionHeader title="Audio Player Controls" />
 
-      <div className="bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs overflow-hidden divide-y divide-gray-100 my-[0.1vw]">
-        {/* Play/Pause Button */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Play/Pause Button</span>
-          <ElementToggle checked={controlPlayPause} onChange={setControlPlayPause} activeColor="#4D47FF" />
-        </div>
-
-        {/* Skip Forward/Backward */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Skip Forward/Backward</span>
-          <div className="flex items-center gap-[0.5vw]">
-            <div className="h-[1.9vw] min-h-[26px] flex items-center border border-gray-200 rounded-[0.35vw] bg-white px-[0.35vw] shadow-2xs">
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
-                title="Decrease skip duration"
-              >
-                <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
-              </button>
-              <span className="text-[0.72vw] text-gray-800 font-medium px-[0.3vw] whitespace-nowrap">
-                {skipSeconds} sec
-              </span>
-              <button
-                type="button"
-                onClick={handleNextStep}
-                className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
-                title="Increase skip duration"
-              >
-                <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
-              </button>
-            </div>
-            <ElementToggle checked={controlSkip} onChange={setControlSkip} activeColor="#4D47FF" />
-          </div>
-        </div>
-
-        {/* Duration */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Duration</span>
-          <ElementToggle checked={controlDuration} onChange={setControlDuration} activeColor="#4D47FF" />
-        </div>
-
-        {/* Volume Control */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Volume Control</span>
-          <ElementToggle checked={controlVolume} onChange={setControlVolume} activeColor="#4D47FF" />
-        </div>
-
-        {/* Loop Button */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Loop Button</span>
-          <ElementToggle checked={controlLoop} onChange={setControlLoop} activeColor="#4D47FF" />
-        </div>
-
-        {/* Mute */}
-        <div className="flex items-center justify-between px-[0.8vw] py-[0.55vw] hover:bg-gray-50/50 transition-colors">
-          <span className="text-[0.8vw] text-gray-800 font-medium">Mute</span>
-          <ElementToggle checked={controlMute} onChange={setControlMute} activeColor="#4D47FF" />
+      {/* Skip Forward/Backward */}
+      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
+        <span className="text-[0.78vw] text-gray-700 font-semibold">Skip Forward/Backward</span>
+        <div className="h-[1.9vw] min-h-[26px] flex items-center border border-gray-200 rounded-[0.35vw] bg-white px-[0.35vw] shadow-2xs">
+          <button
+            type="button"
+            onClick={handlePrevStep}
+            className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+            title="Decrease skip duration"
+          >
+            <ChevronLeft className="w-[0.75vw] h-[0.75vw]" />
+          </button>
+          <span className="text-[0.72vw] text-gray-800 font-medium px-[0.3vw] whitespace-nowrap">
+            {skipSeconds} sec
+          </span>
+          <button
+            type="button"
+            onClick={handleNextStep}
+            className="text-gray-400 hover:text-gray-700 p-[0.1vw] transition-colors cursor-pointer"
+            title="Increase skip duration"
+          >
+            <ChevronRight className="w-[0.75vw] h-[0.75vw]" />
+          </button>
         </div>
       </div>
 

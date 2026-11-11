@@ -30,6 +30,7 @@ import CustomScrollbar from '../../CustomScrollbar';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../../context/AuthContext';
+import { normalizeForeignObjectNamespaces } from '../LeftActionMenu/Elements/utils/tableElementUtils';
 
 const RightSidebar = ({
   isDoublePage,
@@ -441,6 +442,7 @@ const RightSidebar = ({
         '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
         '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
         '[data-type="audio-frame"], g[id^="audio-"], ' +
+        '[data-type="table-frame"], [data-type="table"], g[id^="table-"], ' +
         '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
       );
       if (compoundGroup && compoundGroup !== el) {
@@ -1057,7 +1059,7 @@ const RightSidebar = ({
                           onUpdate={(newHtml) => {
                             window.__skipCanvasUpdateForPage = activePageIndex;
                             if (typeof newHtml === 'string' && newHtml.includes('<svg')) {
-                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', newHtml);
+                              updateElementAttribute(activePageIndex, selectedLayerId, '__dom_sync__', normalizeForeignObjectNamespaces(newHtml));
                             } else {
                               const editorDoc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
                               const el = editorDoc.getElementById(selectedLayerId) || document.getElementById(selectedLayerId);
@@ -1066,17 +1068,27 @@ const RightSidebar = ({
                               const svgRoot = container ? (container.querySelector('[id^="canvas-content-"] svg') || container.querySelector('svg')) : el.closest('svg');
                               if (svgRoot) {
                                 const cloneSvg = svgRoot.cloneNode(true);
-                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
-                                cloneSvg.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, .table-cell-selection-overlay').forEach(e => e.remove());
+                                const normalBorder = el.getAttribute('data-border-color') || '#cbd5e1';
+                                cloneSvg.querySelectorAll('[data-neighbor-highlighted]').forEach(td => {
+                                  td.removeAttribute('data-neighbor-highlighted');
+                                });
+                                cloneSvg.querySelectorAll('td[data-cell-selected], th[data-cell-selected], td[contenteditable], th[contenteditable]').forEach(td => {
                                   td.removeAttribute('data-cell-selected');
+                                  td.removeAttribute('contenteditable');
                                   td.style.removeProperty('outline');
                                   td.style.removeProperty('outline-offset');
                                   td.style.removeProperty('box-shadow');
+                                  td.style.removeProperty('position');
+                                  td.style.removeProperty('z-index');
+                                  if (td.getAttribute('data-cell-border-color')) {
+                                    td.style.borderColor = td.getAttribute('data-cell-border-color');
+                                  }
                                 });
                                 const serializer = new XMLSerializer();
                                 const html = serializer.serializeToString(cloneSvg);
                                 const targetId = selectedElementProps?.audioId || selectedLayerId;
-                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);
+                                updateElementAttribute(activePageIndex, targetId, '__dom_sync__', normalizeForeignObjectNamespaces(html));
                               }
                             }
                           }}
@@ -1118,7 +1130,7 @@ const RightSidebar = ({
                               })();
                               if (svgRoot) {
                                 const cloneSvg = svgRoot.cloneNode(true);
-                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+                                cloneSvg.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, .table-cell-selection-overlay').forEach(e => e.remove());
                                 const serializer = new XMLSerializer();
                                 const html = serializer.serializeToString(cloneSvg);
                                 updateElementAttribute(activePageIndex, targetId, '__dom_sync__', html);

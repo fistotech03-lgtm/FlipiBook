@@ -458,7 +458,12 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
         wObj.busy = false;
 
         completedCount++;
-        const percent = Math.round((completedCount / progressTotal) * 100);
+        const targetDocTotal = totalDocPages || numPages;
+        const taskRatio = Math.min(1, Math.max(0, completedCount / numPages));
+        // Scale current page count smoothly across full document so it reaches totalDocPages within the batch extraction time
+        const scaledCurrent = Math.min(targetDocTotal, Math.max(1, Math.round(taskRatio * targetDocTotal)));
+        // Scale percentage smoothly from 15% to 90% across the batch extraction time
+        const percent = Math.min(90, Math.max(15, Math.round(15 + taskRatio * 75)));
 
         const blob = new Blob([res.svgString], { type: 'image/svg+xml' });
 
@@ -476,11 +481,11 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
         if (typeof onProgress === 'function') {
           try {
             onProgress(
-              completedCount,
-              progressTotal,
+              scaledCurrent,
+              targetDocTotal,
               percent,
               'converting',
-              `Extracting page ${completedCount} of ${progressTotal} (${percent}%)...`,
+              `Extracting page ${scaledCurrent} of ${targetDocTotal} (${percent}%)...`,
               pageItem
             );
           } catch (_) {}
@@ -506,15 +511,18 @@ const convertPdfWithWorkers = async (arrayBuffer, numPages, onProgress = null, t
 /**
  * Main-thread fallback for single-page PDFs or environments where Web Workers are restricted.
  */
-const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = null) => {
+const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = null, totalDocPages = null) => {
   const mupdf = await getMuPdf();
   const doc = mupdf.Document.openDocument(uint8Array, 'application/pdf');
   const images = [];
   const ptToMm = 25.4 / 72;
+  const targetDocTotal = totalDocPages || numPages;
 
   for (let i = 0; i < numPages; i++) {
     const pageNum = i + 1;
-    const percent = Math.round((pageNum / numPages) * 100);
+    const taskRatio = Math.min(1, Math.max(0, pageNum / numPages));
+    const scaledCurrent = Math.min(targetDocTotal, Math.max(1, Math.round(taskRatio * targetDocTotal)));
+    const percent = Math.min(90, Math.max(15, Math.round(15 + taskRatio * 75)));
 
     // Yield to browser compositor with requestAnimationFrame so the step dot spinner spins with 0 lag/stutter
     await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 16)));
@@ -532,97 +540,54 @@ const convertPdfToImagesMainThread = async (uint8Array, numPages, onProgress = n
       const widthMm = Math.round(widthPt * ptToMm * 100) / 100;
       const heightMm = Math.round(heightPt * ptToMm * 100) / 100;
 
-      let vectorSvgString = null;
+      const maxPt = Math.max(widthPt, heightPt);
+      let renderScale = 2.5;
+      if (maxPt > 0) {
+        const targetPixels = 2160;
+        const desiredScale = targetPixels / maxPt;
+        renderScale = Math.max(2.0, Math.min(4.0, desiredScale));
+        if (maxPt * renderScale > 2400) {
+          renderScale = Math.max(1.5, 2400 / maxPt);
+        }
+      }
 
+      const renderMatrix = mupdf.Matrix.scale(renderScale, renderScale);
+      highResPix = page.toPixmap(renderMatrix, mupdf.ColorSpace.DeviceRGB, false, true);
+
+      let imageBytes = null;
+      let mimeType = 'image/jpeg';
       try {
-        svgBuf = new mupdf.Buffer();
-        const writer = new mupdf.DocumentWriter(svgBuf, 'svg', 'text=path');
-        const dev = writer.beginPage([0, 0, widthPt, heightPt]);
-        const transMatrix = mupdf.Matrix.translate(-bounds[0], -bounds[1]);
-        page.run(dev, transMatrix);
-        writer.endPage();
-        writer.close();
+        if (typeof highResPix.asJPEG === 'function') {
+          imageBytes = highResPix.asJPEG(92, false);
+          mimeType = 'image/jpeg';
+        }
+      } catch (_) {}
 
-        let rawSvg = new TextDecoder().decode(svgBuf.asUint8Array());
-        if (rawSvg && rawSvg.includes('<svg')) {
-          if (hasCmykJpeg(rawSvg)) {
-            rawSvg = convertCmykJpegsInSvg(rawSvg, mupdf);
-          }
-          vectorSvgString = formatMuPdfSvgForFlipbook(rawSvg, pageNum, widthMm, heightMm, widthPt, heightPt);
-        }
-      } catch (vecErr) {
-        console.warn(`[MuPDF Vector] Vector extraction for page ${pageNum} encountered warning, using raster fallback:`, vecErr);
-      } finally {
-        if (svgBuf && typeof svgBuf.destroy === 'function') {
-          try { svgBuf.destroy(); } catch (_) {}
-        }
+      if (!imageBytes) {
+        imageBytes = highResPix.asPNG();
+        mimeType = 'image/png';
       }
 
-      let pageItem = null;
-      if (vectorSvgString) {
-        const isVectorPage = (vectorSvgString.match(/<path\b/g) || []).length > 0 || (vectorSvgString.match(/<use\b/g) || []).length > 0;
-        const dataUrl = svgToDataUrl(vectorSvgString);
-        const blob = new Blob([vectorSvgString], { type: 'image/svg+xml' });
+      const pngBase64 = uint8ArrayToBase64(imageBytes);
+      const highResDataUrl = `data:${mimeType};base64,${pngBase64}`;
+      const blob = new Blob([imageBytes], { type: mimeType });
+      const svgString = generatePdfPageSvg(highResDataUrl, `Page ${pageNum}`, widthMm, heightMm, true);
 
-        pageItem = {
-          blob,
-          dataUrl,
-          svgString: vectorSvgString,
-          content: vectorSvgString,
-          width: widthMm,
-          height: heightMm,
-          isVector: isVectorPage
-        };
-      } else {
-        const maxPt = Math.max(widthPt, heightPt);
-        let renderScale = 2.5;
-        if (maxPt > 0) {
-          const targetPixels = 2160;
-          const desiredScale = targetPixels / maxPt;
-          renderScale = Math.max(2.0, Math.min(4.0, desiredScale));
-          if (maxPt * renderScale > 2400) {
-            renderScale = Math.max(1.5, 2400 / maxPt);
-          }
-        }
-
-        const renderMatrix = mupdf.Matrix.scale(renderScale, renderScale);
-        highResPix = page.toPixmap(renderMatrix, mupdf.ColorSpace.DeviceRGB, false, true);
-
-        let imageBytes = null;
-        let mimeType = 'image/jpeg';
-        try {
-          if (typeof highResPix.asJPEG === 'function') {
-            imageBytes = highResPix.asJPEG(90, false);
-            mimeType = 'image/jpeg';
-          }
-        } catch (_) {}
-
-        if (!imageBytes) {
-          imageBytes = highResPix.asPNG();
-          mimeType = 'image/png';
-        }
-
-        const pngBase64 = uint8ArrayToBase64(imageBytes);
-        const highResDataUrl = `data:${mimeType};base64,${pngBase64}`;
-        const blob = new Blob([imageBytes], { type: mimeType });
-        const svgString = generatePdfPageSvg(highResDataUrl, `Page ${pageNum}`, widthMm, heightMm, true);
-
-        pageItem = {
-          blob,
-          dataUrl: highResDataUrl,
-          svgString,
-          content: svgString,
-          width: widthMm,
-          height: heightMm,
-          isVector: false
-        };
-      }
+      let pageItem = {
+        blob,
+        dataUrl: highResDataUrl,
+        svgString,
+        content: svgString,
+        width: widthMm,
+        height: heightMm,
+        isVector: false
+      };
 
       if (pageItem) {
         images.push(pageItem);
         if (typeof onProgress === 'function') {
           try {
-            onProgress(pageNum, numPages, percent, 'converting', `Extracting page ${pageNum} of ${numPages} (${percent}%)...`, pageItem);
+            onProgress(scaledCurrent, targetDocTotal, percent, 'converting', `Extracting page ${scaledCurrent} of ${targetDocTotal} (${percent}%)...`, pageItem);
           } catch (_) {}
         }
       }
@@ -1170,7 +1135,7 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       return slicedPages.map((p, idx) => {
         const width = p.width || 210;
         const height = p.height || 297;
-        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.92) : null);
+        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.82) : null);
         const pageContent = p.content || p.svgString || (pageDataUrl ? generatePdfPageSvg(pageDataUrl, `Page ${idx + 1}`, width, height, true) : '');
         return {
           pageNumber: idx + 1,
@@ -1218,7 +1183,7 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       return targetFile.pagesData.map((p, idx) => {
         const width = p.width || 210;
         const height = p.height || 297;
-        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.92) : null);
+        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.82) : null);
         const flattenedContent = pageDataUrl
           ? generatePdfPageSvg(pageDataUrl, `Page ${idx + 1}`, width, height, true)
           : (p.content || p.svgString || '');

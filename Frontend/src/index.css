@@ -228,6 +228,22 @@ select:-webkit-autofill:focus {
   -webkit-transform: rotateY(180deg);
 }
 
+/* Suppress all native browser focus rings and outlines on tables and foreignObjects */
+foreignObject,
+foreignObject *,
+.table-card-wrapper,
+.table-container,
+[data-type="table-frame"],
+[data-type="table-frame"] * {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 /* Universal Custom Scrollbar with dynamic CSS variables support */
 .custom-scrollbar,
 .custom-scrollbar-wrapper,
@@ -916,6 +932,11 @@ textarea::-webkit-scrollbar-thumb:hover {
   border: 1px solid var(--swiper-pagination-color, var(--swiper-theme-color, #3b82f6)) !important;
   opacity: 1 !important;
   transform: scale(1.1) !important;
+}
+
+body.table-resizing-active,
+body.table-resizing-active * {
+  user-select: none !important;
 }
 
 

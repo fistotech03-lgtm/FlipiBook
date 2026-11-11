@@ -570,7 +570,9 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       setSlots(prevSlots => {
         let changed = false;
         const newSlots = prevSlots.map(slot => {
-          const pattern = svgRoot.querySelector(`pattern[id="${slot.id}"]`);
+          const pattern = selectedElement.querySelector(`pattern[id="${slot.id}"]`) ||
+            svgRoot.querySelector(`pattern[id="${slot.id}"]`) ||
+            (selectedElement.ownerDocument || document).getElementById(slot.id);
           let currentImage = null;
           if (pattern) {
             const imgNode = pattern.querySelector('image, img');
@@ -1091,11 +1093,25 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
   const updateSlotImage = (patternId, dataUrl, skipSync = false) => {
     if (!selectedElement) return;
 
-    const pattern = selectedElement.querySelector(`pattern[id="${patternId}"]`);
-    if (!pattern) return;
+    let svgRoot = selectedElement;
+    while (svgRoot && svgRoot.tagName?.toLowerCase() !== 'svg') {
+      svgRoot = svgRoot.parentElement;
+    }
+    const doc = selectedElement.ownerDocument || document;
+
+    const allPatterns = new Set();
+    selectedElement.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+    if (svgRoot) {
+      svgRoot.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+    }
+    const docP = doc.getElementById?.(patternId) || document.getElementById?.(patternId);
+    if (docP && docP.tagName?.toLowerCase() === 'pattern') allPatterns.add(docP);
+
+    if (allPatterns.size === 0) return;
 
     const shapeEl = selectedElement.querySelector(`[fill="url(#${patternId})"]`) ||
-      selectedElement.querySelector(`[data-pattern-id="${patternId}"]`);
+      selectedElement.querySelector(`[data-pattern-id="${patternId}"]`) ||
+      (svgRoot ? svgRoot.querySelector(`[fill="url(#${patternId})"]`) : null);
     if (!shapeEl) return;
 
     const img = new window.Image();
@@ -1111,41 +1127,56 @@ const ImageFramingProperties = ({ selectedElement, selectedLayerId, activePageIn
       shapeEl.setAttribute('data-slot-pan-y', '0');
       shapeEl.setAttribute('data-slot-zoom', '1');
 
-      let bgRect = pattern.querySelector('rect.mask-bg-fill');
-      if (!bgRect) {
-        bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        bgRect.setAttribute('class', 'mask-bg-fill');
-        bgRect.setAttribute('width', '1');
-        bgRect.setAttribute('height', '1');
-        bgRect.setAttribute('x', '0');
-        bgRect.setAttribute('y', '0');
-        const curFill = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
-        bgRect.setAttribute('fill', curFill !== '#' ? curFill : 'none');
-        const curOp = selectedElement.getAttribute('data-frame-bg-opacity');
-        if (curOp) bgRect.setAttribute('fill-opacity', curOp);
-        pattern.insertBefore(bgRect, pattern.firstChild);
-      }
+      allPatterns.forEach(pattern => {
+        let bgRect = pattern.querySelector('rect.mask-bg-fill');
+        if (!bgRect) {
+          bgRect = (pattern.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bgRect.setAttribute('class', 'mask-bg-fill');
+          bgRect.setAttribute('width', '1');
+          bgRect.setAttribute('height', '1');
+          bgRect.setAttribute('x', '0');
+          bgRect.setAttribute('y', '0');
+          const curFill = selectedElement.getAttribute('data-frame-bg-fill') || 'none';
+          bgRect.setAttribute('fill', curFill !== '#' ? curFill : 'none');
+          const curOp = selectedElement.getAttribute('data-frame-bg-opacity');
+          if (curOp) bgRect.setAttribute('fill-opacity', curOp);
+          pattern.insertBefore(bgRect, pattern.firstChild);
+        }
 
-      let imageNode = pattern.querySelector('image, img');
-      const useNode = pattern.querySelector('use');
+        let imageNode = pattern.querySelector('image, img');
+        const useNode = pattern.querySelector('use');
 
-      if (!imageNode && useNode) {
-        imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        pattern.removeChild(useNode);
-        pattern.appendChild(imageNode);
-      } else if (!imageNode) {
-        imageNode = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        pattern.appendChild(imageNode);
-      }
+        if (useNode) {
+          const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+          if (href.startsWith('#')) {
+            const refTargetId = href.substring(1);
+            const refImgs = (svgRoot || doc).querySelectorAll?.(`image[id="${refTargetId}"], img[id="${refTargetId}"]`);
+            refImgs?.forEach(refImg => {
+              refImg.setAttribute('href', dataUrl);
+              refImg.setAttribute('xlink:href', dataUrl);
+            });
+          }
+          if (!imageNode) {
+            imageNode = (pattern.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'image');
+            pattern.removeChild(useNode);
+            pattern.appendChild(imageNode);
+          } else {
+            useNode.remove();
+          }
+        } else if (!imageNode) {
+          imageNode = (pattern.ownerDocument || document).createElementNS('http://www.w3.org/2000/svg', 'image');
+          pattern.appendChild(imageNode);
+        }
 
-      imageNode.setAttribute('href', dataUrl);
-      imageNode.setAttribute('xlink:href', dataUrl);
+        imageNode.setAttribute('href', dataUrl);
+        imageNode.setAttribute('xlink:href', dataUrl);
 
-      const curOpacity = shapeEl.getAttribute('data-slot-opacity') || selectedElement.getAttribute('data-slot-opacity');
-      if (curOpacity !== null && curOpacity !== undefined && curOpacity !== '') {
-        const dec = Math.max(0, Math.min(1, parseFloat(curOpacity) / 100)).toString();
-        imageNode.setAttribute('opacity', dec);
-      }
+        const curOpacity = shapeEl.getAttribute('data-slot-opacity') || selectedElement.getAttribute('data-slot-opacity');
+        if (curOpacity !== null && curOpacity !== undefined && curOpacity !== '') {
+          const dec = Math.max(0, Math.min(1, parseFloat(curOpacity) / 100)).toString();
+          imageNode.setAttribute('opacity', dec);
+        }
+      });
 
       updateShapeMaskTransform({
         selectedElement: shapeEl,

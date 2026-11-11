@@ -168,7 +168,10 @@ export const AddElementsModal = ({
   }, [selectedCategory]);
 
   const maskingSubtopics = useMemo(() => {
-    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
+    const SUBTOPIC_ORDER = [
+      'Typography Grid', 'Shapes', 'Letters', 'Numbers',
+      'Classic Blue', 'Ocean Cyan', 'Emerald Green', 'Sunset Coral', 'Royal Violet', 'Executive Slate'
+    ];
     return SUBTOPIC_ORDER.map((name) => ({
       id: name,
       name,
@@ -183,7 +186,10 @@ export const AddElementsModal = ({
     filteredElements.forEach((el) => {
       if (el.subtopic) subs.add(el.subtopic);
     });
-    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
+    const SUBTOPIC_ORDER = [
+      'Typography Grid', 'Shapes', 'Letters', 'Numbers',
+      'Classic Blue', 'Ocean Cyan', 'Emerald Green', 'Sunset Coral', 'Royal Violet', 'Executive Slate'
+    ];
     return Array.from(subs).sort((a, b) => {
       const idxA = SUBTOPIC_ORDER.indexOf(a);
       const idxB = SUBTOPIC_ORDER.indexOf(b);

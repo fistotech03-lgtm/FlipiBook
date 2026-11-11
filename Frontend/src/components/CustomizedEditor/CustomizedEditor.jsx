@@ -92,15 +92,33 @@ const CustomizedEditor = () => {
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [pages, setPages] = useState(() => {
-    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
-      return location.state.pages.map((p, i) => {
-        const normalized = normalizeSvgMarkup(p.content || p.html || '');
+    const rawPages = location.state?.pages;
+    const totalCount = Number(location.state?.pageCount) || (Array.isArray(rawPages) ? rawPages.length : 0);
+    
+    if (totalCount > 0) {
+      const initialPages = Array.isArray(rawPages) ? rawPages : [];
+      return Array.from({ length: totalCount }, (_, i) => {
+        const p = initialPages[i];
+        if (p) {
+          const normalized = normalizeSvgMarkup(p.content || p.html || '');
+          return {
+            id: p.id !== undefined ? p.id : i,
+            pageNumber: p.pageNumber || i + 1,
+            name: p.pageName || p.name || `Page ${i + 1}`,
+            html: normalized,
+            content: normalized,
+            isHidden: Boolean(p.isHidden || p.hide === 1),
+            isPlaceholder: false
+          };
+        }
         return {
-          id: p.id !== undefined ? p.id : i,
-          name: p.pageName || p.name || `Page ${i + 1}`,
-          html: normalized,
-          content: normalized,
-          isHidden: Boolean(p.isHidden || p.hide === 1)
+          id: i,
+          pageNumber: i + 1,
+          name: `Page ${i + 1}`,
+          html: '',
+          content: '',
+          isHidden: false,
+          isPlaceholder: true
         };
       });
     }
@@ -176,38 +194,66 @@ const CustomizedEditor = () => {
     }
   }, [v_id]);
 
-  // Live listener for background-extracted pages streamed by backgroundExtractionManager
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager (batched to prevent render storms)
   useEffect(() => {
+    let pendingUpdates = [];
+    let batchTimer = null;
+
+    const flushPending = () => {
+      if (pendingUpdates.length === 0) return;
+      const updates = [...pendingUpdates];
+      pendingUpdates = [];
+
+      setPages(prevPages => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        let changed = false;
+        const next = [...prevPages];
+
+        for (const update of updates) {
+          const { pageNumber, resolvedHtml } = update;
+          // O(1) direct index lookup
+          const targetIdx = (typeof pageNumber === 'number' && pageNumber >= 1 && pageNumber <= next.length)
+            ? (pageNumber - 1)
+            : next.findIndex((p, i) => (
+                p.pageNumber === pageNumber || 
+                p.name === `Page ${pageNumber}` || 
+                (p.id !== undefined && p.id === pageNumber - 1) || 
+                i === pageNumber - 1
+              ));
+          if (targetIdx === -1 || targetIdx >= next.length) continue;
+          const current = next[targetIdx];
+          if (current.html === resolvedHtml && !current.isPlaceholder) continue;
+
+          next[targetIdx] = {
+            ...current,
+            html: resolvedHtml,
+            content: resolvedHtml,
+            isPlaceholder: false
+          };
+          changed = true;
+        }
+
+        return changed ? next : prevPages;
+      });
+    };
+
     const handlePageExtracted = (e) => {
       const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
       if (!eventVId || (v_id && eventVId !== v_id)) return;
       const rawHtml = html || content || '';
       if (!rawHtml) return;
       const resolvedHtml = normalizeSvgMarkup(rawHtml);
-      setPages(prevPages => {
-        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
-        const targetIdx = prevPages.findIndex((p, i) => (
-          p.pageNumber === pageNumber || 
-          p.name === `Page ${pageNumber}` || 
-          (p.id !== undefined && p.id === pageNumber - 1) || 
-          i === pageNumber - 1
-        ));
-        if (targetIdx === -1) return prevPages;
-        const current = prevPages[targetIdx];
-        if (current.html === resolvedHtml && !current.isPlaceholder) return prevPages;
-        const next = [...prevPages];
-        next[targetIdx] = {
-          ...current,
-          html: resolvedHtml,
-          content: resolvedHtml,
-          isPlaceholder: false
-        };
-        return next;
-      });
+
+      pendingUpdates.push({ pageNumber, resolvedHtml });
+      if (batchTimer) clearTimeout(batchTimer);
+      batchTimer = setTimeout(flushPending, 120);
     };
 
     window.addEventListener('flipbook-page-extracted', handlePageExtracted);
-    return () => window.removeEventListener('flipbook-page-extracted', handlePageExtracted);
+    return () => {
+      if (batchTimer) clearTimeout(batchTimer);
+      window.removeEventListener('flipbook-page-extracted', handlePageExtracted);
+    };
   }, [v_id]);
 
   const profilePreviewForcedRef = useRef(false);
@@ -237,22 +283,29 @@ const CustomizedEditor = () => {
   useEffect(() => {
     if (folder && v_id) {
       const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
-      const activeFolderVId =
-        currentBook?.folder_v_id ||
-        currentBook?.folder_id ||
-        location.state?.folder_v_id ||
-        (isFolId(folder) ? folder : null);
+      // Debounce URL updates — avoids re-serialising location.state (SVG data) on every flip
+      const timer = setTimeout(() => {
+        const activeFolderVId =
+          currentBook?.folder_v_id ||
+          currentBook?.folder_id ||
+          location.state?.folder_v_id ||
+          (isFolId(folder) ? folder : null);
 
-      const targetFolderParam = activeFolderVId || folder;
-      const targetPath = targetPage > 0
-        ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
-        : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;
+        const targetFolderParam = activeFolderVId || folder;
+        const targetPath = targetPage > 0
+          ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
+          : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;
 
-      if (location.pathname !== targetPath) {
-        navigate(targetPath, { replace: true, state: location.state });
-      }
+        if (window.location.pathname !== targetPath) {
+          window.history.replaceState(window.history.state, '', targetPath);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [targetPage, folder, v_id, currentBook?.folder_v_id, currentBook?.folder_id, navigate, location.pathname, location.state]);
+    // navigate and location are stable refs — intentionally excluded to prevent
+    // re-serialising location.state (SVG data) on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetPage, folder, v_id, currentBook?.folder_v_id, currentBook?.folder_id]);
 
   // Global flipbook name sync
   useEffect(() => {
@@ -679,6 +732,7 @@ const CustomizedEditor = () => {
             isLoading={isLoading}
             externalShowTOC={tocOpenTrigger}
             currentBook={currentBook}
+            v_id={v_id}
           />
         </div>
       </div>

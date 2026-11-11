@@ -97,7 +97,7 @@ export async function extractDocToPdf(fileInput, fileName = 'document.docx', onP
       // Yield to event loop so spinner runs smoothly
       await new Promise(r => setTimeout(r, 0));
 
-      const jpegBytes = await canvasToJpegBytes(canvas, 0.92);
+      const jpegBytes = await canvasToJpegBytes(canvas, 0.82);
       const fragments = extractPageFragments(lines, i);
 
       pdfPages.push({

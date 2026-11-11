@@ -367,23 +367,30 @@ export const createOverlayHighlightRenderer = ({
             const isTableEl = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
             const isBlackSelection = !isTableEl && (isFreeFrameEl || isHotspotEl || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
 
-            if (isBlackSelection) {
+            if (isTableEl) {
+              polygon.style.display = '';
+              polygon.setAttribute('stroke', '#5255CA');
+              polygon.setAttribute('fill', 'none');
+              polygon.setAttribute('points', pointsStr);
+              polygon.setAttribute('stroke-linejoin', 'miter');
+              polygon.setAttribute('stroke-miterlimit', '4');
+              polygon.setAttribute('stroke-linecap', 'square');
+              polygon.setAttribute('shape-rendering', 'crispEdges');
+              polygon.setAttribute('stroke-width', String(1 / zoomScale));
+            } else if (isBlackSelection) {
               polygon.setAttribute('stroke', (isHover && !isSelected) ? 'transparent' : '#000000');
               polygon.setAttribute('fill', 'none');
+              polygon.setAttribute('points', pointsStr);
+              applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
             } else if (isHover) {
               polygon.setAttribute('stroke', '#5255CA');
               polygon.setAttribute('fill', 'none');
+              polygon.setAttribute('points', pointsStr);
+              applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
             } else if (isSelected || type === 'entered') {
               polygon.setAttribute('stroke', '#5255CA');
               polygon.setAttribute('fill', 'none');
-            }
-            polygon.setAttribute('points', pointsStr);
-
-            if (isBlackSelection) {
-              applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
-            } else if (isHover) {
-              applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
-            } else if (type === 'selected' || type === 'child-selected' || type === 'multi-child-selected') {
+              polygon.setAttribute('points', pointsStr);
               applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
             } else if (type === 'entered') {
               polygon.setAttribute('stroke-width', String(1 / zoomScale));
@@ -678,12 +685,26 @@ export const createOverlayHighlightRenderer = ({
         const isTableFB = el.getAttribute('data-type') === 'table-frame' || el.getAttribute('data-type') === 'table' || (el.id && el.id.startsWith('table-')) || Boolean(el.closest?.('[data-type="table-frame"], g[id^="table-"]'));
         const isBlackSelectionFB = !isTableFB && (isFreeFrameFB || isHotspotFB || ((activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation') && isSelected));
 
-        if (isLine) {
+        const zoomScale2 = zoom / 100;
+        if (isTableFB) {
+          polygon.style.display = '';
+          polygon.setAttribute('stroke', '#5255CA');
+          polygon.setAttribute('fill', 'none');
+          polygon.setAttribute('points', pointsStr);
+          polygon.setAttribute('stroke-linejoin', 'miter');
+          polygon.setAttribute('stroke-miterlimit', '4');
+          polygon.setAttribute('stroke-linecap', 'square');
+          polygon.setAttribute('shape-rendering', 'crispEdges');
+          polygon.setAttribute('stroke-width', String(1 / zoomScale2));
+        } else if (isLine) {
           polygon.setAttribute('stroke', 'transparent');
           polygon.setAttribute('fill', 'none');
+          polygon.setAttribute('points', pointsStr);
         } else if (isBlackSelectionFB) {
           polygon.setAttribute('stroke', (isHover && !isSelected) ? 'transparent' : '#000000');
           polygon.setAttribute('fill', 'none');
+          polygon.setAttribute('points', pointsStr);
+          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
         } else if (isHover) {
           polygon.setAttribute('stroke', '#5255CA');
           if (activeTopToolRef.current === 'interaction' && el.getAttribute('data-interaction') && el.getAttribute('data-interaction') !== 'none') {
@@ -691,23 +712,17 @@ export const createOverlayHighlightRenderer = ({
           } else {
             polygon.setAttribute('fill', 'none');
           }
+          polygon.setAttribute('points', pointsStr);
+          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
         } else if (isSelected) {
           polygon.setAttribute('stroke', '#5255CA');
           polygon.setAttribute('fill', 'none');
+          polygon.setAttribute('points', pointsStr);
+          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
         } else if (type === 'entered') {
           polygon.setAttribute('stroke', isMediaOrText ? 'transparent' : '#5255CA');
           polygon.setAttribute('fill', 'none');
-        }
-        polygon.setAttribute('points', pointsStr);
-
-        const zoomScale2 = zoom / 100;
-        if (isBlackSelectionFB) {
-          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
-        } else if (isHover) {
-          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
-        } else if (type === 'selected' || type === 'child-selected' || type === 'multi-child-selected') {
-          applyCrispSelectionStroke(polygon, pointsStr, zoomScale2);
-        } else if (type === 'entered') {
+          polygon.setAttribute('points', pointsStr);
           polygon.setAttribute('stroke-width', String(1 / zoomScale2));
           polygon.setAttribute('stroke-dasharray', `${4 / zoomScale2},${4 / zoomScale2}`);
         }

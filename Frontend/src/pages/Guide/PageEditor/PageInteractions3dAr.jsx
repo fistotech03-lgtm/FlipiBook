@@ -42,7 +42,7 @@ export default function PageInteractions3dAr() {
         </div>
 
         <div className="w-full flex-1 flex items-center justify-center py-[2vh]">
-          <div className="w-full max-w-[62vw] aspect-video rounded-[0.8vw] overflow-hidden shadow-md border border-gray-200 bg-black relative group flex items-center justify-center">
+          <div className="w-full max-w-[62vw] aspect-video rounded-[0.35vw] overflow-hidden shadow-sm isolate transform-gpu [transform:translateZ(0)] relative group flex items-center justify-center">
             {!isPlaying ? (
               <div
                 onClick={() => setIsPlaying(true)}
@@ -66,7 +66,7 @@ export default function PageInteractions3dAr() {
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
                 title="3D Viewer & AR Tutorial"
-                className="w-full h-full rounded-[0.8vw] border-0"
+                className="w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />

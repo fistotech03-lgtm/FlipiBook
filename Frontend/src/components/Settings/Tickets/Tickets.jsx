@@ -248,7 +248,7 @@ export default function Tickets() {
                 ))}
               </select>
               <Icon
-                icon="lucide:arrow-up-down"
+                icon="iconoir:sort"
                 className="w-[0.8vw] h-[0.8vw] text-gray-500 absolute left-[0.7vw] top-1/2 -translate-y-1/2 pointer-events-none"
               />
               <Icon

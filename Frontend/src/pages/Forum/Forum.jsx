@@ -1,20 +1,19 @@
 // Frontend/src/pages/Forum/Forum.jsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
-  Search, 
   Plus, 
-  Layers, 
-  UserCheck, 
   Inbox, 
   AlertCircle, 
   Menu, 
   X, 
   Loader2 
 } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import ForumSidebar from './ForumSidebar';
 import PostCard from './PostCard';
 import CreatePostModal from './CreatePostModal';
 import PostDetailView from './PostDetailView';
+import CustomDropdown from '../../components/CustomDropdown';
 import { useForum } from './hooks';
 import { FORUM_MODULES } from './data/forumData';
 
@@ -51,29 +50,101 @@ export default function Forum() {
     handleDeletePost
   } = useForum();
 
+  // Sub-filter tabs inside feed (All | Suggestions | Questions)
+  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'suggestions' | 'questions'
+  const [filterDropdown, setFilterDropdown] = useState('All'); // 'All' | 'Answered' | 'Unanswered'
+  const [sortDropdown, setSortDropdown] = useState('Most Popular'); // 'Most Popular' | 'Newest' | 'Recently Updated'
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const activeModule = useMemo(() => {
     return FORUM_MODULES.find(m => m.id === selectedModuleId) || FORUM_MODULES[0];
   }, [selectedModuleId]);
-
-  // Count user's personal posts
-  const myPostsCount = useMemo(() => {
-    return posts.filter(p => p.author?.email === currentUserId || p.author?.name === currentUser?.name).length;
-  }, [posts, currentUserId, currentUser]);
 
   const onSelectModuleFromSidebar = (modId) => {
     setSelectedModuleId(modId);
     setActiveArea('modules');
     setSearchQuery('');
+    setCurrentPage(1);
     handleBackToList();
   };
 
+  const onSelectAreaFromSidebar = (area) => {
+    setActiveArea(area);
+    setSearchQuery('');
+    setCurrentPage(1);
+    handleBackToList();
+  };
+
+  // Filter posts according to type filter, status filter, and sort
+  const filteredPosts = useMemo(() => {
+    let result = [...posts];
+
+    // Filter by type: 'suggestions' or 'questions'
+    if (typeFilter === 'suggestions') {
+      result = result.filter(p => p.postType === 'suggestion');
+    } else if (typeFilter === 'questions') {
+      result = result.filter(p => p.postType !== 'suggestion');
+    }
+
+    // Filter by dropdown status (Answered / Unanswered)
+    if (filterDropdown === 'Answered') {
+      result = result.filter(p => p.adminReply || p.status === 'answered' || (Array.isArray(p.comments) && p.comments.length > 0));
+    } else if (filterDropdown === 'Unanswered') {
+      result = result.filter(p => !p.adminReply && p.status !== 'answered');
+    }
+
+    // Sort order
+    if (sortDropdown === 'Most Popular') {
+      result.sort((a, b) => (b.viewsCount || b.sameQuestionCount || 0) - (a.viewsCount || a.sameQuestionCount || 0));
+    } else if (sortDropdown === 'Newest') {
+      result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sortDropdown === 'Recently Updated') {
+      result.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+    }
+
+    return result;
+  }, [posts, typeFilter, filterDropdown, sortDropdown]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / itemsPerPage));
+  const paginatedPosts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredPosts.slice(start, start + itemsPerPage);
+  }, [filteredPosts, currentPage, itemsPerPage]);
+
+  // Group consecutive posts by same author
+  const groupedPosts = useMemo(() => {
+    const groups = [];
+    (paginatedPosts || []).forEach((post) => {
+      if (!post) return;
+      const authorKey = post.author?.email || post.author?.name || 'unknown';
+      const lastGroup = groups[groups.length - 1];
+
+      if (lastGroup && lastGroup.authorKey === authorKey) {
+        lastGroup.posts.push(post);
+      } else {
+        groups.push({
+          authorKey,
+          author: post.author,
+          createdAt: post.createdAt,
+          postType: post.postType,
+          posts: [post]
+        });
+      }
+    });
+    return groups;
+  }, [paginatedPosts]);
+
   return (
-    <div className="flex h-full w-full bg-[#fbfbfb] overflow-hidden relative font-sans select-none">
-      {/* 1. Left Sidebar: MyFlipbooks Dark Theme with Smooth Open/Close Animation */}
+    <div className="flex h-full w-full bg-[#fafafa] overflow-hidden relative font-sans select-none">
+      {/* 1. Left Sidebar: Dark Theme preserved */}
       <div className="hidden sm:block h-full flex-shrink-0 transition-all duration-300 ease-in-out">
         <ForumSidebar
           selectedModuleId={selectedModuleId}
           onSelectModule={onSelectModuleFromSidebar}
+          activeArea={activeArea}
+          onSelectArea={onSelectAreaFromSidebar}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           moduleCounts={moduleCounts}
@@ -89,7 +160,7 @@ export default function Forum() {
           />
           <div className="relative w-[clamp(260px,75vw,320px)] bg-[#151c28] h-full shadow-2xl flex flex-col z-10 text-white">
             <div className="p-3.5 border-b border-[#243042] flex items-center justify-between">
-              <span className="font-bold text-white text-sm">Modules & Feeds</span>
+              <span className="font-bold text-white text-sm">Categories</span>
               <button
                 onClick={() => setIsMobileDrawerOpen(false)}
                 className="p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer"
@@ -104,6 +175,11 @@ export default function Forum() {
                   onSelectModuleFromSidebar(modId);
                   setIsMobileDrawerOpen(false);
                 }}
+                activeArea={activeArea}
+                onSelectArea={(area) => {
+                  onSelectAreaFromSidebar(area);
+                  setIsMobileDrawerOpen(false);
+                }}
                 isCollapsed={false}
                 moduleCounts={moduleCounts}
               />
@@ -116,6 +192,7 @@ export default function Forum() {
       {activePost ? (
         <PostDetailView
           post={activePost}
+          allPosts={posts}
           onBack={handleBackToList}
           onAddUserComment={handleAddComment}
           onToggleSameQuestion={handleToggleVote}
@@ -124,210 +201,261 @@ export default function Forum() {
           currentUser={currentUser}
         />
       ) : (
-        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#fbfbfb]">
-          {/* Top Main Forum Header (Matched to Ticket Header) */}
-          <header className="bg-[#fbfbfb] px-[1.5vw] pt-[1.2vw] pb-[0.8vw] flex flex-col sm:flex-row sm:items-center justify-between gap-[0.8vw] flex-shrink-0">
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <div className="flex items-center gap-[0.6vw]">
-                {/* Mobile Hamburger Button */}
-                <button
-                  onClick={() => setIsMobileDrawerOpen(true)}
-                  className="sm:hidden p-1.5 -ml-1 text-stone-600 hover:text-[#ec5137] hover:bg-stone-200/60 rounded-[0.6vw] transition-colors cursor-pointer"
-                  title="Open Modules"
-                >
-                  <Menu size={20} />
-                </button>
-
-                <div>
-                  <h1 className="text-[1.35vw] text-lg font-bold text-stone-900 tracking-tight leading-tight">
-                    Community Forum
-                  </h1>
-                  <p className="text-[0.78vw] text-xs text-stone-600 mt-[0.2vw] font-normal hidden sm:block">
-                    Ask questions, share ideas, and connect with other creators
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Right Controls: Search & Ask Button (Ticket Rounded Style) */}
-            <div className="flex items-center gap-[0.6vw] w-full sm:w-auto">
-              {/* Search Bar */}
-              <div className="relative flex-1 sm:w-[16vw]">
-                <Search className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] absolute left-[0.75vw] top-1/2 -translate-y-1/2 text-stone-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search discussions & ideas..."
-                  className="w-full pl-[2.2vw] pr-[1.8vw] py-[0.45vw] bg-white border border-stone-300 rounded-[0.6vw] text-[0.78vw] text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#ec5137] focus:ring-1 focus:ring-[#ec5137]/20 shadow-2xs transition-all"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-[0.78vw] cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {/* Action Button: Ask Question or Suggest */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white">
+          {/* Top Header: Forum + Create Post button */}
+          <header className="px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between border-b border-stone-100 flex-shrink-0">
+            <div className="flex items-center gap-3 pl-1 sm:pl-2">
+              {/* Mobile Menu trigger */}
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-[1vw] py-[0.55vw] rounded-[0.6vw] text-[0.82vw] text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all flex items-center justify-center gap-[0.45vw] cursor-pointer shadow-sm hover:shadow active:scale-[0.99] shrink-0"
+                onClick={() => setIsMobileDrawerOpen(true)}
+                className="sm:hidden p-1.5 text-stone-600 hover:text-[#ec5137] rounded-lg transition-colors cursor-pointer"
               >
-                <Plus className="w-[0.95vw] h-[0.95vw] min-w-[14px] min-h-[14px]" />
-                <span>Ask Question or Suggest</span>
+                <Menu size={20} />
               </button>
+
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
+                  Forum
+                </h1>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  Share ideas, solve problems, and improve your workflow.
+                </p>
+              </div>
             </div>
+
+            {/* + Create Post button */}
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all flex items-center gap-2 cursor-pointer shadow-xs shrink-0"
+            >
+              <Plus size={16} />
+              <span>Create Post</span>
+            </button>
           </header>
 
-          {/* Main Scrollable Content Area (Matched to Ticket Layout & Rounded Corner Cards) */}
-          <div className="flex-1 overflow-y-auto px-[1.5vw] pb-[1.5vw] pt-0 space-y-[0.9vw] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            
-            {/* Filter Area - White Card Rounded like Ticket */}
-            <div className="w-full bg-white rounded-[0.8vw] border border-stone-300 shadow-2xs p-[0.85vw]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[0.75vw]">
-                {/* Segmented Tabs: All Discussions / My Posts */}
-                <div className="flex items-center p-[0.25vw] bg-stone-100/90 rounded-[0.6vw] border border-stone-200/90 self-start sm:self-auto overflow-x-auto max-w-full shadow-2xs">
-                  <button
-                    onClick={() => {
-                      setActiveArea('all');
-                      handleBackToList();
-                    }}
-                    className={`flex items-center gap-[0.45vw] px-[0.8vw] py-[0.45vw] rounded-[0.45vw] text-[0.78vw] text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-                      activeArea === 'all'
-                        ? 'bg-[#ec5137] text-white font-semibold shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <Layers className="w-[0.9vw] h-[0.9vw] min-w-[13px] min-h-[13px]" />
-                    <span>All Discussions</span>
-                    <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.65vw] text-[10px] font-semibold ${
-                      activeArea === 'all'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-stone-200 text-stone-600'
-                    }`}>
-                      {posts.length}
-                    </span>
-                  </button>
+          {/* Subheader Toolbar & Discussions Scrollable Area */}
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
+            {/* Title & Toolbar Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pl-1 sm:pl-2">
+              {/* Section Sub-heading */}
+              <div>
+                <h2 className="text-lg font-bold text-stone-900">
+                  {activeArea === 'all' 
+                    ? 'All Discussions' 
+                    : activeArea === 'favourites' 
+                      ? 'Favourites' 
+                      : activeArea === 'my_posts' 
+                        ? 'My Posts' 
+                        : activeModule.name}
+                </h2>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  Share ideas, solve problems, and improve your workflow.
+                </p>
+              </div>
 
-                  <button
-                    onClick={() => {
-                      setActiveArea('my_posts');
-                      handleBackToList();
+              {/* Filters & Search Toolbar (Exact match to screenshot) */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Search Forum input */}
+                <div className="relative min-w-[200px] sm:w-64">
+                  <Icon 
+                    icon="lineicons:search-2" 
+                    className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#ec5137]" 
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
                     }}
-                    className={`flex items-center gap-[0.45vw] px-[0.8vw] py-[0.45vw] rounded-[0.45vw] text-[0.78vw] text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-                      activeArea === 'my_posts'
-                        ? 'bg-[#ec5137] text-white font-semibold shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <UserCheck className="w-[0.9vw] h-[0.9vw] min-w-[13px] min-h-[13px]" />
-                    <span>My Posts</span>
-                    {myPostsCount > 0 && (
-                      <span className={`px-[0.45vw] py-[0.1vw] rounded-full text-[0.65vw] text-[10px] font-semibold ${
-                        activeArea === 'my_posts'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-stone-200 text-stone-600'
-                      }`}>
-                        {myPostsCount}
-                      </span>
-                    )}
-                  </button>
+                    placeholder="Search Forum..."
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-lg text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#ec5137] transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
-                {/* Right Side: Sorting Toolbar & Counter */}
-                <div className="flex items-center gap-[0.6vw] self-end sm:self-auto">
-                  <span className="text-[0.75vw] text-xs text-stone-500 font-medium hidden md:inline">
-                    Showing {posts.length} {posts.length === 1 ? 'discussion' : 'discussions'}
-                  </span>
+                {/* Filters Dropdown */}
+                <div className="flex items-center gap-2 border border-stone-200 rounded-lg px-2.5 py-1 bg-white shadow-2xs">
+                  <span className="text-xs text-stone-600 font-medium whitespace-nowrap">Filters :</span>
+                  <CustomDropdown
+                    options={[
+                      { value: 'All', label: 'All' },
+                      { value: 'Answered', label: 'Answered' },
+                      { value: 'Unanswered', label: 'Unanswered' }
+                    ]}
+                    value={filterDropdown}
+                    onChange={(val) => {
+                      setFilterDropdown(val);
+                      setCurrentPage(1);
+                    }}
+                    width="w-[115px]"
+                    buttonClassName="!py-1 !px-2.5 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 !shadow-none !ring-0"
+                    itemClassName="hover:!bg-stone-100 !text-stone-700 font-normal"
+                  />
+                </div>
 
-                  <div className="flex items-center p-[0.2vw] bg-stone-100 rounded-[0.5vw] border border-stone-200 shadow-2xs">
-                    <button
-                      onClick={() => setSortOrder('newest')}
-                      className={`px-[0.6vw] py-[0.25vw] rounded-[0.4vw] text-[0.72vw] text-xs transition-all cursor-pointer ${
-                        sortOrder === 'newest'
-                          ? 'bg-white text-stone-900 font-semibold shadow-2xs border border-stone-300'
-                          : 'text-stone-600 hover:text-stone-900'
-                      }`}
-                      title="Shows newest discussions first"
-                    >
-                      Newest
-                    </button>
-                    <button
-                      onClick={() => setSortOrder('updated')}
-                      className={`px-[0.6vw] py-[0.25vw] rounded-[0.4vw] text-[0.72vw] text-xs transition-all cursor-pointer ${
-                        sortOrder === 'updated'
-                          ? 'bg-white text-stone-900 font-semibold shadow-2xs border border-stone-300'
-                          : 'text-stone-600 hover:text-stone-900'
-                      }`}
-                      title="Shows recently replied discussions"
-                    >
-                      Recently Updated
-                    </button>
-                  </div>
+                {/* Sort by Dropdown */}
+                <div className="flex items-center gap-2 border border-stone-200 rounded-lg px-2.5 py-1 bg-white shadow-2xs">
+                  <span className="text-xs text-stone-600 font-medium whitespace-nowrap">Sort by :</span>
+                  <CustomDropdown
+                    options={[
+                      { value: 'Most Popular', label: 'Most Popular' },
+                      { value: 'Newest', label: 'Newest' },
+                      { value: 'Recently Updated', label: 'Recently Updated' }
+                    ]}
+                    value={sortDropdown}
+                    onChange={(val) => {
+                      setSortDropdown(val);
+                      setCurrentPage(1);
+                    }}
+                    width="w-[135px]"
+                    buttonClassName="!py-1 !px-2.5 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 font-normal !shadow-none !ring-0"
+                    itemClassName="hover:!bg-stone-100 !text-stone-700 font-normal"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Discussions Feed / Empty State / List with Ticket Rounded Corner */}
-            <div className="w-full space-y-[0.8vw]">
+            {/* Filter Tabs Under Header: All | Suggestions | Questions */}
+            <div className="flex items-center gap-6 border-b border-stone-100 text-xs font-medium pl-1 sm:pl-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeFilter('all');
+                  setCurrentPage(1);
+                }}
+                className={`pb-2.5 transition-all cursor-pointer ${
+                  typeFilter === 'all'
+                    ? 'text-[#ec5137] border-b-2 border-[#ec5137] font-semibold'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeFilter('suggestions');
+                  setCurrentPage(1);
+                }}
+                className={`pb-2.5 transition-all cursor-pointer ${
+                  typeFilter === 'suggestions'
+                    ? 'text-[#ec5137] border-b-2 border-[#ec5137] font-semibold'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Suggestions
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeFilter('questions');
+                  setCurrentPage(1);
+                }}
+                className={`pb-2.5 transition-all cursor-pointer ${
+                  typeFilter === 'questions'
+                    ? 'text-[#ec5137] border-b-2 border-[#ec5137] font-semibold'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Questions
+              </button>
+            </div>
+
+            {/* Discussion Feed Cards */}
+            <div className="space-y-4">
               {isLoading ? (
-                <div className="py-20 text-center text-stone-500 bg-white rounded-[0.8vw] border border-stone-300 shadow-2xs">
-                  <Loader2 size={28} className="animate-spin text-[#ec5137] mx-auto mb-3" />
-                  <p className="text-[0.85vw] text-sm font-semibold text-stone-700">Loading discussions from server...</p>
-                  <p className="text-[0.72vw] text-xs text-stone-400 mt-1">Fetching live forum data</p>
+                <div className="py-20 text-center text-stone-500 bg-white rounded-xl border border-stone-100">
+                  <Loader2 size={26} className="animate-spin text-[#ec5137] mx-auto mb-3" />
+                  <p className="text-xs font-semibold text-stone-700">Loading discussions...</p>
                 </div>
               ) : loadError ? (
-                <div className="py-12 text-center bg-white rounded-[0.8vw] border border-red-200 p-[1.5vw] shadow-2xs">
+                <div className="py-12 text-center bg-white rounded-xl border border-red-100 p-6">
                   <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-2">
                     <AlertCircle size={20} />
                   </div>
-                  <h3 className="text-[0.85vw] text-sm font-semibold text-stone-900">Failed to connect to forum server</h3>
-                  <p className="text-[0.75vw] text-xs text-stone-500 mt-1">{loadError}</p>
+                  <h3 className="text-xs font-semibold text-stone-900">Failed to connect to forum server</h3>
+                  <p className="text-xs text-stone-500 mt-1">{loadError}</p>
                   <button
                     onClick={loadPosts}
-                    className="mt-3 px-[1vw] py-[0.4vw] text-[0.78vw] text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] rounded-[0.5vw] cursor-pointer"
+                    className="mt-3 px-4 py-1.5 text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] rounded-lg cursor-pointer"
                   >
                     Retry
                   </button>
                 </div>
-              ) : posts.length > 0 ? (
-                posts.map((post) => (
+              ) : paginatedPosts.length > 0 ? (
+                groupedPosts.map((group, gIdx) => (
                   <PostCard
-                    key={post.id}
-                    post={post}
-                    onSelectPost={() => handleSelectPost(post.id)}
+                    key={group.posts[0].id || gIdx}
+                    group={group}
+                    onSelectPost={handleSelectPost}
                   />
                 ))
               ) : (
-                /* Empty State Box matching Ticket rounded-[0.8vw] border border-stone-300 */
-                <div className="py-16 text-center text-stone-500 bg-white rounded-[0.8vw] border border-stone-300 p-[2vw] shadow-2xs">
-                  <div className="w-12 h-12 rounded-[0.8vw] bg-orange-50 text-[#ec5137] flex items-center justify-center mx-auto mb-3 border border-orange-100">
-                    <Inbox size={24} />
+                <div className="py-16 text-center text-stone-500 bg-white rounded-xl border border-stone-100 p-8">
+                  <div className="w-12 h-12 rounded-xl bg-orange-50 text-[#ec5137] flex items-center justify-center mx-auto mb-3 border border-orange-100">
+                    <Inbox size={22} />
                   </div>
-                  <h3 className="text-[1vw] text-base font-semibold text-stone-900">
+                  <h3 className="text-sm font-semibold text-stone-900">
                     No discussions found
                   </h3>
-                  <p className="text-[0.78vw] text-xs text-stone-500 mt-1 max-w-sm mx-auto font-normal">
+                  <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
                     {searchQuery 
-                      ? `No results matching "${searchQuery}". Try a different keyword.` 
-                      : activeArea === 'my_posts'
-                        ? 'You have not submitted any questions or suggestions yet.'
-                        : `No posts found under this filter for ${activeArea === 'modules' ? activeModule.name : 'the forum'}.`
-                    }
+                      ? `No results matching "${searchQuery}".` 
+                      : `No posts available under this filter.`}
                   </p>
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="mt-4 px-[1.2vw] py-[0.55vw] rounded-[0.6vw] text-[0.82vw] text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all cursor-pointer shadow-xs active:scale-[0.99]"
+                    className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all cursor-pointer shadow-xs"
                   >
-                    Create the first discussion
+                    Create the first post
                   </button>
                 </div>
               )}
             </div>
 
+            {/* Pagination Controls - only show when there is more than 1 page and posts exist */}
+            {!isLoading && !loadError && totalPages > 1 && (
+              <div className="flex items-center justify-center pt-5 pb-4">
+                <div className="inline-flex items-stretch border border-stone-200 rounded-md overflow-hidden bg-white shadow-2xs divide-x divide-stone-200">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const pageNum = idx + 1;
+                    const isActive = currentPage === pageNum;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 flex items-center justify-center text-xs font-medium transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-[#ec5137] text-white font-semibold'
+                            : 'bg-white text-stone-500 hover:bg-stone-50 hover:text-stone-800'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  {currentPage < totalPages && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="px-3 h-8 flex items-center justify-center text-xs font-normal text-stone-500 hover:bg-stone-50 hover:text-stone-800 transition-colors cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

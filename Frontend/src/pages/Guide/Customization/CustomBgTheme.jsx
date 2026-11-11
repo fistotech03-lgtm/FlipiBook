@@ -27,7 +27,7 @@ export default function CustomBgTheme() {
       className="w-full h-full"
     >
       <div className="w-full min-h-full flex flex-col pt-[1.5vh] pb-[3vh] px-[1.5vw] space-y-[2.5vh]">
-        <div className="pb-[1.8vh] border-b border-gray-200">
+        <div className="pb-[1.8vh] border-b border-gray-200 -mx-[1.5vw] px-[1.5vw]">
           <div className="flex items-center gap-[0.6vw]">
             <span className="p-[0.45vw] rounded-[0.45vw] bg-[#ec5137]/10 text-[#ec5137]">
               <Palette className="w-[1.1vw] h-[1.1vw]" />

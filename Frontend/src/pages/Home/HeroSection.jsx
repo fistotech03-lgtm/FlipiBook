@@ -314,15 +314,15 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
           transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
           className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-2 sm:my-4 lg:my-0 px-1 sm:px-2 w-full"
         >
-          <div className="relative mx-auto w-full max-w-[340px] xs:max-w-[400px] sm:max-w-[640px] lg:max-w-[48vw] h-[340px] xs:h-[390px] sm:h-[420px] md:h-[460px] lg:h-[30vw] flex items-center justify-center group drop-shadow-[0_22px_40px_rgba(0,0,0,0.22)]">
+          <div className="relative mx-auto w-full max-w-[340px] xs:max-w-[420px] sm:max-w-[620px] lg:max-w-[43vw] aspect-[420/297] flex items-center justify-center group drop-shadow-[0_22px_40px_rgba(0,0,0,0.22)]">
             <HTMLFlipBook
-              width={600}
-              height={800}
+              width={595}
+              height={842}
               size="stretch"
-              minWidth={220}
-              maxWidth={1400}
-              minHeight={260}
-              maxHeight={1800}
+              minWidth={210}
+              maxWidth={1200}
+              minHeight={297}
+              maxHeight={1700}
               maxShadowOpacity={0.5}
               showCover={false}
               mobileScrollSupport={true}

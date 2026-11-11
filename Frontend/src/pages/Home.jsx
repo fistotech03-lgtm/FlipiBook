@@ -23,12 +23,12 @@ import FAQSection from './Home/FAQSection';
 import BuildYourDreamCta from './Home/BuildYourDreamCta';
 
 // Assets for Hero Flipbook
-import page1 from '../assets/Home/A4_1.png';
-import page2 from '../assets/Home/A4_2.png';
-import page3 from '../assets/Home/A4_3.png';
-import page4 from '../assets/Home/A4_4.png';
-import page5 from '../assets/Home/A4_5.png';
-import page6 from '../assets/Home/A4_6.png';
+import page1 from '../assets/Home/A4_1.Webp';
+import page2 from '../assets/Home/A4_2.Webp';
+import page3 from '../assets/Home/A4_3.Webp';
+import page4 from '../assets/Home/A4_4.Webp';
+import page5 from '../assets/Home/A4_5.Webp';
+import page6 from '../assets/Home/A4_6.Webp';
 
 export default function Home() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

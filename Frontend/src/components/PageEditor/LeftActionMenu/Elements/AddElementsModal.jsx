@@ -168,15 +168,12 @@ export const AddElementsModal = ({
   }, [selectedCategory]);
 
   const maskingSubtopics = useMemo(() => {
-    const SUBTOPIC_ORDER = [
-      'Typography Grid', 'Shapes', 'Letters', 'Numbers',
-      'Classic Blue', 'Ocean Cyan', 'Emerald Green', 'Sunset Coral', 'Royal Violet', 'Executive Slate'
-    ];
+    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
     return SUBTOPIC_ORDER.map((name) => ({
       id: name,
       name,
       count: filteredElements.filter((el) => el.subtopic === name).length
-    }));
+    })).filter((item) => item.count > 0);
   }, [filteredElements]);
 
   // Extract distinct subtopics from elements in the selected category
@@ -186,10 +183,7 @@ export const AddElementsModal = ({
     filteredElements.forEach((el) => {
       if (el.subtopic) subs.add(el.subtopic);
     });
-    const SUBTOPIC_ORDER = [
-      'Typography Grid', 'Shapes', 'Letters', 'Numbers',
-      'Classic Blue', 'Ocean Cyan', 'Emerald Green', 'Sunset Coral', 'Royal Violet', 'Executive Slate'
-    ];
+    const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
     return Array.from(subs).sort((a, b) => {
       const idxA = SUBTOPIC_ORDER.indexOf(a);
       const idxB = SUBTOPIC_ORDER.indexOf(b);
@@ -253,9 +247,9 @@ export const AddElementsModal = ({
           transition={{ duration: 0.18, ease: 'easeOut' }}
           className="fixed z-[9999] bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.18)] flex flex-col overflow-hidden select-none"
           style={{
-            width: '26.5vw',
-            minWidth: '380px',
-            height: '74vh',
+            width: '28.5vw',
+            minWidth: '420px',
+            height: '75vh',
             maxHeight: 'calc(100vh - 40px)',
             left: modalPos.x,
             top: modalPos.y,
@@ -318,18 +312,15 @@ export const AddElementsModal = ({
 
           {/* Body: 2 Columns */}
           <div className="flex-1 min-h-0 flex border-t border-gray-100 mt-[0.2vh] overflow-hidden">
-            {/* Left Categories Sidebar Component with Subtopics Tree */}
+            {/* Left Categories Sidebar Component */}
             <CategorySidebarList
               categories={ELEMENT_CATEGORIES}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
-              subtopics={maskingSubtopics}
-              selectedSubtopic={selectedSubtopic}
-              onSelectSubtopic={setSelectedSubtopic}
             />
 
             {/* Right Elements Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.6vw] flex flex-col">
+            <div className="flex-1 overflow-y-auto p-[0.6vw] flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden hover:[scrollbar-width:thin] hover:[&::-webkit-scrollbar]:block custom-scrollbar transition-all duration-200">
               {groupedBySubtopic ? (
                 <div className="flex flex-col gap-[2vh]">
                   {groupedBySubtopic.map(({ title, items }) => (
@@ -342,7 +333,7 @@ export const AddElementsModal = ({
                           {items.length}
                         </span>
                       </div>
-                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-2 gap-x-[0.6vw] gap-y-[1.2vh] p-[0.2vw]' : 'grid-cols-4 gap-x-[0.45vw] gap-y-[0.8vh]'}`}>
                         {items.map((item) => (
                           <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                         ))}
@@ -360,7 +351,7 @@ export const AddElementsModal = ({
                       {displayedElements.length}
                     </span>
                   </div>
-                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-2 gap-x-[0.6vw] gap-y-[1.2vh] p-[0.2vw]' : 'grid-cols-4 gap-x-[0.45vw] gap-y-[0.8vh]'}`}>
                     {displayedElements.map((item) => (
                       <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                     ))}

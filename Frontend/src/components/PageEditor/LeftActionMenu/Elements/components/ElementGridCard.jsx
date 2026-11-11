@@ -40,7 +40,7 @@ export function ElementGridCard({ item, onInsert }) {
       </div>
 
       {/* Label outside below card */}
-      <span className="text-[0.72vw] font-medium text-gray-700 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.5vh] px-[0.1vw] flex-shrink-0 pointer-events-none transition-colors">
+      <span className="text-[0.66vw] font-medium text-gray-700 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.4vh] px-[0.1vw] flex-shrink-0 pointer-events-none transition-colors">
         {item.name}
       </span>
     </button>

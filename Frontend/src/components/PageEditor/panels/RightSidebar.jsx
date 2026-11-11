@@ -343,6 +343,9 @@ const RightSidebar = ({
         if (typeof window.drawOverlayHighlight === 'function') {
           window.drawOverlayHighlight(el, 'selected');
         }
+        if (el && (el.getAttribute('data-type') === 'table-frame' || (el.id && el.id.startsWith('table-')))) {
+          window.dispatchEvent(new CustomEvent('sync-table-cell-selection', { detail: { elementId: el.id } }));
+        }
       }, 50);
       return;
     }

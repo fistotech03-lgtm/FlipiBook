@@ -13,7 +13,7 @@ import { Icon } from '@iconify/react';
 
 // Categories matching editor design
 export const ELEMENT_CATEGORIES = [
-  { id: 'all', name: 'All', icon: 'lucide:layout-grid' },
+  { id: 'recent', name: 'Recent', icon: 'lucide:clock' },
   { id: 'shapes', name: 'Shapes', icon: 'lucide:shapes' },
   { id: 'masking', name: 'TypoGrid', icon: 'tabler:mask' },
   { id: 'buttons', name: 'Buttons', icon: 'lucide:mouse-pointer-click' },

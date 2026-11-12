@@ -16,6 +16,15 @@ export function ElementGridCard({ item, onInsert }) {
       })
     );
     e.dataTransfer.effectAllowed = 'copy';
+
+    // Dispatch in next animation frame so the browser can initialize native drag session & ghost image first
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('element-drag-start', { detail: { item } }));
+    });
+  };
+
+  const handleDragEnd = () => {
+    window.dispatchEvent(new CustomEvent('element-drag-end', { detail: { item } }));
   };
 
   return (
@@ -29,6 +38,7 @@ export function ElementGridCard({ item, onInsert }) {
       onMouseDown={(e) => e.stopPropagation()}
       draggable={true}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       title={`Click to add or drag to place ${item.name}`}
       className="w-full flex flex-col items-center group cursor-grab active:cursor-grabbing select-none focus:outline-none"
     >

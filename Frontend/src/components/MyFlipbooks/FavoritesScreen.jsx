@@ -345,24 +345,19 @@ export default function FavoritesScreen({
     };
 
     const handleViewBook = (book) => {
-        const shareId =
+        const v_id = book.v_id || book.id;
+        const candidateShareId =
             book.Visibility?.shareId ||
             book.Customized_Settings?.Visibility?.shareId ||
             book.shareId ||
-            book.share?.shareId ||
-            book.v_id ||
-            encodeURIComponent(book.realName);
-        const rawAcc = String(
-            book.Visibility?.access || book.Customized_Settings?.Visibility?.access || book.share?.access || 'public'
-        ).toLowerCase();
-        const accessPrefix = rawAcc.includes('private')
-            ? 'share=private'
-            : rawAcc.includes('password')
-            ? 'share=password'
-            : rawAcc.includes('invite')
-            ? 'share=invite'
-            : 'share=public';
-        window.open(`/${accessPrefix}/${shareId}`, '_blank');
+            book.share?.shareId;
+        const visibilityShareId = (candidateShareId && candidateShareId !== v_id) ? candidateShareId : null;
+
+        const previewUrl = visibilityShareId
+            ? `/preview?shareId=${visibilityShareId}${v_id ? `&v_id=${v_id}` : ''}`
+            : (v_id ? `/preview?v_id=${v_id}` : '/preview');
+
+        window.open(previewUrl, '_blank');
     };
 
     const handleCustomize = (book) => {

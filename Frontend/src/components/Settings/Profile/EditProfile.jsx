@@ -911,7 +911,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
               {errors.email && <p className="text-red-500 text-[0.65vw] mt-[0.2vw]">{errors.email}</p>}
             </div>
 
-            {/* Row 3: Profile Type */}
+            {/* Row 3: Profile Type & Professional Title */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
               <div className="relative" ref={profileTypeRef}>
                 <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
@@ -950,6 +950,22 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   </div>
                 )}
               </div>
+
+              {/* For Individual or other: Professional Title on the same line */}
+              {(!editedUser?.profileType || !['Company', 'Agency', 'Freelancer'].includes(editedUser?.profileType)) && (
+                <div>
+                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
+                    Professional Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Luffy"
+                    value={editedUser?.professionalTitle || editedUser?.title || ''}
+                    onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
+                    className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Conditional Fields based on Profile Type */}
@@ -1307,23 +1323,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   </div>
                 </div>
               </>
-            ) : (
-              /* For Individual or other: Professional Title */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Professional Title
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Luffy"
-                    value={editedUser?.professionalTitle || editedUser?.title || ''}
-                    onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
-                    className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* Skills / Expertise */}
             <div>

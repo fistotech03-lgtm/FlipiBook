@@ -532,7 +532,7 @@ app.use(
 );
 
 // Proxy Bookshelf endpoints to MyFlipibook Service
-['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf'].forEach((shelfEndpoint) => {
+['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf', '/update-shelf-order', '/update-shelf-design'].forEach((shelfEndpoint) => {
   app.use(
     `/api/profile${shelfEndpoint}`,
     createProxyMiddleware({
@@ -570,6 +570,20 @@ app.use(
     })
   );
 });
+
+// Also proxy dedicated /api/shelf route to MyFlipibook Service
+app.use(
+  '/api/shelf',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/shelf`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/'
+  })
+);
 
 // Proxy /api/profile requests to User Service
 app.use(

@@ -9,6 +9,7 @@ const connectDB = require('./config/db');
 const myflipibookRoutes = require('./routes/myflipibookRoutes');
 const userSettingRoutes = require('./routes/userSettingRoutes');
 const exploreRoutes = require('./routes/exploreRoutes');
+const shelfRoutes = require('./routes/shelfRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 
 const app = express();
@@ -130,8 +131,10 @@ app.use('/api/usersetting', userSettingRoutes);
 app.use('/usersetting', userSettingRoutes);
 app.use('/api/explore', exploreRoutes);
 app.use('/explore', exploreRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/profile', profileRoutes);
+app.use('/api/shelf', shelfRoutes);
+app.use('/shelf', shelfRoutes);
+app.use('/api/profile', shelfRoutes);
+app.use('/profile', shelfRoutes);
 app.use('/', userSettingRoutes);
 app.use('/', myflipibookRoutes);
 
